@@ -1,2 +1,2 @@
 export type { RecurringSuggestion } from './recurringTypes'
-export { detectUpcoming } from './recurringUpcoming'
+export { detectUpcoming, type StoppedSeries } from './recurringUpcoming'

@@ -1,6 +1,6 @@
 import type { Transaction } from '../types'
 import { monthsBetweenBudget } from './dates'
-import type { OccurrenceGroup } from './recurringTypes'
+import type { GroupKey, OccurrenceGroup } from './recurringTypes'
 
 const MIN_OCCURRENCES = 3
 
@@ -12,6 +12,11 @@ export function normalizeDesc(description: string): string {
 /** One recurring-detection identity per transaction; fixed-spend classification reuses it. */
 export function occurrenceKey(txn: Transaction): string {
   return `${normalizeDesc(txn.description)}|${txn.accountId}|${txn.categoryId}|${txn.type}`
+}
+
+/** The identity of a group as one string, the same text `occurrenceKey` gives each of its rows. */
+export function groupKeyString(key: GroupKey): string {
+  return `${key.normalizedDesc}|${key.accountId}|${key.categoryId}|${key.type}`
 }
 
 /** Months from a transaction's calendar month to its assigned budget month. */

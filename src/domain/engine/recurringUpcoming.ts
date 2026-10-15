@@ -1,6 +1,6 @@
 import type { Transaction } from '../types'
 import { addDaysIso, daysBetween, isDueSoon, shiftBudgetMonth } from './dates'
-import { groupTransactions } from './recurringDetect'
+import { groupKeyString, groupTransactions } from './recurringDetect'
 import {
   PREDICT_HISTORY,
   type UsualDay,
@@ -70,8 +70,21 @@ function pendingDate({ dates, usual, lead }: Series, today: string): string | nu
   return null
 }
 
-function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggestion | null {
+const NO_STOPPED: StoppedSeries = {}
+
+/** Series the owner has stopped, by series key: each stays out of the card until a charge after `after` is logged. */
+export type StoppedSeries = Readonly<Record<string, { after: string }>>
+
+function suggestionFor(
+  group: OccurrenceGroup,
+  today: string,
+  stopped: StoppedSeries,
+): RecurringSuggestion | null {
   const dates = group.dates
+  const seriesKey = groupKeyString(group.key)
+  const lastChargeDate = dates[dates.length - 1]!
+  const stop = stopped[seriesKey]
+  if (stop && lastChargeDate <= stop.after) return null
   const gaps = dates.slice(1).map((date, i) => daysBetween(dates[i]!, date))
   if (classifyFrequency(median(gaps)) !== 'monthly') return null
   if (regularityScore(gaps) < MIN_REGULARITY) return null
@@ -85,6 +98,8 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
   if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
 
   return {
+    seriesKey,
+    lastChargeDate,
     description: group.label,
     type: group.key.type,
     accountId: group.key.accountId,
@@ -100,15 +115,17 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
  * The recurring monthly charges that are due on `today` and not yet logged: from a day or more
  * before their usual date until a week after it. It looks only at the dates of the series' own
  * charges, never at which budget month is on screen, so the same charge is on the card whichever
- * month is open.
+ * month is open. A series the owner has stopped is left out until a charge after the one it was
+ * stopped at is logged.
  */
 export function detectUpcoming(
   transactions: Transaction[],
-  options: { today: string },
+  options: { today: string; stopped?: StoppedSeries },
 ): RecurringSuggestion[] {
+  const stopped = options.stopped ?? NO_STOPPED
   const suggestions: RecurringSuggestion[] = []
   for (const group of groupTransactions(transactions)) {
-    const suggestion = suggestionFor(group, options.today)
+    const suggestion = suggestionFor(group, options.today, stopped)
     if (suggestion) suggestions.push(suggestion)
   }
   return suggestions.sort(

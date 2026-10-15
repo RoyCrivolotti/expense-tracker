@@ -6,9 +6,11 @@ import type { Lookup } from '../format'
 import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
 import { Card, SectionTitle } from '../components/primitives'
+import { NoEntryIcon } from '../icons'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
+import { useStoppedSuggestions } from './stoppedSuggestions'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
@@ -62,6 +64,7 @@ function SuggestionRow({
   lookup,
   onAdd,
   onDismiss,
+  onStop,
 }: {
   suggestion: RecurringSuggestion
   /** The suggestion's budget month when it is not the current one. */
@@ -69,6 +72,7 @@ function SuggestionRow({
   lookup: Lookup
   onAdd: () => void
   onDismiss: () => void
+  onStop: () => void
 }) {
   const format = useMoneyFormat()
   const categoryName = lookup.categoryName(suggestion.categoryId)
@@ -104,6 +108,15 @@ function SuggestionRow({
         >
           ×
         </button>
+        <button
+          type="button"
+          className={styles.stopBtn}
+          onClick={onStop}
+          aria-label={`Stop suggesting ${suggestion.description}`}
+          title="Stop suggesting"
+        >
+          <NoEntryIcon className={styles.stopIcon} aria-hidden="true" />
+        </button>
       </div>
     </div>
   )
@@ -112,6 +125,7 @@ function SuggestionRow({
 export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
   const [dismissed, setDismissed] = useState(loadDismissed)
   const { showToast } = useToast()
+  const { stop, restore } = useStoppedSuggestions()
   const rows = useRef<HTMLDivElement>(null)
 
   const visible = suggestions.filter(
@@ -128,6 +142,15 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
     })
   }, [])
 
+  // The row the focus was on is gone; the one that takes its place, or the one before it when it
+  // was the last, gets the focus.
+  const focusRowAt = (index: number) => {
+    requestAnimationFrame(() => {
+      const remaining = rows.current?.querySelectorAll<HTMLElement>('[data-row]')
+      remaining?.[Math.min(index, remaining.length - 1)]?.querySelector('button')?.focus()
+    })
+  }
+
   const handleDismiss = (s: RecurringSuggestion, index: number) => {
     setHidden(s, true)
     showToast(`Dismissed ${s.description}`, 'info', {
@@ -135,12 +158,17 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
       onAction: () => setHidden(s, false),
       shortcut: UNDO_SHORTCUT,
     })
-    // The row the focus was on is gone; the one that takes its place, or the one before it when
-    // it was the last, gets the focus.
-    requestAnimationFrame(() => {
-      const remaining = rows.current?.querySelectorAll<HTMLElement>('[data-row]')
-      remaining?.[Math.min(index, remaining.length - 1)]?.querySelector('button')?.focus()
+    focusRowAt(index)
+  }
+
+  const handleStop = (s: RecurringSuggestion, index: number) => {
+    stop(s.seriesKey, { after: s.lastChargeDate, label: s.description })
+    showToast(`Stopped suggesting ${s.description}`, 'info', {
+      label: 'Undo',
+      onAction: () => restore(s.seriesKey),
+      shortcut: UNDO_SHORTCUT,
     })
+    focusRowAt(index)
   }
 
   if (visible.length === 0) return null
@@ -158,6 +186,7 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
               lookup={lookup}
               onAdd={() => onAdd(toSeed(s))}
               onDismiss={() => handleDismiss(s, index)}
+              onStop={() => handleStop(s, index)}
             />
           ))}
         </div>

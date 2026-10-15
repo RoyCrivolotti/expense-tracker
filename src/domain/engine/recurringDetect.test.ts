@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupTransactions } from './recurringDetect'
+import { groupKeyString, groupTransactions, occurrenceKey } from './recurringDetect'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
@@ -99,5 +99,13 @@ describe('groupTransactions', () => {
     const newestFirst = [...alpha, ...beta].sort((a, b) => b.date.localeCompare(a.date))
     expect(groupTransactions(newestFirst).map((g) => g.label)).toEqual(['Beta', 'Alpha'])
     expect(groupTransactions([...alpha, ...beta]).map((g) => g.label)).toEqual(['Alpha', 'Beta'])
+  })
+
+  it('writes a group key the way each of its rows does', () => {
+    const rows = monthlyDates(2026, 1, 5, 3).map((date) =>
+      makeTxn({ date, description: '  Gym ', accountId: 3, categoryId: 4, type: 'income' }),
+    )
+    expect(groupKeyString(groupTransactions(rows)[0]!.key)).toBe(occurrenceKey(rows[0]!))
+    expect(occurrenceKey(rows[0]!)).toBe('gym|3|4|income')
   })
 })

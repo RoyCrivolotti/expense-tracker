@@ -15,6 +15,7 @@ import { PreferencesSetting } from '../settings/PreferencesSetting'
 import { ReportNameSetting } from '../settings/ReportNameSetting'
 import { ReceiptStorageSetting } from '../settings/ReceiptStorageSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
+import { StoppedSuggestionsSetting } from '../settings/StoppedSuggestionsSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountSetting } from '../settings/AccountSetting'
@@ -161,6 +162,8 @@ function PreferencesView({
           onChange={(patch) => void actions.updateSettings(patch)}
         />
       )}
+
+      {actions && <StoppedSuggestionsSetting />}
     </>
   )
 }

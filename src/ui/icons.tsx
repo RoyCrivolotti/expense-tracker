@@ -72,6 +72,15 @@ export function PlusIcon(props: IconProps) {
   )
 }
 
+export function NoEntryIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6 6l12 12" />
+    </svg>
+  )
+}
+
 export function BackIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
