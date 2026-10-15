@@ -1,6 +1,6 @@
 import type { Transaction } from '../types'
 import { addDaysIso, daysBetween, isDueSoon, shiftBudgetMonth } from './dates'
-import { groupKeyString, groupTransactions } from './recurringDetect'
+import { groupKeyString, groupTransactions, newestChargeBySeries } from './recurringDetect'
 import {
   PREDICT_HISTORY,
   type UsualDay,
@@ -74,6 +74,21 @@ const NO_STOPPED: StoppedSeries = {}
 
 /** Series the owner has stopped, by series key: each stays out of the card until a charge after `after` is logged. */
 export type StoppedSeries = Readonly<Record<string, { after: string }>>
+
+/**
+ * The stopped series that still keep their suggestions away: those with no charge after the one
+ * they were stopped at. A series with a newer charge has come back by itself, so it is not stopped
+ * any more, whatever the list still holds. A series with no charges left counts as stopped.
+ */
+export function stillStopped<T extends { after: string }>(
+  transactions: Transaction[],
+  stopped: Readonly<Record<string, T>>,
+): Record<string, T> {
+  const newest = newestChargeBySeries(transactions)
+  return Object.fromEntries(
+    Object.entries(stopped).filter(([seriesKey, { after }]) => (newest.get(seriesKey) ?? after) <= after),
+  )
+}
 
 function suggestionFor(
   group: OccurrenceGroup,

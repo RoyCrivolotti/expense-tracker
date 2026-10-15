@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
 import { addDaysIso } from './dates'
-import { detectUpcoming } from './recurringUpcoming'
+import { detectUpcoming, stillStopped } from './recurringUpcoming'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 let nextId = 1
@@ -373,6 +373,36 @@ describe('detectUpcoming', () => {
         '2026-07-05',
         '2026-07-05',
       ])
+    })
+  })
+
+  describe('which stopped series are still stopped', () => {
+    const stopped = { 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' } }
+
+    it('keeps one with no charge after the one it was stopped at', () => {
+      expect(stillStopped(gymOnThe5th(), stopped)).toEqual(stopped)
+      expect(stillStopped(gymOnThe5th([row('2026-05-20')]), stopped)).toEqual(stopped)
+    })
+
+    it('drops one that has a newer charge, however the rows are ordered', () => {
+      const resumed = gymOnThe5th([row('2026-07-05')])
+      expect(stillStopped(resumed, stopped)).toEqual({})
+      expect(stillStopped([...resumed].reverse(), stopped)).toEqual({})
+    })
+
+    it('does not count a cancelled charge, or one of an installment plan, as coming back', () => {
+      const rows = gymOnThe5th([row('2026-07-05', { cancelled: true }), row('2026-07-06', { planId: 3 })])
+      expect(stillStopped(rows, stopped)).toEqual(stopped)
+    })
+
+    it('keeps one whose charges have all gone', () => {
+      expect(stillStopped([], stopped)).toEqual(stopped)
+    })
+
+    it('judges each series by its own newest charge', () => {
+      const both = { ...stopped, 'rent|1|1|expense': { after: '2026-06-01', label: 'Rent' } }
+      const rows = [...gymOnThe5th([row('2026-07-05')]), ...monthlyDates(2026, 1, 1, 6).map((d) => row(d, { description: 'Rent' }))]
+      expect(Object.keys(stillStopped(rows, both))).toEqual(['rent|1|1|expense'])
     })
   })
 

@@ -1,3 +1,5 @@
+import type { Transaction } from '../../types'
+import { stillStopped } from '../../engine'
 import { Card, SectionTitle } from '../components/primitives'
 import { formatDayLabel } from '../format'
 import { useStoppedSuggestions } from '../tabs/stoppedSuggestions'
@@ -7,11 +9,12 @@ import styles from './StoppedSuggestionsSetting.module.css'
 /**
  * The series the Upcoming card was told to stop suggesting on this device, each with a way to
  * take it back. A stopped series is otherwise out of sight, so there has to be somewhere to see
- * what is not being watched. Nothing is shown while nothing is stopped.
+ * what is not being watched. A series that has come back, because a charge for it was logged after
+ * it was stopped, is not listed. Nothing is shown while nothing is stopped.
  */
-export function StoppedSuggestionsSetting() {
+export function StoppedSuggestionsSetting({ transactions }: { transactions: Transaction[] }) {
   const { stopped, restore } = useStoppedSuggestions()
-  const entries = Object.entries(stopped).sort(([, a], [, b]) => a.label.localeCompare(b.label))
+  const entries = Object.entries(stillStopped(transactions, stopped)).sort(([, a], [, b]) => a.label.localeCompare(b.label))
   if (entries.length === 0) return null
 
   return (

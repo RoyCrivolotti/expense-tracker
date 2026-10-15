@@ -163,7 +163,7 @@ function PreferencesView({
         />
       )}
 
-      {actions && <StoppedSuggestionsSetting />}
+      {actions && <StoppedSuggestionsSetting transactions={model.dataset.transactions} />}
     </>
   )
 }
