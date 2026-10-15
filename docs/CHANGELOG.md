@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Upcoming rows say how due they are)
+
+- **Each Upcoming row says when it is due against today.** It showed a bare date under the title Upcoming, so a charge two weeks past read the same as one due tomorrow. Rows now say "Due today", "Due tomorrow", "Due in 3 days", "Due yesterday" or "Due 2 days ago", with the date after it, and a late one is in the warning colour. The date no longer wraps onto a line of its own on a phone.
+- **A long Upcoming card folds.** From five rows it keeps the first three in view and folds the rest behind "Show N more", so eight due charges no longer push the transaction list a screen down. Up to four rows still show in full.
+
 ## October 2026 (Stop suggesting a series)
 
 - **A cancelled subscription can be stopped, not just dismissed for the month.** Each Upcoming row has a no-entry button next to the "x". It stops suggesting that series on this device until you log a charge for it again, so a subscription you resume comes back without anything to switch on. A toast offers an Undo, and Settings, Preferences lists what is stopped with a "Suggest again" button. Stopping is per device, like dismissals, and does not change Analytics.
