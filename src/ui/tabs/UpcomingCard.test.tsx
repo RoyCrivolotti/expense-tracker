@@ -114,6 +114,77 @@ describe('UpcomingCard', () => {
     })
   })
 
+  describe('a long card', () => {
+    const names = ['Gym', 'Rent', 'Streaming', 'Phone', 'Cloud', 'Music', 'News']
+    const suggestionsFor = (count: number) =>
+      names.slice(0, count).map((description, i) =>
+        makeSuggestion({ description, seriesKey: `${description.toLowerCase()}|1|1|expense`, predictedDate: `2026-09-${String(20 + i).padStart(2, '0')}` }),
+      )
+    const foldOf = (description: string) => screen.getByText(description).closest('[inert]')
+
+    it('shows up to four rows in full, with nothing to expand', () => {
+      renderCard(suggestionsFor(4))
+      expect(screen.queryByRole('button', { name: /^Show / })).toBeNull()
+      for (const name of names.slice(0, 4)) expect(foldOf(name)).toBeNull()
+    })
+
+    it('keeps three rows in view from five rows and folds the rest behind a button that says how many', () => {
+      renderCard(suggestionsFor(5))
+      for (const name of names.slice(0, 3)) expect(foldOf(name)).toBeNull()
+      expect(foldOf('Phone')).not.toBeNull()
+      expect(foldOf('Cloud')).not.toBeNull()
+      const toggle = screen.getByRole('button', { name: 'Show 2 more' })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    it('counts a longer fold', () => {
+      renderCard(suggestionsFor(7))
+      expect(screen.getByRole('button', { name: 'Show 4 more' })).toBeDefined()
+    })
+
+    it('opens the folded rows and closes them again', () => {
+      renderCard(suggestionsFor(5))
+      fireEvent.click(screen.getByRole('button', { name: 'Show 2 more' }))
+      expect(foldOf('Phone')).toBeNull()
+      const toggle = screen.getByRole('button', { name: 'Show fewer' })
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      fireEvent.click(toggle)
+      expect(foldOf('Cloud')).not.toBeNull()
+      expect(screen.getByRole('button', { name: 'Show 2 more' })).toBeDefined()
+    })
+
+    it('names the rows it controls', () => {
+      renderCard(suggestionsFor(5))
+      const toggle = screen.getByRole('button', { name: 'Show 2 more' })
+      const controlled = document.getElementById(toggle.getAttribute('aria-controls')!)
+      expect(controlled).not.toBeNull()
+      expect(controlled!.textContent).toContain('Phone')
+    })
+
+    it('keeps the order of the rows across the fold, oldest date first', () => {
+      renderCard(suggestionsFor(6))
+      const order = screen.getAllByText(/^(Gym|Rent|Streaming|Phone|Cloud|Music)$/).map((el) => el.textContent)
+      expect(order).toEqual(['Gym', 'Rent', 'Streaming', 'Phone', 'Cloud', 'Music'])
+    })
+
+    it('shows every row once a dismissal brings it down to four, and the button goes', () => {
+      renderCard(suggestionsFor(5))
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Gym' }))
+      expect(screen.queryByRole('button', { name: /^Show / })).toBeNull()
+      expect(foldOf('Phone')).toBeNull()
+      expect(foldOf('Cloud')).toBeNull()
+    })
+
+    it('hands the focus to a row that is in view, not to one that is folded', async () => {
+      renderCard(suggestionsFor(5))
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Streaming' }))
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+      })
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add Phone' }))
+    })
+  })
+
   describe('a charge that files under another budget month', () => {
     it('is marked with its own month, and one for the month on screen is not', () => {
       renderCard(

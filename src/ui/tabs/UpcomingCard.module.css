@@ -109,3 +109,47 @@
   position: absolute;
   inset: -0.375rem;
 }
+
+/* The rows past the first few fold away by the same technique as a day's rows in the list: the row
+   track runs between 1fr and 0fr, and the rows leave sight (and the find-in-page) only once folded. */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-out),
+    visibility 0s;
+}
+.folded {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-in),
+    visibility 0s linear var(--motion-fold);
+}
+.foldInner {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold,
+  .folded {
+    transition: none;
+  }
+}
+
+.moreBtn {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.moreBtn:hover {
+  text-decoration: underline;
+}
