@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Stop suggesting a series)
+
+- **A cancelled subscription can be stopped, not just dismissed for the month.** Each Upcoming row has a no-entry button next to the "x". It stops suggesting that series on this device until you log a charge for it again, so a subscription you resume comes back without anything to switch on. A toast offers an Undo, and Settings, Preferences lists what is stopped with a "Suggest again" button. Stopping is per device, like dismissals, and does not change Analytics.
+
 ## October 2026 (Upcoming follows the dates, not the month on screen)
 
 - **The Upcoming card no longer depends on the month you have open.** It used to look at the month on screen and the one before, so a charge could show under one month and be gone under the next, and a charge due on the first day of a new budget month could not be reminded until something was logged in that month. It now looks only at the dates of each series' own charges. It sits above the current month and the newest month with data, not above an older one, and a suggestion that files under a different month than the one on screen is tagged "For Nov".
