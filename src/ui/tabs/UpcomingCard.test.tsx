@@ -5,9 +5,11 @@ import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext, type ToastApi } from '../hooks/useToast'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
+import { resetStoppedSuggestionsForTests } from './stoppedSuggestions'
 import { UpcomingCard } from './UpcomingCard'
 
 const DISMISSED_KEY = 'expense:dismissed-recurring'
+const STOPPED_KEY = 'expense:stopped-recurring'
 
 const lookup: Lookup = {
   category: () => undefined,
@@ -24,6 +26,8 @@ const lookup: Lookup = {
 
 function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): RecurringSuggestion {
   return {
+    seriesKey: 'netflix|1|1|expense',
+    lastChargeDate: '2026-08-24',
     description: 'Netflix',
     type: 'expense',
     accountId: 1,
@@ -54,7 +58,10 @@ function renderCard(
 }
 
 describe('UpcomingCard', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    resetStoppedSuggestionsForTests()
+  })
 
   it('lists each suggestion with its category, amount and date', () => {
     renderCard([makeSuggestion({ amountCents: 1599, predictedDate: '2026-09-24' })])
@@ -214,6 +221,43 @@ describe('UpcomingCard', () => {
       localStorage.setItem(DISMISSED_KEY, '{not json')
       renderCard([makeSuggestion()])
       expect(screen.getByText('Netflix')).toBeDefined()
+    })
+  })
+
+  describe('stopping a series', () => {
+    it('records the series with the date of its newest charge, and says so with an Undo', () => {
+      const showToast = vi.fn<ToastApi['showToast']>()
+      renderCard([makeSuggestion()], { showToast })
+      fireEvent.click(screen.getByRole('button', { name: 'Stop suggesting Netflix' }))
+
+      expect(JSON.parse(localStorage.getItem(STOPPED_KEY)!)).toEqual({
+        'netflix|1|1|expense': { after: '2026-08-24', label: 'Netflix' },
+      })
+      expect(showToast).toHaveBeenCalledWith(
+        'Stopped suggesting Netflix',
+        'info',
+        expect.objectContaining({ label: 'Undo' }),
+      )
+    })
+
+    it('is taken back by the Undo', () => {
+      const showToast = vi.fn<ToastApi['showToast']>()
+      renderCard([makeSuggestion()], { showToast })
+      fireEvent.click(screen.getByRole('button', { name: 'Stop suggesting Netflix' }))
+      act(() => showToast.mock.calls[0]![2]!.onAction())
+      expect(JSON.parse(localStorage.getItem(STOPPED_KEY)!)).toEqual({})
+    })
+
+    it('is not the same as dismissing it for the month', () => {
+      renderCard([makeSuggestion()])
+      fireEvent.click(screen.getByRole('button', { name: 'Stop suggesting Netflix' }))
+      expect(localStorage.getItem(DISMISSED_KEY)).toBeNull()
+    })
+
+    it('offers the button for every row, named for it', () => {
+      renderCard([makeSuggestion({ description: 'Gym' }), makeSuggestion({ description: 'Rent' })])
+      expect(screen.getByRole('button', { name: 'Stop suggesting Gym' })).toBeDefined()
+      expect(screen.getByRole('button', { name: 'Stop suggesting Rent' })).toBeDefined()
     })
   })
 })

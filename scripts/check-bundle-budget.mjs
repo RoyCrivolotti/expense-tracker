@@ -281,7 +281,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 //
 // Raised from 279 KB to 280 KB for hiding the tab bar while a phone keyboard is up (the focus and visual viewport
 // reading, and the stylesheet rules): about 480 bytes gzip. No new library.
-const TOTAL_MAX_GZIP = 280_000
+//
+// Raised from 280 KB to 281 KB for stopping a suggestion (the local store, the Upcoming button and
+// its icon, and the list in Settings): about 1.1 KB gzip took the total from 278.9 KB to 280,024
+// bytes, 24 over. No new library.
+const TOTAL_MAX_GZIP = 281_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

@@ -3,6 +3,10 @@ import type { TxnType } from '../types'
 export type RecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 
 export interface RecurringSuggestion {
+  /** Which series this is: its description, account, category and type, as `groupKeyString` writes them. */
+  seriesKey: string
+  /** The date of the series' newest logged charge. */
+  lastChargeDate: string
   description: string
   type: TxnType
   accountId: number

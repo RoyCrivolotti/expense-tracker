@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account, ExpenseDataset } from '../../types'
@@ -6,8 +6,9 @@ import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
 import { buildLookup } from '../format'
 import type { ExpenseModel } from '../useExpenseData'
-import { ToastContext } from '../hooks/useToast'
+import { ToastContext, type ToastApi } from '../hooks/useToast'
 import { TransactionsTab } from './TransactionsTab'
+import { resetStoppedSuggestionsForTests } from './stoppedSuggestions'
 import { RESULTS_ANCHOR_ID } from './scrollToResults'
 
 // The native date input takes a new value in one step; the popover fallback has to be
@@ -438,6 +439,8 @@ describe('TransactionsTab upcoming charges', () => {
   const modelWithGym = (): ExpenseModel => ({ ...modelFor(gym), months })
 
   beforeEach(() => {
+    localStorage.clear()
+    resetStoppedSuggestionsForTests()
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-19T12:00:00'))
   })
@@ -490,5 +493,21 @@ describe('TransactionsTab upcoming charges', () => {
     const logged = [...gym, makeTransaction({ id: 30, description: 'Gym', date: '2026-10-19', budgetMonth: '2026-10' })]
     rerender(<TransactionsTab model={{ ...modelFor(logged), months }} month="2026-10" actions={actions} />)
     expect(screen.queryByText('Upcoming')).not.toBeInTheDocument()
+  })
+
+  it('stops suggesting a series on the spot, and brings it back with the Undo', () => {
+    const showToast = vi.fn<ToastApi['showToast']>()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <TransactionsTab model={modelWithGym()} month="2026-10" actions={makeActions()} />
+      </ToastContext.Provider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop suggesting Gym' }))
+    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument()
+    expect(showToast).toHaveBeenCalledWith('Stopped suggesting Gym', 'info', expect.objectContaining({ label: 'Undo' }))
+
+    act(() => showToast.mock.calls[0]![2]!.onAction())
+    expect(screen.getByText('Upcoming')).toBeInTheDocument()
   })
 })

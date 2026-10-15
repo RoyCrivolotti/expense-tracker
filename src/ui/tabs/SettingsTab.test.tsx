@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsTab } from './SettingsTab'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { makeDataset } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
+import { resetStoppedSuggestionsForTests } from './stoppedSuggestions'
 
 describe('SettingsTab', () => {
   it('saves the investments category and the default account through the actions', () => {
@@ -56,5 +57,38 @@ describe('SettingsTab sections', () => {
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Data')
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Export')
     expect(screen.queryByLabelText('Default account')).not.toBeInTheDocument()
+  })
+})
+
+describe('SettingsTab stopped suggestions', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetStoppedSuggestionsForTests()
+    localStorage.setItem(
+      'expense:stopped-recurring',
+      JSON.stringify({ 'gym|1|1|expense': { after: '2026-08-24', label: 'Gym' } }),
+    )
+  })
+
+  const render_ = (actions: ReturnType<typeof makeActions> | undefined) =>
+    render(
+      <SettingsTab
+        model={buildExpenseModel(makeDataset())}
+        month="2026-09"
+        actions={actions}
+        theme="dark"
+        onThemeChange={vi.fn()}
+      />,
+    )
+
+  it('lists them under Preferences', () => {
+    render_(makeActions())
+    expect(screen.getByText('Suggestions you stopped')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Suggest Gym again' })).toBeInTheDocument()
+  })
+
+  it('does not list them where the card is not offered, in read-only mode', () => {
+    render_(undefined)
+    expect(screen.queryByText('Suggestions you stopped')).not.toBeInTheDocument()
   })
 })

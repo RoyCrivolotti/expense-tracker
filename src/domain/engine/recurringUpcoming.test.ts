@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
 import { addDaysIso } from './dates'
-import { detectUpcoming } from './recurringUpcoming'
+import { detectUpcoming, stillStopped } from './recurringUpcoming'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 let nextId = 1
@@ -45,6 +45,8 @@ describe('detectUpcoming', () => {
       )
       expect(upcoming(rows, '2026-07-05')).toEqual([
         {
+          seriesKey: 'gym|2|4|expense',
+          lastChargeDate: '2026-06-05',
           description: 'Gym',
           type: 'expense',
           accountId: 2,
@@ -326,6 +328,81 @@ describe('detectUpcoming', () => {
       // starts on the 13th is on the card on the 12th.
       const rows = monthlyDates(2026, 1, 13, 6).map((date) => row(date, { budgetMonth: `${addDaysIso(date, 31).slice(0, 7)}` }))
       expect(datesOf(rows, '2026-07-12')).toEqual(['2026-07-13'])
+    })
+  })
+
+  describe('a series the owner stopped', () => {
+    const stoppedAt = (date: string, key = 'gym|1|1|expense') => ({ [key]: { after: date } })
+    const stoppedUpcoming = (rows: Transaction[], today: string, stopped: Record<string, { after: string }>) =>
+      detectUpcoming(rows, { today, stopped }).map((s) => s.predictedDate)
+
+    it('is left out of the card', () => {
+      expect(stoppedUpcoming(gymOnThe5th(), '2026-07-05', stoppedAt('2026-06-05'))).toEqual([])
+      expect(stoppedUpcoming(gymOnThe5th(), '2026-07-05', {})).toEqual(['2026-07-05'])
+    })
+
+    it('says which series it is and when its newest charge was, for the owner to stop it by', () => {
+      const [suggestion] = upcoming(gymOnThe5th(), '2026-07-05')
+      expect(suggestion).toMatchObject({ seriesKey: 'gym|1|1|expense', lastChargeDate: '2026-06-05' })
+    })
+
+    it('stays out when an older charge is logged late', () => {
+      const backfilled = gymOnThe5th([row('2026-05-20')])
+      expect(stoppedUpcoming(backfilled, '2026-07-05', stoppedAt('2026-06-05'))).toEqual([])
+    })
+
+    it('comes back when a charge after the one it was stopped at is logged', () => {
+      const resumed = gymOnThe5th([row('2026-07-05')])
+      expect(stoppedUpcoming(resumed, '2026-07-05', stoppedAt('2026-06-05'))).toEqual([])
+      expect(stoppedUpcoming(resumed, '2026-08-04', stoppedAt('2026-06-05'))).toEqual(['2026-08-05'])
+    })
+
+    it('stays out when it was stopped at a charge dated ahead', () => {
+      const ahead = gymOnThe5th([row('2026-07-05')])
+      expect(stoppedUpcoming(ahead, '2026-08-04', stoppedAt('2026-07-05'))).toEqual([])
+    })
+
+    it('leaves a series with the same text on another account, category or type on the card', () => {
+      const other = [
+        ...monthlyDates(2026, 1, 5, 6).map((date) => row(date, { accountId: 2 })),
+        ...monthlyDates(2026, 1, 5, 6).map((date) => row(date, { categoryId: 2 })),
+        ...monthlyDates(2026, 1, 5, 6).map((date) => row(date, { type: 'income' })),
+      ]
+      expect(stoppedUpcoming(other, '2026-07-05', stoppedAt('2026-06-05'))).toEqual([
+        '2026-07-05',
+        '2026-07-05',
+        '2026-07-05',
+      ])
+    })
+  })
+
+  describe('which stopped series are still stopped', () => {
+    const stopped = { 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' } }
+
+    it('keeps one with no charge after the one it was stopped at', () => {
+      expect(stillStopped(gymOnThe5th(), stopped)).toEqual(stopped)
+      expect(stillStopped(gymOnThe5th([row('2026-05-20')]), stopped)).toEqual(stopped)
+    })
+
+    it('drops one that has a newer charge, however the rows are ordered', () => {
+      const resumed = gymOnThe5th([row('2026-07-05')])
+      expect(stillStopped(resumed, stopped)).toEqual({})
+      expect(stillStopped([...resumed].reverse(), stopped)).toEqual({})
+    })
+
+    it('does not count a cancelled charge, or one of an installment plan, as coming back', () => {
+      const rows = gymOnThe5th([row('2026-07-05', { cancelled: true }), row('2026-07-06', { planId: 3 })])
+      expect(stillStopped(rows, stopped)).toEqual(stopped)
+    })
+
+    it('keeps one whose charges have all gone', () => {
+      expect(stillStopped([], stopped)).toEqual(stopped)
+    })
+
+    it('judges each series by its own newest charge', () => {
+      const both = { ...stopped, 'rent|1|1|expense': { after: '2026-06-01', label: 'Rent' } }
+      const rows = [...gymOnThe5th([row('2026-07-05')]), ...monthlyDates(2026, 1, 1, 6).map((d) => row(d, { description: 'Rent' }))]
+      expect(Object.keys(stillStopped(rows, both))).toEqual(['rent|1|1|expense'])
     })
   })
 
