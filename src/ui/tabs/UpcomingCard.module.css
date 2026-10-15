@@ -6,7 +6,7 @@
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--color-border);
 }
-.row:last-child {
+.rowLast {
   border-bottom: 0;
 }
 
@@ -24,8 +24,25 @@
   white-space: nowrap;
 }
 .meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.75rem;
+  row-gap: 0.05rem;
   font-size: 0.78rem;
   color: var(--color-text-muted);
+}
+.what {
+  white-space: nowrap;
+}
+/* Not worded as a deadline until it is one: today is stated plainly, a late one in the warning colour
+   (never by colour alone, the words say it too). */
+.today {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.late {
+  font-weight: 600;
+  color: var(--exp-warning-text);
 }
 .forMonth {
   font-weight: 600;
@@ -42,33 +59,6 @@
   flex-shrink: 0;
 }
 
-.rowButton {
-  width: 100%;
-  border: none;
-  background: none;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.rowButton:hover {
-  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));
-}
-
-.manageBtn {
-  width: 100%;
-  margin-top: 0.6rem;
-  padding: 0.55rem;
-  border: 1px dashed var(--color-border);
-  border-radius: 0.7rem;
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-}
-.manageBtn:hover {
-  border-color: var(--color-accent);
-}
 .addBtn,
 .dismissBtn,
 .stopBtn {

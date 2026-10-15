@@ -29,7 +29,12 @@ describe('useUpcoming', () => {
   afterEach(() => vi.useRealTimers())
 
   const dates = (model: ExpenseModel, month: string) =>
-    renderHook(() => useUpcoming(model, month)).result.current.map((s) => s.predictedDate)
+    renderHook(() => useUpcoming(model, month)).result.current.suggestions.map((s) => s.predictedDate)
+
+  it('says which day the charges were worked out for, for the rows to be worded against', () => {
+    const { result } = renderHook(() => useUpcoming(modelWith(), '2026-10'))
+    expect(result.current.today).toBe('2026-10-19')
+  })
 
   it('lists the charge that is due today', () => {
     expect(dates(modelWith(), '2026-10')).toEqual(['2026-10-20'])
@@ -76,13 +81,13 @@ describe('useUpcoming', () => {
 
     it('is left out, and comes back when it is taken back', () => {
       const { result } = renderHook(() => ({ upcoming: useUpcoming(modelWith(), '2026-10'), list: useStoppedSuggestions() }))
-      expect(result.current.upcoming).toHaveLength(1)
+      expect(result.current.upcoming.suggestions).toHaveLength(1)
 
       act(() => result.current.list.stop(GYM_KEY, { after: '2026-09-20', label: 'Gym' }))
-      expect(result.current.upcoming).toEqual([])
+      expect(result.current.upcoming.suggestions).toEqual([])
 
       act(() => result.current.list.restore(GYM_KEY))
-      expect(result.current.upcoming).toHaveLength(1)
+      expect(result.current.upcoming.suggestions).toHaveLength(1)
     })
 
     it('comes back by itself when a charge after the one it was stopped at is logged', () => {

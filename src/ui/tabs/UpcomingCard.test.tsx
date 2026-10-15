@@ -44,14 +44,20 @@ function renderCard(
   suggestions: RecurringSuggestion[],
   {
     month = '2026-09',
+    today = '2026-09-24',
     onAdd = () => {},
     showToast = () => {},
-  }: { month?: string; onAdd?: (seed?: TransactionSeed) => void; showToast?: ToastApi['showToast'] } = {},
+  }: {
+    month?: string
+    today?: string
+    onAdd?: (seed?: TransactionSeed) => void
+    showToast?: ToastApi['showToast']
+  } = {},
 ) {
   return render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="en-US">
       <ToastContext.Provider value={{ showToast }}>
-        <UpcomingCard suggestions={suggestions} month={month} lookup={lookup} onAdd={onAdd} />
+        <UpcomingCard suggestions={suggestions} month={month} today={today} lookup={lookup} onAdd={onAdd} />
       </ToastContext.Provider>
     </MoneyFormatProvider>,
   )
@@ -63,15 +69,49 @@ describe('UpcomingCard', () => {
     resetStoppedSuggestionsForTests()
   })
 
-  it('lists each suggestion with its category, amount and date', () => {
+  it('lists each suggestion with its category, amount, how it falls against today and its date', () => {
     renderCard([makeSuggestion({ amountCents: 1599, predictedDate: '2026-09-24' })])
     const info = screen.getByText('Netflix').parentElement!
-    expect(info.textContent).toBe('NetflixSubscriptions · €15.99 · Thu 24 Sept')
+    expect(info.textContent).toBe('NetflixSubscriptions · €15.99Due today · Thu 24 Sept')
   })
 
   it('renders nothing when there is nothing to suggest', () => {
     const { container } = renderCard([])
     expect(container.firstChild).toBeNull()
+  })
+
+  describe('how a charge is worded against today', () => {
+    const due = (predictedDate: string) => {
+      renderCard([makeSuggestion({ predictedDate })], { today: '2026-09-24' })
+      return screen.getByText(/^Due /)
+    }
+
+    it('says today for a charge due today', () => {
+      expect(due('2026-09-24').textContent).toBe('Due today')
+    })
+
+    it('says tomorrow', () => {
+      expect(due('2026-09-25').textContent).toBe('Due tomorrow')
+    })
+
+    it('counts the days to a charge further ahead', () => {
+      expect(due('2026-09-27').textContent).toBe('Due in 3 days')
+    })
+
+    it('says yesterday for a charge that was due the day before', () => {
+      expect(due('2026-09-23').textContent).toBe('Due yesterday')
+    })
+
+    it('counts the days since a charge that is further overdue, with its date after it', () => {
+      renderCard([makeSuggestion({ predictedDate: '2026-09-20' })], { today: '2026-09-24' })
+      expect(screen.getByText('Due 4 days ago')).toBeDefined()
+      expect(screen.getByText('Due 4 days ago').parentElement!.textContent).toBe('Due 4 days ago · Sun 20 Sept')
+    })
+
+    it('words it against the day it was given, not the clock', () => {
+      renderCard([makeSuggestion({ predictedDate: '2026-09-24' })], { today: '2026-09-20' })
+      expect(screen.getByText('Due in 4 days')).toBeDefined()
+    })
   })
 
   describe('a charge that files under another budget month', () => {

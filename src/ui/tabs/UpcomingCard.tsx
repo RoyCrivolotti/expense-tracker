@@ -10,6 +10,7 @@ import { NoEntryIcon } from '../icons'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
+import { dueLabel, daysUntilDue } from './dueLabel'
 import { useStoppedSuggestions } from './stoppedSuggestions'
 import styles from './UpcomingCard.module.css'
 
@@ -18,6 +19,8 @@ interface Props {
   suggestions: RecurringSuggestion[]
   /** The budget month on screen; a suggestion that files under another one is marked with its own. */
   month: string
+  /** The date the rows are said against: "Due tomorrow", "Due 2 days ago". */
+  today: string
   lookup: Lookup
   onAdd: (seed: TransactionSeed) => void
 }
@@ -61,6 +64,8 @@ function toSeed(s: RecurringSuggestion): TransactionSeed {
 function SuggestionRow({
   suggestion,
   forMonth,
+  today,
+  last,
   lookup,
   onAdd,
   onDismiss,
@@ -69,6 +74,9 @@ function SuggestionRow({
   suggestion: RecurringSuggestion
   /** The suggestion's budget month when it is not the current one. */
   forMonth: string | null
+  today: string
+  /** The last row of a card with nothing under it, so it has no line below. */
+  last: boolean
   lookup: Lookup
   onAdd: () => void
   onDismiss: () => void
@@ -76,19 +84,28 @@ function SuggestionRow({
 }) {
   const format = useMoneyFormat()
   const categoryName = lookup.categoryName(suggestion.categoryId)
+  const daysUntil = daysUntilDue(suggestion.predictedDate, today)
   return (
-    <div className={styles.row} data-row>
+    <div className={last ? `${styles.row} ${styles.rowLast}` : styles.row} data-row>
       <div className={styles.info}>
         <span className={styles.desc}>{suggestion.description}</span>
         <span className={styles.meta}>
-          {categoryName} · {formatCents(suggestion.amountCents, format)} ·{' '}
-          {formatDayLabel(suggestion.predictedDate)}
-          {forMonth && (
-            <>
-              {' · '}
-              <span className={styles.forMonth}>For {shortMonthLabel(forMonth)}</span>
-            </>
-          )}
+          <span className={styles.what}>
+            {categoryName} · {formatCents(suggestion.amountCents, format)}
+          </span>
+          <span className={styles.when}>
+            <span className={daysUntil < 0 ? styles.late : daysUntil === 0 ? styles.today : undefined}>
+              {dueLabel(daysUntil)}
+            </span>
+            {' · '}
+            {formatDayLabel(suggestion.predictedDate)}
+            {forMonth && (
+              <>
+                {' · '}
+                <span className={styles.forMonth}>For {shortMonthLabel(forMonth)}</span>
+              </>
+            )}
+          </span>
         </span>
       </div>
       <div className={styles.actions}>
@@ -122,7 +139,7 @@ function SuggestionRow({
   )
 }
 
-export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
+export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props) {
   const [dismissed, setDismissed] = useState(loadDismissed)
   const { showToast } = useToast()
   const { stop, restore } = useStoppedSuggestions()
@@ -183,6 +200,8 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
               key={dismissKey(s)}
               suggestion={s}
               forMonth={s.predictedBudgetMonth === month ? null : s.predictedBudgetMonth}
+              today={today}
+              last={index === visible.length - 1}
               lookup={lookup}
               onAdd={() => onAdd(toSeed(s))}
               onDismiss={() => handleDismiss(s, index)}
