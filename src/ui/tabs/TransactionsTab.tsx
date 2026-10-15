@@ -113,8 +113,14 @@ export function TransactionsTab({
             onClearGroup={setClearingGroup}
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
-          {upcoming.length > 0 && (
-            <UpcomingCard suggestions={upcoming} month={month} lookup={model.lookup} onAdd={actions.onAdd} />
+          {upcoming.suggestions.length > 0 && (
+            <UpcomingCard
+              suggestions={upcoming.suggestions}
+              month={month}
+              today={upcoming.today}
+              lookup={model.lookup}
+              onAdd={actions.onAdd}
+            />
           )}
         </>
       )}

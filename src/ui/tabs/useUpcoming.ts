@@ -7,6 +7,12 @@ import type { ExpenseModel } from '../useExpenseData'
 
 const NONE: RecurringSuggestion[] = []
 
+export interface Upcoming {
+  suggestions: RecurringSuggestion[]
+  /** The day they were worked out for, which the rows are worded against. */
+  today: string
+}
+
 /**
  * The charges due today that are not logged yet, for the Transactions tab showing `month`.
  *
@@ -15,7 +21,7 @@ const NONE: RecurringSuggestion[] = []
  * data (the two differ for a few days around the rollover) and not above a month that is being
  * looked back at. A series the owner stopped on this device is left out.
  */
-export function useUpcoming(model: ExpenseModel, month: string): RecurringSuggestion[] {
+export function useUpcoming(model: ExpenseModel, month: string): Upcoming {
   const today = todayLocalIso()
   const { transactions, settings } = model.dataset
   const { stopped } = useStoppedSuggestions()
@@ -26,5 +32,5 @@ export function useUpcoming(model: ExpenseModel, month: string): RecurringSugges
   const currentMonth = defaultBudgetMonth(today, settings.budgetRolloverDay)
   const newestMonth = model.months[model.months.length - 1] ?? currentMonth
   const oldestShown = currentMonth < newestMonth ? currentMonth : newestMonth
-  return month >= oldestShown ? suggestions : NONE
+  return { suggestions: month >= oldestShown ? suggestions : NONE, today }
 }
