@@ -14,6 +14,10 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
     categoryId: 'all',
     accountId: 'all',
     txnType: 'all',
+    amountMin: '',
+    amountMax: '',
+    amountMinCents: null,
+    amountMaxCents: null,
     dateScope: 'budgetMonth',
     customDateFrom: '',
     customDateTo: '',
@@ -32,6 +36,8 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
     onAccount: vi.fn(),
     onStatus: vi.fn(),
     onTxnType: vi.fn(),
+    onAmountMin: vi.fn(),
+    onAmountMax: vi.fn(),
     onDateScope: vi.fn(),
     onCustomDateFrom: vi.fn(),
     onCustomDateTo: vi.fn(),
@@ -276,5 +282,41 @@ describe('TxnFilters', () => {
     await user.click(within(dialog).getByRole('button', { name: /Madrid trip/ }))
 
     expect(onLabelIds).toHaveBeenCalledWith([])
+  })
+
+  it('passes what is typed in the amount boxes up as text', async () => {
+    const user = userEvent.setup()
+    const onAmountMin = vi.fn()
+    const onAmountMax = vi.fn()
+    render(<TxnFilters {...baseProps({ onAmountMin, onAmountMax })} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Minimum amount' }), '5')
+    await user.type(screen.getByRole('textbox', { name: 'Maximum amount' }), '9')
+
+    expect(onAmountMin).toHaveBeenCalledWith('5')
+    expect(onAmountMax).toHaveBeenCalledWith('9')
+  })
+
+  it('marks a box holding something that is not an amount, and one that is set', async () => {
+    const user = userEvent.setup()
+    render(<TxnFilters {...baseProps({ amountMin: '250k', amountMax: '200', amountMaxCents: 20_000 })} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    expect(screen.getByRole('textbox', { name: 'Minimum amount' })).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('textbox', { name: 'Maximum amount' })).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByRole('button', { name: /Up to 200 €/ })).toBeInTheDocument()
+  })
+
+  it('groups Min and Max as one Amount filter', async () => {
+    const user = userEvent.setup()
+    render(<TxnFilters {...baseProps()} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    const group = screen.getByRole('group', { name: 'Amount' })
+    expect(within(group).getAllByRole('textbox').map((box) => box.getAttribute('aria-label'))).toEqual([
+      'Minimum amount',
+      'Maximum amount',
+    ])
   })
 })

@@ -285,7 +285,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 280 KB to 281 KB for stopping a suggestion (the local store, the Upcoming button and
 // its icon, and the list in Settings): about 1.1 KB gzip took the total from 278.9 KB to 280,024
 // bytes, 24 over. No new library.
-const TOTAL_MAX_GZIP = 281_000
+//
+// Raised from 281 KB to 282 KB for filtering transactions by amount (the Min and Max boxes, their
+// chip, and search reading an amount): 825 bytes gzip took the total from 280,549 to 281,374. No
+// new library.
+const TOTAL_MAX_GZIP = 282_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

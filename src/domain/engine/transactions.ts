@@ -18,9 +18,42 @@ export interface TxnFilter {
    *  a transaction can hold zero labels validly, but that is not itself a
    *  filterable dimension the way "unflagged" is. */
   labelIds?: number[]
+  /**
+   * Inclusive bounds on the size of the amount, so an investment withdrawal (stored negative)
+   * compares like any other row. Income and expenses are told apart by `type`, not by sign.
+   */
+  amountMinCents?: number
+  amountMaxCents?: number
+  /**
+   * The search text read as an amount, as a range of sizes: "64" is 64,00 to 64,99 so the cents
+   * need not be remembered. A row matching it is kept even when the text does not match. The
+   * caller parses it, since only the caller knows the user's number format.
+   */
+  queryAmount?: AmountRange
 }
 
-function matchesQuery(txn: Transaction, query: string): boolean {
+export interface AmountRange {
+  fromCents: number
+  toCents: number
+}
+
+/** Whether an amount's size falls inside the filter's amount bounds. */
+export function matchesAmountBounds(amountCents: number, filter: TxnFilter): boolean {
+  const size = Math.abs(amountCents)
+  if (filter.amountMinCents != null && size < filter.amountMinCents) return false
+  if (filter.amountMaxCents != null && size > filter.amountMaxCents) return false
+  return true
+}
+
+/** Whether an amount's size falls inside the amount the search text was read as. */
+export function matchesQueryAmount(amountCents: number, range: AmountRange | undefined): boolean {
+  if (!range) return false
+  const size = Math.abs(amountCents)
+  return size >= range.fromCents && size <= range.toCents
+}
+
+function matchesQuery(txn: Transaction, query: string, range: AmountRange | undefined): boolean {
+  if (matchesQueryAmount(txn.amountCents, range)) return true
   const haystack = `${txn.description} ${txn.notes ?? ''}`.toLowerCase()
   return haystack.includes(query.toLowerCase())
 }
@@ -59,7 +92,8 @@ function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (!matchesFlag(txn, filter)) return false
   if (!matchesLabels(txn, filter)) return false
   if (!matchesTypeAndStatus(txn, filter)) return false
-  if (filter.query && !matchesQuery(txn, filter.query)) return false
+  if (!matchesAmountBounds(txn.amountCents, filter)) return false
+  if (filter.query && !matchesQuery(txn, filter.query, filter.queryAmount)) return false
   return true
 }
 

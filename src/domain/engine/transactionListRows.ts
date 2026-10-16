@@ -1,7 +1,12 @@
 import type { Account, AccountStatement, Transaction } from '../types'
 import type { CashRow } from './cashReconciliation'
 import { buildStatementPayments, type StatementPaymentRow } from './statementPayments'
-import { filterTransactions, type TxnFilter } from './transactions'
+import {
+  filterTransactions,
+  matchesAmountBounds,
+  matchesQueryAmount,
+  type TxnFilter,
+} from './transactions'
 
 export type TransactionListRow =
   | { kind: 'transaction'; txn: Transaction }
@@ -17,7 +22,8 @@ function matchesPeriod(row: StatementPaymentRow, filter: TxnFilter): boolean {
   return true
 }
 
-function matchesQuery(row: StatementPaymentRow, query: string): boolean {
+function matchesQuery(row: StatementPaymentRow, filter: TxnFilter, query: string): boolean {
+  if (matchesQueryAmount(row.amountCents, filter.queryAmount)) return true
   const haystack = `${row.cardName} statement payment`.toLowerCase()
   return haystack.includes(query.toLowerCase())
 }
@@ -64,7 +70,8 @@ function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): b
   if (!matchesCategoryAndStatus(filter)) return false
   if (!matchesFlagFilter(filter)) return false
   if (!matchesLabelFilter(filter)) return false
-  if (filter.query && !matchesQuery(row, filter.query)) return false
+  if (!matchesAmountBounds(row.amountCents, filter)) return false
+  if (filter.query && !matchesQuery(row, filter, filter.query)) return false
   return true
 }
 

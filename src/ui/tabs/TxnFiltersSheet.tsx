@@ -1,6 +1,6 @@
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import { Modal } from '../components/Modal'
-import { DateScopeRow, FilterFields, LockShield } from './TxnFilterRows'
+import { AmountRangeRow, DateScopeRow, FilterFields, LockShield } from './TxnFilterRows'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
@@ -20,6 +20,10 @@ export function TxnFiltersSheet({
   flagId,
   labelIds,
   txnType,
+  amountMin,
+  amountMax,
+  amountMinCents,
+  amountMaxCents,
   dateScope,
   customDateFrom,
   customDateTo,
@@ -31,6 +35,8 @@ export function TxnFiltersSheet({
   onLabelIds,
   onStatus,
   onTxnType,
+  onAmountMin,
+  onAmountMax,
   onDateScope,
   onCustomDateFrom,
   onCustomDateTo,
@@ -46,6 +52,10 @@ export function TxnFiltersSheet({
   flagId: number | 'all' | 'none'
   labelIds: number[]
   txnType: TxnType | 'all'
+  amountMin: string
+  amountMax: string
+  amountMinCents: number | null
+  amountMaxCents: number | null
   dateScope: TxnDateScope
   customDateFrom: string
   customDateTo: string
@@ -57,6 +67,8 @@ export function TxnFiltersSheet({
   onLabelIds: (ids: number[]) => void
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
+  onAmountMin: (value: string) => void
+  onAmountMax: (value: string) => void
   onDateScope: (value: TxnDateScope) => void
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
@@ -83,6 +95,15 @@ export function TxnFiltersSheet({
           onStatus={onStatus}
           onFlag={onFlag}
           onLabelIds={onLabelIds}
+        />
+        <AmountRangeRow
+          amountMin={amountMin}
+          amountMax={amountMax}
+          amountMinCents={amountMinCents}
+          amountMaxCents={amountMaxCents}
+          selectMode={selectMode}
+          onAmountMin={onAmountMin}
+          onAmountMax={onAmountMax}
         />
         <DateScopeRow
           dateScope={dateScope}

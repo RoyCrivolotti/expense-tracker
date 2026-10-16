@@ -1,5 +1,7 @@
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
+import type { MoneyFormat } from '../../engine/money'
 import type { StatusFilter } from './TxnFilters'
+import { amountChipLabel } from './txnAmountFilter'
 import { isSecondaryDateScope, scopeChipLabel, type TxnDateScope } from './txnDateScope'
 
 export interface ActiveFilterChip {
@@ -19,6 +21,9 @@ interface ChipInput {
   labelIds: number[]
   txnType: TxnType | 'all'
   status: StatusFilter
+  amountMinCents: number | null
+  amountMaxCents: number | null
+  format: MoneyFormat
   dateScope: TxnDateScope
   customDateFrom: string
   customDateTo: string
@@ -28,6 +33,8 @@ interface ChipInput {
   onLabelIds: (ids: number[]) => void
   onTxnType: (value: TxnType | 'all') => void
   onStatus: (value: StatusFilter) => void
+  onAmountMin: (value: string) => void
+  onAmountMax: (value: string) => void
   onDateScope: (value: TxnDateScope) => void
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
@@ -83,6 +90,19 @@ const statusChip: ChipBuilder = (input) =>
     ? null
     : { key: 'status', label: `Status: ${input.status}`, onClear: () => input.onStatus('all') }
 
+const amountChip: ChipBuilder = (input) => {
+  const label = amountChipLabel(input.amountMinCents, input.amountMaxCents, input.format)
+  if (label === null) return null
+  return {
+    key: 'amount',
+    label,
+    onClear: () => {
+      input.onAmountMin('')
+      input.onAmountMax('')
+    },
+  }
+}
+
 const dateChip: ChipBuilder = (input) => {
   if (!isSecondaryDateScope(input.dateScope)) return null
   const label = scopeChipLabel(input.dateScope, input.customDateFrom, input.customDateTo)
@@ -105,6 +125,7 @@ const BUILDERS: ChipBuilder[] = [
   labelsChip,
   typeChip,
   statusChip,
+  amountChip,
   dateChip,
 ]
 

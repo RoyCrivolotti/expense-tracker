@@ -137,6 +137,10 @@ export function TransactionsTab({
         flagId={state.flagId}
         labelIds={state.labelIds}
         txnType={state.txnType}
+        amountMin={state.amountMin}
+        amountMax={state.amountMax}
+        amountMinCents={state.amountMinCents}
+        amountMaxCents={state.amountMaxCents}
         dateScope={state.dateScope}
         customDateFrom={state.customDateFrom}
         customDateTo={state.customDateTo}
@@ -164,6 +168,8 @@ export function TransactionsTab({
         onLabelIds={state.setLabelIds}
         onStatus={state.setStatus}
         onTxnType={state.setTxnType}
+        onAmountMin={state.setAmountMin}
+        onAmountMax={state.setAmountMax}
         onDateScope={state.setDateScope}
         onCustomDateFrom={state.setCustomDateFrom}
         onCustomDateTo={state.setCustomDateTo}

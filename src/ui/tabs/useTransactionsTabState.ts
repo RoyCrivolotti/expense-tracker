@@ -10,6 +10,8 @@ import {
   netSpendCents,
 } from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { parseAmountBound, parseQueryAmount } from './txnAmountFilter'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
 import {
@@ -35,6 +37,9 @@ function useTxnListFilters(
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
+  const [amountMin, setAmountMin] = useState('')
+  const [amountMax, setAmountMax] = useState('')
+  const moneyFormat = useMoneyFormat()
   const [scopeChoice, setScopeChoice] = useState<DateScopeChoice>(() => ({
     scope: 'budgetMonth',
     atNavigation: monthNavigation,
@@ -56,6 +61,8 @@ function useTxnListFilters(
     setTxnType(entry.type ?? 'all')
     setStatus(entry.status ?? 'all')
     setQuery(entry.query ?? '')
+    setAmountMin('')
+    setAmountMax('')
     // The month itself was navigated by the shell; keep the scope on it.
     setScopeChoice((prev) => ({ scope: 'budgetMonth', atNavigation: prev.atNavigation }))
   }
@@ -101,6 +108,10 @@ function useTxnListFilters(
     setDateScope(scope)
   }
 
+  const amountMinCents = parseAmountBound(amountMin, moneyFormat)
+  const amountMaxCents = parseAmountBound(amountMax, moneyFormat)
+  const queryAmount = useMemo(() => parseQueryAmount(query.trim(), moneyFormat), [query, moneyFormat])
+
   const filter = useMemo(
     () => ({
       ...buildPeriodFilter(dateScope, month, customDateFrom, customDateTo),
@@ -111,6 +122,9 @@ function useTxnListFilters(
       ...(labelIds.length > 0 ? { labelIds } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
+      ...(queryAmount ? { queryAmount } : {}),
+      ...(amountMinCents !== null ? { amountMinCents } : {}),
+      ...(amountMaxCents !== null ? { amountMaxCents } : {}),
     }),
     [
       dateScope,
@@ -124,8 +138,12 @@ function useTxnListFilters(
       labelIds,
       txnType,
       query,
+      queryAmount,
+      amountMinCents,
+      amountMaxCents,
     ],
   )
+  const amountActive = amountMinCents !== null || amountMaxCents !== null
   const hasActiveFilters = useMemo(
     () =>
       query.trim() !== '' ||
@@ -135,8 +153,9 @@ function useTxnListFilters(
       labelIds.length > 0 ||
       txnType !== 'all' ||
       status !== 'all' ||
+      amountActive ||
       isSecondaryDateScope(dateScope),
-    [query, categoryId, accountId, flagId, labelIds, txnType, status, dateScope],
+    [query, categoryId, accountId, flagId, labelIds, txnType, status, amountActive, dateScope],
   )
   const secondaryFilterCount = useMemo(
     () =>
@@ -146,8 +165,9 @@ function useTxnListFilters(
       (labelIds.length > 0 ? 1 : 0) +
       (txnType !== 'all' ? 1 : 0) +
       (status !== 'all' ? 1 : 0) +
+      (amountActive ? 1 : 0) +
       (isSecondaryDateScope(dateScope) ? 1 : 0),
-    [categoryId, accountId, flagId, labelIds, txnType, status, dateScope],
+    [categoryId, accountId, flagId, labelIds, txnType, status, amountActive, dateScope],
   )
   const clearFilters = () => {
     setQuery('')
@@ -157,6 +177,8 @@ function useTxnListFilters(
     setLabelIds([])
     setTxnType('all')
     setStatus('all')
+    setAmountMin('')
+    setAmountMax('')
     setDateScope('budgetMonth')
     setCustomDateFrom('')
     setCustomDateTo('')
@@ -176,6 +198,12 @@ function useTxnListFilters(
     setStatus,
     query,
     setQuery,
+    amountMin,
+    setAmountMin,
+    amountMax,
+    setAmountMax,
+    amountMinCents,
+    amountMaxCents,
     dateScope,
     setDateScope: setDateScopeWithDefaults,
     customDateFrom,

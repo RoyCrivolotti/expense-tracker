@@ -399,3 +399,65 @@ describe('useTransactionsTabState — entry preset', () => {
     expect(result.current.labelIds).toEqual([20])
   })
 })
+
+describe('useTransactionsTabState — amount filter', () => {
+  function modelWithRows(): ExpenseModel {
+    const dataset = makeDataset({
+      transactions: [
+        makeTransaction({ id: 1, date: '2026-05-03', budgetMonth: '2026-05', amountCents: 6410, description: 'Groceries' }),
+        makeTransaction({ id: 2, date: '2026-05-04', budgetMonth: '2026-05', amountCents: 2064, description: 'Train' }),
+        makeTransaction({ id: 3, date: '2026-05-05', budgetMonth: '2026-05', amountCents: 110_000, description: 'Rent' }),
+      ],
+    })
+    return { dataset, lookup: buildLookup(dataset), descriptionIndex: { search: () => [], resolve: () => undefined }, months: [] }
+  }
+  const ids = (rows: { id: number }[]) => rows.map((r) => r.id).sort((a, b) => a - b)
+
+  it('finds a row by the amount typed in search', () => {
+    const { result } = renderHook(() => useTransactionsTabState(modelWithRows(), '2026-05'))
+
+    act(() => result.current.setQuery('64'))
+
+    expect(ids(result.current.results)).toEqual([1])
+  })
+
+  it('narrows by Min and Max, counting them as one filter', () => {
+    const { result } = renderHook(() => useTransactionsTabState(modelWithRows(), '2026-05'))
+
+    act(() => {
+      result.current.setAmountMin('50')
+      result.current.setAmountMax('1.000')
+    })
+
+    expect(ids(result.current.results)).toEqual([1])
+    expect(result.current.secondaryFilterCount).toBe(1)
+    expect(result.current.hasActiveFilters).toBe(true)
+  })
+
+  it('ignores a box that holds no amount', () => {
+    const { result } = renderHook(() => useTransactionsTabState(modelWithRows(), '2026-05'))
+
+    act(() => result.current.setAmountMin('lots'))
+
+    expect(result.current.amountMinCents).toBeNull()
+    expect(ids(result.current.results)).toEqual([1, 2, 3])
+    expect(result.current.hasActiveFilters).toBe(false)
+  })
+
+  it('clearFilters and an entry preset both empty the amount boxes', () => {
+    const model = modelWithRows()
+    const { result, rerender } = renderHook(
+      ({ entry }: { entry: { categoryId?: number } | null }) =>
+        useTransactionsTabState(model, '2026-05', undefined, { entry }),
+      { initialProps: { entry: null as { categoryId?: number } | null } },
+    )
+
+    act(() => result.current.setAmountMin('50'))
+    act(() => result.current.clearFilters())
+    expect(result.current.amountMin).toBe('')
+
+    act(() => result.current.setAmountMax('50'))
+    rerender({ entry: { categoryId: 1 } })
+    expect(result.current.amountMax).toBe('')
+  })
+})

@@ -58,7 +58,7 @@ export function SearchRow({
           className={styles.search}
           type="text"
           inputMode="search"
-          placeholder="Search description or notes…"
+          placeholder="Search description, notes or amount…"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           disabled={selectMode}
@@ -335,6 +335,79 @@ export function FilterFields({
       {showLabels ? (
         <LabelFilterField labels={labels} labelIds={labelIds} selectMode={selectMode} onLabelIds={onLabelIds} />
       ) : null}
+    </div>
+  )
+}
+
+/** One bound of the amount filter. Empty is no bound; text that is not an amount is marked invalid and ignored. */
+function AmountBoundInput({
+  value,
+  cents,
+  placeholder,
+  ariaLabel,
+  selectMode,
+  onChange,
+}: {
+  value: string
+  cents: number | null
+  placeholder: string
+  ariaLabel: string
+  selectMode: boolean
+  onChange: (value: string) => void
+}) {
+  const invalid = value.trim() !== '' && cents === null
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      className={cents !== null ? styles.activeAmount : undefined}
+      value={value}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      {...(invalid ? { 'aria-invalid': true } : {})}
+      disabled={selectMode}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  )
+}
+
+/** Min and Max amount, both inclusive and compared by size (see TxnFilter.amountMinCents). */
+export function AmountRangeRow({
+  amountMin,
+  amountMax,
+  amountMinCents,
+  amountMaxCents,
+  selectMode,
+  onAmountMin,
+  onAmountMax,
+}: {
+  amountMin: string
+  amountMax: string
+  amountMinCents: number | null
+  amountMaxCents: number | null
+  selectMode: boolean
+  onAmountMin: (value: string) => void
+  onAmountMax: (value: string) => void
+}) {
+  return (
+    <div className={styles.amountRange} role="group" aria-label="Amount">
+      <AmountBoundInput
+        value={amountMin}
+        cents={amountMinCents}
+        placeholder="Min amount"
+        ariaLabel="Minimum amount"
+        selectMode={selectMode}
+        onChange={onAmountMin}
+      />
+      <AmountBoundInput
+        value={amountMax}
+        cents={amountMaxCents}
+        placeholder="Max amount"
+        ariaLabel="Maximum amount"
+        selectMode={selectMode}
+        onChange={onAmountMax}
+      />
     </div>
   )
 }

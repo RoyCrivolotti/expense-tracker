@@ -247,3 +247,27 @@ describe('buildTransactionListRows — label filter', () => {
     expect(rows.some((r) => r.kind === 'statement-payment')).toBe(true)
   })
 })
+
+describe('buildTransactionListRows by amount', () => {
+  // The June card payment is 300,00 (cardCharges above).
+  const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
+  const rowsFor = (filter: Parameters<typeof buildTransactionListRows>[1]) =>
+    buildTransactionListRows(
+      [txn({ budgetMonth: '2026-06', id: 10, amountCents: 500 })],
+      filter,
+      statements,
+      cashRows,
+      accounts,
+      { defaultAccountId: 1 },
+    ).map((r) => r.kind)
+
+  it('applies the amount bounds to card payments as well', () => {
+    expect(rowsFor({ month: '2026-06', amountMinCents: 10_000 })).toEqual(['statement-payment'])
+    expect(rowsFor({ month: '2026-06', amountMaxCents: 10_000 })).toEqual(['transaction'])
+  })
+
+  it('finds a card payment by its amount in search', () => {
+    const filter = { month: '2026-06', query: '300', queryAmount: { fromCents: 30_000, toCents: 30_099 } }
+    expect(rowsFor(filter)).toEqual(['statement-payment'])
+  })
+})

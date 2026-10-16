@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { EU_MONEY_FORMAT } from '../../engine/money'
 import { buildActiveFilterChips } from './txnFilterChips'
 
 function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> = {}) {
@@ -16,6 +17,9 @@ function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> 
     labelIds: [] as number[],
     txnType: 'all' as const,
     status: 'all' as const,
+    amountMinCents: null as number | null,
+    amountMaxCents: null as number | null,
+    format: EU_MONEY_FORMAT,
     dateScope: 'budgetMonth' as const,
     customDateFrom: '',
     customDateTo: '',
@@ -25,6 +29,8 @@ function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> 
     onLabelIds: vi.fn(),
     onTxnType: vi.fn(),
     onStatus: vi.fn(),
+    onAmountMin: vi.fn(),
+    onAmountMax: vi.fn(),
     onDateScope: vi.fn(),
     onCustomDateFrom: vi.fn(),
     onCustomDateTo: vi.fn(),
@@ -140,5 +146,25 @@ describe('buildActiveFilterChips', () => {
     const chips = buildActiveFilterChips(input({ categoryId: 99, accountId: 99 }))
 
     expect(chips.map((c) => c.label)).toEqual(['Category: Category', 'Account: Account'])
+  })
+})
+
+describe('buildActiveFilterChips — amount', () => {
+  it('shows the amount bounds as one chip, after status', () => {
+    const chips = buildActiveFilterChips(input({ status: 'posted', amountMinCents: 5000, amountMaxCents: 20_000 }))
+
+    expect(chips.map((c) => [c.key, c.label])).toEqual([
+      ['status', 'Status: posted'],
+      ['amount', '50 € to 200 €'],
+    ])
+  })
+
+  it('clearing the amount chip empties both boxes', () => {
+    const onAmountMin = vi.fn()
+    const onAmountMax = vi.fn()
+    buildActiveFilterChips(input({ amountMinCents: 5000, onAmountMin, onAmountMax }))[0]?.onClear()
+
+    expect(onAmountMin).toHaveBeenCalledWith('')
+    expect(onAmountMax).toHaveBeenCalledWith('')
   })
 })
