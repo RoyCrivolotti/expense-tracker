@@ -58,8 +58,9 @@ Read-only queries against the dev database through the D1 query API:
 - **The 100 bound-parameter limit is real.** A query with 100 bound parameters runs; 101 fails with
   `too many SQL variables` (SQLITE_ERROR, code 7500). The code binds `owner` plus every selected id as separate
   parameters for bulk delete and bulk edit (`dbWrite.ts`) and for attachments (`dbAttachments.ts`), so a bulk
-  action on more than 99 rows is expected to fail today. node:sqlite allows 32,766 variables, so the unit
-  tests cannot see it. This went through the query API, which uses the same engine as the Worker binding; the
+  action on more than 99 rows was expected to fail. node:sqlite allows 32,766 variables, so the unit tests could
+  not see it; the stand-in now enforces the limit, and those paths bind one JSON list (`sqlIdList.ts`). This
+  went through the query API, which uses the same engine as the Worker binding; the
   app's own bulk route sits behind Cloudflare Access and was not exercised.
 - **One bound JSON string is a working fix.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
   list itself is read as rows (501 rows read for 500 ids).
@@ -109,5 +110,5 @@ read.
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite,
-  so the real SQL runs in tests. It cannot reproduce D1 billing or limits. They live in `src/testing/` because
+  so the real SQL runs in tests. It enforces D1's bound-parameter limit but cannot reproduce its billing. They live in `src/testing/` because
   the `functions/` typecheck has no Node types.
