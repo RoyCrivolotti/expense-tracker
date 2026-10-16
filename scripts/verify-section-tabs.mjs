@@ -166,6 +166,18 @@ function measure(page, bar) {
 }
 
 /**
+ * Room to scroll below whatever is open. A section that fits on the screen has nothing to scroll,
+ * so a tap on it leaves its content at its natural place, a stack gap (16px) under the bar, not at
+ * the landing line; the demo's Spending is one. The landing is what is measured, so the page is
+ * given the room to reach it.
+ */
+function addScrollRoom(page) {
+  return page.evaluate(() => {
+    document.documentElement.style.paddingBottom = `${window.innerHeight}px`
+  })
+}
+
+/**
  * The bar sticks under the header (tucked 1px beneath it), is 44px high on a phone, fades what
  * scrolls under it, and a section tapped from down the page lands its content 8px under it
  * and comes back where it was left.
@@ -182,6 +194,7 @@ async function checkBar(browser, tabName, first, second) {
   check(where, '(a) what scrolls under the bar fades out', m.fade, 'no ::after under the bar')
 
   const leftAt = m.y
+  await addScrollRoom(page)
   await pick(page, tabName, second)
   m = await measure(page, tabName)
   check(where, `(b) ${second} lands its content ${AIR}px under the bar`, m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
