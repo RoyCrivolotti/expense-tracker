@@ -3,10 +3,12 @@ import type { Transaction } from '../../types'
 import { groupListRowsByDay, type TransactionListRow } from '../../engine'
 import { type Lookup } from '../format'
 import { useCollapsedDateGroups } from '../hooks/useCollapsedDateGroups'
+import { WINDOW_FROM_ROWS } from '../hooks/windowLayout'
 import { DayGroup, type DayGroupShared } from './DayGroup'
 import { EmptyState } from './primitives'
 import { StatementPaymentRow } from './StatementPaymentRow'
 import { TransactionRow } from './TransactionRow'
+import { WindowedGroups } from './WindowedGroups'
 import styles from './TransactionList.module.css'
 
 const NO_SELECTION: ReadonlySet<number> = new Set()
@@ -99,6 +101,19 @@ export function TransactionList({ rows, lookup, flat = false, ...props }: Transa
     onAddForDate: props.onAddForDate,
     renderRow: renderListRow,
   }
+  if (rows.length > WINDOW_FROM_ROWS) {
+    // Row height depends on the layout of the row, so measurements are not carried over a switch.
+    const signature = `${shared.selectMode}-${props.swipeDelete ?? false}`
+    return (
+      <WindowedGroups
+        groups={groups}
+        collapsedDates={collapsedDates}
+        signature={signature}
+        shared={shared}
+      />
+    )
+  }
+
   return (
     <div className={styles.list}>
       {groups.map((group) => (
