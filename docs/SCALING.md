@@ -51,10 +51,24 @@ What it says:
 5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so "All" scope renders every row. The
    backup runs the same load for every owner in one invocation, so it hits the same CPU wall.
 
-Not measurable here, and needed on a deployed database: workerd CPU, D1 `rows_read`/`rows_written`, whether
-`batch()` counts as one query toward the 50, and the 100-parameter limit. The code binds `owner` plus up to 500
-ids in one statement for bulk delete and bulk edit (`dbWrite.ts`) and for attachments (`dbAttachments.ts`).
-node:sqlite allows 32,766 variables, so the unit tests cannot see a failure there.
+## Checked on a deployed D1
+
+Read-only queries against the dev database through the D1 query API:
+
+- **The 100 bound-parameter limit is real.** A query with 100 bound parameters runs; 101 fails with
+  `too many SQL variables` (SQLITE_ERROR, code 7500). The code binds `owner` plus every selected id as separate
+  parameters for bulk delete and bulk edit (`dbWrite.ts`) and for attachments (`dbAttachments.ts`), so a bulk
+  action on more than 99 rows is expected to fail today. node:sqlite allows 32,766 variables, so the unit
+  tests cannot see it. This went through the query API, which uses the same engine as the Worker binding; the
+  app's own bulk route sits behind Cloudflare Access and was not exercised.
+- **One bound JSON string is a working fix.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
+  list itself is read as rows (501 rows read for 500 ids).
+- **`COUNT(*)` is billed as a scan**: counting a table reports every row as read.
+- The owner's real ledger, checked read-only on production, is far below the CPU wall above. This is a question
+  of growth, and of what a bulk import of old history would do, not a present failure.
+
+Still needs a deployed run: workerd CPU, whether `batch()` counts as one query toward the 50, and rows written
+per index.
 
 ## Design in one page
 
@@ -80,7 +94,8 @@ read.
 ## Stages
 
 0. Measure and decide (this page, the synthetic ledger, the SQLite D1 stand-in). No behavior change.
-1. Standalone wins: bulk-parameter fix if confirmed, `revision` and ETag, compact read, list virtualization.
+1. Standalone wins: the bulk-parameter fix (confirmed above, and the one a user can hit today), `revision` and
+   ETag, compact read, list virtualization.
 2. Server query layer: keyset list, summary, by-id, cube, series, repository contract suite, query-plan tests.
 3. Ledger model: pinned rows, typed cube cells, differential tests against the pure engines.
 4. Client data layer: hydration, invalidation, cascade refetch, snapshot per owner, version skew.
