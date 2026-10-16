@@ -307,4 +307,16 @@ describe('TxnFilters', () => {
     expect(screen.getByRole('textbox', { name: 'Maximum amount' })).not.toHaveAttribute('aria-invalid')
     expect(screen.getByRole('button', { name: /Up to 200 €/ })).toBeInTheDocument()
   })
+
+  it('keeps Min and Max together as one Amount filter', async () => {
+    const user = userEvent.setup()
+    render(<TxnFilters {...baseProps()} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    const group = screen.getByRole('group', { name: 'Amount' })
+    expect(within(group).getAllByRole('textbox')).toHaveLength(2)
+
+    await user.click(within(group).getByText('Amount'))
+    expect(screen.getByRole('textbox', { name: 'Minimum amount' })).toHaveFocus()
+  })
 })

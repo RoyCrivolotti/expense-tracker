@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import { ChevronIcon, CloseIcon, FilterIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
@@ -341,6 +341,7 @@ export function FilterFields({
 
 /** One bound of the amount filter. Empty is no bound; text that is not an amount is marked invalid and ignored. */
 function AmountBoundInput({
+  id,
   value,
   cents,
   placeholder,
@@ -348,6 +349,7 @@ function AmountBoundInput({
   selectMode,
   onChange,
 }: {
+  id?: string
   value: string
   cents: number | null
   placeholder: string
@@ -358,10 +360,10 @@ function AmountBoundInput({
   const invalid = value.trim() !== '' && cents === null
   return (
     <input
+      {...(id ? { id } : {})}
       type="text"
       inputMode="decimal"
       autoComplete="off"
-      className={cents !== null ? styles.activeAmount : undefined}
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
@@ -372,7 +374,10 @@ function AmountBoundInput({
   )
 }
 
-/** Min and Max amount, both inclusive and compared by size (see TxnFilter.amountMinCents). */
+/**
+ * Min and Max amount in one box, so the two read as one filter the way each select does. Both
+ * bounds are inclusive and compared by size (see TxnFilter.amountMinCents).
+ */
 export function AmountRangeRow({
   amountMin,
   amountMax,
@@ -390,20 +395,34 @@ export function AmountRangeRow({
   onAmountMin: (value: string) => void
   onAmountMax: (value: string) => void
 }) {
+  const minId = useId()
+  const labelId = useId()
+  const active = amountMinCents !== null || amountMaxCents !== null
   return (
-    <div className={styles.amountRange}>
+    <div
+      className={active ? `${styles.amountRange} ${styles.amountRangeActive}` : styles.amountRange}
+      role="group"
+      aria-labelledby={labelId}
+    >
+      <label id={labelId} htmlFor={minId} className={styles.amountRangeLabel}>
+        Amount
+      </label>
       <AmountBoundInput
+        id={minId}
         value={amountMin}
         cents={amountMinCents}
-        placeholder="Min amount"
+        placeholder="Min"
         ariaLabel="Minimum amount"
         selectMode={selectMode}
         onChange={onAmountMin}
       />
+      <span className={styles.amountRangeDash} aria-hidden="true">
+        –
+      </span>
       <AmountBoundInput
         value={amountMax}
         cents={amountMaxCents}
-        placeholder="Max amount"
+        placeholder="Max"
         ariaLabel="Maximum amount"
         selectMode={selectMode}
         onChange={onAmountMax}
