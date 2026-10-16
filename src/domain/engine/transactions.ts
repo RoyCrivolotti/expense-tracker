@@ -18,6 +18,20 @@ export interface TxnFilter {
    *  a transaction can hold zero labels validly, but that is not itself a
    *  filterable dimension the way "unflagged" is. */
   labelIds?: number[]
+  /**
+   * Inclusive bounds on the size of the amount, so an investment withdrawal (stored negative)
+   * compares like any other row. Income and expenses are told apart by `type`, not by sign.
+   */
+  amountMinCents?: number
+  amountMaxCents?: number
+}
+
+/** Whether an amount's size falls inside the filter's amount bounds. */
+export function matchesAmountBounds(amountCents: number, filter: TxnFilter): boolean {
+  const size = Math.abs(amountCents)
+  if (filter.amountMinCents != null && size < filter.amountMinCents) return false
+  if (filter.amountMaxCents != null && size > filter.amountMaxCents) return false
+  return true
 }
 
 function matchesQuery(txn: Transaction, query: string): boolean {
@@ -59,6 +73,7 @@ function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (!matchesFlag(txn, filter)) return false
   if (!matchesLabels(txn, filter)) return false
   if (!matchesTypeAndStatus(txn, filter)) return false
+  if (!matchesAmountBounds(txn.amountCents, filter)) return false
   if (filter.query && !matchesQuery(txn, filter.query)) return false
   return true
 }

@@ -3,6 +3,7 @@ import type { Account, Category, Flag, Label, TxnStatus, TxnType } from '../../t
 import styles from './tabs.module.css'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { FilterToggle, SearchRow } from './TxnFilterRows'
@@ -25,6 +26,11 @@ export interface TxnFiltersProps {
   flagId: number | 'all' | 'none'
   labelIds: number[]
   txnType: TxnType | 'all'
+  /** What is typed in the Min and Max boxes, and what each reads as (null: no bound). */
+  amountMin: string
+  amountMax: string
+  amountMinCents: number | null
+  amountMaxCents: number | null
   dateScope: TxnDateScope
   customDateFrom: string
   customDateTo: string
@@ -44,6 +50,8 @@ export interface TxnFiltersProps {
   onLabelIds: (ids: number[]) => void
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
+  onAmountMin: (value: string) => void
+  onAmountMax: (value: string) => void
   onDateScope: (value: TxnDateScope) => void
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
@@ -54,7 +62,8 @@ export interface TxnFiltersProps {
 
 export function TxnFilters(props: TxnFiltersProps) {
   const [expanded, setExpanded] = useState(false)
-  const activeChips = useMemo(() => buildActiveFilterChips(props), [props])
+  const format = useMoneyFormat()
+  const activeChips = useMemo(() => buildActiveFilterChips({ ...props, format }), [props, format])
 
   return (
     <>
@@ -106,6 +115,10 @@ export function TxnFilters(props: TxnFiltersProps) {
           flagId={props.flagId}
           labelIds={props.labelIds}
           txnType={props.txnType}
+          amountMin={props.amountMin}
+          amountMax={props.amountMax}
+          amountMinCents={props.amountMinCents}
+          amountMaxCents={props.amountMaxCents}
           dateScope={props.dateScope}
           customDateFrom={props.customDateFrom}
           customDateTo={props.customDateTo}
@@ -117,6 +130,8 @@ export function TxnFilters(props: TxnFiltersProps) {
           onLabelIds={props.onLabelIds}
           onStatus={props.onStatus}
           onTxnType={props.onTxnType}
+          onAmountMin={props.onAmountMin}
+          onAmountMax={props.onAmountMax}
           onDateScope={props.onDateScope}
           onCustomDateFrom={props.onCustomDateFrom}
           onCustomDateTo={props.onCustomDateTo}

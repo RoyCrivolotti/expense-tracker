@@ -160,3 +160,30 @@ describe('filterTransactions — labelIds', () => {
     expect(out.map((t) => t.id)).toEqual([5, 2])
   })
 })
+
+describe('filterTransactions by amount', () => {
+  function priced(id: number, amountCents: number, extra: Partial<Transaction> = {}): Transaction {
+    return { ...txn(id, '2026-03-01'), amountCents, ...extra }
+  }
+  const rows = [
+    priced(1, 4999),
+    priced(2, 5000),
+    priced(3, 20_000),
+    priced(4, 20_001),
+    priced(5, -7500, { type: 'investment' }),
+  ]
+  const ids = (list: Transaction[]) => list.map((t) => t.id).sort((a, b) => a - b)
+
+  it('keeps both bounds, inclusive', () => {
+    expect(ids(filterTransactions(rows, { amountMinCents: 5000, amountMaxCents: 20_000 }))).toEqual([2, 3, 5])
+  })
+
+  it('compares an investment withdrawal by its size', () => {
+    expect(ids(filterTransactions(rows, { amountMinCents: 7500, amountMaxCents: 7500 }))).toEqual([5])
+  })
+
+  it('takes either bound alone', () => {
+    expect(ids(filterTransactions(rows, { amountMinCents: 20_000 }))).toEqual([3, 4])
+    expect(ids(filterTransactions(rows, { amountMaxCents: 4999 }))).toEqual([1])
+  })
+})

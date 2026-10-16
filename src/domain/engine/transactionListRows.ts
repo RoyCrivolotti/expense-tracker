@@ -1,7 +1,7 @@
 import type { Account, AccountStatement, Transaction } from '../types'
 import type { CashRow } from './cashReconciliation'
 import { buildStatementPayments, type StatementPaymentRow } from './statementPayments'
-import { filterTransactions, type TxnFilter } from './transactions'
+import { filterTransactions, matchesAmountBounds, type TxnFilter } from './transactions'
 
 export type TransactionListRow =
   | { kind: 'transaction'; txn: Transaction }
@@ -64,6 +64,7 @@ function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): b
   if (!matchesCategoryAndStatus(filter)) return false
   if (!matchesFlagFilter(filter)) return false
   if (!matchesLabelFilter(filter)) return false
+  if (!matchesAmountBounds(row.amountCents, filter)) return false
   if (filter.query && !matchesQuery(row, filter.query)) return false
   return true
 }
