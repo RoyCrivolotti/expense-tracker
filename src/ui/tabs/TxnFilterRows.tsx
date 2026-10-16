@@ -58,7 +58,7 @@ export function SearchRow({
           className={styles.search}
           type="text"
           inputMode="search"
-          placeholder="Search description or notes…"
+          placeholder="Search description, notes or amount…"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           disabled={selectMode}

@@ -11,7 +11,7 @@ import {
 } from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { parseAmountBound } from './txnAmountFilter'
+import { parseAmountBound, parseQueryAmount } from './txnAmountFilter'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
 import {
@@ -110,6 +110,7 @@ function useTxnListFilters(
 
   const amountMinCents = parseAmountBound(amountMin, moneyFormat)
   const amountMaxCents = parseAmountBound(amountMax, moneyFormat)
+  const queryAmount = useMemo(() => parseQueryAmount(query.trim(), moneyFormat), [query, moneyFormat])
 
   const filter = useMemo(
     () => ({
@@ -121,6 +122,7 @@ function useTxnListFilters(
       ...(labelIds.length > 0 ? { labelIds } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
+      ...(queryAmount ? { queryAmount } : {}),
       ...(amountMinCents !== null ? { amountMinCents } : {}),
       ...(amountMaxCents !== null ? { amountMaxCents } : {}),
     }),
@@ -136,6 +138,7 @@ function useTxnListFilters(
       labelIds,
       txnType,
       query,
+      queryAmount,
       amountMinCents,
       amountMaxCents,
     ],

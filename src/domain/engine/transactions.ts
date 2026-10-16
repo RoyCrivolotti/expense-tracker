@@ -24,6 +24,17 @@ export interface TxnFilter {
    */
   amountMinCents?: number
   amountMaxCents?: number
+  /**
+   * The search text read as an amount, as a range of sizes: "64" is 64,00 to 64,99 so the cents
+   * need not be remembered. A row matching it is kept even when the text does not match. The
+   * caller parses it, since only the caller knows the user's number format.
+   */
+  queryAmount?: AmountRange
+}
+
+export interface AmountRange {
+  fromCents: number
+  toCents: number
 }
 
 /** Whether an amount's size falls inside the filter's amount bounds. */
@@ -34,7 +45,15 @@ export function matchesAmountBounds(amountCents: number, filter: TxnFilter): boo
   return true
 }
 
-function matchesQuery(txn: Transaction, query: string): boolean {
+/** Whether an amount's size falls inside the amount the search text was read as. */
+export function matchesQueryAmount(amountCents: number, range: AmountRange | undefined): boolean {
+  if (!range) return false
+  const size = Math.abs(amountCents)
+  return size >= range.fromCents && size <= range.toCents
+}
+
+function matchesQuery(txn: Transaction, query: string, range: AmountRange | undefined): boolean {
+  if (matchesQueryAmount(txn.amountCents, range)) return true
   const haystack = `${txn.description} ${txn.notes ?? ''}`.toLowerCase()
   return haystack.includes(query.toLowerCase())
 }
@@ -74,7 +93,7 @@ function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (!matchesLabels(txn, filter)) return false
   if (!matchesTypeAndStatus(txn, filter)) return false
   if (!matchesAmountBounds(txn.amountCents, filter)) return false
-  if (filter.query && !matchesQuery(txn, filter.query)) return false
+  if (filter.query && !matchesQuery(txn, filter.query, filter.queryAmount)) return false
   return true
 }
 

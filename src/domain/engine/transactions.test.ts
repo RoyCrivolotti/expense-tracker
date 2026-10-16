@@ -186,4 +186,10 @@ describe('filterTransactions by amount', () => {
     expect(ids(filterTransactions(rows, { amountMinCents: 20_000 }))).toEqual([3, 4])
     expect(ids(filterTransactions(rows, { amountMaxCents: 4999 }))).toEqual([1])
   })
+
+  it('keeps a search that matches by amount or by text', () => {
+    const list = [priced(1, 6410), priced(2, 2064), { ...priced(3, 100), description: 'Room 64' }]
+    const found = filterTransactions(list, { query: '64', queryAmount: { fromCents: 6400, toCents: 6499 } })
+    expect(ids(found)).toEqual([1, 3])
+  })
 })

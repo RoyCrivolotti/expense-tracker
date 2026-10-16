@@ -265,4 +265,9 @@ describe('buildTransactionListRows by amount', () => {
     expect(rowsFor({ month: '2026-06', amountMinCents: 10_000 })).toEqual(['statement-payment'])
     expect(rowsFor({ month: '2026-06', amountMaxCents: 10_000 })).toEqual(['transaction'])
   })
+
+  it('finds a card payment by its amount in search', () => {
+    const filter = { month: '2026-06', query: '300', queryAmount: { fromCents: 30_000, toCents: 30_099 } }
+    expect(rowsFor(filter)).toEqual(['statement-payment'])
+  })
 })

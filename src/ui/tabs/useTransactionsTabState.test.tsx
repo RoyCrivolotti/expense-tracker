@@ -413,6 +413,14 @@ describe('useTransactionsTabState — amount filter', () => {
   }
   const ids = (rows: { id: number }[]) => rows.map((r) => r.id).sort((a, b) => a - b)
 
+  it('finds a row by the amount typed in search', () => {
+    const { result } = renderHook(() => useTransactionsTabState(modelWithRows(), '2026-05'))
+
+    act(() => result.current.setQuery('64'))
+
+    expect(ids(result.current.results)).toEqual([1])
+  })
+
   it('narrows by Min and Max, counting them as one filter', () => {
     const { result } = renderHook(() => useTransactionsTabState(modelWithRows(), '2026-05'))
 

@@ -1,3 +1,4 @@
+import type { AmountRange } from '../../engine'
 import { formatCents, formatCentsCompact, tryParseMoneyToCents, type MoneyFormat } from '../../engine/money'
 
 /**
@@ -9,6 +10,21 @@ export function parseAmountBound(raw: string, format: MoneyFormat): number | nul
   if (raw.trim() === '') return null
   const cents = tryParseMoneyToCents(raw, format)
   return cents === null ? null : Math.abs(cents)
+}
+
+/** Cents typed at the end of a number. Three digits after a mark are thousands ("1.200"), as the parser reads them. */
+const TYPED_CENTS = /[.,]\d{1,2}$/
+
+/**
+ * The search text read as an amount, or null when it is not one. Typed cents match exactly; a whole
+ * number matches every amount with that whole part, so "64" finds 64,10 without remembering the cents.
+ */
+export function parseQueryAmount(query: string, format: MoneyFormat): AmountRange | null {
+  const cents = tryParseMoneyToCents(query, format)
+  if (cents === null) return null
+  const size = Math.abs(cents)
+  const number = query.replaceAll(format.symbol, '').replace(/[\s-]/g, '')
+  return TYPED_CENTS.test(number) ? { fromCents: size, toCents: size } : { fromCents: size, toCents: size + 99 }
 }
 
 /** Whole amounts without ",00": a bound is usually a round number, and the chip has little room. */
