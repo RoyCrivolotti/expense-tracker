@@ -3,7 +3,7 @@ import { syntheticLedger } from '../../src/testing/syntheticLedger'
 import type { ExpenseDataset } from '../../src/domain/types'
 import { loadDataset } from './db'
 import type { Env } from './env'
-import { migratedDatabase, newStats, sqliteD1 } from '../../src/testing/sqliteD1'
+import { D1_MAX_BOUND_PARAMETERS, migratedDatabase, newStats, sqliteD1 } from '../../src/testing/sqliteD1'
 import { seedDataset } from '../../src/testing/seedSqlite'
 
 const OWNER = 'owner@example.com'
@@ -35,6 +35,39 @@ describe('sqliteD1', () => {
     const results = await db.batch([insert(2), db.prepare('SELECT id FROM categories')])
     expect(results[0].meta.changes).toBe(1)
     expect(results[1].results).toEqual([{ id: 2 }])
+  })
+
+  describe('bound-parameter limit', () => {
+    const marks = (n: number) => Array.from({ length: n }, () => '?').join(', ')
+    const values = (n: number) => Array.from({ length: n }, (_, i) => i)
+
+    it('accepts exactly the limit and rejects one more, on every way of reading', async () => {
+      const db = sqliteD1(migratedDatabase())
+      const select = (n: number) => db.prepare(`SELECT ${marks(n)}`).bind(...values(n))
+
+      expect(D1_MAX_BOUND_PARAMETERS).toBe(100)
+      expect((await select(100).all()).results).toHaveLength(1)
+      for (const read of ['first', 'all', 'raw', 'run'] as const) {
+        await expect(select(101)[read]()).rejects.toThrow(/too many SQL variables/)
+      }
+    })
+
+    it('rolls a batch back when one statement is over the limit', async () => {
+      const db = sqliteD1(migratedDatabase())
+      const insert = db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, 1, 'Food')
+      const tooMany = db.prepare(`SELECT ${marks(101)}`).bind(...values(101))
+
+      await expect(db.batch([insert, tooMany])).rejects.toThrow(/too many SQL variables/)
+      expect(await db.prepare('SELECT COUNT(*) AS n FROM categories').first('n')).toBe(0)
+    })
+
+    it('takes a different limit, or none', async () => {
+      const raw = migratedDatabase()
+      const select = (db: ReturnType<typeof sqliteD1>, n: number) => db.prepare(`SELECT ${marks(n)}`).bind(...values(n)).all()
+
+      await expect(select(sqliteD1(raw, newStats(), { maxBoundParameters: 5 }), 6)).rejects.toThrow(/limit 5/)
+      expect((await select(sqliteD1(raw, newStats(), { maxBoundParameters: Infinity }), 1000)).results).toHaveLength(1)
+    })
   })
 })
 

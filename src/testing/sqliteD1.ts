@@ -1,8 +1,8 @@
 /**
  * A D1Database stand-in backed by node:sqlite, so the real SQL in `functions/_shared` can run against the
- * real migrations without Cloudflare. It cannot reproduce D1's billing or limits (node:sqlite allows 32k
- * bound variables where D1 allows 100, and has no row-read meter), so anything about cost still has to be
- * measured on a deployed database. Import only from node-environment tests.
+ * real migrations without Cloudflare. It enforces D1's cap on bound parameters per statement (node:sqlite
+ * itself allows 32k) but not its billing, so anything about cost still has to be measured on a deployed
+ * database. Import only from node-environment tests.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -18,6 +18,14 @@ export interface SqliteD1Stats {
 
 export function newStats(): SqliteD1Stats {
   return { statements: 0, rowsReturned: 0, sqliteMs: 0 }
+}
+
+/** What a deployed D1 accepts in one statement: 100 bound parameters runs, 101 fails. */
+export const D1_MAX_BOUND_PARAMETERS = 100
+
+export interface SqliteD1Options {
+  /** Statements binding more values than this are rejected as D1 does. `Infinity` lifts the limit. */
+  maxBoundParameters?: number
 }
 
 const MIGRATIONS = join(import.meta.dirname, '..', '..', 'migrations')
@@ -73,32 +81,40 @@ function prepared(
   sql: string,
   stats: SqliteD1Stats,
   params: SQLInputValue[],
+  maxBound: number,
 ): Prepared {
   const stmt = db.prepare(sql)
+  const checked = <T>(fn: () => T): Promise<T> =>
+    settle(() => {
+      if (params.length > maxBound) {
+        throw new Error(`D1_ERROR: too many SQL variables: SQLITE_ERROR (${params.length} bound, limit ${maxBound})`)
+      }
+      return fn()
+    })
   return {
     sql,
-    bind: (...values) => prepared(db, sql, stats, values),
+    bind: (...values) => prepared(db, sql, stats, values, maxBound),
     first: (column) =>
-      settle(() => {
+      checked(() => {
         const row = timed(stats, () => stmt.get(...params)) as Row | undefined
         if (row === undefined) return null
         return column === undefined ? row : row[column]
       }),
     all: () =>
-      settle(() => {
+      checked(() => {
         const results = timed(stats, () => stmt.all(...params)) as Row[]
         stats.rowsReturned += results.length
         return { results, success: true, meta: { rows_read: results.length, changes: 0 } }
       }),
     raw: () =>
-      settle(() => {
+      checked(() => {
         stmt.setReturnArrays(true)
         const results = timed(stats, () => stmt.all(...params)) as unknown as unknown[][]
         stats.rowsReturned += results.length
         return results
       }),
     run: () =>
-      settle(() => {
+      checked(() => {
         const info = timed(stats, () => stmt.run(...params))
         return { results: [], success: true, meta: { changes: Number(info.changes) } }
       }),
@@ -110,9 +126,13 @@ function isRead(sql: string): boolean {
 }
 
 /** `batch` is one transaction, as on D1: any failure rolls the whole batch back. */
-export function sqliteD1(db: DatabaseSync, stats: SqliteD1Stats = newStats()): D1Database {
+export function sqliteD1(
+  db: DatabaseSync,
+  stats: SqliteD1Stats = newStats(),
+  { maxBoundParameters = D1_MAX_BOUND_PARAMETERS }: SqliteD1Options = {},
+): D1Database {
   const shim = {
-    prepare: (sql: string) => prepared(db, sql, stats, []),
+    prepare: (sql: string) => prepared(db, sql, stats, [], maxBoundParameters),
     batch: async (statements: Prepared[]) => {
       db.exec('BEGIN')
       try {
