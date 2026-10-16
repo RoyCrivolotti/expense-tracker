@@ -47,6 +47,15 @@ exact statements sent (so reassignment SQL stays owner-scoped) and that a reject
 as an error with zero partial writes. Reuse that `stubEnv()` helper for any future D1 adapter
 change that must be all-or-nothing.
 
+## Running the real SQL locally, and measuring scale
+
+`src/testing/sqliteD1.ts` wraps node:sqlite in a `D1Database`-shaped object over the real
+migrations, and `src/testing/seedSqlite.ts` loads an `ExpenseDataset` into it, so `loadDataset` and any later query code run
+against real SQL without Cloudflare. It cannot reproduce D1's 100-bound-parameter limit or its billing.
+`src/testing/syntheticLedger.ts` builds a deterministic dataset of any size. `SCALING_MEASURE=1 npx vitest run
+functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
+results are in [SCALING.md](./SCALING.md).
+
 ## Real-browser checks (manual)
 
 jsdom lays nothing out, so the unit tests for the Goals phone navigation and the section tabs write down every position they depend on. Four Playwright scripts measure the real thing in headless Chromium, on the `DOCS_CAPTURE=1` demo instance (seeded demo data, nothing real). Each starts its own dev server and stops it again. They are run by hand, need Chromium (`npx playwright install chromium`) and take a minute or a few, so none is part of `npm run verify` or CI.
