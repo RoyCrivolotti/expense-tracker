@@ -391,7 +391,7 @@ export function AmountRangeRow({
   onAmountMax: (value: string) => void
 }) {
   return (
-    <div className={styles.amountRange}>
+    <div className={styles.amountRange} role="group" aria-label="Amount">
       <AmountBoundInput
         value={amountMin}
         cents={amountMinCents}
