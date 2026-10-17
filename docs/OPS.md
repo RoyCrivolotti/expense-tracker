@@ -76,7 +76,9 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 - **category** / **account**: must match existing names exactly.
 - **type**: `expense`, `income`, `investment`, or `refund`.
 - **amount_cents**: integer cents, positive; an `investment` may be negative for money taken back out of the portfolio.
-- **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`.
+- **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`, and a real day and month (`2025-02-30` and `2025-13` are refused).
+- **description**: text of at most 140 characters, which an import, a new transaction and an edit all hold to. The server
+  refuses a whole import with the row number when one row breaks a rule.
 - Easiest path: Settings → Data → Export, edit the CSV, then Import.
 
 Settings → Data → Import includes a **Download template** with the header and one example row.

@@ -3,6 +3,7 @@ import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { ExpenseSettings, TxnType } from '../types'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../data/amountSign'
+import { parseIsoDate } from '../engine/dates'
 import { MAX_DESCRIPTION_LENGTH } from './entityValidation'
 import { ValidationError } from './validationError'
 
@@ -24,11 +25,6 @@ function requirePositiveInt(value: unknown, label: string): number {
   return value as number
 }
 
-function requirePattern(value: unknown, pattern: RegExp, label: string): string {
-  if (typeof value !== 'string' || !pattern.test(value)) throw new ValidationError(label)
-  return value
-}
-
 function requireString(value: unknown, label: string): string {
   if (typeof value !== 'string') throw new ValidationError(`${label} must be text`)
   return value
@@ -45,6 +41,32 @@ function requireDescription(value: unknown): string {
     throw new ValidationError(`description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
   }
   return text
+}
+
+/**
+ * Whatever is written as a description may not be longer than a new one is allowed to be: the text is indexed and
+ * stored a second time as `description_norm`. It is stored as sent and may be blank (an edit can clear it, and an
+ * import can leave it empty); it must be text, because a number would be stored as text by SQLite but has no `trim`.
+ */
+function requireBoundedDescription(value: unknown): string {
+  const text = requireString(value, 'description')
+  if (text.trim().length > MAX_DESCRIPTION_LENGTH) {
+    throw new ValidationError(`description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
+  }
+  return text
+}
+
+/** A real calendar day, not just the pattern: `2024-00-15` and `2025-02-30` fit the pattern and are not days. */
+function requireDate(value: unknown): string {
+  if (typeof value !== 'string' || parseIsoDate(value) === null) throw new ValidationError('date must be YYYY-MM-DD')
+  return value
+}
+
+function requireBudgetMonth(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    throw new ValidationError('budgetMonth must be YYYY-MM')
+  }
+  return value
 }
 
 /**
@@ -71,8 +93,8 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
     if (!VALID_TXN_TYPES.has(v as string)) throw new ValidationError('Invalid transaction type')
     p.type = v as TxnType
   },
-  date: (v, p) => { p.date = requirePattern(v, /^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD') },
-  budgetMonth: (v, p) => { p.budgetMonth = requirePattern(v, /^\d{4}-\d{2}$/, 'budgetMonth must be YYYY-MM') },
+  date: (v, p) => { p.date = requireDate(v) },
+  budgetMonth: (v, p) => { p.budgetMonth = requireBudgetMonth(v) },
   // null is meaningful here: it is how a selection is unflagged.
   flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
   description: (v, p) => { p.description = requireDescription(v) },
@@ -98,6 +120,9 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
   if (!input.date || !input.budgetMonth || !input.accountId || !input.categoryId) {
     throw new ValidationError('date, budgetMonth, accountId and categoryId are required')
   }
+  requireDate(input.date)
+  requireBudgetMonth(input.budgetMonth)
+  requireBoundedDescription(input.description)
   // The UI forms already enforce this for instant feedback, but this is the real
   // source of truth: any other caller (a future import path, a retry, a script)
   // must be stopped here too, not just trusted.
@@ -196,9 +221,9 @@ const PATCH_FIELD_VALIDATORS: Record<
   string,
   (v: unknown, p: Record<string, unknown>) => void
 > = {
-  date: (v, p) => { p.date = requirePattern(v, /^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD') },
-  budgetMonth: (v, p) => { p.budgetMonth = requirePattern(v, /^\d{4}-\d{2}$/, 'budgetMonth must be YYYY-MM') },
-  description: (v, p) => { p.description = requireString(v, 'description') },
+  date: (v, p) => { p.date = requireDate(v) },
+  budgetMonth: (v, p) => { p.budgetMonth = requireBudgetMonth(v) },
+  description: (v, p) => { p.description = requireBoundedDescription(v) },
   accountId: (v, p) => { p.accountId = requirePositiveInt(v, 'accountId') },
   categoryId: (v, p) => { p.categoryId = requirePositiveInt(v, 'categoryId') },
   type: (v, p) => {
