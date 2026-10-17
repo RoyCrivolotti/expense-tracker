@@ -9,7 +9,7 @@ Functions are both adapters around it.
 | --- | --- | --- | --- |
 | **Engine** (pure compute) | `src/domain/engine/` | Nothing | Money formatting, dates, budget totals, cash reconciliation, transaction status, goals math |
 | **Ports** (interfaces) | `src/domain/ports/` | Domain types only | `ExpenseRepository`, `AccessRepository`, `AuthProvider`, `BackupStore`, `EmailSender` — shapes the UI and Functions code against, never a vendor SDK |
-| **Application** (use cases) | `src/domain/application/` | Ports, engine | Orchestration that needs more than one repository call (`installmentPlanService`, `transactionService`, `transactionQueryService`, `goalService`, `categoryService`) |
+| **Application** (use cases) | `src/domain/application/` | Ports, engine | Orchestration that needs more than one repository call (`installmentPlanService`, `transactionService`, `transactionQueryService`, `ledgerPartsService`, `goalService`, `categoryService`) |
 | **Data** (parsing) | `src/domain/data/` | Domain types | CSV import/export parsing, transaction ID helpers — pure, no I/O |
 | **Adapters — backend** | `functions/_shared/adapters/` | Ports | `d1ExpenseRepository`, `d1AccessRepository`, `r2BackupStore`, `cloudflareEmailSender`, `cloudflareAccessAuth` |
 | **Adapters — frontend** | `src/data/`, `src/testing/` | Ports | `apiDataSource` (HTTP client), `csvDataSource`, `inMemoryExpenseRepository` (test double) |
@@ -76,8 +76,8 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
     auth and is not a GET, HEAD or OPTIONS. A new write route needs nothing; a new GET route
     must not write. The second bump also runs when the handler throws or answers with an error
     (the write may have landed), and is retried once.
-  - `backfillInstallments` replaces it when it inserted rows. It writes during a GET, and the
-    backup reaches it through `loadDataset`.
+  - `backfillInstallments` replaces it when it inserted rows. It writes during a GET
+    (`/api/expenses` and `/api/expenses/reference`), and the backup reaches it through `loadDataset`.
   - `purgeOwnerData` deletes the row.
   - Anything else that writes those tables outside the API (a seed script, SQL by hand, a data
     migration) deletes or replaces the owner's row, as the generators in `scripts/` do.
@@ -112,6 +112,20 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   `json_each`. The owner comes from the session, never from a filter or a cursor.
   `transactionQueryPlans.test.ts` runs each statement shape through `EXPLAIN QUERY PLAN` and fails on a full
   scan of `transactions`, or on a sort where the rows should come off an index in order.
+- **Ledger parts are served separately, and the ledger model with its tests is the specification.**
+  `readLedgerReference`, `readMonthRows` and `readMonthCells` on `ExpenseRepository` back
+  `GET /api/expenses/reference`, `/transactions/months` and `/cube` (`docs/SCALING.md`, "Ledger parts").
+  `inMemoryLedgerParts.ts` answers them with `partitionPinned` and `buildCells`, and
+  `dbLedgerParts.parity.test.ts` holds the SQL in `ledgerPartsSql.ts` to that over the synthetic, adversarial and
+  random ledgers, then assembles the three parts and runs the engines over them. A part carries the owner's
+  revision token in its body and answers `If-None-Match` as the dataset does; a change to its JSON means raising
+  `PARTS_FORMAT` in `datasetEtag.ts` (`ledgerPartsEtag.test.ts` fails otherwise). The pinned rule is written four
+  times: `isPinned`, `PINNED_SQL` and `UNPINNED_SQL` in `ledgerPartsSql.ts`, and the predicate of `idx_txn_pinned`
+  (migration 0037, which SQLite only reads when the statement holds the same terms). Changing it means changing all
+  four, with a new migration for the index, because a deployed index cannot be edited. Each range is capped by
+  constants in `src/domain/data/ledgerParts.ts` and refused beyond them, never cut short. The routes do not
+  write, apart from the installment backfill that `reference` runs when its ETag misses. `ledgerPartPlans.test.ts`
+  fails on a full scan of `transactions` or on a pinned read that no longer uses the index.
 
 ## Size and complexity
 
