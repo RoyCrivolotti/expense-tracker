@@ -57,8 +57,9 @@ What the table shows:
    desktop up to 100k rows, but a phone pays 4 to 8 times that on every mutation.
 4. **D1 rows read.** Every load reads every row, so the daily 5M budget covers about 440 loads at 10k rows, 90 at
    50k and 18 at 250k. An open that ends in a 304 skips the load, so the table counts opens that follow a change.
-5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so the All scope renders every row, and the
-   backup runs the same load for every owner in one invocation, so it meets the same CPU limit.
+5. The backup runs the same load for every owner in one invocation, so it meets the same CPU limit. (The
+   transaction list no longer renders every row: past 300 rows it draws only those near the screen, see
+   `docs/ARCHITECTURE.md`.)
 
 ## Checked on a deployed D1
 
@@ -106,15 +107,23 @@ How much history each engine and screen reads, and which of them give a differen
 [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
-key. Every response carries a per-owner revision, and a weak ETag on it lets most opens end after a one-row read.
+key. Each will be checked against the per-owner revision that `GET /api/expenses` already uses (see "Status"), so most
+opens end after a two-row read.
 
 ## Status
 
-Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, the per-owner revision
-with the weak ETag on `GET /api/expenses` (migration 0035) and the windowed Transactions list. Not built: everything
-else under "Proposed design". Planned work, in dependency order:
+Built:
 
-1. Standalone improvements: a compact read. (The revision and ETag, and list windowing, are built.)
+- the synthetic ledger generator and the SQLite stand-in for D1, and the measurement above;
+- the per-owner revision (migration 0035) and the weak ETag on `GET /api/expenses` built from it, so an unchanged
+  ledger is answered with a 304 and no dataset query;
+- the windowed Transactions list, which draws only the rows near the screen past 300 rows;
+- id lists bound as one JSON string, so bulk edit and delete work on more than 99 rows;
+- the audit of how much history each engine reads ([ENGINE-HISTORY.md](./ENGINE-HISTORY.md)), with tests that pin it.
+
+Not built: the compact read and everything else under "Proposed design". Planned work, in dependency order:
+
+1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
 2. A server query layer: keyset list, summary, by-id, per-month sums, series, with query-plan tests.
 3. The ledger model and differential tests against the pure engines.
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
