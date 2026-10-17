@@ -227,8 +227,8 @@ Not built: the compact read and everything else under "Proposed design". Planned
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
-  account), a stand-in that refuses more than 100 bound values as D1 does, and a seeded generator of filters, for
-  the paged-read tests.
+  account), the stand-in with a record of every statement it ran (for the query-plan tests), and a seeded generator
+  of filters, for the paged-read tests.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
   the real SQL runs in tests. It enforces the 100 bound-parameter limit but cannot reproduce D1's billing. They
   live in `src/testing/` because the `functions/` typecheck has no Node types.

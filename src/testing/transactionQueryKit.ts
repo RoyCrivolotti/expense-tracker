@@ -1,8 +1,9 @@
 /**
  * Shared set-up for the tests of the paged transaction reads: a synthetic ledger plus rows built to
  * be awkward (accents, `%` and `_`, ties on a date, withdrawals, a missing account), seeded into a
- * real migrated SQLite database; a stand-in that refuses what D1 refuses; and a seeded generator of
- * filters. Import only from node-environment tests.
+ * real migrated SQLite database behind the D1 stand-in (which refuses more than 100 bound values, as
+ * D1 does) with a record of every statement it runs; and a seeded generator of filters. Import only
+ * from node-environment tests.
  */
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -18,9 +19,6 @@ import { syntheticLedger } from './syntheticLedger'
 export const OWNER = 'owner@example.com'
 export const OTHER_OWNER = 'other@example.com'
 
-/** D1 rejects a statement that binds more than this many values. */
-export const D1_MAX_BOUND_PARAMETERS = 100
-
 export interface RecordedStatement {
   sql: string
   params: unknown[]
@@ -28,24 +26,18 @@ export interface RecordedStatement {
 
 export interface QueryDb {
   sqlite: DatabaseSync
-  /** What the code under test is given: refuses over-long bind lists, records every statement. */
+  /** What the code under test is given: the D1 stand-in, recording every statement bound. */
   d1: D1Database
   stats: SqliteD1Stats
   statements: RecordedStatement[]
 }
 
-/**
- * Wraps the SQLite stand-in so that binding more than D1's 100 values fails the way D1's does,
- * and so a test can look at exactly the statements the code ran.
- */
-function guarded(inner: D1Database, statements: RecordedStatement[]): D1Database {
+/** Wraps the stand-in so that a test can look at exactly the statements the code ran. */
+function recording(inner: D1Database, statements: RecordedStatement[]): D1Database {
   const prepare = (sql: string) => {
     const statement = inner.prepare(sql)
     return Object.assign(Object.create(statement) as object, {
       bind: (...params: unknown[]) => {
-        if (params.length > D1_MAX_BOUND_PARAMETERS) {
-          throw new Error('D1_ERROR: too many SQL variables')
-        }
         statements.push({ sql, params })
         return statement.bind(...params)
       },
@@ -66,7 +58,7 @@ export function queryDb(
   others.forEach((other, i) => seedDataset(sqlite, other.owner, shifted(other.dataset, (i + 1) * 1_000_000)))
   const stats = newStats()
   const statements: RecordedStatement[] = []
-  return { sqlite, d1: guarded(sqliteD1(sqlite, stats), statements), stats, statements }
+  return { sqlite, d1: recording(sqliteD1(sqlite, stats), statements), stats, statements }
 }
 
 /** Ids are global in D1, so each further owner's rows are moved up by `by` to keep clear of the others'. */

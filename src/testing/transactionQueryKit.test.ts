@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
+import { D1_MAX_BOUND_PARAMETERS } from './sqliteD1'
 import { syntheticLedger } from './syntheticLedger'
 import {
-  D1_MAX_BOUND_PARAMETERS,
   OTHER_OWNER,
   OWNER,
   allPages,
@@ -16,10 +16,10 @@ import {
 const small = () => syntheticLedger({ months: 2, perMonth: 5, seed: 4 })
 
 describe('queryDb', () => {
-  it('refuses a statement that binds more than D1 allows, and records the ones it runs', async () => {
+  it('is the D1 stand-in, which refuses more than 100 bound values, and records the statements it is given', async () => {
     const kit = queryDb(small())
     const tooMany = Array.from({ length: D1_MAX_BOUND_PARAMETERS + 1 }, () => 1)
-    expect(() => kit.d1.prepare('SELECT 1').bind(...tooMany)).toThrow('too many SQL variables')
+    await expect(kit.d1.prepare('SELECT 1').bind(...tooMany).first()).rejects.toThrow('too many SQL variables')
     await kit.d1.prepare('SELECT ? AS n').bind(7).first()
     expect(kit.statements.at(-1)).toEqual({ sql: 'SELECT ? AS n', params: [7] })
   })
