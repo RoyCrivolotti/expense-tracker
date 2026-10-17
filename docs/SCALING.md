@@ -10,6 +10,11 @@ document. The browser keeps all of it in memory, runs every engine in `src/domai
 `Transaction[]`, clones the whole dataset on each mutation (`datasetPatches.ts`) and writes it to IndexedDB. The
 daily backup calls `loadDataset` too.
 
+The response carries a weak ETag made from a per-owner revision and the owner's budget month. A browser that
+already holds the current version gets a 304 after two rows are read, before any dataset query or the
+installment backfill. Every write replaces the revision (see "Dataset revision" in `docs/ARCHITECTURE.md`), which
+costs two more rows written per write request.
+
 ## Constraints
 
 - The app is built to run on the Cloudflare **Free** plan. The documented limits that shape the design (see
@@ -51,7 +56,7 @@ What the table shows:
 3. **The network is not the constraint.** gzip is 1.5 MB at 100k rows. Parse and clone are tens of milliseconds on a
    desktop up to 100k rows, but a phone pays 4 to 8 times that on every mutation.
 4. **D1 rows read.** Every load reads every row, so the daily 5M budget covers about 440 loads at 10k rows, 90 at
-   50k and 18 at 250k.
+   50k and 18 at 250k. An open that ends in a 304 skips the load, so the table counts opens that follow a change.
 5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so the All scope renders every row, and the
    backup runs the same load for every owner in one invocation, so it meets the same CPU limit.
 
@@ -101,10 +106,11 @@ key. Every response carries a per-owner revision, and a weak ETag on it lets mos
 
 ## Status
 
-Built: the synthetic ledger generator, the SQLite stand-in for D1 and the measurement above. Not built:
-everything under "Proposed design". Planned work, in dependency order:
+Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, the per-owner revision
+with the weak ETag on `GET /api/expenses` (migration 0035) and the windowed Transactions list. Not built: everything
+else under "Proposed design". Planned work, in dependency order:
 
-1. Standalone improvements: a compact read, the revision and ETag, list windowing.
+1. Standalone improvements: a compact read. (The revision and ETag, and list windowing, are built.)
 2. A server query layer: keyset list, summary, by-id, per-month sums, series, with query-plan tests.
 3. The ledger model and differential tests against the pure engines.
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew.

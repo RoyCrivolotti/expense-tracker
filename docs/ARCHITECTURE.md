@@ -67,6 +67,29 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   both CI workflows) runs `scripts/check-pii.mjs`, which fails the build on any tracked-file email
   outside an explicit allowlist — extend the allowlist there by exact address, not by domain,
   when adding a new legitimately-safe one.
+- **Dataset revision: every write moves it, so a matching ETag means nothing changed.**
+  `owner_revision` holds one random token per owner. `GET /api/expenses` builds a weak ETag from
+  it and the owner's current budget month, and answers a matching `If-None-Match` with 304
+  before it loads anything. A write that does not move the token leaves browsers on stale data
+  until the owner's next write, so every path that changes the dataset's tables has to:
+  - `functions/api/_middleware.ts` replaces it before and after every request that gets past
+    auth and is not a GET, HEAD or OPTIONS. A new write route needs nothing; a new GET route
+    must not write. The second bump also runs when the handler throws or answers with an error
+    (the write may have landed), and is retried once.
+  - `backfillInstallments` replaces it when it inserted rows. It writes during a GET, and the
+    backup reaches it through `loadDataset`.
+  - `purgeOwnerData` deletes the row.
+  - Anything else that writes those tables outside the API (a seed script, SQL by hand, a data
+    migration) deletes or replaces the owner's row, as the generators in `scripts/` do.
+
+  The ETag is read before the data it describes. A write in between leaves the tag older than
+  the data, which costs one reload; the other order could pair a new tag with old data. A change
+  to the JSON that `loadDataset` returns means raising `DATASET_FORMAT` in
+  `functions/_shared/datasetEtag.ts`, or browsers keep the old shape under a tag that still
+  matches (`datasetEtag.test.ts` fails when the shape moves). Each write request costs two more
+  rows written against the Free plan's daily budget.
+  `datasetRevision.integration.test.ts` derives the list of write routes from the route files and
+  fails for a route that has no test case.
 - **The Transactions list renders only the rows near the screen once it passes 300 rows.**
   Padding stands in for the rest, so the page is as long as the whole list and the sticky day
   headers still stick (a day stays one `.group`). Each rendered row sits in a `data-vrow`
