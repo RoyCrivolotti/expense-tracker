@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (A long Transactions list draws only what is on screen)
+
+- **The Transactions list stays quick with every transaction in it.** With the All dates scope and 25,000 transactions it drew every row, 434,000 page elements and about four seconds before anything showed, and a phone struggled to scroll it. Past 300 rows it now draws the days and rows near the screen, under a thousand elements and about 70 milliseconds. Scrolling, the day headers that stick, folding a day, select mode (Select all and a day's checkbox take in rows that are not drawn), swiping a row and holding one to select it work as before. One difference: the browser's Find in page only sees the rows that are drawn, so use the search box on a long list.
+
 ## October 2026 (Upcoming rows say how due they are)
 
 - **Each Upcoming row says when it is due against today.** It showed a bare date under the title Upcoming, so a charge two weeks past read the same as one due tomorrow. Rows now say "Due today", "Due tomorrow", "Due in 3 days", "Due yesterday" or "Due 2 days ago", with the date after it, and a late one is in the warning colour. The date no longer wraps onto a line of its own on a phone.

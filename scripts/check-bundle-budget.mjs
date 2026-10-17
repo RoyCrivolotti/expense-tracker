@@ -289,7 +289,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 281 KB to 282 KB for filtering transactions by amount (the Min and Max boxes, their
 // chip, and search reading an amount): 825 bytes gzip took the total from 280,549 to 281,374. No
 // new library.
-const TOTAL_MAX_GZIP = 282_000
+//
+// Raised from 282 KB to 285 KB for the windowed Transactions list (the layout maths, the row
+// height store, the scroll anchor and the component that renders only the rows near the screen):
+// 2.5 KB gzip took the total from 281,374 to 283,885 bytes. Written in-house rather than taken
+// from a library, which would have cost more.
+const TOTAL_MAX_GZIP = 285_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {
