@@ -122,6 +122,7 @@ const CASES: Record<string, (ids: SeededIds) => Request & { status: number }> = 
 
 const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
   'GET /': () => ({ path: '' }),
+  'GET /attachments': (ids) => ({ path: `/attachments?transactionId=${ids.transactions[0]}` }),
   'GET /attachments/:id': (ids) => ({ path: `/attachments/${ids.attachment}`, params: id(ids.attachment) }),
   'GET /transactions/list': () => ({ path: '/transactions/list' }),
   'GET /transactions/summary': () => ({ path: '/transactions/summary' }),
