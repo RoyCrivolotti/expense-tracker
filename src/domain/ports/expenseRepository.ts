@@ -32,11 +32,33 @@ import type {
   NewWealthAccount,
   NewWealthCheckin,
 } from '../data/dataSource'
+import type {
+  TransactionPage,
+  TransactionPageRequest,
+  TransactionSummary,
+} from '../data/transactionQuery'
+import type { TxnFilter } from '../engine/transactions'
 
 /** Persistence port — UI/API depend on this shape, not on D1 or any vendor SDK. */
 export interface ExpenseRepository {
   loadDataset(owner: string): Promise<ExpenseDataset>
   listOwners(): Promise<string[]>
+  /**
+   * One page of the owner's transactions that match `filter`, in `date DESC, id DESC` order, with the
+   * status and `labelIds` the dataset carries. The reference for what matches is `filterTransactions`
+   * in the engine; statement-payment rows are synthesized on the client and are not part of this.
+   * Paging is by position, not offset, so rows inserted or deleted between pages never repeat or
+   * hide a row that was there throughout.
+   */
+  queryTransactions(
+    owner: string,
+    filter: TxnFilter,
+    page: TransactionPageRequest,
+  ): Promise<TransactionPage>
+  /** Count (capped) and net spend of the rows `filter` matches; see `TransactionSummary`. */
+  summarizeTransactions(owner: string, filter: TxnFilter): Promise<TransactionSummary>
+  /** One row, or null if there is none with that id for this owner (a foreign id looks the same). */
+  getTransaction(owner: string, id: number): Promise<Transaction | null>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,

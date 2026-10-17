@@ -83,6 +83,7 @@ function withAccessTableMocks(env: Env): Env {
         }
         return base.prepare(sql)
       },
+      batch: (statements: D1PreparedStatement[]) => base.batch(statements),
     } as unknown as D1Database,
   }
 }
