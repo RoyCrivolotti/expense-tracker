@@ -12,6 +12,7 @@ function envWith(first: unknown): Env {
       prepare: () => ({
         bind: () => ({
           first: vi.fn().mockResolvedValue(first),
+          run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
         }),
       }),
     },

@@ -125,7 +125,7 @@ open month, these consumers give a different answer from the lists than from the
 | `computeSignals` | While M is the open month it reads the pace |
 | `buildOverviewData` | Builds the classifier from the rows it is handed, so the allocation, movers, pace, fixed costs and signals differ. KPIs, baseline and unpaid caps match |
 | `latestTransactions`, `recentlyAdded` | Global and relative to today; the window around a past M does not hold them |
-| `filterTransactions` over every date | Needs any month's rows: it is served by an endpoint |
+| `filterTransactions` over every date | Needs any month's rows: it is read through the paged transaction reads described in [SCALING.md](./SCALING.md), not from these lists |
 
 The first four rows need the classifier, or the series it is built from, passed in instead of rebuilt from a window.
 That change is not made yet. Each difference is written down in `src/testing/intendedDifferences.ts`, and the

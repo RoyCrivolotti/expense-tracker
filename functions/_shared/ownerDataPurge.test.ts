@@ -45,6 +45,7 @@ describe('purgeOwnerData', () => {
       'DELETE FROM installment_plans WHERE owner = ?',
       'DELETE FROM wealth_checkins WHERE owner = ?',
       'DELETE FROM wealth_accounts WHERE owner = ?',
+      'DELETE FROM owner_revision WHERE owner = ?',
       'DELETE FROM access_requests WHERE email = ?',
     ])
   })
