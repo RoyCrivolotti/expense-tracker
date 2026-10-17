@@ -1,4 +1,4 @@
-import type { AnalyticsBasis, AnalyticsPeriod, CompareMode, classifyFixedSpend } from '../domain/engine'
+import type { AnalyticsBasis, AnalyticsPeriod, CompareMode, OccurrenceGroup, classifyFixedSpend } from '../domain/engine'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 
 /**
@@ -43,6 +43,11 @@ export interface Context {
   /** The budget months with a row, from the linear list: what the month picker steps through. */
   months: string[]
   classifier: Classifier
+  /**
+   * The recurring series of the whole ledger. When present, the engines that would build their own
+   * classifier or series from the rows they are given are passed the whole ledger's instead.
+   */
+  groups: OccurrenceGroup[] | undefined
   base: { month: string; today: string; openMonth: string; rolloverDay: number }
 }
 

@@ -9,7 +9,13 @@
  * listed one that never differs.
  */
 import { describe, expect, it } from 'vitest'
-import { classifyFixedSpend, deriveTransactions, shiftBudgetMonth, sortedMonths } from '../domain/engine'
+import {
+  classifyFixedSpend,
+  deriveTransactions,
+  recurringFixedGroups,
+  shiftBudgetMonth,
+  sortedMonths,
+} from '../domain/engine'
 import {
   type HydrationPolicy,
   HYDRATED_DATA_MONTHS,
@@ -30,7 +36,7 @@ import {
   outputs,
   wholeLedger,
 } from './engineOutputs'
-import { INTENDED_DIFFERENCES } from './intendedDifferences'
+import { GLOBAL_DIFFERENCES, INTENDED_DIFFERENCES, OWN_CLASSIFIER_DIFFERENCES } from './intendedDifferences'
 import { makeDataset, makeTransaction } from './factories'
 import { randomLedger } from './randomLedger'
 
@@ -41,6 +47,7 @@ const ALL_KEYS = Object.keys(
   outputs(randomLedger(0), wholeLedger(randomLedger(0)), '2026-06', classifyFixedSpend([])),
 )
 const MUST_MATCH = ALL_KEYS.filter((k) => !(k in INTENDED_DIFFERENCES))
+const MUST_MATCH_WITH_HISTORY = ALL_KEYS.filter((k) => !(k in GLOBAL_DIFFERENCES))
 
 /** The month picker's months, plus the months a deep link could open: past the newest and before the oldest. */
 function viewedMonths(ds: ExpenseDataset): string[] {
@@ -60,16 +67,19 @@ function clocksFor(viewed: string): [string, Clock][] {
 
 describe('the model against the engines: seeded random ledgers', () => {
   const seeds = Array.from({ length: 80 }, (_, i) => i)
-  const failures = (policy: HydrationPolicy | 'none', keys: string[]): string[] =>
+  const failures = (policy: HydrationPolicy | 'none', keys: string[], passHistory = false): string[] =>
     seeds.flatMap((seed) => {
       const ds = randomLedger(seed)
       const classifier = classifyFixedSpend(ds.transactions)
+      const groups = passHistory ? recurringFixedGroups(ds.transactions) : undefined
       return viewedMonths(ds).flatMap((viewed) => {
         const ledger = policy === 'none' ? buildLedger(ds, []) : ledgerFor(ds, viewed, policy)
         return clocksFor(viewed).flatMap(([name, clock]) =>
-          differing(ds, viewed, wholeLedger(ds), assembleRows(ledger), keys, { clock, classifier }).map(
-            (key) => `seed ${seed}, ${viewed}, ${name}: ${key}`,
-          ),
+          differing(ds, viewed, wholeLedger(ds), assembleRows(ledger), keys, {
+            clock,
+            classifier,
+            ...(groups ? { groups } : {}),
+          }).map((key) => `seed ${seed}, ${viewed}, ${name}: ${key}`),
         )
       })
     })
@@ -114,6 +124,15 @@ describe('the model against the engines: seeded random ledgers', () => {
 
   it('gives every consumer the same answer from the 13 month window, except the intended differences', () => {
     expect(failures(WINDOWED, MUST_MATCH)).toEqual([])
+  })
+
+  it('shows the differences that passing the whole history removes', () => {
+    const shown = new Set(failures(WINDOWED, Object.keys(OWN_CLASSIFIER_DIFFERENCES)).map((f) => f.split(': ')[1]))
+    expect([...shown].sort()).toEqual(Object.keys(OWN_CLASSIFIER_DIFFERENCES).sort())
+  })
+
+  it('gives every consumer but the global lists the same answer once the whole history is passed in', () => {
+    expect(failures(WINDOWED, MUST_MATCH_WITH_HISTORY, true)).toEqual([])
   })
 
   it('hands the engines the whole dataset when the ledger is small', () => {

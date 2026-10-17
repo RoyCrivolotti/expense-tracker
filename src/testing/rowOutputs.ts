@@ -34,15 +34,17 @@ export function rowOutputs(c: Context): Outputs {
   const cats = ds.categories
   const prev = priorBudgetMonth(viewed)
   const opts = { ...base, months, basis: 'committed' as const }
+  const whole = c.groups === undefined ? {} : { classifier }
   const groups = (groupBy: 'category' | 'fixedFlexible' | 'label' | 'description') => () =>
-    computeSpendingGroups({ transactions: linear, categories: cats, labels: ds.labels }, { ...opts, groupBy })
+    computeSpendingGroups({ transactions: linear, categories: cats, labels: ds.labels, ...whole }, { ...opts, groupBy })
   const detail = (groupBy: 'fixedFlexible' | 'label' | 'description', key: string) => () =>
-    computeSpendingGroupDetail({ transactions: linear, categories: cats }, { ...opts, groupBy, key })
+    computeSpendingGroupDetail({ transactions: linear, categories: cats, ...whole }, { ...opts, groupBy, key })
   const pace = () =>
     computeSpendingPace(tx, cats, ds.installmentPlans, classifier, {
       ...base,
       basis: 'committed',
       prevMonth: months.includes(prev) ? prev : null,
+      ...(c.groups === undefined ? {} : { fixedGroups: c.groups }),
     })
   const movers = () => computeMovers(tx, cats, classifier, opts)
   return {
@@ -63,7 +65,7 @@ export function rowOutputs(c: Context): Outputs {
     detailByFixedFlexible: detail('fixedFlexible', 'fixed'),
     detailByLabel: detail('label', '1'),
     detailByDescription: detail('description', 'rent'),
-    fixedCosts: () => detectedFixedCosts(tx, ds.installmentPlans, cats, viewed),
+    fixedCosts: () => detectedFixedCosts(tx, ds.installmentPlans, cats, viewed, c.groups),
     latestEight: () => latestTransactions(tx),
     recentlyAdded: () => recentlyAdded(tx),
     listAll: () => filterTransactions(tx, {}),

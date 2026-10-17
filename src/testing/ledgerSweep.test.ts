@@ -5,29 +5,39 @@
  * are the ones written down in `INTENDED_DIFFERENCES`.
  */
 import { describe, expect, it } from 'vitest'
-import { classifyFixedSpend, sortedMonths } from '../domain/engine'
+import { classifyFixedSpend, recurringFixedGroups, sortedMonths } from '../domain/engine'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy, assembleRows, ledgerFor } from '../domain/ledger'
 import { buildExpenseModel } from '../ui/buildExpenseModel'
 import { buildOverviewData } from '../ui/analytics/overview/overviewModel'
 import { ADVERSARIAL_ROLLOVER_DAY, adversarialLedger } from './adversarialLedger'
 import { LATER, differing, openAt, outputs, plain, wholeLedger } from './engineOutputs'
-import { INTENDED_DIFFERENCES, ONLY_WHILE_OPEN, PACE_ENVELOPE_FIELDS } from './intendedDifferences'
+import {
+  GLOBAL_DIFFERENCES,
+  INTENDED_DIFFERENCES,
+  ONLY_WHILE_OPEN,
+  PACE_ENVELOPE_FIELDS,
+} from './intendedDifferences'
 
 const ds = adversarialLedger()
 const whole = wholeLedger(ds)
 const classifier = classifyFixedSpend(ds.transactions)
+const groups = recurringFixedGroups(ds.transactions)
 const months = sortedMonths(ds.transactions.map((t) => t.budgetMonth))
 const KEYS = Object.keys(outputs(ds, whole, months[0]!, classifier))
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 const clockFor = (mode: 'closed' | 'open', month: string) => (mode === 'closed' ? LATER : openAt(month))
 
-/** For each consumer, the viewed months in which the assembled lists gave a different answer. */
-function sweep(mode: 'closed' | 'open', policy?: HydrationPolicy): Map<string, string[]> {
+/**
+ * For each consumer, the viewed months in which the assembled lists gave a different answer. With
+ * `history`, the engines that build their own classifier or series are handed the whole ledger's.
+ */
+function sweep(mode: 'closed' | 'open', policy?: HydrationPolicy, history = false): Map<string, string[]> {
   const seen = new Map<string, string[]>()
   for (const month of months) {
     const small = assembleRows(policy ? ledgerFor(ds, month, policy) : ledgerFor(ds, month))
-    for (const key of differing(ds, month, whole, small, KEYS, { clock: clockFor(mode, month), classifier })) {
+    const options = { clock: clockFor(mode, month), classifier, ...(history ? { groups } : {}) }
+    for (const key of differing(ds, month, whole, small, KEYS, options)) {
       seen.set(key, [...(seen.get(key) ?? []), month])
     }
   }
@@ -73,6 +83,10 @@ describe.each(['closed', 'open'] as const)('viewed-month sweep, %s month', (mode
       }
       expect(run(small)).toEqual(run(whole))
     }
+  })
+
+  it('differs only in the global lists once the classifier and series of the whole history are passed in', () => {
+    expect([...sweep(mode, WINDOWED, true).keys()].sort()).toEqual(Object.keys(GLOBAL_DIFFERENCES).sort())
   })
 
   it('is exactly today\'s behaviour under the default size policy', () => {

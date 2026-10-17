@@ -18,6 +18,7 @@ import {
   fixedRhythm,
   monthsBetweenBudget,
   portfolioReturn,
+  recurringFixedGroups,
   shiftBudgetMonth,
   sortedMonths,
   splitGap,
@@ -165,6 +166,18 @@ describe('engine history: old months as one summed row per cell', () => {
       sameOutput(ledger, '2025-06', { keep: calendarWindow('2025-06', back, forward), pin: true }, keys)
     expect(past(44, 0)).toEqual(keys)
     expect(past(44, 99)).toEqual([])
+  })
+
+  it('fixed against flexible matches on a 13 month window once the classifier and series of the whole history are passed in', () => {
+    const keys = ['groupsByFixedFlexible', 'detailByFixedFlexible', 'fixedCosts', 'pace']
+    const groups = recurringFixedGroups(ledger.transactions)
+    const at = (viewed: string, back: number, forward = 0) =>
+      differing(ledger, viewed, wholeLedger(ledger), compact(ledger, { keep: calendarWindow(viewed, back, forward), pin: true }), keys, {
+        groups,
+      })
+    expect(at(OPEN_MONTH, 13)).toEqual([])
+    expect(at('2025-06', 13)).toEqual([])
+    expect(at('2025-06', 13, 99)).toEqual([])
   })
 
   it('the global lists follow today, not the viewed month', () => {
