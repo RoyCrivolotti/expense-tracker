@@ -32,11 +32,14 @@ export interface AccessState {
   requests: Map<string, RequestRow>
   grants: Map<string, Set<string>>
   purgedOwners: string[]
+  revisionBumps: string[]
 }
 
 export interface InMemoryAccessDb {
   db: D1Database
   purgedOwners: string[]
+  /** One entry per dataset revision bump, in order: the owner it was for. */
+  revisionBumps: string[]
   seedActiveUser(
     email: string,
     opts?: { grantedBy?: string | null; groups?: AccessGroupId[] },
@@ -92,12 +95,16 @@ export function createInMemoryAccessDb(): InMemoryAccessDb {
     requests: new Map(),
     grants: new Map(),
     purgedOwners: [],
+    revisionBumps: [],
   }
 
   return {
     db: createAccessDb(state),
     get purgedOwners() {
       return state.purgedOwners
+    },
+    get revisionBumps() {
+      return state.revisionBumps
     },
     seedActiveUser(email, opts = {}) {
       state.users.set(email, {

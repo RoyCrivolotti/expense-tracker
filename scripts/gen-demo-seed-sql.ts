@@ -130,6 +130,10 @@ for (const s of scenarioFile.scenarios) {
   )
 }
 
+// Rows written outside the API do not move the owner's dataset revision, so drop it: a browser that
+// cached the old data would otherwise be told nothing changed.
+lines.push(`DELETE FROM owner_revision WHERE owner = ${owner};`)
+
 const out = process.argv[2] ?? join(ROOT, '.tmp/demo-staging-seed.sql')
 writeFileSync(out, lines.join('\n') + '\n')
 process.stderr.write(
