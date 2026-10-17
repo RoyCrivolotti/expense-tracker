@@ -13,6 +13,7 @@
 import { SUMMARY_COUNT_CAP, caseFolds } from '../domain/data/transactionQuery'
 import type { TransactionKey } from '../domain/data/transactionQuery'
 import type { TxnFilter } from '../domain/engine/transactions'
+import { IN_ID_LIST, idList } from './sqlIdList'
 
 export type SqlParam = string | number
 
@@ -86,9 +87,9 @@ function labels(f: TxnFilter, owner: string): Sql {
   return term(
     `t.id IN (SELECT tl.transaction_id FROM transaction_labels tl
        JOIN labels l ON l.id = tl.label_id AND l.owner = ?
-       WHERE tl.label_id IN (SELECT value FROM json_each(?)))`,
+       WHERE tl.label_id ${IN_ID_LIST})`,
     owner,
-    JSON.stringify(f.labelIds),
+    idList(f.labelIds),
   )
 }
 
