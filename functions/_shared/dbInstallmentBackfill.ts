@@ -16,6 +16,7 @@ import { nextInstallmentSuggestion, type InstallmentSuggestion } from '../domain
 import { monthsBetweenBudget } from '../domain/engine/dates'
 import { maybeCompletePlan } from './dbWrite'
 import { bumpRevision, serverBudgetMonth } from './dbRevision'
+import { IN_ID_LIST, idList } from './sqlIdList'
 import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } from './rows'
 
 /**
@@ -96,11 +97,10 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
   const plans = (planRows ?? []).map(toInstallmentPlan)
   if (plans.length === 0) return
 
-  const placeholders = plans.map(() => '?').join(', ')
   const { results: txnRows } = await env.DB.prepare(
-    `SELECT * FROM transactions WHERE owner = ? AND plan_id IN (${placeholders})`,
+    `SELECT * FROM transactions WHERE owner = ? AND plan_id ${IN_ID_LIST}`,
   )
-    .bind(owner, ...plans.map((p) => p.id))
+    .bind(owner, idList(plans.map((p) => p.id)))
     .all<TxnRow>()
   const txnsByPlan = new Map<number, StoredTransaction[]>()
   for (const row of txnRows ?? []) {

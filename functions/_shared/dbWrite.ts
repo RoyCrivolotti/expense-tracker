@@ -15,6 +15,7 @@ import {
   type TxnRow,
 } from './rows'
 import { HttpError } from './http'
+import { IN_ID_LIST, idList } from './sqlIdList'
 import {
   assertOwnedAccount,
   assertOwnedCategory,
@@ -275,15 +276,14 @@ async function assertNoneSettledElsewhere(
   env: Env,
   owner: string,
   ids: number[],
-  placeholders: string,
   settledBy: number | null | undefined,
 ): Promise<void> {
   if (settledBy == null) return
   const { results } = await env.DB.prepare(
     `SELECT id FROM transactions
-     WHERE owner = ? AND id IN (${placeholders}) AND settled_by IS NOT NULL AND settled_by != ?`,
+     WHERE owner = ? AND id ${IN_ID_LIST} AND settled_by IS NOT NULL AND settled_by != ?`,
   )
-    .bind(owner, ...ids, settledBy)
+    .bind(owner, idList(ids), settledBy)
     .all<{ id: number }>()
   if ((results ?? []).length > 0) throw new HttpError(409, SETTLED_ELSEWHERE)
 }
@@ -320,14 +320,13 @@ async function assertNoWithdrawalLeavingInvestment(
   env: Env,
   owner: string,
   ids: number[],
-  placeholders: string,
   type: BulkTransactionPatch['type'],
 ): Promise<void> {
   if (type == null || type === 'investment') return
   const { results } = await env.DB.prepare(
-    `SELECT id FROM transactions WHERE owner = ? AND id IN (${placeholders}) AND amount_cents < 0`,
+    `SELECT id FROM transactions WHERE owner = ? AND id ${IN_ID_LIST} AND amount_cents < 0`,
   )
-    .bind(owner, ...ids)
+    .bind(owner, idList(ids))
     .all<{ id: number }>()
   if ((results ?? []).length > 0) throw new HttpError(400, AMOUNT_SIGN_MESSAGE)
 }
@@ -507,32 +506,26 @@ export async function bulkInsertTransactions(
 /** Delete many rows in one statement; only ids owned by `owner` are removed. */
 export async function deleteTransactions(env: Env, owner: string, ids: number[]): Promise<number> {
   if (ids.length === 0) return 0
-  const placeholders = ids.map(() => '?').join(', ')
+  const list = idList(ids)
   // Same cascade as the single delete, same reasons.
   const [, , , deleted] = await env.DB.batch([
     env.DB
-      .prepare(
-        `DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id IN (${placeholders})`,
-      )
-      .bind(owner, ...ids),
+      .prepare(`DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id ${IN_ID_LIST}`)
+      .bind(owner, list),
     // Scoped through a subquery, same reason as the single delete: transaction_labels
     // has no owner column, so a bare `transaction_id IN (...)` would let a caller
     // wipe another owner's label links for an id that is not theirs.
     env.DB
       .prepare(
         `DELETE FROM transaction_labels WHERE transaction_id IN (
-           SELECT id FROM transactions WHERE owner = ? AND id IN (${placeholders})
+           SELECT id FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}
          )`,
       )
-      .bind(owner, ...ids),
+      .bind(owner, list),
     env.DB
-      .prepare(
-        `UPDATE transactions SET settled_by = NULL WHERE owner = ? AND settled_by IN (${placeholders})`,
-      )
-      .bind(owner, ...ids),
-    env.DB
-      .prepare(`DELETE FROM transactions WHERE owner = ? AND id IN (${placeholders})`)
-      .bind(owner, ...ids),
+      .prepare(`UPDATE transactions SET settled_by = NULL WHERE owner = ? AND settled_by ${IN_ID_LIST}`)
+      .bind(owner, list),
+    env.DB.prepare(`DELETE FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`).bind(owner, list),
   ])
   return deleted?.meta?.changes ?? 0
 }
@@ -547,19 +540,19 @@ export async function bulkUpdateTransactions(
   await assertPatchOwnership(env, owner, patch)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
-  const placeholders = ids.map(() => '?').join(', ')
+  const list = idList(ids)
   // Rejected before any row is touched. The UPDATE's guard clause silently *excludes* a
   // row settled elsewhere rather than failing, so deciding from its changed-row count
   // afterwards has already committed the rows that did qualify.
-  await assertNoneSettledElsewhere(env, owner, ids, placeholders, patch.settledBy)
-  await assertNoWithdrawalLeavingInvestment(env, owner, ids, placeholders, patch.type)
+  await assertNoneSettledElsewhere(env, owner, ids, patch.settledBy)
+  await assertNoWithdrawalLeavingInvestment(env, owner, ids, patch.type)
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
   const patchRec = patch as Record<string, unknown>
   const values = keys.map((k) => patchValue(k, patchRec[k]))
   const guard = settleGuard(patch.settledBy)
   const write = env.DB.prepare(
-    `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})${guard.clause}`,
-  ).bind(...values, owner, ...ids, ...guard.values)
+    `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id ${IN_ID_LIST}${guard.clause}`,
+  ).bind(...values, owner, list, ...guard.values)
   const [updated] = await env.DB.batch([write, ...bulkFollowUpStatements(env, owner, ids, patch)])
   // Backstop for the window between that check and this UPDATE: a concurrent request
   // could settle one of these rows in between. The guard clause still refuses to
@@ -567,10 +560,8 @@ export async function bulkUpdateTransactions(
   if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
     throw new HttpError(409, SETTLED_ELSEWHERE)
   }
-  const { results } = await env.DB.prepare(
-    `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
-  )
-    .bind(owner, ...ids)
+  const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
+    .bind(owner, list)
     .all<TxnRow>()
   const transactions: Transaction[] = []
   for (const row of results) {
