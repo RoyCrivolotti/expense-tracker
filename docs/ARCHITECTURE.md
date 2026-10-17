@@ -67,6 +67,15 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   both CI workflows) runs `scripts/check-pii.mjs`, which fails the build on any tracked-file email
   outside an explicit allowlist — extend the allowlist there by exact address, not by domain,
   when adding a new legitimately-safe one.
+- **The Transactions list renders only the rows near the screen once it passes 300 rows.**
+  Padding stands in for the rest, so the page is as long as the whole list and the sticky day
+  headers still stick (a day stays one `.group`). Each rendered row sits in a `data-vrow`
+  wrapper, which is what gets measured; heights not yet seen are guessed from rows of the same
+  shape. Whatever changes how tall a row is (select mode swaps the row's markup) has to be part
+  of the `signature` `TransactionList` hands `WindowedGroups`, or heights learned under the old
+  layout carry into the new one. Select-all and a day's checkbox work from the data, not the
+  DOM. Find in the page cannot see rows that are not rendered; the search box can. The geometry
+  is in `src/ui/hooks/windowLayout.ts`.
 
 ## Size and complexity
 

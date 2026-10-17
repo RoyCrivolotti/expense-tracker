@@ -1,14 +1,17 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import { groupListRowsByDay, type TransactionListRow } from '../../engine'
 import { type Lookup } from '../format'
 import { useCollapsedDateGroups } from '../hooks/useCollapsedDateGroups'
-import { dayGroupRowsId } from './dayGroupId'
+import { WINDOW_FROM_ROWS } from '../hooks/windowLayout'
+import { DayGroup, type DayGroupShared } from './DayGroup'
 import { EmptyState } from './primitives'
-import { DayGroupHeader } from './DayGroupHeader'
 import { StatementPaymentRow } from './StatementPaymentRow'
 import { TransactionRow } from './TransactionRow'
+import { WindowedGroups } from './WindowedGroups'
 import styles from './TransactionList.module.css'
+
+const NO_SELECTION: ReadonlySet<number> = new Set()
 
 interface TransactionListProps {
   rows: TransactionListRow[]
@@ -72,8 +75,9 @@ function renderRow(
   )
 }
 
-export function TransactionList({ rows, lookup, ...props }: TransactionListProps) {
+export function TransactionList({ rows, lookup, flat = false, ...props }: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
+  const groups = useMemo(() => (flat ? [] : groupListRowsByDay(rows)), [rows, flat])
 
   if (rows.length === 0) {
     return (
@@ -86,44 +90,42 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
     )
   }
 
-  const groups = groupListRowsByDay(rows)
-  if (props.flat) {
-    return <div className={styles.list}>{rows.map((row) => renderRow(row, lookup, props))}</div>
+  const renderListRow = (row: TransactionListRow) => renderRow(row, lookup, props)
+  if (flat) return <div className={styles.list}>{rows.map(renderListRow)}</div>
+
+  const shared: DayGroupShared = {
+    selectMode: props.selectMode ?? false,
+    selectedIds: props.selectedIds ?? NO_SELECTION,
+    onToggleCollapse: toggleDateCollapsed,
+    onToggleDate: props.onToggleDate,
+    onAddForDate: props.onAddForDate,
+    renderRow: renderListRow,
+  }
+  if (rows.length > WINDOW_FROM_ROWS) {
+    // Row height depends on the layout of the row, so measurements are not carried over a switch.
+    const signature = `${shared.selectMode}-${props.swipeDelete ?? false}`
+    return (
+      <WindowedGroups
+        groups={groups}
+        collapsedDates={collapsedDates}
+        signature={signature}
+        shared={shared}
+      />
+    )
   }
 
   return (
     <div className={styles.list}>
-      {groups.map((group) => {
-        const ids = group.rows.flatMap((row) =>
-          row.kind === 'transaction' ? [row.txn.id] : [],
-        )
-        const collapsed = collapsedDates.has(group.date)
-        return (
-          <div key={group.date} className={styles.group}>
-            <DayGroupHeader
-              date={group.date}
-              ids={ids}
-              selectMode={props.selectMode ?? false}
-              selectedIds={props.selectedIds ?? new Set()}
-              collapsed={collapsed}
-              onToggleCollapse={() => toggleDateCollapsed(group.date)}
-              {...(props.onToggleDate ? { onToggleDate: props.onToggleDate } : {})}
-              {...(props.onAddForDate && !props.selectMode ? { onAdd: props.onAddForDate } : {})}
-            />
-            <div
-              id={dayGroupRowsId(group.date)}
-              className={collapsed ? `${styles.dayRows} ${styles.dayRowsCollapsed}` : styles.dayRows}
-              // Kept in the DOM so it can fold; `inert` keeps touch, focus and screen
-              // readers out of rows that are out of sight.
-              inert={collapsed}
-            >
-              <div className={styles.dayRowsInner}>
-                {group.rows.map((row) => renderRow(row, lookup, props))}
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {groups.map((group) => (
+        <DayGroup
+          key={group.date}
+          group={group}
+          collapsed={collapsedDates.has(group.date)}
+          {...shared}
+        >
+          {group.rows.map(renderListRow)}
+        </DayGroup>
+      ))}
     </div>
   )
 }
