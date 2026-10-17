@@ -108,17 +108,16 @@ key. Every response carries a per-owner revision, and a weak ETag on it lets mos
 Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, and the ledger model
 (`src/domain/ledger`, pure code) with differential tests that run the engines over every row and over the assembled
 lists (`src/testing/ledgerDifferential.test.ts`, `ledgerSweep.test.ts`; the result is in
-[ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model)). No screen uses the model yet, so nothing under
-"Proposed design" changes what the app does. Planned work, in dependency order:
+[ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model)). The four engines that rebuilt a classifier or
+recurring series from the rows they were handed take an optional one built from the whole history. No screen uses
+the model yet, so nothing under "Proposed design" changes what the app does. Planned work, in dependency order:
 
 1. Standalone improvements: a compact read, the revision and ETag, list windowing.
 2. A server query layer: keyset list, summary, by-id, per-month sums, series, with query-plan tests.
-3. Passing the classifier or series into the four engines that build their own, so the differences listed in
-   ENGINE-HISTORY.md go away.
-4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
-5. The Transactions tab on server pages, with selection and bulk edit on a filter.
-6. The remaining consumers and a resumable backup.
-7. Switching the default behind a runtime flag, with the old route kept for stale clients.
+3. The client data layer: hydration, invalidation, snapshot per owner, version skew.
+4. The Transactions tab on server pages, with selection and bulk edit on a filter.
+5. The remaining consumers and a resumable backup.
+6. Switching the default behind a runtime flag, with the old route kept for stale clients.
 
 ## Test tools
 

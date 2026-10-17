@@ -46,10 +46,10 @@ for every consumer below on 80 seeded random ledgers and on every viewed month o
 | `unpaidExpenseCents` (`analyticsPeriod.ts`) | The sparkline months | none | S | |
 | `computeAllocation` (`allocation.ts`) | M only | Cut while M is open | R (M) and X (classifier) | |
 | `computeMovers` (`movers.ts`) | M and the 3 months with data before it | Cut while M is open | R and X | Per-row fixed call |
-| `computeSpendingPace`, `expectedFixedCents` (`spendingPace.ts`) | M and M-1. The envelope reads every recurring series, and a series counts as alive from M, M-1 and M-2 | Cut while M is open | R and X | |
-| `computeSpendingGroups` (`spendingGroups.ts`) | The 12 months with data ending at M, and the 3 before M for the average | M and the average months are cut while M is open | S for category rows outside M and the average months. R for label, description and fixed or flexible | `txnCount` is the row count of M. Builds its own classifier from the rows it is given |
-| `computeSpendingGroupDetail` (`spendingGroupDetail.ts`) | The 12 months with data ending at M; the biggest rows of M | Cut while M is open | R, and X for fixed or flexible | Builds its own classifier |
-| `classifyFixedSpend`, `recurringFixedGroups`, `fixedRhythm` (`fixedFlexible.ts`), `detectedFixedCosts` (`fixedCosts.ts`) | Every row of the series, before and after M | none | X | Series key: description, account, category, type (`occurrenceKey` in `recurringDetect.ts`). Three or more rows. `planId`. Cancelled and blank-description rows are out. `detectedFixedCosts` builds its own groups |
+| `computeSpendingPace`, `expectedFixedCents` (`spendingPace.ts`) | M and M-1. The envelope reads every recurring series, and a series counts as alive from M, M-1 and M-2 | Cut while M is open | R and X | Builds the envelope's series from the rows it is given unless `fixedGroups` (`groups` for `expectedFixedCents`) is passed |
+| `computeSpendingGroups` (`spendingGroups.ts`) | The 12 months with data ending at M, and the 3 before M for the average | M and the average months are cut while M is open | S for category rows outside M and the average months. R for label, description and fixed or flexible | `txnCount` is the row count of M. Builds its own classifier from the rows it is given unless `classifier` is passed |
+| `computeSpendingGroupDetail` (`spendingGroupDetail.ts`) | The 12 months with data ending at M; the biggest rows of M | Cut while M is open | R, and X for fixed or flexible | Builds its own classifier unless `classifier` is passed |
+| `classifyFixedSpend`, `recurringFixedGroups`, `fixedRhythm` (`fixedFlexible.ts`), `detectedFixedCosts` (`fixedCosts.ts`) | Every row of the series, before and after M | none | X | Series key: description, account, category, type (`occurrenceKey` in `recurringDetect.ts`). Three or more rows. `planId`. Cancelled and blank-description rows are out. `detectedFixedCosts` builds its own groups unless `groups` is passed |
 | `detectUpcoming`, `stillStopped` (`recurringUpcoming.ts`) | none: it never looks at M | The whole series: median and regularity over every gap, then the newest 3 and 5 dates (`recurringPredict.ts`) | X | Monthly series only. Newest 3 budget offsets. `pendingDate` scans every date. `stillStopped` needs each series' newest charge (`newestChargeBySeries`) |
 | `portfolioReturn`, `readReturn` (`portfolioReturn.ts`) | none | Investments dated after the first check-in, up to the last | P | Exact date and sign. A stretch where money moved and nothing was invested makes the return null. `investmentsRecorded` counts rows |
 | `splitGap` (`gapSplit.ts`) | none | Investments from the first check-in on or after the plan start to the last, and any investment within 45 days of an event anniversary, which reaches back to the plan start less 45 days and on to the newest row | P | Exact date and sign |
@@ -120,15 +120,19 @@ open month, these consumers give a different answer from the lists than from the
 
 | Consumer | Why it differs |
 |---|---|
-| Groups and detail by fixed or flexible, `detectedFixedCosts` | They build their own classifier or recurring groups from the rows they are handed, and a series needs three rows and every gap |
+| Groups and detail by fixed or flexible, `detectedFixedCosts` | Unless handed one, they build their own classifier or recurring groups from the rows they get, and a series needs three rows and every gap |
 | `computeSpendingPace` | Only `flexibleBudgetCents` and `shouldBeTodayCents`, which come from the envelope (`expectedFixedCents`), built the same way |
 | `computeSignals` | While M is the open month it reads the pace |
-| `buildOverviewData` | Builds the classifier from the rows it is handed, so the allocation, movers, pace, fixed costs and signals differ. KPIs, baseline and unpaid caps match |
+| `buildOverviewData` | Builds the classifier from the rows it is handed and does not take one, so the allocation, movers, pace, fixed costs and signals differ. KPIs, baseline and unpaid caps match |
 | `latestTransactions`, `recentlyAdded` | Global and relative to today; the window around a past M does not hold them |
 | `filterTransactions` over every date | Needs any month's rows: it is served by an endpoint |
 
-The first four rows need the classifier, or the series it is built from, passed in instead of rebuilt from a window.
-That change is not made yet. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
+The first three rows go away when the engines are handed the classifier and the recurring series of the whole
+history, which is tested: `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`,
+`computeSpendingPace` takes `fixedGroups`, and `expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them
+with `classifyFixedSpend` and `recurringFixedGroups` over every row. With none passed the engines build their own from
+the rows they are given, as they always did. `buildOverviewData` does not pass one on yet, so the Overview model still
+differs until it is given one. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
 sweep fails both if something else differs and if a listed difference never shows up.
 
 ## Properties worth knowing
@@ -194,8 +198,9 @@ one after.
 2. The classifier is the larger dependency. Movers, pace, allocation, fixed or flexible groups, group detail and
    fixed costs need the series as well as the rows. Four of them build their own classifier or groups from the rows
    they are handed (`computeSpendingGroups`, `computeSpendingGroupDetail`, `expectedFixedCents` and
-   `detectedFixedCosts`). Three answer differently on a window (tested); the pace envelope matched only because every
-   monthly series on the generated ledger has three rows inside it. They need the classifier or series passed in.
+   `detectedFixedCosts`). Left to build their own, three answer differently on a window (tested), and the pace
+   envelope matched only because every monthly series on the generated ledger has three rows inside it. Each takes
+   the classifier or series of the whole history as an optional argument, and with it a window matches (tested).
 3. The same-days cut reaches the months a month is compared with, so while M is the open month the 12 months back
    need dates. A closed month does not.
 4. Recent activity is relative to today and global. The window around a past M never contains it.
