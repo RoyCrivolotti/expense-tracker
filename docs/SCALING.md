@@ -73,8 +73,15 @@ Read-only queries against a deployed database through the D1 query API:
   way (`functions/_shared/sqlIdList.ts`) instead of one parameter per id.
 - **`COUNT(*)` is billed as a scan:** counting a table reports every row as read.
 
-Not yet measured on a deployed Worker: CPU time, whether `batch()` counts as one query toward the 50, and rows
-written per index.
+- **An inserted transaction is reported as eight written rows**, the row and its seven indexes (the one added by
+  migration 0038 is one of them), and a statement that updates a row and one indexed column as two. A `rows_read`
+  of zero is reported for a `LIMIT 1` that is answered from an index alone.
+- **Window functions, `group_concat(DISTINCT ...)`, a recursive query with correlated subqueries and
+  `UPDATE ... FROM` over `json_each` run**, and D1 plans them as the test stand-in does: a search of an owner index,
+  never a scan of `transactions`. `sqlite_version()` is refused ("not authorized to use function"), so the version is
+  not readable.
+
+Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50.
 
 ## Proposed design
 
@@ -98,7 +105,7 @@ one code path with two policies.
 |---|---|
 | Month totals, budgets, yearly overview, cash reconciliation and close, statement amounts, goals flows, cash reserve, spending baseline, KPI totals | Browser, from real rows plus sums |
 | Same-days KPIs, movers, spending groups and detail, pace, top transactions | Browser, from hydrated months |
-| Recurring and Upcoming, fixed versus flexible, fixed costs, allocation | Endpoint returns the series; the detector finishes in the browser |
+| Recurring and Upcoming, fixed versus flexible, fixed costs, allocation | Endpoint returns the series (`GET /api/expenses/series`, built); the detector finishes in the browser |
 | Portfolio return, gap split, instalments, flagged groups, reports, reimbursement links | Browser, from pinned rows |
 | Transaction list, count, net spend, search | Endpoint: keyset pages and a capped summary |
 | Autocomplete beyond loaded rows, usage counts, one row by id, bulk edit on a filter, export, backup | Endpoint |
@@ -108,7 +115,9 @@ How much history each engine and screen reads, and which of them give a differen
 
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
 key. The reference, months and sums are checked against the per-owner revision that `GET /api/expenses` already uses
-(see "Ledger parts"), so most opens end after a two-row read; the series are not built.
+(see "Ledger parts"), so most opens end after a two-row read. The series are served the same way, but they read the
+whole ledger whenever the tag misses, which after any write it does: see "Recurring series" for what a client that
+calls them has to do.
 
 ## Paged transaction reads
 
@@ -333,6 +342,127 @@ The cube has no index of its own. A covering index over the month range and all 
 test read (eleven of them) made the statement 1.6 times faster on the stand-in (36 ms against 59 ms for 97k rows),
 for a wide index and one more written row on every insert, when `transactions` already has eleven. It was not built.
 
+## Recurring series
+
+`GET /api/expenses/series` answers `{ series }`: every recurring series in the owner's history, newest first, as
+`RecurringSeries` (`src/domain/engine/recurringSeries.ts`). A series is the rows that share a normalized
+description, account, category and type, leaving out cancelled rows, blank descriptions and the payments of an
+instalment plan, when there are three or more of them. The detectors cannot run on the few months a browser holds,
+because three rows make a series and the median and regularity run over every gap; with the served series they
+can. A browser builds the classifier and the groups the engines take with
+`classifierFromGroups(recurringFixedGroupsFromSeries(series))` and `recurringFixedGroupsFromSeries(series)`, and
+`detectUpcoming` and `stillStopped` take the series the same way (see `src/domain/engine/recurringSeries.ts`).
+
+**What a series carries.** The newest row's description, amount, account, category and type; its newest 5 dates
+(`SERIES_TAIL_DATES`); the days between every pair of consecutive dates before those, in ascending order of size;
+every distinct budget month; and the budget offset of its newest 3 rows. That is what each detector reads, found by
+reading them (the table is in [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#reading-a-series)). It is more than the
+earlier proposal of every gap and the newest 5 dates: the pace envelope and the fixed cost list ask whether a series
+has a row in a month the screen shows, which can be years back, so they need every budget month.
+
+**Held to the engine.** `dbSeries.parity.test.ts` checks that the SQL serves exactly what `seriesFromTransactions`
+builds from the same rows, in the same order, on 80 seeded random ledgers, the 60 month adversarial ledger, a large
+regular ledger and a ledger of series spelled with accents, other whitespace and other capitals.
+`seriesConsumers.parity.test.ts` runs every consumer in ENGINE-HISTORY.md from the served series and the rows of a
+13 month window, for every viewed month, closed and open, and compares it with the same consumer over every row:
+only the three lists that are global by nature differ (the eight newest rows by date and by creation time, and the
+list over every date). Upcoming charges and stopped series are compared on a spread of days.
+Mutating the SQL (grouping on `lower(trim(description))`, keeping plan rows, keeping cancelled rows, a two row
+minimum, an off by one in the tail, the gap, the order) fails them.
+
+**Exact for non-ASCII text: `description_norm`.** The app groups by `normalizeDesc`, JavaScript's `trim()` then
+`toLowerCase()`. SQLite's `lower` changes ASCII letters only and its `trim` strips spaces only, so grouping in SQL on
+`lower(trim(description))` splits "CAFÉ" from "café" and keeps a tab around a word as part of it; the parity test
+shows the two groupings differ on its ledger. Other designs were weighed and not taken: SQL for ASCII rows plus
+JavaScript for the rest breaks on letters whose JavaScript lower case is ASCII (the Kelvin sign lowers to `k`), so a
+series would have rows in both sets and need merging, and a prefix search would need the same two paths; computing the
+key in the Worker for every row on every read is a full read of the owner's descriptions at about a millisecond of
+CPU per thousand rows, the cost this design exists to avoid. So the key is stored.
+
+Migration `0038_description_norm.sql` adds `transactions.description_norm`, written by the same JavaScript function
+in every statement that writes a description: create, update, bulk update, bulk insert (which creates one row at a
+time), the instalment backfill, and the seed generators in `scripts/`. `descriptionNormWrites.test.ts` reads the
+source of `functions/`, `scripts/`, the SQLite seeding helper and any later migration for an INSERT or UPDATE that
+writes a description without it, and `descriptionNorm.integration.test.ts` drives every route that can write one
+and compares the whole column with the function afterwards. Breaking any of the four write paths fails it.
+
+The index `(owner, description_norm, date)` costs one written row per inserted transaction and one more whenever a
+description or a date changes. It is worth that because it is the only thing that lets a prefix search (the next
+piece) read a range of the owner's descriptions instead of every row, and find the newest row of a description with
+one seek (the date is in the key for that). It also serves the series read and the lookup for rows still waiting
+for a value (NULL entries sort first). `seriesPlans.test.ts` and the backfill tests fail on a scan of
+`transactions`, with and without table statistics. They caught one planner choice worth knowing: asking for the
+waiting rows in id order made SQLite walk every row of the owner through `idx_txn_owner` to avoid a sort, so the
+read has no ORDER BY and takes the rows in index order (by date, then id).
+
+**The backfill.** A row that predates the column holds NULL, and the migration does not fill it because SQL cannot.
+`fillDescriptionNorm` (`descriptionNormBackfill.ts`) fills some of the owner's NULL rows, 500 a pass, four passes at
+most per request: two queries a pass (one read, one UPDATE that takes the values as one bound JSON string, so the 100
+parameter limit is not in play), a normalize per row, and one `JSON.stringify`. A pass stops early at 40,000
+characters of JSON (counted as sent, so a quote weighs two) when descriptions are very long, so one bound string stays small. NULL is the only state, so it is idempotent and resumes
+where it stopped, a row filled by something else in between is left alone, and another owner's rows are never
+touched. The series request runs it first and answers 503 while rows are still waiting, because grouping before then
+would leave rows out; each retry gets further. It does not move the dataset revision: the column is in no
+response. It costs two written rows per existing transaction, once (the row and its index entry, as D1 reports them; 200
+rows reported 400 written), and about four read. Building the index in the migration writes one row per transaction
+as well, so on the Free plan a ledger of about 33,000 transactions uses a day's write budget for the migration and the
+fill together, and the fill resumes the next day if it runs out. The statement that writes a pass is written so
+that the JSON list is the outer loop (a `+` before the target's columns): SQLite's own choice scanned the whole list
+once per waiting row, which D1 reported as 250,000 rows read for a pass of 500.
+
+**Cacheable.** The route is served like the ledger parts: the body is `{ revision, series }`, the tag is
+`W/"<token>-<budget month>-series<PARTS_FORMAT>"` from the owner's dataset revision, and a request that holds it gets
+a 304 after two rows are read, before any series is computed. Only a write changes the answer, and the installment
+backfill that the other parts run is not needed, since a plan's payments are not part of a series. As with the
+dataset, the tag is read before the data. Any query parameter is a 400. `series.integration.test.ts` fails when the
+JSON shape moves without `PARTS_FORMAT` moving.
+
+**Cost.** One statement over the owner's counted rows, once, so it reads every one of them: it is a whole history
+read, not a page. Measured with `SCALING_MEASURE=1 npx vitest run functions/_shared/series.scaling.test.ts
+--reporter=verbose` on the synthetic ledger (120 months, in-memory SQLite, Node 22 on an Apple Silicon laptop).
+"Server JS" is the request minus time inside SQLite, a stand-in for Worker CPU, not a measurement of it.
+
+| Rows | Series | Server JS | SQLite | JSON | gzip | Parse | Classifier from series | from rows |
+|---|---|---|---|---|---|---|---|---|
+| 4.9k | 391 | 2.3 ms | 14 ms | 141 KB | 22 KB | 0.3 ms | 1.8 ms | 5.2 ms |
+| 19.9k | 464 | 2.1 ms | 50 ms | 309 KB | 50 KB | 0.7 ms | 1.7 ms | 21.7 ms |
+| 49.9k | 661 | 4.8 ms | 155 ms | 566 KB | 66 KB | 1.3 ms | 2.3 ms | 68.6 ms |
+| 99.9k | 762 | 8.8 ms | 296 ms | 816 KB | 67 KB | 2.1 ms | 3.1 ms | 113 ms |
+| 249.9k | 779 | 16.7 ms | 729 ms | 1.2 MB | 69 KB | 2.9 ms | 3.9 ms | 297 ms |
+
+1. **Worker CPU** is 8.8 ms at 99.9k transactions for the work counted here, which does not include stringifying the
+   response (1.2 ms at that size) or the Worker's own handling of D1's result, so the 10 ms limit is crossed between
+   75,000 and 100,000 transactions, against about 7,500 for the dataset load. Most of it is turning the gap lists into
+   numbers; a typed array and its native sort (`numbers()` in `dbSeries.ts`) took that from 10.5 ms to 4.7 ms at 95,000
+   gaps. These are Node figures; workerd's meter differs.
+2. **Rows read per recompute**: D1 reports about nine per counted transaction (the two window sorts count), measured
+   on a deployed database with the REST API. That is 0.9 million at 100,000 transactions.
+   **This is a cost per recompute, not per day**, and every write moves the revision, so every write makes the next series
+   request a recompute: 20 of them at 20,000 transactions (about 240,000 reads each) or 4 at 100,000 use the Free plan's
+   whole daily 5M, which every other read and write of every owner shares. An unchanged ledger is a 304 and two rows.
+3. **What the client that calls this has to do.** Fetch the series when a screen needs them (Upcoming, fixed costs, the
+   fixed or flexible split), not on every open and not after every write. Rows the browser holds that are newer than the
+   revision the series were served at are not in them (`detectUpcoming({ groups })` ignores the rows it is given, so a charge
+   logged since keeps showing), so the client either folds those rows into the series or accepts one refetch. The
+   structural fix, not built, is a revision of the series' own that moves only for writes that change a description,
+   date, budget month, account, category, type, cancelled flag, plan link or amount, so that flag, label, note and
+   statement edits stay 304s; usage would have its own for the writes that change a count.
+4. **Size** grows with the number of series times the distinct months each was booked in, more than with the gaps:
+   on the synthetic 100,000 row ledger the budget months are about half of the 816 KB and the older gaps under a third.
+   The browser discards non-recurring series after one pass (`classifier from series`, 2 to 4 ms against 5 to 300 ms from
+   the rows). If the payload matters, a server-side prefilter is exact (none of the recurring rhythms has a median gap
+   under 25 days, so a series with fewer than half of its gaps at 25 days or more can be left out, budget months and
+   all), and run-length encoding the gaps roughly halves their bytes. Neither is built: the first couples the server to
+   the rhythm thresholds.
+5. **Checked on a deployed D1** (the repository's own code, over the REST API, against the dev database): the series
+   equal the reference for every owner there, every stored `description_norm` equals `normalizeDesc`, a first request
+   on a ledger of about a thousand rows fills it and answers in one go (the fill is about four rows read and two
+   written per row filled, plus the series' nine read per row), and a later one is two statements.
+6. **Not measured**: Worker CPU on workerd. Every write route now checks that a date is a real calendar day and a
+   budget month a real month, so a row like `2026-13-01` cannot be written; a row written before that check would be
+   read by the series statement and by the engine differently (none was found in the dev or production database when
+   they were counted, read-only).
+
 ## Status
 
 Built:
@@ -353,14 +483,17 @@ Built:
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
 - an optional classifier or recurring series, built from the whole history, on the four engines that rebuilt their own
   from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list).
-  No screen uses the model or passes one in yet.
+  No screen uses the model or passes one in yet;
+- the recurring series route (`GET /api/expenses/series`) with the stored normalized description it groups by, its
+  backfill, and tests that hold every consumer to the answer over every row. See "Recurring series". Nothing in the
+  app calls it yet;
 
-Not built: the compact read, the series, and the client side of the design. Planned work, in
-dependency order:
+Not built: the compact read, autocomplete and usage counts on the server, and the client side of the design. Planned
+work, in dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
 2. A server query layer: keyset list, summary, by-id and query-plan tests (built); the reference, rows of a range
-   and per-month sums (built); series (not built).
+   and per-month sums (built); series (built).
 3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
    the four engines (built).
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew, and passing the whole history's

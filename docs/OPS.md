@@ -99,7 +99,9 @@ environment is approved in GitHub, and only then does the code that needs it shi
 `docs/DEPLOYMENT.md`). A PR's preview deploy applies nothing and uses the dev database, so a preview
 of a change that adds a column fails to save until dev has had it (`npm run migrate:dev`). To apply
 one by hand, `npm run migrate -- <database> --apply`. Reading is safe without a column: a missing
-one reads as its default.
+one reads as its default. A dev database that has a column `main` does not make fails the deploy's
+schema job on `EXTRA <column>` and so stops every deploy to `main` until that migration is merged:
+apply a migration to dev ahead of its merge only when the merge is near.
 
 ## Scripts (expense-tracker)
 

@@ -74,10 +74,14 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   until the owner's next write, so every path that changes the dataset's tables has to:
   - `functions/api/_middleware.ts` replaces it before and after every request that gets past
     auth and is not a GET, HEAD or OPTIONS. A new write route needs nothing; a new GET route
-    must not write. The second bump also runs when the handler throws or answers with an error
+    must not write the dataset's tables, apart from the two exceptions below. The second bump also runs when the handler throws or answers with an error
     (the write may have landed), and is retried once.
   - `backfillInstallments` replaces it when it inserted rows. It writes during a GET
     (`/api/expenses` and `/api/expenses/reference`), and the backup reaches it through `loadDataset`.
+  - Filling `transactions.description_norm` is the other write a GET makes (the series route, and the
+    routes that search by description). It does not replace the revision: the column is derived from
+    `description` and appears in no response, so a browser that holds the current dataset still holds the
+    current dataset.
   - `purgeOwnerData` deletes the row.
   - Anything else that writes those tables outside the API (a seed script, SQL by hand, a data
     migration) deletes or replaces the owner's row, as the generators in `scripts/` do.
@@ -126,6 +130,30 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   constants in `src/domain/data/ledgerParts.ts` and refused beyond them, never cut short. The routes do not
   write, apart from the installment backfill that `reference` runs when its ETag misses. `ledgerPartPlans.test.ts`
   fails on a full scan of `transactions` or on a pinned read that no longer uses the index.
+- **`transactions.description_norm` is the app's normalized description, written by every statement that
+  writes a description.** The app groups and compares descriptions with `normalizeDesc` (`trim()`, then
+  `toLowerCase()`), which is Unicode-aware; SQLite's `lower` is ASCII-only and its `trim` strips only
+  spaces, so SQL that grouped or searched on `lower(trim(description))` would answer differently for
+  "CAFÉ" or a tab. The column holds the JavaScript result, and anything that groups or searches by
+  description in SQL uses it and never the SQL functions. A statement that inserts into `transactions` or
+  updates `description` has to set it too (`functions/_shared/dbWrite.ts`, `dbInstallmentBackfill.ts`, the
+  seed generators); `descriptionNormWrites.test.ts` fails for one that does not, and a migration that
+  writes descriptions has to as well. NULL means "not computed yet": rows that predate migration 0038
+  are filled by `fillDescriptionNorm`, a bounded chunk per request, and a read that groups by the column
+  first makes sure none are waiting and answers 503 until then. The column appears in no response and
+  filling it does not move the dataset revision.
+- **The recurring series are computed over the whole history on the server, and a test holds them to the
+  engine.** `readSeries` on `ExpenseRepository` backs `GET /api/expenses/series`. `seriesFromTransactions`
+  in `src/domain/engine/recurringSeries.ts` is the specification: it reduces what `groupTransactions`
+  builds to what the detectors read, `inMemoryExpenseRepository` answers with it, and
+  `functions/_shared/seriesSql.ts` (the only place a series becomes SQL) must give the same series,
+  row for row and in the same order, which `dbSeries.parity.test.ts` checks on random, adversarial and
+  accented ledgers. `seriesConsumers.parity.test.ts` then runs every consumer from the served series and a
+  window of rows against the answer over every row. A change to what a detector reads of a series (a new
+  field on `OccurrenceGroup` that something uses, a larger history constant) means changing
+  `RecurringSeries`, the SQL, and `PARTS_FORMAT` in `datasetEtag.ts`; the route's shape test fails until
+  it is raised. The route is served as a ledger part (a revision token in the body, `If-None-Match` answered
+  with a 304) and writes only `description_norm`, which is not part of the dataset.
 
 ## Size and complexity
 
