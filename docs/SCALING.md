@@ -165,6 +165,32 @@ instead be served by the index that names it, and the planner chooses. With tabl
 row of a common category on each page. That is not a problem at the sizes seen so far; if it shows up, the fix is
 an `(owner, category_id, date)` index, one more written row per insert.
 
+#### Proposed, not applied: drop two indexes
+
+Two older indexes on `transactions` stop earning their written row once 0036 is in. This is a proposal only.
+It is deliberately not a file in `migrations/`, because the deploy applies every file there on merge.
+
+- `idx_txn_budget_month (budget_month)` is read by no statement the code runs: nothing filters on the budget
+  month without the owner, and the new month index serves the one that does. It costs a written row per insert for nothing.
+- `idx_txn_owner (owner)` is the first column of `idx_txn_owner_date (owner, date)`, so every lookup it serves
+  is served by the new index with the same rows visited. The one statement that scans it (the backup's list of
+  owners) reads one row per transaction either way.
+
+Dropping both leaves `transactions` with the eight indexes it had before 0036, so the paged reads cost no extra
+written rows per insert. `idx_txn_category` and `idx_txn_account` stay: category and account counts, reassigns
+and foreign-key checks use them. To apply, as a new migration after checking the plans again on the deployed
+database:
+
+```sql
+DROP INDEX IF EXISTS idx_txn_budget_month;
+DROP INDEX IF EXISTS idx_txn_owner;
+```
+
+`transactionIndexUsage.test.ts` is the evidence. It runs the statements the repository issues for reads and for
+the write paths (insert, update, bulk update, deletes, flag, label, category and account reassigns, the dataset
+load) through `EXPLAIN QUERY PLAN`, shows none reads `idx_txn_budget_month`, and shows the plans scan the same
+tables after both indexes are dropped. It does not cover SQL run by hand or by scripts outside `functions/`.
+
 ## Status
 
 Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, the per-owner revision
