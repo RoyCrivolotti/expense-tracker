@@ -63,7 +63,7 @@ export function queryDb(
 }
 
 /** Ids are global in D1, so each further owner's rows are moved up by `by` to keep clear of the others'. */
-function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
+export function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
   const lift = (t: Transaction): Transaction => {
     const moved: Transaction = {
       ...t,
