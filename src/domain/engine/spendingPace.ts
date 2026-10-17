@@ -63,21 +63,35 @@ export function budgetedCategoryIds(categories: Category[]): Set<number> {
  * annual patterns are left out: they are lumpy, and guessing their month wrong
  * would swing the envelope. A charge in a category with no active budget never
  * added to the envelope, so it must not take anything out of it either.
+ *
+ * `groups` are the recurring series, built from `transactions` when absent. A caller that
+ * holds only some of the history passes the series of all of it, since a series needs three
+ * rows and its regularity runs over every gap.
  */
 export function expectedFixedCents(
   transactions: Transaction[],
   plans: InstallmentPlan[],
   categories: Category[],
   month: string,
+  groups: OccurrenceGroup[] = recurringFixedGroups(transactions),
 ): number {
   const budgeted = budgetedCategoryIds(categories)
+  return duePlanCents(plans, budgeted, month) + recurringCents(groups, budgeted, month)
+}
+
+function duePlanCents(plans: InstallmentPlan[], budgeted: Set<number>, month: string): number {
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense' || !budgeted.has(plan.categoryId)) continue
     const idx = expectedIndexForMonth(plan, month)
     if (idx >= plan.startInstallmentIndex && idx <= plan.totalCount) total += plan.amountCents
   }
-  for (const group of recurringFixedGroups(transactions)) {
+  return total
+}
+
+function recurringCents(groups: OccurrenceGroup[], budgeted: Set<number>, month: string): number {
+  let total = 0
+  for (const group of groups) {
     if (group.key.type !== 'expense' || !budgeted.has(group.categoryId) || !isMonthlyGroup(group)) continue
     if (activeInMonth(group, month)) total += group.amountCents
   }
@@ -93,6 +107,8 @@ export interface SpendingPaceOptions {
   openMonth?: string
   /** The owner's budget rollover day; defaults to plain calendar months. */
   rolloverDay?: number
+  /** The recurring series for the envelope; see `expectedFixedCents`. */
+  fixedGroups?: OccurrenceGroup[]
 }
 
 export function computeSpendingPace(
@@ -100,7 +116,7 @@ export function computeSpendingPace(
   categories: Category[],
   plans: InstallmentPlan[],
   classifier: FixedSpendClassifier,
-  { month, today, basis, prevMonth, openMonth, rolloverDay }: SpendingPaceOptions,
+  { month, today, basis, prevMonth, openMonth, rolloverDay, fixedGroups }: SpendingPaceOptions,
 ): SpendingPace {
   const daysInMonth = budgetMonthLength(month, rolloverDay)
   const cut = sameDaysCut(month, today, openMonth, rolloverDay)
@@ -110,7 +126,7 @@ export function computeSpendingPace(
   const totalBudget = categories
     .filter((c) => c.active)
     .reduce((s, c) => s + c.monthlyBudgetCents, 0)
-  const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month))
+  const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month, fixedGroups))
 
   // The clock measures the spend the envelope was built from: spend in a category with
   // no active budget is neither in the envelope nor in the pace.
