@@ -9,7 +9,7 @@ Functions are both adapters around it.
 | --- | --- | --- | --- |
 | **Engine** (pure compute) | `src/domain/engine/` | Nothing | Money formatting, dates, budget totals, cash reconciliation, transaction status, goals math |
 | **Ports** (interfaces) | `src/domain/ports/` | Domain types only | `ExpenseRepository`, `AccessRepository`, `AuthProvider`, `BackupStore`, `EmailSender` — shapes the UI and Functions code against, never a vendor SDK |
-| **Application** (use cases) | `src/domain/application/` | Ports, engine | Orchestration that needs more than one repository call (`installmentPlanService`, `transactionService`, `goalService`, `categoryService`) |
+| **Application** (use cases) | `src/domain/application/` | Ports, engine | Orchestration that needs more than one repository call (`installmentPlanService`, `transactionService`, `transactionQueryService`, `goalService`, `categoryService`) |
 | **Data** (parsing) | `src/domain/data/` | Domain types | CSV import/export parsing, transaction ID helpers — pure, no I/O |
 | **Adapters — backend** | `functions/_shared/adapters/` | Ports | `d1ExpenseRepository`, `d1AccessRepository`, `r2BackupStore`, `cloudflareEmailSender`, `cloudflareAccessAuth` |
 | **Adapters — frontend** | `src/data/`, `src/testing/` | Ports | `apiDataSource` (HTTP client), `csvDataSource`, `inMemoryExpenseRepository` (test double) |
@@ -99,6 +99,19 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   layout carry into the new one. Select-all and a day's checkbox work from the data, not the
   DOM. Find in the page cannot see rows that are not rendered; the search box can. The geometry
   is in `src/ui/hooks/windowLayout.ts`.
+- **Paged transaction reads run the engine's filter in SQL, and a test holds them to it.**
+  `queryTransactions`, `summarizeTransactions` and `getTransaction` on `ExpenseRepository` back
+  `GET /api/expenses/transactions/list`, `/summary` and `/:id`. `filterTransactions` in
+  `src/domain/engine/transactions.ts` is the specification: `functions/_shared/transactionQuerySql.ts` is the
+  only place a `TxnFilter` becomes SQL, `inMemoryExpenseRepository` answers with the engine itself, and
+  `dbTransactionQuery.parity.test.ts` checks that the pages concatenated equal `filterTransactions` over the
+  served dataset for random filters, page sizes and awkward rows. A new filter field therefore needs five
+  things: the engine, its SQL clause, the filter generator in `src/testing/transactionQueryKit.ts`, a
+  validator in `transactionQueryService.ts` and its query-string name in `transactionQueryParams.ts`. Every value is bound, never spliced into the text, and the number
+  bound per statement is fixed by the filter's shape (D1 allows 100); lists travel as one JSON string read with
+  `json_each`. The owner comes from the session, never from a filter or a cursor.
+  `transactionQueryPlans.test.ts` runs each statement shape through `EXPLAIN QUERY PLAN` and fails on a full
+  scan of `transactions`, or on a sort where the rows should come off an index in order.
 
 ## Size and complexity
 

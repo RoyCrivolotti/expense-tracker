@@ -104,14 +104,76 @@ one code path with two policies.
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
 key. Every response carries a per-owner revision, and a weak ETag on it lets most opens end after a one-row read.
 
+## Paged transaction reads
+
+Three read routes serve the transaction list without loading the dataset. They are owner-scoped from the
+session (never from a request value) and none of them writes, so none moves the dataset revision.
+
+| Route | Answers |
+|---|---|
+| `GET /api/expenses/transactions/list` | `{ items, nextCursor }`: up to `limit` rows (default 50, at most 200, more is a 400) in `date DESC, id DESC` order |
+| `GET /api/expenses/transactions/summary` | `{ count, capped, netSpendCents }` for the same filter |
+| `GET /api/expenses/transactions/:id` | One row, or 404; a row that belongs to someone else gives the same 404 |
+
+The filter is the engine's `TxnFilter`, one query parameter per field: `month`, `dateFrom`, `dateTo`,
+`categoryId`, `accountId`, `type`, `status`, `flagId` (an id or `none`), `labelIds` (comma separated, any one
+matches), `query`, `amountMinCents`, `amountMaxCents`, and `queryAmountFromCents` with `queryAmountToCents`.
+Anything else is a 400: an unknown parameter (a misspelt filter that was ignored would answer with every row),
+a value that cannot be read, a field given twice, or `limit` and `cursor` on the summary. Rows are the
+`Transaction` the dataset carries, with the derived status and `labelIds` in ascending order. Statement-payment
+rows are synthesized by the client and are not part of these reads.
+
+**Paging is by position.** A cursor is the last row of a page and a digest of the filter, as base64url JSON. The
+next page is the rows strictly after that position, so a row inserted or deleted between two fetches never
+repeats or hides a row that was there throughout. A changed filter, or a cursor that was edited, is a 400. The
+digest is not a signature and the cursor carries no owner; a hand-written position reveals only rows the
+filter already allows.
+
+**What differs from the engine, on purpose.**
+
+- Text search uses `instr`, not `LIKE`, so `%` and `_` are plain characters and D1's 50 byte cap on a `LIKE`
+  pattern does not apply. The search text is capped at 200 characters instead, and a longer one is a 400.
+- SQLite lowers only ASCII, so each distinct non-ASCII letter in the search text has its capital folded into the
+  lower-case one before the comparison (`CAFÉ` matches a search for `café`; so does `МОСКВА` for `москва`). Each
+  such letter costs two bound values, so a search holds at most 8 different ones (more is a 400). Letters whose
+  capital is not one character that lower-cases back (`ß`), Greek final sigma, the Kelvin sign and `İ` are not
+  folded; the engine's `toLowerCase` treats those differently.
+- A row whose account is missing counts as posted even when cancelled, as `deriveStatus` and `loadDataset` do.
+
+**Cost.** A page reads the rows it returns plus any the filter rules out on the way, and stops at the limit.
+`count` stops after 1,001 matches. `netSpendCents` is exact, so it reads every row the filter cannot rule out by
+index: an unfiltered summary reads the owner's whole ledger, about the cost of one dataset load, and a month
+or a date range reads only that range. Whether a deployed D1 bills these as expected has not been measured.
+
+### Indexes
+
+`migrations/0036_transaction_query_indexes.sql` adds two, each one written row per inserted transaction.
+`transactionQueryPlans.test.ts` fails if either stops being used. The plans are for the first page and a later
+one (`date<?` is the keyset position):
+
+| Query | Before | After |
+|---|---|---|
+| Newest first | `idx_txn_owner (owner=?)`, then a sort of all the owner's rows | `idx_txn_owner_date (owner=?)`, no sort |
+| Later page | same | `idx_txn_owner_date (owner=? AND date<?)` |
+| Date range | same | `idx_txn_owner_date (owner=? AND date>? AND date<?)` |
+| Month | same, so a past month is found by walking every newer row | `idx_txn_owner_month_date (owner=? AND budget_month=?)`, no sort |
+| Month, later page | same | `idx_txn_owner_month_date (owner=? AND budget_month=? AND date<?)` |
+
+The row id breaks ties in the same direction as the date (it is the rowid, stored last in every index), so
+`ORDER BY date DESC, id DESC` needs no index column for it. A filter on category, account, flag or label can
+instead be served by the index that names it, and the planner chooses. With table statistics it may read every
+row of a common category on each page. That is not a problem at the sizes seen so far; if it shows up, the fix is
+an `(owner, category_id, date)` index, one more written row per insert.
+
 ## Status
 
 Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, the per-owner revision
-with the weak ETag on `GET /api/expenses` (migration 0035) and the windowed Transactions list. Not built: everything
-else under "Proposed design". Planned work, in dependency order:
+with the weak ETag on `GET /api/expenses` (migration 0035), the windowed Transactions list and the paged list,
+summary and by-id reads (migration 0036; nothing in the app calls them yet). Not built: everything else under
+"Proposed design". Planned work, in dependency order:
 
 1. Standalone improvements: a compact read. (The revision and ETag, and list windowing, are built.)
-2. A server query layer: keyset list, summary, by-id, per-month sums, series, with query-plan tests.
+2. A server query layer: keyset list, summary, by-id and query-plan tests (built), per-month sums, series.
 3. The ledger model and differential tests against the pure engines.
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
@@ -123,6 +185,9 @@ else under "Proposed design". Planned work, in dependency order:
 - `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns,
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
+- `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
+  account), a stand-in that refuses more than 100 bound values as D1 does, and a seeded generator of filters, for
+  the paged-read tests.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
   the real SQL runs in tests. It cannot reproduce D1's billing. They live in `src/testing/` because the
   `functions/` typecheck has no Node types.
