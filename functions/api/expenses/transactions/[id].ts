@@ -7,8 +7,17 @@ import {
 import { mapAppError } from '../../../_shared/mapAppError'
 import { receiptStore } from '../../../_shared/receiptStoreFactory'
 import { removeReceiptsForTransactions } from '../../../_shared/receiptService'
-import { json, readJson } from '../../../_shared/http'
+import { HttpError, json, readJson } from '../../../_shared/http'
 import { parseNumericId } from '../../../_shared/params'
+
+/** One transaction as the dataset carries it. A row that is not the caller's reads as missing. */
+export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
+  const id = parseNumericId(context.params, 'id')
+  const { repo, owner } = context.data
+  const transaction = await repo.getTransaction(owner, id)
+  if (!transaction) throw new HttpError(404, 'Transaction not found')
+  return json(transaction)
+}
 
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseNumericId(context.params, 'id')
