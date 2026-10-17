@@ -96,6 +96,9 @@ one code path with two policies.
 | Transaction list, count, net spend, search | Endpoint: keyset pages and a capped summary |
 | Autocomplete beyond loaded rows, usage counts, one row by id, bulk edit on a filter, export, backup | Endpoint |
 
+How much history each engine and screen reads, and which of them give a different answer from less, is recorded in
+[ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
+
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
 key. Every response carries a per-owner revision, and a weak ETag on it lets most opens end after a one-row read.
 
