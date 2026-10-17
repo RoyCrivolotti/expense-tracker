@@ -1,4 +1,11 @@
-import type { AnalyticsBasis, AnalyticsPeriod, CompareMode, OccurrenceGroup, classifyFixedSpend } from '../domain/engine'
+import type {
+  AnalyticsBasis,
+  AnalyticsPeriod,
+  CashRow,
+  CompareMode,
+  OccurrenceGroup,
+  classifyFixedSpend,
+} from '../domain/engine'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 
 /**
@@ -48,7 +55,22 @@ export interface Context {
    * classifier or series from the rows they are given are passed the whole ledger's instead.
    */
   groups: OccurrenceGroup[] | undefined
+  /** The cash reconciliation over the linear list, computed once for the consumers that read it. */
+  cashRows: () => CashRow[]
   base: { month: string; today: string; openMonth: string; rolloverDay: number }
+}
+
+/** Runs `f` the first time it is called and hands back that result afterwards. */
+export function once<T>(f: () => T): () => T {
+  let done = false
+  let value: T
+  return () => {
+    if (!done) {
+      value = f()
+      done = true
+    }
+    return value
+  }
 }
 
 /** Maps and sets in a stable order, so two outputs compare by value. */

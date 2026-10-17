@@ -6,7 +6,6 @@
 import {
   buildReimbursementLinks,
   computeAllocation,
-  computeCashReconciliation,
   computeMovers,
   computeSignals,
   computeSpendingGroupDetail,
@@ -26,7 +25,7 @@ import {
   recentlyAdded,
   splitGap,
 } from '../domain/engine'
-import type { Context, Outputs } from './outputContext'
+import { type Context, type Outputs, once } from './outputContext'
 import { samplePlan } from './samplePlan'
 
 export function rowOutputs(c: Context): Outputs {
@@ -39,14 +38,15 @@ export function rowOutputs(c: Context): Outputs {
     computeSpendingGroups({ transactions: linear, categories: cats, labels: ds.labels, ...whole }, { ...opts, groupBy })
   const detail = (groupBy: 'fixedFlexible' | 'label' | 'description', key: string) => () =>
     computeSpendingGroupDetail({ transactions: linear, categories: cats, ...whole }, { ...opts, groupBy, key })
-  const pace = () =>
+  const pace = once(() =>
     computeSpendingPace(tx, cats, ds.installmentPlans, classifier, {
       ...base,
       basis: 'committed',
       prevMonth: months.includes(prev) ? prev : null,
       ...(c.groups === undefined ? {} : { fixedGroups: c.groups }),
-    })
-  const movers = () => computeMovers(tx, cats, classifier, opts)
+    }),
+  )
+  const movers = once(() => computeMovers(tx, cats, classifier, opts))
   return {
     allocation: () => computeAllocation(tx, classifier, viewed, 'committed'),
     pace,
@@ -55,7 +55,7 @@ export function rowOutputs(c: Context): Outputs {
       computeSignals({
         pace: pace(),
         movers: movers(),
-        cashRows: computeCashReconciliation(linear, ds.accounts, ds.settings, ds.cashActuals),
+        cashRows: c.cashRows(),
         openMonth: base.openMonth,
       }),
     groupsByCategory: groups('category'),

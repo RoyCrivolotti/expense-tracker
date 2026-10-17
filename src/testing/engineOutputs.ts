@@ -8,7 +8,7 @@
  * dates, descriptions, labels or links (R, P, X) and the global lists read `lists.real`.
  */
 import type { ExpenseDataset } from '../domain/types'
-import { type OccurrenceGroup, classifyFixedSpend, sortedMonths } from '../domain/engine'
+import { type OccurrenceGroup, classifyFixedSpend, computeCashReconciliation, sortedMonths } from '../domain/engine'
 import {
   BASES,
   COMPARES,
@@ -19,6 +19,7 @@ import {
   NOW,
   type Outputs,
   PERIODS,
+  once,
   plain,
 } from './outputContext'
 import { linkedOutputs, rowOutputs } from './rowOutputs'
@@ -44,7 +45,9 @@ export function outputs(
 ): Outputs {
   const months = sortedMonths(lists.linear.map((t) => t.budgetMonth))
   const rolloverDay = ds.settings.budgetRolloverDay
-  const c: Context = { ds, ...lists, viewed, clock, months, classifier, groups, base: { month: viewed, ...clock, rolloverDay } }
+  const cashRows = once(() => computeCashReconciliation(lists.linear, ds.accounts, ds.settings, ds.cashActuals))
+  const base = { month: viewed, ...clock, rolloverDay }
+  const c: Context = { ds, ...lists, viewed, clock, months, classifier, groups, cashRows, base }
   return { ...sumOutputs(c), ...kpiOutputs(c), ...rowOutputs(c), ...linkedOutputs(c) }
 }
 
@@ -94,6 +97,11 @@ export const ROW_READERS = [
   'detailByDescription',
 ]
 
+/** Runs the named consumers and keeps each result as a string, so it can be kept and compared later. */
+export function fingerprint(out: Outputs, keys: string[]): Record<string, string> {
+  return Object.fromEntries(keys.map((k) => [k, JSON.stringify(plain(out[k]!()))]))
+}
+
 /**
  * Compares the named consumers over two sets of lists and returns the keys that differ. The classifier
  * defaults to one built from the full ledger's rows; pass it in to build it once for many comparisons.
@@ -109,7 +117,7 @@ export function differing(
   options: { clock?: Clock; classifier?: Classifier; groups?: OccurrenceGroup[] } = {},
 ): string[] {
   const { clock = NOW, classifier = classifyFixedSpend(full.real), groups } = options
-  const a = outputs(ds, full, viewed, classifier, clock, groups)
-  const b = outputs(ds, small, viewed, classifier, clock, groups)
-  return keys.filter((k) => JSON.stringify(plain(a[k]!())) !== JSON.stringify(plain(b[k]!())))
+  const a = fingerprint(outputs(ds, full, viewed, classifier, clock, groups), keys)
+  const b = fingerprint(outputs(ds, small, viewed, classifier, clock, groups), keys)
+  return keys.filter((k) => a[k] !== b[k])
 }

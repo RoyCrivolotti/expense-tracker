@@ -22,7 +22,7 @@ export const adversarialMonths = (): string[] =>
 const byApiOrder = (a: Transaction, b: Transaction) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
 
 export function adversarialLedger(): ExpenseDataset {
-  const base = syntheticLedger({ months: COUNT, perMonth: 20, endMonth: END_MONTH, seed: 7 })
+  const base = syntheticLedger({ months: COUNT, perMonth: 10, endMonth: END_MONTH, seed: 7 })
   const months = adversarialMonths()
   const cancelledOnly = new Set([months[8], months[9], months[40]])
   const gap = new Set(months.slice(20, 27))

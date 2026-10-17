@@ -4,13 +4,13 @@
  * closed and once with it as the open month (so the same-days cut applies). The only differences allowed
  * are the ones written down in `INTENDED_DIFFERENCES`.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { classifyFixedSpend, recurringFixedGroups, sortedMonths } from '../domain/engine'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy, assembleRows, ledgerFor } from '../domain/ledger'
 import { buildExpenseModel } from '../ui/buildExpenseModel'
 import { buildOverviewData } from '../ui/analytics/overview/overviewModel'
 import { ADVERSARIAL_ROLLOVER_DAY, adversarialLedger } from './adversarialLedger'
-import { LATER, differing, openAt, outputs, plain, wholeLedger } from './engineOutputs'
+import { LATER, differing, fingerprint, openAt, outputs, plain, wholeLedger } from './engineOutputs'
 import {
   GLOBAL_DIFFERENCES,
   INTENDED_DIFFERENCES,
@@ -28,16 +28,61 @@ const KEYS = Object.keys(outputs(ds, whole, months[0]!, classifier))
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 const clockFor = (mode: 'closed' | 'open', month: string) => (mode === 'closed' ? LATER : openAt(month))
 
+type Fingerprints = Record<string, string>
+
+/** What every consumer gave for one viewed month, on each set of lists. */
+interface Snapshot {
+  /** Over every row. */
+  reference: Fingerprints
+  /** Over the lists from a 13 month window. */
+  windowed: Fingerprints
+  /** The same lists, with the engines handed the classifier and series of the whole history. */
+  windowedWithHistory: Fingerprints
+  /** Over the lists from the default size policy. */
+  defaultPolicy: Fingerprints
+}
+
+/** The pace without the fields the envelope feeds. */
+function paceOutsideEnvelope(pace: unknown): string {
+  const fields = Object.entries(pace as Record<string, unknown>).filter(([k]) => !PACE_ENVELOPE_FIELDS.includes(k))
+  return JSON.stringify(plain(Object.fromEntries(fields)))
+}
+
+function run(lists: typeof whole, month: string, mode: 'closed' | 'open', withHistory = false): Fingerprints {
+  const out = outputs(ds, lists, month, classifier, clockFor(mode, month), withHistory ? groups : undefined)
+  return { ...fingerprint(out, KEYS), paceOutsideEnvelope: paceOutsideEnvelope(out.pace!()) }
+}
+
 /**
- * For each consumer, the viewed months in which the assembled lists gave a different answer. With
- * `history`, the engines that build their own classifier or series are handed the whole ledger's.
+ * Every consumer for every viewed month, run once per set of lists and kept, so the tests below compare
+ * results instead of running the engines again. The whole-ledger run is shared: it does not depend on
+ * which lists are being compared, and handing it its own classifier and series changes nothing (checked
+ * below).
  */
-function sweep(mode: 'closed' | 'open', policy?: HydrationPolicy, history = false): Map<string, string[]> {
+function snapshots(mode: 'closed' | 'open'): Map<string, Snapshot> {
+  return new Map(
+    months.map((month) => {
+      const windowed = assembleRows(ledgerFor(ds, month, WINDOWED))
+      return [
+        month,
+        {
+          reference: run(whole, month, mode),
+          windowed: run(windowed, month, mode),
+          windowedWithHistory: run(windowed, month, mode, true),
+          defaultPolicy: run(assembleRows(ledgerFor(ds, month)), month, mode),
+        },
+      ]
+    }),
+  )
+}
+
+type Side = 'windowed' | 'windowedWithHistory' | 'defaultPolicy'
+
+/** For each consumer, the viewed months in which the lists gave a different answer. */
+function sweep(snaps: Map<string, Snapshot>, side: Side): Map<string, string[]> {
   const seen = new Map<string, string[]>()
-  for (const month of months) {
-    const small = assembleRows(policy ? ledgerFor(ds, month, policy) : ledgerFor(ds, month))
-    const options = { clock: clockFor(mode, month), classifier, ...(history ? { groups } : {}) }
-    for (const key of differing(ds, month, whole, small, KEYS, options)) {
+  for (const [month, snap] of snaps) {
+    for (const key of KEYS.filter((k) => snap[side][k] !== snap.reference[k])) {
       seen.set(key, [...(seen.get(key) ?? []), month])
     }
   }
@@ -67,30 +112,37 @@ function nextMonth(month: string): string {
 }
 
 describe.each(['closed', 'open'] as const)('viewed-month sweep, %s month', (mode) => {
-  const windowed = sweep(mode, WINDOWED)
+  let snaps = new Map<string, Snapshot>()
+  // Five runs of every consumer over 57 months take a few seconds on a CI runner with coverage on,
+  // which would be counted against whichever test came first, so the hook gets its own timeout.
+  beforeAll(() => {
+    snaps = snapshots(mode)
+  }, 120_000)
 
   it('differs from the whole ledger only where intended, and every intended difference shows up', () => {
     const intended = Object.keys(INTENDED_DIFFERENCES).filter((k) => mode === 'open' || !ONLY_WHILE_OPEN.includes(k))
-    expect([...windowed.keys()].sort()).toEqual(intended.sort())
+    expect([...sweep(snaps, 'windowed').keys()].sort()).toEqual(intended.sort())
   })
 
   it('differs in the spending pace only in the fields the envelope feeds', () => {
-    for (const month of months) {
-      const small = assembleRows(ledgerFor(ds, month, WINDOWED))
-      const run = (lists: typeof whole) => {
-        const pace = outputs(ds, lists, month, classifier, clockFor(mode, month)).pace!() as Record<string, unknown>
-        return plain(Object.fromEntries(Object.entries(pace).filter(([k]) => !PACE_ENVELOPE_FIELDS.includes(k))))
-      }
-      expect(run(small)).toEqual(run(whole))
+    for (const [month, snap] of snaps) {
+      expect(snap.windowed['paceOutsideEnvelope'], month).toBe(snap.reference['paceOutsideEnvelope'])
     }
   })
 
   it('differs only in the global lists once the classifier and series of the whole history are passed in', () => {
-    expect([...sweep(mode, WINDOWED, true).keys()].sort()).toEqual(Object.keys(GLOBAL_DIFFERENCES).sort())
+    expect([...sweep(snaps, 'windowedWithHistory').keys()].sort()).toEqual(Object.keys(GLOBAL_DIFFERENCES).sort())
   })
 
   it('is exactly today\'s behaviour under the default size policy', () => {
-    expect([...sweep(mode).keys()]).toEqual([])
+    expect([...sweep(snaps, 'defaultPolicy').keys()]).toEqual([])
+  })
+
+  it('gives the whole ledger the same answers whether or not it is handed its own classifier and series', () => {
+    for (const month of [months[0]!, months[Math.floor(months.length / 2)]!, months.at(-1)!]) {
+      const lists = whole
+      expect(run(lists, month, mode, true), month).toEqual(snaps.get(month)!.reference)
+    }
   })
 })
 

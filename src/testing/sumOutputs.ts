@@ -5,7 +5,6 @@ import {
   basisOptions,
   buildStatementPayments,
   computeBudgetHealth,
-  computeCashReconciliation,
   computeCategoryActuals,
   computeMonthlyTotals,
   computeOverviewKpis,
@@ -22,7 +21,7 @@ import { BASES, COMPARES, type Context, type Outputs, PERIODS } from './outputCo
 export function sumOutputs(c: Context): Outputs {
   const { ds, linear: tx, viewed, clock } = c
   const cats = ds.categories
-  const cashRows = () => computeCashReconciliation(tx, ds.accounts, ds.settings, ds.cashActuals)
+  const cashRows = c.cashRows
   const out: Outputs = {
     categoryActuals: () => computeCategoryActuals(tx, cats, { includeForecast: true, ytdThroughMonth: viewed }),
     budgetHealth: () => computeBudgetHealth(tx, cats, viewed, { includeForecast: true }),
