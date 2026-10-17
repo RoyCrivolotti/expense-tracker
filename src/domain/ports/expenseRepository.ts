@@ -38,6 +38,8 @@ import type {
   TransactionSummary,
 } from '../data/transactionQuery'
 import type { TxnFilter } from '../engine/transactions'
+import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
+import type { MonthCell } from '../ledger/types'
 
 /** Persistence port — UI/API depend on this shape, not on D1 or any vendor SDK. */
 export interface ExpenseRepository {
@@ -59,6 +61,23 @@ export interface ExpenseRepository {
   summarizeTransactions(owner: string, filter: TxnFilter): Promise<TransactionSummary>
   /** One row, or null if there is none with that id for this owner (a foreign id looks the same). */
   getTransaction(owner: string, id: number): Promise<Transaction | null>
+  /**
+   * The parts of the ledger that are small however many transactions there are, and what the ledger
+   * holds: reference tables, pinned rows (see `isPinned`), budget months and row counts. The
+   * installment backfill is the caller's to run first, as `loadDataset` runs it.
+   */
+  readLedgerReference(owner: string): Promise<LedgerReferenceRead>
+  /**
+   * Every real row whose budget month is in `range`, newest first, as `loadDataset` carries them.
+   * Null when the range holds more than `maxRows` rows: a partial month would give wrong totals, so
+   * it is never returned.
+   */
+  readMonthRows(owner: string, range: MonthRange, maxRows: number): Promise<MonthRowsRead | null>
+  /**
+   * The cells (`buildCells`) of the unpinned rows in `range`, ordered as `buildCells` orders them.
+   * Null when there are more than `maxCells`.
+   */
+  readMonthCells(owner: string, range: MonthRange, maxCells: number): Promise<MonthCell[] | null>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,

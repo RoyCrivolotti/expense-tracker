@@ -43,11 +43,11 @@ export const STATUS_JOINS = `LEFT JOIN accounts a ON a.id = t.account_id AND a.o
       ON s.owner = t.owner AND s.account_id = t.account_id AND s.year_month = t.budget_month`
 
 /** Ids of the labels a row carries, one that no longer exists dropped as the dataset drops it. */
-const LABEL_IDS_SQL = `(SELECT json_group_array(tl.label_id)
+export const LABEL_IDS_SQL = `(SELECT json_group_array(tl.label_id)
       FROM transaction_labels tl JOIN labels l ON l.id = tl.label_id AND l.owner = t.owner
       WHERE tl.transaction_id = t.id)`
 
-const COLUMNS = `t.id, t.date, t.budget_month, t.description, t.account_id, t.category_id, t.type,
+export const COLUMNS = `t.id, t.date, t.budget_month, t.description, t.account_id, t.category_id, t.type,
     t.amount_cents, t.cancelled, t.notes, t.created_at, t.plan_id, t.installment_index, t.flag_id,
     t.settled_by, t.report_count, t.report_covered_cents`
 

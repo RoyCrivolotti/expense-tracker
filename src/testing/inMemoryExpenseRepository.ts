@@ -38,6 +38,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
+import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './inMemoryLedgerParts'
 import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
@@ -177,6 +178,25 @@ export function inMemoryExpenseRepository(
       stores.set(key, store)
     }
     return store
+  }
+
+  function datasetOf(owner: string): ExpenseDataset {
+    const store = storeFor(owner)
+    return {
+      categories: [...store.categories],
+      accounts: [...store.accounts],
+      flags: [...store.flags],
+      labels: [...store.labels],
+      attachments: [...store.attachments],
+      transactions: derivedTransactions(store),
+      accountStatements: [...store.statements],
+      cashActuals: [...store.cashActuals],
+      settings: { ...store.settings },
+      goalScenarios: [...store.goalScenarios],
+      installmentPlans: [...store.installmentPlans],
+      wealthAccounts: [...store.wealthAccounts],
+      wealthCheckins: store.wealthCheckins.map((c) => ({ ...c, entries: [...c.entries] })),
+    }
   }
 
   /**
@@ -547,25 +567,15 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   return {
-    loadDataset: (owner) => {
-      const store = storeFor(owner)
-      const derived = derivedTransactions(store)
-      return Promise.resolve({
-        categories: [...store.categories],
-        accounts: [...store.accounts],
-        flags: [...store.flags],
-        labels: [...store.labels],
-        attachments: [...store.attachments],
-        transactions: derived,
-        accountStatements: [...store.statements],
-        cashActuals: [...store.cashActuals],
-        settings: { ...store.settings },
-        goalScenarios: [...store.goalScenarios],
-        installmentPlans: [...store.installmentPlans],
-        wealthAccounts: [...store.wealthAccounts],
-        wealthCheckins: store.wealthCheckins.map((c) => ({ ...c, entries: [...c.entries] })),
-      })
-    },
+    loadDataset: (owner) => Promise.resolve(datasetOf(owner)),
+
+    readLedgerReference: (owner) => Promise.resolve(ledgerReferenceOf(datasetOf(owner))),
+
+    readMonthRows: (owner, range, maxRows) =>
+      Promise.resolve(monthRowsOf(datasetOf(owner), range, maxRows)),
+
+    readMonthCells: (owner, range, maxCells) =>
+      Promise.resolve(monthCellsOf(datasetOf(owner), range, maxCells)),
 
     listOwners: () => Promise.resolve([...stores.keys()]),
 

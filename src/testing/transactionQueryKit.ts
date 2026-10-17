@@ -13,7 +13,7 @@ import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset, Transaction, TxnStatus, TxnType } from '../domain/types'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { seedDataset } from './seedSqlite'
-import { migratedDatabase, newStats, sqliteD1, type SqliteD1Stats } from './sqliteD1'
+import { migratedDatabase, newStats, sqliteD1, type SqliteD1Options, type SqliteD1Stats } from './sqliteD1'
 import { syntheticLedger } from './syntheticLedger'
 
 export const OWNER = 'owner@example.com'
@@ -50,6 +50,7 @@ function recording(inner: D1Database, statements: RecordedStatement[]): D1Databa
 export function queryDb(
   dataset: ExpenseDataset,
   others: Array<{ owner: string; dataset: ExpenseDataset }> = [],
+  options: SqliteD1Options = {},
 ): QueryDb {
   const sqlite = migratedDatabase()
   // Rows that name an account or a label that is not there are the point of some cases.
@@ -58,7 +59,7 @@ export function queryDb(
   others.forEach((other, i) => seedDataset(sqlite, other.owner, shifted(other.dataset, (i + 1) * 1_000_000)))
   const stats = newStats()
   const statements: RecordedStatement[] = []
-  return { sqlite, d1: recording(sqliteD1(sqlite, stats), statements), stats, statements }
+  return { sqlite, d1: recording(sqliteD1(sqlite, stats, options), statements), stats, statements }
 }
 
 /** Ids are global in D1, so each further owner's rows are moved up by `by` to keep clear of the others'. */

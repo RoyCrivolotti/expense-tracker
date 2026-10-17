@@ -107,8 +107,8 @@ How much history each engine and screen reads, and which of them give a differen
 [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
-key. Each will be checked against the per-owner revision that `GET /api/expenses` already uses (see "Status"), so most
-opens end after a two-row read.
+key. The reference, months and sums are checked against the per-owner revision that `GET /api/expenses` already uses
+(see "Ledger parts"), so most opens end after a two-row read; the series are not built.
 
 ## Paged transaction reads
 
@@ -197,6 +197,142 @@ the write paths (insert, update, bulk update, deletes, flag, label, category and
 load) through `EXPLAIN QUERY PLAN`, shows none reads `idx_txn_budget_month`, and shows the plans scan the same
 tables after both indexes are dropped. It does not cover SQL run by hand or by scripts outside `functions/`.
 
+## Ledger parts
+
+Three read routes hand out the pieces of a ledger described under "Proposed design", so that a client does not
+have to load every transaction, and a fourth lists one transaction's receipts. Each is owner-scoped from the
+session (never from a request value) and is a GET, so none moves the dataset revision. `GET /api/expenses` and
+every write route are unchanged.
+
+| Route | Answers | Bound |
+|---|---|---|
+| `GET /api/expenses/reference` | The reference tables, the pinned rows, the months that have a row, the rows in each, and the row count | None; see "What it costs" |
+| `GET /api/expenses/transactions/months?from=YYYY-MM&to=YYYY-MM` | Every real row whose budget month is in the range, newest first, as `Transaction`s | 24 months and 5,000 rows |
+| `GET /api/expenses/cube?from=YYYY-MM&to=YYYY-MM` | The per-month sums (`MonthCell`s) of the unpinned rows in the range | 120 months and 10,000 cells |
+| `GET /api/expenses/attachments?transactionId=N` | One transaction's receipts, oldest first | None |
+
+Both ends of a range are inclusive budget months. A missing, malformed, reversed or too wide range, an unknown
+parameter and a repeated one are each a 400 before any row is read. A range whose rows or cells go over the bound
+is a 400 as well, and the message names the bound. It is never cut short: a client given part of a month would add
+up the wrong total. A month with more than 5,000 rows can only be read through the paged list with a `month`
+filter. The bounds are constants in `src/domain/data/ledgerParts.ts`; the reasoning is under "What it costs".
+
+### One revision across the parts
+
+Every 200 body starts with `revision`, the owner's current token: the one the ETag of `GET /api/expenses` is built
+from. The ETag of a part is the token, the owner's budget month, the part with a format number and, for a range,
+the range, for example `W/"<token>-2026-10-months1-2026-01..2026-03"`. It names the range because a client that
+keeps tags by hand could otherwise offer one range's tag for another and be told nothing changed. A matching
+`If-None-Match` is answered with a 304 after two rows are read, before anything else runs, and every response has
+`Cache-Control: private, no-cache`, as the dataset does.
+
+Two responses whose `revision` differ were read from different states of the ledger: a write came between them,
+or the budget month turned and the installment backfill ran. A client that wants one consistent ledger fetches
+again. The revision is per owner, not per month, so after any write the part for an old range is fetched again too.
+
+`PARTS_FORMAT` in `functions/_shared/datasetEtag.ts` is in every tag, as `DATASET_FORMAT` is for the dataset, and
+`ledgerPartsEtag.test.ts` fails when the shape of a part moves without it.
+
+### Reference
+
+The body holds:
+
+- `reference`: everything `loadDataset` reads except the transactions and the receipts (categories, accounts,
+  flags, labels, statements, cash actuals, installment plans, scenarios, settings, wealth accounts and check-ins);
+- `pinned`: the rows `isPinned` in `src/domain/ledger/pinned.ts` picks, whatever their age: investments, rows with
+  a plan, a flag or a settlement, the rows another row was settled by, and payments with a covered count;
+- `attachmentCounts`: for the pinned rows, `{ transactionId: receipts }` with an entry only for rows that have
+  any. It replaces the dataset's `attachments`, which is the metadata of every receipt. It is a side map and not a
+  field of the row, so a row is exactly what the dataset carries;
+- `months`: every budget month with at least one row, a month of only cancelled rows included, oldest first (what
+  the month picker steps through); `rowsPerMonth`, the rows in each, so that a client can stay inside the bound of
+  the months route; and `rowCount`, their sum.
+
+When the browser's copy is not current, the route runs the installment backfill that `loadDataset` runs, before it
+reads anything, and fails the same way: an error is logged and the read goes on. It then reads the revision
+again, so a backfill that inserted rows is already in the tag and in the `revision` of the body, and the next
+request is a 304 and not a second full load. The months and cube routes run no backfill: in a new budget month,
+until the reference has been fetched, an instalment that has fallen due is missing from them.
+
+### Rows of a range
+
+Rows are what `GET /api/expenses` carries, with the derived status computed in SQL by the same rules as the paged
+reads (a missing account counts as posted) and `labelIds` in ascending order. Receipts of those rows are counted in
+`attachmentCounts`. The statement reads at most one row more than the bound, so a range that is too big costs that
+many rows and not the range, whatever it holds.
+
+### Cube
+
+A cell is what `buildCells` in `src/domain/ledger/cells.ts` makes: one per budget month, account, category, type,
+cancelled flag and sign of amount, with the summed cents and a row count. A month that has only cancelled rows, or a
+sum of zero, still has its cell. Pinned rows are not in any cell; they travel with the reference. The groups come
+from a `GROUP BY` over the month range of `idx_txn_owner_month_date`, in the order `buildCells` returns them.
+
+### What it costs
+
+Measured on the SQLite stand-in with `SCALING_MEASURE=1 npx vitest run functions/_shared/ledgerParts.scaling.test.ts`,
+Node 22 on an Apple Silicon laptop, over the synthetic ledger of 120 months. "JavaScript" is the read, less the
+time spent inside SQLite, plus `JSON.stringify`: a stand-in for Worker CPU, not a measurement of it.
+
+| Part | Size | JavaScript | JSON |
+|---|---|---|---|
+| Reference | 4.9k rows, 241 pinned | 0.9 ms | 82 kB |
+| Reference | 99.9k rows, 1,125 pinned | 2 ms | 297 kB |
+| Reference | 249.9k rows, 2,672 pinned | 3.8 ms | 674 kB |
+| Rows | 1,000 rows | 0.2 to 0.3 ms | 230 kB |
+| Rows | 5,000 rows | 1.1 to 1.4 ms | 1.15 MB |
+| Rows | 10,000 rows | 2.1 to 2.8 ms | 2.3 MB |
+| Cube | 12 months: 818 cells from 9.9k rows | 0.4 ms | 104 kB |
+| Cube | 120 months: 8,156 cells from 98.7k rows | 3.1 ms | 1.03 MB |
+
+- **The reference grows with its pinned rows, not with the ledger.** Pinned rows are 1 to 5% of the synthetic
+  ledger. Its D1 cost does grow with the ledger, because counting rows per month reads one index entry per row, and
+  D1 bills a count as a scan. An unchanged ledger is still a 304 at two rows.
+- **Raw column tuples do not help the mapping.** Over plain objects and arrays, as a Worker receives them, the
+  three ways of building a row (through `toStoredTxn`, building the object directly, and from `raw()` tuples) are
+  within 30% of one another. Run on the stand-in's own row objects, tuples look four times faster, but that is
+  node:sqlite's row objects being slow to read; workerd hands a Worker plain objects, so the scaling test copies
+  the rows through JSON before it times the mapping. Tuples are 2.7 times smaller than named columns before they
+  reach the Worker (688 kB against 1,889 kB for 5,000 rows); what that saves in workerd is not measured, so the
+  routes keep named columns.
+- **The bounds are conservative, not derived.** 5,000 rows is about 1.3 ms of JavaScript here, and 10,000 cells
+  about 4 ms. That leaves most of the Free plan's 10 ms for what cannot be measured here: the Worker's own cost of
+  receiving rows from D1, the statements that authenticate the request, and workerd's meter against Node's. Raise
+  them only after measuring a deployed Worker. A cube of the whole synthetic 120-month ledger of 99k rows has
+  8,156 cells, so 10,000 serves a ledger of that kind in one request; one with more accounts and categories asks
+  by the year.
+- **Rows read are not measured.** Estimated from the plans: the reference reads one index entry per row (the month
+  counts) and one row per pinned row; a rows request reads at most its bound plus one index entries and the rows
+  it returns; the cube reads an index entry and a row for every row in the range. The cube therefore saves Worker
+  CPU and bytes, not D1 reads: a cube of the whole ledger reads the whole ledger. What would is a table of
+  per-month sums that every write keeps current, which is a change to the write path and not built.
+
+### Indexes
+
+`migrations/0037_pinned_rows_index.sql` adds one partial index, `idx_txn_pinned (owner, date)`, holding only the
+rows `isPinned` picks by their own columns. Without it the pinned rows are found by reading every row the owner has:
+plans, flags and settlements have an index, but investments and payments with a covered count do not.
+`ledgerPartPlans.test.ts` runs each statement through `EXPLAIN QUERY PLAN`, with and without table statistics and
+among several owners, and fails on a full scan of `transactions`, on a read of every row the owner has, and on a
+pinned read that stops going through the index.
+
+| Query | Without 0037 | With 0037 |
+|---|---|---|
+| Pinned rows | Every row of the owner, through one of the owner indexes | `idx_txn_pinned (owner=?)`, already in date order |
+| Payments another row points at | `idx_txn_settled_by`, then each row by key | The same |
+| Range of months | `idx_txn_owner_month_date (owner=? AND budget_month>? AND budget_month<?)`, one sort | The same |
+| Cube | The same range, and `idx_txn_settled_by` for the settled rows | The same |
+| Rows per month | `idx_txn_owner_month_date (owner=?)`, index only | The same |
+
+An ordinary expense is not in the partial index, so inserting one costs no extra written row; an inserted
+investment, plan row, flagged row or settled row costs one. The index is keyed on the date so that the rows come off
+it newest first with no sort: keyed on the id, SQLite chose to walk the date index to avoid the sort and read every
+row. The predicate has to hold the same terms as `PINNED_SQL`, or SQLite stops using it.
+
+The cube has no index of its own. A covering index over the month range and all the columns the cube and the pinned
+test read (eleven of them) made the statement 1.6 times faster on the stand-in (36 ms against 59 ms for 97k rows),
+for a wide index and one more written row on every insert, when `transactions` already has eleven. It was not built.
+
 ## Status
 
 Built:
@@ -209,6 +345,9 @@ Built:
 - the audit of how much history each engine reads ([ENGINE-HISTORY.md](./ENGINE-HISTORY.md)), with tests that pin it;
 - the keyset list, the capped summary and the by-id read for transactions, with the two indexes they need
   (migration 0036). See "Paged transaction reads". Nothing in the app calls them yet;
+- the ledger parts: `GET /api/expenses/reference`, `/transactions/months` and `/cube`, and the receipts of one
+  transaction, with a partial index for the pinned rows (migration 0037). See "Ledger parts". Nothing in the app
+  calls them yet;
 - the ledger model (`src/domain/ledger`, pure code), with differential tests that run the engines over every row and
   over the assembled lists (`src/testing/ledgerDifferential.test.ts`, `ledgerSweep.test.ts`; the result is in
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
@@ -216,12 +355,12 @@ Built:
   from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list).
   No screen uses the model or passes one in yet.
 
-Not built: the compact read, the per-month sums and series, and the client side of the design. Planned work, in
+Not built: the compact read, the series, and the client side of the design. Planned work, in
 dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
-2. A server query layer: keyset list, summary, by-id and query-plan tests (built); per-month sums and series (not
-   built).
+2. A server query layer: keyset list, summary, by-id and query-plan tests (built); the reference, rows of a range
+   and per-month sums (built); series (not built).
 3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
    the four engines (built).
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew, and passing the whole history's
@@ -235,6 +374,8 @@ dependency order:
 - `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns,
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
+- `src/testing/inMemoryLedgerParts.ts`: the ledger parts computed with `partitionPinned` and `buildCells` over a whole
+  dataset, which the SQL is held to (`dbLedgerParts.parity.test.ts`, over the synthetic, adversarial and random ledgers).
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
   account), the stand-in with a record of every statement it ran (for the query-plan tests), and a seeded generator
   of filters, for the paged-read tests.
