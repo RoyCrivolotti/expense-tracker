@@ -14,6 +14,7 @@ import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { addDaysIso } from '../domain/engine/dates'
+import { usageFromDataset } from '../domain/engine/recordUsage'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { MAX_SUGGEST_KEYS } from '../domain/data/descriptionSuggest'
 import { normalizeDesc } from '../domain/engine/normalizeDescription'
@@ -593,6 +594,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
 
     readSeries: (owner) => Promise.resolve(seriesFromTransactions(derivedTransactions(storeFor(owner)))),
+
+    readUsage: (owner) => Promise.resolve(usageFromDataset(datasetOf(owner))),
 
     suggestDescriptions: (owner, { prefix, before, limit, locale }) => {
       const all = derivedTransactions(storeFor(owner))

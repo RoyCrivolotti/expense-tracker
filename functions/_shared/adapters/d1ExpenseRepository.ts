@@ -3,6 +3,7 @@ import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import { readSeries } from '../dbSeries'
 import { suggestDescriptions } from '../dbDescriptionSuggest'
+import { readUsage } from '../dbUsage'
 import { getTransaction, queryTransactions, summarizeTransactions } from '../dbTransactionQuery'
 import { readLedgerReference, readMonthCells, readMonthRows } from '../dbLedgerParts'
 import {
@@ -67,6 +68,7 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     readMonthCells: (owner, range, maxCells) => readMonthCells(env, owner, range, maxCells),
     readSeries: (owner) => readSeries(env, owner),
     suggestDescriptions: (owner, request) => suggestDescriptions(env, owner, request),
+    readUsage: (owner) => readUsage(env, owner),
     insertTransaction: (owner, input) => insertTransaction(env, owner, input),
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
