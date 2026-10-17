@@ -38,6 +38,7 @@ import type {
   TransactionSummary,
 } from '../data/transactionQuery'
 import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../data/descriptionSuggest'
+import type { Usage } from '../data/usage'
 import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
@@ -95,6 +96,11 @@ export interface ExpenseRepository {
    * description.
    */
   suggestDescriptions(owner: string, request: DescriptionSuggestRequest): Promise<DescriptionSuggestResult>
+  /**
+   * How many transactions, plans and statements name each of the owner's categories, accounts, flags and
+   * labels, with zero counts included. `usageFromDataset` in the engine is the reference.
+   */
+  readUsage(owner: string): Promise<Usage>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,
