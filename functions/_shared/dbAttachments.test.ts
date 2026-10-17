@@ -256,9 +256,9 @@ describe('deleting a transaction takes its attachments with it', () => {
 
     const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
     const attachments = statements.find((q) => q.sql.includes('DELETE FROM transaction_attachments'))
-    expect(attachments?.args).toEqual([OWNER, 4, 5])
+    expect(attachments?.args).toEqual([OWNER, '[4,5]'])
     const labels = statements.find((q) => q.sql.includes('DELETE FROM transaction_labels'))
-    expect(labels?.args).toEqual([OWNER, 4, 5])
+    expect(labels?.args).toEqual([OWNER, '[4,5]'])
   })
 })
 
@@ -269,7 +269,7 @@ describe('attachmentKeysForTransactions', () => {
     })
 
     await expect(attachmentKeysForTransactions(env, OWNER, [7, 8])).resolves.toEqual(['a', 'a_t', 'b'])
-    expect(calls[0]?.args).toEqual([OWNER, 7, 8])
+    expect(calls[0]?.args).toEqual([OWNER, '[7,8]'])
   })
 
   it('does not query at all for an empty list', async () => {
@@ -303,6 +303,6 @@ describe('deleting a reimbursement releases what it settled', () => {
 
     const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
     const release = statements.find((q) => q.sql.includes('SET settled_by = NULL'))
-    expect(release?.args).toEqual([OWNER, 4, 5])
+    expect(release?.args).toEqual([OWNER, '[4,5]'])
   })
 })

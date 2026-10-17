@@ -57,8 +57,9 @@ What the table shows:
    desktop up to 100k rows, but a phone pays 4 to 8 times that on every mutation.
 4. **D1 rows read.** Every load reads every row, so the daily 5M budget covers about 440 loads at 10k rows, 90 at
    50k and 18 at 250k. An open that ends in a 304 skips the load, so the table counts opens that follow a change.
-5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so the All scope renders every row, and the
-   backup runs the same load for every owner in one invocation, so it meets the same CPU limit.
+5. The backup runs the same load for every owner in one invocation, so it meets the same CPU limit. (The
+   transaction list no longer renders every row: past 300 rows it draws only those near the screen, see
+   `docs/ARCHITECTURE.md`.)
 
 ## Checked on a deployed D1
 
@@ -68,7 +69,8 @@ Read-only queries against a deployed database through the D1 query API:
   `too many SQL variables` (SQLITE_ERROR, code 7500). node:sqlite allows 32,766 variables, so tests that run on it
   (see `src/testing/sqliteD1.ts`) do not see this limit unless they enforce it.
 - **One bound JSON string reads back as a list.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
-  list itself counts as rows read (501 for 500 ids).
+  list itself counts as rows read (501 for 500 ids). Because of the 100-parameter limit, the app binds id lists this
+  way (`functions/_shared/sqlIdList.ts`) instead of one parameter per id.
 - **`COUNT(*)` is billed as a scan:** counting a table reports every row as read.
 
 Not yet measured on a deployed Worker: CPU time, whether `batch()` counts as one query toward the 50, and rows
@@ -101,8 +103,12 @@ one code path with two policies.
 | Transaction list, count, net spend, search | Endpoint: keyset pages and a capped summary |
 | Autocomplete beyond loaded rows, usage counts, one row by id, bulk edit on a filter, export, backup | Endpoint |
 
+How much history each engine and screen reads, and which of them give a different answer from less, is recorded in
+[ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
+
 Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
-key. Every response carries a per-owner revision, and a weak ETag on it lets most opens end after a one-row read.
+key. Each will be checked against the per-owner revision that `GET /api/expenses` already uses (see "Status"), so most
+opens end after a two-row read.
 
 ## Paged transaction reads
 
@@ -193,13 +199,22 @@ tables after both indexes are dropped. It does not cover SQL run by hand or by s
 
 ## Status
 
-Built: the synthetic ledger generator, the SQLite stand-in for D1, the measurement above, the per-owner revision
-with the weak ETag on `GET /api/expenses` (migration 0035), the windowed Transactions list and the paged list,
-summary and by-id reads (migration 0036; nothing in the app calls them yet). Not built: everything else under
-"Proposed design". Planned work, in dependency order:
+Built:
 
-1. Standalone improvements: a compact read. (The revision and ETag, and list windowing, are built.)
-2. A server query layer: keyset list, summary, by-id and query-plan tests (built), per-month sums, series.
+- the synthetic ledger generator and the SQLite stand-in for D1, and the measurement above;
+- the per-owner revision (migration 0035) and the weak ETag on `GET /api/expenses` built from it, so an unchanged
+  ledger is answered with a 304 and no dataset query;
+- the windowed Transactions list, which draws only the rows near the screen past 300 rows;
+- id lists bound as one JSON string, so bulk edit and delete work on more than 99 rows;
+- the audit of how much history each engine reads ([ENGINE-HISTORY.md](./ENGINE-HISTORY.md)), with tests that pin it;
+- the keyset list, the capped summary and the by-id read for transactions, with the two indexes they need
+  (migration 0036). See "Paged transaction reads". Nothing in the app calls them yet.
+
+Not built: the compact read and everything else under "Proposed design". Planned work, in dependency order:
+
+1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
+2. A server query layer: keyset list, summary, by-id and query-plan tests (built); per-month sums and series (not
+   built).
 3. The ledger model and differential tests against the pure engines.
 4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
@@ -215,5 +230,5 @@ summary and by-id reads (migration 0036; nothing in the app calls them yet). Not
   account), a stand-in that refuses more than 100 bound values as D1 does, and a seeded generator of filters, for
   the paged-read tests.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
-  the real SQL runs in tests. It cannot reproduce D1's billing. They live in `src/testing/` because the
-  `functions/` typecheck has no Node types.
+  the real SQL runs in tests. It enforces the 100 bound-parameter limit but cannot reproduce D1's billing. They
+  live in `src/testing/` because the `functions/` typecheck has no Node types.
