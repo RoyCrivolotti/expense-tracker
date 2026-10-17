@@ -154,6 +154,18 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   `RecurringSeries`, the SQL, and `PARTS_FORMAT` in `datasetEtag.ts`; the route's shape test fails until
   it is raised. The route is served as a ledger part (a revision token in the body, `If-None-Match` answered
   with a 304) and writes only `description_norm`, which is not part of the dataset.
+- **Description autocomplete is one order, shared by the browser and the server, and a test merges them.**
+  `src/domain/engine/descriptionSearch.ts` holds the order (the collator over the normalized text, then the
+  text) and the prefix range; `buildDescriptionIndex` and `functions/_shared/dbDescriptionSuggest.ts` both use it.
+  `suggestDescriptions` on `ExpenseRepository` backs `GET /api/expenses/descriptions/suggest`, which answers for
+  rows booked before a month (the browser's oldest); `buildDescriptionIndex` over those rows is the reference (`inMemoryExpenseRepository`
+  answers with it) and `mergeDescriptionMatches` joins the answer to the browser's own matches.
+  `dbDescriptionSuggest.parity.test.ts` holds the SQL to that and checks that the merge equals the index over every
+  row. A description's place in the order must never depend on which of its rows is newest, or the merge stops
+  being exact; that is why the `key` order reads the normalized text and not the label. The index keeps its original
+  `label` order as the default until the app starts merging. The statement skips from one
+  description to the next through `idx_txn_owner_desc_norm`, and `descriptionSuggestPlans.test.ts` fails on a scan
+  or a sort.
 
 ## Size and complexity
 

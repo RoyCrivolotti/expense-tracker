@@ -113,7 +113,7 @@ one code path with two policies.
 How much history each engine and screen reads, and which of them give a different answer from less, is recorded in
 [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 
-Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
+Requests are split (reference data, months, sums, list, summary, series, description matches) so each has its own CPU budget and cache
 key. The reference, months and sums are checked against the per-owner revision that `GET /api/expenses` already uses
 (see "Ledger parts"), so most opens end after a two-row read. The series are served the same way, but they read the
 whole ledger whenever the tag misses, which after any write it does: see "Recurring series" for what a client that
@@ -463,6 +463,93 @@ read, not a page. Measured with `SCALING_MEASURE=1 npx vitest run functions/_sha
    read by the series statement and by the engine differently (none was found in the dev or production database when
    they were counted, read-only).
 
+## Description autocomplete
+
+The browser suggests descriptions from an index of the rows it holds (`buildDescriptionIndex`,
+`src/data/descriptionIndex.ts`). Once it holds only the newest months, descriptions that were last used earlier
+have to come from the server: `GET /api/expenses/descriptions/suggest` answers for the rows booked before the
+ones the browser holds, and the browser merges the two.
+
+| Parameter | Meaning |
+|---|---|
+| `q` | What was typed, 1 to 140 characters once trimmed. The server normalizes it as the index does (`trim()`, then `toLowerCase()`) |
+| `before` | A budget month, `YYYY-MM`, optional. Only rows whose budget month is before it count. The browser sends the oldest month it holds, so the two sides together are every row. A date is a 400 |
+| `limit` | 1 to 25, default 8, the index's own default. Decimal digits only (`0x10` and `1e1` are refused), and more than 25 is a 400 |
+| `locale` | A language tag, optional. Letters sort by it, so send the browser's own (`Intl.Collator().resolvedOptions().locale`). When it is absent the Worker's own locale sorts, which is not the browser's. A tag the server has no sorting rules for is a 400 |
+
+The answer is `{ items, tooBroad }`: up to `limit` descriptions that start with `q`, each as the newest row of that
+description speaks for it (`label` as typed, `template` with its type, category and account, and the `date` and
+`id` of that row), in the order the browser's index lists them. Cancelled and blank rows are out. Any other
+parameter is a 400, the owner included. The response is `Cache-Control: private, no-store`: it follows every write
+and is for one prefix, so nothing should keep it.
+
+**Why a month and not a day.** The browser holds its rows by budget month (`/transactions/months`), and a row's date
+and budget month can differ by a month at the rollover. With a day as the cut a row dated after the cut but booked
+before the browser's oldest month is in neither set. With the browser's oldest month as the cut, a row is in the
+browser's set if its budget month is that month or later and in the server's if it is earlier, so every row is in
+exactly one.
+
+**Merging.** `mergeDescriptionMatches(own.searchEntries(q, limit), items, limit, locale)` (the browser's index built
+with `order: 'key'`) takes both lists, lets the newer row (by date, then id) speak for a description both found,
+sorts, and keeps `limit`. The result is what the index gives over every row, on three conditions: the browser holds
+every row booked from the `before` month on (with fewer, rows are missing from both sides); the browser sends its
+locale; and the browser's ICU and the Worker's sort the same text the same way. The last one is not something a
+test in one process can show, and for a rare script the two can differ by an ICU version. It is true of the first
+`limit` of the whole because a description's place in the order depends only on its normalized text, never on which
+of its rows is newest, so the first `limit` of the whole are among the first `limit` of either part. It is tested on
+generated ledgers for every split, prefix and limit (`src/data/descriptionMerge.test.ts`, and with the real SQL in
+`dbDescriptionSuggest.parity.test.ts`), including accents, capitals, padding, descriptions the collator calls equal,
+ties on a date, rows the browser holds that are older than its window (pinned rows), and Swedish and Spanish
+sorting.
+
+**Two orders in the browser's index.** The app's index sorts by the newest row's label and leaves descriptions the
+collator calls equal ("Cafe", "Café") in the order the rows happened to arrive. Sorted that way, a description could
+move when a newer row of it spelt it differently, and two parts could not be merged exactly. So the index takes an
+`order` option: `label`, the default, is the original and what the app uses today (a test holds it to a copy of the
+original algorithm on generated ledgers), and `key` sorts on the normalized text with ties broken by the text itself,
+which is the order the server answers in. The `label` order is not for merging: a merge over a list in that order
+puts padded and equal-sorting descriptions in the wrong places. The change that makes the app read older matches from
+the server passes `order: 'key'` and deletes `label`. The two differ only for a description with spaces around it and
+for ones the collator calls equal.
+
+**What is exact and where the answer is cut.**
+
+- SQLite cannot sort as `localeCompare` does (it has no such collation), so the statement finds the matching
+  descriptions and the Worker sorts them with the same `Intl.Collator` and tie-break the browser uses
+  (`src/domain/engine/descriptionSearch.ts`).
+- A prefix that matches more than 500 different descriptions of the owner is answered with `tooBroad: true`, a 200
+  and no items, never with a list cut short of the true first eight. That is an ordinary answer for a letter or two
+  of typing, not an error: the browser keeps showing the matches among its own rows and asks again when the person
+  types more. The 500 counts every description of the owner that starts with the prefix, whatever its status or
+  month, because the walk takes every one; a prefix can be too broad although few of its descriptions would be
+  answered. The sort is the one step that runs in the Worker, and 500 keeps it to about a millisecond; a `tooBroad`
+  answer does not build the collator or sort at all.
+- Grouping and matching are on `description_norm`, the stored JavaScript normalization (see "Recurring series"), so
+  the prefix `CAFÉ` finds `café`, which SQL's `lower` would not do. The range is the prefix up to the string just
+  above every string that starts with it, compared as bytes, which is code point order.
+- A route that groups by `description_norm` answers 503 with `Retry-After: 1` while rows still wait for one, as the
+  series route does. It writes `description_norm` on a GET and does not move the dataset revision.
+
+**Cost.** The statement skips from one description of the prefix to the next with one index seek each, reading the
+index alone, and then finds the newest eligible row of each with another seek. It does not walk every row that starts
+with the prefix. The first seek of a description reads the rows of it booked from `before` on (the ones the browser
+holds) one at a time until it reaches an eligible one, so the rows read are a few per description plus the rows of
+that description inside the browser's window. The plan test shows three index searches and one row lookup and no scan
+or sort, with and without `before` and with and without table statistics; it caught the planner choosing the
+budget-month index for the second seek, which reads every row of the owner before the month once per description
+(the `+` before `budget_month` in `descriptionSuggestSql.ts` stops that). An earlier version walked the prefix's
+rows and cost, on the synthetic ledger at 250k rows, about 86,000 rows and 80 ms of SQLite time for the letter "c";
+this one takes about 0.1 ms there, flat from 5k to 250k rows (`SCALING_MEASURE=1 npx vitest run
+functions/_shared/descriptionSuggest.scaling.test.ts --reporter=verbose`). The Worker's own work (sorting at most 500
+strings) is 0.3 ms for 500 random keys in Node. The first `Intl.Collator` of a process costs about 5 ms in Node and
+0.01 ms after that; on a cold Worker isolate the first suggestion pays it, and a request that is `tooBroad` does not.
+On a deployed D1, run through the repository's own code over the REST API, the earlier statement (with the day as
+the cut, before this change) was accepted and planned as in the plan test, answered exactly what the browser's index
+does, and was reported as reading about four rows for each matching description. The statement now in the repository
+has been planned and compared with the index on SQLite only.
+Not measured: Worker CPU on workerd, the statement on a deployed D1, and whether the Worker has sorting rules for
+every locale a browser reports (a missing one is a 400 and the browser falls back to its own matches).
+
 ## Status
 
 Built:
@@ -487,8 +574,10 @@ Built:
 - the recurring series route (`GET /api/expenses/series`) with the stored normalized description it groups by, its
   backfill, and tests that hold every consumer to the answer over every row. See "Recurring series". Nothing in the
   app calls it yet;
+- description autocomplete over older rows (`GET /api/expenses/descriptions/suggest`) and the merge with the
+  browser's own matches. See "Description autocomplete". Nothing in the app calls it yet;
 
-Not built: the compact read, autocomplete and usage counts on the server, and the client side of the design. Planned
+Not built: the compact read, usage counts on the server, and the client side of the design. Planned
 work, in dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
