@@ -1,28 +1,33 @@
-# Scaling — what breaks as the ledger grows, and the plan
+# Scaling
 
-`GET /api/expenses` returns every table for the owner in one document (`loadDataset`,
-`functions/_shared/db.ts`). The browser keeps all of it in memory, runs every engine over the full
-`Transaction[]`, clones the whole dataset on each mutation (`datasetPatches.ts`) and writes it to IndexedDB.
-The daily backup calls the same `loadDataset`. This page records what that costs, measured, and the plan to
-stop paying it.
+How the app behaves as the number of transactions grows, what that costs today, and the direction the data
+layer is moving in. Every number below can be reproduced; the command is next to it.
+
+## How data reaches the browser today
+
+`GET /api/expenses` runs `loadDataset` (`functions/_shared/db.ts`) and returns every table for the owner in one
+document. The browser keeps all of it in memory, runs every engine in `src/domain/engine/` over the full
+`Transaction[]`, clones the whole dataset on each mutation (`datasetPatches.ts`) and writes it to IndexedDB. The
+daily backup calls `loadDataset` too.
 
 ## Constraints
 
-- Cloudflare **Free** plan. Documented limits that matter (Cloudflare docs: Workers limits, D1 limits and
-  pricing; re-check before relying on them): 10 ms CPU per request (Pages Functions bill as Workers), 50 D1
-  queries per invocation, 5M rows read and 100k rows written per day, 100 bound parameters per statement,
-  500 MB per database. `rows_read` counts rows scanned, not returned, and `COUNT(*)` is a scan. Each index adds
-  a written row per insert.
-- Offline is read-only (recent months and settings). No offline writes and no sync.
-- Same screens, same numbers. The pure functions in `src/domain/engine/` are the reference.
+- The app is built to run on the Cloudflare **Free** plan. The documented limits that shape the design (see
+  Cloudflare's Workers limits and D1 limits and pricing pages, and re-check them before relying on a figure): 10 ms
+  of CPU per request (Pages Functions bill as Workers), 50 D1 queries per invocation, 5M rows read and 100k rows
+  written per day, 100 bound parameters per statement and 500 MB per database. `rows_read` counts rows scanned,
+  not returned, and `COUNT(*)` is a scan. Every index adds a written row per insert.
+- Offline is read-only: recent months and settings, no offline writes, no sync.
+- Output must not change. The pure functions in `src/domain/engine/` are the reference for every number.
 
-## Measured: the current path, by ledger size
+## Measured: the current load path, by ledger size
 
 `SCALING_MEASURE=1 npx vitest run functions/_shared/loadDataset.scaling.test.ts` seeds a synthetic ledger
-(`src/testing/syntheticLedger.ts`, 120 months) into an in-memory SQLite with the real migrations, then runs the
-real `loadDataset`. Node 22 on an Apple M5 Pro. **These are desktop numbers with an in-memory database.**
-`server JS` is the load minus time inside SQLite: a stand-in for Worker CPU, not a measurement of it. A phone
-is roughly 4 to 8 times slower on the client columns.
+(`src/testing/syntheticLedger.ts`, 120 months) into an in-memory SQLite database with the real migrations, then
+runs the real `loadDataset`. Node 22 on an Apple Silicon laptop. These are desktop numbers against an in-memory
+database. "Server JS" is the load minus the time spent inside SQLite, a stand-in for Worker CPU and not a
+measurement of it. A phone is typically several times slower on the client columns (4 to 8 times is a common
+rule of thumb, not a measurement).
 
 | Rows | Server JS | + stringify | Compact read* | JSON | gzip | parse | clone | rows read per load |
 |---|---|---|---|---|---|---|---|---|
@@ -33,82 +38,86 @@ is roughly 4 to 8 times slower on the client columns.
 | 99.9k | 109 ms | 21 | 15 ms | 22.8 MB | 1.5 MB | 34 ms | 83 ms | 112k |
 | 249.9k | 326 ms | 58 | 47 ms | 57 MB | 3.5 MB | 99 ms | 223 ms | 280k |
 
-\* Raw column tuples straight to JSON, no row mapping and no status derivation on the server (the client would
-derive status from accounts and statements). `clone` is what every mutation pays today.
+\* Raw column tuples straight to JSON, with no row mapping and no status derivation on the server (the client
+would derive status from accounts and statements). "clone" is what every mutation pays today.
 
-What it says:
+What the table shows:
 
-1. **Worker CPU is the first wall: roughly 7,500 to 9,000 transactions on Free.** Mapping and deriving status
-   costs about 1.1 ms per 1,000 rows and stringify another 0.2, so the 10 ms limit is crossed near 7,500 rows
-   (9,000 without stringify). That is an estimate from Node, not a workerd reading. If the real ledger were
-   already past it, loads would be failing, so either the real row count is below it or workerd's meter differs
-   from this proxy; staging settles which.
-2. A compact read moves that wall to about 65,000 rows (about 9 times). It is cheap to build and stands alone.
-3. **The network is not the problem**: gzip is 1.5 MB at 100k rows. Parse and clone are tens of milliseconds on
-   a desktop up to 100k rows, but a phone pays 4 to 8 times that on every mutation.
-4. **D1 rows read**: every load reads every row, so the daily 5M budget covers about 440 loads at 10k rows, 90
-   at 50k and 18 at 250k.
-5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so "All" scope renders every row. The
-   backup runs the same load for every owner in one invocation, so it hits the same CPU wall.
+1. **Worker CPU is the first limit to reach, at roughly 7,500 to 9,000 transactions on the Free plan.** Mapping and
+   deriving status costs about 1.1 ms per 1,000 rows and stringify another 0.2, so 10 ms is crossed near 7,500 rows
+   (9,000 without stringify). This is an estimate from Node. workerd's meter differs, so confirm it on a deployed
+   Worker before relying on the figure.
+2. A compact read moves that limit to about 65,000 rows, roughly 9 times further.
+3. **The network is not the constraint.** gzip is 1.5 MB at 100k rows. Parse and clone are tens of milliseconds on a
+   desktop up to 100k rows, but a phone pays 4 to 8 times that on every mutation.
+4. **D1 rows read.** Every load reads every row, so the daily 5M budget covers about 440 loads at 10k rows, 90 at
+   50k and 18 at 250k.
+5. The transaction list is not virtualized (`SwipeTransactionRow.tsx`), so the All scope renders every row, and the
+   backup runs the same load for every owner in one invocation, so it meets the same CPU limit.
 
 ## Checked on a deployed D1
 
-Read-only queries against the dev database through the D1 query API:
+Read-only queries against a deployed database through the D1 query API:
 
-- **The 100 bound-parameter limit is real.** A query with 100 bound parameters runs; 101 fails with
-  `too many SQL variables` (SQLITE_ERROR, code 7500). The code binds `owner` plus every selected id as separate
-  parameters for bulk delete and bulk edit (`dbWrite.ts`) and for attachments (`dbAttachments.ts`), so a bulk
-  action on more than 99 rows was expected to fail. node:sqlite allows 32,766 variables, so the unit tests could
-  not see it; the stand-in now enforces the limit, and those paths bind one JSON list (`sqlIdList.ts`). This
-  went through the query API, which uses the same engine as the Worker binding; the
-  app's own bulk route sits behind Cloudflare Access and was not exercised.
-- **One bound JSON string is a working fix.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
-  list itself is read as rows (501 rows read for 500 ids).
-- **`COUNT(*)` is billed as a scan**: counting a table reports every row as read.
-- The owner's real ledger, checked read-only on production, is far below the CPU wall above. This is a question
-  of growth, and of what a bulk import of old history would do, not a present failure.
+- **The 100 bound-parameter limit is enforced.** A statement with 100 bound parameters runs; 101 fails with
+  `too many SQL variables` (SQLITE_ERROR, code 7500). node:sqlite allows 32,766 variables, so tests that run on it
+  (see `src/testing/sqliteD1.ts`) do not see this limit unless they enforce it.
+- **One bound JSON string reads back as a list.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
+  list itself counts as rows read (501 for 500 ids). Because of the 100-parameter limit, the app binds id lists this
+  way (`functions/_shared/sqlIdList.ts`) instead of one parameter per id.
+- **`COUNT(*)` is billed as a scan:** counting a table reports every row as read.
 
-Still needs a deployed run: workerd CPU, whether `batch()` counts as one query toward the 50, and rows written
-per index.
+Not yet measured on a deployed Worker: CPU time, whether `batch()` counts as one query toward the 50, and rows
+written per index.
 
-## Design in one page
+## Proposed design
 
-A **ledger** is: reference data (always local), **pinned rows** (always real: investments and rows tied to a
-plan, flag or settlement), **hydrated months** (real rows for the months being viewed, the viewed month back
-13), and a **cube** of per-month sums for everything else, which only the engines that are linear in amounts
-receive. Status stays derived on the client. When the ledger is small, every month is hydrated and the cube is
-empty, which is today's model, so there is one code path and two policies.
+A **ledger** is made of:
+
+1. **Reference data**, always local: categories, accounts, flags, labels, statements, cash actuals, settings,
+   plans, scenarios, wealth accounts and check-ins. Bounded and small.
+2. **Pinned rows**, always real and any age: every investment, and rows tied to a plan, flag or settlement. They
+   feed portfolio return, instalments, flagged groups and reports, which read exact dates, signs and links.
+3. **Hydrated months**: real rows for the months being viewed. Engines are relative to the viewed month, so the
+   rows come from that month back far enough for the comparisons it makes, not from a fixed window ending today.
+4. **Per-month sums** for every other month: one cell per (budget month, account, category, type, cancelled,
+   sign) with the summed cents and a count. Only the engines that are linear in amounts receive them. Status is
+   still derived on the client, from account settlement and statements.
+5. **Server projections** for answers that depend on unbounded history.
+
+When the ledger is small every month is hydrated and there are no sums, which is today's behavior, so there is
+one code path with two policies.
 
 | Feature | Runs |
 |---|---|
-| Month totals, budgets, yearly, cash reconciliation and close, statement amounts, goals flows, cash reserve, baseline, KPI totals | Browser, real rows plus cube |
-| Day-cut KPIs, movers, spending groups and detail, pace, top transactions | Browser, hydrated `[M-13, M]` |
-| Recurring and Upcoming, fixed vs flexible, fixed costs, allocation | Endpoint returns the series; the detector finishes in the browser |
-| Portfolio return, gap split, installments, Flagged, reports, reimbursement links | Browser, pinned rows |
+| Month totals, budgets, yearly overview, cash reconciliation and close, statement amounts, goals flows, cash reserve, spending baseline, KPI totals | Browser, from real rows plus sums |
+| Same-days KPIs, movers, spending groups and detail, pace, top transactions | Browser, from hydrated months |
+| Recurring and Upcoming, fixed versus flexible, fixed costs, allocation | Endpoint returns the series; the detector finishes in the browser |
+| Portfolio return, gap split, instalments, flagged groups, reports, reimbursement links | Browser, from pinned rows |
 | Transaction list, count, net spend, search | Endpoint: keyset pages and a capped summary |
-| Autocomplete beyond loaded rows, usage counts, detail by id, bulk on a filter (edit only), export, backup | Endpoint |
+| Autocomplete beyond loaded rows, usage counts, one row by id, bulk edit on a filter, export, backup | Endpoint |
 
-Requests are split (reference, months, cube, list, summary, series) so each has its own CPU budget and cache
-key. Every response carries a per-owner `revision`; a weak ETag on it lets most opens end after a one-row
-read.
+Requests are split (reference data, months, sums, list, summary, series) so each has its own CPU budget and cache
+key. Every response carries a per-owner revision, and a weak ETag on it lets most opens end after a one-row read.
 
-## Stages
+## Status
 
-0. Measure and decide (this page, the synthetic ledger, the SQLite D1 stand-in). No behavior change.
-1. Standalone wins: the bulk-parameter fix (confirmed above, and the one a user can hit today), `revision` and
-   ETag, compact read, list virtualization.
-2. Server query layer: keyset list, summary, by-id, cube, series, repository contract suite, query-plan tests.
-3. Ledger model: pinned rows, typed cube cells, differential tests against the pure engines.
-4. Client data layer: hydration, invalidation, cascade refetch, snapshot per owner, version skew.
-5. Transactions tab on pages: infinite list, server summary, selection and bulk rework.
-6. Remaining consumers and a resumable backup.
-7. Flip behind a runtime flag, soak with shadow reads. The old route stays, capped by size.
+Built: the synthetic ledger generator, the SQLite stand-in for D1 and the measurement above. Not built:
+everything under "Proposed design". Planned work, in dependency order:
 
-## Tools added for this work
+1. Standalone improvements: a compact read, the revision and ETag, list windowing.
+2. A server query layer: keyset list, summary, by-id, per-month sums, series, with query-plan tests.
+3. The ledger model and differential tests against the pure engines.
+4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
+5. The Transactions tab on server pages, with selection and bulk edit on a filter.
+6. The remaining consumers and a resumable backup.
+7. Switching the default behind a runtime flag, with the old route kept for stale clients.
 
-- `src/testing/syntheticLedger.ts`: a deterministic dataset of any size in the shape and order the API returns,
+## Test tools
+
+- `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns,
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
-- `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite,
-  so the real SQL runs in tests. It enforces D1's bound-parameter limit but cannot reproduce its billing. They live in `src/testing/` because
-  the `functions/` typecheck has no Node types.
+- `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
+  the real SQL runs in tests. It enforces the 100 bound-parameter limit but cannot reproduce D1's billing. They
+  live in `src/testing/` because the `functions/` typecheck has no Node types.

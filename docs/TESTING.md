@@ -51,7 +51,8 @@ change that must be all-or-nothing.
 
 `src/testing/sqliteD1.ts` wraps node:sqlite in a `D1Database`-shaped object over the real
 migrations, and `src/testing/seedSqlite.ts` loads an `ExpenseDataset` into it, so `loadDataset` and any later query code run
-against real SQL without Cloudflare. It rejects a statement that binds more than 100 values, as D1 does (`maxBoundParameters` changes that), but it cannot reproduce D1's billing.
+against real SQL without Cloudflare. It rejects a statement that binds more than 100 values, as D1 does
+(`maxBoundParameters` changes that), but it cannot reproduce D1's billing.
 `src/testing/syntheticLedger.ts` builds a deterministic dataset of any size. `SCALING_MEASURE=1 npx vitest run
 functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
 results are in [SCALING.md](./SCALING.md).
