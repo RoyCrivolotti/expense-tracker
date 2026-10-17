@@ -14,6 +14,7 @@ import {
   type StatementRow,
   type TxnRow,
 } from './rows'
+import { descriptionNorm, descriptionNormSets } from './descriptionNorm'
 import { HttpError } from './http'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import {
@@ -168,14 +169,15 @@ export async function insertTransaction(
   const planLink = await resolvePlanLink(env, owner, input)
   const row = await env.DB.prepare(
     `INSERT INTO transactions
-       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes, plan_id, installment_index, flag_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+       (owner, date, budget_month, description, description_norm, account_id, category_id, type, amount_cents, cancelled, notes, plan_id, installment_index, flag_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
       input.date,
       input.budgetMonth,
       input.description,
+      descriptionNorm(input.description),
       input.accountId,
       input.categoryId,
       input.type,
@@ -394,10 +396,11 @@ export async function updateTransaction(
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   await assertPatchOwnership(env, owner, patch)
   await assertAmountSignAgainstRow(env, owner, id, patch)
+  const norm = descriptionNormSets(keys, patch)
   const sets = keys
     .map((k) => `${COLUMN[k]} = ?`)
-    .concat(link.sets, "updated_at = datetime('now')")
-  const values = keys.map((k) => patchValue(k, patch[k])).concat(link.values)
+    .concat(norm.sets, link.sets, "updated_at = datetime('now')")
+  const values = keys.map((k) => patchValue(k, patch[k])).concat(norm.values, link.values)
   const guard = settleGuard(patch.settledBy)
   const row = await env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE id = ? AND owner = ?${guard.clause} RETURNING *`,
@@ -546,9 +549,10 @@ export async function bulkUpdateTransactions(
   // afterwards has already committed the rows that did qualify.
   await assertNoneSettledElsewhere(env, owner, ids, patch.settledBy)
   await assertNoWithdrawalLeavingInvestment(env, owner, ids, patch.type)
-  const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
+  const norm = descriptionNormSets(keys, patch)
+  const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat(norm.sets, "updated_at = datetime('now')")
   const patchRec = patch as Record<string, unknown>
-  const values = keys.map((k) => patchValue(k, patchRec[k]))
+  const values = keys.map((k) => patchValue(k, patchRec[k])).concat(norm.values)
   const guard = settleGuard(patch.settledBy)
   const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id ${IN_ID_LIST}${guard.clause}`,

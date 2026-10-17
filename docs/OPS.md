@@ -76,7 +76,9 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 - **category** / **account**: must match existing names exactly.
 - **type**: `expense`, `income`, `investment`, or `refund`.
 - **amount_cents**: integer cents, positive; an `investment` may be negative for money taken back out of the portfolio.
-- **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`.
+- **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`, and a real day and month (`2025-02-30` and `2025-13` are refused).
+- **description**: text of at most 140 characters, which an import, a new transaction and an edit all hold to. The server
+  refuses a whole import with the row number when one row breaks a rule.
 - Easiest path: Settings → Data → Export, edit the CSV, then Import.
 
 Settings → Data → Import includes a **Download template** with the header and one example row.
@@ -97,7 +99,9 @@ environment is approved in GitHub, and only then does the code that needs it shi
 `docs/DEPLOYMENT.md`). A PR's preview deploy applies nothing and uses the dev database, so a preview
 of a change that adds a column fails to save until dev has had it (`npm run migrate:dev`). To apply
 one by hand, `npm run migrate -- <database> --apply`. Reading is safe without a column: a missing
-one reads as its default.
+one reads as its default. A dev database that has a column `main` does not make fails the deploy's
+schema job on `EXTRA <column>` and so stops every deploy to `main` until that migration is merged:
+apply a migration to dev ahead of its merge only when the merge is near.
 
 ## Scripts (expense-tracker)
 

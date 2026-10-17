@@ -53,6 +53,48 @@ describe('transactionService validation', () => {
     expect(validateNewTransaction({ ...validTxn, type: 'investment', amountCents: -1000 }).amountCents).toBe(-1000)
   })
 
+  it('accepts only real calendar days and months, on create as on edit', () => {
+    // These fit a YYYY-MM-DD pattern and are not days; SQLite would store them and every
+    // date comparison downstream (series gaps, the suggest cut-off) would read them wrong.
+    for (const date of ['2025-02-30', '2024-00-15', '2024-13-01', '2024-04-31', '2026-1-01', 'yesterday']) {
+      expect(() => validateNewTransaction({ ...validTxn, date }), date).toThrow('date must be YYYY-MM-DD')
+      expect(() => validateTransactionPatch({ date }), date).toThrow('date must be YYYY-MM-DD')
+      expect(() => validateBulkUpdatePatch({ date }), date).toThrow('date must be YYYY-MM-DD')
+    }
+    for (const budgetMonth of ['2026-00', '2026-13', '2026-1', '26-01', 'january']) {
+      expect(() => validateNewTransaction({ ...validTxn, budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
+      expect(() => validateTransactionPatch({ budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
+      expect(() => validateBulkUpdatePatch({ budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
+    }
+    expect(validateNewTransaction({ ...validTxn, date: '2024-02-29', budgetMonth: '2024-12' }).date).toBe('2024-02-29')
+    expect(() => validateNewTransaction({ ...validTxn, date: '2023-02-29' })).toThrow('date must be YYYY-MM-DD')
+  })
+
+  it('refuses a date or month that is not text, which used to reach SQLite as given', () => {
+    expect(() => validateNewTransaction({ ...validTxn, date: 20260101 as never })).toThrow('date must be YYYY-MM-DD')
+    expect(() => validateNewTransaction({ ...validTxn, budgetMonth: 202601 as never })).toThrow('budgetMonth must be YYYY-MM')
+  })
+
+  it('requires a text description on create, and lets it be blank or padded as sent', () => {
+    // The stored column is NOT NULL TEXT and description_norm is computed from it with trim().
+    // A number or an object reaching that line threw a 500 after the write path started
+    // computing the norm; it is a 400 here.
+    for (const description of [42, null, undefined, {}, ['a']]) {
+      expect(() => validateNewTransaction({ ...validTxn, description: description as never })).toThrow('description must be text')
+    }
+    expect(validateNewTransaction({ ...validTxn, description: '' }).description).toBe('')
+    expect(validateNewTransaction({ ...validTxn, description: '  Rent  ' }).description).toBe('  Rent  ')
+  })
+
+  it('holds a new description to the same 140 characters an edit has', () => {
+    const longest = 'x'.repeat(140)
+    expect(validateNewTransaction({ ...validTxn, description: longest }).description).toBe(longest)
+    expect(() => validateNewTransaction({ ...validTxn, description: `${longest}x` })).toThrow('140 characters or fewer')
+    expect(() => validateBulkTransactions([validTxn, { ...validTxn, description: 'x'.repeat(5000) }])).toThrow(
+      'Row 2: description must be 140 characters or fewer',
+    )
+  })
+
   it('validates bulk payloads with the same rules', () => {
     expect(validateBulkTransactions([validTxn])).toHaveLength(1)
     expect(() => validateBulkTransactions('nope')).toThrow('transactions array is required')
@@ -233,6 +275,15 @@ describe('validateTransactionPatch', () => {
       flagId: 3,
     }
     expect(validateTransactionPatch(patch)).toEqual(patch)
+  })
+
+  it('holds a patched description to the length a new one has, and still lets an edit clear it', () => {
+    const longest = 'x'.repeat(140)
+    expect(validateTransactionPatch({ description: longest })).toEqual({ description: longest })
+    expect(validateTransactionPatch({ description: ` ${longest} ` })).toEqual({ description: ` ${longest} ` })
+    expect(() => validateTransactionPatch({ description: `${longest}x` })).toThrow('140 characters or fewer')
+    expect(() => validateTransactionPatch({ description: 'x'.repeat(1_500_000) })).toThrow('140 characters or fewer')
+    expect(validateTransactionPatch({ description: '   ' })).toEqual({ description: '   ' })
   })
 
   it('accepts planId and installmentIndex together', () => {

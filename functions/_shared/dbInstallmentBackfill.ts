@@ -16,6 +16,7 @@ import { nextInstallmentSuggestion, type InstallmentSuggestion } from '../domain
 import { monthsBetweenBudget } from '../domain/engine/dates'
 import { maybeCompletePlan } from './dbWrite'
 import { bumpRevision, serverBudgetMonth } from './dbRevision'
+import { descriptionNorm } from './descriptionNorm'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } from './rows'
 
@@ -42,8 +43,8 @@ async function insertBackfillRow(
 ): Promise<TxnRow | null> {
   return env.DB.prepare(
     `INSERT INTO transactions
-       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, plan_id, installment_index)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+       (owner, date, budget_month, description, description_norm, account_id, category_id, type, amount_cents, cancelled, plan_id, installment_index)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
      ON CONFLICT(owner, plan_id, installment_index)
        WHERE plan_id IS NOT NULL AND installment_index IS NOT NULL
      DO NOTHING
@@ -54,6 +55,7 @@ async function insertBackfillRow(
       suggestion.predictedDate,
       suggestion.budgetMonth,
       suggestion.description,
+      descriptionNorm(suggestion.description),
       suggestion.accountId,
       suggestion.categoryId,
       suggestion.type,

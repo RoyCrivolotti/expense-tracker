@@ -14,6 +14,7 @@ import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { addDaysIso } from '../domain/engine/dates'
+import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
@@ -587,6 +588,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     getTransaction: (owner, id) =>
       Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
+
+    readSeries: (owner) => Promise.resolve(seriesFromTransactions(derivedTransactions(storeFor(owner)))),
 
     insertTransaction: (owner, input) => Promise.resolve(insertOne(owner, input)),
 

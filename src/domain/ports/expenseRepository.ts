@@ -37,6 +37,7 @@ import type {
   TransactionPageRequest,
   TransactionSummary,
 } from '../data/transactionQuery'
+import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
 import type { MonthCell } from '../ledger/types'
@@ -78,6 +79,13 @@ export interface ExpenseRepository {
    * Null when there are more than `maxCells`.
    */
   readMonthCells(owner: string, range: MonthRange, maxCells: number): Promise<MonthCell[] | null>
+  /**
+   * The owner's recurring series over the whole history, newest first: what the detectors need so that
+   * a caller holding only some of the rows can finish them. `seriesFromTransactions` in the engine is
+   * the reference. The D1 adapter answers with a 503 while rows still wait for their normalized
+   * description (migration 0038), because grouping before then would leave rows out.
+   */
+  readSeries(owner: string): Promise<RecurringSeries[]>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,

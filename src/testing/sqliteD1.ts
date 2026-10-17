@@ -41,12 +41,24 @@ function statementsOf(file: string): string[] {
     .filter(Boolean)
 }
 
-export function migratedDatabase(): DatabaseSync {
-  const db = new DatabaseSync(':memory:')
-  const files = readdirSync(MIGRATIONS)
+export function migrationFiles(): string[] {
+  return readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith('.sql'))
     .sort()
-  for (const file of files) for (const statement of statementsOf(file)) db.exec(statement)
+}
+
+/** Applies one migration file the way the documented `--command` fallback does, statement by statement. */
+export function applyMigration(db: DatabaseSync, file: string): void {
+  for (const statement of statementsOf(file)) db.exec(statement)
+}
+
+/** All the migrations, or those up to and including the file whose name starts with `through` (`'0037'`). */
+export function migratedDatabase(through?: string): DatabaseSync {
+  const db = new DatabaseSync(':memory:')
+  for (const file of migrationFiles()) {
+    if (through !== undefined && file.slice(0, through.length) > through) break
+    applyMigration(db, file)
+  }
   return db
 }
 
