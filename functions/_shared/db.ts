@@ -1,15 +1,13 @@
 import type { ExpenseDataset } from '../domain/types'
 import { deriveTransactions } from '../domain/engine/status'
 import type { Env } from './env'
-import { backfillInstallments } from './dbInstallmentBackfill'
+import { backfillForRead } from './dbInstallmentBackfill'
 import { loadReferenceTables, rows } from './dbReference'
 import { toAttachment, toStoredTxn, type AttachmentRow, type TxnRow } from './rows'
 
 /** Read every table for one owner and assemble a dataset with derived statuses. */
 export async function loadDataset(env: Env, owner: string): Promise<ExpenseDataset> {
-  await backfillInstallments(env, owner).catch((err) => {
-    console.error('installment backfill failed', err)
-  })
+  await backfillForRead(env, owner)
   const [reference, attachmentRows, txns, transactionLabelRows] = await Promise.all([
     loadReferenceTables(env, owner),
     // Metadata only — the bytes are fetched by URL from /api/expenses/attachments/:id.

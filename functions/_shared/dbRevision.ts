@@ -8,6 +8,12 @@
 import { DEFAULT_BUDGET_ROLLOVER_DAY, defaultBudgetMonth } from '../domain/engine/dates'
 import { datasetEtag } from './datasetEtag'
 
+/** What a conditional read is compared against: the owner's token, and the budget month it was read in. */
+export interface OwnerRevision {
+  token: string
+  budgetMonth: string
+}
+
 /**
  * The owner's current budget month by the server's clock (UTC) and their rollover day. The installment
  * backfill and the ETag must agree on it: a new month is what makes the backfill insert rows.
@@ -50,18 +56,18 @@ async function ensureRevision(db: D1Database, owner: string): Promise<string> {
 }
 
 /**
- * The ETag for the dataset as it stands. One statement reads the token and the rollover day (a row
- * each), so an unchanged dataset costs two rows read; only an owner with no token yet pays a write.
+ * The owner's revision as it stands. One statement reads the token and the rollover day (a row each),
+ * so an unchanged ledger costs two rows read; only an owner with no token yet pays a write.
  *
  * Call this before reading the data it describes. A write that lands in between makes the token older
  * than the data, so the next request misses and reloads. Reading it after could pair a newer token with
  * older data, and that pair would be served from cache until the next write.
  */
-export async function readDatasetEtag(
+export async function readOwnerRevision(
   db: D1Database,
   owner: string,
   now: Date = new Date(),
-): Promise<string> {
+): Promise<OwnerRevision> {
   const row = await db
     .prepare(
       `SELECT (SELECT token FROM owner_revision WHERE owner = ?) AS token,
@@ -70,5 +76,15 @@ export async function readDatasetEtag(
     .bind(owner, owner)
     .first<{ token: string | null; rollover_day: number | null }>()
   const token = row?.token ?? (await ensureRevision(db, owner))
-  return datasetEtag(token, serverBudgetMonth(row?.rollover_day, now))
+  return { token, budgetMonth: serverBudgetMonth(row?.rollover_day, now) }
+}
+
+/** The ETag for the dataset as it stands; see {@link readOwnerRevision} for when to call it. */
+export async function readDatasetEtag(
+  db: D1Database,
+  owner: string,
+  now: Date = new Date(),
+): Promise<string> {
+  const { token, budgetMonth } = await readOwnerRevision(db, owner, now)
+  return datasetEtag(token, budgetMonth)
 }

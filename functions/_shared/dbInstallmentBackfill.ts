@@ -142,3 +142,13 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
   // without these rows.
   if (wrote.any) await bumpRevision(env.DB, owner)
 }
+
+/**
+ * `backfillInstallments` for a read: a failure is logged and the read goes on without the rows that
+ * were not inserted, rather than failing a request that only wanted to look.
+ */
+export async function backfillForRead(env: Env, owner: string): Promise<void> {
+  await backfillInstallments(env, owner).catch((err) => {
+    console.error('installment backfill failed', err)
+  })
+}
