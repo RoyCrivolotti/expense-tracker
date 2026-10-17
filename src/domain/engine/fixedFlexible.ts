@@ -31,7 +31,11 @@ function gapsOf(group: OccurrenceGroup): number[] {
  * groceries are exactly the spending the pace clock exists to watch.
  */
 export function fixedRhythm(group: OccurrenceGroup): Exclude<RecurringFrequency, 'weekly'> | null {
-  const gaps = gapsOf(group)
+  return fixedRhythmFromGaps(gapsOf(group))
+}
+
+/** `fixedRhythm` from the days between a series' consecutive dates, in any order: only their spread counts. */
+export function fixedRhythmFromGaps(gaps: number[]): Exclude<RecurringFrequency, 'weekly'> | null {
   if (gaps.length === 0) return null
   const frequency = classifyFrequency(median(gaps))
   if (!frequency || frequency === 'weekly') return null
@@ -57,7 +61,12 @@ function keyString(key: GroupKey): string {
 
 /** Build the classifier once per dataset; it is a per-transaction set lookup after that. */
 export function classifyFixedSpend(transactions: Transaction[]): FixedSpendClassifier {
-  const fixedKeys = new Set(recurringFixedGroups(transactions).map((g) => keyString(g.key)))
+  return classifierFromGroups(recurringFixedGroups(transactions))
+}
+
+/** The classifier for recurring series already detected, such as the ones the server holds for the whole history. */
+export function classifierFromGroups(groups: OccurrenceGroup[]): FixedSpendClassifier {
+  const fixedKeys = new Set(groups.map((g) => keyString(g.key)))
   // A refund keys by its own type, so it would never match the expense pattern it
   // repays: the refund of a fixed charge is fixed money coming back, not flexible.
   const matches = (txn: Transaction): boolean => {

@@ -39,7 +39,7 @@ export function regularityScore(gaps: number[]): number {
 export const PREDICT_HISTORY = 3
 
 /** How many of a series' newest occurrences say how early it can land. */
-const WINDOW_HISTORY = 5
+export const WINDOW_HISTORY = 5
 
 /** A reminder shows this many days before the usual date at the least. */
 const BASE_LEAD_DAYS = 1
