@@ -166,6 +166,15 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   `label` order as the default until the app starts merging. The statement skips from one
   description to the next through `idx_txn_owner_desc_norm`, and `descriptionSuggestPlans.test.ts` fails on a scan
   or a sort.
+- **Usage counts come from the owner's rows through an owner index, and a test holds them to the dataset.**
+  `readUsage` on `ExpenseRepository` backs `GET /api/expenses/usage`. `usageFromDataset` in
+  `src/domain/engine/recordUsage.ts` is the reference (`inMemoryExpenseRepository` answers with it);
+  `functions/_shared/usageSql.ts` is the only place the counts become SQL, and `dbUsage.parity.test.ts` checks it
+  against the reference, against the counts the Settings lists compute, and against what `deleteCategory` and
+  `deleteAccount` accept. A count is what the server's delete check counts, so a record is deletable exactly when
+  its counts are all zero; a new kind of record that can block a delete means a new count here, in the reference
+  and in the lists. The statement groups `transactions` by `category_id + 0` on purpose, and
+  `usagePlans.test.ts` fails if it ever reads another owner's rows or scans `transactions`.
 
 ## Size and complexity
 
