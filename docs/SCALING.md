@@ -208,15 +208,24 @@ Built:
 - id lists bound as one JSON string, so bulk edit and delete work on more than 99 rows;
 - the audit of how much history each engine reads ([ENGINE-HISTORY.md](./ENGINE-HISTORY.md)), with tests that pin it;
 - the keyset list, the capped summary and the by-id read for transactions, with the two indexes they need
-  (migration 0036). See "Paged transaction reads". Nothing in the app calls them yet.
+  (migration 0036). See "Paged transaction reads". Nothing in the app calls them yet;
+- the ledger model (`src/domain/ledger`, pure code), with differential tests that run the engines over every row and
+  over the assembled lists (`src/testing/ledgerDifferential.test.ts`, `ledgerSweep.test.ts`; the result is in
+  [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
+- an optional classifier or recurring series, built from the whole history, on the four engines that rebuilt their own
+  from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list).
+  No screen uses the model or passes one in yet.
 
-Not built: the compact read and everything else under "Proposed design". Planned work, in dependency order:
+Not built: the compact read, the per-month sums and series, and the client side of the design. Planned work, in
+dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
 2. A server query layer: keyset list, summary, by-id and query-plan tests (built); per-month sums and series (not
    built).
-3. The ledger model and differential tests against the pure engines.
-4. The client data layer: hydration, invalidation, snapshot per owner, version skew.
+3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
+   the four engines (built).
+4. The client data layer: hydration, invalidation, snapshot per owner, version skew, and passing the whole history's
+   classifier and series to the Overview model and the Spending view, which still build their own.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
 6. The remaining consumers and a resumable backup.
 7. Switching the default behind a runtime flag, with the old route kept for stale clients.

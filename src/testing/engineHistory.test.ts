@@ -2,87 +2,41 @@
  * Pins what docs/ENGINE-HISTORY.md says each engine reads. It builds the ledger the model in
  * docs/SCALING.md would hand an engine (real rows for a window around the viewed month, one summed
  * row per (budget month, account, category, type, cancelled, sign) cell for the rest, and the
- * pinned rows kept real) and compares each engine's output with its output on the full ledger.
+ * pinned rows kept real) with `src/domain/ledger` and compares each engine's output with its output
+ * on the full ledger.
  */
 import { describe, expect, it } from 'vitest'
-import type { ExpenseDataset, StoredTransaction, Transaction } from '../domain/types'
+import type { ExpenseDataset, Transaction } from '../domain/types'
 import {
-  type AnalyticsBasis,
-  type AnalyticsPeriod,
-  type CompareMode,
   addDaysIso,
   averageMonthlySpendCents,
-  balancesAtCost,
-  buildReimbursementLinks,
-  buildStatementPayments,
   classifyFixedSpend,
-  computeAllocation,
-  computeBudgetHealth,
-  computeCashReconciliation,
-  computeCategoryActuals,
-  computeMonthlyTotals,
-  computeMovers,
   computeOverviewKpis,
   computeSpendingBaseline,
-  computeSpendingGroupDetail,
-  computeSpendingGroups,
-  computeSpendingPace,
-  computeYearlyOverview,
-  computeYtdBudgetHealth,
   daysBetween,
-  deriveTransactions,
   detectUpcoming,
-  detectedFixedCosts,
-  filterTransactions,
   fixedRhythm,
-  groupTransactionsByFlag,
-  investedYtdCents,
-  latestTransactions,
-  listPastReports,
-  monthlyFlows,
   monthsBetweenBudget,
-  nextInstallmentSuggestion,
-  paceMonths,
-  paidInstallmentInMonth,
-  planProgress,
   portfolioReturn,
-  priorBudgetMonth,
-  readReturn,
-  recentlyAdded,
+  recurringFixedGroups,
   shiftBudgetMonth,
   sortedMonths,
   splitGap,
-  unpaidExpenseCents,
 } from '../domain/engine'
 import { groupTransactions } from '../domain/engine/recurringDetect'
 import { makeTxn } from '../domain/engine/recurringTestHelpers'
+import { assembleRows, buildCells, buildLedger, cellRows } from '../domain/ledger'
+import { KPI_KEYS, LINKED_KEYS, type Lists, NOW, ROW_READERS, SUMS_ONLY, differing, wholeLedger } from './engineOutputs'
 import { makeTransaction, makeWealthAccount, makeWealthCheckin } from './factories'
 import { samplePlan } from './samplePlan'
 import { syntheticLedger } from './syntheticLedger'
 
-const TODAY = '2026-09-15'
-const OPEN_MONTH = '2026-09'
-const SUMMED_ID_BASE = 1_000_000
-
-/**
- * The rows the engines read by link or by exact date, so they have to stay real: investments
- * (portfolio return, gap split), rows tied to a plan, flag or settlement, and the payments that
- * settled rows (a past report is read back from them).
- */
-function isPinned(t: Transaction, payments: Set<number>): boolean {
-  return (
-    t.type === 'investment' ||
-    t.planId != null ||
-    t.flagId != null ||
-    t.settledBy != null ||
-    payments.has(t.id) ||
-    (t.reportCount ?? 0) > 0
-  )
-}
+const OPEN_MONTH = NOW.openMonth
 
 interface Window {
   /** Which budget months keep their real rows. */
   keep: (month: string) => boolean
+  /** Whether the pinned rows stay real. Off only to show what pinning is for. */
   pin: boolean
 }
 
@@ -100,172 +54,22 @@ function dataMonthWindow(ds: ExpenseDataset, viewed: string, count: number): (mo
   return (month) => recent.has(month)
 }
 
-function compact(ds: ExpenseDataset, win: Window): ExpenseDataset {
-  const payments = new Set(ds.transactions.flatMap((t) => (t.settledBy != null ? [t.settledBy] : [])))
-  const real: Transaction[] = []
-  const cells = new Map<string, StoredTransaction>()
-  for (const t of ds.transactions) {
-    if (win.keep(t.budgetMonth) || (win.pin && isPinned(t, payments))) {
-      real.push(t)
-      continue
-    }
-    const key = [t.budgetMonth, t.accountId, t.categoryId, t.type, t.cancelled, Math.sign(t.amountCents)].join('|')
-    const cell = cells.get(key)
-    if (cell) cell.amountCents += t.amountCents
-    else {
-      cells.set(key, {
-        id: SUMMED_ID_BASE + cells.size,
-        date: `${t.budgetMonth}-01`,
-        budgetMonth: t.budgetMonth,
-        description: '',
-        accountId: t.accountId,
-        categoryId: t.categoryId,
-        type: t.type,
-        amountCents: t.amountCents,
-        cancelled: t.cancelled,
-      })
-    }
-  }
-  const summed = deriveTransactions([...cells.values()], ds.accounts, ds.accountStatements).map((t) => ({
-    ...t,
-    labelIds: [] as number[],
-  }))
-  const transactions = [...real, ...summed].sort((a, b) =>
-    a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1,
+function compact(ds: ExpenseDataset, win: Window): Lists {
+  const hydrated = sortedMonths(ds.transactions.map((t) => t.budgetMonth)).filter(win.keep)
+  if (win.pin) return assembleRows(buildLedger(ds, hydrated))
+  const kept = new Set(hydrated)
+  const real = ds.transactions.filter((t) => kept.has(t.budgetMonth))
+  const summed = cellRows(
+    buildCells(ds.transactions.filter((t) => !kept.has(t.budgetMonth))),
+    ds.accounts,
+    ds.accountStatements,
   )
-  return { ...ds, transactions }
+  const byDate = (a: Transaction, b: Transaction) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
+  return { real, linear: [...real, ...summed].sort(byDate) }
 }
-
-/** Maps and sets in a stable order, so two outputs compare by value. */
-function plain(v: unknown): unknown {
-  if (v instanceof Map) {
-    return [...v.entries()]
-      .map(([k, x]) => [plain(k), plain(x)])
-      .sort((a, b) => JSON.stringify(a[0]).localeCompare(JSON.stringify(b[0])))
-  }
-  if (v instanceof Set) return [...v].sort().map(plain)
-  if (Array.isArray(v)) return v.map(plain)
-  if (v && typeof v === 'object') {
-    return Object.fromEntries(
-      Object.entries(v as Record<string, unknown>)
-        .filter(([, x]) => typeof x !== 'function')
-        .map(([k, x]) => [k, plain(x)]),
-    )
-  }
-  return v
-}
-
-type Outputs = Record<string, () => unknown>
-
-const BASES: AnalyticsBasis[] = ['committed', 'paid']
-const PERIODS: AnalyticsPeriod[] = ['month', 'ytd', 'last12']
-const COMPARES: CompareMode[] = ['prevMonth', 'avg3', 'prevYear']
-
-/**
- * Each consumer in docs/ENGINE-HISTORY.md, run the way the screen runs it. The classifier always comes
- * from the full ledger because a window cannot rebuild it. Four engines build their own from the rows
- * they are given (spending groups, group detail, the pace envelope and fixed costs); the ones whose
- * output changes on a window are the `groupsByFixedFlexible`, `detailByFixedFlexible` and `fixedCosts` keys.
- */
-function outputs(ds: ExpenseDataset, viewed: string, classifier: ReturnType<typeof classifyFixedSpend>): Outputs {
-  const tx = ds.transactions
-  const months = sortedMonths(tx.map((t) => t.budgetMonth))
-  const cats = ds.categories
-  const rolloverDay = ds.settings.budgetRolloverDay
-  const cashRows = () => computeCashReconciliation(tx, ds.accounts, ds.settings, ds.cashActuals)
-  const prev = priorBudgetMonth(viewed)
-  const base = { month: viewed, today: TODAY, openMonth: OPEN_MONTH, rolloverDay }
-  const out: Outputs = {
-    categoryActuals: () => computeCategoryActuals(tx, cats, { includeForecast: true, ytdThroughMonth: viewed }),
-    budgetHealth: () => computeBudgetHealth(tx, cats, viewed, { includeForecast: true }),
-    ytdBudgetHealth: () => computeYtdBudgetHealth(tx, cats, viewed, { includeForecast: true }),
-    investedYtd: () => investedYtdCents(computeMonthlyTotals(tx), viewed),
-    yearlyOverview: () => computeYearlyOverview(tx, ds.settings),
-    cashRows,
-    balancesAtCost: () => balancesAtCost(cashRows(), ds.settings, tx, viewed),
-    statementPayments: () =>
-      buildStatementPayments(ds.accountStatements, cashRows(), ds.accounts, ds.settings.defaultAccountId),
-    cashReserveSpend: () => averageMonthlySpendCents(tx, OPEN_MONTH),
-    paceMonths: () => paceMonths(monthlyFlows(computeMonthlyTotals(tx)), '2023-04-10', OPEN_MONTH),
-    unpaid: () => months.map((m) => unpaidExpenseCents(tx, m)),
-    allocation: () => computeAllocation(tx, classifier, viewed, 'committed'),
-    pace: () =>
-      computeSpendingPace(tx, cats, ds.installmentPlans, classifier, {
-        ...base,
-        basis: 'committed',
-        prevMonth: months.includes(prev) ? prev : null,
-      }),
-    movers: () => computeMovers(tx, cats, classifier, { ...base, months, basis: 'committed' }),
-    groupsByCategory: () =>
-      computeSpendingGroups(
-        { transactions: tx, categories: cats, labels: ds.labels },
-        { ...base, months, basis: 'committed', groupBy: 'category' },
-      ),
-    groupsByFixedFlexible: () =>
-      computeSpendingGroups(
-        { transactions: tx, categories: cats, labels: ds.labels },
-        { ...base, months, basis: 'committed', groupBy: 'fixedFlexible' },
-      ),
-    groupsByLabel: () =>
-      computeSpendingGroups(
-        { transactions: tx, categories: cats, labels: ds.labels },
-        { ...base, months, basis: 'committed', groupBy: 'label' },
-      ),
-    groupsByDescription: () =>
-      computeSpendingGroups(
-        { transactions: tx, categories: cats, labels: ds.labels },
-        { ...base, months, basis: 'committed', groupBy: 'description' },
-      ),
-    detailByFixedFlexible: () =>
-      computeSpendingGroupDetail({ transactions: tx, categories: cats }, { ...base, months, basis: 'committed', groupBy: 'fixedFlexible', key: 'fixed' }),
-    detailByLabel: () =>
-      computeSpendingGroupDetail({ transactions: tx, categories: cats }, { ...base, months, basis: 'committed', groupBy: 'label', key: '1' }),
-    detailByDescription: () =>
-      computeSpendingGroupDetail({ transactions: tx, categories: cats }, { ...base, months, basis: 'committed', groupBy: 'description', key: 'rent' }),
-    fixedCosts: () => detectedFixedCosts(tx, ds.installmentPlans, cats, viewed),
-    latestEight: () => latestTransactions(tx),
-    recentlyAdded: () => recentlyAdded(tx),
-    listAll: () => filterTransactions(tx, {}),
-  }
-  for (const basis of BASES) {
-    out[`monthlyTotals:${basis}`] = () => [...computeMonthlyTotals(tx, { includeForecast: basis === 'committed' }).values()]
-    out[`baseline:${basis}`] = () =>
-      computeSpendingBaseline(tx, ds.installmentPlans, [], { months, month: viewed, basis })
-    for (const period of PERIODS) {
-      for (const compare of COMPARES) {
-        out[`kpis:${period}:${compare}:${basis}`] = () =>
-          computeOverviewKpis(tx, { ...base, months, period, compare, basis })
-      }
-    }
-  }
-  return out
-}
-
-const SUMS_ONLY = [
-  'monthlyTotals:committed',
-  'monthlyTotals:paid',
-  'categoryActuals',
-  'budgetHealth',
-  'ytdBudgetHealth',
-  'investedYtd',
-  'yearlyOverview',
-  'cashRows',
-  'balancesAtCost',
-  'statementPayments',
-  'cashReserveSpend',
-  'paceMonths',
-  'unpaid',
-  'baseline:committed',
-  'baseline:paid',
-]
-
-const KPI_KEYS = BASES.flatMap((b) => PERIODS.flatMap((p) => COMPARES.map((c) => `kpis:${p}:${c}:${b}`)))
 
 function sameOutput(ds: ExpenseDataset, viewed: string, win: Window, keys: string[]): string[] {
-  const classifier = classifyFixedSpend(ds.transactions)
-  const full = outputs(ds, viewed, classifier)
-  const small = outputs(compact(ds, win), viewed, classifier)
-  return keys.filter((k) => JSON.stringify(plain(full[k]!())) !== JSON.stringify(plain(small[k]!())))
+  return differing(ds, viewed, wholeLedger(ds), compact(ds, win), keys)
 }
 
 /** The fewest months before `viewed` that must stay real for `key` to match the full ledger. */
@@ -322,19 +126,9 @@ describe('engine history: old months as one summed row per cell', () => {
   })
 
   describe('the 13 newest months with data', () => {
-    const ROW_READERS = [
-      'allocation',
-      'pace',
-      'movers',
-      'groupsByCategory',
-      'groupsByLabel',
-      'groupsByDescription',
-      'detailByLabel',
-      'detailByDescription',
-      ...KPI_KEYS,
-    ]
+    const READERS = [...ROW_READERS, ...KPI_KEYS]
     const withRows = (ds: ExpenseDataset, viewed: string, count: number) =>
-      sameOutput(ds, viewed, { keep: dataMonthWindow(ds, viewed, count), pin: true }, ROW_READERS)
+      sameOutput(ds, viewed, { keep: dataMonthWindow(ds, viewed, count), pin: true }, READERS)
 
     it.each([
       ['no gaps, open month', ledger, OPEN_MONTH],
@@ -347,37 +141,14 @@ describe('engine history: old months as one summed row per cell', () => {
     it('is one month more than the readers need when there is no gap, and a calendar window is short with one', () => {
       expect(withRows(ledger, OPEN_MONTH, 12)).toContain('kpis:month:prevYear:committed')
       const calendar = (back: number) =>
-        sameOutput(gapped, OPEN_MONTH, { keep: calendarWindow(OPEN_MONTH, back), pin: true }, ROW_READERS)
+        sameOutput(gapped, OPEN_MONTH, { keep: calendarWindow(OPEN_MONTH, back), pin: true }, READERS)
       expect(calendar(13)).not.toEqual([])
     })
   })
 
   it('pinning is what keeps the link-based and exact-date consumers whole', () => {
-    const linked = ['portfolioReturn', 'readReturn', 'splitGap', 'flagGroups', 'pastReports', 'links', 'planProgress']
-    const run = (pin: boolean) => {
-      const small = compact(ledger, { keep: calendarWindow('2025-06', 13), pin })
-      const read = (ds: ExpenseDataset) => {
-        const tx = ds.transactions
-        const plan = samplePlan({ planStartDate: '2022-01-01', startInvestedCents: 1_500_000, monthlyContributionCents: 80_000 })
-        const links = buildReimbursementLinks(tx)
-        return {
-          portfolioReturn: portfolioReturn(ds.wealthCheckins, ds.wealthAccounts, tx),
-          readReturn: readReturn(ds.wealthCheckins, ds.wealthAccounts, tx, plan),
-          splitGap: splitGap(plan, ds.wealthCheckins, ds.wealthAccounts, tx, 0.02),
-          flagGroups: groupTransactionsByFlag(tx, ds.flags),
-          pastReports: listPastReports(tx, ds.flags),
-          links: tx.filter((t) => t.reportCount).map((t) => links.settledBy(t.id).map((r) => r.id)),
-          planProgress: ds.installmentPlans.map((p) => planProgress(p, tx)),
-          installments: ds.installmentPlans.map((p) => [
-            paidInstallmentInMonth(p, tx, '2025-06'),
-            nextInstallmentSuggestion(p, tx, '2025-06'),
-          ]),
-        }
-      }
-      const a = plain(read(ledger)) as Record<string, unknown>
-      const b = plain(read(small)) as Record<string, unknown>
-      return [...linked, 'installments'].filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
-    }
+    const small = (pin: boolean) => compact(ledger, { keep: calendarWindow('2025-06', 13), pin })
+    const run = (pin: boolean) => differing(ledger, '2025-06', wholeLedger(ledger), small(pin), LINKED_KEYS)
     expect(run(true)).toEqual([])
     expect(run(false)).toEqual(
       expect.arrayContaining(['portfolioReturn', 'splitGap', 'flagGroups', 'pastReports', 'planProgress']),
@@ -395,6 +166,18 @@ describe('engine history: old months as one summed row per cell', () => {
       sameOutput(ledger, '2025-06', { keep: calendarWindow('2025-06', back, forward), pin: true }, keys)
     expect(past(44, 0)).toEqual(keys)
     expect(past(44, 99)).toEqual([])
+  })
+
+  it('fixed against flexible matches on a 13 month window once the classifier and series of the whole history are passed in', () => {
+    const keys = ['groupsByFixedFlexible', 'detailByFixedFlexible', 'fixedCosts', 'pace']
+    const groups = recurringFixedGroups(ledger.transactions)
+    const at = (viewed: string, back: number, forward = 0) =>
+      differing(ledger, viewed, wholeLedger(ledger), compact(ledger, { keep: calendarWindow(viewed, back, forward), pin: true }), keys, {
+        groups,
+      })
+    expect(at(OPEN_MONTH, 13)).toEqual([])
+    expect(at('2025-06', 13)).toEqual([])
+    expect(at('2025-06', 13, 99)).toEqual([])
   })
 
   it('the global lists follow today, not the viewed month', () => {

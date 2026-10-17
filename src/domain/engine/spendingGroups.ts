@@ -45,6 +45,12 @@ export interface SpendingGroupsArgs {
   transactions: Transaction[]
   categories: Category[]
   labels: Label[]
+  /**
+   * Which rows are fixed, for grouping by fixed or flexible. Built from `transactions` when absent. A
+   * caller that holds only some of the history passes one built from all of it: a series needs three
+   * rows and its regularity runs over every gap, so a window classifies it differently.
+   */
+  classifier?: FixedSpendClassifier
 }
 
 export interface SpendingGroupsOptions {
@@ -196,7 +202,7 @@ export function computeSpendingGroups(
   args: SpendingGroupsArgs,
   opts: SpendingGroupsOptions,
 ): SpendingGroupRow[] {
-  const classifier = classifyFixedSpend(args.transactions)
+  const classifier = args.classifier ?? classifyFixedSpend(args.transactions)
   const sparkMonths = opts.months.filter((m) => m <= opts.month).slice(-12)
   const avgCount = opts.months.filter((m) => m < opts.month).slice(-3).length
   const rows: SpendingGroupRow[] = []

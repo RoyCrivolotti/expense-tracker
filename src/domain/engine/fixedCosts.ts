@@ -8,7 +8,7 @@ import type { Category, InstallmentPlan, Transaction } from '../types'
 import { finalBudgetMonth, budgetMonthForIndex, expectedIndexForMonth } from './installments'
 import { fixedRhythm, recurringFixedGroups } from './fixedFlexible'
 import { activeInMonth, budgetedCategoryIds, isMonthlyGroup } from './spendingPace'
-import type { RecurringFrequency } from './recurringTypes'
+import type { OccurrenceGroup, RecurringFrequency } from './recurringTypes'
 
 export interface FixedCostItem {
   key: string
@@ -54,16 +54,20 @@ function instalmentItems(
   return items
 }
 
-/** Detected fixed costs for a budget month: what is in the pace budget first, then by size. */
+/**
+ * Detected fixed costs for a budget month: what is in the pace budget first, then by size.
+ * `groups` are the recurring series, built from `transactions` when absent; see `expectedFixedCents`.
+ */
 export function detectedFixedCosts(
   transactions: Transaction[],
   plans: InstallmentPlan[],
   categories: Category[],
   month: string,
+  groups: OccurrenceGroup[] = recurringFixedGroups(transactions),
 ): FixedCostItem[] {
   const budgeted = budgetedCategoryIds(categories)
   const items = instalmentItems(plans, budgeted, month)
-  for (const group of recurringFixedGroups(transactions)) {
+  for (const group of groups) {
     const frequency = fixedRhythm(group)
     if (group.key.type !== 'expense' || frequency === null) continue
     items.push({

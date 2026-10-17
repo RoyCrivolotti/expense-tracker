@@ -12,7 +12,7 @@ import {
   signedExpense,
   withinCut,
 } from './analyticsPeriod'
-import { classifyFixedSpend } from './fixedFlexible'
+import { type FixedSpendClassifier, classifyFixedSpend } from './fixedFlexible'
 import { groupMatcher, type SpendingGroupBy } from './spendingGroups'
 
 export interface SpendingGroupDetail {
@@ -87,10 +87,15 @@ function worstOf(history: { month: string; actualCents: number }[]): { month: st
 }
 
 export function computeSpendingGroupDetail(
-  args: { transactions: Transaction[]; categories: Category[] },
+  args: {
+    transactions: Transaction[]
+    categories: Category[]
+    /** Built from `transactions` when absent; see `SpendingGroupsArgs.classifier`. */
+    classifier?: FixedSpendClassifier
+  },
   { months, month, basis, groupBy, key, topCount = 5, today, openMonth, rolloverDay }: SpendingGroupDetailOptions,
 ): SpendingGroupDetail {
-  const classifier = classifyFixedSpend(args.transactions)
+  const classifier = args.classifier ?? classifyFixedSpend(args.transactions)
   const window = months.filter((m) => m <= month).slice(-12)
   const cut = today === undefined ? null : sameDaysCut(month, today, openMonth, rolloverDay)
   const { byMonth, current } = collect(
