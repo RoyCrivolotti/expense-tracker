@@ -63,7 +63,8 @@ Read-only queries against a deployed database through the D1 query API:
   `too many SQL variables` (SQLITE_ERROR, code 7500). node:sqlite allows 32,766 variables, so tests that run on it
   (see `src/testing/sqliteD1.ts`) do not see this limit unless they enforce it.
 - **One bound JSON string reads back as a list.** `id IN (SELECT value FROM json_each(?))` accepted 5,000 ids. The
-  list itself counts as rows read (501 for 500 ids).
+  list itself counts as rows read (501 for 500 ids). Because of the 100-parameter limit, the app binds id lists this
+  way (`functions/_shared/sqlIdList.ts`) instead of one parameter per id.
 - **`COUNT(*)` is billed as a scan:** counting a table reports every row as read.
 
 Not yet measured on a deployed Worker: CPU time, whether `batch()` counts as one query toward the 50, and rows
@@ -118,5 +119,5 @@ everything under "Proposed design". Planned work, in dependency order:
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
-  the real SQL runs in tests. It cannot reproduce D1's billing. They live in `src/testing/` because the
-  `functions/` typecheck has no Node types.
+  the real SQL runs in tests. It enforces the 100 bound-parameter limit but cannot reproduce D1's billing. They
+  live in `src/testing/` because the `functions/` typecheck has no Node types.

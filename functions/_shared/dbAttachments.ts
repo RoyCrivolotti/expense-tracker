@@ -3,6 +3,7 @@ import type { TransactionAttachment } from '../domain/types'
 import type { Env } from './env'
 import { HttpError } from './http'
 import { toAttachment, type AttachmentRow } from './rows'
+import { IN_ID_LIST, idList } from './sqlIdList'
 
 export async function transactionExists(
   env: Env,
@@ -121,12 +122,11 @@ export async function attachmentKeysForTransactions(
   transactionIds: number[],
 ): Promise<string[]> {
   if (transactionIds.length === 0) return []
-  const placeholders = transactionIds.map(() => '?').join(', ')
   const { results } = await env.DB.prepare(
     `SELECT object_key, thumb_key FROM transaction_attachments
-     WHERE owner = ? AND transaction_id IN (${placeholders})`,
+     WHERE owner = ? AND transaction_id ${IN_ID_LIST}`,
   )
-    .bind(owner, ...transactionIds)
+    .bind(owner, idList(transactionIds))
     .all<{ object_key: string; thumb_key: string | null }>()
   return (results ?? []).flatMap((r) => (r.thumb_key ? [r.object_key, r.thumb_key] : [r.object_key]))
 }
