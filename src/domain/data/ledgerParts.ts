@@ -10,13 +10,30 @@
  * read from different states of the ledger and fetch again.
  */
 import type { LedgerReference, MonthCell } from '../ledger/types'
-import type { Transaction } from '../types'
+import type { ExpenseDataset, Transaction } from '../types'
 
 /**
  * Everything in a ledger's reference except receipts. A row's receipts are listed on demand
  * (`GET /api/expenses/attachments?transactionId=`), and `AttachmentCounts` says which rows have any.
  */
 export type ReferenceTables = Omit<LedgerReference, 'attachments'>
+
+/** The reference tables of a whole dataset: all of it but the transactions and the receipts. */
+export function referenceTablesOf(dataset: ExpenseDataset): ReferenceTables {
+  return {
+    categories: dataset.categories,
+    accounts: dataset.accounts,
+    flags: dataset.flags,
+    labels: dataset.labels,
+    accountStatements: dataset.accountStatements,
+    cashActuals: dataset.cashActuals,
+    installmentPlans: dataset.installmentPlans,
+    goalScenarios: dataset.goalScenarios,
+    settings: dataset.settings,
+    wealthAccounts: dataset.wealthAccounts,
+    wealthCheckins: dataset.wealthCheckins,
+  }
+}
 
 /** Receipts per transaction id, for the rows that have at least one. */
 export type AttachmentCounts = Record<number, number>
