@@ -75,6 +75,23 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect((await readJson<{ name: string }>(updated)).name).toBe('Main checking')
   })
 
+  it('replaces the owner\'s dataset revision before and after a write', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    await invokeExpenseApiRoute({
+      handler: createAccount,
+      repo,
+      env: expenseEnv(store),
+      url: 'https://expenses.test/api/expenses/accounts',
+      method: 'POST',
+      body: { name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+      email: OWNER,
+    })
+
+    expect(store.revisionBumps).toEqual([OWNER, OWNER])
+  })
+
   it('creates and updates a category', async () => {
     const store = createInMemoryAccessDb()
     store.seedActiveUser(OWNER, { groups: ['expenses'] })

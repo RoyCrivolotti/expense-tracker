@@ -10,6 +10,7 @@ function envWith(first: unknown): Env {
       prepare: () => ({
         bind: () => ({
           first: vi.fn().mockResolvedValue(first),
+          run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
         }),
       }),
     },
@@ -25,6 +26,7 @@ function envRejectingForeignCategory(): Env {
             if (sql.includes('categories')) return null
             return { ok: 1 }
           }),
+          run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
         }),
       }),
     },

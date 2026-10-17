@@ -125,7 +125,7 @@ open month, these consumers give a different answer from the lists than from the
 | `computeSignals` | While M is the open month it reads the pace |
 | `buildOverviewData` | Builds the classifier from the rows it is handed and does not take one, so the allocation, movers, pace, fixed costs and signals differ. KPIs, baseline and unpaid caps match |
 | `latestTransactions`, `recentlyAdded` | Global and relative to today; the window around a past M does not hold them |
-| `filterTransactions` over every date | Needs any month's rows: it is served by an endpoint |
+| `filterTransactions` over every date | Needs any month's rows: it is read through the paged transaction reads described in [SCALING.md](./SCALING.md), not from these lists |
 
 The first three rows go away when the engines are handed the classifier and the recurring series of the whole
 history, which is tested: `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`,

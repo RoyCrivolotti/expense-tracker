@@ -57,6 +57,7 @@ async function purgeOwnerExpenseData(db: D1Database, owner: string): Promise<voi
     db.prepare('DELETE FROM installment_plans WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM wealth_checkins WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM wealth_accounts WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM owner_revision WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM access_requests WHERE email = ?').bind(owner),
   ])
 }

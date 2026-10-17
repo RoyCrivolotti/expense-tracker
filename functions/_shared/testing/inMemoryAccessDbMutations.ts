@@ -1,11 +1,20 @@
 import type { AccessState } from './inMemoryAccessDb'
 import { NOW, asEmail } from './inMemoryAccessDb'
 
-export function runMutation(
-  sql: string,
-  state: AccessState,
-  args: unknown[],
-): { meta: { changes: number } } {
+type Changes = { meta: { changes: number } }
+
+/** The dataset revision lives in D1 beside the data; this fake only records that a bump happened. */
+function recordRevisionBump(sql: string, state: AccessState, args: unknown[]): Changes | null {
+  if (!sql.includes('INSERT INTO owner_revision')) return null
+  state.revisionBumps.push(asEmail(args[0]))
+  return { meta: { changes: 1 } }
+}
+
+export function runMutation(sql: string, state: AccessState, args: unknown[]): Changes {
+  return recordRevisionBump(sql, state, args) ?? runAccessMutation(sql, state, args)
+}
+
+function runAccessMutation(sql: string, state: AccessState, args: unknown[]): Changes {
   if (sql.includes('INSERT INTO allowed_users')) return insertAllowedUser(state, args)
   if (sql.includes('UPDATE allowed_users SET status =')) return revokeAllowedUser(state, args)
   if (sql.includes('UPDATE allowed_users SET last_seen_at')) return touchLastSeen(state, args)

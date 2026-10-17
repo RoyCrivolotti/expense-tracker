@@ -38,6 +38,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
+import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
 export type ExpenseRepositorySeed = Partial<ExpenseDataset> & {
@@ -72,6 +73,14 @@ interface OwnerStore {
 }
 
 const DEFAULT_SETTINGS: ExpenseSettings = defaultExpenseSettings()
+
+/** Every stored transaction with the status and label ids D1 would hand back with it. */
+function derivedTransactions(store: OwnerStore): Transaction[] {
+  return deriveTransactions(store.transactions, store.accounts, store.statements).map((t) => ({
+    ...t,
+    labelIds: store.transactionLabels.filter((tl) => tl.transactionId === t.id).map((tl) => tl.labelId),
+  }))
+}
 
 function nextId(items: { id: number }[]): number {
   return items.reduce((max, item) => Math.max(max, item.id), 0) + 1
@@ -540,14 +549,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   return {
     loadDataset: (owner) => {
       const store = storeFor(owner)
-      const derived = deriveTransactions(store.transactions, store.accounts, store.statements).map(
-        (t) => ({
-          ...t,
-          labelIds: store.transactionLabels
-            .filter((tl) => tl.transactionId === t.id)
-            .map((tl) => tl.labelId),
-        }),
-      )
+      const derived = derivedTransactions(store)
       return Promise.resolve({
         categories: [...store.categories],
         accounts: [...store.accounts],
@@ -566,6 +568,15 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     },
 
     listOwners: () => Promise.resolve([...stores.keys()]),
+
+    queryTransactions: (owner, filter, page) =>
+      Promise.resolve(pageOf(derivedTransactions(storeFor(owner)), filter, page)),
+
+    summarizeTransactions: (owner, filter) =>
+      Promise.resolve(summaryOf(derivedTransactions(storeFor(owner)), filter)),
+
+    getTransaction: (owner, id) =>
+      Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
 
     insertTransaction: (owner, input) => Promise.resolve(insertOne(owner, input)),
 

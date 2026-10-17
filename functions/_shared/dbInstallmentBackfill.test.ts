@@ -58,6 +58,8 @@ interface MockState {
   conflictOn?: { planId: number; installmentIndex: number }
   /** Simulate the insert throwing for this planId — anything, any installment. */
   throwForPlanId?: number
+  /** Simulate the insert throwing for one installment only, so earlier ones of the plan are already in. */
+  throwAt?: { planId: number; installmentIndex: number }
   /** settings.budget_rollover_day for the owner; omitted simulates no settings row (falls back to 1). */
   rolloverDay?: number
 }
@@ -88,6 +90,9 @@ function envForBackfill(state: MockState): Env {
               installmentIndex,
             ] = args as [string, string, string, string, number, number, TxnRow['type'], number, number, number]
             if (state.throwForPlanId === planId) throw new Error('simulated insert failure')
+            if (state.throwAt?.planId === planId && state.throwAt.installmentIndex === installmentIndex) {
+              throw new Error('simulated insert failure')
+            }
             if (
               state.conflictOn &&
               state.conflictOn.planId === planId &&
@@ -125,6 +130,9 @@ function envForBackfill(state: MockState): Env {
             return { first: async () => ({ m: indices.length ? Math.max(...indices) : null }) }
           }
           if (sql.startsWith('UPDATE installment_plans')) {
+            return { run: async () => ({ meta: { changes: 1 } }) }
+          }
+          if (sql.includes('owner_revision')) {
             return { run: async () => ({ meta: { changes: 1 } }) }
           }
           if (sql.includes('budget_rollover_day')) {
@@ -294,5 +302,68 @@ describe('backfillInstallments', () => {
     await expect(backfillInstallments(envForBackfill(state), 'a@b.com')).resolves.toBeUndefined()
     expect(state.insertedRows.every((r) => r.plan_id === 2)).toBe(true)
     expect(state.insertedRows.length).toBeGreaterThan(0)
+  })
+  describe('the dataset revision', () => {
+    const bumps = (state: MockState) => state.prepared.filter((sql) => sql.includes('owner_revision')).length
+    const monthsAgo = (n: number) => shiftBudgetMonth(currentBudgetMonth(), -n)
+    const fresh = (planRows: InstallmentPlanRow[], extra: Partial<MockState> = {}): MockState => ({
+      planRows,
+      txnRows: [],
+      insertedRows: [],
+      prepared: [],
+      nextId: 1000,
+      ...extra,
+    })
+
+    it('moves once after rows were inserted, however many and for however many plans', async () => {
+      const state = fresh([
+        planRow({ id: 1, total_count: 3, anchor_budget_month: monthsAgo(2) }),
+        planRow({ id: 2, total_count: 2, anchor_budget_month: monthsAgo(1) }),
+      ])
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(state.insertedRows).toHaveLength(5)
+      expect(bumps(state)).toBe(1)
+    })
+
+    it('moves after the last row is in, so nobody can read the token and miss it', async () => {
+      const state = fresh([planRow({ id: 1, total_count: 3, anchor_budget_month: monthsAgo(2) })])
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(state.prepared.at(-1)).toContain('owner_revision')
+    })
+
+    it('stays put when no plan is eligible', async () => {
+      const state = fresh([])
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(bumps(state)).toBe(0)
+    })
+
+    it('stays put when nothing is due yet', async () => {
+      const state = fresh([planRow({ id: 1, anchor_budget_month: shiftBudgetMonth(currentBudgetMonth(), 24) })])
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(bumps(state)).toBe(0)
+    })
+
+    it('stays put when another request had already inserted the row', async () => {
+      const state = fresh([planRow({ id: 1, anchor_budget_month: monthsAgo(1) })], {
+        conflictOn: { planId: 1, installmentIndex: 1 },
+      })
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(bumps(state)).toBe(0)
+    })
+
+    it('stays put when the only plan failed before inserting anything', async () => {
+      const state = fresh([planRow({ id: 1, anchor_budget_month: monthsAgo(1) })], { throwForPlanId: 1 })
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(bumps(state)).toBe(0)
+    })
+
+    it('moves for the rows a plan inserted before it failed', async () => {
+      const state = fresh([planRow({ id: 1, total_count: 4, anchor_budget_month: monthsAgo(3) })], {
+        throwAt: { planId: 1, installmentIndex: 3 },
+      })
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      expect(state.insertedRows).toHaveLength(2)
+      expect(bumps(state)).toBe(1)
+    })
   })
 })

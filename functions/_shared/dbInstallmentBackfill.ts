@@ -13,8 +13,9 @@
 import type { Env } from './env'
 import type { InstallmentPlan, StoredTransaction } from '../domain/types'
 import { nextInstallmentSuggestion, type InstallmentSuggestion } from '../domain/engine/installments'
-import { defaultBudgetMonth, monthsBetweenBudget, DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
+import { monthsBetweenBudget } from '../domain/engine/dates'
 import { maybeCompletePlan } from './dbWrite'
+import { bumpRevision, serverBudgetMonth } from './dbRevision'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } from './rows'
 
@@ -69,6 +70,7 @@ async function backfillPlan(
   plan: InstallmentPlan,
   initialTxns: StoredTransaction[],
   currentBudgetMonth: string,
+  wrote: { any: boolean },
 ): Promise<void> {
   let txns = initialTxns
   let inserted = false
@@ -78,6 +80,7 @@ async function backfillPlan(
     if (!row) break // another request already backfilled this index
     txns = [...txns, toStoredTxn(row)]
     inserted = true
+    wrote.any = true
     suggestion = nextInstallmentSuggestion(plan, txns)
   }
   if (inserted) await maybeCompletePlan(env, owner, plan.id)
@@ -119,19 +122,23 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
   )
     .bind(owner)
     .first<{ budget_rollover_day: number | null }>()
-  const rolloverDay = settingsRow?.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY
   // Server clock (UTC), not the user's local one — right at a day boundary
   // this can disagree with the user's calendar by up to a day. Matches existing
   // ad hoc `new Date()` usage elsewhere in functions/ (backupService.ts,
   // accessService.ts); not worth a shared clock for a personal expense tracker.
-  const todayIso = new Date().toISOString().slice(0, 10)
-  const currentBudgetMonth = defaultBudgetMonth(todayIso, rolloverDay)
+  const currentBudgetMonth = serverBudgetMonth(settingsRow?.budget_rollover_day)
 
+  // `wrote` outlives a plan that fails halfway: its earlier rows are in the table and the revision has
+  // to move for them even though the plan did not finish.
+  const wrote = { any: false }
   for (const plan of plans) {
     try {
-      await backfillPlan(env, owner, plan, txnsByPlan.get(plan.id) ?? [], currentBudgetMonth)
+      await backfillPlan(env, owner, plan, txnsByPlan.get(plan.id) ?? [], currentBudgetMonth, wrote)
     } catch (err) {
       console.error('installment backfill failed for plan', plan.id, err)
     }
   }
+  // This is the one write that happens on a GET. Anyone holding the previous revision has a dataset
+  // without these rows.
+  if (wrote.any) await bumpRevision(env.DB, owner)
 }
