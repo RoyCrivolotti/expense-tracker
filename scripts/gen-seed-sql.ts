@@ -68,6 +68,10 @@ lines.push(
   `INSERT INTO settings (owner, opening_cash_cents, opening_investment_cents) VALUES (${owner}, ${num(s.openingCashCents)}, ${num(s.openingInvestmentCents)}) ON CONFLICT(owner) DO UPDATE SET opening_cash_cents = excluded.opening_cash_cents, opening_investment_cents = excluded.opening_investment_cents;`,
 )
 
+// Rows written outside the API do not move the owner's dataset revision, so drop it: a browser that
+// cached the old data would otherwise be told nothing changed.
+lines.push(`DELETE FROM owner_revision WHERE owner = ${owner};`)
+
 const out = process.argv[2] ?? '/tmp/seed-roy-expenses.sql'
 writeFileSync(out, lines.join('\n') + '\n')
 process.stderr.write(
