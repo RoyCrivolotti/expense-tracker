@@ -5,6 +5,7 @@
  */
 import type { DatabaseSync, SQLInputValue, StatementSync } from 'node:sqlite'
 import type { ExpenseDataset } from '../domain/types'
+import { normalizeDesc } from '../domain/engine/recurringDetect'
 
 type Row = SQLInputValue[]
 
@@ -52,11 +53,11 @@ function seedReference(db: DatabaseSync, owner: string, d: ExpenseDataset): void
   )
 }
 
-function seedTransactions(db: DatabaseSync, owner: string, d: ExpenseDataset): void {
+function seedTransactions(db: DatabaseSync, owner: string, d: ExpenseDataset, withNorm: boolean): void {
   insertAll(
-    db.prepare('INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled,notes,created_at,plan_id,installment_index,flag_id,settled_by,report_count,report_covered_cents) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'),
+    db.prepare('INSERT INTO transactions (owner,id,date,budget_month,description,description_norm,account_id,category_id,type,amount_cents,cancelled,notes,created_at,plan_id,installment_index,flag_id,settled_by,report_count,report_covered_cents) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'),
     d.transactions,
-    (t) => [owner, t.id, t.date, t.budgetMonth, t.description, t.accountId, t.categoryId, t.type, t.amountCents, bit(t.cancelled), t.notes ?? null, t.createdAt ?? `${t.date}T00:00:00Z`, t.planId ?? null, t.installmentIndex ?? null, t.flagId ?? null, t.settledBy ?? null, t.reportCount ?? null, t.reportCoveredCents ?? null],
+    (t) => [owner, t.id, t.date, t.budgetMonth, t.description, withNorm ? normalizeDesc(t.description) : null, t.accountId, t.categoryId, t.type, t.amountCents, bit(t.cancelled), t.notes ?? null, t.createdAt ?? `${t.date}T00:00:00Z`, t.planId ?? null, t.installmentIndex ?? null, t.flagId ?? null, t.settledBy ?? null, t.reportCount ?? null, t.reportCoveredCents ?? null],
   )
   const links = d.transactions.flatMap((t) => (t.labelIds ?? []).map((labelId): Row => [t.id, labelId]))
   insertAll(db.prepare('INSERT INTO transaction_labels (transaction_id,label_id) VALUES (?,?)'), links, (l) => l)
@@ -67,11 +68,24 @@ function seedTransactions(db: DatabaseSync, owner: string, d: ExpenseDataset): v
   )
 }
 
-export function seedDataset(db: DatabaseSync, owner: string, dataset: ExpenseDataset): void {
+export interface SeedOptions {
+  /**
+   * Fill `description_norm` as every write path does. Off, the rows are left as a database migrated
+   * from before the column holds them, waiting for the backfill.
+   */
+  descriptionNorm?: boolean
+}
+
+export function seedDataset(
+  db: DatabaseSync,
+  owner: string,
+  dataset: ExpenseDataset,
+  { descriptionNorm = true }: SeedOptions = {},
+): void {
   db.exec('BEGIN')
   try {
     seedReference(db, owner, dataset)
-    seedTransactions(db, owner, dataset)
+    seedTransactions(db, owner, dataset, descriptionNorm)
     db.exec('COMMIT')
   } catch (err) {
     db.exec('ROLLBACK')
