@@ -125,6 +125,7 @@ const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
   'GET /attachments': (ids) => ({ path: `/attachments?transactionId=${ids.transactions[0]}` }),
   'GET /attachments/:id': (ids) => ({ path: `/attachments/${ids.attachment}`, params: id(ids.attachment) }),
   'GET /cube': () => ({ path: '/cube?from=2026-01&to=2026-12' }),
+  'GET /descriptions/suggest': () => ({ path: '/descriptions/suggest?q=ma' }),
   'GET /reference': () => ({ path: '/reference' }),
   'GET /transactions/months': () => ({ path: '/transactions/months?from=2026-01&to=2026-12' }),
   'GET /series': () => ({ path: '/series' }),
