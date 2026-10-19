@@ -15,6 +15,8 @@ interface InvokeOptions {
   params?: Record<string, string>
   /** Omit header when false; defaults to owner@example.com. */
   email?: string | false
+  /** Extra request headers, such as `If-None-Match`. */
+  headers?: Record<string, string>
 }
 
 function handlerContext(
@@ -93,7 +95,7 @@ export async function invokePagesRoute(
   handler: RouteHandler,
   options: InvokeOptions,
 ): Promise<Response> {
-  const headers = new Headers()
+  const headers = new Headers(options.headers)
   if (options.email !== false) {
     headers.set('Cf-Access-Authenticated-User-Email', options.email ?? 'owner@example.com')
   }
