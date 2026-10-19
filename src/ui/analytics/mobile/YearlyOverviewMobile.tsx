@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
+import { sumsOf } from '../../buildExpenseModel'
 import { computeYearlyOverview, formatCents, fullMonthLabel } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './mobile.module.css'
 
 export function YearlyOverviewMobile({ model }: { model: ExpenseModel }) {
-  const rows = useMemo(
-    () => computeYearlyOverview(model.dataset.transactions, model.dataset.settings),
-    [model.dataset],
-  )
+  const sums = sumsOf(model)
+  const rows = useMemo(() => computeYearlyOverview(sums.transactions, sums.settings), [sums])
 
   if (rows.length === 0) return null
 

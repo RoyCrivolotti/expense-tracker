@@ -1,4 +1,5 @@
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../buildExpenseModel'
 import type { AnalyticsBasis, CategoryActuals } from '../../engine'
 import { basisOptions, computeCategoryActuals } from '../../engine'
 
@@ -18,7 +19,7 @@ export function monthlySummaryRows(
 ): CategoryActuals[] {
   const { dataset } = model
   const order = new Map(dataset.categories.map((c) => [c.id, c.sortOrder]))
-  return computeCategoryActuals(dataset.transactions, dataset.categories, {
+  return computeCategoryActuals(sumsOf(model).transactions, dataset.categories, {
     ...basisOptions(basis),
     ytdThroughMonth: month,
   })
