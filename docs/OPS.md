@@ -115,6 +115,7 @@ apply a migration to dev ahead of its merge only when the merge is near.
 | `scripts/seed-dev.mjs` | `seed:dev` / `seed:dev-from-prod` | Prod D1 export → dev (`.tmp/` gitignored); private QA only |
 | `scripts/seed-demo-staging.mjs` | `seed:demo-staging` | Synthetic demo tenant on `roy-expenses-dev` (public fixtures) |
 | `scripts/migrate.mjs` | `migrate`, `migrate:dev` | Check any database against `migrations/`, or apply what it lacks (`migrate:dev`: dev, post-seed only) |
+| `scripts/measure-d1.mjs` | `measure:d1` | Measure rows read and written per route on the dev D1 as a synthetic owner; dry run unless given `--write` and the database name (see docs/SCALING.md, "Measuring on a deployed system") |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to `roy-expenses-stg` |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.
