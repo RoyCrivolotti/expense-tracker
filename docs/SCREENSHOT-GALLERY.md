@@ -1,6 +1,6 @@
 # Screenshot gallery
 
-Full visual reference for the expense tracker UI. Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** use `DOCS_CAPTURE=1` mocks during capture.
+For users: a full visual reference for the expense tracker UI. Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** use `DOCS_CAPTURE=1` mocks during capture.
 
 Regenerate all images:
 

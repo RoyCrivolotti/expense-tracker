@@ -1,6 +1,6 @@
 # Changelog (product-facing)
 
-High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
+For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
 ## October 2026 (A long Transactions list draws only what is on screen)
 
