@@ -82,15 +82,19 @@ async function accountUsage(args: Args, deps: Deps, base: Omit<RestOptions, 'dat
   }
 }
 
-/** Every statement, single or batched, passes the write guard before it is sent. */
-export function guarded(inner: Transport, writesEnabled: boolean): Transport {
+/** Every statement, single or batched, passes the write guard and the stop file before it is sent. */
+export function guarded(inner: Transport, writesEnabled: boolean, shouldStop: () => boolean = () => false): Transport {
+  const admit = (statement: Statement): void => {
+    if (shouldStop()) throw new Error('Stopped: the stop file is present')
+    assertStatementAllowed(statement.sql, statement.params, writesEnabled)
+  }
   return {
     query: (statement) => {
-      assertStatementAllowed(statement.sql, statement.params, writesEnabled)
+      admit(statement)
       return inner.query(statement)
     },
     batch: (statements) => {
-      for (const s of statements) assertStatementAllowed(s.sql, s.params, writesEnabled)
+      statements.forEach(admit)
       return inner.batch(statements)
     },
   }
@@ -116,7 +120,7 @@ export async function openSession(args: Args, deps: Deps, plannedWritten: number
     assertAccountHasRoom(usage, plannedWritten)
     ledger.assertWithin(plannedWritten)
   }
-  const transport = guarded(deps.transportFor(options), args.write)
+  const transport = guarded(deps.transportFor(options), args.write, deps.stopRequested)
   return {
     transport,
     query: async (statement) => {

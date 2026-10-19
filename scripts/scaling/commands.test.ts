@@ -227,6 +227,14 @@ describe('a whole exercise through the commands', () => {
   })
 })
 
+describe('the stop file', () => {
+  it('ends a read-only command before its next statement', async () => {
+    const h = harness(sqliteTransport(databaseWithAnotherOwner()), { stopRequested: () => true })
+    await expect(run(['snapshot', '--database', 'roy-expenses-dev'], h)).rejects.toThrow(/stop file/)
+    expect(h.files.size).toBe(0)
+  })
+})
+
 describe('compare', () => {
   it('shows the growth per 1,000 transactions between two runs', async () => {
     const h = harness(sqliteTransport(databaseWithAnotherOwner()))
