@@ -6,8 +6,16 @@ export function createR2BackupStore(bucket: R2Bucket): BackupStore {
     put: async (key, body, contentType = 'application/json') => {
       await bucket.put(key, body, { httpMetadata: { contentType } })
     },
+    get: async (key) => {
+      const object = await bucket.get(key)
+      return object ? object.text() : null
+    },
     list: (prefix) => listAll(bucket, prefix),
     delete: (key) => bucket.delete(key),
+    // R2 deletes up to 1,000 keys in one call.
+    deleteMany: async (keys) => {
+      for (let i = 0; i < keys.length; i += 1_000) await bucket.delete(keys.slice(i, i + 1_000))
+    },
   }
 }
 

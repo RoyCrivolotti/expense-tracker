@@ -1,6 +1,6 @@
 import type { BackupObjectMeta, BackupStore } from '../domain/ports/backupStore'
 import type { BackupPolicy } from './backupPolicy'
-import { dateKeyFromObjectKey, utcDateFromKey } from './backupKeys'
+import { backupUnitOf, utcDateFromKey } from './backupKeys'
 
 export function keysOlderThan(
   objects: BackupObjectMeta[],
@@ -11,25 +11,47 @@ export function keysOlderThan(
   cutoff.setUTCDate(cutoff.getUTCDate() - retentionDays)
   return objects
     .filter((obj) => {
-      const dateKey = dateKeyFromObjectKey(obj.key)
+      const dateKey = backupUnitOf(obj.key)?.dateKey ?? null
       return dateKey !== null && utcDateFromKey(dateKey) < cutoff
     })
     .map((obj) => obj.key)
 }
 
-/** Delete oldest dated snapshots until total stored bytes is at or below maxBucketBytes. */
-export function keysOverSizeBudget(objects: BackupObjectMeta[], maxBucketBytes: number): string[] {
-  const dated = objects
-    .map((obj) => ({ obj, dateKey: dateKeyFromObjectKey(obj.key) }))
-    .filter((row): row is { obj: BackupObjectMeta; dateKey: string } => row.dateKey !== null)
-    .sort((a, b) => utcDateFromKey(a.dateKey).getTime() - utcDateFromKey(b.dateKey).getTime())
+interface Unit {
+  dateKey: string
+  size: number
+  keys: string[]
+}
 
-  let total = dated.reduce((sum, row) => sum + row.obj.size, 0)
+/** A day's snapshot file, or every object of a chunked backup's folder, as one thing to keep or drop. */
+function unitsOf(objects: BackupObjectMeta[]): Unit[] {
+  const units = new Map<string, Unit>()
+  for (const obj of objects) {
+    const found = backupUnitOf(obj.key)
+    if (!found) continue
+    const unit = units.get(found.unit) ?? { dateKey: found.dateKey, size: 0, keys: [] }
+    unit.size += obj.size
+    unit.keys.push(obj.key)
+    units.set(found.unit, unit)
+  }
+  return [...units.values()]
+}
+
+/**
+ * Delete oldest dated backups until total stored bytes is at or below maxBucketBytes. A chunked backup
+ * goes whole: dropping some of its parts would leave a manifest that points at nothing.
+ */
+export function keysOverSizeBudget(objects: BackupObjectMeta[], maxBucketBytes: number): string[] {
+  const dated = unitsOf(objects).sort(
+    (a, b) => utcDateFromKey(a.dateKey).getTime() - utcDateFromKey(b.dateKey).getTime(),
+  )
+
+  let total = dated.reduce((sum, unit) => sum + unit.size, 0)
   const toDrop: string[] = []
-  for (const row of dated) {
+  for (const unit of dated) {
     if (total <= maxBucketBytes) break
-    toDrop.push(row.obj.key)
-    total -= row.obj.size
+    toDrop.push(...unit.keys)
+    total -= unit.size
   }
   return toDrop
 }
@@ -46,6 +68,10 @@ export function buildPrunePlan(
 }
 
 export async function applyPrunePlan(store: BackupStore, keys: string[]): Promise<number> {
+  if (keys.length > 0 && store.deleteMany) {
+    await store.deleteMany(keys)
+    return keys.length
+  }
   let deleted = 0
   for (const key of keys) {
     await store.delete(key)
