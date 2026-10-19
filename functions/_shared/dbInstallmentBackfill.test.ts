@@ -52,6 +52,8 @@ interface MockState {
   planRows: InstallmentPlanRow[]
   txnRows: TxnRow[]
   insertedRows: TxnRow[]
+  /** The description_norm bound for each inserted row, in order. */
+  insertedNorms?: string[]
   prepared: string[]
   nextId: number
   /** Simulate ON CONFLICT DO NOTHING firing for this exact (planId, installmentIndex). */
@@ -82,13 +84,15 @@ function envForBackfill(state: MockState): Env {
               date,
               budgetMonth,
               description,
+              descriptionNorm,
               accountId,
               categoryId,
               type,
               amountCents,
               planId,
               installmentIndex,
-            ] = args as [string, string, string, string, number, number, TxnRow['type'], number, number, number]
+            ] = args as [string, string, string, string, string, number, number, TxnRow['type'], number, number, number]
+            state.insertedNorms?.push(descriptionNorm)
             if (state.throwForPlanId === planId) throw new Error('simulated insert failure')
             if (state.throwAt?.planId === planId && state.throwAt.installmentIndex === installmentIndex) {
               throw new Error('simulated insert failure')
@@ -166,12 +170,14 @@ describe('backfillInstallments', () => {
       planRows: [plan],
       txnRows: existing,
       insertedRows: [],
+      insertedNorms: [],
       prepared: [],
       nextId: 1000,
     }
     await backfillInstallments(envForBackfill(state), 'a@b.com')
     expect(state.insertedRows).toHaveLength(1)
     expect(state.insertedRows[0]!.installment_index).toBe(3)
+    expect(state.insertedNorms).toEqual(['sofa'])
     expect(state.prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(true)
   })
 

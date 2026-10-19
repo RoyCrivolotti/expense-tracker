@@ -5,16 +5,20 @@ export function json(data: unknown, status = 200): Response {
   })
 }
 
-export function error(status: number, message: string): Response {
-  return json({ error: message }, status)
+export function error(status: number, message: string, headers: Record<string, string> = {}): Response {
+  const response = json({ error: message }, status)
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value)
+  return response
 }
 
-/** A thrown HttpError short-circuits a handler with an HTTP status + message. */
+/** A thrown HttpError short-circuits a handler with an HTTP status + message, and headers when it has any. */
 export class HttpError extends Error {
   readonly status: number
-  constructor(status: number, message: string) {
+  readonly headers: Record<string, string>
+  constructor(status: number, message: string, headers: Record<string, string> = {}) {
     super(message)
     this.status = status
+    this.headers = headers
   }
 }
 

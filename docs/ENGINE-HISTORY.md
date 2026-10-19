@@ -135,6 +135,39 @@ the rows they are given, as they always did. `buildOverviewData` does not pass o
 differs until it is given one. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
 sweep fails both if something else differs and if a listed difference never shows up.
 
+## Reading a series
+
+A series needs the whole history, but what the detectors read of it is small. Reading each consumer
+(`recurringDetect.ts`, `recurringPredict.ts`, `recurringUpcoming.ts`, `fixedFlexible.ts`, `fixedCosts.ts`,
+`spendingPace.ts`) for what it takes from an `OccurrenceGroup`:
+
+| Read | By | Needs |
+|---|---|---|
+| Median gap and regularity | `fixedRhythm`, `isMonthlyGroup`, `detectUpcoming` | Every gap between consecutive dates, in any order: only their spread counts |
+| Usual day | `usualDay` | The newest 3 dates |
+| Lead time | `leadFromHistory` | The newest 5 dates |
+| Pending date | `pendingDate` | The newest date. It also asks whether any date is within 14 days of a usual date, but an older date can only be if the newest is |
+| Budget month of a suggestion | `suggestionFor` | The median of the newest 3 rows' offsets, so their order does not matter |
+| Alive in a month | `activeInMonth` | Whether the series has a row booked to the month, the one before or the one before that, for any month the screen shows |
+| Last month of a fixed cost | `detectedFixedCosts` | The newest budget month |
+| Name, amount, account, category, type | every consumer | The newest row |
+
+So a series is carried as the newest 5 dates, the gaps before them, every distinct budget month, 3 offsets and
+the newest row (`RecurringSeries`). The budget months are the part the earlier proposal of "every gap and the
+newest 5 dates" left out: `activeInMonth` is asked about the viewed month, which can be years back, so the
+newest few cannot answer it. They cost one short string per month a series was booked in. The dates before
+the newest 5 are known only by their gaps, which is all anything reads: the group built back from a series
+has the right gaps in those places and not the day each one fell on. A series of 5 or fewer rows has no
+older gaps. Each of these is needed: the consumer tests (`seriesConsumers.parity.test.ts`) fail if the tail
+is cut to 3 or 4 dates, the budget months to the newest 3, one older gap dropped, or the offsets to one.
+
+The one input that is not part of a served series is a stopped series with fewer than three rows left.
+`stillStopped` knows the newest charge of any series key it is given, including a series too short to be a
+series, and the served series list only series of three or more. For a stopped series that has since fallen
+below three rows, whose newest charge is newer than the one it was stopped at and is not among the rows the
+browser holds, `stillStopped` still counts it as stopped. A series is only offered to be stopped when it has
+three rows, so this needs the owner to have deleted rows afterwards.
+
 ## Properties worth knowing
 
 **Recurring detection and the fixed or flexible split**
@@ -183,7 +216,7 @@ one after.
 
 | Engine | Why | Constant to read it with |
 |---|---|---|
-| Fixed or flexible split, recurring detection, Upcoming (`classifyFixedSpend`, `recurringFixedGroups`, `detectedFixedCosts`, `detectUpcoming`, `stillStopped`) | The median and regularity run over every gap, three rows make a series, and later rows reclassify earlier ones | `SERIES_TAIL_DATES = 5` (not in code): per series key, every gap and the newest 5 dates (the detector reads 3 and 5, `PREDICT_HISTORY` and `WINDOW_HISTORY`). No history bound: a cap would have to cover three yearly charges at 395 days, about 39 months, and would still reclassify long series |
+| Fixed or flexible split, recurring detection, Upcoming (`classifyFixedSpend`, `recurringFixedGroups`, `detectedFixedCosts`, `detectUpcoming`, `stillStopped`) | The median and regularity run over every gap, three rows make a series, and later rows reclassify earlier ones | `SERIES_TAIL_DATES = 5` (`recurringSeries.ts`, the larger of `PREDICT_HISTORY` = 3 and `WINDOW_HISTORY` = 5): per series key, the newest 5 dates, every older gap, every distinct budget month, the newest 3 budget offsets and the newest row (see [Reading a series](#reading-a-series)). No history bound: a cap would have to cover three yearly charges at 395 days, about 39 months, and would still reclassify long series |
 | `averageMonthlySpendCents`, `cashReserve` | 12 months with spend, not 12 calendar months | `CASH_RESERVE_SPEND_MONTHS = 12` (exists), applied to month sums as the 12 newest months with a non-zero net expense before the open month |
 | `computeSpendingBaseline` | 12 months with data | `BASELINE_MONTHS = 12` (exists), counted in months with data |
 | `computeOverviewKpis`, `computeMovers`, `computeSpendingPace`, `computeSpendingGroups`, `computeSpendingGroupDetail`, `computeAllocation` | The same-days cut and the per-row reads reach 12 months back, and further across a gap | `HYDRATED_DATA_MONTHS = 13` (`src/domain/ledger/hydration.ts`): the 13 newest months with data up to and including M. Tested with and without a gap; 12 is one short for the year-ago baseline |
@@ -201,6 +234,11 @@ one after.
    `detectedFixedCosts`). Left to build their own, three answer differently on a window (tested), and the pace
    envelope matched only because every monthly series on the generated ledger has three rows inside it. Each takes
    the classifier or series of the whole history as an optional argument, and with it a window matches (tested).
+   The server holds that history: `GET /api/expenses/series` returns every series in the shape of
+   `RecurringSeries`, and `classifierFromGroups(recurringFixedGroupsFromSeries(series))` and
+   `recurringFixedGroupsFromSeries(series)` are the classifier and groups to pass. Upcoming charges
+   (`detectUpcoming`) take `groups` the same way, and `stillStopped` takes the series' newest charges
+   (`newestChargesOfSeries`). The result is tested to match the answer over every row.
 3. The same-days cut reaches the months a month is compared with, so while M is the open month the 12 months back
    need dates. A closed month does not.
 4. Recent activity is relative to today and global. The window around a past M never contains it.

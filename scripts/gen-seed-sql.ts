@@ -13,6 +13,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { parseWorkbookCsv } from '../src/domain/data/parseWorkbookCsv'
+import { normalizeDesc } from '../src/domain/engine/recurringDetect'
 
 /** Owner for seeded rows; set EXPENSE_OWNER for your environment. */
 const OWNER = process.env.EXPENSE_OWNER?.trim().toLowerCase()
@@ -50,7 +51,7 @@ for (const a of d.accounts) {
 }
 for (const t of d.transactions) {
   lines.push(
-    `INSERT INTO transactions (owner, id, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes) VALUES (${owner}, ${num(t.id)}, ${str(t.date)}, ${str(t.budgetMonth)}, ${str(t.description)}, ${num(t.accountId)}, ${num(t.categoryId)}, ${str(t.type)}, ${num(t.amountCents)}, ${bit(t.cancelled)}, ${str(t.notes)});`,
+    `INSERT INTO transactions (owner, id, date, budget_month, description, description_norm, account_id, category_id, type, amount_cents, cancelled, notes) VALUES (${owner}, ${num(t.id)}, ${str(t.date)}, ${str(t.budgetMonth)}, ${str(t.description)}, ${str(normalizeDesc(t.description))}, ${num(t.accountId)}, ${num(t.categoryId)}, ${str(t.type)}, ${num(t.amountCents)}, ${bit(t.cancelled)}, ${str(t.notes)});`,
   )
 }
 for (const s of d.accountStatements) {

@@ -12,7 +12,7 @@ import { mulberry32 } from '../domain/engine/rng'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset, Transaction, TxnStatus, TxnType } from '../domain/types'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
-import { seedDataset } from './seedSqlite'
+import { seedDataset, type SeedOptions } from './seedSqlite'
 import { migratedDatabase, newStats, sqliteD1, type SqliteD1Options, type SqliteD1Stats } from './sqliteD1'
 import { syntheticLedger } from './syntheticLedger'
 
@@ -50,20 +50,20 @@ function recording(inner: D1Database, statements: RecordedStatement[]): D1Databa
 export function queryDb(
   dataset: ExpenseDataset,
   others: Array<{ owner: string; dataset: ExpenseDataset }> = [],
-  options: SqliteD1Options = {},
+  options: SqliteD1Options & SeedOptions = {},
 ): QueryDb {
   const sqlite = migratedDatabase()
   // Rows that name an account or a label that is not there are the point of some cases.
   sqlite.exec('PRAGMA foreign_keys = OFF')
-  seedDataset(sqlite, OWNER, dataset)
-  others.forEach((other, i) => seedDataset(sqlite, other.owner, shifted(other.dataset, (i + 1) * 1_000_000)))
+  seedDataset(sqlite, OWNER, dataset, options)
+  others.forEach((other, i) => seedDataset(sqlite, other.owner, shifted(other.dataset, (i + 1) * 1_000_000), options))
   const stats = newStats()
   const statements: RecordedStatement[] = []
   return { sqlite, d1: recording(sqliteD1(sqlite, stats, options), statements), stats, statements }
 }
 
 /** Ids are global in D1, so each further owner's rows are moved up by `by` to keep clear of the others'. */
-function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
+export function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
   const lift = (t: Transaction): Transaction => {
     const moved: Transaction = {
       ...t,

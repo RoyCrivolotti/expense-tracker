@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseWorkbookCsv } from '../src/domain/data/parseWorkbookCsv'
 import { pickScenarioColor } from '../src/domain/engine/projectionPresets'
+import { normalizeDesc } from '../src/domain/engine/recurringDetect'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -87,7 +88,7 @@ for (const a of d.accounts) {
 }
 for (const t of d.transactions) {
   lines.push(
-    `INSERT INTO transactions (owner, id, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes) VALUES (${owner}, ${num(remapId(t.id))}, ${str(t.date)}, ${str(t.budgetMonth)}, ${str(t.description)}, ${num(remapId(t.accountId))}, ${num(remapId(t.categoryId))}, ${str(t.type)}, ${num(t.amountCents)}, ${bit(t.cancelled)}, ${str(t.notes)});`,
+    `INSERT INTO transactions (owner, id, date, budget_month, description, description_norm, account_id, category_id, type, amount_cents, cancelled, notes) VALUES (${owner}, ${num(remapId(t.id))}, ${str(t.date)}, ${str(t.budgetMonth)}, ${str(t.description)}, ${str(normalizeDesc(t.description))}, ${num(remapId(t.accountId))}, ${num(remapId(t.categoryId))}, ${str(t.type)}, ${num(t.amountCents)}, ${bit(t.cancelled)}, ${str(t.notes)});`,
   )
 }
 for (const s of d.accountStatements) {

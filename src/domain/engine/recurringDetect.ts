@@ -1,13 +1,11 @@
 import type { Transaction } from '../types'
 import { monthsBetweenBudget } from './dates'
+import { normalizeDesc } from './normalizeDescription'
 import type { GroupKey, OccurrenceGroup } from './recurringTypes'
 
 const MIN_OCCURRENCES = 3
 
-/** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
-export function normalizeDesc(description: string): string {
-  return description.trim().toLowerCase()
-}
+export { normalizeDesc } from './normalizeDescription'
 
 /** One recurring-detection identity per transaction; fixed-spend classification reuses it. */
 export function occurrenceKey(txn: Transaction): string {

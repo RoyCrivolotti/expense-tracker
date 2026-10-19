@@ -78,13 +78,18 @@ export type StoppedSeries = Readonly<Record<string, { after: string }>>
 /**
  * The stopped series that still keep their suggestions away: those with no charge after the one
  * they were stopped at. A series with a newer charge has come back by itself, so it is not stopped
- * any more, whatever the list still holds. A series with no charges left counts as stopped.
+ * any more, whatever the list still holds. A series with no charges left counts as stopped. `known` are
+ * newest charges by series key from elsewhere (the server's series), and the newer of the two counts.
  */
 export function stillStopped<T extends { after: string }>(
   transactions: Transaction[],
   stopped: Readonly<Record<string, T>>,
+  known: ReadonlyMap<string, string> = new Map(),
 ): Record<string, T> {
   const newest = newestChargeBySeries(transactions)
+  for (const [seriesKey, date] of known) {
+    if (date > (newest.get(seriesKey) ?? '')) newest.set(seriesKey, date)
+  }
   return Object.fromEntries(
     Object.entries(stopped).filter(([seriesKey, { after }]) => (newest.get(seriesKey) ?? after) <= after),
   )
@@ -132,14 +137,17 @@ function suggestionFor(
  * charges, never at which budget month is on screen, so the same charge is on the card whichever
  * month is open. A series the owner has stopped is left out until a charge after the one it was
  * stopped at is logged.
+ *
+ * `groups` are the series, built from `transactions` when absent. A caller that holds only some of the
+ * history passes the series of all of it, since a series needs three rows and its gaps run over every one.
  */
 export function detectUpcoming(
   transactions: Transaction[],
-  options: { today: string; stopped?: StoppedSeries },
+  options: { today: string; stopped?: StoppedSeries; groups?: OccurrenceGroup[] },
 ): RecurringSuggestion[] {
   const stopped = options.stopped ?? NO_STOPPED
   const suggestions: RecurringSuggestion[] = []
-  for (const group of groupTransactions(transactions)) {
+  for (const group of options.groups ?? groupTransactions(transactions)) {
     const suggestion = suggestionFor(group, options.today, stopped)
     if (suggestion) suggestions.push(suggestion)
   }

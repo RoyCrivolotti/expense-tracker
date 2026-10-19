@@ -70,6 +70,6 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
     // validation failure with 500 while the routes that did catch answered 400. The
     // same mapping in both places makes the status depend on the error, not the route.
     const mapped = toHttpError(e)
-    return error(mapped.status, mapped.message)
+    return error(mapped.status, mapped.message, mapped.headers)
   }
 }
