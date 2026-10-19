@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Flag, Label, TxnType } from '../../types'
 import type { TransactionsEntry } from './transactionsEntry'
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../buildExpenseModel'
 import type { ExpenseActions } from '../actions'
 import {
   buildTransactionListRows,
@@ -247,9 +248,10 @@ export function useTransactionsTabState(
     [model.dataset, filters.filter],
   )
 
+  const sums = sumsOf(model)
   const listRows = useMemo(() => {
     const cashRows = computeCashReconciliation(
-      model.dataset.transactions,
+      sums.transactions,
       model.dataset.accounts,
       model.dataset.settings,
       model.dataset.cashActuals,
@@ -262,7 +264,7 @@ export function useTransactionsTabState(
       model.dataset.accounts,
       model.dataset.settings,
     )
-  }, [model.dataset, filters.filter])
+  }, [model.dataset, sums, filters.filter])
 
   const totalCents = useMemo(() => netSpendCents(results), [results])
 
