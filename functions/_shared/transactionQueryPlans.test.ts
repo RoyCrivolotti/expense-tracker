@@ -12,6 +12,8 @@ import type { TxnFilter } from '../../src/domain/engine/transactions'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
 import { OWNER, planOf, queryDb, type QueryDb } from '../../src/testing/transactionQueryKit'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
+import { MAX_FILTER_EDIT_ROWS } from '../domain/data/bulkEdit'
+import { idsSql, matchGuardSql } from './transactionQuerySql'
 import type { ExpenseRepository } from '../../src/domain/ports/expenseRepository'
 
 const AFTER: TransactionKey = { date: '2026-06-15', id: 1_500 }
@@ -122,6 +124,27 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
     for (const statement of statements) {
       expectNoFullScan(planOf(kit.sqlite, statement))
     }
+  })
+
+  describe.each(SHAPES)('a bulk edit on the filter: $name', ({ filter, walk }) => {
+    // The ids a filter matches, and the guard that reads them again at write time: no full scan, and the
+    // range a filter names is the range that is read.
+    const IDS = Array.from({ length: 50 }, (_, i) => 100 + i)
+
+    it.each([
+      ['finding the ids', () => idsSql(OWNER, filter, MAX_FILTER_EDIT_ROWS + 1)],
+      ['the guard', () => matchGuardSql(OWNER, filter, IDS, MAX_FILTER_EDIT_ROWS)],
+    ])('%s', (_what, build) => {
+      const plan = planOf(kit.sqlite, build())
+      const text = plan.join('\n')
+      expectNoFullScan(plan)
+      if (walk === 'month') {
+        expect(text, text).toMatch(/SEARCH t USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month=\?/)
+      }
+      if (filter.dateFrom || filter.dateTo) {
+        expect(text, text).toMatch(/SEARCH t USING (COVERING )?INDEX idx_txn_owner_date \(owner=\? AND date/)
+      }
+    })
   })
 
   it('one row by id is a lookup by primary key', async () => {

@@ -9,8 +9,9 @@
  */
 const FAILS = 'abs(-9223372036854775808)'
 
-export function guardSql(condition: string): string {
-  return `SELECT CASE WHEN ${condition} THEN 1 ELSE ${FAILS} END AS ok`
+/** `prefix` is a leading `WITH` clause the condition reads from, when it needs one. */
+export function guardSql(condition: string, prefix = ''): string {
+  return `${prefix}SELECT CASE WHEN ${condition} THEN 1 ELSE ${FAILS} END AS ok`
 }
 
 /** Whether a rejected batch failed because a guard in it did not hold, not for any other reason. */

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { ValidationError } from '../domain/application/validationError'
+import { validateTxnFilter } from '../domain/application/transactionQueryService'
+import type { TxnFilter } from '../domain/engine/transactions'
+import { syntheticLedger } from '../../src/testing/syntheticLedger'
+import { filterStream, vocabularyOf } from '../../src/testing/transactionQueryKit'
 import { parseTransactionQuery } from './transactionQueryParams'
 
 const parse = (query: string) => parseTransactionQuery(new URL(`https://expenses.test/api?${query}`))
@@ -75,5 +79,52 @@ describe('parseTransactionQuery', () => {
       fromCents: 5,
       toCents: 9,
     })
+  })
+})
+
+/** The filter spelt as the list and summary take it, one query parameter per field. */
+function queryStringOf(f: TxnFilter): string {
+  const query = new URLSearchParams()
+  const set = (key: string, value: unknown) => value !== undefined && query.set(key, String(value))
+  for (const key of ['month', 'dateFrom', 'dateTo', 'type', 'status', 'query'] as const) set(key, f[key])
+  for (const key of ['categoryId', 'accountId', 'flagId', 'amountMinCents', 'amountMaxCents'] as const) set(key, f[key])
+  if (f.labelIds) set('labelIds', f.labelIds.join(','))
+  set('queryAmountFromCents', f.queryAmount?.fromCents)
+  set('queryAmountToCents', f.queryAmount?.toCents)
+  return query.toString()
+}
+
+describe('a filter in a request body and in a query string', () => {
+  // A bulk edit sends its filter as JSON; the list and summary it was chosen from send it as parameters.
+  // Both end in `validateTxnFilter`, so these are the same rows. This holds them to it for filters of
+  // every shape, since a filter that meant something else in the edit would change rows nobody saw.
+  it('are the same filter for 300 random filters', () => {
+    const filters = filterStream(vocabularyOf(syntheticLedger({ months: 12, perMonth: 30, seed: 3 })), 300, 20261019)
+    for (const filter of filters) {
+      const fromQuery = validateTxnFilter(parse(queryStringOf(filter)).filter)
+
+      expect(fromQuery, JSON.stringify(filter)).toEqual(validateTxnFilter(filter))
+    }
+  })
+
+  it('are refused for the same reasons', () => {
+    const messageOf = (run: () => unknown): string => {
+      try {
+        run()
+      } catch (error) {
+        expect(error).toBeInstanceOf(ValidationError)
+        return (error as Error).message
+      }
+      throw new Error('accepted')
+    }
+    for (const [body, query] of [
+      [{ month: 'June' }, 'month=June'],
+      [{ categoryId: 0 }, 'categoryId=0'],
+      [{ type: 'transfer' }, 'type=transfer'],
+      [{ labelIds: [1, -2] }, 'labelIds=1,-2'],
+      [{ query: 'x'.repeat(201) }, `query=${'x'.repeat(201)}`],
+    ] as const) {
+      expect(messageOf(() => validateTxnFilter(parse(query).filter))).toBe(messageOf(() => validateTxnFilter(body)))
+    }
   })
 })
