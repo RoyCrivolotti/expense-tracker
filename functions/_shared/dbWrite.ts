@@ -15,6 +15,8 @@ import {
   type TxnRow,
 } from './rows'
 import { descriptionNorm, descriptionNormSets } from './descriptionNorm'
+import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
+import { guardSql, isGuardFailure } from './batchGuard'
 import { HttpError } from './http'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import {
@@ -351,6 +353,21 @@ function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: B
   return statements
 }
 
+/**
+ * Last in a settling batch: fails, and so undoes the batch, unless every row of the owner in `ids` is
+ * now settled by `settledBy`. `assertNoneSettledElsewhere` refuses the common case before anything is
+ * written; this covers a payment that settled one of the rows between that check and the batch, which
+ * the UPDATE's guard clause would otherwise skip over while the rest of the rows were committed.
+ */
+function settledGuardStatement(env: Env, owner: string, ids: number[], settledBy: number) {
+  return env.DB.prepare(
+    guardSql(
+      `NOT EXISTS (SELECT 1 FROM transactions
+         WHERE owner = ? AND id ${IN_ID_LIST} AND (settled_by IS NULL OR settled_by != ?))`,
+    ),
+  ).bind(owner, idList(ids), settledBy)
+}
+
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
 async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
@@ -562,7 +579,18 @@ export async function planBulkUpdate(
   const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id ${IN_ID_LIST}${guard.clause}`,
   ).bind(...values, owner, list, ...guard.values)
-  return [write, ...bulkFollowUpStatements(env, owner, ids, patch)]
+  const guards = patch.settledBy != null ? [settledGuardStatement(env, owner, ids, patch.settledBy)] : []
+  return [write, ...bulkFollowUpStatements(env, owner, ids, patch), ...guards]
+}
+
+/** Runs a planned bulk batch; a guard in it that does not hold is a 409 and nothing was written. */
+export async function runBulkBatch(env: Env, statements: D1PreparedStatement[]): Promise<D1Result[]> {
+  try {
+    return await env.DB.batch(statements)
+  } catch (error) {
+    if (isGuardFailure(error)) throw new HttpError(409, BULK_CHANGED_MESSAGE)
+    throw error
+  }
 }
 
 export async function bulkUpdateTransactions(
@@ -572,13 +600,7 @@ export async function bulkUpdateTransactions(
   patch: BulkTransactionPatch,
 ): Promise<Transaction[]> {
   if (ids.length === 0) return []
-  const [updated] = await env.DB.batch(await planBulkUpdate(env, owner, ids, patch))
-  // Backstop for the window between that check and this UPDATE: a concurrent request
-  // could settle one of these rows in between. The guard clause still refuses to
-  // double-settle it; this surfaces that as a conflict instead of a short result set.
-  if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
-    throw new HttpError(409, SETTLED_ELSEWHERE)
-  }
+  await runBulkBatch(env, await planBulkUpdate(env, owner, ids, patch))
   const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
     .bind(owner, idList(ids))
     .all<TxnRow>()

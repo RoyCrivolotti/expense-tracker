@@ -7,6 +7,7 @@ import {
 } from './dbWrite'
 import type { Env } from './env'
 import { AMOUNT_SIGN_MESSAGE } from '../domain/data/amountSign'
+import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
 
 function envWith(first: unknown): Env {
   return {
@@ -30,6 +31,8 @@ function envForBulkUpdate(opts: {
   settledElsewhere?: number[]
   /** Ids the pre-check should report as carrying a negative amount. */
   withdrawals?: number[]
+  /** Rejects the batch with this error, as D1 does when a statement in it fails. */
+  batchFails?: Error
   /** Set true by the mock if the UPDATE statement is ever prepared. */
   updateRan?: { value: boolean }
   /** Every SQL string prepared, in order, when the caller wants to inspect them. */
@@ -42,6 +45,7 @@ function envForBulkUpdate(opts: {
     changes = 1,
     settledElsewhere = [],
     withdrawals = [],
+    batchFails,
     updateRan,
     prepared,
   } = opts
@@ -67,7 +71,9 @@ function envForBulkUpdate(opts: {
       // D1 runs a batch as one transaction; the stub just echoes each statement's own
       // meta, which is enough to tell the settle's changed-row count from the stamp's.
       batch: vi.fn((stmts: { meta?: { changes: number } }[]) =>
-        Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes } }))),
+        batchFails
+          ? Promise.reject(batchFails)
+          : Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes } }))),
       ),
       prepare: (sql: string) => ({
         bind: () => {
@@ -306,12 +312,12 @@ describe('bulkUpdateTransactions', () => {
     expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(true)
   })
 
-  it('sends the stamp in the same batch as the settle, so neither lands alone', async () => {
+  it('sends the stamp and the settled check in the same batch as the settle, so none lands alone', async () => {
     const env = envForBulkUpdate({})
     await bulkUpdateTransactions(env, 'a@b.com', [1], { settledBy: 7 })
     const batch = env.DB.batch as unknown as ReturnType<typeof vi.fn>
     expect(batch).toHaveBeenCalledOnce()
-    expect(batch.mock.calls[0]![0]).toHaveLength(2)
+    expect(batch.mock.calls[0]![0]).toHaveLength(3)
   })
 
   it('leaves the stamp alone on a patch that settles nothing', async () => {
@@ -442,14 +448,20 @@ describe('bulkUpdateTransactions settledBy guard', () => {
     expect(updateRan.value).toBe(false)
   })
 
-  it('still reports a conflict that appears between the check and the write', async () => {
-    // Nothing is settled elsewhere when the pre-check runs, but the UPDATE matches
-    // fewer rows than asked for — a concurrent settle. The count check is the backstop.
+  it('reports a conflict that appears between the check and the write', async () => {
+    // Nothing is settled elsewhere when the pre-check runs, but a concurrent settle lands
+    // before the batch. The check at the end of the batch fails and D1 undoes the batch.
+    const env = envForBulkUpdate({ batchFails: new Error('D1_ERROR: integer overflow: SQLITE_ERROR') })
     await expect(
-      bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
-        settledBy: 50,
-      }),
-    ).rejects.toMatchObject({ status: 409 })
+      bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 }),
+    ).rejects.toMatchObject({ status: 409, message: BULK_CHANGED_MESSAGE })
+  })
+
+  it('passes any other batch failure on unchanged', async () => {
+    const failure = new Error('D1_ERROR: network lost')
+    await expect(
+      bulkUpdateTransactions(envForBulkUpdate({ batchFails: failure }), 'a@b.com', [1], { settledBy: 50 }),
+    ).rejects.toBe(failure)
   })
 
   it('writes when no target is settled elsewhere', async () => {
@@ -459,15 +471,6 @@ describe('bulkUpdateTransactions settledBy guard', () => {
     await bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 })
 
     expect(updateRan.value).toBe(true)
-  })
-
-  it('does not apply the row-count check to an ordinary bulk edit without settledBy', async () => {
-    // Same partial match (1 changed of 2 requested), but with no settledBy in
-    // the patch — this must still resolve, as it did before the fix.
-    const result = await bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
-      categoryId: 2,
-    })
-    expect(result).toHaveLength(1)
   })
 })
 
