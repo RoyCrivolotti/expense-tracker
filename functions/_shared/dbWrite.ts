@@ -533,13 +533,17 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
   return deleted?.meta?.changes ?? 0
 }
 
-export async function bulkUpdateTransactions(
+/**
+ * Every check a bulk update makes and the statements that carry it out, in the order they run as one
+ * batch. Nothing is written here: a check that fails throws before the caller has anything to run, so
+ * the ids form and the filter form refuse the same patches for the same reasons.
+ */
+export async function planBulkUpdate(
   env: Env,
   owner: string,
   ids: number[],
   patch: BulkTransactionPatch,
-): Promise<Transaction[]> {
-  if (ids.length === 0) return []
+): Promise<D1PreparedStatement[]> {
   await assertPatchOwnership(env, owner, patch)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
@@ -557,7 +561,17 @@ export async function bulkUpdateTransactions(
   const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id ${IN_ID_LIST}${guard.clause}`,
   ).bind(...values, owner, list, ...guard.values)
-  const [updated] = await env.DB.batch([write, ...bulkFollowUpStatements(env, owner, ids, patch)])
+  return [write, ...bulkFollowUpStatements(env, owner, ids, patch)]
+}
+
+export async function bulkUpdateTransactions(
+  env: Env,
+  owner: string,
+  ids: number[],
+  patch: BulkTransactionPatch,
+): Promise<Transaction[]> {
+  if (ids.length === 0) return []
+  const [updated] = await env.DB.batch(await planBulkUpdate(env, owner, ids, patch))
   // Backstop for the window between that check and this UPDATE: a concurrent request
   // could settle one of these rows in between. The guard clause still refuses to
   // double-settle it; this surfaces that as a conflict instead of a short result set.
@@ -565,7 +579,7 @@ export async function bulkUpdateTransactions(
     throw new HttpError(409, SETTLED_ELSEWHERE)
   }
   const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
-    .bind(owner, list)
+    .bind(owner, idList(ids))
     .all<TxnRow>()
   const transactions: Transaction[] = []
   for (const row of results) {
