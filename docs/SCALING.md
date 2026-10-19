@@ -615,6 +615,50 @@ not. It was found by running the repository's own code against the dev database,
 Not measured: workerd CPU, and whether a deployed D1 keeps table statistics (it had none when read; the plan is held
 to the owner's index with and without them).
 
+## Reading the parts in the browser
+
+`ExpenseDataSource` has three optional methods, one per route: `readReferencePart`, `readMonthsPart(range)` and
+`readCubePart(range)`. `hasLedgerParts` says whether a source has them. `apiDataSource` fetches the routes (its code is
+imported on first use, so a browser that loads the whole dataset never fetches it). The demo sources
+(`csvDataSource`, `docsCaptureDataSource`) cut the parts from the dataset they already hold with
+`src/domain/ledger/partsOfDataset.ts`, and refuse the same ranges and sizes the routes refuse, so the pure ledger
+code is the server for them.
+
+`loadLedger(source, { viewed, policy })` in `src/data/ledgerLoader.ts` reads the reference, applies the size policy to
+its months and row count (`hydratedMonthsFor`), reads the rows of the months to hydrate and, when some months are not
+hydrated, the sums of the whole span, and returns a `Ledger` with the revision and the receipt counts.
+`ledgerFromParts` (pure, in `src/domain/ledger`) does the assembling and `partsPlan.ts` the splitting into requests:
+
+- Rows are asked for in the fewest calendar ranges that stay inside 24 months and 5,000 rows each. A range also
+  returns the rows of any month with data inside it, so the months held as rows are taken from the ranges that were
+  read, not from the months asked for.
+- Sums are asked for in ranges of at most 120 months. A range the server refuses for its size is asked for again in
+  halves, down to a single month.
+- A month with more than 5,000 rows cannot be read through these routes and fails with `PartTooLargeError`.
+
+**One revision.** The reference is read first and everything else after it, so a part whose `revision` differs from
+the reference's was read later, and the reference is the stale one. It is read again and the parts that already carry
+its revision are kept; only the others are fetched again. After three attempts the load throws `LedgerChangedError`:
+a ledger written to every few milliseconds never yields a mix of two states. The plan is made again from each new
+reference, so a month a write added is read.
+
+**Caching.** Parts carry `Cache-Control: private, no-cache` and an ETag, so the browser keeps the body and asks
+before using it; an unchanged ledger costs a 304 and two rows read, as the dataset route does. The client names no
+validator itself, because a request that carries `If-None-Match` skips the browser's cache and the 304 would then have
+nothing to return. A 304 that reaches the code anyway is read again with `cache: 'reload'`.
+
+**Version skew.** A server without the routes answers 404, or the app's `index.html` with a 200. A deploy that changed
+a part's shape without the browser knowing sends a body that fails the shape check. Both are `PartsUnavailableError`,
+which a caller answers by loading the whole dataset as before. `GET /api/expenses` is unchanged.
+
+**Receipts.** The reference leaves out the receipt list, so a ledger built from parts has none:
+`reference.attachments` is empty, and `LoadedLedger.attachmentCounts` says which real rows have receipts. A row's
+receipts are read when needed, from `GET /api/expenses/attachments?transactionId=`.
+
+`functions/api/expenses/ledgerParts.client.integration.test.ts` runs the real client against the real routes and SQL
+and holds the result to the ledger made from `GET /api/expenses` over the same database, for every viewed month, with
+and without a window.
+
 ## Status
 
 Built:
@@ -628,8 +672,9 @@ Built:
 - the keyset list, the capped summary and the by-id read for transactions, with the two indexes they need
   (migration 0036). See "Paged transaction reads". Nothing in the app calls them yet;
 - the ledger parts: `GET /api/expenses/reference`, `/transactions/months` and `/cube`, and the receipts of one
-  transaction, with a partial index for the pinned rows (migration 0037). See "Ledger parts". Nothing in the app
-  calls them yet;
+  transaction, with a partial index for the pinned rows (migration 0037). See "Ledger parts";
+- the browser's side of reading them: the data sources serve the parts and `loadLedger` assembles a ledger from
+  them, consistent across parts. See "Reading the parts in the browser". No screen uses it yet;
 - the ledger model (`src/domain/ledger`, pure code), with differential tests that run the engines over every row and
   over the assembled lists (`src/testing/ledgerDifferential.test.ts`, `ledgerSweep.test.ts`; the result is in
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
@@ -644,16 +689,16 @@ Built:
 - usage counts per category, account, flag and label (`GET /api/expenses/usage`). See "Usage counts". Nothing in the
   app calls it yet;
 
-Not built: the compact read, and the client side of the design. Planned
-work, in dependency order:
+Not built: the compact read, and the rest of the client side of the design. Planned work, in dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
 2. A server query layer: keyset list, summary, by-id and query-plan tests (built); the reference, rows of a range
    and per-month sums (built); series (built).
 3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
    the four engines (built).
-4. The client data layer: hydration, invalidation, snapshot per owner, version skew, and passing the whole history's
-   classifier and series to the Overview model and the Spending view, which still build their own.
+4. The client data layer. Built: the parts on the data sources and the loader that assembles them. Not built: the
+   model on top of a ledger, hydration of the viewed month, invalidation, the snapshot per owner, and passing the
+   whole history's classifier and series to the Overview model and the Spending view, which still build their own.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
 6. The remaining consumers and a resumable backup.
 7. Switching the default behind a runtime flag, with the old route kept for stale clients.
@@ -663,8 +708,11 @@ work, in dependency order:
 - `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns,
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
-- `src/testing/inMemoryLedgerParts.ts`: the ledger parts computed with `partitionPinned` and `buildCells` over a whole
+- `src/domain/ledger/partsOfDataset.ts`: the ledger parts computed with `partitionPinned` and `buildCells` over a whole
   dataset, which the SQL is held to (`dbLedgerParts.parity.test.ts`, over the synthetic, adversarial and random ledgers).
+  The demo data sources serve their parts from it.
+- `src/testing/ledgerSource.ts`: a dataset served as the routes serve it, with a revision a test can move between two
+  reads and a record of every call, for the tests of `loadLedger`.
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
   account), the stand-in with a record of every statement it ran (for the query-plan tests), and a seeded generator
   of filters, for the paged-read tests.

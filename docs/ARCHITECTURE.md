@@ -119,7 +119,7 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
 - **Ledger parts are served separately, and the ledger model with its tests is the specification.**
   `readLedgerReference`, `readMonthRows` and `readMonthCells` on `ExpenseRepository` back
   `GET /api/expenses/reference`, `/transactions/months` and `/cube` (`docs/SCALING.md`, "Ledger parts").
-  `inMemoryLedgerParts.ts` answers them with `partitionPinned` and `buildCells`, and
+  `src/domain/ledger/partsOfDataset.ts` answers them with `partitionPinned` and `buildCells`, and
   `dbLedgerParts.parity.test.ts` holds the SQL in `ledgerPartsSql.ts` to that over the synthetic, adversarial and
   random ledgers, then assembles the three parts and runs the engines over them. A part carries the owner's
   revision token in its body and answers `If-None-Match` as the dataset does; a change to its JSON means raising
