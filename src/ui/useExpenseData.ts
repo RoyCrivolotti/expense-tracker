@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { OccurrenceGroup } from '../domain/engine'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
@@ -6,12 +7,32 @@ import type { DescriptionIndex } from '../data/descriptionIndex'
 import type { Lookup } from './format'
 import { buildExpenseModel } from './buildExpenseModel'
 
+/**
+ * The recurring series of the whole history. The engines that decide what is fixed spend build their own
+ * from the rows they are handed, which is the whole history only while the model holds it (see
+ * docs/ENGINE-HISTORY.md), so a model that does not carries them.
+ */
+export interface FixedHistory {
+  groups: OccurrenceGroup[]
+}
+
 export interface ExpenseModel {
+  /** The reference tables and the real transactions: what is shown to the user as a transaction. */
   dataset: ExpenseDataset
+  /**
+   * The dataset to give the engines that only add amounts, and the spending groups, which read a 12 month
+   * trend of sums beside the rows of the viewed month (the lists are named in docs/ENGINE-HISTORY.md).
+   * Absent while `dataset` holds every transaction, when `dataset` is that dataset. Otherwise its
+   * transactions also hold one row per summed cell, with an empty description, and it must never be
+   * listed or searched. Read it with `sumsOf`.
+   */
+  sums?: ExpenseDataset
   lookup: Lookup
   descriptionIndex: DescriptionIndex
   /** Budget months present in the data, oldest first. */
   months: string[]
+  /** Set when `dataset.transactions` is not the whole history. */
+  history?: FixedHistory
 }
 
 interface LoadState {
