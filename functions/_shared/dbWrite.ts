@@ -137,17 +137,9 @@ export async function maybeCompletePlan(env: Env, owner: string, planId: number 
 /**
  * The forward half of a flag's auto-label: whenever a write assigns `flagId` to
  * `transactionId`, that flag's configured label (if any) is applied too. A
- * statement, not a run-it-here call, so bulkUpdateTransactions can batch one per
- * affected row alongside its own UPDATE rather than a separate round trip per row.
+ * statement, not a run-it-here call, so a caller can batch it with its own write.
  * `INSERT OR IGNORE` plus the `auto_label_id IS NOT NULL` filter make this a safe
  * no-op both for a flag with no auto-label and for a row that already has it.
- *
- * Joins through `transactions` and filters it to `owner` too, not just `flags`:
- * `bulkUpdateTransactions` batches one of these per id in the caller's raw `ids`
- * array, before that array has been checked against `owner` (the UPDATE it runs
- * alongside excludes a foreign id itself via its own `WHERE owner = ?`, but this
- * statement runs independently of that, so it needs the same guarantee on its own
- * rather than trusting the id it was handed).
  */
 function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: number, flagId: number) {
   return env.DB.prepare(
@@ -156,6 +148,21 @@ function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: nu
      FROM transactions t, flags f
      WHERE t.id = ? AND t.owner = ? AND f.id = ? AND f.owner = ? AND f.auto_label_id IS NOT NULL`,
   ).bind(transactionId, owner, flagId, owner)
+}
+
+/**
+ * The same, for many rows in one statement. One statement per row would put thousands in a batch
+ * for a large selection, so the ids travel as one JSON list. Joins through `transactions` and
+ * filters it to `owner`: an id in the list is not checked against the owner anywhere else, and the
+ * UPDATE it runs beside excludes a foreign id only for itself.
+ */
+function maybeApplyAutoLabelToIdsStatement(env: Env, owner: string, ids: number[], flagId: number) {
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
+     SELECT t.id, f.auto_label_id
+     FROM transactions t, flags f
+     WHERE t.owner = ? AND t.id ${IN_ID_LIST} AND f.id = ? AND f.owner = ? AND f.auto_label_id IS NOT NULL`,
+  ).bind(owner, idList(ids), flagId, owner)
 }
 
 export async function insertTransaction(
@@ -335,18 +342,12 @@ async function assertNoWithdrawalLeavingInvestment(
 
 /**
  * The statements a bulk update batches alongside its own UPDATE: the report
- * snapshot when settling, and one auto-label fan-out per row when assigning a
- * flag (see maybeApplyAutoLabelStatement — unlike the single-row write paths,
- * a bulk update's row count is not known until `ids` is given, so this cannot
- * be one shared statement the way reportSnapshotStatement is).
+ * snapshot when settling, and the flag's auto-label when assigning a flag.
  */
 function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: BulkTransactionPatch) {
   const statements = []
   if (patch.settledBy != null) statements.push(reportSnapshotStatement(env, owner, patch.settledBy))
-  if (patch.flagId != null) {
-    const flagId = patch.flagId
-    statements.push(...ids.map((id) => maybeApplyAutoLabelStatement(env, owner, id, flagId)))
-  }
+  if (patch.flagId != null) statements.push(maybeApplyAutoLabelToIdsStatement(env, owner, ids, patch.flagId))
   return statements
 }
 

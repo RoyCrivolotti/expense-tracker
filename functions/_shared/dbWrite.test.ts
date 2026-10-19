@@ -926,7 +926,7 @@ describe('flag auto-label fan-out', () => {
     expect(recorded.some((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))).toBe(false)
   })
 
-  it('bulkUpdateTransactions batches one fan-out statement per affected row', async () => {
+  it('bulkUpdateTransactions labels every affected row with one statement, however many', async () => {
     const recorded: Recorded[] = []
     const env = envForAutoLabel({ row: autoLabelTxnRow, recorded })
     const batch = env.DB.batch as ReturnType<typeof vi.fn>
@@ -935,12 +935,8 @@ describe('flag auto-label fan-out', () => {
 
     const [batched] = batch.mock.calls[0] as [Recorded[]]
     const fanOutCalls = batched.filter((s) => s.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
-    expect(fanOutCalls).toHaveLength(3)
-    expect(fanOutCalls.map((s) => s.args)).toEqual([
-      [5, 'a@b.com', 9, 'a@b.com'],
-      [6, 'a@b.com', 9, 'a@b.com'],
-      [7, 'a@b.com', 9, 'a@b.com'],
-    ])
+    expect(fanOutCalls).toHaveLength(1)
+    expect(fanOutCalls[0]?.args).toEqual(['a@b.com', '[5,6,7]', 9, 'a@b.com'])
   })
 
   it('bulkUpdateTransactions scopes the fan-out to transactions this owner actually has', async () => {
@@ -956,8 +952,8 @@ describe('flag auto-label fan-out', () => {
 
     const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
     expect(call?.sql).toMatch(/FROM transactions t,\s*flags f/)
-    expect(call?.sql).toContain('t.id = ?')
     expect(call?.sql).toContain('t.owner = ?')
-    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
+    expect(call?.sql).toContain('json_each')
+    expect(call?.args).toEqual(['a@b.com', '[5]', 9, 'a@b.com'])
   })
 })
