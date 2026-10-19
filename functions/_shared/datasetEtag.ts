@@ -11,6 +11,26 @@ export function datasetEtag(token: string, budgetMonth: string): string {
   return `W/"${token}-${budgetMonth}-${DATASET_FORMAT}"`
 }
 
+/**
+ * Bump this whenever the JSON shape of a ledger part (GET /api/expenses/reference, /transactions/months
+ * or /cube) changes, for the same reason as {@link DATASET_FORMAT}. `ledgerPartsEtag.test.ts` fails when
+ * a shape moves.
+ */
+export const PARTS_FORMAT = 1
+
+export type PartName = 'reference' | 'months' | 'cube'
+
+/**
+ * The tag of one ledger part. It carries the part and the range asked for (`scope`), because a client
+ * that keeps tags by hand could otherwise offer the tag of one range for another and be told nothing
+ * changed. The token and budget month are the same as the dataset's, so a write or a new month moves
+ * every part's tag together with the dataset's.
+ */
+export function partEtag(part: PartName, revision: { token: string; budgetMonth: string }, scope = ''): string {
+  const suffix = scope === '' ? '' : `-${scope}`
+  return `W/"${revision.token}-${revision.budgetMonth}-${part}${PARTS_FORMAT}${suffix}"`
+}
+
 function opaqueTag(value: string): string {
   return value.trim().replace(/^W\//, '')
 }

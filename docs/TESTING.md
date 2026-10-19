@@ -55,7 +55,9 @@ against real SQL without Cloudflare. It rejects a statement that binds more than
 (`maxBoundParameters` changes that), but it cannot reproduce D1's billing.
 `src/testing/syntheticLedger.ts` builds a deterministic dataset of any size. `SCALING_MEASURE=1 npx vitest run
 functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
-results are in [SCALING.md](./SCALING.md).
+results are in [SCALING.md](./SCALING.md). `SCALING_MEASURE=1 npx vitest run functions/_shared/ledgerParts.scaling.test.ts`
+does the same for the ledger parts routes, and `functions/_shared/ledgerPartPlans.test.ts` runs each of their statements
+through `EXPLAIN QUERY PLAN`.
 
 ## Real-browser checks (manual)
 

@@ -2,6 +2,7 @@ import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
 import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import { getTransaction, queryTransactions, summarizeTransactions } from '../dbTransactionQuery'
+import { readLedgerReference, readMonthCells, readMonthRows } from '../dbLedgerParts'
 import {
   bulkInsertTransactions,
   bulkUpdateTransactions,
@@ -59,6 +60,9 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     queryTransactions: (owner, filter, page) => queryTransactions(env, owner, filter, page),
     summarizeTransactions: (owner, filter) => summarizeTransactions(env, owner, filter),
     getTransaction: (owner, id) => getTransaction(env, owner, id),
+    readLedgerReference: (owner) => readLedgerReference(env, owner),
+    readMonthRows: (owner, range, maxRows) => readMonthRows(env, owner, range, maxRows),
+    readMonthCells: (owner, range, maxCells) => readMonthCells(env, owner, range, maxCells),
     insertTransaction: (owner, input) => insertTransaction(env, owner, input),
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
