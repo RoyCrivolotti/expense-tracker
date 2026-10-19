@@ -3,6 +3,7 @@
  * adapter's SQL on SQLite with the real migrations, over a database that holds two owners.
  */
 import { beforeAll, describe, expect, it } from 'vitest'
+import type { DatabaseSync } from 'node:sqlite'
 import { filterTransactions, netSpendCents } from '../../../../src/domain/engine/transactions'
 import type { Transaction } from '../../../../src/domain/types'
 import { MAX_PAGE_LIMIT, MAX_QUERY_LENGTH } from '../../../../src/domain/data/transactionQuery'
@@ -18,6 +19,7 @@ import { onRequestGet as getSummary } from './summary'
 const BASE = 'https://expenses.test/api/expenses/transactions'
 
 let env: Env
+let sqlite: DatabaseSync
 let mine: Transaction[]
 let theirs: Transaction[]
 let theirIds: Set<number>
@@ -32,6 +34,7 @@ beforeAll(async () => {
   const kit = queryDb(syntheticLedger({ months: 4, perMonth: 15, seed: 1 }), [
     { owner: OTHER_OWNER, dataset: syntheticLedger({ months: 4, perMonth: 15, seed: 2 }) },
   ])
+  sqlite = kit.sqlite
   env = { DB: kit.d1, ALLOWED_EMAILS: `${OWNER},${OTHER_OWNER}` }
   mine = (await loadDataset(env, OWNER)).transactions
   theirs = (await loadDataset(env, OTHER_OWNER)).transactions
@@ -140,11 +143,23 @@ describe('GET /transactions/summary', () => {
       const response = await summary(query)
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({
+        revision: expect.any(String),
         count: matching.length,
         capped: false,
         netSpendCents: netSpendCents(matching),
       })
     }
+  })
+
+  it('starts with the owner’s revision, which only a write changes', async () => {
+    const read = async () => ((await (await summary('')).json()) as { revision: string }).revision
+    const first = await read()
+
+    expect(await read()).toBe(first)
+    expect(await (await invokePagesRoute(getSummary, { env, method: 'GET', url: `${BASE}/summary`, email: OTHER_OWNER })).json())
+      .not.toMatchObject({ revision: first })
+    sqlite.prepare("UPDATE owner_revision SET token = 'moved' WHERE owner = ?").run(OWNER)
+    expect(await read()).toBe('moved')
   })
 
   it('refuses paging parameters and bad filters', async () => {
