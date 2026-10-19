@@ -113,7 +113,7 @@ one code path with two policies.
 How much history each engine and screen reads, and which of them give a different answer from less, is recorded in
 [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 
-Requests are split (reference data, months, sums, list, summary, series, description matches) so each has its own CPU budget and cache
+Requests are split (reference data, months, sums, list, summary, series, description matches, usage counts) so each has its own CPU budget and cache
 key. The reference, months and sums are checked against the per-owner revision that `GET /api/expenses` already uses
 (see "Ledger parts"), so most opens end after a two-row read. The series are served the same way, but they read the
 whole ledger whenever the tag misses, which after any write it does: see "Recurring series" for what a client that
@@ -550,6 +550,71 @@ has been planned and compared with the index on SQLite only.
 Not measured: Worker CPU on workerd, the statement on a deployed D1, and whether the Worker has sorting rules for
 every locale a browser reports (a missing one is a 400 and the browser falls back to its own matches).
 
+## Usage counts
+
+`GET /api/expenses/usage` answers how many records name each of the owner's categories, accounts, flags and labels.
+The Settings lists show these counts and ask for a reassignment before deleting a record that has any
+(`categoryUsageCount` and `accountUsageCount` in `src/ui/definitions/recordUsage.ts`, and the counts in the flag and
+label lists), which is what the server checks as well (`countCategoryUsage` and `countAccountUsage` in `dbConfig.ts`).
+Today they are counted over every row the browser holds; a browser that holds only some months cannot.
+
+```
+{ revision, categories: [{ id, transactions, plans }],
+            accounts:   [{ id, transactions, plans, statements }],
+            flags:      [{ id, transactions }],
+            labels:     [{ id, transactions }] }
+```
+
+Every category, account, flag and label of the owner is listed, with zeros, each list in ascending order of id. A
+count is the number of records of that kind that name it: `transactions` of any status (cancelled rows and the
+payments of an instalment plan included, as the lists count them), `plans` for a category or account, `statements`
+(paid or not) for an account, and a transaction once per label it carries. Nothing but the owner's own records is
+counted, whatever ids another owner's rows name. The route runs the installment backfill when the browser's copy is
+not current, as `GET /api/expenses` does, so the payments it adds are counted as the dataset counts them.
+
+**Held to the dataset.** `dbUsage.parity.test.ts` checks that the SQL serves exactly what `usageFromDataset` computes
+from the dataset the API serves, on 80 seeded random ledgers, the adversarial ledger and others; that each count
+equals what the Settings lists compute from every row; and that delete and reassign go the way the counts say, which
+is the server's own behaviour: a category or account with a count of zero deletes outright and one with any is refused
+with a 409 until its rows are moved. It also plants another owner's plan, statement, tags and transactions naming
+this owner's ids and checks none is counted.
+
+**Cost.** One statement, one query. The transactions are counted in a single pass of the owner's rows grouped by
+category and account, which gives both counts at once; the rest is the owner's plans, statements, flags and
+labels, and the rows that carry a flag (`idx_txn_flag`, which holds only those) or a label (found from the owner's
+labels through `idx_transaction_labels_label`). `usagePlans.test.ts` fails on a scan of `transactions` or
+`transaction_labels`, and on a walk of an index with no owner in it. That is not an academic check: once the planner
+had table statistics it chose `idx_txn_category`, which has no owner, to produce the groups in order, and would have
+read every owner's transactions to count one owner's. Grouping by `category_id + 0` removes that choice. The choice
+only appears in a database with a single owner and statistics (with several owners the owner index is selective and
+wins anyway), so the test runs that shape as well. Measured with
+`SCALING_MEASURE=1 npx vitest run functions/_shared/usage.scaling.test.ts --reporter=verbose` on the synthetic
+ledger (in-memory SQLite, Node 22):
+
+| Rows | SQLite | Server JS | Response |
+|---|---|---|---|
+| 4.9k | 0.9 ms | 0.1 ms | 1.0 KB |
+| 19.9k | 4.0 ms | 0.1 ms | 1.0 KB |
+| 49.9k | 12 ms | 0.2 ms | 1.0 KB |
+| 99.9k | 29 ms | 0.2 ms | 1.0 KB |
+| 249.9k | 70 ms | 0.2 ms | 1.0 KB |
+
+The statement reads every transaction of the owner once. D1 reports it as about two rows read per transaction (the
+index entry and the row, as the grouped columns are not in the index), plus about two for each label link, since a
+transaction is found again from each label it carries. That is about 200,000 at 100,000 transactions and 500,000 at
+250,000, 4% and 10% of the Free plan's daily 5M, for the first Settings open after a change, and more for a ledger
+that tags most of its rows; the same revision tag as the ledger parts makes every open after that a 304 and two
+rows. Server CPU is negligible; the answer is a kilobyte. Counting each id through `idx_txn_category` and
+`idx_txn_account` would read the owner's rows once for categories and again for accounts, and a stored counter would
+cost a written row on every transaction change; neither was built.
+
+**What D1 refused.** The first version of the statement had seven terms in its compound SELECT. A deployed D1 allows
+five and answered "too many terms in compound SELECT", which SQLite itself, and so every test on the stand-in, does
+not. It was found by running the repository's own code against the dev database, and it now uses exactly five
+(`usagePlans.test.ts` fails on a sixth). Against the dev database the counts equal the reference for every owner.
+Not measured: workerd CPU, and whether a deployed D1 keeps table statistics (it had none when read; the plan is held
+to the owner's index with and without them).
+
 ## Status
 
 Built:
@@ -576,8 +641,10 @@ Built:
   app calls it yet;
 - description autocomplete over older rows (`GET /api/expenses/descriptions/suggest`) and the merge with the
   browser's own matches. See "Description autocomplete". Nothing in the app calls it yet;
+- usage counts per category, account, flag and label (`GET /api/expenses/usage`). See "Usage counts". Nothing in the
+  app calls it yet;
 
-Not built: the compact read, usage counts on the server, and the client side of the design. Planned
+Not built: the compact read, and the client side of the design. Planned
 work, in dependency order:
 
 1. Standalone improvements: a compact read (not built), the revision and ETag (built), list windowing (built).
