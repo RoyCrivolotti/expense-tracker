@@ -83,7 +83,11 @@ function withAccessTableMocks(env: Env): Env {
         }
         return base.prepare(sql)
       },
-      batch: (statements: D1PreparedStatement[]) => base.batch(statements),
+      // A mock database that never batches still has to take the middleware's revision read and bump.
+      batch: (statements: D1PreparedStatement[]) =>
+        typeof base.batch === 'function'
+          ? base.batch(statements)
+          : Promise.resolve(statements.map(() => ({ results: [] }))),
     } as unknown as D1Database,
   }
 }

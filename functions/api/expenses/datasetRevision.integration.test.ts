@@ -235,6 +235,56 @@ describe('a read never moves the revision', () => {
   })
 })
 
+describe('the token a write replaced', () => {
+  const seeing = (record: (value: unknown) => void): Handler => (context) => {
+    record(context.data.revisionBeforeWrite)
+    return new Response('ok')
+  }
+
+  it('reaches the handler, so a write can tell whether the ledger moved since it was looked at', async () => {
+    const before = world.token()
+    let seen: unknown = 'unset'
+
+    await world.call(seeing((value) => (seen = value)), { method: 'PATCH', path: '/anything' })
+
+    expect(before).not.toBeNull()
+    expect(seen).toBe(before)
+    expect(world.token()).not.toBe(before)
+  })
+
+  it('is the token the previous write left behind', async () => {
+    const first = world.token()
+    let seen: unknown = 'unset'
+    await world.call(seeing(() => undefined), { method: 'POST', path: '/anything' })
+    const second = world.token()
+
+    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything' })
+
+    expect(seen).toBe(second)
+    expect(seen).not.toBe(first)
+  })
+
+  it('is null for an owner who has no token yet', async () => {
+    let seen: unknown = 'unset'
+    expect(world.token(OTHER)).toBeNull()
+
+    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything', email: OTHER })
+
+    expect(seen).toBeNull()
+    expect(world.token(OTHER)).not.toBeNull()
+  })
+
+  it('is not read for a request that cannot write', async () => {
+    let seen: unknown = 'unset'
+    world.clearLog()
+
+    await world.call(seeing((value) => (seen = value)), { path: '/anything' })
+
+    expect(seen).toBeUndefined()
+    expect(world.log.some((sql) => sql.includes('FROM owner_revision'))).toBe(false)
+  })
+})
+
 describe('the bumps around a write', () => {
   /** Runs a handler that records the token it saw, so the order of bump, handler, bump shows. */
   async function writeSeeing(handler: (seen: () => string | null) => Handler, method = 'POST') {
