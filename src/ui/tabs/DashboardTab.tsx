@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../buildExpenseModel'
 import type { ExpenseActions } from '../actions'
 import type { BudgetHealth } from '../../engine'
 import {
@@ -96,20 +97,21 @@ function BudgetsSection({
 
 export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }: DashboardTabProps) {
   const { dataset } = model
+  const sums = sumsOf(model)
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
 
   const totals = useMemo(
-    () => computeMonthlyTotals(dataset.transactions, { includeForecast: true }).get(month),
-    [dataset, month],
+    () => computeMonthlyTotals(sums.transactions, { includeForecast: true }).get(month),
+    [sums, month],
   )
   const budgets = useMemo(() => {
     const order = new Map(dataset.categories.map((c) => [c.id, c.sortOrder]))
-    return computeBudgetHealth(dataset.transactions, dataset.categories, month, {
+    return computeBudgetHealth(sums.transactions, dataset.categories, month, {
       includeForecast: true,
     })
       .filter((b) => b.budgetCents > 0)
       .sort(budgetComparator(budgetSort, order))
-  }, [dataset, month, budgetSort])
+  }, [dataset, sums, month, budgetSort])
   const categoryIcons = useMemo(
     () => new Map(dataset.categories.map((c) => [c.id, c.icon])),
     [dataset.categories],
@@ -124,7 +126,7 @@ export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
 
-      <CardStatementsCard dataset={dataset} month={month} actions={actions} />
+      <CardStatementsCard dataset={sums} month={month} actions={actions} />
 
       <BudgetsSection
         budgets={budgets}
@@ -135,7 +137,7 @@ export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }
       />
 
       <GoalsCard
-        dataset={dataset}
+        dataset={sums}
         onOpenGoals={() => onNavigate?.('goals')}
         onLogCheckin={actions && onLogCheckin ? onLogCheckin : undefined}
       />
