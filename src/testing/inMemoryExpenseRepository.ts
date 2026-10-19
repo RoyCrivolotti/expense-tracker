@@ -44,6 +44,7 @@ import type {
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './inMemoryLedgerParts'
+import { idsMatching } from './inMemoryBulkEdit'
 import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
@@ -571,7 +572,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return deriveOne(stored, store.accounts, store.statements, store.transactionLabels)
   }
 
-  return {
+  const repository: ExpenseRepository = {
     loadDataset: (owner) => Promise.resolve(datasetOf(owner)),
 
     readLedgerReference: (owner) => Promise.resolve(ledgerReferenceOf(datasetOf(owner))),
@@ -722,6 +723,12 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       })
       if (patch.settledBy != null) stampReportSnapshot(store, patch.settledBy)
       return Promise.resolve(updated)
+    },
+
+    bulkUpdateTransactionsByFilter: async (owner, target, patch) => {
+      const ids = idsMatching(derivedTransactions(storeFor(owner)), target)
+      if (ids.length > 0) await repository.bulkUpdateTransactions(owner, ids, patch)
+      return { updated: ids.length }
     },
 
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) => {
@@ -1196,4 +1203,5 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve()
     },
   }
+  return repository
 }

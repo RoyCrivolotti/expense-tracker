@@ -41,6 +41,7 @@ import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../dat
 import type { Usage } from '../data/usage'
 import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
+import type { FilterTarget } from '../data/bulkEdit'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
 import type { MonthCell } from '../ledger/types'
 
@@ -114,6 +115,16 @@ export interface ExpenseRepository {
     ids: number[],
     patch: BulkTransactionPatch,
   ): Promise<Transaction[]>
+  /**
+   * The same edit as `bulkUpdateTransactions`, for the rows `target.filter` matches. Refused with a 409 unless
+   * exactly `target.expectedCount` rows match, and with a 400 above `MAX_FILTER_EDIT_ROWS`; one atomic write,
+   * which is undone if the matching rows change while it is made. Does not hand the rows back.
+   */
+  bulkUpdateTransactionsByFilter(
+    owner: string,
+    target: FilterTarget,
+    patch: BulkTransactionPatch,
+  ): Promise<{ updated: number }>
   setStatementPaid(
     owner: string,
     accountId: number,

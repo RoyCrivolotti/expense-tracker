@@ -3,6 +3,7 @@ import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import { readSeries } from '../dbSeries'
 import { suggestDescriptions } from '../dbDescriptionSuggest'
+import { bulkUpdateTransactionsByFilter } from '../dbBulkEdit'
 import { readUsage } from '../dbUsage'
 import { getTransaction, queryTransactions, summarizeTransactions } from '../dbTransactionQuery'
 import { readLedgerReference, readMonthCells, readMonthRows } from '../dbLedgerParts'
@@ -75,6 +76,8 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
     bulkUpdateTransactions: (owner, ids, patch) =>
       bulkUpdateTransactions(env, owner, ids, patch),
+    bulkUpdateTransactionsByFilter: (owner, target, patch) =>
+      bulkUpdateTransactionsByFilter(env, owner, target, patch),
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) =>
       setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
     setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
