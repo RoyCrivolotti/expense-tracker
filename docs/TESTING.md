@@ -57,8 +57,7 @@ against real SQL without Cloudflare. It rejects a statement that binds more than
 functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
 results are in [SCALING.md](./SCALING.md). `SCALING_MEASURE=1 npx vitest run functions/_shared/ledgerParts.scaling.test.ts`
 does the same for the ledger parts routes, and `functions/_shared/ledgerPartPlans.test.ts` runs each of their statements
-through `EXPLAIN QUERY PLAN`. `scripts/scaling/` and `functions/_shared/measure/` hold the tooling for measuring on a deployed D1; its tests run the
-whole flow (seed, route matrix, cleanup, proof that another owner is untouched) over the same stand-in.
+through `EXPLAIN QUERY PLAN`. The measuring tooling in `scripts/scaling/` is tested over the same stand-in (see [MEASURING.md](./MEASURING.md)).
 
 ## Real-browser checks (manual)
 

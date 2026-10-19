@@ -82,7 +82,7 @@ Read-only queries against a deployed database through the D1 query API:
   not readable.
 
 Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50. The plan for
-measuring both, and the rows per statement and the table statistics, is under "Measuring on a deployed system".
+measuring both, and the rows per statement and the table statistics, is in [MEASURING.md](./MEASURING.md).
 
 ## Proposed design
 
@@ -616,236 +616,6 @@ not. It was found by running the repository's own code against the dev database,
 Not measured: workerd CPU, and whether a deployed D1 keeps table statistics (it had none when read; the plan is held
 to the owner's index with and without them).
 
-## Measuring on a deployed system
-
-Four things in this document are still estimates that only a deployed system can settle: the Worker CPU each route
-uses against the Free plan's 10 ms, the `rows_read` and `rows_written` D1 bills for each statement, whether
-`batch()` counts as one query toward the 50 a Worker may issue per invocation, and whether a deployed D1 keeps table
-statistics. This section is the plan for measuring them without making the app unusable and without touching
-anyone's data, and the tooling that carries it out. Nothing here has been run against Cloudflare. The tooling is
-tested against the SQLite stand-in only, and every figure taken from Cloudflare's documentation names its page and
-the date it was read.
-
-### The limits that bind
-
-Read on 2026-10-19; each page's own last-updated date is in brackets.
-
-| Free plan | Value | What the page says about scope |
-|---|---|---|
-| D1 rows read | 5 million a day, reset 00:00 UTC | [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) [2026-04-21]: in the "Workers Free" column. "When your account hits the daily read and/or write limits, you will not be able to run queries against D1." It never says per database. Storage on the same page is "the sum of all databases in your account" |
-| D1 rows written | 100,000 a day | The same page and wording |
-| D1 queries per Worker invocation | 50 | [D1 limits](https://developers.cloudflare.com/d1/platform/limits/) [2026-04-21]. The page says per-statement limits apply "to each individual statement contained within a batch" and is silent on how a batch counts toward the 50 |
-| Workers requests | 100,000 a day, for the account | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) [2026-10-12]. [Pages Functions pricing](https://developers.cloudflare.com/pages/functions/pricing/) [2026-09-08]: Functions requests "count towards your quota for the Workers Free plan"; static assets do not count |
-| Worker CPU | 10 ms per HTTP request. Waiting on `fetch`, KV or database queries does not count | Workers limits. Past it the request fails with error 1102, which Pages Functions metrics list as "Exceeded Resources" |
-| Time Travel | 7 days of history | D1 limits |
-
-**Treat the D1 daily limits as one budget for the whole account.** The pages say the account reaches them. They do
-not say in so many words that databases share them, but being wrong in that direction costs the production app its
-writes, so the plan assumes the worst. Production, the development database (used by every PR preview and the
-staging site) and the backup Worker all draw on the same 100,000 writes and 5 million reads. Seeding the
-development database spends the production app's budget. When the budget runs out D1 refuses every query in the
-account until 00:00 UTC, or until the plan is upgraded, which the pricing page says takes "typically within minutes".
-Nothing is lost; the app just cannot save, and later cannot read. The 100,000 Workers requests a day are a separate
-budget, and a REST call to the D1 API is not a Worker request, so the measurement below spends none of them.
-
-### What an insert costs
-
-D1 reports a written row for the table row and one for every index entry. `transactions` has twelve indexes, seven
-of which hold every row:
-
-| Index | Migration | Holds |
-|---|---|---|
-| `idx_txn_budget_month`, `idx_txn_account`, `idx_txn_category` | 0001 | every row |
-| `idx_txn_owner` | 0003 | every row |
-| `idx_txn_owner_date`, `idx_txn_owner_month_date` | 0036 | every row |
-| `idx_txn_owner_desc_norm` | 0038 | every row |
-| `idx_txn_plan_installment` (unique), `idx_txn_plan` | 0009 | rows of an instalment plan |
-| `idx_txn_flag` | 0015 | flagged rows |
-| `idx_txn_settled_by` | 0018 | rows a reimbursement settled |
-| `idx_txn_pinned` | 0037 | investments, and rows with a plan, flag, settlement or covered count |
-
-An ordinary expense writes 1 + 7 = **8 rows**, which is what D1 reported when it was measured (see "Checked on a
-deployed D1"); a row in every partial index writes 13. A label link writes 4 (its row, its UNIQUE pair and two
-indexes). The synthetic ledger's mix averages 8.4 rows a transaction. `scripts/scaling/budget.test.ts` keeps this
-from going stale: it counts the indexes in the migrated schema and the entries a seeded ledger really puts in them,
-so a migration that adds an index fails it until the figures here are updated. Deleting a row is assumed to write
-as many rows as inserting it did, because the index entries go too; the run's spend ledger stops it if that is wrong.
-
-### The budget
-
-**Caps for the whole exercise**, because the same budget serves the production app: at most 25,000 rows written in
-total (a quarter of one day) and 15,000 on any one UTC day; at most 500,000 rows read in total (a tenth of a day) and
-300,000 on any one day. Independent of those, a run refuses to start, and stops, once the account as a whole has
-written 40,000 rows or read 1.5 million that day, so at least 60% of the writes and 70% of the reads are left for the
-app whatever goes wrong. One statement can overshoot a cap by at most one chunk (500 rows, about 4,000 written
-rows).
-
-A seed of N transactions costs about 8.4 N to insert and the same to delete, plus about 200 rows of reference data
-(`node scripts/measure-d1.mjs plan --transactions N` prints this; the write routes add about 800):
-
-| Transactions | Insert | Reference | Write routes | Seed and measure | Clean up | Total |
-|---|---|---|---|---|---|---|
-| 303 | 2,549 | 90 | 800 | 3,439 | 2,639 | 6,078 |
-| 613 | 5,195 | 120 | 800 | 6,115 | 5,315 | 11,430 |
-| 910 | 7,683 | 154 | 800 | 8,637 | 7,837 | 16,474 |
-| 1,215 | 10,255 | 184 | 800 | 11,239 | 10,439 | 21,678 |
-| 1,366 | | | | | | 24,298 (the largest that fits) |
-
-Two sizes are needed to tell a per-row cost from a fixed one. **The plan is a seed of 303 transactions on one day
-and 910 on a later one**, each cleaned up on a day after its measuring or on the same day if it fits: 22,552 rows
-written in all (22.6% of one day's budget, never more than 8,637 on a day). The read passes cost about 60,000 rows
-(a pass over every route reads about 10,000 rows at 303 transactions and 20,000 at 910, estimated from the query
-plans; the run measures it, and runs the routes with and without the write cases), and each fingerprint reads about
-one row per row the development database holds. Writing the first 20 transactions of a seed is a calibration: if
-D1 reports more than 25% over the plan for them, the run stops having spent about 160 rows.
-
-### Rules, and what enforces each
-
-| Rule | Enforced by |
-|---|---|
-| Never touch production | `guard.ts`: the name `roy-expenses` is refused before config or credentials are read. A target must also match `config/dev.json`, end in `-dev`, differ from the id the backup Worker's `wrangler.toml` binds to production, and match what Cloudflare itself reports for that id. Writes need `--write` and `--confirm <database>` repeating the name |
-| Write only as the synthetic owner | `scaling-check@example.com`. `example.com` is reserved for documentation (RFC 2606), so nobody can sign in as it, and `scripts/check-pii.mjs` already accepts it. Every write statement must name an owner column and bind that address, or it is refused before it is sent. The schema is never changed: DDL is always refused |
-| Removable by an owner-scoped delete | `cleanup.ts` deletes by owner, a table at a time, transactions in chunks of 500 with their label links. `seedCleanup.test.ts` fails if a migration adds a table with an `owner` or `email` column that the list does not know |
-| Provably nothing else touched | See "Proving nothing else was touched" |
-| The app stays usable | The caps above, the calibration stop, one statement at a time, and a stop file (`.tmp/scaling/stop`) checked before every statement |
-
-Ids of the synthetic rows start 1,000 above the largest id each table holds when the seed runs, so they cannot
-collide with anyone's rows.
-
-### What has to be provided
-
-Nothing is created or requested by this plan. To run it the maintainer provides:
-
-| What | Needed for | Without it |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment of the command. The token needs Account, D1, Edit: the REST query endpoint is one endpoint for reads and writes, and the pages read do not say whether a read-only D1 token may call it. Try the read-only token for the read commands first; the script's own guard blocks writes without `--write` either way | every command except `plan` and the dry runs | `plan`, `seed` and `cleanup` without `--write`, and all the tests, run offline |
-| `config/dev.json` (exists on the maintainer's machine) | everything that connects | none |
-| Account, Account Analytics, Read on the token ([GraphQL analytics token](https://developers.cloudflare.com/analytics/graphql-api/getting-started/authentication/api-token-auth/) [2026-04-23]) | reading how much of today's budget the whole account has used | read the number off the dashboard (D1, Metrics) and pass `--account-written-today N` |
-| A Cloudflare Access service token | only the deployed-route approach below, which this plan does not recommend: a service token's payload carries a `common_name` and an empty `sub` and no email ([application token](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/) page), and `resolveAuthenticatedEmail` answers 401 without one | not needed |
-
-### The ways to measure, and what each leaves unmeasured
-
-| Approach | Tells you | Leaves unmeasured | Cost |
-|---|---|---|---|
-| **(a) The repository's own routes, run in Node against the development database over the REST API** (built: `scripts/measure-d1.mjs`). The route handlers and middleware run unchanged; a D1 adapter sends each statement to the REST API and records `rows_read`, `rows_written` and `duration` | Exact rows billed per statement and per route, with the real plans and the real statistics state; the number of statements and D1 calls per request, counted both ways (see below); a slope per 1,000 transactions from two sizes | Worker CPU. How a Worker is billed for a batch. Anything above 910 rows is an extrapolation | 22,552 rows written, about 60,000 read plus the fingerprints; needs the token |
-| (a, by hand) Hand-picked statements through the same API | A subset of (a), less faithful: it misses statements nobody thought of | The same | The same |
-| **(b) The built Functions under local workerd** (`wrangler pages dev`, local D1) | The real runtime's CPU shape: which route dominates, and the ratio of workerd to Node | Billing (local D1 is not Cloudflare's), and absolute CPU, since it is the maintainer's machine. Not built: needs the migrations and the seed applied to a local D1 | No Cloudflare rows, no token. Local D1 is simulated unless a binding says `remote` ([local development](https://developers.cloudflare.com/workers/local-development/) [2026-10-18]); use a throwaway database id so it cannot reach a real one |
-| (c) A preview deployment read through `wrangler pages deployment tail` | Pass or fail at the real 10 ms, as "Exceeded Resources" | CPU in milliseconds: the output documented for Pages has no CPU field (whether the live payload carries one is unconfirmed and costs one request to check); Workers Logs, Logpush and Tail Workers are Workers Paid features, and Pages metrics list requests, errors and invocation statuses only. The synthetic owner cannot be used: it cannot sign in, and a service token carries no email, so every route answers 401 | Needs a real signed-in user, so it can only read the maintainer's own staging data |
-| **(d) Free evidence that already exists** | Four facts, no rows spent: the transaction count production holds (the app shows it) against the fact that `GET /api/expenses` works on the Free plan, which bounds CPU at that size; the **backup Worker's CPU per execution** and invocation statuses (Workers & Pages, `expense-backup-cron`, Metrics): it runs `loadDataset` and stringify for every owner under the same 10 ms (the limits page lists 10 ms per cron trigger), so it calibrates Node against Cloudflare's meter; Exceeded Resources counts on the production Pages project over 31 days; and whether a bulk import of more than 6 rows or a bulk edit of more than 13 ever succeeded (next section) | Per-route CPU | None; dashboard access |
-| (e) A diagnostic route in a throwaway PR preview, to settle `batch()` | The batch question exactly (below), with no rows read or written | Nothing else | One Worker request each; needs a deploy, so needs approval |
-| (f) A scratch D1 database made for the exercise and deleted after (`wrangler d1 delete`) | What (a) tells, with no collateral possible: nothing else is in it, so cleanup writes no rows and the proof of no collateral is that the database is gone | The same as (a), and not the development database's real volume or statistics state | The same seed costs about 8.4 N rows instead of 16.8 N, so the 25,000 cap fits about 2,800 transactions. It needs a Cloudflare resource created (10 databases on Free) and the migrations applied to it, which breaks the rule that only the development database is written, so it is the maintainer's call |
-
-### The 50 queries per invocation
-
-The routes were run in process against the SQLite stand-in with a counting wrapper (`routeMatrix.integration.test.ts`
-keeps the shape), so these counts are exact for the code and independent of D1. Each real request adds the
-middleware's access checks, 5 statements for the owner and 7 for anyone else (the allowlist count and lookup, the group
-grant, and the last-seen read, plus one write a day). The harness answers those from a stub, as the route tests do,
-so they are not in the table and not billed in the run; they are small reads of the allowlist.
-
-| Request | D1 statements | D1 calls |
-|---|---|---|
-| `GET /api/expenses` | 19 | 19 |
-| `GET /api/expenses`, 304 | 1 | 1 |
-| reference / months / cube / series / usage | 20 / 2 / 2 / 3 / 6 | the same |
-| list page, summary | 1, 2 | 1, 1 (the summary is a batch of two) |
-| `POST /transactions/bulk`, n rows | 6n + 4 | 6n + 4 |
-| `PATCH /transactions/bulk`, n rows | 3n + 5 | 3n + 5 |
-| `DELETE /transactions/bulk` | 2 | 2 |
-
-**A bulk import of more than 6 rows, or a bulk edit of more than 13, issues more than 50 queries** once the access
-checks are added, whichever way a batch is counted, because neither is a batch: they loop (`bulkInsertTransactions`,
-and the per-row `deriveOne` in `bulkUpdateTransactions`). If the documented limit applied to this deployment, both
-would already fail on the Free plan. If either has ever succeeded in production, the limit does not bind there as the page describes it (or the
-account is not on the Free plan), and the 50 can be dropped from the design. That history is the cheapest test and
-costs nothing. Whether `batch()` counts as one matters little today: the routes that exceed 50 are not batches. It
-matters for the flag fan-out (one statement per row inside one `batch()`) and for any future route.
-
-To settle it directly, a throwaway draft PR adds one route behind the same Access middleware and is closed
-unmerged, since every PR already deploys a preview against the development database:
-
-```ts
-// functions/api/expenses/batch-probe.ts (temporary; never merged)
-export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
-  const mode = new URL(request.url).searchParams.get('mode')
-  const statements = Array.from({ length: 60 }, () => env.DB.prepare('SELECT 1'))
-  try {
-    if (mode === 'batch') await env.DB.batch(statements)
-    else for (const statement of statements) await statement.run()
-    return Response.json({ mode, result: 'ok' })
-  } catch (error) {
-    return Response.json({ mode, result: String(error) })
-  }
-}
-```
-
-Open `?mode=batch` and `?mode=separate` signed in as the maintainer, in two requests. A batch that passes beside
-separate calls that fail at the 51st means a batch counts as one. Both failing means a batch counts per statement.
-Both passing means the limit is not enforced on this deployment. A `SELECT 1` reads and writes no rows.
-
-### Table statistics
-
-SQLite keeps statistics in `sqlite_stat1`, which exists only once `ANALYZE` or `PRAGMA optimize` has run. D1's
-[use-indexes page](https://developers.cloudflare.com/d1/best-practices/use-indexes/) [2026-08-10] tells users to run
-`PRAGMA optimize` after creating an index, which suggests D1 does not do it unprompted. `check` reads
-`SELECT count(*) FROM sqlite_stat1` before the seed; the same read after the seed and again a day later shows
-whether D1 ever fills it without being asked (the plan tests hold either way). The run never executes
-`PRAGMA optimize` or `ANALYZE`: that would change plans for every owner. The guard refuses it.
-
-### Running it
-
-All commands are `npx tsx scripts/measure-d1.mjs <command>` (`npm run measure:d1 -- <command>`). Reads and the dry
-runs come first; each prints what it spends. Do it between 06:00 and 22:00 UTC, not near the 04:00 backup or the
-midnight reset, and not while a migration is waiting for the development database (a merge to `main` applies one
-there, and an index build writes a row per existing transaction, the synthetic ones included). Seed and measure in the
-same budget month: a read in a later month would insert the instalments that have fallen due, and a read-only run
-refuses that write.
-
-1. **No cost.** Read the four free facts above. `plan`, `seed` and `cleanup` (dry runs) print the budget and the
-   statements without a token.
-2. **Read only.** `check --database roy-expenses-dev` reports the target, the last migration, the indexes, whether
-   `sqlite_stat1` exists, whether `batch` works through the API, the highest transaction id (which sizes the
-   snapshot) and today's account use. `snapshot --database roy-expenses-dev` fingerprints everything that is not the
-   synthetic owner's and saves it under `.tmp/scaling/`. Before the first write, note a Time Travel bookmark:
-   `npx wrangler d1 time-travel info roy-expenses-dev`.
-3. **Day one, 303 transactions.** `seed --database roy-expenses-dev --write --confirm roy-expenses-dev --snapshot <file> --transactions 300`,
-   then `measure` (reads), then `measure ... --write --confirm ...` (adds the write routes), then `cleanup ... --write
-   --confirm ... --transactions 300` and `verify`.
-4. **A later day, 910 transactions.** The same through `measure`, then on a third UTC day `cleanup` and `verify`.
-5. `compare <run-a> <run-b>` prints rows read per 1,000 transactions between the two measure runs and the straight-line
-   figure at 10,000 and 100,000. Put the figures in this document in place of the estimates, and say which came from
-   Cloudflare.
-
-If anything looks wrong, create `.tmp/scaling/stop`; the next statement is refused and the run ends. The run's spend
-file (`.tmp/scaling/spend.json`) keeps the totals across commands and days.
-
-### Proving nothing else was touched
-
-- Every write statement binds the synthetic address (the guard), and the transport refuses the rest before sending.
-- `snapshot` hashes every row of every owner-scoped table that is not the synthetic owner's, plus the link and
-  check-in entry tables, in rowid order. `verify` takes the same hash after cleanup and requires equality, so a row
-  changed, added or removed would show as `CHANGED: <table>`. The hashes are of contents that are never printed or
-  saved, because the development database can hold a copy of real data. A mismatch is not proof of harm (staging
-  is live and someone may have written meanwhile): `owner_revision` and `allowed_users.last_seen_at` change when anyone
-  uses the app, so run it in a short window and read the table that differs.
-- `verify` also requires every owner-scoped table to hold no row for the synthetic owner and no label link without a
-  transaction.
-- By hand: the spend file keeps the rows D1 reported written to the run. Compare its total for the day with the
-  development database's rows written that day in the dashboard (D1, Metrics) or the analytics API
-  (`d1AnalyticsAdaptiveGroups`, by database id). A large excess means something else wrote.
-- Time Travel keeps 7 days of history on the Free plan. A restore discards every write since the bookmark, including
-  other people's, so it is the last resort and not part of the plan.
-- The same flow runs in `routeMatrix.integration.test.ts` against a database that already holds another owner whose
-  ids collide with a fresh seed's, and fails on any change to that owner.
-
-### What stays unmeasured
-
-Whatever is chosen: Worker CPU on Cloudflare's meter for the heavy routes at large ledger sizes (the free evidence
-calibrates it at one size, and local workerd gives its shape); anything above 910 transactions, which is a straight
-line through two points; D1's latency from a Worker, which a REST call from a laptop does not reproduce; receipts,
-settings, scenarios and wealth rows, which the seed leaves out because they are bounded and small. The result of
-each item belongs in this document in place of its "not measured" line.
-
 ## Status
 
 Built:
@@ -874,9 +644,8 @@ Built:
   browser's own matches. See "Description autocomplete". Nothing in the app calls it yet;
 - usage counts per category, account, flag and label (`GET /api/expenses/usage`). See "Usage counts". Nothing in the
   app calls it yet;
-- the plan and the tooling for measuring on a deployed system (`scripts/measure-d1.mjs`), which can only write as a
-  synthetic owner in the development database and stops at a stated share of the Free plan's daily budget. See
-  "Measuring on a deployed system". Tested against the SQLite stand-in; not yet run against Cloudflare;
+- a plan and tooling for measuring on a deployed system ([MEASURING.md](./MEASURING.md)); tested against the SQLite stand-in,
+  not yet run against Cloudflare;
 
 Not built: the compact read, and the client side of the design. Planned
 work, in dependency order:
@@ -902,9 +671,6 @@ work, in dependency order:
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
   account), the stand-in with a record of every statement it ran (for the query-plan tests), and a seeded generator
   of filters, for the paged-read tests.
-- `scripts/scaling/` and `functions/_shared/measure/`: the guard, spend ledger, REST transport, seed, cleanup, snapshot
-  and route matrix behind `scripts/measure-d1.mjs`. Every piece takes its transport as an argument, so the tests run the
-  whole flow over the SQLite stand-in (`sqliteTransport.ts`), including a database that already holds another owner.
 - `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so
   the real SQL runs in tests. It enforces the 100 bound-parameter limit but cannot reproduce D1's billing. They
   live in `src/testing/` because the `functions/` typecheck has no Node types.
