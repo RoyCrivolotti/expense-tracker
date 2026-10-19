@@ -41,7 +41,7 @@ import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../dat
 import type { Usage } from '../data/usage'
 import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
-import type { FilterTarget } from '../data/bulkEdit'
+import type { BulkTarget, FilterTarget } from '../data/bulkEdit'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
 import type { MonthCell } from '../ledger/types'
 
@@ -125,6 +125,15 @@ export interface ExpenseRepository {
     target: FilterTarget,
     patch: BulkTransactionPatch,
   ): Promise<{ updated: number }>
+  /**
+   * Adds the labels to the rows (by id or by filter, with the refusals above), keeping the labels they have.
+   * `matched` is the owner's rows among the targets, `added` the label links that were new.
+   */
+  addLabelsToTransactions(
+    owner: string,
+    target: BulkTarget,
+    labelIds: number[],
+  ): Promise<{ matched: number; added: number }>
   setStatementPaid(
     owner: string,
     accountId: number,

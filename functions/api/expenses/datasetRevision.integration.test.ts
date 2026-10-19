@@ -109,6 +109,7 @@ const CASES: Record<string, (ids: SeededIds) => Request & { status: number }> = 
   'PATCH /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[0]}`, params: id(ids.transactions[0]!), body: { description: 'Edited' } }),
   'DELETE /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.spareTransaction}`, params: id(ids.spareTransaction) }),
   'PUT /transactions/:id/labels': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[1]}/labels`, params: id(ids.transactions[1]!), body: { labelIds: [] } }),
+  'POST /transactions/bulk/labels': (ids) => ({ status: 200, path: '/transactions/bulk/labels', body: { ids: [ids.transactions[0]], labelIds: [ids.label] } }),
   'POST /transactions/bulk': (ids) => ({ status: 201, path: '/transactions/bulk', body: { transactions: [expense(ids, '2026-10-09', 'Bulk one'), expense(ids, '2026-10-10', 'Bulk two')] } }),
   'PATCH /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.transactions[0]], patch: { categoryId: ids.travel } } }),
   'DELETE /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.spareTransaction] } }),

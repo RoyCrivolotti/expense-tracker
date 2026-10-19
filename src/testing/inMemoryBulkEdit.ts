@@ -1,6 +1,8 @@
 import {
+  MAX_BULK_LABEL_LINKS,
   MAX_FILTER_EDIT_ROWS,
   bulkCountMessage,
+  bulkTooManyLinksMessage,
   bulkTooManyMessage,
   type FilterTarget,
 } from '../domain/data/bulkEdit'
@@ -17,4 +19,8 @@ export function idsMatching(all: Transaction[], { filter, expectedCount }: Filte
   if (ids.length > MAX_FILTER_EDIT_ROWS) throw new RepoHttpError(400, bulkTooManyMessage())
   if (ids.length !== expectedCount) throw new RepoHttpError(409, bulkCountMessage(ids.length, expectedCount))
   return ids
+}
+
+export function assertLinksWithinCap(rows: number, labels: number): void {
+  if (rows * labels > MAX_BULK_LABEL_LINKS) throw new RepoHttpError(400, bulkTooManyLinksMessage())
 }

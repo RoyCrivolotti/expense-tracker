@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_FILTER_EDIT_ROWS, bulkTooManyMessage } from '../data/bulkEdit'
+import { MAX_BULK_LABELS, MAX_BULK_LABEL_LINKS, MAX_FILTER_EDIT_ROWS, bulkTooManyMessage } from '../data/bulkEdit'
+import { MAX_BULK_DELETE } from '../data/transactionIds'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import {
+  addLabelsToTransactions,
   bulkUpdateTransactionsByFilter,
   isFilterBody,
   parseBulkFilterEdit,
+  parseBulkLabelRequest,
 } from './bulkEditService'
 
 const ok = { filter: { month: '2026-09' }, expectedCount: 12, expectedRevision: 'abc123', patch: { categoryId: 3 } }
@@ -78,10 +81,51 @@ describe('parseBulkFilterEdit', () => {
   })
 })
 
+describe('parseBulkLabelRequest', () => {
+  it('reads rows by id, with the labels once each', () => {
+    expect(parseBulkLabelRequest({ ids: [3, 3, 4], labelIds: [1, 2, 1] })).toEqual({
+      target: { ids: [3, 4] },
+      labelIds: [1, 2],
+    })
+  })
+
+  it('reads rows by filter, with the count and the revision', () => {
+    expect(
+      parseBulkLabelRequest({ filter: { month: '2026-09' }, expectedCount: 4, expectedRevision: 'r', labelIds: [2] }),
+    ).toEqual({ target: { filter: { month: '2026-09' }, expectedCount: 4 }, expectedRevision: 'r', labelIds: [2] })
+  })
+
+  it.each([
+    ['no body', undefined, 'A request body is required'],
+    ['no labels', { ids: [1] }, 'labelIds must name at least one label'],
+    ['an empty list of labels', { ids: [1], labelIds: [] }, 'labelIds must name at least one label'],
+    ['a label that is not an id', { ids: [1], labelIds: ['a'] }, 'Invalid labelId'],
+    ['a label id of zero', { ids: [1], labelIds: [0] }, 'Invalid labelId'],
+    ['too many labels', { ids: [1], labelIds: Array.from({ length: MAX_BULK_LABELS + 1 }, (_, i) => i + 1) }, `A request may name at most ${MAX_BULK_LABELS} labels`],
+    ['no rows', { labelIds: [1] }, 'ids must be an array'],
+    ['an empty list of ids', { ids: [], labelIds: [1] }, 'ids must not be empty'],
+    ['ids and a filter', { ids: [1], filter: {}, expectedCount: 1, expectedRevision: 'r', labelIds: [1] }, 'Give ids or a filter, not both'],
+    ['a field it does not know', { ids: [1], labelIds: [1], patch: {} }, 'Unknown field "patch" in a filter request'],
+    ['a filter with no revision', { filter: {}, expectedCount: 1, labelIds: [1] }, 'expectedRevision must be the revision you were given'],
+    ['a filter with no count', { filter: {}, expectedRevision: 'r', labelIds: [1] }, 'expectedCount must be the number of transactions you were shown'],
+  ])('refuses %s', (_name, body, message) => {
+    expect(refused(() => parseBulkLabelRequest(body))).toBe(message)
+  })
+
+  it('refuses ids times labels above the cap before any row is read', () => {
+    const ids = Array.from({ length: MAX_BULK_DELETE }, (_, i) => i + 1)
+    const labelIds = Array.from({ length: MAX_BULK_LABEL_LINKS / MAX_BULK_DELETE + 1 }, (_, i) => i + 1)
+
+    expect(refused(() => parseBulkLabelRequest({ ids, labelIds }))).toMatch(/at most 5,000 labels in all/)
+    expect(() => parseBulkLabelRequest({ ids, labelIds: labelIds.slice(1) })).not.toThrow()
+  })
+})
+
 describe('handing the request to the repository', () => {
   const seed = {
     categories: [{ id: 1, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 1, name: 'Main', kind: 'debit' as const, settlement: 'immediate' as const, active: true }],
+    labels: [{ id: 1, name: 'Trip', color: '#10b981', sortOrder: 0, active: true }],
     transactions: ['2026-08', '2026-09', '2026-09'].map((month, i) => ({
       id: i + 1,
       date: `${month}-10`,
@@ -104,5 +148,12 @@ describe('handing the request to the repository', () => {
 
     expect(await bulkUpdateTransactionsByFilter(repo, owner, edit)).toEqual({ updated: 2 })
     expect((await repo.loadDataset(owner)).transactions.map((t) => t.description)).toEqual(['Row 1', 'Renamed', 'Renamed'])
+  })
+
+  it('adds the labels', async () => {
+    const repo = inMemoryExpenseRepository(seed, owner)
+    const request = parseBulkLabelRequest({ ids: [1, 2], labelIds: [1] })
+
+    expect(await addLabelsToTransactions(repo, owner, request)).toEqual({ matched: 2, added: 2 })
   })
 })

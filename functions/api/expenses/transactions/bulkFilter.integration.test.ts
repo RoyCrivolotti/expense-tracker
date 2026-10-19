@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * Bulk edit on a filter, through the real auth middleware and revision bumps, the real
+ * Bulk edit on a filter and bulk labels, through the real auth middleware and revision bumps, the real
  * application layer and the D1 adapter on SQLite with the real migrations, over a database that holds two
  * owners. What the user looked at is the summary's count and revision; the edit is refused if either moved.
  */
@@ -8,7 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import {
   BULK_REVISION_MESSAGE,
+  MAX_BULK_LABEL_LINKS,
   bulkCountMessage,
+  bulkTooManyLinksMessage,
 } from '../../../../src/domain/data/bulkEdit'
 import { seedDataset } from '../../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../../src/testing/sqliteD1'
@@ -18,6 +20,7 @@ import { OTHER, OWNER, createExpenseWorld, pinClock, type World } from '../../..
 import { onRequestGet as getDataset } from '../index'
 import { onRequestPut as putSettings } from '../settings/index'
 import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from './bulk'
+import { onRequestPost as postLabels } from './bulk/labels'
 import { onRequestGet as getSummary } from './summary'
 
 let world: World
@@ -50,6 +53,9 @@ async function look(query: string, email = OWNER): Promise<Looked> {
 
 const patch = (body: unknown, email = OWNER) =>
   world.call(patchBulk, { method: 'PATCH', path: '/transactions/bulk', body, email })
+
+const label = (body: unknown, email = OWNER) =>
+  world.call(postLabels, { method: 'POST', path: '/transactions/bulk/labels', body, email })
 
 const message = async (response: Response): Promise<string> => ((await response.json()) as { error: string }).error
 
@@ -213,5 +219,104 @@ describe('DELETE /transactions/bulk', () => {
     expect(response.status).toBe(400)
     expect(await message(response)).toBe('ids must be an array')
     expect(rows(OWNER)).toEqual(before)
+  })
+})
+
+describe('POST /transactions/bulk/labels', () => {
+  const labelsOf = (id: number): number[] =>
+    (sqlite.prepare('SELECT label_id FROM transaction_labels WHERE transaction_id = ? ORDER BY label_id').all(id) as Array<{ label_id: number }>).map((r) => r.label_id)
+  const ownLabels = (): number[] => (sqlite.prepare('SELECT id FROM labels WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>).map((r) => r.id)
+  const links = (): number => (sqlite.prepare('SELECT COUNT(*) AS n FROM transaction_labels').get() as { n: number }).n
+
+  it('adds the labels to the rows named, keeping the ones they have', async () => {
+    const [first, second] = idsIn(firstMonth()) as [number, number]
+    const [a, b] = ownLabels() as [number, number]
+    sqlite.prepare('INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)').run(first, b)
+    const had = labelsOf(first)
+
+    const response = await label({ ids: [first, second], labelIds: [a] })
+
+    expect(response.status).toBe(200)
+    expect(labelsOf(first)).toEqual([...new Set([...had, a])].sort((x, y) => x - y))
+    expect(labelsOf(second)).toContain(a)
+    const body = (await response.json()) as { matched: number; added: number }
+    expect(body.matched).toBe(2)
+  })
+
+  it('adds the labels to the rows a filter matches, with the same count and revision checks', async () => {
+    const month = firstMonth()
+    const looked = await look(`month=${month}`)
+    const [a] = ownLabels() as [number]
+
+    const response = await label({ filter: { month }, expectedCount: looked.count, expectedRevision: looked.revision, labelIds: [a] })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { matched: number; added: number }
+    expect(body.matched).toBe(looked.count)
+    for (const id of idsIn(month)) expect(labelsOf(id)).toContain(a)
+
+    const stale = await label({ filter: { month }, expectedCount: looked.count, expectedRevision: looked.revision, labelIds: [a] })
+    expect(stale.status).toBe(409)
+    expect(await message(stale)).toBe(BULK_REVISION_MESSAGE)
+  })
+
+  it('is refused for a count that is not the one shown, and writes nothing', async () => {
+    const month = firstMonth()
+    const looked = await look(`month=${month}`)
+    const [a] = ownLabels() as [number]
+    const before = links()
+
+    const response = await label({ filter: { month }, expectedCount: looked.count - 1, expectedRevision: looked.revision, labelIds: [a] })
+
+    expect(response.status).toBe(409)
+    expect(links()).toBe(before)
+  })
+
+  it('moves the revision, like every other write', async () => {
+    const token = world.token()
+    const [a] = ownLabels() as [number]
+
+    await label({ ids: idsIn(firstMonth()).slice(0, 1), labelIds: [a] })
+
+    expect(world.token()).not.toBe(token)
+  })
+
+  it('refuses another owner’s label and writes nothing', async () => {
+    const foreign = (sqlite.prepare('SELECT id FROM labels WHERE owner = ?').get(OTHER) as { id: number }).id
+    const before = links()
+
+    const response = await label({ ids: idsIn(firstMonth()).slice(0, 2), labelIds: [foreign] })
+
+    expect(response.status).toBe(400)
+    expect(await message(response)).toBe('Invalid labelId')
+    expect(links()).toBe(before)
+  })
+
+  it('does not label another owner’s rows, though their ids are in the list', async () => {
+    const theirId = (sqlite.prepare('SELECT MIN(id) AS id FROM transactions WHERE owner = ?').get(OTHER) as { id: number }).id
+    const [a] = ownLabels() as [number]
+
+    const response = await label({ ids: [theirId], labelIds: [a] })
+
+    expect(await response.json()).toEqual({ matched: 0, added: 0 })
+    expect(labelsOf(theirId)).not.toContain(a)
+  })
+
+  it('refuses more links than the cap before reading a row', async () => {
+    const ids = Array.from({ length: 500 }, (_, i) => i + 1)
+    const labelIds = Array.from({ length: MAX_BULK_LABEL_LINKS / 500 + 1 }, (_, i) => i + 1)
+
+    const response = await label({ ids, labelIds })
+
+    expect(response.status).toBe(400)
+    expect(await message(response)).toBe(bulkTooManyLinksMessage())
+  })
+
+  it.each([
+    ['no labels', { ids: [1] }],
+    ['no rows', { labelIds: [1] }],
+    ['ids and a filter', { ids: [1], filter: {}, expectedCount: 1, expectedRevision: 'r', labelIds: [1] }],
+  ])('answers 400 for %s', async (_name, body) => {
+    expect((await label(body)).status).toBe(400)
   })
 })

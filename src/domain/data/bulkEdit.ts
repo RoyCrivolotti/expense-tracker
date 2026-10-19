@@ -12,6 +12,15 @@ import type { TxnFilter } from '../engine/transactions'
 export const MAX_FILTER_EDIT_ROWS = 5_000
 
 /**
+ * The most label links one request may add (rows times labels). Each link is a row written in the table
+ * and in its three indexes, against 100,000 rows written a day on the Free plan.
+ */
+export const MAX_BULK_LABEL_LINKS = 5_000
+
+/** Most labels one request may name; the product with the rows is what {@link MAX_BULK_LABEL_LINKS} bounds. */
+export const MAX_BULK_LABELS = 20
+
+/**
  * A bulk write checks its rows and then writes them in one batch. This is the answer when a row
  * changed between the two: the batch is rolled back, so nothing was written.
  */
@@ -31,8 +40,19 @@ export function bulkTooManyMessage(cap = MAX_FILTER_EDIT_ROWS): string {
   return `More than ${cap.toLocaleString('en-US')} transactions match. Narrow the filter to edit them`
 }
 
+export function bulkTooManyLinksMessage(): string {
+  return `A request may add at most ${MAX_BULK_LABEL_LINKS.toLocaleString('en-US')} labels in all (transactions times labels)`
+}
+
 /** The rows a bulk write is meant for, as the user saw them: a filter, and how many rows it matched. */
 export interface FilterTarget {
   filter: TxnFilter
   expectedCount: number
+}
+
+/** Rows named one by one, or the rows a filter matches. */
+export type BulkTarget = { ids: number[] } | FilterTarget
+
+export function isFilterTarget(target: BulkTarget): target is FilterTarget {
+  return 'filter' in target
 }
