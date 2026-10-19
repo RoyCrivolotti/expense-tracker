@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { AnalyticsBasis, SpendingGroupBy, SpendingGroupRow, SpendingSort } from '../../../engine'
-import { computeSpendingGroupDetail, computeSpendingGroups, sortSpendingRows } from '../../../engine'
+import { sortSpendingRows } from '../../../engine'
 import { downloadCsv, monthlySummaryCsv } from '../../../data/exportCsv'
 import { fullMonthLabel } from '../../../engine'
 import { monthlySummaryRows } from '../monthlySummaryRows'
@@ -17,6 +17,7 @@ import type { SpendingMode } from './spendingMode'
 import { presetFor } from './presetFor'
 import { SpendingRow } from './SpendingRow'
 import { SpendingDetailBody } from './SpendingDetailBody'
+import { spendingDetail, spendingRows } from './spendingModel'
 import styles from './spending.module.css'
 
 function Detail({
@@ -41,21 +42,8 @@ function Detail({
   onOpenTransactions?: ((preset: TransactionsEntry) => void) | undefined
 }) {
   const detail = useMemo(
-    () =>
-      computeSpendingGroupDetail(
-        { transactions: model.dataset.transactions, categories: model.dataset.categories },
-        {
-          months,
-          month,
-          basis,
-          groupBy,
-          key: row.key,
-          today,
-          openMonth,
-          rolloverDay: model.dataset.settings.budgetRolloverDay,
-        },
-      ),
-    [model.dataset, months, month, basis, groupBy, row.key, today, openMonth],
+    () => spendingDetail(model, { months, month, basis, groupBy, key: row.key, today, openMonth }),
+    [model, months, month, basis, groupBy, row.key, today, openMonth],
   )
   const preset = presetFor(groupBy, row, month, basis)
   return (
@@ -94,24 +82,8 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
   }
 
   const rows = useMemo(
-    () =>
-      computeSpendingGroups(
-        {
-          transactions: model.dataset.transactions,
-          categories: model.dataset.categories,
-          labels: model.dataset.labels,
-        },
-        {
-          months: model.months,
-          month,
-          basis,
-          today,
-          openMonth,
-          rolloverDay: model.dataset.settings.budgetRolloverDay,
-          groupBy,
-        },
-      ),
-    [model.dataset, model.months, month, basis, today, openMonth, groupBy],
+    () => spendingRows(model, { month, basis, today, openMonth, groupBy }),
+    [model, month, basis, today, openMonth, groupBy],
   )
   const [sortBy, setSortBy] = useState<SpendingSort>('amount')
   const ordered = useMemo(() => sortSpendingRows(rows, sortBy), [rows, sortBy])

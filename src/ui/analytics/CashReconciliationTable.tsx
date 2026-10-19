@@ -1,4 +1,5 @@
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../buildExpenseModel'
 import type { CashRow } from '../../engine'
 import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { ActualCashCell } from './ActualCashCell'
@@ -100,10 +101,11 @@ function TotalsRow({ rows, cardIds }: { rows: CashRow[]; cardIds: number[] }) {
 
 export function CashReconciliationTable({ model, onSetCashActual }: Props) {
   const { dataset } = model
+  const summed = sumsOf(model).transactions
   const cards = dataset.accounts.filter((a) => a.settlement === 'deferred')
   const cardIds = cards.map((c) => c.id)
   const rows = computeCashReconciliation(
-    dataset.transactions,
+    summed,
     dataset.accounts,
     dataset.settings,
     dataset.cashActuals,

@@ -3,6 +3,7 @@
  * and the engine stays the only place that computes it.
  */
 import type { ExpenseModel } from '../../useExpenseData'
+import { sumsOf } from '../../buildExpenseModel'
 import type {
   Allocation,
   AnalyticsBasis,
@@ -16,6 +17,7 @@ import type {
   SpendingPace,
 } from '../../../engine'
 import {
+  classifierFromGroups,
   classifyFixedSpend,
   computeAllocation,
   computeCashReconciliation,
@@ -53,14 +55,20 @@ export interface OverviewOptions {
   openMonth: string
 }
 
+/**
+ * The totals, the baseline and the cash rows only add amounts, so they take the rows the model sums
+ * (`sums`); everything that reads dates, descriptions or a series takes the real rows, with the series of
+ * the whole history when the model holds only part of it (see docs/ENGINE-HISTORY.md).
+ */
 export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): OverviewData {
-  const { dataset, months } = model
+  const { dataset, months, history } = model
   const { transactions, categories, installmentPlans, goalScenarios } = dataset
+  const summed = sumsOf(model).transactions
   const { month, period, compare, basis, today, openMonth } = opts
   const rolloverDay = dataset.settings.budgetRolloverDay
 
-  const classifier = classifyFixedSpend(transactions)
-  const kpis = computeOverviewKpis(transactions, {
+  const classifier = history ? classifierFromGroups(history.groups) : classifyFixedSpend(transactions)
+  const kpis = computeOverviewKpis(summed, {
     months,
     month,
     period,
@@ -77,6 +85,7 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     rolloverDay,
     basis,
     prevMonth: months.includes(priorBudgetMonth(month)) ? priorBudgetMonth(month) : null,
+    ...(history ? { fixedGroups: history.groups } : {}),
   })
   const movers = computeMovers(transactions, categories, classifier, {
     months,
@@ -87,14 +96,14 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     rolloverDay,
   })
   const cashRows = computeCashReconciliation(
-    transactions,
+    summed,
     dataset.accounts,
     dataset.settings,
     dataset.cashActuals,
   )
   const signals = computeSignals({ pace, movers, cashRows, openMonth })
   const unpaidByMonth = new Map(
-    kpis.series.map((s) => [s.month, basis === 'committed' ? unpaidExpenseCents(transactions, s.month) : 0]),
+    kpis.series.map((s) => [s.month, basis === 'committed' ? unpaidExpenseCents(summed, s.month) : 0]),
   )
   return {
     kpis,
@@ -108,12 +117,12 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     ),
     movers,
     signals,
-    baseline: computeSpendingBaseline(transactions, installmentPlans, goalScenarios, {
+    baseline: computeSpendingBaseline(summed, installmentPlans, goalScenarios, {
       months,
       month,
       basis,
     }),
     unpaidByMonth,
-    fixedCosts: detectedFixedCosts(transactions, installmentPlans, categories, month),
+    fixedCosts: detectedFixedCosts(transactions, installmentPlans, categories, month, history?.groups),
   }
 }
