@@ -17,6 +17,8 @@ interface Props {
   checkins: WealthCheckin[]
   /** For the measured return: investment transactions are the contributions. */
   transactions?: Transaction[]
+  /** For the pace and the cash reserve, which only add amounts; the transactions when absent. */
+  sumTransactions?: Transaction[] | undefined
   milestones: Milestone[]
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
@@ -44,6 +46,7 @@ export function ProgressView({
   accounts,
   checkins,
   transactions = [],
+  sumTransactions,
   milestones,
   reached,
   plan,
@@ -68,6 +71,7 @@ export function ProgressView({
         accounts={accounts}
         plan={plan}
         transactions={transactions}
+        sumTransactions={sumTransactions}
         cashReserveMonths={cashReserveMonths}
         openBudgetMonth={openBudgetMonth}
         onRebaseline={canWrite ? onRebaseline : undefined}
