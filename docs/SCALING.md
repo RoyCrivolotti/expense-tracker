@@ -721,7 +721,7 @@ Nothing is created or requested by this plan. To run it the maintainer provides:
 | `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment of the command. The token needs Account, D1, Edit: the REST query endpoint is one endpoint for reads and writes, and the pages read do not say whether a read-only D1 token may call it. Try the read-only token for the read commands first; the script's own guard blocks writes without `--write` either way | every command except `plan` and the dry runs | `plan`, `seed` and `cleanup` without `--write`, and all the tests, run offline |
 | `config/dev.json` (exists on the maintainer's machine) | everything that connects | none |
 | Account, Account Analytics, Read on the token ([GraphQL analytics token](https://developers.cloudflare.com/analytics/graphql-api/getting-started/authentication/api-token-auth/) [2026-04-23]) | reading how much of today's budget the whole account has used | read the number off the dashboard (D1, Metrics) and pass `--account-written-today N` |
-| A Cloudflare Access service token | only the deployed-route approach below, which this plan does not recommend: Access sets no email for a service token, and `resolveAuthenticatedEmail` answers 401 without one | not needed |
+| A Cloudflare Access service token | only the deployed-route approach below, which this plan does not recommend: a service token's payload carries a `common_name` and an empty `sub` and no email ([application token](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/) page), and `resolveAuthenticatedEmail` answers 401 without one | not needed |
 
 ### The ways to measure, and what each leaves unmeasured
 
