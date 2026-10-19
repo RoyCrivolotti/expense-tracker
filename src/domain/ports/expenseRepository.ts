@@ -37,6 +37,7 @@ import type {
   TransactionPageRequest,
   TransactionSummary,
 } from '../data/transactionQuery'
+import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../data/descriptionSuggest'
 import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
@@ -86,6 +87,14 @@ export interface ExpenseRepository {
    * description (migration 0038), because grouping before then would leave rows out.
    */
   readSeries(owner: string): Promise<RecurringSeries[]>
+  /**
+   * The first `limit` descriptions that start with `prefix` among the owner's rows booked in months before
+   * `before`, as the browser's index lists them: `buildDescriptionIndex` in `src/data/descriptionIndex.ts`
+   * is the reference. A prefix that matches more than `MAX_SUGGEST_KEYS` descriptions is answered with
+   * `tooBroad` and no matches, and the D1 adapter answers 503 while rows still wait for their normalized
+   * description.
+   */
+  suggestDescriptions(owner: string, request: DescriptionSuggestRequest): Promise<DescriptionSuggestResult>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,

@@ -58,7 +58,7 @@ for every consumer below on 80 seeded random ledgers and on every viewed month o
 | `listPastReports`, `pastReportDrifted` (`pastReports.ts`), `buildReimbursementLinks` (`reimbursementLinks.ts`) | Every row with a `settledBy` and every payment with a `reportCount` | none | P | `reportCount`, `reportCoveredCents`; counts |
 | `filterTransactions`, `buildTransactionListRows`, `netSpendCents` (`transactions.ts`, `transactionListRows.ts`) | Whatever the date scope asks: M, the 3 calendar months to M, all, or a custom range. All but M filter on the row's calendar date, not its budget month | none | R, any month | `description` and `notes` search; `flagId`, `labelIds`, amount bounds; statement payments for every statement |
 | `latestTransactions`, `recentlyAdded` (`transactions.ts`) | none | The 8 newest by date and the 8 newest by `createdAt` (D1 only), over the whole ledger | R | `createdAt`, `id` |
-| `buildDescriptionIndex` (`descriptionIndex.ts`), `buildExpenseModel` | The whole ledger: the newest row of each description, and the `months` list from every row | none | X | Cancelled rows count for `months` |
+| `buildDescriptionIndex` (`descriptionIndex.ts`), `buildExpenseModel` | The whole ledger: the newest row of each description, and the `months` list from every row | none | X | Cancelled rows count for `months`. The descriptions of rows the browser does not hold come from `GET /api/expenses/descriptions/suggest` and are merged with `mergeDescriptionMatches` (see [SCALING.md](./SCALING.md)) |
 
 The remaining engines in `src/domain/engine/` take no `Transaction[]`: `reimbursementDraft` takes a flag group,
 `receiptFiles` a report, `receiptStorage` attachments, `analyticsSignals` cash rows, and the projection and goal
