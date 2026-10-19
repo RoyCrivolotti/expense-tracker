@@ -5,7 +5,8 @@ engine and each screen that feeds one, how much of that history its output depen
 app is showing (M) and from today (T). It matters to anything that stops handing an engine the whole ledger, such as
 the model in [SCALING.md](./SCALING.md) (real rows for some months, per-month sums for the rest, pinned rows that
 are always real): an engine can be given less history only if its output does not change. That model is built, in
-`src/domain/ledger` (see [The ledger model](#the-ledger-model)), and nothing in the app uses it yet.
+`src/domain/ledger` (see [The ledger model](#the-ledger-model)). The screens read their rows through the model's two
+datasets ([How the screens read the model](#how-the-screens-read-the-model)); the app does not build a model from a ledger yet.
 
 `src/testing/engineHistory.test.ts` pins the properties marked *tested*. It assembles the ledger with that model
 (real rows for some months, one summed row per (budget month, account, category, type, cancelled, sign) cell for the
@@ -131,9 +132,52 @@ The first three rows go away when the engines are handed the classifier and the 
 history, which is tested: `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`,
 `computeSpendingPace` takes `fixedGroups`, and `expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them
 with `classifyFixedSpend` and `recurringFixedGroups` over every row. With none passed the engines build their own from
-the rows they are given, as they always did. `buildOverviewData` does not pass one on yet, so the Overview model still
-differs until it is given one. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
-sweep fails both if something else differs and if a listed difference never shows up.
+the rows they are given, as they always did. `buildOverviewData` and the Spending view pass the model's `history` when
+it has one, so the Overview model matches too. Each difference is written down in `src/testing/intendedDifferences.ts`,
+and the sweep fails both if something else differs and if a listed difference never shows up.
+
+### How the screens read the model
+
+`ExpenseModel` (`src/ui/useExpenseData.ts`) holds two datasets. `dataset.transactions` is the `real` list: what is
+shown to the user as a transaction, and what every engine that reads dates, descriptions, labels or links is given.
+`sums` is the `linear` list (the real rows and one row per cell), for the engines that only add amounts. It is absent
+while the model holds every row, when `sumsOf(model)` returns `dataset` itself, so for a ledger under the size policy
+every screen reads the same list as before. `history` carries the recurring series of the whole history and is set
+only for a model that does not hold every row. `buildLedgerModel` (`src/ui/buildLedgerModel.ts`) makes the model from
+a `Ledger`.
+
+| Screen | Reads |
+|---|---|
+| Dashboard totals, budgets, card statements, Goals card | `sums` |
+| Dashboard recent activity, installments, flagged, past reports, expense report | `dataset` (real rows) |
+| Overview: totals, baseline, unpaid caps, cash rows | `sums` |
+| Overview: allocation, movers, pace, fixed costs | `dataset`, with the classifier and series from `history` |
+| Spending groups and their detail | `sums`, with the classifier from `history` |
+| Monthly summary grid, monthly totals, yearly overview, cash view and table | `sums` |
+| Goals: monthly flows, pace, cash reserve | `sums` |
+| Goals: measured return and gap split | `dataset` |
+| Settings: card statements | `sums` |
+| Settings: stopped suggestions, label counts | `dataset` |
+| Transactions: list, selection, search, total | `dataset` |
+| Transactions: statement rows (cash reconciliation) | `sums` |
+| Upcoming | `dataset` |
+
+Three readings of `dataset` are wrong on a model that holds only a window, and are not changed here: recent activity
+(the newest rows by date and by when they were added), the description index, and the counts of how many
+transactions carry a label, a category or an account. The first two need rows that are not held, and the counts need
+a read of their own (`GET /api/expenses/usage`). The stopped suggestions and Upcoming need the series, which the
+server also serves (`GET /api/expenses/series`). None of these differs for a model that holds every row.
+
+An investment is pinned, so it is real in every month, and the Goals pace and the balances at cost, which read only
+investments, give the same answer from either list. They read `sums` anyway, since they are engines that add amounts
+and that agreement rests on the pinning rule alone.
+
+`src/ui/ledgerModelSweep.test.ts` runs the functions the views call, for every viewed month of the 60 month
+adversarial ledger, with a 13 month window and the series of the whole history, closed and as the open month, and
+requires them to equal the same functions over every row. It also checks that the sweep fails when the series is left
+out and when the engines that add amounts are given the real rows. A second test holds a one month window to the
+readings of a closed month that need no other real rows. `src/ui/ledgerModelRender.test.tsx` renders the screens
+over both models and compares their text, with today in the newest month while an older month is shown.
 
 ## Reading a series
 

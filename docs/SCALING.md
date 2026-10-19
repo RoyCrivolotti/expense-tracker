@@ -679,8 +679,10 @@ Built:
   over the assembled lists (`src/testing/ledgerDifferential.test.ts`, `ledgerSweep.test.ts`; the result is in
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
 - an optional classifier or recurring series, built from the whole history, on the four engines that rebuilt their own
-  from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list).
-  No screen uses the model or passes one in yet;
+  from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list);
+- the screens read the model through `dataset` and `sums`, and pass the series of the whole history to the engines
+  that need it, with a model built from a ledger by `buildLedgerModel`. The app does not build one yet; the
+  differential tests do (see [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#how-the-screens-read-the-model));
 - the recurring series route (`GET /api/expenses/series`) with the stored normalized description it groups by, its
   backfill, and tests that hold every consumer to the answer over every row. See "Recurring series". Nothing in the
   app calls it yet;
@@ -696,9 +698,9 @@ Not built: the compact read, and the rest of the client side of the design. Plan
    and per-month sums (built); series (built).
 3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
    the four engines (built).
-4. The client data layer. Built: the parts on the data sources and the loader that assembles them. Not built: the
-   model on top of a ledger, hydration of the viewed month, invalidation, the snapshot per owner, and passing the
-   whole history's classifier and series to the Overview model and the Spending view, which still build their own.
+4. The client data layer. Built: the parts on the data sources and the loader that assembles them, the model on top of
+   a ledger, and the screens reading it. Not built: hydration of the viewed month, invalidation and the snapshot per
+   owner.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
 6. The remaining consumers and a resumable backup.
 7. Switching the default behind a runtime flag, with the old route kept for stale clients.
