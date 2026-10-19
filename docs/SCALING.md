@@ -829,8 +829,9 @@ file (`.tmp/scaling/spend.json`) keeps the totals across commands and days.
   uses the app, so run it in a short window and read the table that differs.
 - `verify` also requires every owner-scoped table to hold no row for the synthetic owner and no label link without a
   transaction.
-- The rows D1 reported written, summed by the run, are compared with the development database's rows written
-  today in the analytics (`d1AnalyticsAdaptiveGroups`, by database id). A large excess means something else wrote.
+- By hand: the spend file keeps the rows D1 reported written to the run. Compare its total for the day with the
+  development database's rows written that day in the dashboard (D1, Metrics) or the analytics API
+  (`d1AnalyticsAdaptiveGroups`, by database id). A large excess means something else wrote.
 - Time Travel keeps 7 days of history on the Free plan. A restore discards every write since the bookmark, including
   other people's, so it is the last resort and not part of the plan.
 - The same flow runs in `routeMatrix.integration.test.ts` against a database that already holds another owner whose
