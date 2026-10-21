@@ -13,7 +13,8 @@ fit together is in [SCALING.md](./SCALING.md).
   repeated or unreadable query parameter: a misspelt filter that was ignored would answer with every row. Anything
   unexpected is a 500 with a fixed message, and the cause goes to the log.
 - **Bounds are refused, never cut.** A request over a bound is a 400 that names the bound, because a client that
-  silently received part of a month would add up the wrong total.
+  silently received part of a month would add up the wrong total. The bounds are conservative, not derived from a
+  deployed Worker: raise one only after measuring CPU on a deployed Worker.
 - **Conditional reads.** The dataset, reference, months, cube, series and usage routes send a weak `ETag` and
   `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before anything
   else runs. The tag is built from the owner's revision token, which every write request replaces
@@ -151,7 +152,9 @@ Descriptions that start with what was typed, among rows booked before a month. C
   for is a 400).
 - Response: `{ items, tooBroad }`. Each item is a description as its newest row speaks for it: `label`, `template`
   (`type`, `categoryId`, `accountId`), `date` and `id`. Cancelled and blank rows are out. Order is the browser index's
-  `key` order, which `mergeDescriptionMatches` expects.
+  `key` order. `mergeDescriptionMatches` joins this answer to the client's own matches, and the result equals the index
+  over every row when the client holds every row booked from `before` on, sends its locale, and its ICU sorts text as
+  the Worker's does.
 - A prefix that matches more than 500 different descriptions of the owner, whatever their status or month, is a 200 with
   `tooBroad: true` and no items. It is an ordinary answer for a letter or two of typing: keep the local matches and ask
   again when more is typed.
@@ -159,7 +162,7 @@ Descriptions that start with what was typed, among rows booked before a month. C
 - Caching: `Cache-Control: private, no-store`, since a request is one prefix and the answer follows every write.
 - Cost: one index seek per matching description and one more for its newest eligible row, so a few rows per description
   plus that description's rows inside the client's window. It does not walk every row that starts with the prefix. The
-  Worker sorts at most 500 strings.
+  Worker sorts at most 500 strings, and a `tooBroad` answer builds no collator and sorts nothing.
 
 ## GET /usage
 
@@ -191,5 +194,5 @@ All three are in [`bulk.ts`](../functions/api/expenses/transactions/bulk.ts) at 
 - `DELETE` with `{ ids }` answers `{ deleted, requested }`. The receipt files go first, then the rows, their receipt
   rows and label links in one batch, and `settled_by` is cleared on any row a deleted payment had settled. There is no
   filter form ([decision](./decisions/no-filter-based-delete.md)).
-- `ids` hold at most 500 distinct positive integers, bound as one JSON string because D1 allows 100 bound values per
-  statement.
+- `ids` holds at most 500 positive integers (duplicates are dropped), bound as one JSON string because D1 allows 100
+  bound values per statement.
