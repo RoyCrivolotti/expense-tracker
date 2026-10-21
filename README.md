@@ -1,6 +1,6 @@
 # Expense tracker
 
-Personal budget and transaction tracker with cash reconciliation, card settlement modeling, and multi-scenario wealth projections. A live instance runs at **https://expenses.crivolotti.com** (Cloudflare Access + D1 allowlist — authentication does not mean access; the owner approves users in-app).
+Personal budget and transaction tracker with cash reconciliation, card settlement modeling, and multi-scenario wealth projections. It runs on Cloudflare Pages, D1 and R2, behind Cloudflare Access and a D1 allowlist: authentication does not mean access, the owner approves users in-app.
 
 - **Cloudflare Access** (Google sign-in) — who can authenticate
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
@@ -68,8 +68,6 @@ npm run dev
 ```
 
 Opens at `http://localhost:5173` with **read-only CSV data** imported straight from `fixtures/demo-expenses.csv`. There is no path to real data in local dev. Production uses the D1-backed API.
-
-To point dev at your own workbook export, set `FINANCIAL_REVIEW_DIR` to a directory containing `data/expenses_v3.csv` before `npm run dev`.
 
 `/access/admin` works against a deployed API, or with `DOCS_CAPTURE=1` mocks (`npm run capture:screenshots`).
 
