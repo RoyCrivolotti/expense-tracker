@@ -33,6 +33,7 @@ import { deriveTransactions } from '../domain/engine/status'
 import { computeCashReconciliation } from '../domain/engine/cashReconciliation'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { csvDataSource } from './csvDataSource'
+import { type HeldDataset, inMemoryLedgerParts } from './inMemoryLedgerParts'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
 
@@ -253,6 +254,35 @@ let loadedSettings: ExpenseSettings = defaultExpenseSettings()
 /** The scenarios as the page has them: the seeded ones, and any made or changed since the last load. */
 let loadedScenarios: GoalScenario[] = []
 
+/**
+ * What the ledger parts are cut from: the last load with the rows, flags, labels, settings and scenarios
+ * as the page has changed them. Every mutation above replaces one of those with a new value and never
+ * edits one in place, so a different value is the sign that the ledger moved and the revision follows it.
+ */
+let baseline: ExpenseDataset | undefined
+let seenState: unknown[] = []
+let stateRevision = 0
+
+async function heldDataset(): Promise<HeldDataset> {
+  baseline ??= await docsCaptureDataSource.load()
+  const state = [loaded, loadedFlags, loadedLabels, loadedSettings, loadedScenarios]
+  if (state.some((value, i) => value !== seenState[i])) {
+    seenState = state
+    stateRevision += 1
+  }
+  return {
+    dataset: {
+      ...baseline,
+      transactions: loaded,
+      flags: loadedFlags,
+      labels: loadedLabels,
+      settings: loadedSettings,
+      goalScenarios: loadedScenarios,
+    },
+    revision: `capture-${stateRevision}`,
+  }
+}
+
 /** Add `labelId` to `labelIds` if it is not already there, without mutating the input. */
 function withLabelAdded(labelIds: number[] | undefined, labelId: number): number[] {
   const current = labelIds ?? []
@@ -300,9 +330,11 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       loadedLabels = enriched.labels
       loadedSettings = enriched.settings
       loadedScenarios = enriched.goalScenarios
+      baseline = enriched
       return enriched
     })
   },
+  ...inMemoryLedgerParts(heldDataset),
   // Registered in `loaded`, not just returned: a same-session follow-up call that
   // looks the new row up by id (setTransactionLabels, then an immediate edit)
   // found nothing here before this, and silently no-opped against a row `loaded`
