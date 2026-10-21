@@ -80,6 +80,13 @@ never seen this repo, so:
   `docs/decisions/`. Link to the home instead of copying from it.
 - No line numbers, private data, or references to a conversation or an internal tracker.
 
+## Pull request size
+
+A pull request should be reviewable by one person in one sitting. Tests count for less than code and
+docs, but a PR whose non-test diff goes past roughly 600 lines should be split by behavior. Stacked PRs
+are fine when each one stands alone and merges safely in order. A PR that touches a live write path or
+a migration says so in its first sentence.
+
 ## Code style
 
 - No narrating comments ("// Import the module"). A comment explains why the code is the
