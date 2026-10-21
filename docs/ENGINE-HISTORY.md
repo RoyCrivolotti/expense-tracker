@@ -5,7 +5,8 @@ engine and each screen that feeds one, how much of that history its output depen
 app is showing (M) and from today (T). It matters to anything that stops handing an engine the whole ledger, such as
 the model in [SCALING.md](./SCALING.md) (real rows for some months, per-month sums for the rest, pinned rows that
 are always real): an engine can be given less history only if its output does not change. That model is built, in
-`src/domain/ledger` (see [The ledger model](#the-ledger-model)), and nothing in the app uses it yet.
+`src/domain/ledger` (see [The ledger model](#the-ledger-model)). The screens read it through the model's `sums` and
+`history` (see the invariant on the two row lists in [ARCHITECTURE.md](./ARCHITECTURE.md)).
 
 `src/testing/engineHistory.test.ts` pins the properties marked *tested*. It assembles the ledger with that model
 (real rows for some months, one summed row per (budget month, account, category, type, cancelled, sign) cell for the
@@ -131,8 +132,8 @@ The first three rows go away when the engines are handed the classifier and the 
 history, which is tested: `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`,
 `computeSpendingPace` takes `fixedGroups`, and `expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them
 with `classifyFixedSpend` and `recurringFixedGroups` over every row. With none passed the engines build their own from
-the rows they are given, as they always did. `buildOverviewData` does not pass one on yet, so the Overview model still
-differs until it is given one. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
+the rows they are given, as they always did. `buildOverviewData` and the Spending view pass the model's `history` when
+it has one, so the Overview model matches too. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
 sweep fails both if something else differs and if a listed difference never shows up.
 
 ## Reading a series

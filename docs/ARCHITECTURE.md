@@ -186,6 +186,17 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   bounds (`planRowRanges`, `planCubeRanges`); a month over the row bound cannot be read this way. A ledger built from
   parts has no receipt list (`reference.attachments` is empty): a row's receipts are read when needed. The demo data
   sources serve their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
+- **The screens read one of two row lists, and an engine that is given the wrong one is wrong only when the model
+  holds a window.** `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what
+  every engine that reads dates, descriptions, labels or links is given. `sums` (`sumsOf(model)`) adds one row per
+  summed cell and goes to the engines that only add amounts and to the spending groups, which read a 12 month trend of
+  sums. While the model holds every row there are no cells, `sums` is absent and both lists are the same array, so
+  nothing changes for a ledger under the size policy. For a window the model also carries `history` (the recurring
+  series of the whole history), which the Overview and Spending hand to the engines that would otherwise classify fixed
+  spend from the rows they are given. `docs/ENGINE-HISTORY.md` says which engine is which class. A new screen that
+  adds amounts reads `sumsOf(model)`, and one that lists or searches rows reads `dataset`; `ledgerModelSweep.test.ts`
+  and `ledgerModelRender.test.tsx` fail for a screen wired to the wrong list. What a window cannot give is the newest
+  rows by date (recent activity), the description index and counts of how many rows carry a label, category or account.
 
 ## Size and complexity
 
