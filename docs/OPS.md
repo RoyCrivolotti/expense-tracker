@@ -84,6 +84,7 @@ apply a migration to dev ahead of its merge only when the merge is near.
 | `scripts/seed-dev.mjs` | `seed:dev` / `seed:dev-from-prod` | Prod D1 export → dev (`.tmp/` gitignored); private QA only |
 | `scripts/seed-demo-staging.mjs` | `seed:demo-staging` | Synthetic demo tenant on the dev database (public fixtures) |
 | `scripts/migrate.mjs` | `migrate`, `migrate:dev` | Check any database against `migrations/`, or apply what it lacks (`migrate:dev`: dev, post-seed only) |
+| `scripts/measure-d1.mjs` | `measure:d1` | Measure rows billed per route on the dev D1 as a synthetic owner; see [MEASURING.md](./MEASURING.md) |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to the staging project |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.

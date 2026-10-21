@@ -81,7 +81,7 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 5. **A load issues 16 D1 queries**, inside the limit of 50.
 
 Not measured: Worker CPU on workerd, rows billed per route on a deployed D1, and how the 50-query limit counts a
-`batch()`.
+`batch()`. [MEASURING.md](./MEASURING.md) says how to measure the rows billed and the `batch()` count safely.
 
 ## The design
 
