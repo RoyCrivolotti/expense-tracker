@@ -8,14 +8,16 @@
 import { referenceTablesOf } from '../domain/data/ledgerParts'
 import { sortedMonths } from '../domain/engine/dates'
 import { assembleRows, isPinned, ledgerDataset, settlementPaymentIds } from '../domain/ledger'
-import type { ExpenseDataset, Transaction } from '../domain/types'
+import type { ExpenseDataset, Transaction, TransactionAttachment } from '../domain/types'
 import { type HeldLedger, ledgerOfHeld, wantedMonths } from './ledgerHold'
 
 export interface Reconciled {
   held: HeldLedger
-  changed: { reference: boolean; rows: boolean }
+  changed: { reference: boolean; rows: boolean; receipts: boolean }
   /** Months whose sums no longer match the rows. Empty for a ledger held in full. */
   stale: string[]
+  /** Transactions that gained a receipt before their list was read, so the list held is partial. */
+  partialReceipts: number[]
 }
 
 /** The dataset the screens see for what is held: the reference and every real row. */
@@ -96,6 +98,37 @@ function diffRows(before: ExpenseDataset, after: ExpenseDataset): Delta {
   return delta
 }
 
+const idsOf = (list: readonly TransactionAttachment[]): string => list.map((a) => a.id).join(',')
+
+function receiptsOf(list: readonly TransactionAttachment[], id: number): TransactionAttachment[] {
+  return list.filter((a) => a.transactionId === id)
+}
+
+/**
+ * The receipt lists and counts after a patch. A transaction whose receipts changed takes the list the
+ * dataset now has, and its count follows; one that is gone loses both. A list that gained a receipt before the
+ * transaction's list was read is partial, so it is returned for a read of the whole list.
+ */
+function patchReceipts(held: HeldLedger, before: ExpenseDataset, after: ExpenseDataset, removed: readonly number[]) {
+  const receipts = new Map(held.receipts)
+  const counts = { ...held.attachmentCounts }
+  const partial: number[] = []
+  const ids = new Set([...before.attachments, ...after.attachments].map((a) => a.transactionId))
+  for (const id of ids) {
+    const list = receiptsOf(after.attachments, id)
+    if (idsOf(list) === idsOf(receiptsOf(before.attachments, id))) continue
+    if (!held.receipts.has(id)) partial.push(id)
+    receipts.set(id, list)
+    if (list.length > 0) counts[id] = list.length
+    else delete counts[id]
+  }
+  for (const id of removed) {
+    receipts.delete(id)
+    delete counts[id]
+  }
+  return { receipts, counts, partial: partial.filter((id) => !removed.includes(id)) }
+}
+
 /** The month index and counts after a delta: a month with no row left is gone. */
 function recount(held: HeldLedger, counts: ReadonlyMap<string, number>) {
   const rowsPerMonth = { ...held.rowsPerMonth }
@@ -116,11 +149,15 @@ function recount(held: HeldLedger, counts: ReadonlyMap<string, number>) {
 export function reconcileHeld(held: HeldLedger, before: ExpenseDataset, after: ExpenseDataset, viewed: string): Reconciled {
   const reference = !sameTables(before, after)
   const delta = diffRows(before, after)
-  if (!reference && !delta.changed) return { held, changed: { reference: false, rows: false }, stale: [] }
+  const receiptsChanged = idsOf(before.attachments) !== idsOf(after.attachments)
+  if (!reference && !delta.changed && !receiptsChanged) {
+    return { held, changed: { reference: false, rows: false, receipts: false }, stale: [], partialReceipts: [] }
+  }
   const payments = settlementPaymentIds(after.transactions)
   const byMonth = new Map<string, Transaction[]>()
   for (const row of after.transactions) byMonth.set(row.budgetMonth, [...(byMonth.get(row.budgetMonth) ?? []), row])
   const { rowsPerMonth, rowCount, months } = recount(held, delta.counts)
+  const receipts = patchReceipts(held, before, after, delta.removed)
   const rows = new Map<string, readonly Transaction[]>()
   for (const month of held.rows.keys()) if (months.includes(month)) rows.set(month, byMonth.get(month) ?? [])
   const next: HeldLedger = {
@@ -131,13 +168,13 @@ export function reconcileHeld(held: HeldLedger, before: ExpenseDataset, after: E
     months,
     rowsPerMonth,
     rowCount,
-    attachmentCounts: Object.fromEntries(
-      Object.entries(held.attachmentCounts).filter(([id]) => !delta.removed.includes(Number(id))),
-    ),
+    attachmentCounts: receipts.counts,
+    receipts: receipts.receipts,
     rows,
   }
   const fresh = wantedMonths(next, viewed).filter((month) => !rows.has(month) && !held.months.includes(month))
   for (const month of fresh) rows.set(month, byMonth.get(month) ?? [])
   const stale = held.cells === null ? [] : sortedMonths([...delta.stale].filter((month) => months.includes(month) || held.months.includes(month)))
-  return { held: next, changed: { reference, rows: delta.changed }, stale }
+  const changed = { reference, rows: delta.changed, receipts: receiptsChanged }
+  return { held: next, changed, stale, partialReceipts: receipts.partial }
 }
