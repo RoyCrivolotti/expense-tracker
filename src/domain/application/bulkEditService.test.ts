@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_BULK_LABELS, MAX_BULK_LABEL_LINKS, MAX_FILTER_EDIT_ROWS, bulkTooManyMessage } from '../data/bulkEdit'
 import { MAX_BULK_DELETE } from '../data/transactionIds'
+import { SUMMARY_COUNT_CAP } from '../data/transactionQuery'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import {
   addLabelsToTransactions,
@@ -20,6 +21,14 @@ const refused = (run: () => unknown): string => {
   }
   return 'accepted'
 }
+
+describe('the cap on an edit on a filter', () => {
+  it('is the count the summary can show exactly, so a count that is shown is a count that can be edited', () => {
+    expect(MAX_FILTER_EDIT_ROWS).toBe(SUMMARY_COUNT_CAP)
+    expect(MAX_FILTER_EDIT_ROWS).toBe(1_000)
+    expect(bulkTooManyMessage()).toBe('More than 1,000 transactions match. Narrow the filter to edit them')
+  })
+})
 
 describe('isFilterBody', () => {
   it('is true for a body that has a filter, whatever else it has', () => {

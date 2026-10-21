@@ -3,13 +3,19 @@
  * the in-memory repository both import this file, so that the two refuse a request in the same way.
  */
 import type { TxnFilter } from '../engine/transactions'
+import { SUMMARY_COUNT_CAP } from './transactionQuery'
 
 /**
  * The most rows one edit on a filter may change. A filter that matches more is refused rather than cut
- * short: an edit applied to the first 5,000 of 7,000 matches would be a different edit from the one the
- * user was shown. The cap keeps one request inside the Free plan's Worker CPU, query and row budgets.
+ * short: an edit applied to the first 1,000 of 7,000 matches would be a different edit from the one the
+ * user was shown.
+ *
+ * It is the summary's count cap on purpose: the summary counts exactly up to this many rows and reports
+ * `capped` beyond, so the count a user is shown is exact whenever the edit is allowed, and a filter whose
+ * summary is capped is one that cannot be edited. The rows written by an edit of this many rows have not been
+ * measured on a deployed D1, so raising the cap waits for that measurement.
  */
-export const MAX_FILTER_EDIT_ROWS = 5_000
+export const MAX_FILTER_EDIT_ROWS = SUMMARY_COUNT_CAP
 
 /**
  * The most label links one request may add (rows times labels). Each link is a row written in the table

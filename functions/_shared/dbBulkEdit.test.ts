@@ -366,7 +366,7 @@ describe('the cap', () => {
     expect(idsWhere(ledger.db, 'category_id = ? AND owner = ?', A.travel, OWNER)).toHaveLength(MAX_FILTER_EDIT_ROWS)
   })
 
-  it('refuses one row more with a 400, rather than editing the first 5,000', async () => {
+  it('refuses one row more with a 400, rather than editing the first rows it finds', async () => {
     bigLedger(MAX_FILTER_EDIT_ROWS + 1)
     const before = ledger.db.prepare('SELECT COUNT(*) AS n FROM transactions WHERE category_id = ?').get(A.travel)
 

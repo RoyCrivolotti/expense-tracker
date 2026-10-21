@@ -74,10 +74,20 @@ const renamed = (): number[] =>
 describe('an edit on a filter changes exactly the rows the engine’s filter picks', () => {
   it('for 120 random filters, in SQL and in the in-memory repository', async () => {
     let withRows = 0
+    let tooMany = 0
     for (const [i, filter] of filters.entries()) {
       const want = filterTransactions(served.transactions, validateTxnFilter(filter)).map((t) => t.id).sort((a, b) => a - b)
-      if (want.length > 0) withRows += 1
       const patch = { description: `Bulk edit ${i}` }
+      if (want.length > MAX_FILTER_EDIT_ROWS) {
+        // Past the cap an edit is refused whole, in SQL and in memory alike, and nothing is written.
+        const target = { filter: validateTxnFilter(filter), expectedCount: MAX_FILTER_EDIT_ROWS }
+        await expect(repo.bulkUpdateTransactionsByFilter(OWNER, target, patch)).rejects.toMatchObject({ status: 400 })
+        await expect(inMemoryRepository().bulkUpdateTransactionsByFilter(OWNER, target, patch)).rejects.toMatchObject({ status: 400 })
+        expect(renamed(), JSON.stringify(filter)).toEqual([])
+        tooMany += 1
+        continue
+      }
+      if (want.length > 0) withRows += 1
 
       const sql = await repo.bulkUpdateTransactionsByFilter(OWNER, { filter: validateTxnFilter(filter), expectedCount: want.length }, patch)
       const touched = renamed()
@@ -91,13 +101,15 @@ describe('an edit on a filter changes exactly the rows the engine’s filter pic
       expect(double.updated).toBe(want.length)
       expect(doubled.map((t) => t.id).sort((a, b) => a - b), JSON.stringify(filter)).toEqual(want)
     }
-    expect(withRows).toBeGreaterThan(60)
+    expect(withRows).toBeGreaterThan(40)
+    expect(tooMany).toBeGreaterThan(3)
   }, SLOW)
 
   it('and refuses the same filters when the count is one off', async () => {
     for (const filter of filters.slice(0, 30)) {
       const valid = validateTxnFilter(filter)
       const n = filterTransactions(served.transactions, valid).length
+      if (n > MAX_FILTER_EDIT_ROWS) continue
       for (const expectedCount of [n + 1, ...(n > 0 ? [n - 1] : [])]) {
         await expect(repo.bulkUpdateTransactionsByFilter(OWNER, { filter: valid, expectedCount }, { description: 'No' })).rejects.toMatchObject({ status: 409 })
         await expect(
@@ -112,7 +124,7 @@ describe('an edit on a filter changes exactly the rows the engine’s filter pic
     for (const [i, filter] of filters.slice(0, 40).entries()) {
       const valid = validateTxnFilter(filter)
       const listed = (await allPages(repo, OWNER, valid, 50)).map((t: Transaction) => t.id).sort((a, b) => a - b)
-      expect(listed.length).toBeLessThanOrEqual(MAX_FILTER_EDIT_ROWS)
+      if (listed.length > MAX_FILTER_EDIT_ROWS) continue
 
       await repo.bulkUpdateTransactionsByFilter(OWNER, { filter: valid, expectedCount: listed.length }, { description: `Bulk edit ${i}` })
       const touched = renamed()

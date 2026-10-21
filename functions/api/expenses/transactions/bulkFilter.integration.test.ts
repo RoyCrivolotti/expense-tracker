@@ -9,8 +9,10 @@ import type { DatabaseSync } from 'node:sqlite'
 import {
   BULK_REVISION_MESSAGE,
   MAX_BULK_LABEL_LINKS,
+  MAX_FILTER_EDIT_ROWS,
   bulkCountMessage,
   bulkTooManyLinksMessage,
+  bulkTooManyMessage,
 } from '../../../../src/domain/data/bulkEdit'
 import { seedDataset } from '../../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../../src/testing/sqliteD1'
@@ -203,6 +205,40 @@ describe('PATCH /transactions/bulk with a filter', () => {
 
     expect(response.status).toBe(200)
     expect(((await response.json()) as { updated: number }).updated).toBe(3)
+  })
+})
+
+describe('the cap and the count the summary shows', () => {
+  /** `count` rows in a month nothing else is in, on the owner's first account and category. */
+  function fill(count: number): void {
+    const { account_id: accountId, category_id: categoryId } = sqlite
+      .prepare('SELECT account_id, category_id FROM transactions WHERE owner = ? LIMIT 1')
+      .get(OWNER) as { account_id: number; category_id: number }
+    const insert = sqlite.prepare(
+      `INSERT INTO transactions (owner,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
+       VALUES (?,'2030-01-10','2030-01','Cap',?,?,'expense',100,0)`,
+    )
+    sqlite.exec('BEGIN')
+    for (let i = 0; i < count; i += 1) insert.run(OWNER, accountId, categoryId)
+    sqlite.exec('COMMIT')
+  }
+
+  it('lets a filter be edited exactly when the summary can count it, and refuses one it can only say is over', async () => {
+    fill(MAX_FILTER_EDIT_ROWS)
+    const exact = (await (await world.call(getSummary, { path: '/transactions/summary?month=2030-01' })).json()) as Looked & { capped: boolean }
+    expect(exact).toMatchObject({ count: MAX_FILTER_EDIT_ROWS, capped: false })
+
+    const edited = await patch({ filter: { month: '2030-01' }, expectedCount: exact.count, expectedRevision: exact.revision, patch: { description: 'Edited' } })
+    expect(edited.status).toBe(200)
+    expect(await edited.json()).toEqual({ updated: MAX_FILTER_EDIT_ROWS })
+
+    fill(1)
+    const over = (await (await world.call(getSummary, { path: '/transactions/summary?month=2030-01' })).json()) as Looked & { capped: boolean }
+    expect(over).toMatchObject({ count: MAX_FILTER_EDIT_ROWS, capped: true })
+    const refused = await patch({ filter: { month: '2030-01' }, expectedCount: over.count, expectedRevision: over.revision, patch: { description: 'Again' } })
+    expect(refused.status).toBe(400)
+    expect(await message(refused)).toBe(bulkTooManyMessage())
+    expect(rows(OWNER, "description = 'Again'")).toEqual([])
   })
 })
 

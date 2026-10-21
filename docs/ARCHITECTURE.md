@@ -194,7 +194,8 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
 - **A bulk write on a filter is refused unless the user's view still holds, and is one atomic batch.**
   `PATCH /api/expenses/transactions/bulk` with `{ filter, expectedCount, expectedRevision, patch }` and
   `POST /api/expenses/transactions/bulk/labels` find the ids with `idsSql` (the list's WHERE, capped at
-  `MAX_FILTER_EDIT_ROWS`, refused above it and never cut short), compare the count and the revision, and write
+  `MAX_FILTER_EDIT_ROWS`, which is the summary's exact-count cap; refused above it, never cut short, and raised
+  only after rows written per edit are measured on a deployed D1), compare the count and the revision, and write
   through `planBulkUpdate`, which the ids form uses too, so the two cannot apply different rules: a new rule for a
   bulk patch goes there. The batch starts with a guard (`matchGuardSql`, built on `batchGuard.ts`) that fails
   unless exactly the ids that were read still match, so nothing is written when the ledger moved in between; a
