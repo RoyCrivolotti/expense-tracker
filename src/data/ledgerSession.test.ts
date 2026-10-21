@@ -263,6 +263,67 @@ describe('LedgerSession, receipts', () => {
   })
 })
 
+describe('LedgerSession, holding a snapshot', () => {
+  async function restored() {
+    const source = memorySource(dataset)
+    const first = new LedgerSession(source, { policy: WINDOWED })
+    await first.open()
+    const held = first.getState().held!
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    source.calls.length = 0
+    session.restore(held, newest)
+    return { source, session, held }
+  }
+
+  it('shows what was kept and says so', async () => {
+    const { session, held } = await restored()
+    expect(session.getState()).toMatchObject({ held, viewed: newest, offline: true, error: null })
+  })
+
+  it('reads nothing when the month shown changes, but follows it', async () => {
+    const { source, session } = await restored()
+    await session.view(months[5]!)
+    expect(source.calls).toEqual([])
+    expect(session.getState().viewed).toBe(months[5])
+    expect(session.getState().hydrating).toBe(false)
+  })
+
+  it('refuses a write, so nothing shown offline is changed', async () => {
+    const { source, session, held } = await restored()
+    session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 1 } }))
+    expect(session.getState().held).toBe(held)
+    expect(source.calls).toEqual([])
+  })
+
+  it('asks for no receipt lists', async () => {
+    const { source, session } = await restored()
+    session.loadReceipts(Object.keys(session.getState().held!.attachmentCounts).map(Number))
+    await flush()
+    expect(source.calls).toEqual([])
+  })
+
+  it('leaves the snapshot when a refresh reads, and takes the new ledger', async () => {
+    const { source, session } = await restored()
+    source.move('r9')
+    await session.refresh()
+    expect(session.getState().offline).toBe(false)
+    expect(session.getState().held!.revision).toBe('r9')
+  })
+
+  it('stays on the snapshot when a refresh cannot read', async () => {
+    const { source, session, held } = await restored()
+    source.readReferencePart = () => Promise.reject(new Error('offline'))
+    await expect(session.refresh()).rejects.toThrow('offline')
+    expect(session.getState()).toMatchObject({ held, offline: true })
+  })
+
+  it('is online after an ordinary open', async () => {
+    const session = new LedgerSession(memorySource(dataset), { policy: WINDOWED })
+    await session.open()
+    expect(session.getState().offline).toBe(false)
+  })
+})
+
 describe('LedgerSession, a month that cannot be read', () => {
   it('reports the failure, stops hydrating and keeps what it holds, without rejecting', async () => {
     const source = memorySource(dataset)

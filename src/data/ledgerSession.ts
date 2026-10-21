@@ -19,8 +19,8 @@ import {
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
 import { cascadeOf } from './ledgerCascade'
-import { datasetOfHeld, reconcileHeld } from './ledgerReconcile'
-import { type Epochs, NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
+import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
+import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
 
 export interface SessionState {
   held: HeldLedger | null
@@ -30,6 +30,8 @@ export interface SessionState {
   hydrating: boolean
   /** Why the last read in the background failed, or null. */
   error: string | null
+  /** True while what is held is a snapshot: nothing is read, nothing is written, and a refresh may end it. */
+  offline: boolean
 }
 
 export interface SessionOptions {
@@ -54,6 +56,15 @@ export function rangesOfMonths(months: readonly string[]): MonthRange[] {
   return ranges
 }
 
+/** The resources a patch wrote to, whose reads that started before it are now out of date. */
+function resourcesTouched(done: Reconciled): Resource[] {
+  return [
+    ...(done.changed.reference ? (['reference'] as const) : []),
+    ...(done.changed.rows ? (['rows'] as const) : []),
+    ...(done.stale.length > 0 ? (['cube'] as const) : []),
+  ]
+}
+
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 /**
@@ -62,7 +73,7 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
  * overtook (`ledgerResources.ts`). `subscribe` and `getState` are what a screen reads it through.
  */
 export class LedgerSession {
-  private state: SessionState = { held: null, viewed: '', hydrating: false, error: null }
+  private state: SessionState = { held: null, viewed: '', hydrating: false, error: null, offline: false }
   private epochs: Epochs = NO_EPOCHS
   private readonly stale = new Set<string>()
   private flushing = false
@@ -94,7 +105,15 @@ export class LedgerSession {
   async open(viewed?: string): Promise<void> {
     const parts = await readLedgerParts(this.source, this.readOptions(viewed ?? (this.state.viewed || undefined)))
     const held = holdParts(parts)
-    this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null })
+    this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null, offline: false })
+  }
+
+  /**
+   * Holds a snapshot instead of reading: the screens show what was kept, the months not held stay as sums, and
+   * a write is refused. `refresh` leaves this state once it reads.
+   */
+  restore(held: HeldLedger, viewed: string): void {
+    this.set({ held, viewed, error: null, offline: true })
   }
 
   private readOptions(viewed: string | undefined) {
@@ -119,7 +138,7 @@ export class LedgerSession {
       const current = stillCurrent(started, this.epochs)
       const held = this.state.held ? mergeRead(this.state.held, read, current) : read
       if (current.cube) this.stale.clear()
-      this.set({ held, error: null })
+      this.set({ held, error: null, offline: false })
       if (current.reference && current.rows && current.cube) return
     }
   }
@@ -134,6 +153,7 @@ export class LedgerSession {
     if (!held) return
     const wanted = wantedMonths(held, month, this.policy.dataMonths)
     const missing = missingMonths(held, wanted)
+    if (this.state.offline) return
     if (missing.length === 0) return this.set({ held: this.tidy(touchMonths(held, wanted)) })
     this.set({ hydrating: true })
     try {
@@ -174,17 +194,12 @@ export class LedgerSession {
    */
   patch(patch: (dataset: ExpenseDataset) => ExpenseDataset): void {
     const held = this.state.held
-    if (!held) return
+    if (!held || this.state.offline) return
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
     if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return
-    const touched: Array<'reference' | 'rows' | 'cube'> = [
-      ...(done.changed.reference ? (['reference'] as const) : []),
-      ...(done.changed.rows ? (['rows'] as const) : []),
-      ...(done.stale.length > 0 ? (['cube'] as const) : []),
-    ]
-    this.epochs = bump(this.epochs, touched)
+    this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     this.set({ held: done.held })
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
@@ -203,7 +218,7 @@ export class LedgerSession {
   /** `again` reads a list that is held too, for one that a write left partial. */
   private async readReceipts(ids: readonly number[], again: boolean): Promise<void> {
     const held = this.state.held
-    if (!held) return
+    if (!held || this.state.offline) return
     const wanted = (again ? [...ids] : receiptsToRead(held, ids)).filter((id) => !this.readingReceipts.has(id))
     for (const id of wanted) this.readingReceipts.add(id)
     try {
