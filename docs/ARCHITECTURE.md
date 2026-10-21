@@ -184,8 +184,11 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   reaches it anyway is read again past the cache. A server without the routes, or a body of another shape, is a
   `PartsUnavailableError`, and the caller loads the whole dataset as it always did. Requests stay inside the route
   bounds (`planRowRanges`, `planCubeRanges`); a month over the row bound cannot be read this way. A ledger built from
-  parts has no receipt list (`reference.attachments` is empty): a row's receipts are read when needed. The demo data
-  sources serve their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
+  parts has no receipt list (`reference.attachments` is empty): the parts count a row's receipts, and a screen that
+  shows them asks for the lists it needs through `model.ensureReceipts` (the edit sheet for its transaction, a claim
+  for its rows, the storage meter for all of them). The row mark reads the count, a claim and the meter wait for
+  the lists, and a model that holds every receipt list never has `ensureReceipts`. The demo data sources serve
+  their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
 - **The screens read one of two row lists, and an engine that is given the wrong one is wrong only when the model
   holds a window.** `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what
   every engine that reads dates, descriptions, labels or links is given. `sums` (`sumsOf(model)`) adds one row per
