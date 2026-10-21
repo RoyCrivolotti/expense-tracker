@@ -15,7 +15,7 @@ import { makeDataset, makeTransaction } from '../testing/factories'
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { randomLedger } from '../testing/randomLedger'
 import { syntheticLedger } from '../testing/syntheticLedger'
-import { loadLedger } from './ledgerLoader'
+import { loadLedger, readLedgerParts } from './ledgerLoader'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 
@@ -215,5 +215,33 @@ describe('loadLedger, when the sums are too many for one request', () => {
     const source = memorySource(adversarialLedger())
     source.readCubePart = () => Promise.reject(new Error('network'))
     await expect(loadLedger(source, { policy: WINDOWED })).rejects.toThrow('network')
+  })
+})
+
+describe('readLedgerParts', () => {
+  const dataset = adversarialLedger()
+
+  it('returns the parts as they were read, with the sums of every month when it is windowed', async () => {
+    const parts = await readLedgerParts(memorySource(dataset), { policy: WINDOWED })
+    expect(parts.rows.length).toBeGreaterThan(0)
+    expect(parts.cube.flatMap((read) => read.cells).length).toBeGreaterThan(0)
+    expect(parts.reference.revision).toBe('r0')
+  })
+
+  it('reads the months the caller names, for a caller that holds more than one window', async () => {
+    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+    const named = [months[2]!, months[3]!, months.at(-1)!]
+    const source = memorySource(dataset)
+    const parts = await readLedgerParts(source, { policy: WINDOWED, hydrate: () => named })
+    const held = new Set(parts.rows.flatMap((read) => read.transactions.map((t) => t.budgetMonth)))
+    expect([...held].sort()).toEqual(expect.arrayContaining(named))
+    expect(parts.cube.length).toBeGreaterThan(0)
+  })
+
+  it('is what loadLedger assembles', async () => {
+    const loaded = await loadLedger(memorySource(dataset), { policy: WINDOWED })
+    const parts = await readLedgerParts(memorySource(dataset), { policy: WINDOWED })
+    expect(loaded.rowCount).toBe(parts.reference.rowCount)
+    expect(loaded.revision).toBe(parts.reference.revision)
   })
 })
