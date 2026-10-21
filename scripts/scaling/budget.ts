@@ -1,8 +1,7 @@
 /**
  * The arithmetic behind a measurement run on a deployed database: what the Free plan allows per day, what
  * one exercise may spend of it, and what a seed of N transactions costs in rows written. Pure, so the plan
- * can be printed and checked without a token. The reasoning is in docs/SCALING.md, "Measuring on a deployed
- * system".
+ * can be printed and checked without a token. See docs/MEASURING.md.
  */
 import type { ExpenseDataset, Transaction } from '../../src/domain/types'
 
@@ -117,7 +116,7 @@ export function seedBudget(dataset: ExpenseDataset): SeedBudget {
   }
 }
 
-/** Rows read by one pass over the read routes, per transaction, as estimated from the plans (docs/SCALING.md). */
+/** Rows read by one pass over the read routes, per transaction, as estimated from the query plans. */
 export const READS_PER_TRANSACTION = {
   dataset: 1.1,
   reference: 1.1,

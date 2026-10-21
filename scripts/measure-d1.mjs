@@ -8,8 +8,8 @@
  *
  * Anything that writes needs --write and --confirm <database>, and only the development database named in
  * config/dev.json is ever accepted. The Cloudflare token is read from CLOUDFLARE_API_TOKEN (with
- * CLOUDFLARE_ACCOUNT_ID) and is never printed or stored. The plan, the budget and the proof that nothing else
- * was touched are in docs/SCALING.md, "Measuring on a deployed system".
+ * CLOUDFLARE_ACCOUNT_ID) and is never printed or stored. The rules, the budget and the proof that nothing else
+ * was touched are in docs/MEASURING.md.
  *
  * This file only wires the real filesystem, network and route handlers into scripts/scaling/commands.ts,
  * where the logic is and where it is tested. Run it through tsx (the way seed:scenarios is): the route

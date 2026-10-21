@@ -1,26 +1,20 @@
 # Deployment — expense-tracker
 
-## URL
+## URL and DNS (one-time)
 
-| Surface | URL | Cloudflare Pages project |
-| --- | --- | --- |
-| Expense tracker | **https://expenses.crivolotti.com** | `expense-tracker` |
-
-## DreamHost DNS (one-time)
+The app is one Cloudflare Pages project, named `expense-tracker` unless `EXPENSE_PROJECT_NAME` says otherwise (`scripts/deploy.sh`). Add `<your-hostname>` as a custom domain on it and point your DNS at the project:
 
 | Record name | Type | Target |
 | --- | --- | --- |
-| `expenses` | CNAME | `expense-tracker-3hq.pages.dev` |
-
-Add **expenses.crivolotti.com** as a custom domain on the expense-tracker Pages project.
+| `<subdomain>` | CNAME | `<your-pages-project>.pages.dev` |
 
 ## Cloudflare Access
 
-Add **expenses.crivolotti.com** to the **roy-admin** Access application.
+Add `<your-hostname>` to your Cloudflare Access application. The application names the scripts use are in `config/staging-access.json`.
 
 **Authentication only:** set the Allow policy to **Login methods → Google** (any Google account may sign in). The app enforces who may use the tracker via D1 (`allowed_users`), not per-email Access rules.
 
-One-time dashboard change: Workers & Pages → Access → roy-admin → Policies → Allow → replace email rules with a Google identity provider rule.
+One-time dashboard change: Zero Trust → Access → your application → Policies → Allow → replace email rules with a Google identity provider rule.
 
 Or, with a token that has Zero Trust Access edit scope (the CI `CLOUDFLARE_API_TOKEN` usually works):
 
@@ -30,7 +24,7 @@ CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 
 **Sign out:** Hub menu and Settings show a link to `/cdn-cgi/access/logout`, which clears the Cloudflare Access session cookie only (D1 allowlist unchanged). Optional redirect: `/cdn-cgi/access/logout?redirect_url=<encoded-url>`.
 
-**Staging:** private staging uses the **roy-admin-staging** Access app and **https://stg-expenses.crivolotti.com** (`roy-expenses-stg`). See [docs/OPS.md](./OPS.md) for the full staging chain and setup scripts.
+**Staging:** staging has its own Pages project, hostname and Access application. See [docs/OPS.md](./OPS.md) for the setup scripts.
 
 ## App access control (D1 + in-app admin)
 
@@ -47,15 +41,15 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
 
-**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (Expense Tracker, Financial documents, Legacy site, On-call pay); **Revoke all** removes the user and deletes expense data (including `goal_scenarios`). New approvals grant **Expense Tracker only** by default — enable finance/legacy/oncall manually. Settings shows a badge when requests are pending.
+**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (the groups are listed in `src/domain/accessGroups.ts`); **Revoke all** removes the user and deletes expense data (including `goal_scenarios`). New approvals grant the `expenses` group only by default; enable the others manually. Settings shows a badge when requests are pending.
 
-**Group access (hide-only MVP):** D1 table `user_group_grants` stores which resource groups each user may see. Hub cards and navigation filter client-side. Expense API requires the `expenses` group. Direct URLs to admin-hub HTML still work for anyone on Cloudflare Access (server enforcement deferred).
+**Group access:** D1 table `user_group_grants` stores which resource groups each user may see. The cross-app navigation filters client-side, and the expense API requires the `expenses` group.
 
-**R2 backups:** daily snapshots under `{email}/` in `roy-expenses-backups` are not deleted on revoke (manual cleanup if needed).
+**R2 backups:** daily snapshots under `{email}/` in the backups bucket are not deleted on revoke (manual cleanup if needed).
 
 ## D1 + legacy ALLOWED_EMAILS
 
-D1 binding: `roy-expenses`. `ALLOWED_EMAILS` Pages env is a **bootstrap fallback** when `allowed_users` is empty, but only if `ALLOW_BOOTSTRAP=1` is also set. After bootstrap, D1 is authoritative and the env fallback is ignored.
+D1 binding: `DB`, bound to `<your-d1-database>`. `ALLOWED_EMAILS` Pages env is a **bootstrap fallback** when `allowed_users` is empty, but only if `ALLOW_BOOTSTRAP=1` is also set. After bootstrap, D1 is authoritative and the env fallback is ignored.
 
 ```bash
 npm run bootstrap:allowed-users
@@ -64,7 +58,7 @@ npm run sync:access-env
 
 ## CI
 
-Push to `main` → verify → sync access env → deploy **production** (`expense-tracker`) and **staging** (`roy-expenses-stg`) → deploy backup cron worker.
+Push to `main` → verify → sync access env → deploy the **production** and **staging** Pages projects → deploy backup cron worker.
 
 Pull requests → verify + deploy **staging** only (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
 
@@ -84,8 +78,8 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 ## Migrations
 
 ```bash
-npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
-npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
+npx wrangler d1 execute <your-d1-database> --remote --file=migrations/NNNN_name.sql
+npx wrangler d1 execute <your-d1-database> --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
 `npm run migrate -- <database>` does the same with the checks below built in, and writes nothing unless
@@ -115,12 +109,11 @@ production migration left waiting for approval holds the queue, and rejecting it
 
 The same holds for what the API sends. An installed app keeps its old code until its owner taps the update banner, and re-reads the data meanwhile, so a field the running client reads is dropped in a later release, once no client reads it. `annualContributionGrowth` was removed from scenarios, and the API still sends it as 0 (`GoalScenarioDto` in `functions/_shared/rows.ts`) for one release: without it a client opened before the deploy multiplies `undefined` into every projection and the Goals tab goes to NaN until reload.
 
-The deploy applies migrations through `0038_description_norm.sql` and records each file in `_migrations` by its name without `.sql`. By hand, `npm run migrate:dev` does that for the dev database and `npm run migrate -- roy-expenses --apply` for production. Do not run a migration's file with `wrangler d1 execute` on its own: it applies the change without the record, and the next deploy tries to apply it again and fails with a duplicate column. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
+The deploy applies migrations through `0038_description_norm.sql` and records each file in `_migrations` by its name without `.sql`. By hand, `npm run migrate:dev` does that for the dev database and `npm run migrate -- <your-d1-database> --apply` for production. Do not run a migration's file with `wrangler d1 execute` on its own: it applies the change without the record, and the next deploy tries to apply it again and fails with a duplicate column. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happens.
 
-**Check what a database actually has before trusting this line.** It has been wrong: on
-2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
-been applied there, while this section read as though it had. The record is the thing to
-query, and the schema is the thing that settles it:
+**Check what a database actually has before trusting the record.** `_migrations` can be wrong, for
+example when a file was applied by hand and never recorded, or recorded without having run. The record is
+the thing to query, and the schema is the thing that settles it:
 
 ```bash
 npx wrangler d1 execute <db> --remote --command="SELECT name FROM _migrations ORDER BY name"
@@ -131,10 +124,8 @@ npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_i
 from `migrations/`, reads the real one's columns over wrangler, and lists what is missing with the
 migration that adds it (and anything the database has that no migration makes). It only reads, and it
 exits 1 on a difference and 2 when the database could not be read. Run it after applying a migration
-and before trusting `_migrations` for anything: the record has been wrong twice, with `0013` recorded
-and `goal_scenarios.life_events` absent on 2026-09-22 (scenario saves failed), and `0026` recorded and
-`settings.investment_category_id` absent, found on 2026-10-03. It compares column names only, not types,
-defaults or indexes.
+and before trusting `_migrations` for anything: a migration recorded as applied with its column absent
+shows up here as a missing column. It compares column names only, not types, defaults or indexes.
 
 ### If a migration goes wrong
 
@@ -201,9 +192,9 @@ Two things make that safer rather than replacing it:
 **Write new backfills scoped.** Table rebuilds (`DROP TABLE` + rename) cannot be made safe this way,
 which is why the tracking table, not idempotency, carries the guarantee.
 
-**One-time seeding, for the two databases that are already fully migrated.** Deliberately not a
+**One-time seeding, for a database that was fully migrated before `0020` existed.** Deliberately not a
 migration — a brand-new database must genuinely execute `0001`–`0019`. Apply `0020` first, then, once
-per existing database (`roy-expenses`, `roy-expenses-dev`):
+per such database:
 
 ```bash
 npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES \
@@ -220,23 +211,21 @@ npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migratio
 `0001` onward to a populated database means handing it `0003`'s four `DROP TABLE`s.
 
 It refuses on either of two signals, because the table being *empty* is not the only way the
-record can be wrong. `roy-expenses-dev` reached a state where `_migrations` held exactly
-`0020_migrations_table` and nothing else, having had `0020` applied but never the seed above.
-Every earlier file then looked pending, and `migrate:dev` started re-applying `0001`. It failed
-on `INSERT INTO settings (id)` — the `settings` table has had no `id` column since `0003`
-rebuilt it — and that failure, not any guard, is what stopped the run two files short of `0003`.
-So the check is now: any pending file numbered *below* the highest recorded one means the
+record can be wrong. A database that had `0020` applied but never the seed above holds exactly
+`0020_migrations_table` and nothing else, so every earlier file looks pending and `migrate:dev` would
+start re-applying `0001`. Only a failure on `INSERT INTO settings (id)` (the `settings` table has had no
+`id` column since `0003` rebuilt it) would stop it, two files short of `0003`, which is not a guard.
+So the check is: any pending file numbered *below* the highest recorded one means the
 record is incomplete, since a database cannot have reached `0020` without them; and an empty
 record on a database that already has a `transactions` table means the same thing.
 
-> **If `--file` fails with `fetch failed`, use `--command` instead.** Applying `0015`–`0019` to
-> production hit a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, ~13s in,
-> straight after "Uploading complete". It was specific to the *import* path: `--command` queries
-> against the same database in the same shell succeeded in under a millisecond, the same files
-> imported cleanly into `roy-expenses-dev` minutes earlier, and upgrading to wrangler 4.131.1 changed
-> nothing. For a file that has not been applied yet, running its statements individually through
-> `--command` reaches the same end state — strip the `--` comments, split on `;`, and run them in
-> order, then record it in `_migrations` yourself. That is how production took `0015`–`0019`.
+> **If `--file` fails with `fetch failed`, use `--command` instead.** `wrangler d1 execute --file` can
+> fail with a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, straight after
+> "Uploading complete". It is specific to the *import* path: `--command` queries against the same
+> database in the same shell succeed, and upgrading wrangler did not change it. Node 24 is the suspect,
+> so try Node 22 first. For a file that has not been applied yet, running its statements individually
+> through `--command` reaches the same end state — strip the `--` comments, split on `;`, and run them in
+> order, then record it in `_migrations` yourself.
 >
 > Only ever do this for a *pending* file. On an already-applied one it skips past the error that
 > would have stopped a `--file` run — see the warning about `0003` and `0012` above.
@@ -249,7 +238,7 @@ record on a database that already has a `transactions` table means the same thin
 
 `0010_installment_due_day.sql` adds the nullable `due_day_of_month` column on `installment_plans` (existing rows stay `NULL`). Apply it before (or with) the code deploy that reads it: the column dates each suggested and auto-created installment.
 
-`0011_user_preferences.sql` adds three nullable `settings` columns — `currency_code`, `number_locale`, `budget_rollover_day` — so the tracker is not tied to one owner's euros-and-13th conventions. `NULL` falls back to the built-in defaults (EUR, `de-DE` grouping, rollover day 1 = plain calendar months). The migration's final `UPDATE` keeps the primary owner on the historical day-13 rollover: replace the placeholder `owner@example.com` with the real Access email before applying to production. Users change all three later under Settings → Money & months (also set during onboarding).
+`0011_user_preferences.sql` adds three nullable `settings` columns — `currency_code`, `number_locale`, `budget_rollover_day` — so currency, number format and the budget period are not fixed to one convention. `NULL` falls back to the built-in defaults (EUR, `de-DE` grouping, rollover day 1 = plain calendar months). The migration's final `UPDATE` sets a day-13 rollover for the placeholder owner `owner@example.com`: replace the placeholder with your Access email before applying, or delete the statement to keep calendar months. Users change all three later under Settings → Money & months (also set during onboarding).
 
 `0012_wealth_checkins.sql` adds three new tables (`wealth_accounts`, `wealth_checkins`, `wealth_checkin_entries`) and a `plan_start_date` column on `goal_scenarios`. The new tables start empty (accounts are created through the Goals UI). The `plan_start_date` backfill is owner-agnostic — no placeholder substitution needed.
 
@@ -271,7 +260,7 @@ record on a database that already has a `transactions` table means the same thin
 
 `0022_backfill_completed_installment_plans.sql` flips `active` to `0` on any installment plan whose linked, non-cancelled transactions already cover every installment. Recording a plan's final installment now does this automatically going forward (see `maybeCompletePlan` in `functions/_shared/dbWrite.ts`); this is the one-time catch-up for plans that finished before that code shipped. Idempotent — running it again against an already-caught-up database updates zero rows. Owner-agnostic — no placeholder substitution needed.
 
-`0023_drop_goal_inputs.sql` drops the `goal_inputs` table and the `liquid_net_worth_cents` column on `settings`. Both were workbook-import leftovers that only ever seeded the first unsaved Goals draft: every saved scenario carries its own house and return assumptions, and a new plan now starts from the latest wealth check-in. Owner-agnostic, no backfill, and the data is gone with it. **Apply it with or after the code deploy**, the other way round from `0021`: the previous release selects from `goal_inputs` on every dataset load and would 500 against a database that no longer has it.
+`0023_drop_goal_inputs.sql` drops the `goal_inputs` table and the `liquid_net_worth_cents` column on `settings`. Both were import leftovers that only ever seeded the first unsaved Goals draft: every saved scenario carries its own house and return assumptions, and a new plan now starts from the latest wealth check-in. Owner-agnostic, no backfill, and the data is gone with it. **Apply it with or after the code deploy**, the other way round from `0021`: the previous release selects from `goal_inputs` on every dataset load and would 500 against a database that no longer has it.
 
 `0024_goal_scenario_active.sql` adds `is_active INTEGER NOT NULL DEFAULT 0` on `goal_scenarios`, backfills each owner's newest scenario as their plan (what the app was already comparing against, so nothing moves on deploy), and adds a partial unique index so an owner can never hold two. The backfill is scoped to owners with no plan yet. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — creating and activating a scenario both write the column.
 
@@ -322,14 +311,6 @@ Use the first (the next read that needs the values refills them, two written row
 
 **A dev database that is ahead of `main`.** The deploy's schema job compares each database's columns with what `migrations/` on `main` produces and fails on an extra one (`EXTRA transactions.description_norm`), which stops every deploy, not only this one, until the migration is merged. Applying a migration to dev by hand so that a preview can save is the documented way to try a change (docs/OPS.md), so do it when the merge is near, or remove the column again if it is not.
 
-## Old URL
-
-`https://roy-admin.crivolotti.com/expenses` redirects here (301 in admin-hub `_redirects`).
-
-## Public repo?
-
-Repository visibility and git history hygiene checklist is kept locally (not in this repo).
-
 ## Receipt storage (R2)
 
 Receipt photos and PDFs attached to a transaction. Bytes live in R2; only metadata lives in D1.
@@ -359,7 +340,7 @@ Daily cron exports each owner's full dataset to R2 as JSON. **Pages does not sup
 **Cost:** one cron invocation per day fits Cloudflare Workers free tier (100k requests/day). R2 free tier (10 GB-month storage, 1M Class A ops) is ample; policy defaults in [`config/backup-policy.json`](../config/backup-policy.json) cap total backup storage at **512 MB** (~5% of free tier) and retain **14 days** of daily snapshots. Oldest files are deleted first when over budget.
 
 1. Enable R2 on the account (dashboard).
-2. Run `npm run setup:backups` — creates bucket `roy-expenses-backups` and binds `BACKUPS` on the expense-tracker Pages project (production + preview).
+2. Run `npm run setup:backups` — creates the backups R2 bucket (its name is set in `scripts/setup-backup-infrastructure.mjs`) and binds `BACKUPS` on the expense-tracker Pages project (production + preview).
 3. Deploy the cron worker: `npm run deploy:backup-cron` (also runs automatically on push to `main` via CI).
 4. Backups are stored at `{owner-email}/{YYYY-MM-DD}.json`.
 
@@ -371,7 +352,7 @@ Restore: download JSON from R2 and re-import via `wrangler d1 execute` or a one-
 
 If the Worker's `BACKUPS` binding is missing, the handler logs a warning and skips (no deploy failure).
 
-**Verify:** Cloudflare dashboard → Workers & Pages → expense-backup-cron → Triggers (cron `0 4 * * *` UTC). After the first run, check R2 bucket `roy-expenses-backups`. To test locally: `npx wrangler dev --config workers/backup-cron/wrangler.toml --test-scheduled` then `curl "http://localhost:8787/cdn-cgi/handler/scheduled"`.
+**Verify:** Cloudflare dashboard → Workers & Pages → expense-backup-cron → Triggers (cron `0 4 * * *` UTC). After the first run, check the backups R2 bucket. To test locally: `npx wrangler dev --config workers/backup-cron/wrangler.toml --test-scheduled` then `curl "http://localhost:8787/cdn-cgi/handler/scheduled"`.
 
 **Backup alerts (email + logs):** large snapshots and bucket usage above **80%** of the cap (`bucketAlertThresholdFraction` in `config/backup-policy.json`) notify via the `BackupAlerts` port. Configure recipients in gitignored `config/backup-alerts.json` (copy from `backup-alerts.example.json`), then:
 

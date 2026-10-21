@@ -9,7 +9,7 @@ npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
 npm run verify         # symlinks, migration docs, PII check, lint, typecheck, test:coverage, build, bundle budget
-PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
+PARITY_TESTS=1 npm test   # optional parity test, needs a private export (see "Local parity tests")
 ```
 
 ## Layers
@@ -57,7 +57,7 @@ against real SQL without Cloudflare. It rejects a statement that binds more than
 functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
 results are in [SCALING.md](./SCALING.md). `SCALING_MEASURE=1 npx vitest run functions/_shared/ledgerParts.scaling.test.ts`
 does the same for the ledger parts routes, and `functions/_shared/ledgerPartPlans.test.ts` runs each of their statements
-through `EXPLAIN QUERY PLAN`. The measuring tooling in `scripts/scaling/` is tested over the same stand-in (see [MEASURING.md](./MEASURING.md)).
+through `EXPLAIN QUERY PLAN`.
 
 ## Real-browser checks (manual)
 
@@ -115,4 +115,4 @@ full PR workflow.
 
 ## Local parity tests
 
-`src/domain/data/parseWorkbookCsv.parity.test.ts` runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at the private workbook export. CI sets neither, so parity is optional and local-only.
+`src/domain/data/parseWorkbookCsv.parity.test.ts` compares the CSV importer with a spreadsheet export that is not in this repo. It runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at that export. CI sets neither, so it is skipped there.

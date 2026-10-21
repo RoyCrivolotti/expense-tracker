@@ -10,7 +10,7 @@ const n = (value: number): string => value.toLocaleString('en-US')
 export function renderPlan(budget: SeedBudget, largest: { requested: number; budget: SeedBudget }): string[] {
   const { rowsWrittenPerDay: writeLimit, rowsReadPerDay: readLimit } = FREE_PLAN
   return [
-    'Free plan, per UTC day and per account (docs/SCALING.md, "Measuring on a deployed system"):',
+    'Free plan, per UTC day and per account (docs/MEASURING.md):',
     `  rows written ${n(writeLimit)}, rows read ${n(readLimit)}, ${FREE_PLAN.queriesPerInvocation} queries per invocation, ${FREE_PLAN.cpuMsPerRequest} ms CPU per request`,
     'This exercise may spend, in total:',
     `  rows written ${n(CAPS.rowsWrittenTotal)} (${n(CAPS.rowsWrittenPerDay)} on any one day), rows read ${n(CAPS.rowsReadTotal)} (${n(CAPS.rowsReadPerDay)} a day)`,

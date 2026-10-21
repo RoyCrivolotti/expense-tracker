@@ -644,8 +644,6 @@ Built:
   browser's own matches. See "Description autocomplete". Nothing in the app calls it yet;
 - usage counts per category, account, flag and label (`GET /api/expenses/usage`). See "Usage counts". Nothing in the
   app calls it yet;
-- a plan and tooling for measuring on a deployed system ([MEASURING.md](./MEASURING.md)); tested against the SQLite stand-in,
-  not yet run against Cloudflare;
 
 Not built: the compact read, and the client side of the design. Planned
 work, in dependency order:
@@ -666,7 +664,7 @@ work, in dependency order:
 - `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns,
   with fixed, quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative
   investments, cancelled rows and refunds. Placeholder data only.
-- `src/testing/inMemoryLedgerParts.ts`: the ledger parts computed with `partitionPinned` and `buildCells` over a whole
+- `src/domain/ledger/partsOfDataset.ts`: the ledger parts computed with `partitionPinned` and `buildCells` over a whole
   dataset, which the SQL is held to (`dbLedgerParts.parity.test.ts`, over the synthetic, adversarial and random ledgers).
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
   account), the stand-in with a record of every statement it ran (for the query-plan tests), and a seeded generator

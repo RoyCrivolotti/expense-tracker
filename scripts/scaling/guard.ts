@@ -1,7 +1,7 @@
 /**
  * The rules that keep a measurement run off production and off anyone else's rows. Pure functions, so the
  * rules are tested without a token; the command line and the D1 adapter both call them before anything is
- * sent. See docs/SCALING.md, "Measuring on a deployed system".
+ * sent. See docs/MEASURING.md.
  */
 
 /** The production database's name (docs/DEPLOYMENT.md). It is never a valid target, whatever else matches. */

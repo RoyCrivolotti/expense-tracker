@@ -124,7 +124,7 @@ npm run deploy:dev    # staging
 ```
 
 CI deploys `main` automatically. It applies pending migrations first (dev at once, production after your approval in GitHub, each with a restore point), so a PR that adds one needs nothing by hand; see `docs/DEPLOYMENT.md`, "If a migration goes wrong". Every PR gets a staging preview at
-`https://<sanitized-branch>.roy-expenses-stg.pages.dev`, and `deploy-dev.yml` posts that
+`https://<sanitized-branch>.<staging-project>.pages.dev`, and `deploy-dev.yml` posts that
 URL into the PR description itself — don't add a second one by hand.
 
 To preview a branch that has no PR yet, run the workflow by hand:
@@ -221,11 +221,5 @@ in git. A comment earns its place when it stops the next reader breaking somethi
 
 ## Further reading
 
-| Doc | |
-|---|---|
-| [AGENTS.md](AGENTS.md) | Branch and PR workflow |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layering rules |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy, migrations, access control |
-| [docs/OPS.md](docs/OPS.md) | Staging, backups, runbooks |
-| [docs/TESTING.md](docs/TESTING.md) | Coverage gates |
-| [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) | Projection engine |
+[AGENTS.md](AGENTS.md) has the branch and PR workflow and the rules for writing docs.
+[docs/README.md](docs/README.md) lists every doc and who it is for.

@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-async function toApiError(res: Response): Promise<ApiError> {
+export async function toApiError(res: Response): Promise<ApiError> {
   let message = `Request failed (${res.status})`
   try {
     const body = (await res.json()) as { error?: string }
