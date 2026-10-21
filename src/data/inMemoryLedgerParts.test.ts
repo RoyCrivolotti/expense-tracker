@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ValidationError } from '../domain/application/validationError'
 import { MAX_CUBE_CELLS, MAX_ROWS_PER_REQUEST } from '../domain/data/ledgerParts'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
-import { makeDataset, makeTransaction } from '../testing/factories'
+import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
 import { inMemoryLedgerParts } from './inMemoryLedgerParts'
 
 const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
@@ -56,6 +56,16 @@ describe('inMemoryLedgerParts', () => {
     held = { dataset: makeDataset({ transactions: [row(1, '2026-01')] }), revision: 'v2' }
     const after = await live.readReferencePart()
     expect([after.rowCount, after.revision]).toEqual([1, 'v2'])
+  })
+
+  it('lists the receipts of one transaction, and none for a transaction without any', async () => {
+    const withReceipts = makeDataset({
+      transactions: [row(1, '2026-01'), row(2, '2026-01')],
+      attachments: [makeAttachment({ id: 1, transactionId: 1 }), makeAttachment({ id: 2, transactionId: 1 }), makeAttachment({ id: 3, transactionId: 2 })],
+    })
+    const served = inMemoryLedgerParts(() => ({ dataset: withReceipts, revision: 'v1' }))
+    expect((await served.readReceiptsPart(1)).map((a) => a.id)).toEqual([1, 2])
+    expect(await served.readReceiptsPart(9)).toEqual([])
   })
 
   it('accepts a dataset that arrives later', async () => {

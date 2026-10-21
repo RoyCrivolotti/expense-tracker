@@ -41,5 +41,9 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
       if (cells === null) throw new PartTooLargeError(`The range holds more than ${MAX_CUBE_CELLS} cells`)
       return { revision, ...asked, cells }
     },
+    async readReceiptsPart(transactionId: number) {
+      const { dataset } = await current()
+      return dataset.attachments.filter((a) => a.transactionId === transactionId)
+    },
   }
 }

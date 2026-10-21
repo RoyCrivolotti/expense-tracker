@@ -1,6 +1,7 @@
 import type { LedgerPartsSource } from './dataSource'
 import { toApiError } from './apiClient'
 import type { CubePart, MonthRange, MonthRowsPart, ReferencePart } from '../domain/data/ledgerParts'
+import type { TransactionAttachment } from '../domain/types'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 
 const BASE = '/api/expenses'
@@ -58,6 +59,13 @@ function isCubePart(body: unknown): body is CubePart {
   )
 }
 
+function isReceiptList(body: unknown): body is TransactionAttachment[] {
+  return (
+    Array.isArray(body) &&
+    body.every((item) => isObject(item) && typeof item.id === 'number' && typeof item.transactionId === 'number')
+  )
+}
+
 function unavailable(url: string, detail: string): PartsUnavailableError {
   return new PartsUnavailableError(`${url} is not served here (${detail})`)
 }
@@ -107,4 +115,5 @@ export const apiLedgerParts: LedgerPartsSource = {
   readReferencePart: () => readPart(`${BASE}/reference`, isReferencePart),
   readMonthsPart: (range) => readPart(`${BASE}/transactions/months?${query(range)}`, isMonthRowsPart),
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
+  readReceiptsPart: (transactionId) => readPart(`${BASE}/attachments?transactionId=${transactionId}`, isReceiptList),
 }
