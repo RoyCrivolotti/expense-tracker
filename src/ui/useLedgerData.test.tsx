@@ -117,4 +117,22 @@ describe('useLedgerData', () => {
     await new Promise((resolve) => setTimeout(resolve, 10))
     expect(source.calls.length).toBeGreaterThan(0)
   })
+
+  it('has the receipt counts but no receipt lists until a screen asks, then reads them', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const model = result.current.model!
+    const ids = [...new Set(small.attachments.map((a) => a.transactionId))]
+    expect(model.dataset.attachments).toEqual([])
+    expect(model.receiptsPending).toBe(ids.length)
+    expect(model.lookup.attachmentCount(ids[0]!)).toBe(small.attachments.filter((a) => a.transactionId === ids[0]).length)
+    expect(model.lookup.attachments(ids[0]!)).toEqual([])
+    act(() => model.ensureReceipts!([ids[0]!]))
+    await waitFor(() => expect(result.current.model!.lookup.attachments(ids[0]!)).toHaveLength(small.attachments.filter((a) => a.transactionId === ids[0]).length))
+    expect(result.current.model!.receiptsPending).toBe(ids.length - 1)
+    act(() => result.current.model!.ensureReceipts!(ids))
+    await waitFor(() => expect(result.current.model!.receiptsPending).toBe(0))
+    expect(result.current.model!.dataset.attachments).toHaveLength(small.attachments.length)
+  })
 })

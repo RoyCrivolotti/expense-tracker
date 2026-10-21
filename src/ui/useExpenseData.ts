@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import type { OccurrenceGroup } from '../domain/engine'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
@@ -33,6 +34,15 @@ export interface ExpenseModel {
   months: string[]
   /** Set when `dataset.transactions` is not the whole history. */
   history?: FixedHistory
+  /**
+   * Set when `dataset.attachments` holds only the receipt lists that were asked for: how many receipts each
+   * transaction has, for the ones whose list has not been read.
+   */
+  attachmentCounts?: AttachmentCounts
+  /** How many transactions have receipts whose list has not been read. */
+  receiptsPending?: number
+  /** Reads the receipt lists of these transactions into `dataset.attachments`; present with `attachmentCounts`. */
+  ensureReceipts?: (ids: readonly number[]) => void
 }
 
 interface LoadState {
