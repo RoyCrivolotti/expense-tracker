@@ -81,7 +81,8 @@ Read-only queries against a deployed database through the D1 query API:
   never a scan of `transactions`. `sqlite_version()` is refused ("not authorized to use function"), so the version is
   not readable.
 
-Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50.
+Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50. The plan for
+measuring both, and the rows per statement and the table statistics, is in [MEASURING.md](./MEASURING.md).
 
 ## Proposed design
 
