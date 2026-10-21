@@ -20,9 +20,20 @@ function ndjson(chunk: ExportChunk, revision: string): Response {
 }
 
 /**
- * One chunk of one table of the owner's ledger as NDJSON (docs/SCALING.md, "Export"). Follow `X-Export-Next`
- * as `after` until it is absent to read a table; do that for every table to read the ledger. A read: it
- * writes nothing and never moves the revision, and it does not run the installment backfill.
+ * One chunk of one table of the owner's ledger as NDJSON: `?table=<name>&after=<position>&limit=<n>`. Follow
+ * `X-Export-Next` as `after` until it is absent to read a table, and do that for every table in `EXPORT_TABLES`
+ * to read the ledger. Rows are in primary-key order and are the shapes `loadDataset` carries (a transaction with
+ * its derived status and ascending label ids, a check-in with its entries, an attachment as metadata only).
+ *
+ * `limit` defaults to the table's bound in `EXPORT_CHUNK_ROWS` and a larger one is a 400, never trimmed, so one
+ * request stays inside the Free plan's CPU time. A position is the id, a month (`cashActuals`) or
+ * `accountId:month` (`accountStatements`); it carries no owner, which comes from the session. A row inserted or
+ * deleted between two requests never repeats or hides a row that was there throughout, but a walk is not a
+ * snapshot: `X-Export-Revision` is the owner's token read before the rows, so a reader that needs one consistent
+ * state compares it across chunks and starts again when it moved.
+ *
+ * A read: it writes nothing and never moves the revision, and it does not run the installment backfill, so an
+ * instalment that has fallen due and not yet been created (a dataset read creates it) is not in an export.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const { repo, owner } = context.data

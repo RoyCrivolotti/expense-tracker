@@ -176,6 +176,13 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   and in the lists. The statement groups `transactions` by `category_id + 0` on purpose, and
   `usagePlans.test.ts` fails if it ever reads another owner's rows or scans `transactions`.
 
+- **The export reads a ledger in chunks of one table, by primary key, and the dataset is its specification.**
+  `readExportChunk` on `ExpenseRepository` backs `GET /api/expenses/export` and, in the same process, the backup
+  (a worker with D1 and R2 bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore
+  order, `EXPORT_CHUNK_ROWS` bounds every table, and rows are the shapes `rows.ts` maps for the dataset, so a new
+  dataset table or column means a new entry or mapper there and a raise of `EXPORT_FORMAT`. A parity test fails
+  when the chunks put end to end stop equalling `loadDataset`'s table, and a plan test fails on a scan or a sort.
+
 ## Size and complexity
 
 ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12`, `max-depth: 3`
