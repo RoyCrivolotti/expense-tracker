@@ -1,8 +1,7 @@
 # Goals projection model
 
-For contributors working on the Goals tab: the year-by-year wealth projection behind it. Canonical personal assumptions
-live in a private workbook repo; the public app reads saved scenarios
-from D1 only.
+For contributors working on the Goals tab: the year-by-year wealth projection behind it. The app reads saved
+scenarios from D1 only; personal assumptions are not kept in this repo.
 
 ## Overview
 
