@@ -7,8 +7,12 @@
  * The condition is evaluated at that point of the batch, so it sees the batch's own earlier writes and
  * nothing a concurrent request changes after the batch began.
  *
- * Only the stand-in used by the tests has been seen to raise this error. If a deployed D1 words it differently the
- * batch is still undone, but `isGuardFailure` does not recognise it and the request answers 500 and not 409.
+ * D1's REST API returns `integer overflow: SQLITE_ERROR` (code 7500) for it. A Worker binding may put a prefix
+ * such as `D1_ERROR:` in front, which has not been tested, so `isGuardFailure` matches the substring and nothing
+ * more. A batch that fails for any other reason, or with wording that does not contain it, is rethrown unchanged
+ * and answers 500; nothing was written either way, because a failed batch is undone as a whole. The only other
+ * statement in these batches that could overflow is the sum of one payment's covered cents, which amounts in
+ * cents cannot reach.
  */
 const FAILS = 'abs(-9223372036854775808)'
 

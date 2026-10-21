@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import {
+  BULK_CHANGED_MESSAGE,
   BULK_REVISION_MESSAGE,
   MAX_BULK_LABEL_LINKS,
   MAX_FILTER_EDIT_ROWS,
@@ -205,6 +206,86 @@ describe('PATCH /transactions/bulk with a filter', () => {
 
     expect(response.status).toBe(200)
     expect(((await response.json()) as { updated: number }).updated).toBe(3)
+  })
+})
+
+describe('a batch that fails when the edit is written', () => {
+  /**
+   * A world whose database runs `before` just ahead of each batch (a concurrent request landing in the gap) and
+   * words any failure of the batch as `reword` says, as a deployed D1 might word the guard's.
+   */
+  function worldFailing(before: () => void, reword: (message: string) => string, extra?: (d1: D1Database) => D1PreparedStatement): World {
+    const db = migratedDatabase()
+    db.exec('PRAGMA foreign_keys = OFF')
+    seedDataset(db, OWNER, syntheticLedger({ months: 4, perMonth: 15, seed: 1 }))
+    const inner = sqliteD1(db, newStats())
+    const d1 = {
+      prepare: inner.prepare.bind(inner),
+      batch: async (statements: Parameters<D1Database['batch']>[0]) => {
+        // The batches of a write request are the middleware's revision bump and the edit, which has a guard.
+        const isEdit = statements.some((s) => (s as unknown as { sql: string }).sql.includes('abs(-9223372036854775808)'))
+        if (isEdit) before()
+        try {
+          return await inner.batch(isEdit && extra ? [...statements, extra(inner)] : statements)
+        } catch (error) {
+          // No cause on purpose: a D1 that words the failure differently does not carry the original text along.
+          // eslint-disable-next-line preserve-caught-error
+          throw new Error(reword((error as Error).message))
+        }
+      },
+    } as unknown as D1Database
+    sqlite = db
+    return createExpenseWorld(db, d1)
+  }
+
+  const gap = () =>
+    sqlite
+      .prepare(
+        `INSERT INTO transactions (owner,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
+         SELECT owner,date,budget_month,'Late',account_id,category_id,'expense',100,0 FROM transactions
+         WHERE owner = ? ORDER BY budget_month LIMIT 1`,
+      )
+      .run(OWNER)
+
+  async function editInTheGap(failing: World): Promise<{ response: Response; before: unknown[] }> {
+    world = failing
+    const month = firstMonth()
+    const looked = await look(`month=${month}`)
+    // The row that joins the month in the gap makes the guard fail.
+    const before = rows(OWNER)
+    const response = await patch({ filter: { month }, expectedCount: looked.count, expectedRevision: looked.revision, patch: { description: 'Edited' } })
+    return { response, before }
+  }
+
+  it.each([
+    ['integer overflow: SQLITE_ERROR'],
+    ['D1_ERROR: integer overflow: SQLITE_ERROR'],
+  ])('is a 409 when D1 words the guard as %j, and nothing is written', async (wording) => {
+    const { response, before } = await editInTheGap(worldFailing(gap, () => wording))
+
+    expect(response.status).toBe(409)
+    expect(await message(response)).toBe(BULK_CHANGED_MESSAGE)
+    expect(rows(OWNER, "description = 'Edited'")).toEqual([])
+    expect(rows(OWNER).length).toBe(before.length + 1)
+  })
+
+  it('is a clear 500, never a success, when D1 words the guard in a way that is not recognised, and nothing is written', async () => {
+    const { response } = await editInTheGap(worldFailing(gap, () => 'D1_ERROR: some wording nobody has seen'))
+
+    expect(response.status).toBe(500)
+    expect(await message(response)).toBe('Something went wrong on our side')
+    expect(rows(OWNER, "description = 'Edited'")).toEqual([])
+  })
+
+  it('is a 500, not a 409, when the batch fails for a reason that is not the guard', async () => {
+    // A statement that cannot succeed is added to the edit's batch: the guard holds, and the batch fails anyway.
+    const { response } = await editInTheGap(
+      worldFailing(() => undefined, (m) => `D1_ERROR: ${m}`, (d1) => d1.prepare("INSERT INTO labels (owner) VALUES ('x')")),
+    )
+
+    expect(response.status).toBe(500)
+    expect(await message(response)).toBe('Something went wrong on our side')
+    expect(rows(OWNER, "description = 'Edited'")).toEqual([])
   })
 })
 
