@@ -17,7 +17,7 @@ const SNAPSHOT_KEY = 'latest'
 // predates `GoalScenario.homeCarryRate`, which Rent vs buy and the draft read. Version 7 predates
 // `GoalScenario.retirementYears`, which the drawdown chart and the draft read. Version 8 predates
 // `settings.marketVolatility`, which the spread card and the Assumptions card read.
-const SNAPSHOT_VERSION = 9
+export const SNAPSHOT_VERSION = 9
 
 interface SnapshotRecord {
   key: string
@@ -59,7 +59,7 @@ function writeSnapshot(store: IDBObjectStore, record: SnapshotRecord): Promise<v
   })
 }
 
-async function withStore<T>(
+export async function withStore<T>(
   mode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => Promise<T>,
 ): Promise<T> {
