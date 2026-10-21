@@ -13,7 +13,7 @@ import {
   holdRows,
   ledgerOfHeld,
   missingMonths,
-  useMonths,
+  touchMonths,
   wantedMonths,
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
@@ -120,7 +120,7 @@ describe('giving months up again', () => {
   it('treats a month just used as the last to go', async () => {
     const { held } = await windowAround(months.at(-1)!)
     const first = [...held.rows.keys()][0]!
-    const used = useMonths(held, [first])
+    const used = touchMonths(held, [first])
     expect([...used.rows.keys()].at(-1)).toBe(first)
     const next = evictMonths(used, [], held.rows.size - 1)
     expect(next.rows.has(first)).toBe(true)

@@ -13,6 +13,7 @@ import type {
 import { sortedMonths } from '../domain/engine/dates'
 import {
   HYDRATED_DATA_MONTHS,
+  type HydrationPolicy,
   type Ledger,
   type LedgerParts,
   type MonthCell,
@@ -89,15 +90,23 @@ export function ledgerOfHeld(held: HeldLedger): Ledger {
 /**
  * The months to hold as rows for a screen showing `viewed`: the window around it, and the newest window,
  * which what reads the recent past (recent activity, the cash reserve, the pace) does not move away from.
- * Every month for a ledger held in full.
  */
-export function wantedMonths(held: HeldLedger, viewed: string): string[] {
-  if (held.cells === null) return held.months
-  const newest = held.months[held.months.length - 1] ?? viewed
+function windows(months: readonly string[], viewed: string, count: number): string[] {
+  const newest = months[months.length - 1] ?? viewed
   return sortedMonths([
-    ...chooseHydratedMonths(held.months, viewed, HYDRATED_DATA_MONTHS),
-    ...chooseHydratedMonths(held.months, newest, HYDRATED_DATA_MONTHS),
+    ...chooseHydratedMonths(months, viewed, count),
+    ...chooseHydratedMonths(months, newest, count),
   ])
+}
+
+/** Every month for a ledger held in full, otherwise the windows. */
+export function wantedMonths(held: HeldLedger, viewed: string, count: number = HYDRATED_DATA_MONTHS): string[] {
+  return held.cells === null ? held.months : windows(held.months, viewed, count)
+}
+
+/** The months to read as rows for a reference: every month while the ledger is small, otherwise the windows. */
+export function monthsToHold(reference: ReferencePart, viewed: string, policy: HydrationPolicy): string[] {
+  return reference.rowCount <= policy.fullBelowRows ? reference.months : windows(reference.months, viewed, policy.dataMonths)
 }
 
 export function missingMonths(held: HeldLedger, wanted: readonly string[]): string[] {
@@ -115,7 +124,7 @@ export function holdRows(held: HeldLedger, parts: readonly MonthRowsPart[]): Hel
 }
 
 /** Marks months as used just now, so that they are the last to be given up. */
-export function useMonths(held: HeldLedger, months: readonly string[]): HeldLedger {
+export function touchMonths(held: HeldLedger, months: readonly string[]): HeldLedger {
   const rows = new Map(held.rows)
   for (const month of months) {
     const list = rows.get(month)
