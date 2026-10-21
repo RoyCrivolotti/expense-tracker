@@ -6,6 +6,9 @@
  *
  * The condition is evaluated at that point of the batch, so it sees the batch's own earlier writes and
  * nothing a concurrent request changes after the batch began.
+ *
+ * Only the stand-in used by the tests has been seen to raise this error. If a deployed D1 words it differently the
+ * batch is still undone, but `isGuardFailure` does not recognise it and the request answers 500 and not 409.
  */
 const FAILS = 'abs(-9223372036854775808)'
 

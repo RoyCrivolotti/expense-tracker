@@ -54,9 +54,19 @@ interface BulkUpdateBody {
 }
 
 /**
- * Two forms. `{ ids, patch }` edits the rows named. `{ filter, expectedCount, expectedRevision, patch }` edits
- * the rows a filter matches, and only if they are still the ones the user was shown: same count, and nothing
- * written to the ledger since the revision they saw. Edit only; a delete never takes a filter.
+ * Two forms. `{ ids, patch }` edits the rows named (up to 500) and answers `{ updated, transactions }`.
+ * `{ filter, expectedCount, expectedRevision, patch }` edits the rows a filter matches and answers
+ * `{ updated }`; the rows are not sent back, because reading each one back costs three queries.
+ *
+ * The filter is a `TxnFilter` as JSON, validated by the function the paged reads use. `expectedCount` and
+ * `expectedRevision` are what the user was shown: `count` and `revision` of `GET /transactions/summary` for that
+ * filter. The edit is refused with a 400 for an invalid body, filter or patch, an `expectedCount` over
+ * `MAX_FILTER_EDIT_ROWS`, a filter that matches more rows than that, a patch that names another owner's account,
+ * category, flag or payment, or a type change that would leave a withdrawal on an expense. It is refused with a
+ * 409 if anything was written to the ledger since that revision (any write moves it, so an edit in another tab
+ * counts), if the filter now matches another number of rows, if a row is settled by another payment, or if a row
+ * changed in the moment between checking and writing. A refused request still moves the revision, as every write
+ * request does, so look again before retrying. Edit only; a delete never takes a filter.
  */
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const body = await readJson<BulkUpdateBody>(context.request)

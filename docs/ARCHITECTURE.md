@@ -83,6 +83,10 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
     `description` and appears in no response, so a browser that holds the current dataset still holds the
     current dataset.
   - `purgeOwnerData` deletes the row.
+  - The first bump reads the token it replaces, in the same batch, and the middleware gives it to the handler as
+    `context.data.revisionBeforeWrite`. A route that takes the revision its user was looking at
+    (`expectedRevision`) compares it with that, through `assertRevisionUnchanged`, not with the table: by the time a
+    handler runs the table already holds the new token. One more row read per write request.
   - Anything else that writes those tables outside the API (a seed script, SQL by hand, a data
     migration) deletes or replaces the owner's row, as the generators in `scripts/` do.
 
@@ -91,7 +95,7 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   to the JSON that `loadDataset` returns means raising `DATASET_FORMAT` in
   `functions/_shared/datasetEtag.ts`, or browsers keep the old shape under a tag that still
   matches (`datasetEtag.test.ts` fails when the shape moves). Each write request costs two more
-  rows written against the Free plan's daily budget.
+  rows written against the Free plan's daily budget, and one more row read (the token it replaces).
   `datasetRevision.integration.test.ts` derives the list of write routes from the route files and
   fails for a route that has no test case.
 - **The Transactions list renders only the rows near the screen once it passes 300 rows.**
@@ -175,6 +179,19 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   its counts are all zero; a new kind of record that can block a delete means a new count here, in the reference
   and in the lists. The statement groups `transactions` by `category_id + 0` on purpose, and
   `usagePlans.test.ts` fails if it ever reads another owner's rows or scans `transactions`.
+
+- **A bulk write on a filter is refused unless the user's view still holds, and is one atomic batch.**
+  `PATCH /api/expenses/transactions/bulk` with `{ filter, expectedCount, expectedRevision, patch }` and
+  `POST /api/expenses/transactions/bulk/labels` find the ids with `idsSql` (the list's WHERE, capped at
+  `MAX_FILTER_EDIT_ROWS`, refused above it and never cut short), compare the count and the revision, and write
+  through `planBulkUpdate`, which the ids form uses too, so the two cannot apply different rules: a new rule for a
+  bulk patch goes there. The batch starts with a guard (`matchGuardSql`, built on `batchGuard.ts`) that fails
+  unless exactly the ids that were read still match, so nothing is written when the ledger moved in between; a
+  settling batch ends with a second one. The ids form shares the plan, so a flag's auto-label is one statement for
+  the whole list, and a settle conflict that appears after the check undoes the batch (409, nothing written) instead
+  of committing the rows that qualified. The filter is validated by `validateTxnFilter`, the validator of the paged
+  reads, and the in-memory repository answers with the engine's own filter, which `dbBulkEdit.parity.test.ts` holds
+  the SQL to. A delete never takes a filter: the rows a filter matches can change between the look and the click.
 
 ## Size and complexity
 
