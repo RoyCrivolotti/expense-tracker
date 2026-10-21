@@ -18,6 +18,12 @@ export interface Env {
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
   BACKUP_BUCKET_ALERT_FRACTION?: string
+  /** `chunked` switches the cron worker to the resumable backup; anything else keeps the daily snapshot. */
+  BACKUP_MODE?: string
+  /** Upper bound on D1 queries plus bucket calls per cron invocation in chunked mode. */
+  BACKUP_STEP_MAX_OPERATIONS?: string
+  /** Upper bound on rows read and written per cron invocation in chunked mode. */
+  BACKUP_STEP_MAX_ROWS?: string
   /** Comma-separated alert recipients (synced from config/backup-alerts.json). */
   BACKUP_ALERT_TO?: string
   /** Verified sender address on your domain (must match Email Sending setup). */

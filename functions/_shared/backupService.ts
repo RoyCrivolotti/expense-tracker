@@ -6,7 +6,7 @@ import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { createR2BackupStore } from './adapters/r2BackupStore'
 import { ownerBackupKey } from './backupKeys'
 import type { BackupPolicy } from './backupPolicy'
-import { applyPrunePlan, buildPrunePlan } from './backupPrune'
+import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import { resolveBackupPolicy } from './backupPolicy'
 import type { Env } from './env'
 
@@ -22,10 +22,6 @@ export interface BackupDeps {
   store: BackupStore | null
   alerts: BackupAlerts
   policy: BackupPolicy
-}
-
-function totalBytes(objects: { size: number }[]): number {
-  return objects.reduce((sum, obj) => sum + obj.size, 0)
 }
 
 async function backupOwner(
@@ -45,27 +41,6 @@ async function backupOwner(
   }
   await deps.store.put(ownerBackupKey(owner, dateKey), body)
   return { snapshotBytes: body.length }
-}
-
-async function pruneBackups(deps: BackupDeps, dateKey: string): Promise<number> {
-  if (!deps.store) return 0
-  const objects = await deps.store.list()
-  const keys = buildPrunePlan(objects, deps.policy, dateKey)
-  return applyPrunePlan(deps.store, keys)
-}
-
-async function maybeAlertBucketUsage(deps: BackupDeps): Promise<number> {
-  if (!deps.store) return 0
-  const objects = await deps.store.list()
-  const usedBytes = totalBytes(objects)
-  const threshold = deps.policy.maxBucketBytes * deps.policy.bucketAlertThresholdFraction
-  if (usedBytes >= threshold) {
-    await deps.alerts.onBucketNearLimit({
-      usedBytes,
-      limitBytes: deps.policy.maxBucketBytes,
-    })
-  }
-  return usedBytes
 }
 
 export async function runAllBackups(deps: BackupDeps): Promise<BackupRunResult> {

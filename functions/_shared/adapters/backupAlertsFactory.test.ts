@@ -7,6 +7,7 @@ describe('createEmailBackupAlerts', () => {
     const inner = {
       onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
       onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
+      onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
     }
     const alerts = createEmailBackupAlerts(inner, send)
     await alerts.onLargeSnapshot({ owner: 'a@b.com', bytes: 100, limit: 50 })
@@ -25,5 +26,22 @@ describe('createEmailBackupAlerts', () => {
       expect.stringContaining('nearing size cap'),
       expect.stringContaining('900'),
     )
+  })
+
+  it('says a backup did not finish, naming the owner and the day', async () => {
+    const send = vi.fn().mockResolvedValue(undefined)
+    const alerts = createEmailBackupAlerts(consoleBackupAlerts, send)
+    await alerts.onIncompleteBackup({ owner: 'a@b.com', dateKey: '2026-10-15' })
+    expect(send).toHaveBeenCalledWith(
+      expect.stringContaining('did not finish (a@b.com, 2026-10-15)'),
+      expect.stringContaining('Day: 2026-10-15'),
+    )
+  })
+
+  it('logs it when only the console is configured', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await consoleBackupAlerts.onIncompleteBackup({ owner: 'a@b.com', dateKey: '2026-10-15' })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('a@b.com backup for 2026-10-15 was started and never finished'))
+    warn.mockRestore()
   })
 })
