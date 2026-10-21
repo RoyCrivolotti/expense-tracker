@@ -100,18 +100,22 @@ describe('a chunked backup in the bucket', () => {
     expect(keys).toHaveLength(2)
   })
 
-  it('is deleted in one call where the store can, and one object at a time where it cannot', async () => {
+  it('is deleted one object at a time unless a batch is asked for and the store can do it', async () => {
     const deleteMany = vi.fn().mockResolvedValue(undefined)
     const remove = vi.fn().mockResolvedValue(undefined)
     const base = { put: vi.fn(), get: vi.fn(), list: vi.fn() }
 
-    expect(await applyPrunePlan({ ...base, delete: remove, deleteMany }, ['a', 'b', 'c'])).toBe(3)
-    expect(deleteMany).toHaveBeenCalledWith(['a', 'b', 'c'])
-    expect(remove).not.toHaveBeenCalled()
-
-    expect(await applyPrunePlan({ ...base, delete: remove }, ['a', 'b'])).toBe(2)
+    expect(await applyPrunePlan({ ...base, delete: remove, deleteMany }, ['a', 'b'])).toBe(2)
     expect(remove).toHaveBeenCalledTimes(2)
-    expect(await applyPrunePlan({ ...base, delete: remove, deleteMany }, [])).toBe(0)
+    expect(deleteMany).not.toHaveBeenCalled()
+
+    expect(await applyPrunePlan({ ...base, delete: remove, deleteMany }, ['a', 'b', 'c'], true)).toBe(3)
+    expect(deleteMany).toHaveBeenCalledWith(['a', 'b', 'c'])
+    expect(remove).toHaveBeenCalledTimes(2)
+
+    expect(await applyPrunePlan({ ...base, delete: remove }, ['a', 'b'], true)).toBe(2)
+    expect(remove).toHaveBeenCalledTimes(4)
+    expect(await applyPrunePlan({ ...base, delete: remove, deleteMany }, [], true)).toBe(0)
     expect(deleteMany).toHaveBeenCalledOnce()
   })
 })

@@ -67,8 +67,12 @@ export function buildPrunePlan(
   return [...byAge, ...bySize]
 }
 
-export async function applyPrunePlan(store: BackupStore, keys: string[]): Promise<number> {
-  if (keys.length > 0 && store.deleteMany) {
+/**
+ * Deletes the keys. One object at a time unless `batch` is true and the store can delete many in one call, which
+ * only the chunked backup asks for, because pruning one of its days removes dozens of objects.
+ */
+export async function applyPrunePlan(store: BackupStore, keys: string[], batch = false): Promise<number> {
+  if (batch && keys.length > 0 && store.deleteMany) {
     await store.deleteMany(keys)
     return keys.length
   }

@@ -241,7 +241,7 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
     if (outcome === 'complete') finished += 1
   }
   if (finished === 0) return { owners: owners.length, dateKey, complete: true, pruned: 0, usedBytes: 0 }
-  const pruned = await pruneBackups(deps, dateKey)
+  const pruned = await pruneBackups(deps, dateKey, true)
   const usedBytes = await maybeAlertBucketUsage(deps)
   return { owners: owners.length, dateKey, complete: true, pruned, usedBytes }
 }

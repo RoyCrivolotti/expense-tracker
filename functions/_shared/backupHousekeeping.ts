@@ -14,11 +14,11 @@ function totalBytes(objects: { size: number }[]): number {
   return objects.reduce((sum, obj) => sum + obj.size, 0)
 }
 
-export async function pruneBackups(deps: Housekeeping, dateKey: string): Promise<number> {
+export async function pruneBackups(deps: Housekeeping, dateKey: string, batch = false): Promise<number> {
   if (!deps.store) return 0
   const objects = await deps.store.list()
   const keys = buildPrunePlan(objects, deps.policy, dateKey)
-  return applyPrunePlan(deps.store, keys)
+  return applyPrunePlan(deps.store, keys, batch)
 }
 
 export async function maybeAlertBucketUsage(deps: Housekeeping): Promise<number> {
