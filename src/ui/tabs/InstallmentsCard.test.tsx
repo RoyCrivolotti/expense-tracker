@@ -73,6 +73,7 @@ function modelWithPlans(
       flag: () => undefined,
       label: () => undefined,
       attachments: () => [],
+      attachmentCount: () => 0,
       categoryName: () => 'Tech',
       accountName: (id) => accs.find((a) => a.id === id)?.name ?? 'Unknown',
       installmentPlan: (id) => plans.find((p) => p.id === id),

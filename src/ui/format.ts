@@ -9,6 +9,7 @@ import type {
   TransactionAttachment,
   TxnStatus,
 } from '../types'
+import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import { buildReimbursementLinks } from '../domain/engine/reimbursementLinks'
 
 export interface Lookup {
@@ -17,6 +18,8 @@ export interface Lookup {
   flag: (id: number) => Flag | undefined
   label: (id: number) => Label | undefined
   attachments: (transactionId: number) => TransactionAttachment[]
+  /** How many receipts a transaction has, which a model that has not read the list can still say. */
+  attachmentCount: (transactionId: number) => number
   categoryName: (id: number) => string
   accountName: (id: number) => string
   installmentPlan: (id: number) => InstallmentPlan | undefined
@@ -26,7 +29,7 @@ export interface Lookup {
   settledBy: (reimbursementId: number) => Transaction[]
 }
 
-export function buildLookup(dataset: ExpenseDataset): Lookup {
+export function buildLookup(dataset: ExpenseDataset, counts: AttachmentCounts = {}): Lookup {
   const cats = new Map(dataset.categories.map((c) => [c.id, c]))
   const accs = new Map(dataset.accounts.map((a) => [a.id, a]))
   const plans = new Map(dataset.installmentPlans.map((p) => [p.id, p]))
@@ -48,6 +51,7 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
     flag: (id) => flags.get(id),
     label: (id) => labels.get(id),
     attachments: (transactionId) => attachmentsByTxn.get(transactionId) ?? [],
+    attachmentCount: (transactionId) => attachmentsByTxn.get(transactionId)?.length ?? counts[transactionId] ?? 0,
     categoryName: (id) => cats.get(id)?.name ?? 'Uncategorised',
     accountName: (id) => accs.get(id)?.name ?? 'Unknown',
     installmentPlan: (id) => plans.get(id),
