@@ -50,6 +50,10 @@ export interface ExpenseData extends LoadState {
   refreshOutcome: RefreshOutcome
   reload: () => void
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
+  /** Present when the model holds only the months being looked at: tells it which month the screens show. */
+  viewMonth?: (month: string) => void
+  /** True while the rows of the month shown are being read. */
+  hydrating?: boolean
 }
 
 function isOnline(): boolean {
