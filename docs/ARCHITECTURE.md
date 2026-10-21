@@ -175,6 +175,17 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   its counts are all zero; a new kind of record that can block a delete means a new count here, in the reference
   and in the lists. The statement groups `transactions` by `category_id + 0` on purpose, and
   `usagePlans.test.ts` fails if it ever reads another owner's rows or scans `transactions`.
+- **The browser reads the ledger in parts, and the parts count only together.** `loadLedger`
+  (`src/data/ledgerLoader.ts`) reads the reference first and the rows and sums after it. Every part carries the
+  owner's revision token. A part with another token was read after a write, so the reference is read again and only
+  the parts that still carry its token are kept; after three attempts the load throws `LedgerChangedError`, so a
+  ledger that is written to constantly never yields a mix of two states. The browser's HTTP cache does the ETag
+  revalidation: a request that names `If-None-Match` itself skips that cache, so the client sends none, and a 304 that
+  reaches it anyway is read again past the cache. A server without the routes, or a body of another shape, is a
+  `PartsUnavailableError`, and the caller loads the whole dataset as it always did. Requests stay inside the route
+  bounds (`planRowRanges`, `planCubeRanges`); a month over the row bound cannot be read this way. A ledger built from
+  parts has no receipt list (`reference.attachments` is empty): a row's receipts are read when needed. The demo data
+  sources serve their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
 
 ## Size and complexity
 
