@@ -367,7 +367,7 @@ Optional Pages env vars override policy JSON: `BACKUP_RETENTION_DAYS`, `BACKUP_M
 
 If `setup:backups` was run before R2 was enabled, it may have bound `BACKUPS` to a missing bucket and **blocked deploy**. Remove the binding with `node scripts/remove-backups-binding.mjs`, then deploy; re-run `npm run setup:backups` once R2 works.
 
-Restore: download JSON from R2 and re-import via `wrangler d1 execute` or a one-off script.
+Restore: see "Restoring from a backup" below. D1 Time Travel is the first thing to reach for.
 
 If the Worker's `BACKUPS` binding is missing, the handler logs a warning and skips (no deploy failure).
 
@@ -391,3 +391,31 @@ One-time setup (R2 bucket + Pages binding) — uses wrangler OAuth when logged i
 npm run setup:backups
 npm run deploy:backup-cron
 ```
+
+### Chunked backups (off until switched on)
+
+The daily snapshot loads each owner's whole dataset and stringifies it in one invocation, which meets the Free plan's CPU limit as a ledger grows. Chunked mode reads the ledger a chunk of one table at a time and writes it as parts, so an invocation does a bounded amount of work and the next one carries on. It runs only when `BACKUP_MODE` is exactly `chunked` on the worker; anything else keeps the daily snapshot, and merging code that adds the mode deploys the worker in that default.
+
+A day's backup is a folder `{owner}/{YYYY-MM-DD}/` of `part-NNNNNN.ndjson` files, a `state.json` while it runs, and a `manifest.json` written last. **A backup exists when its manifest does.** The manifest lists the parts and the row count of each table, and says `consistent: false` if the ledger was written to while it ran. The single-file snapshot is not written in this mode and is still read.
+
+An invocation spends at most `BACKUP_STEP_MAX_OPERATIONS` calls (D1 queries plus bucket calls; default 44, at most 46 against the Free plan's 50 subrequests) and `BACKUP_STEP_MAX_ROWS` rows (default 10,000). A small ledger needs about twenty calls per owner, so a larger ledger or several owners take more than one invocation, and the daily trigger only starts the day. Set the variable and add continuation triggers together in `workers/backup-cron/wrangler.toml` (a deploy replaces variables that only the dashboard holds), then deploy by hand with `npm run deploy:backup-cron`:
+
+```toml
+[triggers]
+crons = ["0 4 * * *", "*/10 4-6 * * *"]   # the daily start, then every ten minutes until 07:00 UTC
+
+[vars]
+BACKUP_MODE = "chunked"
+```
+
+Switch the mode on before adding triggers: in the default mode every extra trigger would run a whole snapshot. A day that is started and not finished is reported once, the next day, through the backup alerts. Pruning and the size alerts work as before, with a day's folder counted as one backup. To go back, remove the variable and deploy.
+
+### Restoring from a backup
+
+D1 Time Travel is the first way back (see "If a migration goes wrong"). Use a backup when that is not enough: its window has passed, or you want one owner's data rebuilt in a database you can inspect first. The restore only writes SQL; nothing applies it for you.
+
+1. Download the backup with `npx wrangler r2 object get <bucket>/<key> --file backup/<key>`: the `manifest.json` and every part it lists for a chunked backup, or the `{owner}/{date}.json` file for a single-file snapshot.
+2. `npm run restore:backup -- --dir backup --owner <email> --date <YYYY-MM-DD> --out restore.sql` checks a chunked backup against its manifest (every part present at the recorded length, every table's row count) and refuses one that does not add up. `--as <email>` writes the rows under another owner.
+3. Read it, then apply it to a new empty database that has every migration, never to the live one: `npx wrangler d1 execute <new-database> --remote --file=restore.sql` (in a Node 22 shell; see "Migrations"). Rows go in with their ids, in an order that satisfies every reference. A database that already holds the owner's rows stops at the first duplicate.
+
+Not restored: receipt files (a backup holds attachment metadata only, and restored rows get a key that names nothing, so a receipt shows as present with no file behind it), timestamps the app never shows, and instalments that were due but not yet created (the app creates them on its next load).

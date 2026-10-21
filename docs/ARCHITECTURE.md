@@ -183,6 +183,15 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   dataset table or column means a new entry or mapper there and a raise of `EXPORT_FORMAT`. A parity test fails
   when the chunks put end to end stop equalling `loadDataset`'s table, and a plan test fails on a scan or a sort.
 
+- **The resumable backup is a bounded walk of the export, and a backup exists when its manifest does.**
+  `runChunkedBackups` is what the cron worker runs when `BACKUP_MODE` is `chunked`; otherwise `runAllBackups` runs
+  as it always did, and `runScheduledBackup` is the one place that chooses. An invocation spends a budget of calls
+  and rows, always keeps four calls back to finish, writes a part before the state that names it, and writes the
+  manifest last, so a kill at any point leaves a run the next invocation continues. Adding a table to
+  `EXPORT_TABLES` needs a row in `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows
+  that a restore cannot write. Pruning treats a day's folder as one backup. The restore only produces SQL
+  (`npm run restore:backup`); no code path writes a backup back into a database.
+
 ## Size and complexity
 
 ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12`, `max-depth: 3`
