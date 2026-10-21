@@ -294,7 +294,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // height store, the scroll anchor and the component that renders only the rows near the screen):
 // 2.5 KB gzip took the total from 281,374 to 283,885 bytes. Written in-house rather than taken
 // from a library, which would have cost more.
-const TOTAL_MAX_GZIP = 285_000
+//
+// Raised from 285 KB to 286 KB for reading the ledger in parts (the client for the three routes and its shape
+// checks, the planner, the assembler and the loader, all imported on first use, so a browser that loads the whole
+// dataset never fetches them): about 1.1 KB gzip took the total from 283,885 to 284,990 bytes, 10 under the old
+// limit. The entry chunk grew by 67 bytes. No new library.
+const TOTAL_MAX_GZIP = 286_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

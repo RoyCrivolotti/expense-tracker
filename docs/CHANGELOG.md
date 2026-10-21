@@ -1,6 +1,6 @@
 # Changelog (product-facing)
 
-High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
+For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
 ## October 2026 (A long Transactions list draws only what is on screen)
 
@@ -19,8 +19,8 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **The Upcoming card no longer depends on the month you have open.** It used to look at the month on screen and the one before, so a charge could show under one month and be gone under the next, and a charge due on the first day of a new budget month could not be reminded until something was logged in that month. It now looks only at the dates of each series' own charges. It sits above the current month and the newest month with data, not above an older one, and a suggestion that files under a different month than the one on screen is tagged "For Nov".
 - **A charge booked to an unusual month no longer hides the next reminder.** A bill normally filed under one month but once filed under the next (or one paid a couple of days early that landed in the previous month) used to make the card believe the next charge was already in, or that the series had gone quiet. The card now asks whether a charge was logged around the usual date, or up to two weeks before it, whichever month it is booked to.
-- **Forgetting to log one charge no longer silences the month after it.** The card waits for two charges: the next one and, if it never gets logged, the one after. On one real history, the reminder after a forgotten entry went missing in about a quarter of the cases, against four in five before this change. The cost is that a cancelled subscription is offered for its next two charges before it leaves the card, which raised the days the card listed a charge that never came from 90 to 112 on that history.
-- **An unlogged charge leaves the card after a week.** It was 15 days (a week for last month's). The longer wait kept cancelled subscriptions on screen, but a charge logged 8 to 10 days late (3 of 78 on one real history) had a card for the week before it and none when it was logged.
+- **Forgetting to log one charge no longer silences the month after it.** The card waits for two charges: the next one and, if it never gets logged, the one after. The cost is that a cancelled subscription is offered for its next two charges before it leaves the card.
+- **An unlogged charge leaves the card after a week.** It was 15 days (a week for last month's). The longer wait kept cancelled subscriptions on screen, but a charge logged 8 to 10 days late had a card for the week before it and none when it was logged.
 - **Dismissing a suggestion can be undone, and its buttons are named.** The "x" shows an Undo, hands the focus to the next row, and the buttons read "Add Netflix" and "Dismiss Netflix" to a screen reader, with 44px tap areas. The constant "Monthly" label is gone from the rows.
 
 ## October 2026 (Upcoming shows a charge when it is due)
@@ -356,7 +356,7 @@ single line. The confirmation names the new description ("Renamed 14 transaction
 
 ## October 2026 (the Analytics redesign)
 
-Analytics was the workbook, ported: four wide tables and three small charts that reported numbers
+Analytics was a spreadsheet, ported: four wide tables and three small charts that reported numbers
 and stopped. It is now three views — **Overview**, **Spending**, **Cash** — identical on phone and
 desktop, each built to answer a question and lead somewhere.
 
@@ -378,7 +378,7 @@ desktop, each built to answer a question and lead somewhere.
   Category rows carry a budget bullet with a "where should I be today" tick; every row opens its
   story — typical month, worst month, months over (against today's budget, and saying so), the
   month's biggest transactions — and a deep link that lands on Transactions with the filters set.
-  The exact workbook grid stays one tap away as the Grid mode, now with CSV export.
+  The original spreadsheet grid stays one tap away as the Grid mode, now with CSV export.
 - **Cash: do my numbers match?** One dot per month (counted, drift found, ready, waiting on its
   statement) and a banner pointing at the month ready to count. A bridge from opening cash to
   expected cash with the count entered right under it, drift bars with a ±5 € tolerance band, and

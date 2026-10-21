@@ -1,0 +1,112 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from './apiClient'
+import { apiDataSource } from './apiDataSource'
+import { apiLedgerParts } from './apiLedgerParts'
+import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
+import { ledgerReferenceOf } from '../domain/ledger/partsOfDataset'
+import { makeDataset, makeTransaction } from '../testing/factories'
+
+const reference = {
+  revision: 'abc',
+  ...ledgerReferenceOf(makeDataset({ transactions: [makeTransaction({ id: 1 })] })),
+}
+const rows = { revision: 'abc', from: '2025-01', to: '2025-03', transactions: [], attachmentCounts: {} }
+const cube = { revision: 'abc', from: '2025-01', to: '2025-03', cells: [] }
+
+function json(body: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' }, ...init })
+}
+
+function serve(...responses: Response[]) {
+  const fetchMock = vi.fn()
+  for (const response of responses) fetchMock.mockResolvedValueOnce(response)
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('apiLedgerParts', () => {
+  it('reads the reference from /reference', async () => {
+    const fetchMock = serve(json(reference))
+    await expect(apiLedgerParts.readReferencePart()).resolves.toEqual(reference)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/expenses/reference')
+    expect(init).toMatchObject({ credentials: 'same-origin' })
+  })
+
+  it('asks for a range of months with both ends in the query', async () => {
+    const fetchMock = serve(json(rows), json(cube))
+    await apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })
+    await apiLedgerParts.readCubePart({ from: '2025-01', to: '2025-03' })
+    expect(fetchMock.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      '/api/expenses/transactions/months?from=2025-01&to=2025-03',
+      '/api/expenses/cube?from=2025-01&to=2025-03',
+    ])
+  })
+
+  it('names no validator itself, so the browser revalidates the body it holds', async () => {
+    const fetchMock = serve(json(reference))
+    await apiLedgerParts.readReferencePart()
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(new Headers(init.headers).has('if-none-match')).toBe(false)
+    expect(init.cache).toBeUndefined()
+  })
+
+  it('reads a part again past every cache when a 304 reaches it with no body to use', async () => {
+    const fetchMock = serve(new Response(null, { status: 304 }), json(reference))
+    await expect(apiLedgerParts.readReferencePart()).resolves.toEqual(reference)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ cache: 'reload' })
+  })
+
+  it.each([404, 405, 501])('reports a server without the route (%i) as unavailable', async (status) => {
+    serve(json({ error: 'Not found' }, { status }))
+    await expect(apiLedgerParts.readReferencePart()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('reports the single-page app answering with its HTML as unavailable', async () => {
+    serve(new Response('<!doctype html><title>app</title>', { status: 200, headers: { 'content-type': 'text/html' } }))
+    await expect(apiLedgerParts.readReferencePart()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it.each([
+    ['a reference without its tables', { revision: 'abc', reference: {} }],
+    ['a reference with no revision', { ...reference, revision: undefined }],
+    ['an array', []],
+    ['null', null],
+  ])('reports %s as unavailable', async (_name, body) => {
+    serve(json(body))
+    await expect(apiLedgerParts.readReferencePart()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('reports a rows part and a cube part of the wrong shape as unavailable', async () => {
+    serve(json({ ...rows, transactions: 'none' }), json({ ...cube, cells: undefined }))
+    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(apiLedgerParts.readCubePart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('reports a range the server refuses for its size, with the server’s message', async () => {
+    serve(json({ error: 'The range holds more than 10000 cells; ask for fewer months' }, { status: 400 }))
+    await expect(apiLedgerParts.readCubePart({ from: '2015-01', to: '2025-01' })).rejects.toThrow(
+      new PartTooLargeError('The range holds more than 10000 cells; ask for fewer months'),
+    )
+  })
+
+  it('passes any other failure on as an ApiError with its status', async () => {
+    serve(json({ error: 'Boom' }, { status: 500 }))
+    await expect(apiLedgerParts.readReferencePart()).rejects.toEqual(new ApiError('Boom', 500))
+  })
+})
+
+describe('apiDataSource, ledger parts', () => {
+  it('serves the three parts through the same client, loaded when first used', async () => {
+    const fetchMock = serve(json(reference), json(rows), json(cube))
+    await expect(apiDataSource.readReferencePart!()).resolves.toEqual(reference)
+    await expect(apiDataSource.readMonthsPart!({ from: '2025-01', to: '2025-03' })).resolves.toEqual(rows)
+    await expect(apiDataSource.readCubePart!({ from: '2025-01', to: '2025-03' })).resolves.toEqual(cube)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+})
