@@ -5,13 +5,14 @@ import { sortedMonths } from '../domain/engine/dates'
 import { withoutFlag } from '../domain/engine/flagGroups'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import {
+  patchAfterAttachmentAdd,
   patchAfterFlagDelete,
   patchAfterInstallmentPlanCreate,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
-import { makeTransaction } from '../testing/factories'
+import { makeAttachment, makeTransaction } from '../testing/factories'
 import { comparable, memorySource, type TestSource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { ledgerOfHeld } from './ledgerHold'
@@ -179,6 +180,86 @@ describe('LedgerSession, a month being read and a write to it', () => {
     const rows = session.getState().held!.rows.get(month)
     expect(rows?.some((t) => t.id === added.id)).toBe(true)
     expect(rows).toHaveLength((dataset.transactions.filter((t) => t.budgetMonth === month).length) + 1)
+  })
+})
+
+describe('LedgerSession, receipts', () => {
+  const small = syntheticLedger({ months: 12, perMonth: 10, seed: 1 })
+  const withCounts = small.attachments.map((a) => a.transactionId)
+  const ids = [...new Set(withCounts)]
+
+  async function opened() {
+    const source = memorySource(small)
+    const session = new LedgerSession(source)
+    await session.open()
+    source.calls.length = 0
+    return { source, session }
+  }
+
+  it('has read no list when it opens, and reads the lists asked for once each', async () => {
+    const { source, session } = await opened()
+    expect(session.getState().held!.receipts.size).toBe(0)
+    session.loadReceipts([ids[0]!, ids[1]!])
+    session.loadReceipts([ids[0]!])
+    await flush()
+    expect(calls(source, 'receipts:').sort()).toEqual([`receipts:${ids[0]}`, `receipts:${ids[1]}`].sort())
+    const { held } = session.getState()
+    expect(held!.receipts.get(ids[0]!)!.map((a) => a.id)).toEqual(small.attachments.filter((a) => a.transactionId === ids[0]).map((a) => a.id))
+    session.loadReceipts([ids[0]!])
+    await flush()
+    expect(calls(source, 'receipts:')).toHaveLength(2)
+  })
+
+  it('reads nothing for a transaction that has no receipts', async () => {
+    const { source, session } = await opened()
+    const none = small.transactions.find((t) => !withCounts.includes(t.id))!
+    session.loadReceipts([none.id])
+    await flush()
+    expect(calls(source, 'receipts:')).toEqual([])
+  })
+
+  it('reads many lists a few at a time and holds every one', async () => {
+    const { session } = await opened()
+    session.loadReceipts(ids)
+    await flush()
+    await flush()
+    expect(session.getState().held!.receipts.size).toBe(ids.length)
+    expect(session.getState().held!.attachmentCounts).toEqual(Object.fromEntries(ids.map((id) => [id, small.attachments.filter((a) => a.transactionId === id).length])))
+  })
+
+  it('reports a list that cannot be read and holds the others', async () => {
+    const { source, session } = await opened()
+    const read = source.readReceiptsPart.bind(source)
+    source.readReceiptsPart = (id) => (id === ids[0] ? Promise.reject(new Error('offline')) : read(id))
+    session.loadReceipts([ids[0]!])
+    await flush()
+    expect(session.getState().error).toBe('offline')
+    expect(session.getState().held!.receipts.has(ids[0]!)).toBe(false)
+    session.loadReceipts([ids[1]!])
+    await flush()
+    expect(session.getState().held!.receipts.has(ids[1]!)).toBe(true)
+  })
+
+  it('reads the whole list when a receipt is added to a transaction whose list was not read, and keeps the one added', async () => {
+    const { source, session } = await opened()
+    const id = ids[0]!
+    const added = makeAttachment({ id: 9_001, transactionId: id })
+    source.dataset = { ...small, attachments: [...small.attachments, added] }
+    session.patch((d) => patchAfterAttachmentAdd(d, added))
+    expect(session.getState().held!.receipts.get(id)!.map((a) => a.id)).toEqual([9_001])
+    await flush()
+    expect(calls(source, 'receipts:')).toEqual([`receipts:${id}`])
+    const list = session.getState().held!.receipts.get(id)!.map((a) => a.id)
+    expect(list).toEqual([...small.attachments.filter((a) => a.transactionId === id).map((a) => a.id), 9_001])
+    expect(session.getState().held!.attachmentCounts[id]).toBe(list.length)
+  })
+
+  it('does nothing before the ledger is open', async () => {
+    const source = memorySource(small)
+    const session = new LedgerSession(source)
+    session.loadReceipts([ids[0]!])
+    await flush()
+    expect(source.calls).toEqual([])
   })
 })
 
