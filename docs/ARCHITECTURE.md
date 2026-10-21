@@ -197,6 +197,16 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   adds amounts reads `sumsOf(model)`, and one that lists or searches rows reads `dataset`; `ledgerModelSweep.test.ts`
   and `ledgerModelRender.test.tsx` fail for a screen wired to the wrong list. What a window cannot give is the newest
   rows by date (recent activity), the description index and counts of how many rows carry a label, category or account.
+- **A ledger held open is changed by writes in place, and what a write moved is read again.** `LedgerSession`
+  (`src/data/ledgerSession.ts`) holds the reference, the pinned rows, the rows of the months being looked at and
+  the sums of every month (`ledgerHold.ts`). A write is patched into the rows held at once, and
+  `reconcileHeld` returns the months whose sums it moved (a row in a month that is not held, a row that stops
+  being pinned) for the session to read again, because the browser cannot tell what a write did to months it does not
+  hold. Reads are guarded per resource (`ledgerResources.ts`): a write to the rows drops a read of the rows that
+  started before it, and leaves a read of the reference alone, so the old value is never shown again. A write also
+  makes the held revision unknown until a part is read again, so the next read of another month reads everything
+  again rather than mixing two states. The months held beyond the window around the month shown and the newest
+  window are given up oldest first; a ledger held in full gives up nothing.
 
 ## Size and complexity
 
