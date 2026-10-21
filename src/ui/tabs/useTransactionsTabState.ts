@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Flag, Label, TxnType } from '../../types'
 import type { TransactionsEntry } from './transactionsEntry'
 import type { ExpenseModel } from '../useExpenseData'
-import { sumsOf } from '../buildExpenseModel'
+import { sumsOf } from '../modelSums'
 import type { ExpenseActions } from '../actions'
 import {
   buildTransactionListRows,

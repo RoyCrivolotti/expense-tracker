@@ -5,7 +5,8 @@ import { adversarialLedger } from '../testing/adversarialLedger'
 import { comparable } from '../testing/ledgerSource'
 import { randomLedger } from '../testing/randomLedger'
 import { syntheticLedger } from '../testing/syntheticLedger'
-import { buildExpenseModel, sumsOf } from './buildExpenseModel'
+import { buildExpenseModel } from './buildExpenseModel'
+import { sumsOf } from './modelSums'
 import { buildLedgerModel, fixedHistoryOf } from './buildLedgerModel'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }

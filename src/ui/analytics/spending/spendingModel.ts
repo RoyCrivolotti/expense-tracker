@@ -3,7 +3,7 @@
  * over a model that holds every row and over one that holds a window, and compare them.
  */
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../buildExpenseModel'
+import { sumsOf } from '../../modelSums'
 import type { AnalyticsBasis, SpendingGroupBy } from '../../../engine'
 import { classifierFromGroups, computeSpendingGroupDetail, computeSpendingGroups } from '../../../engine'
 

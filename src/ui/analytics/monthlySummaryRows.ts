@@ -1,5 +1,5 @@
 import type { ExpenseModel } from '../useExpenseData'
-import { sumsOf } from '../buildExpenseModel'
+import { sumsOf } from '../modelSums'
 import type { AnalyticsBasis, CategoryActuals } from '../../engine'
 import { basisOptions, computeCategoryActuals } from '../../engine'
 

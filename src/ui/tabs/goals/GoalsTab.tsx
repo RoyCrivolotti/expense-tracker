@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../buildExpenseModel'
+import { sumsOf } from '../../modelSums'
 import type { ExpenseActions } from '../../actions'
 import {
   averageMonthlyCents,

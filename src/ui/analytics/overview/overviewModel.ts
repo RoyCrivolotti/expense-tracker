@@ -3,7 +3,7 @@
  * and the engine stays the only place that computes it.
  */
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../buildExpenseModel'
+import { sumsOf } from '../../modelSums'
 import type {
   Allocation,
   AnalyticsBasis,

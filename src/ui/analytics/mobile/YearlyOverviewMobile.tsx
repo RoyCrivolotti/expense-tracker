@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../buildExpenseModel'
+import { sumsOf } from '../../modelSums'
 import { computeYearlyOverview, formatCents, fullMonthLabel } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './mobile.module.css'

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import { sumsOf } from '../buildExpenseModel'
+import { sumsOf } from '../modelSums'
 import type { AnalyticsBasis, MonthlyTotals } from '../../engine'
 import { basisOptions, computeMonthlyTotals } from '../../engine'
 import { LedgerTable, type LedgerColumn } from './LedgerTable'

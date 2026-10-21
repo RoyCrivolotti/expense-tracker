@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseActions } from '../../actions'
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../buildExpenseModel'
+import { sumsOf } from '../../modelSums'
 import type { BalancesAtCost, CashRow, MonthCloseStatus } from '../../../engine'
 import {
   balancesAtCost,

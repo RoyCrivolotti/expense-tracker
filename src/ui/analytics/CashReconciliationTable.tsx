@@ -1,5 +1,5 @@
 import type { ExpenseModel } from '../useExpenseData'
-import { sumsOf } from '../buildExpenseModel'
+import { sumsOf } from '../modelSums'
 import type { CashRow } from '../../engine'
 import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { ActualCashCell } from './ActualCashCell'
