@@ -16,6 +16,7 @@ import {
   wantedMonths,
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
+import { cascadeOf } from './ledgerCascade'
 import { datasetOfHeld, reconcileHeld } from './ledgerReconcile'
 import { type Epochs, NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
 
@@ -112,6 +113,7 @@ export class LedgerSession {
       const read = holdParts(parts)
       const current = stillCurrent(started, this.epochs)
       const held = this.state.held ? mergeRead(this.state.held, read, current) : read
+      if (current.cube) this.stale.clear()
       this.set({ held, error: null })
       if (current.reference && current.rows && current.cube) return
     }
@@ -156,12 +158,16 @@ export class LedgerSession {
     return evictMonths(touchMonths(held, wanted), wanted, this.cap)
   }
 
-  /** A write the user made, as the patch functions of the screens express it. */
+  /**
+   * A write the user made, as the patch functions of the screens express it. One the server answered with
+   * more than the patch shows (`cascadeOf`) is followed by a read of the whole ledger.
+   */
   patch(patch: (dataset: ExpenseDataset) => ExpenseDataset): void {
     const held = this.state.held
     if (!held) return
     const before = datasetOfHeld(held)
-    const done = reconcileHeld(held, before, patch(before), this.state.viewed)
+    const after = patch(before)
+    const done = reconcileHeld(held, before, after, this.state.viewed)
     if (!done.changed.rows && !done.changed.reference) return
     const touched: Array<'reference' | 'rows' | 'cube'> = [
       ...(done.changed.reference ? (['reference'] as const) : []),
@@ -171,7 +177,8 @@ export class LedgerSession {
     this.epochs = bump(this.epochs, touched)
     for (const month of done.stale) this.stale.add(month)
     this.set({ held: done.held })
-    if (done.stale.length > 0) void this.flushCube()
+    if (cascadeOf(before, after)) this.refresh().catch((error: unknown) => this.set({ error: reason(error) }))
+    else if (done.stale.length > 0) void this.flushCube()
   }
 
   /** Reads again the sums of the months a write moved, until none is waiting. */

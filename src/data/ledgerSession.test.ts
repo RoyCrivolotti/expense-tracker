@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy, assembleRows, buildLedger } from '../domain/ledger'
 import type { Ledger } from '../domain/ledger'
 import { sortedMonths } from '../domain/engine/dates'
+import { withoutFlag } from '../domain/engine/flagGroups'
 import type { ExpenseDataset, Transaction } from '../domain/types'
-import { patchAfterTransactionCreate, patchAfterTransactionUpdate } from '../ui/datasetPatches'
+import {
+  patchAfterFlagDelete,
+  patchAfterInstallmentPlanCreate,
+  patchAfterTransactionCreate,
+  patchAfterTransactionUpdate,
+} from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeTransaction } from '../testing/factories'
 import { comparable, memorySource, type TestSource } from '../testing/ledgerSource'
@@ -270,6 +276,90 @@ describe('LedgerSession, writes', () => {
     await flush()
     expect(session.getState().error).toBe('offline')
     expect(session.getState().held!.rowCount).toBe(dataset.transactions.length + 1)
+  })
+})
+
+describe('LedgerSession, a write the server answered with more than the patch shows', () => {
+  it('reads the ledger again after a flag is deleted, and holds what the server holds', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const flagged = session.getState().held!.pinned.find((t) => t.flagId != null)!
+    const flagId = flagged.flagId!
+    // The server unflags the rows, which stop being pinned; the old ones among them are summed instead.
+    const truth: ExpenseDataset = {
+      ...dataset,
+      flags: dataset.flags.filter((f) => f.id !== flagId),
+      transactions: dataset.transactions.map((t) => (t.flagId === flagId ? withoutFlag(t) : t)),
+    }
+    source.dataset = truth
+    source.move('r5')
+    source.calls.length = 0
+    session.patch((d) => patchAfterFlagDelete(d, flagId))
+    await flush()
+    await flush()
+    expect(calls(source, 'reference')).toHaveLength(1)
+    const { held } = session.getState()
+    expect(held!.revision).toBe('r5')
+    expect(held!.pinned.some((t) => t.flagId === flagId)).toBe(false)
+    expect(listsOf(ledgerOfHeld(held!))).toEqual(listsOf(buildLedger(truth, held!.rows.keys())))
+  })
+
+  it('reads the ledger again after a plan is added, to pick up the instalments the server inserted', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    source.calls.length = 0
+    session.patch((d) =>
+      patchAfterInstallmentPlanCreate(d, {
+        id: 9_001,
+        description: 'Laptop',
+        totalCount: 6,
+        amountCents: 1_000,
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        anchorBudgetMonth: newest,
+        startInstallmentIndex: 1,
+        active: true,
+      }),
+    )
+    await flush()
+    expect(calls(source, 'reference')).toHaveLength(1)
+  })
+
+  it('reads nothing again after a write the patch shows in full', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    source.calls.length = 0
+    session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 1 } }))
+    await flush()
+    expect(source.calls).toEqual([])
+  })
+
+  it('leaves no month waiting for sums once the whole read has brought them', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    // Deleting a flag unpins its rows, so the old months they sit in are summed and wait for sums.
+    const flagId = session.getState().held!.pinned.find((t) => t.flagId != null && !session.getState().held!.rows.has(t.budgetMonth))!.flagId!
+    let truth: ExpenseDataset = {
+      ...dataset,
+      flags: dataset.flags.filter((f) => f.id !== flagId),
+      transactions: dataset.transactions.map((t) => (t.flagId === flagId ? withoutFlag(t) : t)),
+    }
+    source.dataset = truth
+    session.patch((d) => patchAfterFlagDelete(d, flagId))
+    await flush()
+    await flush()
+    const added = row(900_010, months[5]!)
+    truth = { ...truth, transactions: [...truth.transactions, added] }
+    source.dataset = truth
+    source.calls.length = 0
+    session.patch((d) => patchAfterTransactionCreate(d, added))
+    await flush()
+    expect(calls(source, 'cube:')).toEqual([`cube:${months[5]}..${months[5]}`])
   })
 })
 
