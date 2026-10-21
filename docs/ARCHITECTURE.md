@@ -224,6 +224,13 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   | Settle rows, or delete the payment that settled them | Stamps what the payment covered, or clears the rows | Patch, then read all |
   | A row created, changed or deleted | Nothing the patch lacks | Patch; read again the sums of the months it moved |
   | Statement paid, cash actual, settings, scenarios, wealth, receipts, a definition added or renamed | Nothing the patch lacks | Patch |
+- **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
+  `saveLedgerSnapshot` (`ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them and
+  removes every other owner's, so a second person on the same browser never opens the first one's figures. A record
+  from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the whole-dataset snapshot),
+  another ledger format or another owner is discarded when it is found. Saving and loading never throw. Offline, or
+  when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a refresh that reads ends
+  it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key.
 
 ## Size and complexity
 
