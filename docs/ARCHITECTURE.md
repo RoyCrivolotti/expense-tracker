@@ -208,6 +208,20 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   again rather than mixing two states. The months held beyond the window around the month shown and the newest
   window are given up oldest first; a ledger held in full gives up nothing.
 
+  A write the server answers with more than the patch shows is followed by a read of the whole ledger instead of a
+  hand mirror of the cascade (`cascadeOf` in `ledgerCascade.ts` recognises it from what the patch did to the
+  dataset; a new server cascade needs a case there and a test):
+
+  | Write | What the server also does | Browser |
+  | --- | --- | --- |
+  | Delete a category, account, flag, label or plan | Moves, clears or unlinks every row, plan, statement or setting that pointed at it | Patch, then read all |
+  | Give a flag an auto-label | Labels every row already carrying the flag | Patch, then read all |
+  | Give a row a flag that has an auto-label | Adds the label to the row | Patch, then read all |
+  | Add or change a plan | Inserts the instalments that are due | Patch, then read all |
+  | Settle rows, or delete the payment that settled them | Stamps what the payment covered, or clears the rows | Patch, then read all |
+  | A row created, changed or deleted | Nothing the patch lacks | Patch; read again the sums of the months it moved |
+  | Statement paid, cash actual, settings, scenarios, wealth, receipts, a definition added or renamed | Nothing the patch lacks | Patch |
+
 ## Size and complexity
 
 ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12`, `max-depth: 3`
