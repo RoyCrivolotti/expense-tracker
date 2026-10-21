@@ -69,9 +69,8 @@ describe('useLedgerData', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'))
     const month = months[10]!
     const before = result.current.model!.dataset.transactions.filter((t) => t.budgetMonth === month).length
-    let sawHydrating = false
     act(() => result.current.viewMonth!(month))
-    sawHydrating = result.current.hydrating === true
+    const sawHydrating = result.current.hydrating === true
     await waitFor(() => expect(result.current.hydrating).toBe(false))
     expect(sawHydrating).toBe(true)
     const after = result.current.model!.dataset.transactions.filter((t) => t.budgetMonth === month).length
