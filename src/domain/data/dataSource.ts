@@ -21,6 +21,7 @@ import type {
   WealthCheckin,
   WealthCheckinEntry,
 } from '../types'
+import type { CubePart, MonthRange, MonthRowsPart, ReferencePart } from './ledgerParts'
 
 export type NewTransaction = Omit<
   StoredTransaction,
@@ -109,7 +110,20 @@ export type NewInstallmentPlan = Omit<InstallmentPlan, 'id' | 'dueDayOfMonth'> &
   dueDayOfMonth?: number | null
 }
 
-export interface ExpenseDataSource {
+/**
+ * The ledger read in parts instead of as one dataset (docs/SCALING.md, "Ledger parts"). Each part
+ * carries the revision it was read under; two parts with different revisions were read from different
+ * states of the ledger. `loadLedger` puts them together.
+ */
+export interface LedgerPartsSource {
+  readReferencePart(): Promise<ReferencePart>
+  /** Every real row whose budget month is in the range, inclusive. */
+  readMonthsPart(range: MonthRange): Promise<MonthRowsPart>
+  /** The per-month sums of the unpinned rows in the range, inclusive. */
+  readCubePart(range: MonthRange): Promise<CubePart>
+}
+
+export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   /** Whether mutations are supported; the UI hides add/edit when false. */
   readonly canWrite: boolean
   load(): Promise<ExpenseDataset>
@@ -160,4 +174,13 @@ export interface ExpenseDataSource {
   createWealthCheckin?(input: NewWealthCheckin): Promise<WealthCheckin>
   updateWealthCheckin?(id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
   deleteWealthCheckin?(id: number): Promise<void>
+}
+
+/** Whether a source can serve the ledger in parts. Every source that can serve one part serves all three. */
+export function hasLedgerParts(source: ExpenseDataSource): source is ExpenseDataSource & LedgerPartsSource {
+  return (
+    source.readReferencePart !== undefined &&
+    source.readMonthsPart !== undefined &&
+    source.readCubePart !== undefined
+  )
 }

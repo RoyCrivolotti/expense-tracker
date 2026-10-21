@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { hasLedgerParts } from '../domain/data/dataSource'
 import { docsCaptureDataSource } from './docsCaptureDataSource'
+import { loadLedger } from './ledgerLoader'
 
 describe('docsCaptureDataSource.updateSettings', () => {
   it('returns the whole settings with the patch merged on, as the API does', async () => {
@@ -416,5 +418,58 @@ describe('docsCaptureDataSource scenarios', () => {
     await docsCaptureDataSource.load()
 
     await expect(docsCaptureDataSource.activateScenario!(made.id)).rejects.toThrow('Scenario not found')
+  })
+})
+
+describe('docsCaptureDataSource ledger parts', () => {
+  const source = docsCaptureDataSource as Required<typeof docsCaptureDataSource>
+
+  it('serves the dataset it loads in parts, with the demo flags and plans among the pinned rows', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    expect(hasLedgerParts(docsCaptureDataSource)).toBe(true)
+    const reference = await source.readReferencePart()
+    expect(reference.rowCount).toBe(dataset.transactions.length)
+    expect(reference.reference.flags).toEqual(dataset.flags)
+    expect(reference.pinned.some((t) => t.flagId != null)).toBe(true)
+    expect(reference.pinned.some((t) => t.planId != null)).toBe(true)
+  })
+
+  it('moves the revision when a row is added and when a flag is, and not when nothing changed', async () => {
+    await docsCaptureDataSource.load()
+    const start = await source.readReferencePart()
+    const first = start.revision
+    expect((await source.readReferencePart()).revision).toBe(first)
+
+    const created = await docsCaptureDataSource.createTransaction!({
+      date: '2026-05-02',
+      budgetMonth: '2026-05',
+      description: 'Revision test',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 100,
+      cancelled: false,
+    })
+    const afterRow = await source.readReferencePart()
+    expect(afterRow.revision).not.toBe(first)
+    expect(afterRow.rowCount).toBe(start.rowCount + 1)
+    expect(created.id).toBeGreaterThan(0)
+
+    await docsCaptureDataSource.load()
+    const base = (await source.readReferencePart()).revision
+    await docsCaptureDataSource.createFlag!({ name: 'Another', color: '#000000', reimbursable: false, sortOrder: 9, active: true })
+    const afterFlag = await source.readReferencePart()
+    expect(afterFlag.revision).not.toBe(base)
+    expect(afterFlag.reference.flags.map((f) => f.name)).toContain('Another')
+  })
+
+  it('shows a row edited since the load in the months part, and loads as a ledger', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.transactions[0]!
+    await docsCaptureDataSource.updateTransaction!(target.id, { description: 'Edited for the parts test' })
+    const rows = await source.readMonthsPart({ from: target.budgetMonth, to: target.budgetMonth })
+    expect(rows.transactions.find((t) => t.id === target.id)?.description).toBe('Edited for the parts test')
+    const loaded = await loadLedger(source)
+    expect(loaded.ledger.hydrated.find((t) => t.id === target.id)?.description).toBe('Edited for the parts test')
   })
 })

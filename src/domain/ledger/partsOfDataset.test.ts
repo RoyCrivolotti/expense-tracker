@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { buildCells, partitionPinned } from '../domain/ledger'
-import { makeAttachment, makeDataset, makeTransaction } from './factories'
-import { inMemoryExpenseRepository } from './inMemoryExpenseRepository'
-import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './inMemoryLedgerParts'
+import { buildCells, partitionPinned } from './index'
+import { makeAttachment, makeDataset, makeTransaction } from '../../testing/factories'
+import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
+import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './partsOfDataset'
 
 const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
   makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })

@@ -43,7 +43,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
-import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './inMemoryLedgerParts'
+import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import { exportChunkOf } from './inMemoryExport'
 import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
