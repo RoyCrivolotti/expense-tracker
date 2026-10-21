@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { memorySource } from '../testing/ledgerSource'
-import { holdParts } from './ledgerHold'
+import { holdParts, holdReceipts } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
 import { NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
 
@@ -59,5 +59,16 @@ describe('mergeRead', () => {
     const merged = mergeRead(a, b, { reference: true, rows: true, cube: false })
     expect(merged.cells).toBe(a.cells)
     expect(merged.revision).toBeNull()
+  })
+
+  it('keeps a receipt list the new counts still agree with, and drops one they do not', async () => {
+    const { a, b } = await twoStates()
+    const id = Number(Object.keys(b.attachmentCounts)[0])
+    const withLists = (count: number) =>
+      holdReceipts({ ...a, attachmentCounts: { ...a.attachmentCounts } }, id, Array.from({ length: count }, (_, i) => ({ id: i + 1, transactionId: id, contentType: 'image/jpeg', byteSize: 1, createdAt: 'x', hasThumb: true })))
+    const same = mergeRead(withLists(b.attachmentCounts[id]!), b, { reference: true, rows: true, cube: true })
+    expect(same.receipts.has(id)).toBe(true)
+    const other = mergeRead(withLists(b.attachmentCounts[id]! + 1), b, { reference: true, rows: true, cube: true })
+    expect(other.receipts.has(id)).toBe(false)
   })
 })

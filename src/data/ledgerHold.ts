@@ -19,7 +19,7 @@ import {
   type MonthCell,
   chooseHydratedMonths,
 } from '../domain/ledger'
-import type { Transaction } from '../domain/types'
+import type { Transaction, TransactionAttachment } from '../domain/types'
 
 export interface HeldLedger {
   /** The revision the parts were read under, or null after a local write, which the server answered with another. */
@@ -39,6 +39,11 @@ export interface HeldLedger {
   cells: MonthCell[] | null
   /** The months held as real rows, with their rows, least recently used first. */
   rows: ReadonlyMap<string, readonly Transaction[]>
+  /**
+   * The receipts of the transactions whose list has been read, which is every one a screen asked for: the
+   * parts only say how many each has (`attachmentCounts`). A transaction with none read has no entry.
+   */
+  receipts: ReadonlyMap<number, readonly TransactionAttachment[]>
 }
 
 function mergeCounts(...lists: readonly AttachmentCounts[]): AttachmentCounts {
@@ -70,6 +75,7 @@ export function holdParts(parts: LedgerParts): HeldLedger {
     attachmentCounts: mergeCounts(reference.attachmentCounts, ...parts.rows.map((read) => read.attachmentCounts)),
     cells: parts.cube.length === 0 ? null : parts.cube.flatMap((read) => read.cells),
     rows: groupByMonth(parts.rows, reference.months),
+    receipts: new Map(),
   }
 }
 
@@ -79,7 +85,7 @@ export function ledgerOfHeld(held: HeldLedger): Ledger {
   const hydrated = hydratedMonths.flatMap((month) => held.rows.get(month) ?? [])
   const covered = new Set(hydratedMonths)
   return {
-    reference: { ...held.reference, attachments: [] },
+    reference: { ...held.reference, attachments: [...held.receipts.values()].flat() },
     pinned: held.pinned,
     hydratedMonths,
     hydrated,
@@ -169,4 +175,36 @@ export function holdReference(held: HeldLedger, part: ReferencePart): HeldLedger
     rowCount: part.rowCount,
     attachmentCounts: mergeCounts(held.attachmentCounts, part.attachmentCounts),
   }
+}
+
+/** Holds the receipts read for one transaction, and the count the parts gave it moves to match. */
+export function holdReceipts(held: HeldLedger, transactionId: number, list: readonly TransactionAttachment[]): HeldLedger {
+  const receipts = new Map(held.receipts)
+  receipts.set(transactionId, list)
+  const counts = { ...held.attachmentCounts }
+  if (list.length > 0) counts[transactionId] = list.length
+  else delete counts[transactionId]
+  return { ...held, receipts, attachmentCounts: counts }
+}
+
+/** Holds a list for each id, keeping the one already held unless `again`. */
+export function holdReceiptLists(
+  held: HeldLedger,
+  ids: readonly number[],
+  lists: ReadonlyArray<readonly TransactionAttachment[]>,
+  again: boolean,
+): HeldLedger {
+  let next = held
+  for (const [i, id] of ids.entries()) if (again || !next.receipts.has(id)) next = holdReceipts(next, id, lists[i] ?? [])
+  return next
+}
+
+/** The transactions among `ids` that have receipts whose list has not been read. */
+export function receiptsToRead(held: HeldLedger, ids: readonly number[]): number[] {
+  return ids.filter((id) => (held.attachmentCounts[id] ?? 0) > 0 && !held.receipts.has(id))
+}
+
+/** How many transactions have receipts that no screen has asked for yet. */
+export function receiptsPending(held: HeldLedger): number {
+  return receiptsToRead(held, Object.keys(held.attachmentCounts).map(Number)).length
 }

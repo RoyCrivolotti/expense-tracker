@@ -46,5 +46,9 @@ export function mergeRead(held: HeldLedger, read: HeldLedger, current: Record<Re
   }
   if (current.rows) next = { ...next, pinned: read.pinned, rows: read.rows }
   if (current.cube) next = { ...next, cells: read.cells }
+  // A list read before is kept while the counts say the transaction still has that many receipts; one that no
+  // longer fits was changed elsewhere, or belongs to a row that is no longer held, and is read again on request.
+  const receipts = [...next.receipts].filter(([id, list]) => (next.attachmentCounts[id] ?? 0) === list.length)
+  next = { ...next, receipts: new Map(receipts) }
   return { ...next, revision: current.reference && current.rows && current.cube ? read.revision : null }
 }

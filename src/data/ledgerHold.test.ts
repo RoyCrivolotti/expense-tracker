@@ -3,16 +3,21 @@ import { HYDRATED_DATA_MONTHS, type HydrationPolicy, assembleRows, buildLedger, 
 import type { Ledger } from '../domain/ledger'
 import { sortedMonths } from '../domain/engine/dates'
 import { adversarialLedger } from '../testing/adversarialLedger'
+import { makeAttachment } from '../testing/factories'
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import {
   evictMonths,
   holdCells,
   holdParts,
+  holdReceiptLists,
+  holdReceipts,
   holdReference,
   holdRows,
   ledgerOfHeld,
   missingMonths,
+  receiptsPending,
+  receiptsToRead,
   touchMonths,
   wantedMonths,
 } from './ledgerHold'
@@ -165,5 +170,56 @@ describe('the ledger a held window makes', () => {
       const { held } = await windowAround(viewed)
       expect(listsOf(ledgerOfHeld(held))).toEqual(listsOf(ledgerFor(dataset, viewed, WINDOWED)))
     }
+  })
+})
+
+describe('receipts', () => {
+  const small = syntheticLedger({ months: 6, perMonth: 5, seed: 2 })
+  const ids = small.transactions.slice(0, 3).map((t) => t.id)
+  const withReceipts = {
+    ...small,
+    attachments: [
+      makeAttachment({ id: 1, transactionId: ids[0]! }),
+      makeAttachment({ id: 2, transactionId: ids[0]! }),
+      makeAttachment({ id: 3, transactionId: ids[1]! }),
+    ],
+  }
+
+  async function held() {
+    return holdParts(await readLedgerParts(memorySource(withReceipts)))
+  }
+
+  it('has no list read at first, and says which transactions have receipts that no screen has asked for', async () => {
+    const h = await held()
+    expect(h.receipts.size).toBe(0)
+    expect(receiptsToRead(h, ids)).toEqual([ids[0], ids[1]])
+    expect(receiptsPending(h)).toBe(2)
+    expect(ledgerOfHeld(h).reference.attachments).toEqual([])
+  })
+
+  it('puts a list in the ledger’s receipts once it is read, and stops listing the transaction as pending', async () => {
+    const h = holdReceipts(await held(), ids[0]!, withReceipts.attachments.slice(0, 2))
+    expect(receiptsToRead(h, ids)).toEqual([ids[1]])
+    expect(receiptsPending(h)).toBe(1)
+    expect(ledgerOfHeld(h).reference.attachments.map((a) => a.id)).toEqual([1, 2])
+  })
+
+  it('corrects the count to the list read, and forgets it when the list is empty', async () => {
+    const h = holdReceipts(await held(), ids[0]!, [makeAttachment({ id: 1, transactionId: ids[0]! })])
+    expect(h.attachmentCounts[ids[0]!]).toBe(1)
+    const none = holdReceipts(h, ids[0]!, [])
+    expect(none.attachmentCounts[ids[0]!]).toBeUndefined()
+    expect(none.receipts.get(ids[0]!)).toEqual([])
+    expect(receiptsToRead(none, ids)).toEqual([ids[1]])
+  })
+
+  it('holds a list for each id, keeping one already held unless told to read it again', async () => {
+    const start = holdReceipts(await held(), ids[0]!, [makeAttachment({ id: 7, transactionId: ids[0]! })])
+    const lists = [withReceipts.attachments.slice(0, 2), withReceipts.attachments.slice(2)]
+    const kept = holdReceiptLists(start, [ids[0]!, ids[1]!], lists, false)
+    expect(kept.receipts.get(ids[0]!)!.map((a) => a.id)).toEqual([7])
+    expect(kept.receipts.get(ids[1]!)!.map((a) => a.id)).toEqual([3])
+    const again = holdReceiptLists(start, [ids[0]!, ids[1]!], lists, true)
+    expect(again.receipts.get(ids[0]!)!.map((a) => a.id)).toEqual([1, 2])
   })
 })
