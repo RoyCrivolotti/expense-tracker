@@ -22,10 +22,24 @@ import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import type { BackupPolicy } from './backupPolicy'
 import type { ChunkedBackupSettings } from './chunkedBackupSettings'
 
-/** Rows after which what has been read is written as a part. */
-export const PART_ROWS = 5_000
-/** Calls that must be left to finish whatever happens next: write a part, save the state, read the revision, write the manifest. */
-const FINISH_RESERVE = 4
+/**
+ * Rows read in one chunk. Small, because the state is saved after every chunk that is big enough to matter and an
+ * invocation that is killed loses only what it read since: less than this many rows of work.
+ */
+export const READ_ROWS = 500
+/**
+ * Rows after which what has been read is written as a part and the state is saved. A save is only safe after the
+ * rows it counts are in a part, since the state says they are done; chunks smaller than this (the small tables)
+ * wait in memory for the next one, at the cost of at most this many rows redone after a kill.
+ */
+export const SAVE_ROWS = 500
+/**
+ * Calls that must be left to finish whatever happens next: a part and the state saved after a read, then the
+ * revision, the manifest and the removal of the state.
+ */
+const FINISH_RESERVE = 5
+/** A pass over the ledger is started again when it was written to meanwhile, this many times in all. */
+export const MAX_PASSES = 3
 /** A run that has fewer calls than this left would start and make no progress. */
 const MIN_TO_START = 6
 
@@ -45,13 +59,15 @@ export interface StepBudget {
   rows: number
 }
 
-export type OwnerOutcome = 'complete' | 'already complete' | 'continues'
+export type OwnerOutcome = 'complete' | 'already complete' | 'continues' | 'failed'
 
 export interface ChunkedRunResult {
   owners: number
   dateKey: string
   /** True when every owner has a backup for the day. */
   complete: boolean
+  /** Owners whose ledger kept changing under the backup, so that today has none for them. */
+  failed: number
   pruned: number
   usedBytes: number
 }
@@ -80,6 +96,24 @@ async function revisionOf(deps: ChunkedDeps, owner: string, budget: StepBudget):
   return deps.readRevision(owner)
 }
 
+function freshState(owner: string, dateKey: string, startedAt: Date, revision: string | null, attempt: number): BackupState {
+  return {
+    format: BACKUP_FORMAT,
+    owner,
+    dateKey,
+    startedAt: startedAt.toISOString(),
+    revision,
+    attempt,
+    failed: false,
+    table: 0,
+    after: null,
+    nextPart: 1,
+    parts: [],
+    counts: emptyCounts(),
+  }
+}
+
+/** The saved state of a run in progress, or a new one. `resumed` says which. */
 async function startOrResume(
   deps: ChunkedDeps,
   owner: string,
@@ -87,24 +121,13 @@ async function startOrResume(
   budget: StepBudget,
   existing: ReadonlySet<string>,
   now: Date,
-): Promise<BackupState> {
+): Promise<{ state: BackupState; resumed: boolean }> {
   if (existing.has(stateKey(owner, dateKey))) {
     spend(budget, 1)
     const saved = parseBackupState(await deps.store.get(stateKey(owner, dateKey)), owner, dateKey)
-    if (saved) return saved
+    if (saved) return { state: saved, resumed: true }
   }
-  return {
-    format: BACKUP_FORMAT,
-    owner,
-    dateKey,
-    startedAt: now.toISOString(),
-    revision: await revisionOf(deps, owner, budget),
-    table: 0,
-    after: null,
-    nextPart: 1,
-    parts: [],
-    counts: emptyCounts(),
-  }
+  return { state: freshState(owner, dateKey, now, await revisionOf(deps, owner, budget), 1), resumed: false }
 }
 
 async function saveState(run: Run): Promise<void> {
@@ -143,22 +166,45 @@ async function drain(run: Run): Promise<void> {
   while (state.table < EXPORT_TABLES.length) {
     const table = EXPORT_TABLES[state.table] as (typeof EXPORT_TABLES)[number]
     if (budget.rows <= 0 || budget.operations < readCost(table) + FINISH_RESERVE) return
-    const limit = Math.min(EXPORT_CHUNK_ROWS[table], budget.rows)
+    const limit = Math.min(EXPORT_CHUNK_ROWS[table], READ_ROWS, budget.rows)
     spend(budget, readCost(table))
     const chunk = await deps.repo.readExportChunk(owner, { table, limit, ...(state.after !== null ? { after: state.after } : {}) })
     spend(budget, 0, chunk.rows.length)
     take(run, chunk)
-    if (run.pendingRows >= PART_ROWS) {
+    if (run.pendingRows >= SAVE_ROWS) {
       await writePart(run)
       await saveState(run)
     }
   }
 }
 
-async function finish(run: Run): Promise<void> {
+/**
+ * The ledger was written to while this pass was running, so what it has read is not one moment and a restore of it
+ * could fail on a reference. Say so, and start the pass again from the first table unless this was the last one
+ * allowed. Parts the abandoned pass wrote are overwritten by number or left out of the manifest.
+ */
+async function startOver(run: Run, revisionNow: string | null): Promise<'continues' | 'failed'> {
   const { deps, owner, dateKey, state } = run
+  const final = state.attempt >= MAX_PASSES
+  await deps.alerts.onInconsistentBackup({ owner, dateKey, attempt: state.attempt, final })
+  run.pending = []
+  run.pendingRows = 0
+  if (final) {
+    run.state = { ...state, failed: true }
+    await saveState(run)
+    return 'failed'
+  }
+  run.state = freshState(owner, dateKey, run.now(), revisionNow, state.attempt + 1)
+  await saveState(run)
+  return 'continues'
+}
+
+/** Writes the manifest, if the ledger did not move; otherwise starts the pass again. */
+async function finish(run: Run): Promise<'complete' | 'continues' | 'failed'> {
   await writePart(run)
-  const revisionNow = await revisionOf(deps, owner, run.budget)
+  const revisionNow = await revisionOf(run.deps, run.owner, run.budget)
+  if (revisionNow !== run.state.revision) return startOver(run, revisionNow)
+  const { deps, owner, dateKey, state } = run
   const manifest: BackupManifest = {
     format: BACKUP_FORMAT,
     exportFormat: EXPORT_FORMAT,
@@ -167,7 +213,6 @@ async function finish(run: Run): Promise<void> {
     startedAt: state.startedAt,
     finishedAt: run.now().toISOString(),
     revision: state.revision,
-    consistent: revisionNow === state.revision,
     tables: state.counts,
     parts: state.parts,
     bytes: state.parts.reduce((sum, part) => sum + part.bytes, 0),
@@ -180,6 +225,7 @@ async function finish(run: Run): Promise<void> {
   if (manifest.bytes > deps.policy.maxSnapshotBytes) {
     await deps.alerts.onLargeSnapshot({ owner, bytes: manifest.bytes, limit: deps.policy.maxSnapshotBytes })
   }
+  return 'complete'
 }
 
 /**
@@ -196,16 +242,21 @@ export async function backupOwnerChunked(
 ): Promise<OwnerOutcome> {
   if (existing.has(manifestKey(owner, dateKey))) return 'already complete'
   if (budget.operations < MIN_TO_START) return 'continues'
-  const state = await startOrResume(deps, owner, dateKey, budget, existing, now())
+  const { state, resumed } = await startOrResume(deps, owner, dateKey, budget, existing, now())
+  if (state.failed) return 'failed'
   const run: Run = { deps, owner, dateKey, budget, state, pending: [], pendingRows: 0, now }
+  // A run carried on from an earlier invocation checks the ledger has not moved since it began, before spending more on it.
+  if (resumed && deps.readRevision) {
+    const revisionNow = await revisionOf(deps, owner, budget)
+    if (revisionNow !== state.revision) return startOver(run, revisionNow)
+  }
   await drain(run)
-  if (state.table < EXPORT_TABLES.length) {
+  if (run.state.table < EXPORT_TABLES.length) {
     await writePart(run)
     await saveState(run)
     return 'continues'
   }
-  await finish(run)
-  return 'complete'
+  return finish(run)
 }
 
 /** A run from an earlier day that has a state but no manifest never finished: say so once, and stop carrying it. */
@@ -235,13 +286,21 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
   const keys = new Set(objects.map((object) => object.key))
   await reportAbandoned(deps, keys, dateKey, budget)
   let finished = 0
+  let failed = 0
+  let waiting = false
   for (const owner of owners) {
     const outcome = await backupOwnerChunked(deps, owner, dateKey, budget, keys, now)
-    if (outcome === 'continues') return { owners: owners.length, dateKey, complete: false, pruned: 0, usedBytes: 0 }
+    if (outcome === 'continues') {
+      waiting = true
+      break
+    }
+    if (outcome === 'failed') failed += 1
     if (outcome === 'complete') finished += 1
   }
-  if (finished === 0) return { owners: owners.length, dateKey, complete: true, pruned: 0, usedBytes: 0 }
+  const open = { owners: owners.length, dateKey, complete: false, failed, pruned: 0, usedBytes: 0 }
+  if (waiting || failed > 0) return open
+  if (finished === 0) return { ...open, complete: true }
   const pruned = await pruneBackups(deps, dateKey, true)
   const usedBytes = await maybeAlertBucketUsage(deps)
-  return { owners: owners.length, dateKey, complete: true, pruned, usedBytes }
+  return { ...open, complete: true, pruned, usedBytes }
 }

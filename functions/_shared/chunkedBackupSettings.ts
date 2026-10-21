@@ -13,7 +13,7 @@ export interface ChunkedBackupSettings {
 }
 
 export const DEFAULT_STEP_OPERATIONS = 44
-export const DEFAULT_STEP_ROWS = 10_000
+export const DEFAULT_STEP_ROWS = 1_500
 /** Enough to start a run, read a chunk and finish or save; below it an invocation could make no progress. */
 export const MIN_STEP_OPERATIONS = 12
 /**

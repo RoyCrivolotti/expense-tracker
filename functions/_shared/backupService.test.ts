@@ -59,6 +59,7 @@ function mockAlerts(): BackupAlerts & {
     onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
     onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
     onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
+    onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
   }
 }
 

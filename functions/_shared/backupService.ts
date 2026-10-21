@@ -69,7 +69,8 @@ export async function runScheduledBackup(deps: BackupDeps & { store: BackupStore
   if (deps.chunked?.enabled) {
     const result = await runChunkedBackups({ ...deps, store: deps.store, chunked: deps.chunked })
     const state = result.complete ? 'complete' : 'continues in the next invocation'
-    return `backup (chunked): ${result.owners} owner(s) for ${result.dateKey}, ${state}; pruned ${result.pruned}; ${result.usedBytes} bytes stored`
+    const failed = result.failed > 0 ? `; ${result.failed} owner(s) have no backup today because the ledger kept changing` : ''
+    return `backup (chunked): ${result.owners} owner(s) for ${result.dateKey}, ${state}${failed}; pruned ${result.pruned}; ${result.usedBytes} bytes stored`
   }
   const result = await runAllBackups(deps)
   return `backup: wrote ${result.owners} owner(s) for ${result.dateKey}; pruned ${result.pruned}; ${result.usedBytes} bytes stored`

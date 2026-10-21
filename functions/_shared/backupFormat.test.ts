@@ -11,6 +11,8 @@ const state = (over: Partial<BackupState> = {}): BackupState => ({
   table: 3,
   after: '40',
   nextPart: 2,
+  attempt: 1,
+  failed: false,
   parts: [{ key: 'a@b.com/2026-10-15/part-000001.ndjson', rows: 10, bytes: 900 }],
   counts: emptyCounts(),
   ...over,
@@ -25,7 +27,6 @@ const manifest = (over: Record<string, unknown> = {}): string =>
     startedAt: 's',
     finishedAt: 'f',
     revision: 'abc',
-    consistent: true,
     tables: emptyCounts(),
     parts: [],
     bytes: 0,
@@ -47,6 +48,8 @@ describe('parseBackupState', () => {
     ['another day', JSON.stringify(state({ dateKey: '2026-10-14' }))],
     ['a table past the end', JSON.stringify(state({ table: 99 }))],
     ['a negative part number', JSON.stringify(state({ nextPart: -1 }))],
+    ['no pass number', JSON.stringify({ ...state(), attempt: undefined })],
+    ['a failed flag that is not a flag', JSON.stringify({ ...state(), failed: 'yes' })],
     ['a part that is not one', JSON.stringify({ ...state(), parts: [{ key: 1 }] })],
     ['counts that are missing a table', JSON.stringify({ ...state(), counts: { categories: 1 } })],
     ['a position that is not text', JSON.stringify({ ...state(), after: 40 })],
@@ -60,7 +63,7 @@ describe('parseBackupManifest', () => {
   it('reads a manifest this code wrote', () => {
     const read: BackupManifest = parseBackupManifest(manifest())
     expect(read.owner).toBe('a@b.com')
-    expect(read.consistent).toBe(true)
+    expect(read.revision).toBe('abc')
   })
 
   it.each([

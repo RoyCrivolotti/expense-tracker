@@ -11,6 +11,7 @@ import type { BackupAlerts } from '../domain/ports/backupAlerts'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import type { ExpenseDataset } from '../domain/types'
 import { adversarialLedger } from '../../src/testing/adversarialLedger'
+import { makeDataset } from '../../src/testing/factories'
 import { memoryBackupStore, type MemoryBackupStore } from '../../src/testing/memoryBackupStore'
 import { randomLedger } from '../../src/testing/randomLedger'
 import { migratedDatabase, newStats, sqliteD1 } from '../../src/testing/sqliteD1'
@@ -21,7 +22,8 @@ import { manifestKey, ownerBackupKey, partKey, stateKey } from './backupKeys'
 import { parseBackupManifest } from './backupFormat'
 import { readBackup } from './backupRestore'
 import type { BackupPolicy } from './backupPolicy'
-import { PART_ROWS, runChunkedBackups, type ChunkedDeps } from './chunkedBackup'
+import { MAX_PASSES, READ_ROWS, SAVE_ROWS, runChunkedBackups, type ChunkedDeps } from './chunkedBackup'
+import { resolveChunkedBackup } from './chunkedBackupSettings'
 import { loadDataset } from './db'
 import { readOwnerRevision } from './dbRevision'
 import type { Env } from './env'
@@ -44,11 +46,12 @@ const policy: BackupPolicy = {
   bucketAlertThresholdFraction: 0.8,
 }
 
-function alertsSpy(): BackupAlerts & { onLargeSnapshot: ReturnType<typeof vi.fn>; onBucketNearLimit: ReturnType<typeof vi.fn>; onIncompleteBackup: ReturnType<typeof vi.fn> } {
+function alertsSpy(): BackupAlerts & { onLargeSnapshot: ReturnType<typeof vi.fn>; onBucketNearLimit: ReturnType<typeof vi.fn>; onIncompleteBackup: ReturnType<typeof vi.fn>; onInconsistentBackup: ReturnType<typeof vi.fn> } {
   return {
     onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
     onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
     onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
+    onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -123,7 +126,7 @@ function depsOf(
     store,
     alerts: alertsSpy(),
     policy,
-    chunked: { enabled: true, maxOperations: 44, maxRows: 10_000 },
+    chunked: resolveChunkedBackup({ BACKUP_MODE: 'chunked' }),
     readRevision: async (owner) => (await readOwnerRevision(source.env.DB, owner)).token,
     ...over,
   }
@@ -175,7 +178,6 @@ describe('a backup restores to the dataset it was made from', () => {
       expect(settled(restored)).toEqual(settled(source.dataset))
       if (source.dataset.transactions.length > 3_000) expect(invocations).toBeGreaterThan(2)
       const manifest = parseBackupManifest(store.objects.get(manifestKey(source.owner, DAY))!)
-      expect(manifest.consistent).toBe(true)
       expect(manifest.tables.transactions).toBe(source.dataset.transactions.length)
     },
     SLOW,
@@ -212,18 +214,19 @@ describe('a backup restores to the dataset it was made from', () => {
 })
 
 describe('a ledger larger than one part', () => {
-  it('is written as several parts, the state saved after each, and restores whole', async () => {
+  it('is written as several parts, the state saved after every chunk, and restores whole', async () => {
     const source = await sourceOf('large', syntheticLedger({ months: 48, perMonth: 130, seed: 17 }))
-    expect(source.dataset.transactions.length).toBeGreaterThan(PART_ROWS)
+    expect(source.dataset.transactions.length).toBeGreaterThan(READ_ROWS * 10)
     const store = memoryBackupStore()
     const deps = depsOf(source, store, { chunked: { enabled: true, maxOperations: 44, maxRows: 100_000 } })
 
     const invocations = await untilComplete(deps)
 
     const manifest = parseBackupManifest(store.objects.get(manifestKey(source.owner, DAY))!)
-    expect(invocations).toBe(1)
+    // Every chunk of 500 rows is a read, a part and a save, so a ledger this size is more than one invocation.
+    expect(invocations).toBeGreaterThan(1)
     expect(manifest.parts.length).toBeGreaterThan(1)
-    expect(manifest.parts.slice(0, -1).every((part) => part.rows >= PART_ROWS)).toBe(true)
+    expect(manifest.parts.slice(0, -1).every((part) => part.rows >= SAVE_ROWS)).toBe(true)
     expect(settled(await restoredFrom(store, source.owner))).toEqual(settled(source.dataset))
   }, SLOW)
 })
@@ -319,16 +322,65 @@ describe('the work of one invocation is bounded', () => {
       store.resetCalls()
       rowsRead.length = 0
       const before = source.queries.count
-      const result = await runChunkedBackups({ ...deps, repo }, clockOf(DAY))
-      const operations = source.queries.count - before + store.total()
+      // What had been spent when each listing of the bucket was asked for: the first starts the invocation and the
+      // second is the pruning that follows a finished day, which is not part of the backup's own budget.
+      const spentAtList: number[] = []
+      const watched = { ...store, list: (prefix?: string) => {
+        spentAtList.push(source.queries.count - before + store.total())
+        return store.list(prefix)
+      } } as MemoryBackupStore
+      const result = await runChunkedBackups({ ...deps, repo, store: watched }, clockOf(DAY))
 
-      // Three more calls follow a finished day: listing the bucket, deleting what has expired, listing it again.
-      const allowance = result.complete ? 3 : 0
-      expect(operations, `invocation ${i + 1}`).toBeLessThanOrEqual(budget.maxOperations + allowance)
+      const spent = result.complete && spentAtList.length > 1 ? spentAtList[1]! : source.queries.count - before + store.total()
+      expect(spent, `invocation ${i + 1}`).toBeLessThanOrEqual(budget.maxOperations)
       expect(rowsRead.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(budget.maxRows)
       if (result.complete) return
     }
     throw new Error('the backup did not finish')
+  }, SLOW)
+
+  it('whatever the budget, so that no phase of a run can overspend it', async () => {
+    // Receipts come last, so a ledger with exactly a part's worth of them is one whose final read both ends the last
+    // table and fills a part: the case in which writing the part and saving the state leaves the least for finishing.
+    // With nothing else in the ledger, some budget leaves exactly the reserve for that read.
+    const withReceipts = async (name: string, ledger: ExpenseDataset): Promise<Source> => {
+      const source = await sourceOf(name, ledger)
+      const attach = source.sqlite.prepare(
+        `INSERT INTO transaction_attachments (owner,transaction_id,object_key,content_type,byte_size) VALUES (?,?,?,'image/jpeg',100)`,
+      )
+      for (let i = 0; i < SAVE_ROWS; i += 1) attach.run(source.owner, 1, `extra-receipts/${i}`)
+      // A check-in makes reading the wealth tables cost the two queries it is budgeted for; an empty one costs one.
+      source.sqlite.prepare("INSERT INTO wealth_accounts (id,owner,name,kind) VALUES (1,?,'Broker','investment')").run(source.owner)
+      source.sqlite.prepare("INSERT INTO wealth_checkins (id,owner,checkin_date) VALUES (1,?,'2019-06-01')").run(source.owner)
+      source.sqlite.prepare('INSERT INTO wealth_checkin_entries (checkin_id,account_id,value_cents) VALUES (1,1,5000)').run()
+      return source
+    }
+    const ledgers = [
+      await withReceipts('receipts', syntheticLedger({ months: 3, perMonth: 20, seed: 61 })),
+      // An owner exists once they have a row in some table, so the ledger has a category and nothing else.
+      await withReceipts('only receipts', makeDataset({ categories: [{ id: 1, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true }] })),
+    ]
+    for (const source of ledgers) {
+      for (const maxRows of [300, 1_500, 100_000]) {
+        for (let maxOperations = 12; maxOperations <= 46; maxOperations += 1) {
+          const store = memoryBackupStore()
+          const deps = depsOf(source, store, { chunked: { enabled: true, maxOperations, maxRows } })
+          for (let i = 0; i < 400; i += 1) {
+            store.resetCalls()
+            const before = source.queries.count
+            const spentAtList: number[] = []
+            const watched = { ...store, list: (prefix?: string) => {
+              spentAtList.push(source.queries.count - before + store.total())
+              return store.list(prefix)
+            } } as MemoryBackupStore
+            const result = await runChunkedBackups({ ...deps, store: watched }, clockOf(DAY))
+            const spent = result.complete && spentAtList.length > 1 ? spentAtList[1]! : source.queries.count - before + store.total()
+            expect(spent, `${source.name}: ${maxOperations} calls, ${maxRows} rows, invocation ${i + 1}`).toBeLessThanOrEqual(maxOperations)
+            if (result.complete) break
+          }
+        }
+      }
+    }
   }, SLOW)
 
   it('and the default budget fits two owners with a small ledger each into one invocation', async () => {
@@ -512,16 +564,141 @@ describe('the alerts the single-file backup raised are kept', () => {
 })
 
 describe('a ledger written to while it is backed up', () => {
-  it('is recorded as not consistent in the manifest', async () => {
-    const source = sources.find((s) => s.name === 'synthetic')!
+  /** A source of its own, so that a test can change it. */
+  const moving = (seed: number) => sourceOf('moving', syntheticLedger({ months: 6, perMonth: 40, seed }))
+
+  function addTransaction(source: Source): void {
+    const { account_id: accountId, category_id: categoryId } = source.sqlite
+      .prepare('SELECT account_id, category_id FROM transactions WHERE owner = ? LIMIT 1')
+      .get(source.owner) as { account_id: number; category_id: number }
+    source.sqlite
+      .prepare(
+        `INSERT INTO transactions (owner,date,budget_month,description,description_norm,account_id,category_id,type,amount_cents,cancelled)
+         VALUES (?,'2019-12-30','2019-12','Written meanwhile','written meanwhile',?,?,'expense',777,0)`,
+      )
+      .run(source.owner, accountId, categoryId)
+    source.sqlite.prepare("UPDATE owner_revision SET token = 'moved' WHERE owner = ?").run(source.owner)
+  }
+
+  it('is noticed when the run is carried on: the pass is thrown away, reported, and redone with the write in it', async () => {
+    const source = await moving(31)
     const store = memoryBackupStore()
-    const deps = depsOf(source, store, { chunked: { enabled: true, maxOperations: 14, maxRows: 1_500 } })
+    const alerts = alertsSpy()
+    let reads = 0
+    const repo: ExpenseRepository = {
+      ...source.repo,
+      readExportChunk: (owner, request) => {
+        reads += 1
+        return source.repo.readExportChunk(owner, request)
+      },
+    }
+    const deps = depsOf(source, store, { alerts, repo, chunked: { enabled: true, maxOperations: 14, maxRows: 100 } })
     expect((await runChunkedBackups(deps, clockOf(DAY))).complete).toBe(false)
 
-    source.sqlite.prepare("UPDATE owner_revision SET token = 'written-meanwhile' WHERE owner = ?").run(source.owner)
+    addTransaction(source)
+    reads = 0
+    await runChunkedBackups(deps, clockOf(DAY))
+    // The invocation that finds the ledger has moved says so before it reads another row.
+    expect(reads).toBe(0)
+    expect(alerts.onInconsistentBackup).toHaveBeenCalledTimes(1)
     await untilComplete(deps)
 
-    expect(parseBackupManifest(store.objects.get(manifestKey(source.owner, DAY))!).consistent).toBe(false)
+    expect(alerts.onInconsistentBackup).toHaveBeenCalledTimes(1)
+    expect(alerts.onInconsistentBackup).toHaveBeenCalledWith({ owner: source.owner, dateKey: DAY, attempt: 1, final: false })
+    expect(parseBackupManifest(store.objects.get(manifestKey(source.owner, DAY))!).revision).toBe('moved')
+    const now = await loadDataset(source.env, source.owner)
+    expect(now.transactions.some((t) => t.description === 'Written meanwhile')).toBe(true)
+    expect(settled(await restoredFrom(store, source.owner))).toEqual(settled(now))
+  }, SLOW)
+
+  it('is noticed at the very end, and the backup that is marked complete is the pass that followed', async () => {
+    const source = await moving(32)
+    const store = memoryBackupStore()
+    const alerts = alertsSpy()
+    // The revision read as the run starts, and the one read as it finishes, differ; every read after is steady.
+    const readings = ['first', 'second']
+    const readRevision = () => Promise.resolve(readings.shift() ?? 'second')
+    const deps = depsOf(source, store, { alerts, readRevision })
+
+    const first = await runChunkedBackups(deps, clockOf(DAY))
+
+    expect(first.complete).toBe(false)
+    expect(store.objects.has(manifestKey(source.owner, DAY))).toBe(false)
+    await untilComplete(deps)
+    expect(alerts.onInconsistentBackup).toHaveBeenCalledTimes(1)
+    expect(parseBackupManifest(store.objects.get(manifestKey(source.owner, DAY))!).revision).toBe('second')
+    expect(settled(await restoredFrom(store, source.owner))).toEqual(settled(source.dataset))
+  }, SLOW)
+
+  it('gives up for the day after a few passes, says so, and spends nothing more on that owner', async () => {
+    const sqlite = migratedDatabase()
+    sqlite.exec('PRAGMA foreign_keys = OFF')
+    sqlite.exec('DELETE FROM settings')
+    const { seedDataset } = await import('../../src/testing/seedSqlite')
+    seedDataset(sqlite, OWNER, syntheticLedger({ months: 3, perMonth: 10, seed: 41 }))
+    seedDataset(sqlite, OTHER_OWNER, shifted(syntheticLedger({ months: 3, perMonth: 10, seed: 42 }), 1_000_000))
+    const env: Env = { DB: sqliteD1(sqlite) }
+    const store = memoryBackupStore()
+    const alerts = alertsSpy()
+    let reads = 0
+    const deps: ChunkedDeps = {
+      repo: createD1ExpenseRepository(env),
+      store,
+      alerts,
+      policy,
+      chunked: resolveChunkedBackup({ BACKUP_MODE: 'chunked' }),
+      // One owner's ledger moves every time it is looked at; the other's never does.
+      readRevision: (owner) => Promise.resolve(owner === OWNER ? `moving-${(reads += 1)}` : 'steady'),
+    }
+
+    let last = await runChunkedBackups(deps, clockOf(DAY))
+    for (let i = 0; i < 12 && last.failed === 0; i += 1) last = await runChunkedBackups(deps, clockOf(DAY))
+
+    expect(last).toMatchObject({ failed: 1, complete: false, pruned: 0 })
+    const finals = alerts.onInconsistentBackup.mock.calls.map(([d]) => d)
+    expect(finals).toHaveLength(MAX_PASSES)
+    expect(finals.map((d) => d.attempt)).toEqual(Array.from({ length: MAX_PASSES }, (_, i) => i + 1))
+    expect(finals.map((d) => d.final)).toEqual([...Array(MAX_PASSES - 1).fill(false), true])
+    expect(store.objects.has(manifestKey(OWNER, DAY))).toBe(false)
+    expect(store.objects.has(manifestKey(OTHER_OWNER, DAY))).toBe(true)
+
+    store.resetCalls()
+    alerts.onInconsistentBackup.mockClear()
+    const again = await runChunkedBackups(deps, clockOf(DAY))
+
+    expect(again).toMatchObject({ failed: 1, complete: false })
+    expect(alerts.onInconsistentBackup).not.toHaveBeenCalled()
+    expect(store.calls.put).toBe(0)
+  }, SLOW)
+
+  it('never marks a spoiled pass complete: with the ledger moving, no manifest is written', async () => {
+    const source = await moving(33)
+    const store = memoryBackupStore()
+    let reads = 0
+    const deps = depsOf(source, store, { readRevision: () => Promise.resolve(`moving-${(reads += 1)}`) })
+
+    for (let i = 0; i < 10; i += 1) await runChunkedBackups(deps, clockOf(DAY))
+
+    expect([...store.objects.keys()].some((key) => key.endsWith('manifest.json'))).toBe(false)
+  }, SLOW)
+})
+
+describe('how often the state is saved', () => {
+  it('after every chunk of a big table, so a kill loses less than a chunk of work', async () => {
+    const source = await sourceOf('big', syntheticLedger({ months: 24, perMonth: 100, seed: 51 }))
+    const store = memoryBackupStore()
+    const stateWrites: number[] = []
+    const counting = { ...store, put: (key: string, text: string, type?: string) => {
+      if (key === stateKey(source.owner, DAY)) stateWrites.push(text.length)
+      return store.put(key, text, type)
+    } }
+    const deps = depsOf(source, counting as MemoryBackupStore, { chunked: { enabled: true, maxOperations: 46, maxRows: 100_000 } })
+
+    await untilComplete(deps)
+
+    const transactions = source.dataset.transactions.length
+    expect(transactions).toBeGreaterThan(READ_ROWS * 4)
+    expect(stateWrites.length).toBeGreaterThanOrEqual(Math.floor(transactions / READ_ROWS))
   }, SLOW)
 })
 

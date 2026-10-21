@@ -29,6 +29,10 @@ export interface BackupState {
   startedAt: string
   /** The owner's revision when the run began; compared with the revision at the end. */
   revision: string | null
+  /** Which pass over the ledger this is: it starts again, up to a limit, when the ledger is written to meanwhile. */
+  attempt: number
+  /** Set when the last pass was spoiled too, so that the day has no backup and nothing more is spent on it. */
+  failed: boolean
   /** Index in `EXPORT_TABLES` of the table being read, and the position to continue after in it. */
   table: number
   after: string | null
@@ -44,12 +48,8 @@ export interface BackupManifest {
   dateKey: string
   startedAt: string
   finishedAt: string
+  /** The owner's dataset revision at the start; it was the same at the end, or there would be no manifest. */
   revision: string | null
-  /**
-   * False when the ledger was written to while the backup was being made. Each table is read by position,
-   * so a row is never repeated or lost, but two tables may then show different moments.
-   */
-  consistent: boolean
   tables: TableCounts
   parts: BackupPart[]
   bytes: number
@@ -96,6 +96,8 @@ function hasStateShape(value: Record<string, unknown>): boolean {
     isCount(value.table) &&
     value.table <= EXPORT_TABLES.length &&
     isCount(value.nextPart) &&
+    isCount(value.attempt) &&
+    typeof value.failed === 'boolean' &&
     Array.isArray(value.parts) &&
     value.parts.every(isPart) &&
     isCounts(value.counts)

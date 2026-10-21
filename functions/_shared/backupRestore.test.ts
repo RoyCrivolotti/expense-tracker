@@ -27,7 +27,6 @@ function backup(over: { parts?: Record<string, string>; manifest?: Record<string
     startedAt: 's',
     finishedAt: 'f',
     revision: 'r',
-    consistent: true,
     tables: { ...emptyCounts(), categories: 2, accounts: 1 },
     parts: [
       { key: partKey(OWNER, DAY, 1), rows: 2, bytes: part1.length },
@@ -47,7 +46,7 @@ describe('readBackup of a chunked backup', () => {
     expect(read.tables.categories).toEqual([{ id: 1, name: 'Food' }, { id: 2, name: 'Rent' }])
     expect(read.tables.accounts).toEqual([{ id: 1, name: 'Main' }])
     expect(read.tables.transactions).toEqual([])
-    expect(read.manifest?.consistent).toBe(true)
+    expect(read.manifest?.revision).toBe('r')
   })
 
   it('refuses a part that is not there', async () => {

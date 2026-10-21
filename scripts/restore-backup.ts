@@ -51,5 +51,4 @@ const script = restoreScript(target, backup.tables, new Date().toISOString())
 const rows = script.split('\n').filter((line) => line.startsWith('INSERT')).length
 if (out) writeFileSync(out, script)
 else process.stdout.write(script)
-const consistent = backup.manifest ? (backup.manifest.consistent ? 'consistent' : 'NOT consistent: the ledger changed while it was backed up') : 'single-file snapshot'
-console.error(`${rows} statements for ${target} from the ${backup.kind} backup of ${owner} on ${date} (${consistent})`)
+console.error(`${rows} statements for ${target} from the ${backup.kind} backup of ${owner} on ${date}`)
