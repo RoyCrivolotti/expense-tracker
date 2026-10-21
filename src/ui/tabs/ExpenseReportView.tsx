@@ -46,6 +46,8 @@ interface Props {
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
   /** Overridable so the printed issue date is testable. */
   issuedOn?: string
+  /** Reads the receipt lists of the report's rows, for a model that reads them on request. */
+  ensureReceipts?: ((ids: readonly number[]) => void) | undefined
 }
 
 /**
@@ -190,6 +192,42 @@ function useDocumentTitle(title: string, report: ExpenseReport | null) {
   }, [name])
 }
 
+/**
+ * The report lists receipts, so it waits for the lists of its rows when the model reads them on request: a row
+ * whose list is still on its way would otherwise be reported as having none.
+ */
+function useReceiptsLoading(
+  report: ExpenseReport | null,
+  lookup: Lookup,
+  ensureReceipts: Props['ensureReceipts'],
+): boolean {
+  const ids = (report ? [...report.lines, ...report.credits] : []).map((line) => line.transaction.id)
+  const key = ids.join(',')
+  useEffect(() => {
+    if (key !== '') ensureReceipts?.(key.split(',').map(Number))
+  }, [key, ensureReceipts])
+  return ids.some((id) => lookup.attachmentCount(id) > lookup.attachments(id).length)
+}
+
+/**
+ * The report with the filter applied. Null only when every line left has no receipt: reachable by toggling
+ * the filter on a claim that turns out to have none, not by anything a fresh open of the report can produce.
+ */
+function shownReport(base: ExpenseReport | null, receiptsOnly: boolean): ExpenseReport | null {
+  return base && receiptsOnly ? receiptsOnlyReport(base) : base
+}
+
+/** The open claim for a flag, or a past one rebuilt from the payment that settled it. */
+function baseReportOf(
+  dataset: ExpenseDataset,
+  flagId: number | undefined,
+  settledByPaymentId: number | undefined,
+): ExpenseReport | null {
+  const { transactions, flags, attachments } = dataset
+  if (settledByPaymentId != null) return buildSettledReport(settledByPaymentId, transactions, flags, attachments)
+  return flagId != null ? buildExpenseReport(flagId, transactions, flags, attachments) : null
+}
+
 export function ExpenseReportView({
   dataset: liveDataset,
   lookup,
@@ -198,6 +236,7 @@ export function ExpenseReportView({
   onClose,
   onOpenTransaction,
   issuedOn,
+  ensureReceipts,
 }: Props) {
   const format = useMoneyFormat()
   const { leaving, exitMs } = useExit()
@@ -213,17 +252,7 @@ export function ExpenseReportView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
-  const baseReport =
-    settledByPaymentId != null
-      ? buildSettledReport(
-          settledByPaymentId,
-          dataset.transactions,
-          dataset.flags,
-          dataset.attachments,
-        )
-      : flagId != null
-        ? buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
-        : null
+  const baseReport = baseReportOf(dataset, flagId, settledByPaymentId)
 
   // Defaults to the flag's name and lives only for this visit: nothing about a
   // report is stored, so there is nowhere to keep an edited title between
@@ -256,12 +285,11 @@ export function ExpenseReportView({
   // the full claim again.
   const [receiptsOnly, setReceiptsOnly] = useState(false)
 
-  // Null only when every line left has no receipt — reachable by toggling the
-  // filter on a claim that turns out to have none, not by anything a fresh
-  // open of the report can produce.
-  const report = baseReport && receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
+  const report = shownReport(baseReport, receiptsOnly)
 
   useDocumentTitle(title, report)
+
+  const receiptsLoading = useReceiptsLoading(baseReport, lookup, ensureReceipts)
 
   if (!baseReport) return null
 
@@ -280,7 +308,7 @@ export function ExpenseReportView({
         <button type="button" className={styles.closeBtn} onClick={onClose}>
           Back
         </button>
-        {report ? (
+        {report && !receiptsLoading ? (
           <div className={styles.toolbarActions}>
             <button
               type="button"
@@ -323,13 +351,15 @@ export function ExpenseReportView({
           version was on screen when Print was pressed. Aligned to the sheet's own
           column rather than the full-width toolbar, since it controls the sheet
           specifically and not the page. */}
-      <ReportControls
-        report={baseReport}
-        receiptsOnly={receiptsOnly}
-        onReceiptsOnlyChange={setReceiptsOnly}
-        showNotes={showNotes}
-        onShowNotesChange={setShowNotes}
-      />
+      {receiptsLoading ? null : (
+        <ReportControls
+          report={baseReport}
+          receiptsOnly={receiptsOnly}
+          onReceiptsOnlyChange={setReceiptsOnly}
+          showNotes={showNotes}
+          onShowNotesChange={setShowNotes}
+        />
+      )}
 
       {drifted ? (
         <p className={styles.driftNotice}>
@@ -338,7 +368,9 @@ export function ExpenseReportView({
         </p>
       ) : null}
 
-      {report ? (
+      {receiptsLoading ? (
+        <p className={styles.emptyNotice}>Loading receipts…</p>
+      ) : report ? (
         <ExpenseReportSheet
           report={report}
           lookup={lookup}

@@ -1,4 +1,4 @@
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { cleanup, render, screen, within, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
@@ -6,6 +6,8 @@ import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { FormFields } from './transactionFormState'
 import { defaultExpenseSettings } from '../../engine'
+import { makeActions } from '../../testing/makeActions'
+import type { ExpenseActions } from '../actions'
 import { Fields } from './TransactionFields'
 
 function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseModel {
@@ -40,6 +42,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
       flag: () => undefined,
       label: () => undefined,
       attachments: () => [],
+      attachmentCount: () => 0,
       installmentPlan: () => undefined,
       settlementFor: () => undefined,
       settledBy: () => [],
@@ -66,7 +69,13 @@ function baseForm(overrides: Partial<FormFields> = {}): FormFields {
   }
 }
 
-function renderFields(form: FormFields, model: ExpenseModel, editing: Transaction | null = null) {
+function renderFields(
+  form: FormFields,
+  model: ExpenseModel,
+  editing: Transaction | null = null,
+  receiptTargetId: number | null = null,
+  actions?: ExpenseActions,
+) {
   render(
     <Fields
       form={form}
@@ -74,6 +83,8 @@ function renderFields(form: FormFields, model: ExpenseModel, editing: Transactio
       model={model}
       editing={editing}
       onAcceptSuggestion={vi.fn()}
+      receiptTargetId={receiptTargetId}
+      {...(actions ? { actions } : {})}
     />,
   )
 }
@@ -330,5 +341,31 @@ describe('Fields type selector', () => {
     renderFields(baseForm({ type: 'investment', outflow: true }), modelWith())
     expect(screen.getByRole('button', { name: 'Withdraw' }).className).toMatch(/typeActive/)
     expect(screen.getByRole('button', { name: 'Invest' }).className).not.toMatch(/typeActive/)
+  })
+})
+
+describe('Fields receipts, when the model reads receipt lists on request', () => {
+  it('asks for the list of the transaction being edited, once', () => {
+    const ensureReceipts = vi.fn()
+    const model = { ...modelWith(), ensureReceipts }
+    renderFields(baseForm(), model, null, 12)
+    expect(ensureReceipts).toHaveBeenCalledTimes(1)
+    expect(ensureReceipts).toHaveBeenCalledWith([12])
+  })
+
+  it('asks for nothing for a transaction that is not saved yet', () => {
+    const ensureReceipts = vi.fn()
+    renderFields(baseForm(), { ...modelWith(), ensureReceipts })
+    expect(ensureReceipts).not.toHaveBeenCalled()
+  })
+
+  it('counts the receipts the transaction has, not only the list read, against the limit per transaction', () => {
+    const model = modelWith()
+    renderFields(baseForm(), model, null, 12, makeActions())
+    expect(screen.getByRole('button', { name: 'Add receipt' })).toBeEnabled()
+    cleanup()
+    model.lookup.attachmentCount = () => 4
+    renderFields(baseForm(), model, null, 12, makeActions())
+    expect(screen.getByRole('button', { name: 'Limit reached' })).toBeDisabled()
   })
 })

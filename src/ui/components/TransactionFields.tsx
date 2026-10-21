@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
@@ -235,6 +235,21 @@ interface FieldsProps {
 
 const NO_PENDING: PendingReceipt[] = []
 
+/**
+ * The receipts of the transaction being edited, and how many it has. A model that reads receipt lists on
+ * request has only the count until the list is asked for here.
+ */
+function useReceipts(model: ExpenseModel, transactionId: number | null) {
+  const { ensureReceipts, lookup } = model
+  useEffect(() => {
+    if (transactionId != null) ensureReceipts?.([transactionId])
+  }, [transactionId, ensureReceipts])
+  return {
+    attachments: transactionId != null ? lookup.attachments(transactionId) : [],
+    count: transactionId != null ? lookup.attachmentCount(transactionId) : 0,
+  }
+}
+
 export function Fields({
   form,
   set,
@@ -259,9 +274,8 @@ export function Fields({
 
   const showNoteInput = noteExpanded || form.notes !== ''
   const investmentCategoryId = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
-  const attachments = receiptTargetId != null ? model.lookup.attachments(receiptTargetId) : []
-  const receiptAtCap =
-    attachments.length + pendingFiles.length >= RECEIPT_CLIENT_POLICY.maxPerTransaction
+  const { attachments, count: receiptCount } = useReceipts(model, receiptTargetId)
+  const receiptAtCap = receiptCount + pendingFiles.length >= RECEIPT_CLIENT_POLICY.maxPerTransaction
 
   return (
     <>
