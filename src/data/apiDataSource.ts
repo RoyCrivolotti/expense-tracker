@@ -46,9 +46,18 @@ const BASE = '/api/expenses'
  * only decide how hard the browser tries before uploading, so a small drift
  * costs a rejected upload rather than a wrong one.
  */
+/**
+ * The ledger parts are imported on first use, so a browser that loads the whole dataset never fetches
+ * the code that reads them.
+ */
+const parts = () => import('./apiLedgerParts').then((m) => m.apiLedgerParts)
+
 export const apiDataSource: ExpenseDataSource = {
   canWrite: true,
   load: () => req<ExpenseDataset>(BASE),
+  readReferencePart: () => parts().then((p) => p.readReferencePart()),
+  readMonthsPart: (range) => parts().then((p) => p.readMonthsPart(range)),
+  readCubePart: (range) => parts().then((p) => p.readCubePart(range)),
   createTransaction: (input: NewTransaction) =>
     req<Transaction>(`${BASE}/transactions`, {
       method: 'POST',

@@ -43,13 +43,15 @@ async function purgeOwnerReceipts(env: Env, owner: string): Promise<void> {
 
 /** Delete all expense-tracker rows for one owner. Private: see purgeOwnerData. */
 async function purgeOwnerExpenseData(db: D1Database, owner: string): Promise<void> {
-  // wealth_checkin_entries is deleted via ON DELETE CASCADE from wealth_checkins.
+  // wealth_checkin_entries is deleted via ON DELETE CASCADE from wealth_checkins, and
+  // transaction_labels from transactions, so labels goes after transactions.
   await db.batch([
     db.prepare('DELETE FROM transactions WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM account_statements WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM cash_actuals WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM transaction_attachments WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM flags WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM labels WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM categories WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM accounts WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM settings WHERE owner = ?').bind(owner),

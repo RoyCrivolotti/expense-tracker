@@ -9,7 +9,7 @@ npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
 npm run verify         # symlinks, migration docs, PII check, lint, typecheck, test:coverage, build, bundle budget
-PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
+PARITY_TESTS=1 npm test   # optional parity test, needs a private export (see "Local parity tests")
 ```
 
 ## Layers
@@ -115,4 +115,4 @@ full PR workflow.
 
 ## Local parity tests
 
-`src/domain/data/parseWorkbookCsv.parity.test.ts` runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at the private workbook export. CI sets neither, so parity is optional and local-only.
+`src/domain/data/parseWorkbookCsv.parity.test.ts` compares the CSV importer with a spreadsheet export that is not in this repo. It runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at that export. CI sets neither, so it is skipped there.
