@@ -39,7 +39,17 @@ D1 is stricter than the SQLite the tests run on, in ways a test on SQLite cannot
 parameters, which is why id lists are bound as one JSON string read with `json_each`
 ([`sqlIdList.ts`](../functions/_shared/sqlIdList.ts)), and it refuses a compound `SELECT` of more than five terms. The
 test stand-in enforces the first rule and not the second. Cloudflare's documentation does not say whether each statement
-of a `batch()` counts toward the 50, and that has not been measured.
+of a `batch()` counts toward the 50.
+
+### Observed on a Free account
+
+The design stays inside the documented limits, so it holds on any plan and in any fork, and would hold if enforcement
+changed. A probe on 2026-10-22 did not see the 50 queries or the 10 ms enforced on one Free-plan account. A throwaway
+route on a deployed preview of this app (never merged) ran 60 `SELECT 1` as separate D1 calls in one request, and the
+same 60 in one `batch()`. All succeeded, with no failure at the 51st. It also ran about 10 million and about 100 million
+loop iterations in a request. Both completed, and the larger used about 275 ms of CPU by the platform's own analytics.
+This is one account on one day: an observation that may change, not a guarantee. The recipe to repeat it is in
+[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
 
 Two constraints come from the product. Output must not change: the pure functions in `src/domain/engine/` are the
 reference for every number. Offline is read-only (a snapshot, no offline writes, no sync).
@@ -69,19 +79,54 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 
 "clone" is what every local mutation pays today.
 
-1. **Worker CPU is the first limit, at a few thousand to about ten thousand transactions.** Mapping rows and deriving
-   status costs 1.1 to 1.5 ms per 1,000 rows and stringifying another 0.2, so 10 ms is crossed between roughly 6,500 and
-   9,000 rows. This is an estimate from Node. workerd's meter differs, so confirm it on a deployed Worker before relying
-   on it.
+1. **Worker CPU against the documented 10 ms.** Mapping rows and deriving status costs 1.1 to 1.5 ms per 1,000 rows and
+   stringifying another 0.2, so a full load passes 10 ms between roughly 6,500 and 9,000 rows if the limit is enforced.
+   This is an estimate from Node, and workerd's meter differs. The probe above saw no enforcement, so a load of that
+   size is not known to fail, and the design still keeps the CPU of one request small.
 2. **The network is not the constraint.** The response is 1.5 MB gzipped at 100,000 rows. Parse and clone are tens of
    milliseconds on a desktop, but a phone is several times slower and pays for the clone on every mutation.
 3. **D1 rows read.** Every load reads every row, so the daily 5 million covers about 440 loads at 10,000 transactions,
    90 at 50,000 and 18 at 250,000. A 304 skips the load, so the figure counts opens that follow a change.
 4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
-5. **A load issues 16 D1 queries**, inside the limit of 50.
+5. **A load issues 19 D1 queries** on a deployed D1 (the table below), inside the limit of 50.
 
-Not measured: Worker CPU on workerd, rows billed per route on a deployed D1, and how the 50-query limit counts a
-`batch()`. [MEASURING.md](./MEASURING.md) says how to measure the rows billed and the `batch()` count safely.
+### On a deployed D1
+
+`scripts/measure-d1.mjs` ran the route handlers against a development D1 database through Cloudflare's REST API, which
+reports the rows each statement read and wrote ([MEASURING.md](./MEASURING.md)). The ledger was synthetic: 303
+transactions and 11 statements under a reserved example owner, removed afterwards. A call is one round trip, with a
+`batch()` counted once, and the statements count each member of a batch. The harness stubs the middleware's access
+checks, about five statements a request, so they are in none of the counts.
+
+| Route | Calls | Statements | Rows read | Rows written |
+| --- | --- | --- | --- | --- |
+| `GET /api/expenses` | 19 | 19 | 774 | 0 |
+| `GET /api/expenses`, unchanged (304) | 1 | 1 | 1 | 0 |
+| `GET /reference` | 20 | 20 | 546 | 0 |
+| `GET /transactions/months`, 3 months | 2 | 2 | 863 | 0 |
+| `GET /cube`, 12 months | 2 | 2 | 890 | 0 |
+| `GET /series` | 3 | 3 | 3,027 | 0 |
+| `GET /descriptions/suggest`, one letter | 2 | 2 | 139 | 0 |
+| `GET /usage` | 6 | 6 | 756 | 0 |
+| `GET /transactions/list`, first page | 1 | 1 | 277 | 0 |
+| `GET /transactions/list`, second page | 1 | 1 | 283 | 0 |
+| `GET /transactions/list`, one month | 1 | 1 | 208 | 0 |
+| `GET /transactions/summary` | 1 | 2 | 608 | 0 |
+| `GET /transactions/summary`, one month | 1 | 2 | 78 | 0 |
+| `GET /transactions/:id` | 1 | 1 | 5 | 0 |
+| `POST /transactions`, one row | 8 | 8 | 10 | 11 |
+| `POST /transactions/bulk`, 20 rows | 124 | 124 | 164 | 182 |
+| `PATCH /transactions/bulk`, 50 ids | 155 | 155 | 628 | 102 |
+| `DELETE /transactions/bulk`, 20 rows | 3 | 6 | 264 | 22 |
+| `DELETE /transactions/:id` | 3 | 6 | 6 | 3 |
+
+A delete wrote about one row per row removed, so D1 did not appear to bill the index entries it removed. That is one run
+on a small ledger. The statement counts of the bulk routes are the formulas in
+[API.md](./API.md#bulk-transaction-routes).
+
+Not measured: the CPU of the app's own routes on workerd (the REST API reports none, and the probe above ran a loop),
+and any ledger larger than the seed. [MEASURING.md](./MEASURING.md) says how to repeat the run with a larger seed and
+compare.
 
 ## The design
 
