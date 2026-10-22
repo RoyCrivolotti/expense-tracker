@@ -29,6 +29,7 @@ const alerts: BackupAlerts = {
   onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
   onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
   onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
+  onBackupFailed: vi.fn().mockResolvedValue(undefined),
 }
 
 afterEach(() => vi.restoreAllMocks())

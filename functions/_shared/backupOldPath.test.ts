@@ -81,6 +81,10 @@ function run(over: { objects?: Record<string, string>; policy?: Partial<BackupPo
     },
     onIncompleteBackup: () => Promise.reject(new Error('the old path never reports an unfinished chunked backup')),
     onInconsistentBackup: () => Promise.reject(new Error('the old path never reports an inconsistent chunked backup')),
+    onBackupFailed: (d) => {
+      log.push(`alert failed ${d.owner}`)
+      return Promise.resolve()
+    },
   }
   const policy: BackupPolicy = {
     retentionDays: 14,

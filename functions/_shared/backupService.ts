@@ -6,6 +6,7 @@ import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { createR2BackupStore } from './adapters/r2BackupStore'
 import { ownerBackupKey } from './backupKeys'
 import type { BackupPolicy } from './backupPolicy'
+import { reportFailedBackups, type OwnerFailure } from './backupFailures'
 import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import { resolveBackupPolicy } from './backupPolicy'
 import { runChunkedBackups } from './chunkedBackup'
@@ -53,12 +54,21 @@ async function backupOwner(
 export async function runAllBackups(deps: BackupDeps): Promise<BackupRunResult> {
   const dateKey = new Date().toISOString().slice(0, 10)
   const owners = await deps.repo.listOwners()
+  const failures: OwnerFailure[] = []
   for (const owner of owners) {
-    await backupOwner(deps, owner, dateKey)
+    try {
+      await backupOwner(deps, owner, dateKey)
+    } catch (error) {
+      failures.push({ owner, error })
+    }
   }
-  const pruned = await pruneBackups(deps, dateKey)
-  const usedBytes = await maybeAlertBucketUsage(deps)
-  return { owners: owners.length, dateKey, pruned, usedBytes }
+  try {
+    const pruned = await pruneBackups(deps, dateKey)
+    const usedBytes = await maybeAlertBucketUsage(deps)
+    return { owners: owners.length, dateKey, pruned, usedBytes }
+  } finally {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+  }
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   type BackupState,
   type PartLine,
 } from './backupFormat'
+import { reportFailedBackups, type OwnerFailure } from './backupFailures'
 import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import type { BackupPolicy } from './backupPolicy'
 import type { ChunkedBackupSettings } from './chunkedBackupSettings'
@@ -288,8 +289,16 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
   let finished = 0
   let failed = 0
   let waiting = false
+  const failures: OwnerFailure[] = []
   for (const owner of owners) {
-    const outcome = await backupOwnerChunked(deps, owner, dateKey, budget, keys, now)
+    let outcome: OwnerOutcome
+    try {
+      outcome = await backupOwnerChunked(deps, owner, dateKey, budget, keys, now)
+    } catch (error) {
+      // The next owner is still backed up; the failure is reported, and thrown, once the loop is over.
+      failures.push({ owner, error })
+      continue
+    }
     if (outcome === 'continues') {
       waiting = true
       break
@@ -297,6 +306,7 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
     if (outcome === 'failed') failed += 1
     if (outcome === 'complete') finished += 1
   }
+  await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
   const open = { owners: owners.length, dateKey, complete: false, failed, pruned: 0, usedBytes: 0 }
   if (waiting || failed > 0) return open
   if (finished === 0) return { ...open, complete: true }

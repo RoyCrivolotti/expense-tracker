@@ -45,6 +45,11 @@ stays green and the worker keeps its old code and settings. After changing eithe
 Workers & Pages, `expense-backup-cron`, Deployments, or run `npm run deploy:backup-cron` with a token that has the
 scope.
 
+## When a backup fails
+
+An owner whose backup throws does not stop the others. Everyone else is backed up, old backups are pruned and the bucket
+is measured, then the failed owners are alerted by name and the invocation fails, so the cron run shows as failed.
+
 ## Restoring
 
 Restoring only produces SQL. `scripts/restore-backup.ts` reads files, never a database or the bucket, so the statements
