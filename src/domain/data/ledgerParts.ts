@@ -9,6 +9,7 @@
  * The HTTP routes add the owner's revision token to each, so a client can tell that two responses were
  * read from different states of the ledger and fetch again.
  */
+import type { RecurringSeries } from '../engine/recurringSeries'
 import type { LedgerReference, MonthCell } from '../ledger/types'
 import type { ExpenseDataset, Transaction } from '../types'
 import type { TransactionSummary } from './transactionQuery'
@@ -90,6 +91,12 @@ export interface MonthRowsPart extends MonthRange, MonthRowsRead {
 export interface CubePart extends MonthRange {
   revision: string
   cells: MonthCell[]
+}
+
+/** Every recurring series of the whole history, newest first, as `GET /series` answers. */
+export interface SeriesPart {
+  revision: string
+  series: RecurringSeries[]
 }
 
 /** A keyset page of the rows a filter matches, and the cursor to hand back for the page after it. */

@@ -201,3 +201,47 @@ describe('apiDataSource, ledger parts', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
+
+describe('apiLedgerParts, series', () => {
+  const series = {
+    label: 'Gym',
+    accountId: 1,
+    categoryId: 2,
+    type: 'expense',
+    amountCents: 2500,
+    newestDates: ['2026-01-05', '2026-02-05', '2026-03-05'],
+    olderGaps: [],
+    budgetMonths: ['2026-01', '2026-02', '2026-03'],
+    budgetOffsets: [0, 0, 0],
+  }
+
+  it('reads the series of the whole history from /series, from the browser cache like the other parts', async () => {
+    const fetchMock = serve(json({ revision: 'abc', series: [series] }))
+    await expect(apiLedgerParts.readSeriesPart()).resolves.toEqual({ revision: 'abc', series: [series] })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/expenses/series')
+    expect(init.cache).toBeUndefined()
+  })
+
+  it('reads it again past every cache when a 304 reaches it with no body to use', async () => {
+    const fetchMock = serve(new Response(null, { status: 304 }), json({ revision: 'abc', series: [] }))
+    await expect(apiLedgerParts.readSeriesPart()).resolves.toEqual({ revision: 'abc', series: [] })
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ cache: 'reload' })
+  })
+
+  it.each([
+    ['no revision', { series: [] }],
+    ['a series that is not a list', { revision: 'abc', series: {} }],
+    ['a series with no dates', { revision: 'abc', series: [{ ...series, newestDates: [] }] }],
+    ['a series with no label', { revision: 'abc', series: [{ ...series, label: undefined }] }],
+    ['a series with no gaps list', { revision: 'abc', series: [{ ...series, olderGaps: 4 }] }],
+  ])('reports %s as unavailable', async (_name, body) => {
+    serve(json(body))
+    await expect(apiLedgerParts.readSeriesPart()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('is served through apiDataSource', async () => {
+    serve(json({ revision: 'abc', series: [] }))
+    await expect(apiDataSource.readSeriesPart!()).resolves.toEqual({ revision: 'abc', series: [] })
+  })
+})

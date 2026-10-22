@@ -5,6 +5,7 @@ import type {
   MonthRange,
   MonthRowsPart,
   ReferencePart,
+  SeriesPart,
   TransactionPagePart,
   TransactionSummaryPart,
 } from '../domain/data/ledgerParts'
@@ -65,6 +66,25 @@ function isCubePart(body: unknown): body is CubePart {
     typeof body.from === 'string' &&
     typeof body.to === 'string' &&
     Array.isArray(body.cells)
+  )
+}
+
+/** A series the detectors read without a check of their own: a text label and the lists they index into. */
+function isSeriesPart(body: unknown): body is SeriesPart {
+  return (
+    isObject(body) &&
+    typeof body.revision === 'string' &&
+    Array.isArray(body.series) &&
+    body.series.every(
+      (s) =>
+        isObject(s) &&
+        typeof s.label === 'string' &&
+        Array.isArray(s.newestDates) &&
+        s.newestDates.length > 0 &&
+        Array.isArray(s.olderGaps) &&
+        Array.isArray(s.budgetMonths) &&
+        Array.isArray(s.budgetOffsets),
+    )
   )
 }
 
@@ -163,6 +183,7 @@ export const apiLedgerParts: LedgerPartsSource = {
   readReferencePart: () => readPart(`${BASE}/reference`, isReferencePart),
   readMonthsPart: (range) => readPart(`${BASE}/transactions/months?${query(range)}`, isMonthRowsPart),
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
+  readSeriesPart: () => readPart(`${BASE}/series`, isSeriesPart),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
   readTransactionPage: (filter, request) =>
