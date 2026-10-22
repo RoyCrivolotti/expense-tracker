@@ -4,6 +4,7 @@ import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
 import { EXIT_MS } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../modelSums'
 import type { Account } from '../../types'
 import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
@@ -52,15 +53,10 @@ export function StatementToggles({ model, onToggle }: Props) {
   )
   const months = [...model.months].reverse()
 
+  const sums = sumsOf(model)
   const reconciliation = useMemo(
-    () =>
-      computeCashReconciliation(
-        model.dataset.transactions,
-        model.dataset.accounts,
-        model.dataset.settings,
-        model.dataset.cashActuals,
-      ),
-    [model.dataset],
+    () => computeCashReconciliation(sums.transactions, sums.accounts, sums.settings, sums.cashActuals),
+    [sums],
   )
 
   const chargeCents = (accountId: number, yearMonth: string): number =>

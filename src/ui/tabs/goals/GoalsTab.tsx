@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
+import { sumsOf } from '../../modelSums'
 import type { ExpenseActions } from '../../actions'
 import {
   averageMonthlyCents,
@@ -119,9 +120,10 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       date: latest.checkinDate,
     }
   }, [dataset.wealthCheckins, dataset.wealthAccounts])
+  const sums = sumsOf(model)
   const monthly = useMemo(
-    () => monthlyFlows(computeMonthlyTotals(dataset.transactions)),
-    [dataset.transactions],
+    () => monthlyFlows(computeMonthlyTotals(sums.transactions)),
+    [sums.transactions],
   )
   const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The plan as it stands from the latest check-in: derived, never saved, and null until
@@ -193,6 +195,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         {view === 'progress' ? (
           <ProgressPane
             dataset={dataset}
+            sums={sums}
             actions={actions}
             plan={plan}
             latestSnapshot={latestSnapshot}
