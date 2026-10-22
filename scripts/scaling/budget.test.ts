@@ -8,6 +8,8 @@ import {
   FREE_PLAN,
   FULL_INDEXES_ON_TRANSACTIONS,
   LABEL_LINK_WRITES,
+  cleanupReserve,
+  datasetDeleteWrites,
   datasetInsertWrites,
   insertWrites,
   largestSeed,
@@ -82,9 +84,26 @@ describe('the seed budget', () => {
     expect(budget.total).toBeLessThanOrEqual(CAPS.rowsWrittenTotal)
   })
 
-  it('does not fit at 2,000 transactions', () => {
-    const budget = seedBudget(ledgerOfAbout(2000, '2026-10'))
+  it('does not fit at 3,200 transactions', () => {
+    const budget = seedBudget(ledgerOfAbout(3200, '2026-10'))
     expect(budget.fitsTotalCap).toBe(false)
+  })
+
+  it('counts a delete as one written row per row removed, which is what a real D1 reported', () => {
+    const dataset = ledgerOfAbout(300, '2026-10')
+    expect(dataset.transactions).toHaveLength(303)
+    expect(datasetInsertWrites(dataset)).toBe(2549)
+    expect(datasetDeleteWrites(dataset)).toBe(368)
+  })
+
+  it('lets a ledger of 910 be seeded, measured and removed on one UTC day, with the cleanup reserve still free', () => {
+    const dataset = ledgerOfAbout(900, '2026-10')
+    const budget = seedBudget(dataset)
+    expect(budget.transactions).toBe(910)
+    expect(budget.deleteWrites).toBeLessThan(budget.insertWrites / 4)
+    expect(budget.fitsOneDay).toBe(true)
+    expect(budget.dayOne + cleanupReserve(dataset)).toBeLessThanOrEqual(CAPS.rowsWrittenPerDay)
+    expect(cleanupReserve(dataset)).toBe(2 * budget.deleteWrites)
   })
 
   it('finds the largest seed under a cap, and none larger fits', () => {
