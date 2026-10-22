@@ -409,7 +409,7 @@ export async function updateTransaction(
   id: number,
   patch: TxnPatch,
 ): Promise<Transaction> {
-  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => Object.hasOwn(COLUMN, k))
   const link = await planLinkColumns(env, owner, id, patch)
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   await assertPatchOwnership(env, owner, patch)
@@ -563,7 +563,7 @@ export async function planBulkUpdate(
   patch: BulkTransactionPatch,
 ): Promise<D1PreparedStatement[]> {
   await assertPatchOwnership(env, owner, patch)
-  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => Object.hasOwn(COLUMN, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const list = idList(ids)
   // Rejected before any row is touched. The UPDATE's guard clause silently *excludes* a
