@@ -23,6 +23,7 @@ import { cascadeOf } from './ledgerCascade'
 import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
 import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
+import { reason } from './reason'
 
 export interface SessionState {
   held: HeldLedger | null
@@ -114,8 +115,6 @@ function resourcesTouched(done: Reconciled): Resource[] {
     ...(done.stale.length > 0 ? (['cube'] as const) : []),
   ]
 }
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 /**
  * A ledger held open: the months the screens want are read when the month shown changes, a write is

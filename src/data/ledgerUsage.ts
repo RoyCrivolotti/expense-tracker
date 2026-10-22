@@ -2,6 +2,7 @@ import type { UsagePart } from '../domain/data/ledgerParts'
 import { usageFromDataset } from '../domain/engine/recordUsage'
 import type { LedgerPartsSource } from './dataSource'
 import type { WriteEvent } from './ledgerSession'
+import { reason } from './reason'
 
 export interface UsageState {
   /** The counts as last read, or null before the first read has come. */
@@ -16,8 +17,6 @@ export interface UsageState {
 
 /** Reads of the counts made for one change of what is shown: the last is the one kept if writes keep coming. */
 const READ_ATTEMPTS = 3
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 /** The fields of a row the counts are made of. */
 const COUNTED_FIELDS = ['categoryId', 'accountId', 'flagId', 'labelIds']
