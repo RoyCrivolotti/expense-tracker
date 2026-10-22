@@ -15,6 +15,8 @@ interface InvokeOptions {
   params?: Record<string, string>
   /** Omit header when false; defaults to owner@example.com. */
   email?: string | false
+  /** Extra request headers, such as `If-None-Match`. */
+  headers?: Record<string, string>
 }
 
 function handlerContext(
@@ -83,7 +85,11 @@ function withAccessTableMocks(env: Env): Env {
         }
         return base.prepare(sql)
       },
-      batch: (statements: D1PreparedStatement[]) => base.batch(statements),
+      // A mock database that never batches still has to take the middleware's revision read and bump.
+      batch: (statements: D1PreparedStatement[]) =>
+        typeof base.batch === 'function'
+          ? base.batch(statements)
+          : Promise.resolve(statements.map(() => ({ results: [] }))),
     } as unknown as D1Database,
   }
 }
@@ -93,7 +99,7 @@ export async function invokePagesRoute(
   handler: RouteHandler,
   options: InvokeOptions,
 ): Promise<Response> {
-  const headers = new Headers()
+  const headers = new Headers(options.headers)
   if (options.email !== false) {
     headers.set('Cf-Access-Authenticated-User-Email', options.email ?? 'owner@example.com')
   }

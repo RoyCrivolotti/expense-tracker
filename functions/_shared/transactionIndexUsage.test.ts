@@ -1,6 +1,6 @@
 /**
  * Evidence for dropping two indexes on `transactions` that the paged reads make redundant (the drop
- * itself is proposed in docs/SCALING.md and is not a migration). Every statement the repository runs
+ * itself is described in docs/SCALING.md and is not a migration). Every statement the repository runs
  * against `transactions` across reads and the write paths is put through `EXPLAIN QUERY PLAN`:
  *
  * - `idx_txn_budget_month (budget_month)` is read by no statement at all. Writes keep it up to date

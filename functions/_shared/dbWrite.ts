@@ -15,6 +15,8 @@ import {
   type TxnRow,
 } from './rows'
 import { descriptionNorm, descriptionNormSets } from './descriptionNorm'
+import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
+import { guardSql, isGuardFailure } from './batchGuard'
 import { HttpError } from './http'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import {
@@ -137,17 +139,9 @@ export async function maybeCompletePlan(env: Env, owner: string, planId: number 
 /**
  * The forward half of a flag's auto-label: whenever a write assigns `flagId` to
  * `transactionId`, that flag's configured label (if any) is applied too. A
- * statement, not a run-it-here call, so bulkUpdateTransactions can batch one per
- * affected row alongside its own UPDATE rather than a separate round trip per row.
+ * statement, not a run-it-here call, so a caller can batch it with its own write.
  * `INSERT OR IGNORE` plus the `auto_label_id IS NOT NULL` filter make this a safe
  * no-op both for a flag with no auto-label and for a row that already has it.
- *
- * Joins through `transactions` and filters it to `owner` too, not just `flags`:
- * `bulkUpdateTransactions` batches one of these per id in the caller's raw `ids`
- * array, before that array has been checked against `owner` (the UPDATE it runs
- * alongside excludes a foreign id itself via its own `WHERE owner = ?`, but this
- * statement runs independently of that, so it needs the same guarantee on its own
- * rather than trusting the id it was handed).
  */
 function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: number, flagId: number) {
   return env.DB.prepare(
@@ -156,6 +150,21 @@ function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: nu
      FROM transactions t, flags f
      WHERE t.id = ? AND t.owner = ? AND f.id = ? AND f.owner = ? AND f.auto_label_id IS NOT NULL`,
   ).bind(transactionId, owner, flagId, owner)
+}
+
+/**
+ * The same, for many rows in one statement. One statement per row would put thousands in a batch
+ * for a large selection, so the ids travel as one JSON list. Joins through `transactions` and
+ * filters it to `owner`: an id in the list is not checked against the owner anywhere else, and the
+ * UPDATE it runs beside excludes a foreign id only for itself.
+ */
+function maybeApplyAutoLabelToIdsStatement(env: Env, owner: string, ids: number[], flagId: number) {
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
+     SELECT t.id, f.auto_label_id
+     FROM transactions t, flags f
+     WHERE t.owner = ? AND t.id ${IN_ID_LIST} AND f.id = ? AND f.owner = ? AND f.auto_label_id IS NOT NULL`,
+  ).bind(owner, idList(ids), flagId, owner)
 }
 
 export async function insertTransaction(
@@ -335,19 +344,28 @@ async function assertNoWithdrawalLeavingInvestment(
 
 /**
  * The statements a bulk update batches alongside its own UPDATE: the report
- * snapshot when settling, and one auto-label fan-out per row when assigning a
- * flag (see maybeApplyAutoLabelStatement — unlike the single-row write paths,
- * a bulk update's row count is not known until `ids` is given, so this cannot
- * be one shared statement the way reportSnapshotStatement is).
+ * snapshot when settling, and the flag's auto-label when assigning a flag.
  */
 function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: BulkTransactionPatch) {
   const statements = []
   if (patch.settledBy != null) statements.push(reportSnapshotStatement(env, owner, patch.settledBy))
-  if (patch.flagId != null) {
-    const flagId = patch.flagId
-    statements.push(...ids.map((id) => maybeApplyAutoLabelStatement(env, owner, id, flagId)))
-  }
+  if (patch.flagId != null) statements.push(maybeApplyAutoLabelToIdsStatement(env, owner, ids, patch.flagId))
   return statements
+}
+
+/**
+ * Last in a settling batch: fails, and so undoes the batch, unless every row of the owner in `ids` is
+ * now settled by `settledBy`. `assertNoneSettledElsewhere` refuses the common case before anything is
+ * written; this covers a payment that settled one of the rows between that check and the batch, which
+ * the UPDATE's guard clause would otherwise skip over while the rest of the rows were committed.
+ */
+function settledGuardStatement(env: Env, owner: string, ids: number[], settledBy: number) {
+  return env.DB.prepare(
+    guardSql(
+      `NOT EXISTS (SELECT 1 FROM transactions
+         WHERE owner = ? AND id ${IN_ID_LIST} AND (settled_by IS NULL OR settled_by != ?))`,
+    ),
+  ).bind(owner, idList(ids), settledBy)
 }
 
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
@@ -533,13 +551,17 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
   return deleted?.meta?.changes ?? 0
 }
 
-export async function bulkUpdateTransactions(
+/**
+ * Every check a bulk update makes and the statements that carry it out, in the order they run as one
+ * batch. Nothing is written here: a check that fails throws before the caller has anything to run, so
+ * the ids form and the filter form refuse the same patches for the same reasons.
+ */
+export async function planBulkUpdate(
   env: Env,
   owner: string,
   ids: number[],
   patch: BulkTransactionPatch,
-): Promise<Transaction[]> {
-  if (ids.length === 0) return []
+): Promise<D1PreparedStatement[]> {
   await assertPatchOwnership(env, owner, patch)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
@@ -557,15 +579,30 @@ export async function bulkUpdateTransactions(
   const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id ${IN_ID_LIST}${guard.clause}`,
   ).bind(...values, owner, list, ...guard.values)
-  const [updated] = await env.DB.batch([write, ...bulkFollowUpStatements(env, owner, ids, patch)])
-  // Backstop for the window between that check and this UPDATE: a concurrent request
-  // could settle one of these rows in between. The guard clause still refuses to
-  // double-settle it; this surfaces that as a conflict instead of a short result set.
-  if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
-    throw new HttpError(409, SETTLED_ELSEWHERE)
+  const guards = patch.settledBy != null ? [settledGuardStatement(env, owner, ids, patch.settledBy)] : []
+  return [write, ...bulkFollowUpStatements(env, owner, ids, patch), ...guards]
+}
+
+/** Runs a planned bulk batch; a guard in it that does not hold is a 409 and nothing was written. */
+export async function runBulkBatch(env: Env, statements: D1PreparedStatement[]): Promise<D1Result[]> {
+  try {
+    return await env.DB.batch(statements)
+  } catch (error) {
+    if (isGuardFailure(error)) throw new HttpError(409, BULK_CHANGED_MESSAGE)
+    throw error
   }
+}
+
+export async function bulkUpdateTransactions(
+  env: Env,
+  owner: string,
+  ids: number[],
+  patch: BulkTransactionPatch,
+): Promise<Transaction[]> {
+  if (ids.length === 0) return []
+  await runBulkBatch(env, await planBulkUpdate(env, owner, ids, patch))
   const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
-    .bind(owner, list)
+    .bind(owner, idList(ids))
     .all<TxnRow>()
   const transactions: Transaction[] = []
   for (const row of results) {

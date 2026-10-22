@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { migratedDatabase, sqliteD1 } from '../../src/testing/sqliteD1'
 import { purgeOwnerData } from './ownerDataPurge'
 import type { Env } from './env'
 
@@ -38,6 +39,7 @@ describe('purgeOwnerData', () => {
       'DELETE FROM cash_actuals WHERE owner = ?',
       'DELETE FROM transaction_attachments WHERE owner = ?',
       'DELETE FROM flags WHERE owner = ?',
+      'DELETE FROM labels WHERE owner = ?',
       'DELETE FROM categories WHERE owner = ?',
       'DELETE FROM accounts WHERE owner = ?',
       'DELETE FROM settings WHERE owner = ?',
@@ -109,5 +111,32 @@ describe('purgeOwnerData', () => {
     expect(batch).toHaveBeenCalledOnce()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('guest@example.com'))
     warn.mockRestore()
+  })
+})
+
+describe('purgeOwnerData against SQLite', () => {
+  /** One account, category, transaction and label for `owner`, with the label applied to the transaction. */
+  function seedOwner(db: ReturnType<typeof migratedDatabase>, owner: string, id: number) {
+    db.prepare('INSERT INTO accounts (id, owner, name, kind, settlement) VALUES (?, ?, ?, ?, ?)').run(
+      id, owner, 'Card', 'debit', 'immediate',
+    )
+    db.prepare('INSERT INTO categories (id, owner, name) VALUES (?, ?, ?)').run(id, owner, 'Food')
+    db.prepare(
+      'INSERT INTO transactions (id, owner, date, budget_month, account_id, category_id, type, amount_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(id, owner, '2026-10-01', '2026-10', id, id, 'expense', 1000)
+    db.prepare('INSERT INTO labels (id, owner, name, color) VALUES (?, ?, ?, ?)').run(id, owner, 'Trip', '#336699')
+    db.prepare('INSERT INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)').run(id, id)
+  }
+
+  it("deletes a revoked owner's labels and label links and leaves another owner's alone", async () => {
+    const db = migratedDatabase()
+    seedOwner(db, 'gone@example.com', 1)
+    seedOwner(db, 'kept@example.com', 2)
+
+    await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
+
+    expect(db.prepare('SELECT owner FROM labels').all()).toEqual([{ owner: 'kept@example.com' }])
+    // The link rows go with their transactions, not through anything the purge names.
+    expect(db.prepare('SELECT label_id FROM transaction_labels').all()).toEqual([{ label_id: 2 }])
   })
 })
