@@ -20,6 +20,12 @@ export interface DescriptionSuggestion {
 export interface DescriptionIndex {
   search(prefix: string, limit?: number): DescriptionSuggestion[]
   resolve(label: string): DescriptionSuggestion | undefined
+  /**
+   * A hook for an index that has more to say than its own rows (a window, whose older rows the server holds): the
+   * suggestions for what is typed, the index's own at once and the rest as they arrive. Absent for an index that
+   * holds every row, whose `search` is the whole answer.
+   */
+  useSuggestions?: (index: DescriptionIndex, value: string) => DescriptionSuggestion[]
 }
 
 /** What `buildDescriptionIndex` returns: `search`, and the same matches with the row each comes from. */

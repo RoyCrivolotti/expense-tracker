@@ -1,4 +1,9 @@
-import { buildDescriptionIndex } from '../data/descriptionIndex'
+import {
+  type DescriptionEntryIndex,
+  type DescriptionIndex,
+  type DescriptionIndexOptions,
+  buildDescriptionIndex,
+} from '../data/descriptionIndex'
 import { recurringFixedGroups } from '../domain/engine'
 import { foldNewerRows } from '../domain/engine/recurringFold'
 import { type RecurringSeries, recurringFixedGroupsFromSeries } from '../domain/engine/recurringSeries'
@@ -16,6 +21,16 @@ export interface LedgerModelOptions {
   history?: FixedHistory
   /** Receipts per transaction, for a ledger whose receipt lists are read on request. */
   attachmentCounts?: AttachmentCounts
+  /**
+   * For a window, whose older descriptions the server holds: how the index of the rows held is ordered, and what
+   * adds the server's matches to it (`withOlderDescriptions`).
+   */
+  descriptions?: { index: DescriptionIndexOptions; wrap: (index: DescriptionEntryIndex) => DescriptionIndex }
+}
+
+function descriptionsOf(real: Transaction[], { descriptions }: LedgerModelOptions): DescriptionIndex {
+  if (!descriptions) return buildDescriptionIndex(real)
+  return descriptions.wrap(buildDescriptionIndex(real, descriptions.index))
 }
 
 /** The series of `rows`, which must be the whole history. */
@@ -48,7 +63,7 @@ export function buildLedgerModel(ledger: Ledger, options: LedgerModelOptions = {
     dataset,
     ...(linear.length === real.length ? {} : { sums: ledgerDataset(ledger, linear) }),
     lookup: buildLookup(dataset, options.attachmentCounts),
-    descriptionIndex: buildDescriptionIndex(real),
+    descriptionIndex: descriptionsOf(real, options),
     months: ledgerMonths(ledger),
     ...(options.history ? { history: options.history } : {}),
     ...(options.attachmentCounts ? { attachmentCounts: options.attachmentCounts } : {}),

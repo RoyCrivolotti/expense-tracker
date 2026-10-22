@@ -5,6 +5,7 @@ import { LedgerSession, type SessionOptions, type SessionState } from '../data/l
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { TransactionPager } from '../data/transactionPager'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
+import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
 import { pagedListOf } from './pagedTransactionList'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
@@ -134,7 +135,19 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const note = historyNoteOf(windowed && !series, state)
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
-    const built = buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts })
+    // A window's older descriptions are the server's: its own are in the server's order so that the two can be merged.
+    const older = windowed ? olderThan(held) : null
+    const descriptions = older
+      ? {
+          index: { order: 'key' as const, locale: BROWSER_LOCALE },
+          wrap: (index: Parameters<typeof withOlderDescriptions>[0]) =>
+            withOlderDescriptions(index, source, { before: older.before, locale: BROWSER_LOCALE }),
+        }
+      : undefined
+    const built = buildLedgerModel(ledgerOfHeld(held), {
+      attachmentCounts: held.attachmentCounts,
+      ...(descriptions ? { descriptions } : {}),
+    })
     const withSeries = windowed && series ? withHistory(built, series) : built
     return {
       ...withSeries,
@@ -144,7 +157,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       pagedList,
       ...(note ? { historyNote: note } : {}),
     }
-  }, [held, series, windowed, note, session, pagedList])
+  }, [held, series, windowed, note, session, pagedList, source])
 
   const reload = useCallback(() => {
     if (phase === 'error') {
