@@ -31,11 +31,7 @@ adapter checks a patch that carries only one of them against the stored row, and
 ## Statement `paid_on`
 
 `paid_on` is always user-authored: flipping a statement to paid sets it to today's date (or whatever the user picks),
-full stop. No code in this repo infers a bank's payment date, because a guessed date was wrong for a whole account once
-and the rows had to be corrected by hand.
-
-If a future migration needs a one-time backfill of `paid_on`, don't guess: default new `paid = 1` rows to
-`todayLocalIso()` and let the user correct the date, as the live UI does.
+full stop. No code in this repo infers a bank's payment date.
 
 ## Currency, number format & budget months
 
@@ -76,8 +72,8 @@ Due day: `due_day_of_month` (nullable, migration `0010`) is the day of the month
 captures it automatically from the day of the logging transaction; you can set or correct it on the plan edit form
 (leave blank to clear). It is the charge day, not the day the card's bill is paid: a card that debits on the 1st can
 carry a plan whose charge day is the 6th. It clamps to the month length (day 31 in a 30-day month becomes the 30th).
-Legacy plans with `NULL` are treated as "unknown day": a suggested or auto-created payment is dated the 1st of its
-budget month and the card reads "Due this month".
+Plans with `NULL` are treated as "unknown day": a suggested or auto-created payment is dated the 1st of its budget month
+and the card reads "Due this month".
 
 Payment dates: a payment's calendar date is its budget month shifted back by the gap the plan's earliest recorded
 installment shows between its own date and its budget month (`calendarOffsetMonths`, ignored past one month as a likely
@@ -90,7 +86,7 @@ The Transactions tab is the single home for installments. Creating, attaching, m
 inside the transaction modal (add or edit): the "Installment plan" button swaps the modal body to an installment step
 where you pick None / New plan / Existing plan (plus Change plan / Remove on an already-linked row). A new plan is
 derived from the transaction's own fields, anchored to its budget month. Save applies the intent (create-plan-then-link,
-link, move, or unlink) via the standard create/update endpoints. Settings no longer hosts installments.
+link, move, or unlink) via the standard create/update endpoints.
 
 Managing plans (progress, edit details, complete/reactivate, delete) lives behind the "Manage plans" button on the
 Installments card in the Transactions tab, which opens a modal listing every plan with a step-swap edit form. The card
@@ -108,17 +104,18 @@ text). The styles live in `InstallmentsCard.module.css`, separate from the recur
 whenever any plan exists, so "Manage plans" is always reachable. Only the recurring Upcoming card is windowed, see
 below.
 
-Automatic creation for credit-card plans: `backfillInstallments` (`functions/_shared/dbInstallmentBackfill.ts`) runs at
-the start of every dataset load and, for each active plan on a deferred-settlement account, inserts every installment
-that has come due and isn't recorded, oldest first, up to the owner's current budget month (rollover-aware, on the
-server's UTC clock). A credit-card installment's charge is a certainty from the day the plan is created, so there is
-nothing to confirm by hand; a debit-card installment is the only signal the app gets that money left the account, so
-debit plans stay manual by design. Rows are inserted with `ON CONFLICT DO NOTHING` against the unique index, so
-concurrent loads never create a duplicate; one plan failing doesn't stop the others, and a failure never fails the load
-itself. When the final installment exists the plan is marked complete (`maybeCompletePlan`, which also runs after any
-transaction write that reaches the last installment; migration `0022` closed out plans that had already finished).
-Deleting an auto-created row gets it re-created on the next load while the plan is active and its month has come due; to
-stop the schedule, complete or delete the plan.
+Automatic creation for credit-card plans: `backfillInstallments` (`functions/_shared/dbInstallmentBackfill.ts`) runs
+when the dataset, the reference or the usage route is read and the browser's copy is not current (a 304 skips it), and
+when the backup loads a dataset. For each active plan on a deferred-settlement account it inserts every installment that
+has come due and isn't recorded, oldest first, up to the owner's current budget month (rollover-aware, on the server's
+UTC clock). A credit-card installment's charge is a certainty from the day the plan is created, so there is nothing to
+confirm by hand; a debit-card installment is the only signal the app gets that money left the account, so debit plans
+stay manual by design. Rows are inserted with `ON CONFLICT DO NOTHING` against the unique index, so concurrent loads
+never create a duplicate; one plan failing doesn't stop the others, and a failure never fails the load itself. When the
+final installment exists the plan is marked complete (`maybeCompletePlan`, which also runs after any transaction write
+that reaches the last installment; migration `0022` closed out plans that had already finished). Deleting an
+auto-created row gets it re-created on the next load while the plan is active and its month has come due; to stop the
+schedule, complete or delete the plan.
 
 Linking pre-existing rows: open the row, use the installment step, and attach it to the plan (index defaults to the
 plan's next open slot, overridable).
