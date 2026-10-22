@@ -81,6 +81,30 @@ describe('an edit by ids answers with the rows it edited', () => {
   })
 })
 
+describe('a label link that points at another owner’s label', () => {
+  // It needs corrupt data, since every writer checks a label against its owner; the answer must still not carry it,
+  // as the list, the dataset and the export do not.
+  it('is left out of the rows an edit answers with, and a link to the owner’s own label stays', async () => {
+    const kit = queryDb(syntheticLedger({ months: 3, perMonth: 20, seed: 9 }), [
+      { owner: OTHER_OWNER, dataset: syntheticLedger({ months: 3, perMonth: 20, seed: 10 }) },
+    ])
+    const env = { DB: kit.d1 } as Env
+    const mine = (kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id LIMIT 3').all(OWNER) as Array<{ id: number }>).map((r) => r.id)
+    const own = (kit.sqlite.prepare('SELECT id FROM labels WHERE owner = ? LIMIT 1').get(OWNER) as { id: number }).id
+    const foreign = (kit.sqlite.prepare('SELECT id FROM labels WHERE owner <> ? LIMIT 1').get(OWNER) as { id: number }).id
+    const link = kit.sqlite.prepare('INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)')
+    link.run(mine[0]!, foreign)
+    link.run(mine[1]!, own)
+    link.run(mine[1]!, foreign)
+
+    const answer = await bulkUpdateTransactions(env, OWNER, mine, { description: 'Edited' })
+
+    expect(answer.flatMap((t) => t.labelIds ?? [])).not.toContain(foreign)
+    expect(answer.find((t) => t.id === mine[1])?.labelIds).toEqual([own])
+    expect(answer.find((t) => t.id === mine[0])?.labelIds).toEqual([])
+  })
+})
+
 describe('the cost of an edit by ids', () => {
   it('is the same handful of statements whether it edits 1 row or 500', async () => {
     const kit = queryDb(syntheticLedger({ months: 12, perMonth: 60, seed: 5 }))
