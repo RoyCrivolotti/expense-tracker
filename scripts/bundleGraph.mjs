@@ -36,18 +36,37 @@ function reach(starts, edges, stop = new Set()) {
   return seen
 }
 
+function graphOf({ files, read, indexHtml }) {
+  const staticEdges = edgesOf(files, read, [STATIC_IMPORT])
+  const allEdges = edgesOf(files, read, [STATIC_IMPORT, DYNAMIC_IMPORT])
+  const entry = [...indexHtml.matchAll(/assets\/([A-Za-z0-9_.-]+\.js)/g)].map((m) => m[1]).filter((name) => files.includes(name))
+  const eager = reach(entry, staticEdges)
+  const named = (...prefixes) => files.filter((file) => prefixes.some((prefix) => file.startsWith(prefix)))
+  return { allEdges, eager, named }
+}
+
 /**
  * The chunks (file names) that only the Goals tab loads, the Goals chunk itself among them.
  * @param {{ files: string[], read: (file: string) => string, indexHtml: string }} build
  * @returns {string[]}
  */
-export function goalsOnlyChunks({ files, read, indexHtml }) {
-  const staticEdges = edgesOf(files, read, [STATIC_IMPORT])
-  const allEdges = edgesOf(files, read, [STATIC_IMPORT, DYNAMIC_IMPORT])
-  const entry = [...indexHtml.matchAll(/assets\/([A-Za-z0-9_.-]+\.js)/g)].map((m) => m[1]).filter((name) => files.includes(name))
-  const eager = reach(entry, staticEdges)
-  const named = (prefix) => files.filter((file) => file.startsWith(prefix))
+export function goalsOnlyChunks(build) {
+  const { allEdges, eager, named } = graphOf(build)
   const goals = reach(named('GoalsTab'), allEdges, eager)
   const analytics = reach(named('AnalyticsTab'), allEdges, eager)
   return [...goals].filter((file) => !eager.has(file) && !analytics.has(file)).sort()
+}
+
+/**
+ * The chunks only a browser that turned the ledger mode on loads: the app over the ledger and what it
+ * imports, and the client of the parts routes, which the entry imports on first use. What the entry loads at
+ * once, or a tab loads too, is not the ledger's.
+ * @param {{ files: string[], read: (file: string) => string, indexHtml: string }} build
+ * @returns {string[]}
+ */
+export function ledgerOnlyChunks(build) {
+  const { allEdges, eager, named } = graphOf(build)
+  const ledger = reach(named('LedgerExpensesApp', 'apiLedgerParts'), allEdges, eager)
+  const tabs = reach(named('GoalsTab', 'AnalyticsTab'), allEdges, eager)
+  return [...ledger].filter((file) => !eager.has(file) && !tabs.has(file)).sort()
 }

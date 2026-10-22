@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { goalsOnlyChunks } from './bundleGraph.mjs'
+import { goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
 
 type Build = Record<string, string>
 
-const run = (build: Build, indexHtml = '<script type="module" src="/assets/index-a.js"></script><link rel="modulepreload" href="/assets/jsx-1.js">'): string[] =>
-  goalsOnlyChunks({
-    files: Object.keys(build),
-    read: (file: string) => build[file] ?? '',
-    indexHtml,
-  })
+const INDEX = '<script type="module" src="/assets/index-a.js"></script><link rel="modulepreload" href="/assets/jsx-1.js">'
+const asBuild = (build: Build, indexHtml = INDEX) => ({
+  files: Object.keys(build),
+  read: (file: string) => build[file] ?? '',
+  indexHtml,
+})
+const run = (build: Build, indexHtml = INDEX): string[] => goalsOnlyChunks(asBuild(build, indexHtml))
+const runLedger = (build: Build): string[] => ledgerOnlyChunks(asBuild(build))
 
 // A build as the bundler writes it: the entry holds the lazy imports of both tabs, each tab imports the entry back,
 // and chunks are named after the first module in them.
@@ -59,5 +61,36 @@ describe('goalsOnlyChunks', () => {
   it('is nothing when there is no Goals chunk', () => {
     const none: Build = { 'index-a.js': 'export const x=1', 'jsx-1.js': 'export const y=1' }
     expect(run(none)).toEqual([])
+  })
+})
+
+describe('ledgerOnlyChunks', () => {
+  // The entry imports the ledger app and the client of the parts routes lazily; the app imports a chunk of its own,
+  // and a chunk a tab loads too.
+  const ledgerBuild: Build = {
+    ...base,
+    'index-a.js': `${base['index-a.js']};const l=lazy(()=>load(()=>import(\`./LedgerExpensesApp-h.js\`)));const p=()=>import(\`./apiLedgerParts-i.js\`)`,
+    'LedgerExpensesApp-h.js': 'import{a}from"./index-a.js";import{s}from"./ledgerSession-j.js";import{c}from"./useSvgAnchor-e.js"',
+    'ledgerSession-j.js': 'export const s=1',
+    'apiLedgerParts-i.js': 'import{e}from"./ledgerPartsErrors-k.js"',
+    'ledgerPartsErrors-k.js': 'export const e=1',
+  }
+
+  it('finds the ledger app, what only it imports, and the parts client with its errors, and not what a tab also loads', () => {
+    expect(runLedger(ledgerBuild)).toEqual([
+      'LedgerExpensesApp-h.js',
+      'apiLedgerParts-i.js',
+      'ledgerPartsErrors-k.js',
+      'ledgerSession-j.js',
+    ])
+  })
+
+  it('leaves out a chunk the page loads at once', () => {
+    const eagerErrors = { ...ledgerBuild, 'index-a.js': `${ledgerBuild['index-a.js']};import"./ledgerPartsErrors-k.js"` }
+    expect(runLedger(eagerErrors)).not.toContain('ledgerPartsErrors-k.js')
+  })
+
+  it('is nothing when there is no ledger chunk', () => {
+    expect(runLedger(base)).toEqual([])
   })
 })
