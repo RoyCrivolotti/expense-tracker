@@ -3,7 +3,8 @@ import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions, type SessionState } from '../data/ledgerSession'
 import { LedgerUsage, touchesUsage } from '../data/ledgerUsage'
-import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
+import { isAccessDenied } from '../data/apiClient'
+import { forgetLedgerSnapshot, loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { TransactionPager } from '../data/transactionPager'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
 import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
@@ -31,15 +32,18 @@ export interface LedgerDataOptions extends SessionOptions {
 
 type Phase = 'loading' | 'ready' | 'error'
 
-/** Opens the session if the browser is online. Null when it is open, otherwise why it is not. */
-async function openOnline(session: LedgerSession, opened: () => void): Promise<string | null> {
-  if (!isOnline()) return 'You are offline and no saved data is available.'
+/**
+ * Opens the session if the browser is online. Null when it is open, otherwise why it is not, and whether the server
+ * refused the person, in which case nothing kept on this device is shown in its place.
+ */
+async function openOnline(session: LedgerSession, opened: () => void): Promise<{ message: string; denied: boolean } | null> {
+  if (!isOnline()) return { message: 'You are offline and no saved data is available.', denied: false }
   try {
     await session.open()
     opened()
     return null
   } catch (failed) {
-    return reason(failed)
+    return { message: reason(failed), denied: isAccessDenied(failed) }
   }
 }
 
@@ -125,9 +129,10 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     }
     const begin = async () => {
       const error = await openOnline(session, () => keep(session, owner, settled.current))
-      if (error === null || (await restore())) return setPhase('ready')
+      if (error?.denied && owner) void forgetLedgerSnapshot(owner)
+      if (error === null || (!error.denied && (await restore()))) return setPhase('ready')
       if (!alive.current) return
-      setFailure(error)
+      setFailure(error.message)
       setPhase('error')
     }
     void begin()

@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type HeldLedger, holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
+import { ApiError } from '../data/apiClient'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
@@ -331,6 +332,30 @@ describe('useLedgerData, snapshots', () => {
     const fallback = renderHook(() => useLedgerData(down, { owner: OWNER }))
     await waitFor(() => expect(fallback.result.current.status).toBe('ready'))
     expect(fallback.result.current.fromCache).toBe(true)
+  })
+
+  it.each([401, 403])('shows the failure and not the snapshot when the server answers %i, and removes the snapshot', async (status) => {
+    await withSnapshot()
+    const refused = memorySource(small)
+    refused.readReferencePart = () => Promise.reject(new ApiError('Refused', status))
+
+    const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.error).toBe('Refused')
+    await waitFor(() => expect(keys()).toEqual([]))
+  })
+
+  it('does not show the snapshot after a refusal even when the store will not let it be removed', async () => {
+    await withSnapshot()
+    const refused = memorySource(small)
+    refused.readReferencePart = () => Promise.reject(new ApiError('Refused', 403))
+    fake.failNext('delete')
+
+    const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(keys()).toContain(`ledger:${OWNER}`)
   })
 
   it('leaves the snapshot when a refresh reads, and keeps the new ledger as the snapshot', async () => {

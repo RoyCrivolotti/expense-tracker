@@ -3,7 +3,8 @@ import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import type { OccurrenceGroup } from '../domain/engine'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
-import { loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
+import { isAccessDenied } from '../data/apiClient'
+import { forgetOfflineSnapshot, loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
 import type { WriteReach } from '../data/ledgerSession'
 import type { Lookup } from './format'
@@ -110,7 +111,11 @@ function isOnline(): boolean {
 
 const MIN_REFRESH_MS = 700
 
-export function useExpenseData(source: ExpenseDataSource): ExpenseData {
+/**
+ * The dataset of a source. `owner` is who is signed in: the copy kept for when the network does not answer is
+ * theirs alone, so with no owner none is kept or shown.
+ */
+export function useExpenseData(source: ExpenseDataSource, owner?: string): ExpenseData {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [version, setVersion] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -169,7 +174,7 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
      * can fall through to an error state.
      */
     const applyCached = async (outcome: RefreshOutcome): Promise<boolean> => {
-      const cached = await loadOfflineSnapshot()
+      const cached = owner ? await loadOfflineSnapshot(owner) : null
       if (!active) return true
       if (isStale()) {
         void finish(outcome)
@@ -198,7 +203,7 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
       // outcome: nothing on screen changed, and "Updated" for a response we threw
       // away is a plainer lie than the stale data this discarding exists to avoid.
       if (isStale()) return void finish(null)
-      await saveOfflineSnapshot(dataset)
+      if (owner) await saveOfflineSnapshot(owner, dataset)
       if (!active) return
       if (isStale()) return void finish(null)
       const model = buildExpenseModel(dataset)
@@ -210,7 +215,9 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
     const handleLoadError = async (err: unknown) => {
       if (!active) return
       if (modelRef.current) return void finish('fail')
-      if (await applyCached('fail')) return
+      // The server answered and said no, so what this device kept is not for anyone to see in its place.
+      if (isAccessDenied(err)) await forgetOfflineSnapshot()
+      else if (await applyCached('fail')) return
       setState({ status: 'error', error: err instanceof Error ? err.message : String(err) })
       void finish('fail')
     }
@@ -228,7 +235,7 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
     return () => {
       active = false
     }
-  }, [source, version])
+  }, [source, version, owner])
 
   return { ...state, refreshing, refreshOutcome, reload, applyPatch }
 }

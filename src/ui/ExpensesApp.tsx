@@ -197,7 +197,7 @@ export function ExpensesApp(props: ExpensesAppProps) {
 }
 
 function DatasetApp(props: ExpensesAppProps) {
-  return <ExpensesAppView {...props} data={useExpenseData(props.source)} />
+  return <ExpensesAppView {...props} data={useExpenseData(props.source, props.accountEmail)} />
 }
 
 /** The app over data a hook has loaded: the whole dataset (`useExpenseData`) or a ledger (`useLedgerData`). */

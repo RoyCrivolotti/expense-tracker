@@ -5,6 +5,7 @@ import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { makeScenario, makeWealthAccount } from '../testing/factories'
+import { installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { ExpensesApp } from './ExpensesApp'
 import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
@@ -105,6 +106,26 @@ describe('ExpensesApp onboarding wiring', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
     fireEvent.click(await screen.findByRole('tab', { name: 'Account' }))
     await screen.findByText('test@example.com')
+  })
+})
+
+describe('ExpensesApp saved copy', () => {
+  it('keeps the dataset as the copy of the account it is signed in as, and shows it to no one else', async () => {
+    const idb = installFakeIndexedDb()
+    try {
+      const dataset = datasetWith({ settings: { ...defaultExpenseSettings(), openingCashCents: 4_242_000 } })
+      const alice = render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+      await waitFor(() => expect(idb.stores.get('snapshots')?.get('latest')).toMatchObject({ owner: 'alice@example.com' }))
+      alice.unmount()
+
+      const failing: ExpenseDataSource = { canWrite: false, load: vi.fn().mockRejectedValue(new Error('503')) }
+      render(<ExpensesApp source={failing} hubGrants={allGroupsGranted()} accountEmail="bob@example.com" />)
+
+      expect(await screen.findByText(/Couldn.t load expense data/)).toBeInTheDocument()
+      expect(idb.stores.get('snapshots')?.has('latest')).toBe(false)
+    } finally {
+      idb.uninstall()
+    }
   })
 })
 

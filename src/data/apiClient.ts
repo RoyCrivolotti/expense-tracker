@@ -9,6 +9,11 @@ export class ApiError extends Error {
   }
 }
 
+/** The server answered and refused the person, so no copy of anyone's data kept on this device is to stand in for it. */
+export function isAccessDenied(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 401 || error.status === 403)
+}
+
 export async function toApiError(res: Response): Promise<ApiError> {
   let message = `Request failed (${res.status})`
   try {
