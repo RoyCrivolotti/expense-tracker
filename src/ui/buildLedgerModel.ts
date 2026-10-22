@@ -1,5 +1,6 @@
 import { buildDescriptionIndex } from '../data/descriptionIndex'
 import { recurringFixedGroups } from '../domain/engine'
+import { type RecurringSeries, recurringFixedGroupsFromSeries } from '../domain/engine/recurringSeries'
 import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import { type Ledger, assembleRows, ledgerDataset, ledgerMonths } from '../domain/ledger'
 import type { Transaction } from '../types'
@@ -19,6 +20,11 @@ export interface LedgerModelOptions {
 /** The series of `rows`, which must be the whole history. */
 export function fixedHistoryOf(rows: Transaction[]): FixedHistory {
   return { groups: recurringFixedGroups(rows) }
+}
+
+/** The series of the whole history as the server serves them, for a ledger that does not hold every row. */
+export function historyOfSeries(series: RecurringSeries[]): FixedHistory {
+  return { groups: recurringFixedGroupsFromSeries(series) }
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { AnalyticsBasis, AnalyticsPeriod, CompareMode } from '../../../engine'
 import type { ExpenseModel } from '../../useExpenseData'
+import { useHistoryWatch } from '../../useHistoryWatch'
 import { Card } from '../../components/primitives'
 import { MonthlyTotalsTable } from '../MonthlyTotalsTable'
 import type { AnalyticsView } from '../analyticsView'
@@ -54,6 +55,7 @@ export function OverviewView({
   onShowView,
   onUseBaselineInGoals,
 }: Props) {
+  useHistoryWatch(model)
   const data = useMemo(
     () => buildOverviewData(model, { month, period, compare, basis, today, openMonth }),
     [model, month, period, compare, basis, today, openMonth],

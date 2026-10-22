@@ -16,6 +16,7 @@ import {
   patchAfterTransactionUpdate,
 } from './datasetPatches'
 import { buildExpenseModel } from './buildExpenseModel'
+import { fixedHistoryOf } from './buildLedgerModel'
 import { useLedgerData } from './useLedgerData'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
@@ -143,6 +144,33 @@ describe('useLedgerData', () => {
     act(() => result.current.model!.ensureReceipts!(ids))
     await waitFor(() => expect(result.current.model!.receiptsPending).toBe(0))
     expect(result.current.model!.dataset.attachments).toHaveLength(small.attachments.length)
+  })
+})
+
+describe('useLedgerData, the recurring series', () => {
+  const labels = (history: { groups: Array<{ label: string }> }) => history.groups.map((g) => g.label).sort()
+
+  it('gives a windowed model the series of the whole history once a screen has asked for them', async () => {
+    const source = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model!.history).toBeUndefined()
+    expect(source.calls).not.toContain('series')
+    act(() => void result.current.model!.watchHistory!())
+    await waitFor(() => expect(result.current.model!.history).toBeDefined())
+    const whole = fixedHistoryOf(big.transactions)
+    expect(labels(result.current.model!.history!)).toEqual(labels(whole))
+    expect(whole.groups.length).toBeGreaterThan(0)
+  })
+
+  it('gives a model that holds every row no series, since the rows are the series', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    act(() => void result.current.model!.watchHistory!())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(result.current.model!.history).toBeUndefined()
+    expect(source.calls).not.toContain('series')
   })
 })
 

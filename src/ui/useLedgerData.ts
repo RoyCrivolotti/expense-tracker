@@ -3,7 +3,7 @@ import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions } from '../data/ledgerSession'
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
-import { buildLedgerModel } from './buildLedgerModel'
+import { buildLedgerModel, historyOfSeries } from './buildLedgerModel'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
 const MIN_REFRESH_MS = 700
@@ -109,12 +109,23 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     }
   }, [session, owner, attempt])
 
-  const { held } = state
+  const { held, series } = state
+  // A ledger held in full has every row to work the series out from, as the screens do without a history.
+  const windowed = held !== null && held.cells !== null
+  const history = useMemo(() => (windowed && series ? historyOfSeries(series) : undefined), [windowed, series])
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
-    const built = buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts })
-    return { ...built, receiptsPending: receiptsPending(held), ensureReceipts: session.loadReceipts }
-  }, [held, session])
+    const built = buildLedgerModel(ledgerOfHeld(held), {
+      attachmentCounts: held.attachmentCounts,
+      ...(history ? { history } : {}),
+    })
+    return {
+      ...built,
+      receiptsPending: receiptsPending(held),
+      ensureReceipts: session.loadReceipts,
+      watchHistory: session.watchSeries,
+    }
+  }, [held, history, session])
 
   const reload = useCallback(() => {
     if (phase === 'error') {

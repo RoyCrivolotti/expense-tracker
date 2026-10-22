@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { recurringFixedGroupsFromSeries, seriesFromTransactions } from '../../domain/engine/recurringSeries'
 import { makeDataset, makeTransaction } from '../../testing/factories'
 import type { ExpenseModel } from '../useExpenseData'
 import { resetStoppedSuggestionsForTests, useStoppedSuggestions } from './stoppedSuggestions'
@@ -98,6 +99,36 @@ describe('useUpcoming', () => {
       vi.setSystemTime(new Date('2026-11-19T12:00:00'))
       const resumed = [...GYM, makeTransaction({ id: 20, description: 'Gym', date: '2026-10-20', budgetMonth: '2026-10' })]
       expect(dates(modelWith(resumed, ['2026-09', '2026-10', '2026-11']), '2026-11')).toEqual(['2026-11-20'])
+    })
+  })
+
+  describe('a model that holds only some of the rows', () => {
+    const history = { groups: recurringFixedGroupsFromSeries(seriesFromTransactions(GYM)) }
+    /** The window: the last two months of the gym, which is too few rows to be a series. */
+    const window = GYM.slice(-2)
+    const windowed = (extra: Partial<ExpenseModel> = {}): ExpenseModel => ({
+      ...modelWith(window),
+      sums: makeDataset({ transactions: window }),
+      ...extra,
+    })
+
+    it('offers nothing until the series of the whole history arrive', () => {
+      expect(dates(windowed(), '2026-10')).toEqual([])
+    })
+
+    it('offers the charge the series say is due, though the rows it holds are too few to show it', () => {
+      expect(dates(windowed({ history }), '2026-10')).toEqual(['2026-10-20'])
+      expect(dates(modelWith(window), '2026-10')).toEqual([])
+    })
+
+    it('tells the model a screen is using the series while it is mounted', () => {
+      const stop = vi.fn()
+      const watchHistory = vi.fn(() => stop)
+      const { unmount } = renderHook(() => useUpcoming(windowed({ history, watchHistory }), '2026-10'))
+      expect(watchHistory).toHaveBeenCalledTimes(1)
+      expect(stop).not.toHaveBeenCalled()
+      unmount()
+      expect(stop).toHaveBeenCalledTimes(1)
     })
   })
 })
