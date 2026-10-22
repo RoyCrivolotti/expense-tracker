@@ -147,7 +147,7 @@ deliberately stays out of that, since retitling a PR is no reason to redeploy it
 npm run verify
 ```
 
-Symlink check → migration doc check → PII check → lint → typecheck → test coverage →
+Symlink check → migration doc check → docs size check → PII check → lint → typecheck → test coverage →
 build → bundle budget.
 
 **A green `verify` does not mean CI will be green.** Two required checks run only in CI:

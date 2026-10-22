@@ -8,7 +8,7 @@ For contributors writing or running tests. Stack: **Vitest** + **React Testing L
 npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
-npm run verify         # symlinks, migration docs, PII check, lint, typecheck, test:coverage, build, bundle budget
+npm run verify         # symlinks, migration docs, docs size, PII check, lint, typecheck, test:coverage, build, bundle budget
 PARITY_TESTS=1 npm test   # optional parity test, needs a private export (see "Local parity tests")
 ```
 
