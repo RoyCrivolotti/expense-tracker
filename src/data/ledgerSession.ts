@@ -32,12 +32,19 @@ export interface SessionState {
   error: string | null
   /** True while what is held is a snapshot: nothing is read, nothing is written, and a refresh may end it. */
   offline: boolean
+  /** True once a read found a ledger held as a window and `refuseWindow` kept it out; nothing more is read. */
+  outsized: boolean
 }
 
 export interface SessionOptions {
   policy?: HydrationPolicy
   /** Months held as rows at most; months the screens want are never given up. */
   maxHeldMonths?: number
+  /**
+   * For screens that list every row: a read, a refresh or a snapshot that holds only a window is not taken
+   * in, whatever it grew to since the last one, and the session says `outsized` instead.
+   */
+  refuseWindow?: boolean
 }
 
 const DEFAULT_MAX_HELD_MONTHS = 48
@@ -73,7 +80,7 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
  * overtook (`ledgerResources.ts`). `subscribe` and `getState` are what a screen reads it through.
  */
 export class LedgerSession {
-  private state: SessionState = { held: null, viewed: '', hydrating: false, error: null, offline: false }
+  private state: SessionState = { held: null, viewed: '', hydrating: false, error: null, offline: false, outsized: false }
   private epochs: Epochs = NO_EPOCHS
   private readonly stale = new Set<string>()
   private flushing = false
@@ -85,11 +92,17 @@ export class LedgerSession {
   private readonly source: LedgerPartsSource
   private readonly policy: HydrationPolicy
   private readonly cap: number
+  private readonly refuseWindow: boolean
 
   constructor(source: LedgerPartsSource, options: SessionOptions = {}) {
     this.source = source
     this.policy = options.policy ?? DEFAULT_HYDRATION_POLICY
     this.cap = options.maxHeldMonths ?? DEFAULT_MAX_HELD_MONTHS
+    this.refuseWindow = options.refuseWindow ?? false
+  }
+
+  private refuses(held: HeldLedger): boolean {
+    return this.refuseWindow && held.cells !== null
   }
 
   getState = (): SessionState => this.state
@@ -108,15 +121,18 @@ export class LedgerSession {
   async open(viewed?: string): Promise<void> {
     const parts = await readLedgerParts(this.source, this.readOptions(viewed ?? (this.state.viewed || undefined)))
     const held = holdParts(parts)
+    if (this.refuses(held)) return this.set({ outsized: true })
     this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null, offline: false })
   }
 
   /**
    * Holds a snapshot instead of reading: the screens show what was kept, the months not held stay as sums, and
-   * a write is refused. `refresh` leaves this state once it reads.
+   * a write is refused. `refresh` leaves this state once it reads. False for a snapshot the session refuses.
    */
-  restore(held: HeldLedger, viewed: string): void {
+  restore(held: HeldLedger, viewed: string): boolean {
+    if (this.refuses(held)) return false
     this.set({ held, viewed, error: null, offline: true })
+    return true
   }
 
   private readOptions(viewed: string | undefined) {
@@ -152,6 +168,7 @@ export class LedgerSession {
       )
       if (mine !== this.refreshes || !parts) return this.latest
       const read = holdParts(parts)
+      if (this.refuses(read)) return this.set({ outsized: true })
       const current = stillCurrent(started, this.epochs)
       const held = this.state.held ? mergeRead(this.state.held, read, current) : read
       if (current.cube) this.stale.clear()

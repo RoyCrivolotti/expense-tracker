@@ -204,6 +204,18 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it and is not kept per
   owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset app
   offline, that app can still show it.
+- **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
+  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `off` renders the whole-dataset app and
+  nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop
+  (importing it back makes the bundler split shared code into files every browser loads at startup). The service
+  worker precaches the chunk for every browser, so it is downloaded and not run. The chunk hands back to the
+  whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts, and for an offline
+  browser whose snapshot is missing, another owner's, or holds only a window. The limit holds for the life of the
+  session (`refuseWindow`): a read or a snapshot that would hold only a window is kept out and the app hands back,
+  which starts it over, so a screen that lists every row never lists part of the ledger and the switch only ever holds
+  a ledger in full. `shadow` is honoured in development and staging builds only; there `ledgerShadow.ts` compares the
+  held ledger with the whole dataset and reports, and shows nothing. A read in the background that fails raises a
+  toast that offers to read again.
 
 ## Size and complexity
 

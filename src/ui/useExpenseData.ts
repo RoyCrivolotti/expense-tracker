@@ -70,6 +70,11 @@ export interface ExpenseData extends LoadState {
    * refresh that works. Absent when the data has no such reads.
    */
   backgroundError?: string | null
+  /**
+   * True when a read found more rows than the app lists in full and kept them out, so there is no model to show
+   * and the caller hands back to the app that loads everything.
+   */
+  outsized?: boolean
 }
 
 function isOnline(): boolean {

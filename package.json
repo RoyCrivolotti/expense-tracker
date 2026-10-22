@@ -48,7 +48,8 @@
     "verify:goals-tabs": "node scripts/verify-goals-mobile-tabs.mjs",
     "verify:goals-nav": "node scripts/verify-goals-nav.mjs",
     "verify:goals-desktop": "node scripts/verify-goals-desktop.mjs",
-    "verify:section-tabs": "node scripts/verify-section-tabs.mjs"
+    "verify:section-tabs": "node scripts/verify-section-tabs.mjs",
+    "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

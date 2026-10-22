@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { HeldLedger } from '../data/ledgerHold'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
@@ -256,6 +257,34 @@ describe('useLedgerData, snapshots', () => {
     const { result } = renderHook(() => useLedgerData(source, { owner: OWNER }))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.fromCache).toBe(false)
+  })
+
+  it('tells the caller what was held after a first load and after a refresh that worked, and after nothing else', async () => {
+    const source = memorySource(small)
+    const onSettled = vi.fn<(held: HeldLedger) => void>()
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER, onSettled }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(onSettled).toHaveBeenCalledTimes(1)
+    expect(onSettled.mock.calls[0]![0].rowCount).toBe(small.transactions.length)
+    act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 3 } })))
+    expect(onSettled).toHaveBeenCalledTimes(1)
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
+    act(() => result.current.reload())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+    expect(onSettled).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('does not tell the caller about a snapshot it fell back on', async () => {
+    await withSnapshot()
+    setOnline(false)
+    const source = memorySource(small)
+    const onSettled = vi.fn<(held: HeldLedger) => void>()
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER, onSettled }))
+    await waitFor(() => expect(result.current.fromCache).toBe(true))
+    expect(onSettled).not.toHaveBeenCalled()
   })
 })
 

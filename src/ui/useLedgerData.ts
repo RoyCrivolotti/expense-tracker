@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { LedgerPartsSource } from '../data/dataSource'
-import { ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
+import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions } from '../data/ledgerSession'
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { buildLedgerModel } from './buildLedgerModel'
@@ -18,14 +18,48 @@ export interface LedgerDataOptions extends SessionOptions {
    * owner's alone (see `ledgerSnapshot.ts`).
    */
   owner?: string | undefined
+  /** Told what was held after a read that worked, a first load or a refresh; not for a snapshot or a write. */
+  onSettled?: ((held: HeldLedger) => void) | undefined
 }
 
 type Phase = 'loading' | 'ready' | 'error'
 
-/** Keeps what is held as the owner's snapshot. It never throws and nothing waits for it. */
-function keep(session: LedgerSession, owner: string | undefined): void {
+/** Opens the session if the browser is online. Null when it is open, otherwise why it is not. */
+async function openOnline(session: LedgerSession, opened: () => void): Promise<string | null> {
+  if (!isOnline()) return 'You are offline and no saved data is available.'
+  try {
+    await session.open()
+    opened()
+    return null
+  } catch (failed) {
+    return reason(failed)
+  }
+}
+
+/** Keeps what is held as the owner's snapshot (it never throws and nothing waits for it) and says it settled. */
+function keep(session: LedgerSession, owner: string | undefined, settled: LedgerDataOptions['onSettled']): void {
   const { held, viewed } = session.getState()
-  if (owner && held) void saveLedgerSnapshot(owner, held, viewed)
+  if (!held) return
+  if (owner) void saveLedgerSnapshot(owner, held, viewed)
+  settled?.(held)
+}
+
+interface Shown {
+  phase: Phase
+  model: ExpenseModel | undefined
+  offline: boolean
+  outsized: boolean
+  snapshotAt: string | undefined
+  failure: string | undefined
+}
+
+/** What the screens are given of the model: nothing while it loads, after a failure, or when a read was kept out. */
+function shown({ phase, model, offline, outsized, snapshotAt, failure }: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
+  if (phase === 'ready' && model !== undefined && !outsized) {
+    return { status: 'ready', model, fromCache: offline, ...(offline && snapshotAt ? { snapshotAt } : {}) }
+  }
+  if (phase === 'error') return { status: 'error', ...(failure !== undefined ? { error: failure } : {}) }
+  return { status: 'loading' }
 }
 
 /**
@@ -39,6 +73,10 @@ function keep(session: LedgerSession, owner: string | undefined): void {
  */
 export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOptions): ExpenseData {
   const owner = options?.owner
+  const settled = useRef(options?.onSettled)
+  useEffect(() => {
+    settled.current = options?.onSettled
+  })
   const session = useMemo(() => new LedgerSession(source, options), [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const [phase, setPhase] = useState<Phase>('loading')
@@ -54,22 +92,13 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     const restore = async (): Promise<boolean> => {
       const snapshot = owner ? await loadLedgerSnapshot(owner) : null
       if (!snapshot || !alive.current) return false
-      session.restore(snapshot.held, snapshot.viewed)
+      if (!session.restore(snapshot.held, snapshot.viewed)) return false
       setSnapshotAt(snapshot.savedAt)
       return true
     }
     const begin = async () => {
-      let error = 'You are offline and no saved data is available.'
-      if (isOnline()) {
-        try {
-          await session.open()
-          keep(session, owner)
-          return setPhase('ready')
-        } catch (failed) {
-          error = reason(failed)
-        }
-      }
-      if (await restore()) return setPhase('ready')
+      const error = await openOnline(session, () => keep(session, owner, settled.current))
+      if (error === null || (await restore())) return setPhase('ready')
       if (!alive.current) return
       setFailure(error)
       setPhase('error')
@@ -105,7 +134,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     }
     session.refresh().then(
       () => {
-        keep(session, owner)
+        keep(session, owner, settled.current)
         return finish('ok')
       },
       () => finish('fail'),
@@ -115,18 +144,15 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const applyPatch = useCallback<ExpenseData['applyPatch']>((patch) => session.patch(patch), [session])
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 
-  const ready = phase === 'ready' && model !== undefined
   return {
-    status: ready ? 'ready' : phase === 'error' ? 'error' : 'loading',
-    ...(ready ? { model, fromCache: state.offline } : {}),
-    ...(ready && state.offline && snapshotAt ? { snapshotAt } : {}),
-    ...(phase === 'error' && failure !== undefined ? { error: failure } : {}),
+    ...shown({ phase, model, offline: state.offline, outsized: state.outsized, snapshotAt, failure }),
     refreshing,
     refreshOutcome,
     reload,
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
-    backgroundError: ready ? state.error : null,
+    backgroundError: phase === 'ready' && model !== undefined && !state.outsized ? state.error : null,
+    outsized: state.outsized,
   }
 }
