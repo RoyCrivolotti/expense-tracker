@@ -24,8 +24,9 @@ import { syntheticLedger } from '../../../src/testing/syntheticLedger'
 import { CAT, CHECKING } from '../../../src/testing/syntheticReference'
 import { buildOverviewData } from '../../../src/ui/analytics/overview/overviewModel'
 import { spendingDetail, spendingRows } from '../../../src/ui/analytics/spending/spendingModel'
+import { patchAfterTransactionCreate } from '../../../src/ui/datasetPatches'
 import { buildExpenseModel } from '../../../src/ui/buildExpenseModel'
-import { buildLedgerModel, historyOfSeries } from '../../../src/ui/buildLedgerModel'
+import { buildLedgerModel, withHistory } from '../../../src/ui/buildLedgerModel'
 import { upcomingOf } from '../../../src/ui/tabs/useUpcoming'
 import type { ExpenseModel } from '../../../src/ui/useExpenseData'
 import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
@@ -51,7 +52,7 @@ interface Served {
   dataset: ExpenseDataset
 }
 
-function routeFetch(world: World) {
+function routeFetch(world: World, seen: string[] = []) {
   const handlers: Array<[string, Handler]> = [
     ['/api/expenses/transactions/months', getMonths],
     ['/api/expenses/reference', getReference],
@@ -60,6 +61,7 @@ function routeFetch(world: World) {
   ]
   return async (input: string | URL | Request): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
+    seen.push(url.pathname)
     const handler = handlers.find(([path]) => path === url.pathname)?.[1]
     if (!handler) return new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } })
     return world.call(handler, { path: `${url.pathname.slice('/api/expenses'.length)}${url.search}` })
@@ -150,20 +152,22 @@ afterEach(() => {
 })
 
 /** The model a browser builds over the routes with a window around `month`, and the series it was given. */
-async function windowedModel(c: Served, month: string, withSeries: boolean) {
-  vi.stubGlobal('fetch', routeFetch(c.world))
+async function windowedModel(c: Served, month: string, withSeries: boolean, seen: string[] = []) {
+  vi.stubGlobal('fetch', routeFetch(c.world, seen))
   const session = new LedgerSession(apiDataSource as Required<typeof apiDataSource>, { policy: WINDOWED })
   await session.open(month)
   const stop = session.watchSeries()
   await vi.waitFor(() => expect(session.getState().series, String(session.getState().error)).not.toBeNull())
-  stop()
   const { held, series } = session.getState()
-  const history = withSeries ? historyOfSeries(series!) : undefined
-  const model = buildLedgerModel(ledgerOfHeld(held!), {
-    attachmentCounts: held!.attachmentCounts,
-    ...(history ? { history } : {}),
-  })
-  return { model, series: series!, windowed: held!.cells !== null }
+  const built = buildLedgerModel(ledgerOfHeld(held!), { attachmentCounts: held!.attachmentCounts })
+  const model = withSeries ? withHistory(built, series!) : built
+  return { model, series: series!, windowed: held!.cells !== null, session, stop }
+}
+
+/** The model the screens have after a write: the rows as they are now, with the series as they were read. */
+function modelAfterWrite(session: LedgerSession): ExpenseModel {
+  const { held, series } = session.getState()
+  return withHistory(buildLedgerModel(ledgerOfHeld(held!), { attachmentCounts: held!.attachmentCounts }), series!)
 }
 
 /** What the Overview and the Spending view show of a model for a viewed month, as strings that can be compared. */
@@ -269,5 +273,45 @@ describe('the same model without the served series', () => {
     expect(wrong.length).toBeGreaterThan(0)
     expect(days.map((today) => upcomingNames(whole, today)).join()).not.toContain('Cleaner')
     expect(wrong.map((today) => upcomingNames(model, today)).join()).toContain('Cleaner')
+  }, SLOW)
+})
+
+describe('a windowed model after a write, with the series as they were read', () => {
+  it('stops offering a charge once it is logged, as the model of every row does, without reading the series again', async () => {
+    let logged = 0
+    for (const c of cases) {
+      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+      const seen: string[] = []
+      const { session, stop } = await windowedModel(c, months.at(-1)!, true, seen)
+      const whole = buildExpenseModel(c.dataset)
+      const day = todays(whole).find((today) => detectUpcoming(whole.dataset.transactions, { today }).length > 0)
+      if (!day) continue
+      const due = detectUpcoming(whole.dataset.transactions, { today: day })[0]!
+      const row: Transaction = {
+        id: Math.max(...c.dataset.transactions.map((t) => t.id)) + 1,
+        date: due.predictedDate,
+        budgetMonth: due.predictedBudgetMonth,
+        description: due.description,
+        accountId: due.accountId,
+        categoryId: due.categoryId,
+        type: due.type,
+        amountCents: due.amountCents,
+        cancelled: false,
+        status: 'posted',
+        labelIds: [],
+      }
+      expect(upcomingNames(modelAfterWrite(session), day), c.name).toContain(due.description)
+      session.patch((d) => patchAfterTransactionCreate(d, row))
+      const model = modelAfterWrite(session)
+      const written = buildExpenseModel({ ...c.dataset, transactions: [row, ...c.dataset.transactions] })
+      for (const today of todays(whole)) {
+        expect(upcomingNames(model, today), `${c.name} ${today}`).toBe(upcomingNames(written, today))
+      }
+      expect(upcomingNames(model, day), c.name).not.toContain(due.description)
+      expect(seen.filter((path) => path.endsWith('/series')), c.name).toHaveLength(1)
+      logged += 1
+      stop()
+    }
+    expect(logged).toBeGreaterThan(0)
   }, SLOW)
 })
