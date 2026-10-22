@@ -182,6 +182,36 @@ describe('LedgerSession, a month being read and a write to it', () => {
   })
 })
 
+describe('LedgerSession, a month that cannot be read', () => {
+  it('reports the failure, stops hydrating and keeps what it holds, without rejecting', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const before = session.getState().held
+    source.readMonthsPart = () => Promise.reject(new Error('offline'))
+    await expect(session.view(months[10]!)).resolves.toBeUndefined()
+    const state = session.getState()
+    expect(state.error).toBe('offline')
+    expect(state.hydrating).toBe(false)
+    expect(state.viewed).toBe(months[10])
+    expect(state.held).toBe(before)
+  })
+
+  it('reports a failed full read after a write the same way, with hydrating on while it ran', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    session.patch((d) => ({ ...d, transactions: d.transactions.map((t, i) => (i === 0 ? { ...t, description: 'x' } : t)) }))
+    source.readReferencePart = () => Promise.reject(new Error('down'))
+    const seen: boolean[] = []
+    session.subscribe(() => seen.push(session.getState().hydrating))
+    await session.view(months[10]!)
+    expect(seen).toContain(true)
+    expect(session.getState().error).toBe('down')
+    expect(session.getState().hydrating).toBe(false)
+  })
+})
+
 describe('LedgerSession, writes', () => {
   it('shows a write at once, and reads again the sums of the months it moved', async () => {
     const source = memorySource(dataset)

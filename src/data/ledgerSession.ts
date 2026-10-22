@@ -136,7 +136,10 @@ export class LedgerSession {
     }
   }
 
-  /** The month the screens show changed: read the months of its window that are not held. */
+  /**
+   * The month the screens show changed: read the months of its window that are not held. A read that fails
+   * is reported in `error` and leaves the month with the sums it has, so the call never rejects.
+   */
   async view(month: string): Promise<void> {
     this.set({ viewed: month })
     const held = this.state.held
@@ -144,12 +147,14 @@ export class LedgerSession {
     const wanted = wantedMonths(held, month, this.policy.dataMonths)
     const missing = missingMonths(held, wanted)
     if (missing.length === 0) return this.set({ held: this.tidy(touchMonths(held, wanted)) })
-    // After a write the revision the parts were read under is not known, so what is read now could not be told
-    // from a later state of the ledger: read it all again, which also settles the revision.
-    if (held.revision === null) return this.refresh()
     this.set({ hydrating: true })
     try {
-      await this.hydrate(missing)
+      // After a write the revision the parts were read under is not known, so what is read now could not be
+      // told from a later state of the ledger: read it all again, which also settles the revision.
+      if (held.revision === null) await this.refresh()
+      else await this.hydrate(missing)
+    } catch (error) {
+      this.set({ error: reason(error) })
     } finally {
       this.set({ hydrating: false })
     }

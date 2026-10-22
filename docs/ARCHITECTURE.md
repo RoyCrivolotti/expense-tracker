@@ -190,8 +190,9 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
   adding or changing a plan, and settling rows or deleting the payment that settled them. A new server-side cascade
-  needs a case there and a test. A read in the background that fails is kept in `SessionState.error` until a refresh
-  works, because what is shown may then be out of date.
+  needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
+  is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
+  `useLedgerData` returns it as `backgroundError` for the app to tell the user.
 
 ## Size and complexity
 
