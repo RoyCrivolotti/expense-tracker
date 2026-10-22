@@ -48,6 +48,10 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
 - **Pickers and reassign targets offer only active categories and accounts**, so nothing new is linked to something
   archived. The one exception is a form's own current value, so editing an unrelated field never breaks the form
   (`src/ui/components/pickerOptions.ts`).
+- **A field the running client reads is dropped in a later release.** An installed app keeps its old code until its owner
+  taps the update banner, and re-reads the data meanwhile. `GoalScenarioDto` (`functions/_shared/rows.ts`) still sends
+  `annualContributionGrowth` as 0 for that reason: without it a client opened before the deploy multiplies `undefined`
+  into every projection and the Goals tab shows NaN until reload.
 - **Real emails, figures and identifiers never reach a tracked file.** The source is public. Commit a placeholder
   (`owner@example.com`) with a comment telling whoever applies the change to substitute the real value, and keep real
   per-deployment config gitignored beside a committed `*.example.json`. `scripts/check-pii.mjs` fails `npm run verify`
