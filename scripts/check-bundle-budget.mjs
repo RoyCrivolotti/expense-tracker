@@ -338,7 +338,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // by 657 (166,345 to 167,002, for the selection hook, the bar, the footer and what a write tells the data layer about
 // the rows it reached). The bulk writes themselves, the session's read after a write and the pager's offer sit in the
 // chunks only the ledger mode loads, which went from 12,526 to 13,279 bytes of their 16,000.
-const TOTAL_MAX_GZIP = 286_970
+//
+// Raised from 286,970 to 287,245 bytes for the autocomplete and the usage counts of a ledger read in pages: the
+// description box takes the list it shows from a hook the ledger mode may supply, and the Settings screens ask a
+// per-record view for their counts (the held rows' own, which is what a ledger held in full keeps using, or the
+// server's) and show a note beside a count that is being read, may be out of date or could not be read. The default
+// path went from 286,913 to 287,188 bytes, 57 under the new limit. The entry chunk grew by 308 (167,002 to 167,310).
+// The merge of older descriptions, the store that reads and keeps the counts, and the words of the notes sit in the
+// chunks only the ledger mode loads, which went from 13,279 to 14,884 bytes of their 16,000.
+const TOTAL_MAX_GZIP = 287_245
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
