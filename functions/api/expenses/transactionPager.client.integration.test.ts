@@ -9,6 +9,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { apiDataSource } from '../../../src/data/apiDataSource'
 import { TransactionPager, type PagerState } from '../../../src/data/transactionPager'
 import { summaryOf } from '../../../src/domain/data/transactionQueryOf'
+import { mulberry32 } from '../../../src/domain/engine/rng'
 import { filterTransactions, type TxnFilter } from '../../../src/domain/engine/transactions'
 import type { ExpenseDataset, Transaction } from '../../../src/domain/types'
 import { adversarialLedger } from '../../../src/testing/adversarialLedger'
@@ -105,7 +106,7 @@ describe('a list read in pages from the routes', () => {
     for (const c of cases) {
       vi.stubGlobal('fetch', routeFetch(c))
       for (const [at, filter] of [{}, ...filterStream(vocabularyOf(c.dataset), 25, 4242)].entries()) {
-        const pager = new TransactionPager(source, [13, 100, 200][at % 3])
+        const pager = new TransactionPager(source, { limit: [13, 100, 200][at % 3]! })
         pager.setFilter(filter)
         const state = await drain(pager)
         expect(state.rows.map(withSortedLabels), `${c.name} ${JSON.stringify(filter)}`).toEqual(expected(c, filter))
@@ -121,7 +122,7 @@ describe('a list read in pages from the routes', () => {
   it('holds a row once when it is edited to an older day between two pages', async () => {
     vi.stubGlobal('fetch', routeFetch(main))
     const { sqlite } = main
-    const pager = new TransactionPager(source, 25)
+    const pager = new TransactionPager(source, { limit: 25 })
     pager.setFilter({})
     const first = await settled(pager)
     const moved = first.rows[3]!
@@ -147,7 +148,7 @@ describe('a list read in pages from the routes', () => {
         if (cursor) url.searchParams.set('cursor', `${cursor}x`)
       }),
     )
-    const pager = new TransactionPager(source, 40)
+    const pager = new TransactionPager(source, { limit: 40 })
     pager.setFilter({ status: 'posted' })
     const state = await drain(pager)
     expect(state.error).toMatch(/cursor/i)
@@ -160,7 +161,7 @@ describe('a list read in pages from the routes', () => {
   it('starts a new filter at its first page, never at the cursor of the one before', async () => {
     const seen: string[] = []
     vi.stubGlobal('fetch', routeFetch(main, (url) => seen.push(url.search)))
-    const pager = new TransactionPager(source, 30)
+    const pager = new TransactionPager(source, { limit: 30 })
     pager.setFilter({ status: 'posted' })
     await settled(pager)
     const before = seen.length
@@ -170,5 +171,64 @@ describe('a list read in pages from the routes', () => {
     expect(pages.length).toBeGreaterThan(1)
     expect(pages.every((search) => search.includes('status=forecast'))).toBe(true)
     expect(pages[0]).not.toContain('cursor=')
+  }, SLOW)
+
+  it('cancels the read of a filter that was replaced, through the fetch', async () => {
+    const route = routeFetch(main)
+    const signals: AbortSignal[] = []
+    vi.stubGlobal('fetch', (input: string, init: RequestInit) => {
+      signals.push(init.signal!)
+      if (signals.length > 1) return route(input)
+      // The first page hangs until it is cancelled, as a slow one would.
+      return new Promise<Response>((_, reject) =>
+        init.signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))),
+      )
+    })
+    const pager = new TransactionPager(source, { limit: 40 })
+    pager.setFilter({ status: 'posted' })
+    await vi.waitFor(() => expect(signals).toHaveLength(2))
+    pager.setFilter({ status: 'forecast' })
+    expect(signals[0]!.aborted && signals[1]!.aborted).toBe(true)
+    const state = await drain(pager)
+    expect(state.error).toBeNull()
+    expect(state.rows.map(withSortedLabels)).toEqual(expected(main, { status: 'forecast' }))
+  }, SLOW)
+})
+
+describe('a list read in pages while the ledger is written to', () => {
+  it('is the list the engine makes after a refresh, however rows were moved and deleted behind the cursor', async () => {
+    const walked = await serve('walk', awkwardLedger())
+    vi.stubGlobal('fetch', routeFetch(walked))
+    const rnd = mulberry32(20261022)
+    const pick = <T,>(items: T[]): T => items[Math.floor(rnd() * items.length)]!
+    let behind = 0
+    for (let walk = 0; walk < 15; walk += 1) {
+      const pager = new TransactionPager(source, { limit: 20 + Math.floor(rnd() * 80) })
+      pager.setFilter({})
+      await settled(pager)
+      for (let more = Math.floor(rnd() * 3); more > 0; more -= 1) {
+        pager.loadMore()
+        await settled(pager)
+      }
+      const before = (await (await walked.world.call(getDataset)).json()) as ExpenseDataset
+      for (let edit = 1 + Math.floor(rnd() * 4); edit > 0; edit -= 1) {
+        // Half the edits land in the rows already read, behind the cursor, and half anywhere in the ledger.
+        const read = [...pager.getState().rows]
+        const [row, other] = [pick(rnd() < 0.5 ? read : before.transactions), pick(before.transactions)]
+        if (rnd() < 0.3) walked.sqlite.prepare('DELETE FROM transactions WHERE id = ?').run(row.id)
+        else walked.sqlite.prepare('UPDATE transactions SET date = ? WHERE id = ?').run(other.date, row.id)
+      }
+      const truth = (await (await walked.world.call(getDataset)).json()) as ExpenseDataset
+      const wanted = filterTransactions(truth.transactions, {}).map(withSortedLabels)
+      const unrefreshed = (await drain(pager)).rows.map((t) => t.id)
+      if (unrefreshed.join() !== wanted.map((t) => t.id).join()) behind += 1
+      pager.refresh({ summary: true })
+      const refreshed = await drain(pager)
+      expect(refreshed.rows.map(withSortedLabels), `walk ${walk}`).toEqual(wanted)
+      await vi.waitFor(() => expect(pager.getState().summary).toMatchObject({ netSpendCents: summaryOf(truth.transactions, {}).netSpendCents }))
+      expect(pager.getState().summaryStale).toBe(false)
+    }
+    // Paging by position cannot see a row that moved behind the cursor: that is why a screen refreshes after a write.
+    expect(behind).toBeGreaterThan(0)
   }, SLOW)
 })
