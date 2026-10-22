@@ -174,8 +174,8 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
 
   // A list read from the server does not see a write until it is read again.
   const applyPatch = useCallback<ExpenseData['applyPatch']>(
-    (patch) => {
-      if (session.patch(patch)) pager.refresh({ summary: true })
+    (patch, reach) => {
+      if (session.patch(patch, reach)) pager.refresh({ summary: true })
     },
     [session, pager],
   )

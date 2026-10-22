@@ -4,6 +4,13 @@ import type { Transaction } from '../domain/types'
 /** What of a row the series are made of: who it is, when it was, how much and where it is booked. */
 const FIELDS = ['description', 'accountId', 'categoryId', 'type', 'date', 'budgetMonth', 'amountCents'] as const
 
+const SERIES_FIELDS: ReadonlySet<string> = new Set(FIELDS)
+
+/** Whether an edit naming these fields could make a row a different one to a series, for a write to rows that are not held. */
+export function reshapesSeries(patch: object): boolean {
+  return Object.keys(patch).some((field) => SERIES_FIELDS.has(field))
+}
+
 /** Whether a row, edited from `was` to `now`, could be a different row to a series. */
 function reshaped(was: Transaction, now: Transaction): boolean {
   if (!countsAsOccurrence(was) && !countsAsOccurrence(now)) return false
