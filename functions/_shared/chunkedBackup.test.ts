@@ -361,7 +361,7 @@ describe('the work of one invocation is bounded', () => {
       await withReceipts('only receipts', makeDataset({ categories: [{ id: 1, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true }] })),
     ]
     for (const source of ledgers) {
-      for (const maxRows of [300, 1_500, 100_000]) {
+      for (const maxRows of [300, 1_500, 3_000, 100_000]) {
         for (let maxOperations = 12; maxOperations <= 46; maxOperations += 1) {
           const store = memoryBackupStore()
           const deps = depsOf(source, store, { chunked: { enabled: true, maxOperations, maxRows } })

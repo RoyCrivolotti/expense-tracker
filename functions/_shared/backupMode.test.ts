@@ -36,7 +36,7 @@ afterEach(() => vi.restoreAllMocks())
 describe('resolveChunkedBackup', () => {
   it('is off, with the defaults, when nothing is set', () => {
     expect(resolveChunkedBackup({})).toEqual({ enabled: false, maxOperations: DEFAULT_STEP_OPERATIONS, maxRows: DEFAULT_STEP_ROWS })
-    expect(DEFAULT_STEP_ROWS).toBe(1_500)
+    expect(DEFAULT_STEP_ROWS).toBe(3_000)
   })
 
   it.each([

@@ -17,22 +17,30 @@ invocation, or has to restore. The schedule, bucket and retention policy are in
 
 It runs only when `BACKUP_MODE` is exactly `chunked`; unset, or any other value, keeps the single-file snapshot. An
 invocation makes at most `BACKUP_STEP_MAX_OPERATIONS` D1 and bucket calls (default 44, allowed 12 to 46, under the Free
-plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 1,500), then saves where it got to. The
+plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 3,000), then saves where it got to. The
 next invocation carries on, so the worker needs a trigger that fires several times. In the same commit, in
 `workers/backup-cron/wrangler.toml`:
 
 ```toml
 [triggers]
-crons = ["*/10 4-6 * * *"]
+crons = ["*/10 4-7 * * *"]
 
 [vars]
 BACKUP_MODE = "chunked"
 ```
 
-Once every owner has a manifest for the day, the later runs only list the bucket. The defaults are cautious guesses
-about what a Free-plan invocation allows; raise them only after watching a run in the worker's logs. Do not add the
-frequent trigger without the mode (it would rewrite the single-file snapshot every ten minutes), and do not set the mode
-without it (a ledger that does not finish in one invocation would never finish).
+Once every owner has a manifest for the day, the later runs only list the bucket. Do not add the frequent trigger
+without the mode (it would rewrite the single-file snapshot every ten minutes), and do not set the mode without it (a
+ledger that does not finish in one invocation would never finish).
+
+**Capacity.** A day's backup can hold as many rows as the runs in the window times the rows of a run, all owners
+together. The trigger above fires 24 times, from 04:00 to 07:50 UTC, so the default holds 72,000 rows. Every
+transaction, receipt row and check-in is a row: a ledger of 50,000 transactions is about 50,300 rows and takes 18 runs
+(three hours), which leaves six for a run that fails, one that is missed or a pass that has to start again. A bigger
+ledger needs more rows a run or a longer window. A run's calls stop at `BACKUP_STEP_MAX_OPERATIONS` whatever the rows,
+but its CPU time grows with them, and that is what limits the rows. The default was sized from the JavaScript time on
+the test stand-in, not from a Worker, so after turning the mode on watch the first runs' CPU time in the worker's logs
+and lower `BACKUP_STEP_MAX_ROWS` if one is cut off. The next run carries on from the last save either way.
 
 If the ledger is written to during a pass, the pass is thrown away and started again, and the owner is alerted. After
 three passes there is no backup of that owner for the day and an alert says so; the previous day's stands. A run left
