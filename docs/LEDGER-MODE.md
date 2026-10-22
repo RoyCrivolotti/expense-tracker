@@ -5,6 +5,14 @@ pages and the writes, with the rules each one keeps. What each route answers is 
 is what it is in [SCALING.md](./SCALING.md) and [the decision record](./decisions/ledger-model.md). The rules that hold
 for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+**Status.** The app holds a ledger only in full: up to `FULL_HYDRATION_ROW_LIMIT` (5,000) rows, and a larger ledger
+hands back to the whole-dataset app. Behind the switch it is loaded in parts and its Transactions list is read in pages.
+The windowed behaviour described below (a window of months with per-month sums, the series, older descriptions, the
+server's usage counts, reading back writes to rows that are not held) is built and tested but cannot occur, because
+`LedgerExpensesApp` passes `refuseWindow: true`. Lifting the limit changes four places together (the constant,
+`choose()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
+has to decide what a window may show.
+
 ## The switch and the hand-back
 
 - **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
