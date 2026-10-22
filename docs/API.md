@@ -15,6 +15,10 @@ fit together is in [SCALING.md](./SCALING.md).
 - **Bounds are refused, never cut.** A request over a bound is a 400 that names the bound, because a client that
   silently received part of a month would add up the wrong total. The bounds are conservative, not derived from a
   deployed Worker: raise one only after measuring CPU on a deployed Worker.
+- **Rows visited.** A transaction is read together with its account row, its statement row and its label links, and each
+  label is looked up by key, so a read of n transactions visits about 3n to 5n rows, whatever number of labels the owner
+  has (3n when few rows carry a label, 5n when four in ten carry one to three). D1 bills the rows visited, not the rows
+  returned. A cost below that says "rows returned" means this, plus any rows a filter rules out on the way.
 - **Conditional reads.** The dataset, reference, months, cube, series and usage routes send a weak `ETag` and
   `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before anything
   else runs. The tag is built from the owner's revision token, which every write request replaces
@@ -47,8 +51,8 @@ The reference tables, the pinned rows and what the ledger holds. Parameters: non
 - Bounds: none. Tag part: `reference`.
 - When the tag misses it runs the installment backfill and reads the revision again, so a backfill that inserted rows is
   already in the tag and in `revision`.
-- Cost: the reference tables, one row per pinned row (through `idx_txn_pinned`), and one index entry per transaction for
-  the month counts, since a count is billed as a scan.
+- Cost: the reference tables, one row per pinned row (through `idx_txn_pinned`, visited as under Conventions), and one
+  index entry per transaction for the month counts, since a count is billed as a scan.
 
 ## GET /transactions/months
 
@@ -64,8 +68,8 @@ Every real row whose budget month is in a range, newest first. Code:
 - Errors: 400 for a missing, malformed, reversed or too wide range, or a range over a bound.
 - Tag part: `months` plus the range. It runs no backfill, so in a new budget month a due instalment is missing here
   until the reference has been read.
-- Cost: at most 5,001 index entries plus the rows returned, so a range that is too big costs the bound and not the
-  range.
+- Cost: at most 5,001 index entries plus the rows returned (visited as under Conventions), so a range that is too big
+  costs the bound and not the range.
 
 ## GET /cube
 
@@ -108,8 +112,8 @@ Keyset pages of the owner's transactions. Code: [`list.ts`](../functions/api/exp
   SQLite lowers only ASCII and each such letter's capital has to be folded by hand (`CAFÉ` matches `café`). Letters
   whose capital is not one character that lower-cases back (`ß`, final sigma, the Kelvin sign, `İ`) are not folded. A
   row whose account is missing counts as posted even when cancelled.
-- Not conditional, and never cached: `Cache-Control: private, no-store`. Cost: the rows returned plus any the filter
-  rules out on the way; it stops at the limit.
+- Not conditional, and never cached: `Cache-Control: private, no-store`. Cost: the rows returned (visited as under
+  Conventions) plus any the filter rules out on the way; it stops at the limit.
 
 ## GET /transactions/summary
 
@@ -127,7 +131,8 @@ Count and net spend for a filter. Code: [`summary.ts`](../functions/api/expenses
 ## GET /transactions/:id
 
 One transaction as the dataset carries it. Code: [`[id].ts`](../functions/api/expenses/transactions/%5Bid%5D.ts). A row
-that is not the caller's is the same 404 as a missing one. A non-positive or non-numeric id is a 400. Cost: one row.
+that is not the caller's is the same 404 as a missing one. A non-positive or non-numeric id is a 400. Cost: one row, plus
+its account, statement and label lookups.
 
 ## GET /series
 
@@ -203,7 +208,8 @@ One chunk of one table of the owner's ledger as NDJSON, for the CSV export and t
 - Caching: `Cache-Control: private, no-store`. A walk is not a snapshot. `X-Export-Revision` is the token read before
   the rows, so a reader that needs one consistent state compares it across chunks and starts again when it moved.
 - It writes nothing and does not run the installment backfill, so an instalment that has fallen due and not yet been
-  created is not in an export. Cost: the chunk's rows plus one, read in primary-key order with no sort.
+  created is not in an export. Cost: the chunk's rows plus one, read in primary-key order with no sort, and visited as
+  under Conventions.
 
 ## Bulk transaction routes
 
