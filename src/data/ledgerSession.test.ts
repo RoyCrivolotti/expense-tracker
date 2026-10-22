@@ -227,6 +227,69 @@ describe('LedgerSession, receipts', () => {
     expect(session.getState().held!.attachmentCounts).toEqual(Object.fromEntries(ids.map((id) => [id, small.attachments.filter((a) => a.transactionId === id).length])))
   })
 
+  describe('many lists at once', () => {
+    const many = {
+      ...small,
+      attachments: small.transactions.slice(0, 10).flatMap((t, i) => [
+        makeAttachment({ id: 100 + i * 2, transactionId: t.id }),
+        makeAttachment({ id: 101 + i * 2, transactionId: t.id }),
+      ]),
+    }
+    const manyIds = many.transactions.slice(0, 10).map((t) => t.id)
+
+    async function openedMany() {
+      const source = memorySource(many)
+      const session = new LedgerSession(source)
+      await session.open()
+      source.calls.length = 0
+      return { source, session }
+    }
+
+    it('reads them in one request for every receipt, and holds each list', async () => {
+      const { source, session } = await openedMany()
+      session.loadReceipts(manyIds)
+      await flush()
+      expect(calls(source, 'receipts')).toEqual(['receipts'])
+      const { held } = session.getState()
+      for (const id of manyIds) expect(held!.receipts.get(id)!.map((a) => a.transactionId)).toEqual([id, id])
+      expect(held!.receipts.size).toBe(manyIds.length)
+      expect(ledgerOfHeld(held!).reference.attachments).toHaveLength(20)
+    })
+
+    it('reads a few lists one by one, as before', async () => {
+      const { source, session } = await openedMany()
+      session.loadReceipts(manyIds.slice(0, 3))
+      await flush()
+      expect(calls(source, 'receipts').sort()).toEqual(manyIds.slice(0, 3).map((id) => `receipts:${id}`).sort())
+    })
+
+    it('holds an empty list, and a count that matches it, for a transaction whose receipts were deleted meanwhile', async () => {
+      const { source, session } = await openedMany()
+      const gone = manyIds[0]!
+      source.dataset = { ...many, attachments: many.attachments.filter((a) => a.transactionId !== gone) }
+      session.loadReceipts(manyIds)
+      await flush()
+      const { held } = session.getState()
+      expect(held!.receipts.get(gone)).toEqual([])
+      expect(held!.attachmentCounts[gone]).toBeUndefined()
+      expect(held!.receipts.get(manyIds[1]!)).toHaveLength(2)
+    })
+
+    it('reports a failed request and holds no list, so the lists are asked for again next time', async () => {
+      const { source, session } = await openedMany()
+      const read = source.readReceiptsPart.bind(source)
+      source.readReceiptsPart = () => Promise.reject(new Error('offline'))
+      session.loadReceipts(manyIds)
+      await flush()
+      expect(session.getState().error).toBe('offline')
+      expect(session.getState().held!.receipts.size).toBe(0)
+      source.readReceiptsPart = read
+      session.loadReceipts(manyIds)
+      await flush()
+      expect(session.getState().held!.receipts.size).toBe(manyIds.length)
+    })
+  })
+
   it('reports a list that cannot be read and holds the others', async () => {
     const { source, session } = await opened()
     const read = source.readReceiptsPart.bind(source)

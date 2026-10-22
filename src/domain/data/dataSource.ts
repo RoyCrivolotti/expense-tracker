@@ -121,8 +121,11 @@ export interface LedgerPartsSource {
   readMonthsPart(range: MonthRange): Promise<MonthRowsPart>
   /** The per-month sums of the unpinned rows in the range, inclusive. */
   readCubePart(range: MonthRange): Promise<CubePart>
-  /** The receipts of one transaction, oldest first. The parts only say which transactions have any. */
-  readReceiptsPart(transactionId: number): Promise<TransactionAttachment[]>
+  /**
+   * The receipts of one transaction, oldest first, or of every transaction when none is named. The parts
+   * only say which transactions have any.
+   */
+  readReceiptsPart(transactionId?: number): Promise<TransactionAttachment[]>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
