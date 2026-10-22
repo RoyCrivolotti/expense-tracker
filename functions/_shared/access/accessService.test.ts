@@ -179,6 +179,63 @@ describe('accessService', () => {
     expect(batch).toHaveBeenCalledOnce()
   })
 
+  describe('asking again after a revoke whose purge failed', () => {
+    const user = (status: 'active' | 'revoked') => ({
+      email: 'guest@example.com',
+      status,
+      grantedAt: '2026-01-01',
+      grantedBy: 'owner@example.com',
+      lastSeenAt: null,
+    })
+
+    it('purges the data of a user who is already revoked, so the failed purge can be finished', async () => {
+      const batch = vi.fn().mockRejectedValueOnce(new Error('D1 is down')).mockResolvedValue(undefined)
+      const prepare = vi.fn(() => ({ bind: vi.fn().mockReturnThis() }))
+      const serviceDeps = deps({
+        // The first request revokes; by the second the user is no longer active.
+        revokeAccess: vi.fn().mockResolvedValueOnce(true).mockResolvedValue(false),
+        getAllowedUser: vi.fn().mockResolvedValue(user('revoked')),
+      })
+      serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
+
+      await expect(revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')).rejects.toThrow('D1 is down')
+      const retry = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
+
+      expect(retry).toEqual({ email: 'guest@example.com', dataPurged: true })
+      expect(batch).toHaveBeenCalledTimes(2)
+      expect(serviceDeps.repo.revokeAllGroups).toHaveBeenCalledTimes(2)
+    })
+
+    it('is still a 404 for an email that never had access, and purges nothing', async () => {
+      const batch = vi.fn()
+      const serviceDeps = deps({
+        revokeAccess: vi.fn().mockResolvedValue(false),
+        getAllowedUser: vi.fn().mockResolvedValue(null),
+      })
+      serviceDeps.env.DB = { prepare: vi.fn(), batch } as unknown as D1Database
+
+      await expect(revokeAccessByEmail(serviceDeps, 'nobody@example.com', 'owner@example.com')).rejects.toMatchObject({
+        status: 404,
+      })
+      expect(batch).not.toHaveBeenCalled()
+      expect(serviceDeps.repo.revokeAllGroups).not.toHaveBeenCalled()
+    })
+
+    it('does not purge a user who is active but whose revoke did not take', async () => {
+      const batch = vi.fn()
+      const serviceDeps = deps({
+        revokeAccess: vi.fn().mockResolvedValue(false),
+        getAllowedUser: vi.fn().mockResolvedValue(user('active')),
+      })
+      serviceDeps.env.DB = { prepare: vi.fn(), batch } as unknown as D1Database
+
+      await expect(revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')).rejects.toMatchObject({
+        status: 404,
+      })
+      expect(batch).not.toHaveBeenCalled()
+    })
+  })
+
   it('purges expense data when expenses group is removed', async () => {
     const batch = vi.fn().mockResolvedValue(undefined)
     const prepare = vi.fn(() => ({ bind: vi.fn().mockReturnThis() }))

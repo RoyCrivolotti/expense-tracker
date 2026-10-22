@@ -196,7 +196,12 @@ export async function revokeAccessByEmail(
     throw new HttpError(400, 'Cannot revoke the owner')
   }
   const revoked = await deps.repo.revokeAccess(email)
-  if (!revoked) throw new HttpError(404, 'Active user not found')
+  if (!revoked) {
+    // A revoke whose purge failed leaves the user revoked and their data in place, and nothing else would ever purge
+    // it. Asking again finishes the job; every step is safe to repeat. An email that never had access is still a 404.
+    const user = await deps.repo.getAllowedUser(email)
+    if (user?.status !== 'revoked') throw new HttpError(404, 'Active user not found')
+  }
   await deps.repo.revokeAllGroups(email)
   await purgeOwnerData(deps.env, email)
   return { email, dataPurged: true }
