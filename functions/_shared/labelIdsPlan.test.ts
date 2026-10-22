@@ -1,12 +1,20 @@
 // @vitest-environment node
 /**
  * The ids of a row's labels are read by a subquery that every transaction read carries (the list, one row, the
- * months, the pinned rows and the export). Left to choose, SQLite starts it from the owner's labels and looks for the
- * row's links under each, so a page of 100 rows visits every label of the owner 100 times and the cost grows with the
- * number of labels as well as with the rows. The links of the row are read first, and each label is checked by
- * primary key, whatever the number of labels is; these tests fail on the plan that is not that, with and without
- * table statistics, and hold the new subquery to the old one's answer on ledgers with labels that are gone, labels of
- * other owners, rows with none and rows with several.
+ * months, the pinned rows and the export). Left to choose, SQLite may start it from the owner's labels and look for
+ * the row's links under each, so a page of 100 rows visits every label of the owner 100 times and the cost grows with
+ * the number of labels as well as with the rows. The links of the row are read first, and each label is checked by
+ * primary key, whatever the number of labels is.
+ *
+ * Without table statistics (no `sqlite_stat1`) the plain `JOIN` does start from the labels, and the first group below
+ * fails on it. After `ANALYZE` the plain `JOIN` already starts from the links, so the second group does not fail on it:
+ * it guards the fix against a flip once statistics exist. Whether the production database has statistics has not been
+ * checked, so the gain there may be smaller than where there are none. `CROSS JOIN` pins the order of `tl` and `l` and
+ * nothing more: statistics saying a transaction has about 100 links (a `sqlite_stat1` row of `100 100`) make SQLite
+ * scan `transaction_labels` for each row whichever way the join is written.
+ *
+ * The last group holds the subquery to the old one's answer on ledgers with labels that are gone, labels of other
+ * owners, inactive labels, rows with none and rows with several.
  */
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { Label } from '../domain/types'
