@@ -1,7 +1,10 @@
 import type { Transaction } from '../types'
 import {
   DEFAULT_SUGGEST_LIMIT,
+  MAX_SUGGEST_KEYS,
   type DescriptionMatch,
+  type DescriptionSuggestRequest,
+  type DescriptionSuggestResult,
   type DescriptionTemplate,
 } from '../domain/data/descriptionSuggest'
 import { descriptionCollator, inSuggestionOrder } from '../domain/engine/descriptionSearch'
@@ -164,4 +167,20 @@ export function mergeDescriptionMatches(
   return inSuggestionOrder(merged, descriptionCollator(locale))
     .slice(0, limit)
     .map(({ entry }) => entry)
+}
+
+/**
+ * What `GET /descriptions/suggest` answers over a whole set of rows: the reference the route is held to. The server
+ * walks every description of the owner in the prefix range, whatever its status or month, and counts those against
+ * the cap; the matches are then the eligible rows among them.
+ */
+export function suggestDescriptionsOf(
+  rows: readonly (IndexRow & Pick<Transaction, 'budgetMonth'>)[],
+  { prefix, before, limit, locale }: DescriptionSuggestRequest,
+): DescriptionSuggestResult {
+  const walked = new Set(rows.map((row) => normalizeDescriptionKey(row.description)).filter((key) => key.startsWith(prefix)))
+  if (walked.size > MAX_SUGGEST_KEYS) return { items: [], tooBroad: true }
+  const eligible = rows.filter((row) => before === undefined || row.budgetMonth < before)
+  const index = buildDescriptionIndex([...eligible], { order: 'key', ...(locale ? { locale } : {}) })
+  return { items: index.searchEntries(prefix, limit), tooBroad: false }
 }

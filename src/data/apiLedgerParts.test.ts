@@ -277,3 +277,91 @@ describe('apiLedgerParts, series', () => {
     })
   })
 })
+
+describe('apiLedgerParts, usage', () => {
+  const usage = {
+    revision: 'abc',
+    categories: [{ id: 1, transactions: 4, plans: 1 }],
+    accounts: [{ id: 2, transactions: 4, plans: 0, statements: 3 }],
+    flags: [{ id: 3, transactions: 0 }],
+    labels: [{ id: 4, transactions: 2 }],
+  }
+
+  it('reads the counts from /usage, from the browser cache like the other parts', async () => {
+    const fetchMock = serve(json(usage))
+    await expect(apiLedgerParts.readUsagePart()).resolves.toEqual(usage)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/usage')
+  })
+
+  it.each([
+    ['no revision', { ...usage, revision: undefined }],
+    ['a list that is not a list', { ...usage, flags: {} }],
+    ['a list that is missing', { ...usage, labels: undefined }],
+    ['a record with no id', { ...usage, categories: [{ transactions: 1, plans: 0 }] }],
+    ['a count that is text', { ...usage, accounts: [{ id: 2, transactions: '4', plans: 0, statements: 0 }] }],
+  ])('reports %s as unavailable', async (_name, body) => {
+    serve(json(body))
+    await expect(apiLedgerParts.readUsagePart()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('is served through apiDataSource', async () => {
+    serve(json(usage))
+    await expect(apiDataSource.readUsagePart!()).resolves.toEqual(usage)
+  })
+})
+
+describe('apiLedgerParts, description matches', () => {
+  const match = { label: 'Café', template: { type: 'expense', categoryId: 1, accountId: 2 }, date: '2025-01-05', id: 7 }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('asks for the prefix with the budget month, limit and locale, as now and never from a cache', async () => {
+    const fetchMock = serve(json({ items: [match], tooBroad: false }))
+    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'caf', before: '2025-10', limit: 8, locale: 'en' })).resolves.toEqual({
+      items: [match],
+      tooBroad: false,
+    })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/expenses/descriptions/suggest?q=caf&limit=8&before=2025-10&locale=en')
+    expect(init).toMatchObject({ cache: 'no-store' })
+  })
+
+  it('leaves out the budget month and locale it was not given', async () => {
+    const fetchMock = serve(json({ items: [], tooBroad: true }))
+    await apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/descriptions/suggest?q=a&limit=3')
+  })
+
+  it('hands the abort signal to fetch, so a prefix that is no longer typed is cancelled', async () => {
+    const fetchMock = serve(json({ items: [], tooBroad: false }))
+    const controller = new AbortController()
+    await apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 }, { signal: controller.signal })
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ signal: controller.signal })
+  })
+
+  it.each([
+    ['no list of items', { tooBroad: false }],
+    ['no tooBroad', { items: [] }],
+    ['an item with no label', { items: [{ ...match, label: undefined }], tooBroad: false }],
+    ['an item with no template', { items: [{ ...match, template: undefined }], tooBroad: false }],
+    ['an item whose id is text', { items: [{ ...match, id: '7' }], tooBroad: false }],
+  ])('reports %s as unavailable', async (_name, body) => {
+    serve(json(body))
+    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 })).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('reads the server refusing the request as a validation error, and asks again a second later while descriptions are being prepared', async () => {
+    serve(json({ error: 'locale must be a language tag' }, { status: 400 }))
+    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3, locale: 'xx' })).rejects.toBeInstanceOf(ValidationError)
+
+    vi.useFakeTimers()
+    const preparing = () => json({ error: 'Descriptions are being prepared' }, { status: 503 })
+    const fetchMock = serve(preparing(), json({ items: [match], tooBroad: false }))
+    const read = apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 })
+    await vi.advanceTimersByTimeAsync(1500)
+    await expect(read).resolves.toEqual({ items: [match], tooBroad: false })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})

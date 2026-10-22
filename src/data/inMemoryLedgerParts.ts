@@ -1,4 +1,5 @@
 import type { LedgerPartsSource } from './dataSource'
+import { suggestDescriptionsOf } from './descriptionIndex'
 import { rowsRange, cubeRange } from '../domain/application/ledgerPartsService'
 import { listTransactions, summarizeTransactions } from '../domain/application/transactionQueryService'
 import {
@@ -10,6 +11,7 @@ import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
 import { pageOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import type { TransactionPageRequest } from '../domain/data/transactionQuery'
+import { usageFromDataset } from '../domain/engine/recordUsage'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset } from '../domain/types'
@@ -53,6 +55,15 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
     async readSeriesPart() {
       const { dataset, revision } = await current()
       return { revision, series: seriesFromTransactions(dataset.transactions) }
+    },
+    async readUsagePart() {
+      const { dataset, revision } = await current()
+      return { revision, ...usageFromDataset(dataset) }
+    },
+    async readDescriptionSuggest(request, { signal } = {}) {
+      const { dataset } = await current()
+      signal?.throwIfAborted()
+      return suggestDescriptionsOf(dataset.transactions, request)
     },
     async readTransactionPage(filter, { limit, cursor, signal } = {}) {
       const { dataset } = await current()

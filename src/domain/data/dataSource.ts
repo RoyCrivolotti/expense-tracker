@@ -29,7 +29,9 @@ import type {
   SeriesPart,
   TransactionPagePart,
   TransactionSummaryPart,
+  UsagePart,
 } from './ledgerParts'
+import type { DescriptionSuggestRequest, DescriptionSuggestResult } from './descriptionSuggest'
 import type { TxnFilter } from '../engine/transactions'
 
 export type NewTransaction = Omit<
@@ -162,6 +164,18 @@ export interface LedgerPartsSource {
    * when a screen needs it, not after every write.
    */
   readSeriesPart(): Promise<SeriesPart>
+  /**
+   * How many records name each category, account, flag and label, which a client that holds only some of the rows
+   * cannot count. The server counts every row, so a read is made when a screen shows the counts and they are not
+   * current.
+   */
+  readUsagePart(): Promise<UsagePart>
+  /**
+   * The descriptions that start with what was typed among the rows booked before a budget month (every row when
+   * none is given), for a client that holds the rows from that month on: `mergeDescriptionMatches` joins the two.
+   * `signal` cancels the read.
+   */
+  readDescriptionSuggest(request: DescriptionSuggestRequest, options?: { signal?: AbortSignal }): Promise<DescriptionSuggestResult>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
