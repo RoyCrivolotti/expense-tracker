@@ -345,14 +345,16 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // (the entry chunk 166,705, from 167,002). The seams that stay are the model's `useSelection`, the bar's overrides and
 // what a row write tells the data about the rows it reached. The ledger-only chunks went from 13,279 to 13,834 of 16,000.
 //
-// Raised from 286,660 to 286,946 bytes for the autocomplete and the usage counts of a ledger read in pages: the
-// description box takes the list it shows from a hook the ledger mode may supply, and the Settings screens ask a
-// per-record view for their counts (the held rows' own, which is what a ledger held in full keeps using, or the
-// server's) and show a note beside a count that is being read, may be out of date or could not be read. The default
-// path went from 286,602 to 286,889 bytes, 57 under the new limit. The entry chunk grew by 289 (166,705 to 166,994).
-// The merge of older descriptions, the store that reads and keeps the counts, and the words of the notes sit in the
-// chunks only the ledger mode loads, which went from 13,834 to 15,468 bytes of their 16,000.
-const TOTAL_MAX_GZIP = 286_946
+// Raised from 286,660 to 287,211 bytes for the autocomplete and the usage counts of a ledger read in pages: the
+// description box takes the list it shows from a hook the ledger mode may supply, keeps its highlight as the
+// suggestion's label and sends a click to the row that was pressed, and the Settings screens ask a per-record view for
+// their counts (the held rows' own, which is what a ledger held in full keeps using, or the server's), show a note
+// beside a count that is being read, may be out of date or could not be read, and keep the delete of a flag or label
+// shut until the counts can be taken. The default path went from 286,602 to 287,154 bytes, 57 under the new limit. The
+// entry chunk grew by 556 (166,705 to 167,261). The merge of older descriptions, the store that reads and keeps the
+// counts, and the words of the notes sit in the chunks only the ledger mode loads, which went from 13,834 to 15,483
+// bytes of their 16,000.
+const TOTAL_MAX_GZIP = 287_211
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
