@@ -452,7 +452,7 @@ export async function updateTransaction(
  * key), so it is done explicitly — and it must be atomic: a transaction deleted
  * without its attachment rows leaves metadata whose byte_size keeps counting
  * against the owner's storage quota, reachable from no UI, forever. Deleting the
- * R2 bytes is the caller's job afterwards (see removeReceiptsForTransactions);
+ * R2 bytes is the caller's job afterwards (see deleteWithReceipts);
  * an R2 delete cannot join a D1 batch.
  */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {

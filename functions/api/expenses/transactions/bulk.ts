@@ -12,8 +12,9 @@ import {
 import { mapAppError } from '../../../_shared/mapAppError'
 import { assertRevisionUnchanged } from '../../../_shared/revisionPrecondition'
 import { receiptStore } from '../../../_shared/receiptStoreFactory'
-import { removeReceiptsForTransactions } from '../../../_shared/receiptService'
+import { deleteWithReceipts } from '../../../_shared/receiptService'
 import { json, readJson } from '../../../_shared/http'
+import { parseDeleteTransactionIds } from '../../../domain/data/transactionIds'
 
 interface BulkDeleteBody {
   ids: unknown
@@ -37,12 +38,13 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const body = await readJson<BulkDeleteBody>(context.request)
   const { repo, owner } = context.data
   try {
-    // Same order as the single delete: bytes first, rows cascade with the batch.
-    if (Array.isArray(body.ids)) {
-      const ids = body.ids.filter((id): id is number => Number.isInteger(id))
-      await removeReceiptsForTransactions(repo, receiptStore(context.env), owner, ids)
-    }
-    return json(await bulkDeleteTransactions(repo, owner, body.ids))
+    // Refuse a bad request before anything is read or removed; the receipt files go only after the rows have.
+    const ids = parseDeleteTransactionIds(body.ids)
+    return json(
+      await deleteWithReceipts(repo, receiptStore(context.env), owner, ids, () =>
+        bulkDeleteTransactions(repo, owner, ids),
+      ),
+    )
   } catch (error) {
     mapAppError(error)
   }

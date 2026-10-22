@@ -234,9 +234,12 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   or missing, is not counted) and the label links that were new. A label that is not the owner's is a 400. A request
   names at most 20 labels and adds at most 5,000 links (rows times labels), because each new link writes a row in the
   table and in three indexes against the daily written-row budget.
-- **`DELETE /transactions/bulk`** with `{ ids }` answers `{ deleted, requested }`. The receipt files go first, then the
-  rows, their receipt rows and label links in one batch, and `settled_by` is cleared on any row a deleted payment had
-  settled. There is no filter form ([decision](./decisions/no-filter-based-delete.md)).
+- **`DELETE /transactions/bulk`** with `{ ids }` answers `{ deleted, requested }`. The ids are checked before anything is
+  read or removed. The rows, their receipt rows and label links then go in one batch, and `settled_by` is cleared on any
+  row a deleted payment had settled. The receipt files are removed after that, best effort, so a refused or failed
+  delete never costs a file (receipts are in no backup), and a file the bucket then fails to delete is left behind and
+  costs only space. `DELETE /transactions/:id` does the same. There is no filter form
+  ([decision](./decisions/no-filter-based-delete.md)).
 - `ids` holds at most 500 positive integers (duplicates are dropped), bound as one JSON string because D1 allows 100
   bound values per statement.
 
