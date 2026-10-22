@@ -134,6 +134,14 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore order and `EXPORT_CHUNK_ROWS`
   bounds every table. A new dataset table or column needs a new entry or mapper there and a raise of `EXPORT_FORMAT`. A
   parity test fails when the chunks put end to end stop equalling `loadDataset`'s table.
+- **The resumable backup is a bounded walk of the export, and a backup exists when its manifest does.**
+  `runScheduledBackup` is the one place that chooses: `runChunkedBackups` when `BACKUP_MODE` is `chunked`, otherwise
+  `runAllBackups`, the single-file snapshot, whose calls `backupOldPath.test.ts` pins (a merge redeploys the worker). An
+  invocation spends a budget of calls and rows and keeps back what it needs to finish. State is saved only after the
+  rows it counts are in a part, and the manifest is written last, so a kill at any point leaves a run the next
+  invocation continues. A pass is redone if the owner's revision moved. A new `EXPORT_TABLES` entry needs a row in
+  `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows a restore cannot write. Nothing in
+  the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
 
 ### Bulk writes
 
