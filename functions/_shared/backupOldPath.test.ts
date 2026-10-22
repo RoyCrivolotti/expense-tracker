@@ -2,8 +2,9 @@
 /**
  * The daily single-file snapshot is what runs unless `BACKUP_MODE=chunked`, and a merge redeploys the cron worker,
  * so this pins everything the old path does as a sequence: which calls it makes to the repository, the bucket and
- * the alerts, in what order, with what keys. The sequences below are what the backup did before chunked mode
- * existed; the tests run them through every way of reaching the old path.
+ * the alerts, in what order, with what keys. The tests run the sequences through every way of reaching the old path.
+ * A sequence changes only on purpose: the bucket is measured before it is pruned, so that the alert sees the size the
+ * day's files brought it to and not the size it was pruned down to.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BackupAlerts } from '../domain/ports/backupAlerts'
@@ -121,15 +122,15 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
       `loadDataset ${B}`,
       `put ${B}/${TODAY}.json`,
       'list',
-      `delete ${A}/2026-09-01.json`,
       'list',
+      `delete ${A}/2026-09-01.json`,
     ])
     expect(stored.get(`${A}/${TODAY}.json`)).toBe(body(A))
     expect(stored.get(`${B}/${TODAY}.json`)).toBe(body(B))
     expect([...stored.keys()].sort()).toEqual([`${A}/${TODAY}.json`, `${A}/notes.txt`, `${B}/2026-10-14.json`, `${B}/${TODAY}.json`])
   })
 
-  it('raises the same alerts: a large snapshot before its file is written, the bucket after pruning', async () => {
+  it('raises the same alerts: a large snapshot before its file is written, the bucket before pruning', async () => {
     const { log, deps } = run({
       objects: { [`${A}/2026-09-01.json`]: 'x'.repeat(50) },
       policy: { maxSnapshotBytes: body(B).length + 1, maxBucketBytes: 1_000_000, bucketAlertThresholdFraction: 0.01 },
@@ -137,7 +138,7 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
 
     await entry(deps)
 
-    const used = body(A).length + body(B).length
+    const used = body(A).length + body(B).length + 50
     expect(log).toEqual([
       'listOwners',
       `loadDataset ${A}`,
@@ -146,9 +147,9 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
       `loadDataset ${B}`,
       `put ${B}/${TODAY}.json`,
       'list',
-      `delete ${A}/2026-09-01.json`,
-      'list',
       `alert bucket ${used} 1000000`,
+      'list',
+      `delete ${A}/2026-09-01.json`,
     ])
   })
 
@@ -162,6 +163,19 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
 
     expect(log.filter((l) => l.startsWith('delete'))).toEqual([`delete ${A}/2026-10-10.json`])
     expect(stored.has(`${A}/2026-10-11.json`)).toBe(true)
+  })
+
+  it('alerts on the size the bucket reached, even when pruning brings it back under its cap', async () => {
+    const cap = body(A).length + body(B).length + 301
+    const { log, deps } = run({
+      objects: { [`${A}/2026-10-10.json`]: 'a'.repeat(300), [`${A}/2026-10-11.json`]: 'b'.repeat(300) },
+      policy: { maxBucketBytes: cap, bucketAlertThresholdFraction: 1 },
+    })
+
+    await entry(deps)
+
+    expect(log.filter((l) => l.startsWith('delete'))).toEqual([`delete ${A}/2026-10-10.json`])
+    expect(log.filter((l) => l.startsWith('alert bucket'))).toEqual([`alert bucket ${body(A).length + body(B).length + 600} ${cap}`])
   })
 })
 

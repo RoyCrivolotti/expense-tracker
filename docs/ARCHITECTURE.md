@@ -141,7 +141,8 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   rows it counts are in a part, and the manifest is written last, so a kill at any point leaves a run the next
   invocation continues. A pass is redone if the owner's revision moved. A new `EXPORT_TABLES` entry needs a row in
   `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows a restore cannot write. One owner's
-  failure never stops the others. Nothing in the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
+  failure never stops the others, and pruning never drops the newest complete backup of an owner who still has data.
+  Nothing in the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
 
 ### Bulk writes
 

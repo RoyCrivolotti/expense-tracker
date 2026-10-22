@@ -48,7 +48,11 @@ scope.
 ## When a backup fails
 
 An owner whose backup throws does not stop the others. Everyone else is backed up, old backups are pruned and the bucket
-is measured, then the failed owners are alerted by name and the invocation fails, so the cron run shows as failed.
+is measured, then the failed owners are alerted by name and the invocation fails, so the cron run shows as failed. The
+bucket alert is raised on the size before pruning, since after it the bucket is under its cap by definition. Pruning
+always keeps the newest complete backup of each owner who still has data, however old and even when the bucket is over
+its cap, so a ledger that fails for weeks is not left with none. The backups of someone revoked and purged are not
+kept and age out with the rest.
 
 ## Restoring
 

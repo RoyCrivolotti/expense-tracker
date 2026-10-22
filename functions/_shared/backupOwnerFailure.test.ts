@@ -85,6 +85,14 @@ describe('the daily snapshot, with the second of three owners failing', () => {
     expect(store.objects.has(ownerBackupKey(A, '2026-09-01'))).toBe(false)
   })
 
+  it('keeps the failed owner’s last backup through the clean-up, however old', async () => {
+    const { store, deps } = setup()
+
+    await runAllBackups(deps).catch(() => undefined)
+
+    expect(store.objects.has(ownerBackupKey(B, '2026-09-01'))).toBe(true)
+  })
+
   it('fails the same way when it is reached through the cron entry point', async () => {
     const { deps, spy } = setup()
 
@@ -156,5 +164,50 @@ describe('the resumable backup, with the first of two owners failing', () => {
     expect(store.objects.has(manifestKey(B, TODAY))).toBe(true)
     expect(store.objects.has(manifestKey(A, TODAY))).toBe(false)
     expect(spy.onBackupFailed).toHaveBeenCalledWith({ owner: A, dateKey: TODAY, reason: 'D1 hiccup' })
+  })
+})
+
+describe('the resumable backup, when it is done for the day', () => {
+  it('alerts on the size the bucket reached, even when pruning brings it back under its cap', async () => {
+    const old = `${B}/2026-09-01/`
+    const store = memoryBackupStore({ [`${old}part-000001.ndjson`]: 'x'.repeat(10_000), [`${old}manifest.json`]: '{}' })
+    const spy = alerts()
+    const repo = {
+      listOwners: () => Promise.resolve([A, B]),
+      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+    } as unknown as ExpenseRepository
+    const deps = {
+      repo,
+      store,
+      alerts: spy,
+      policy: { ...policy, maxBucketBytes: 5_000, bucketAlertThresholdFraction: 1 },
+      chunked: resolveChunkedBackup({ BACKUP_MODE: 'chunked' }),
+    }
+
+    const result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
+
+    expect(result.complete).toBe(true)
+    expect(store.objects.has(`${old}manifest.json`)).toBe(false)
+    expect(spy.onBucketNearLimit).toHaveBeenCalledOnce()
+  })
+
+  it('keeps each owner’s backup of the day however far over its cap the bucket is', async () => {
+    const store = memoryBackupStore()
+    const repo = {
+      listOwners: () => Promise.resolve([A, B]),
+      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+    } as unknown as ExpenseRepository
+    const deps = {
+      repo,
+      store,
+      alerts: alerts(),
+      policy: { ...policy, maxBucketBytes: 1 },
+      chunked: resolveChunkedBackup({ BACKUP_MODE: 'chunked' }),
+    }
+
+    await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
+
+    expect(store.objects.has(manifestKey(A, TODAY))).toBe(true)
+    expect(store.objects.has(manifestKey(B, TODAY))).toBe(true)
   })
 })

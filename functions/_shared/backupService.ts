@@ -18,6 +18,7 @@ export interface BackupRunResult {
   owners: number
   dateKey: string
   pruned: number
+  /** Bytes in the bucket once the day's backups were written, before anything old was pruned. */
   usedBytes: number
 }
 
@@ -63,8 +64,9 @@ export async function runAllBackups(deps: BackupDeps): Promise<BackupRunResult> 
     }
   }
   try {
-    const pruned = await pruneBackups(deps, dateKey)
+    // The bucket is measured before pruning: afterwards it is under its cap by construction, and never alerts.
     const usedBytes = await maybeAlertBucketUsage(deps)
+    const pruned = await pruneBackups(deps, dateKey, owners)
     return { owners: owners.length, dateKey, pruned, usedBytes }
   } finally {
     await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
