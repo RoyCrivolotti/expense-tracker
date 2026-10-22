@@ -635,3 +635,60 @@ describe('TransactionPager, with no screen showing the list', () => {
     expect(source.calls).toEqual([])
   })
 })
+
+describe('TransactionPager, the rows a write on a filter may name', () => {
+  const filter: TxnFilter = { categoryId: ledger.categories[0]!.id }
+
+  async function ready(source = memorySource(ledger), options?: ConstructorParameters<typeof TransactionPager>[1]) {
+    const pager = pagerOf(source, options)
+    pager.setFilter(filter)
+    await drain(pager)
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
+    return { pager, source }
+  }
+
+  it('gives the filter, the count and the revision the figures on screen were read for', async () => {
+    const { pager, source } = await ready()
+
+    expect(pager.matching()).toEqual({
+      filter,
+      expectedCount: summaryOf(ledger.transactions, filter).count,
+      expectedRevision: source.revision,
+    })
+  })
+
+  it('gives nothing while the figures may not fit the filter: typed, read again, or not read', async () => {
+    const source = memorySource(ledger)
+    const { pager } = await ready(source, { limit: 5, settleMs: 50 })
+    expect(pager.matching()).not.toBeNull()
+
+    // A burst of typing: the filter on screen is not the one the figures were read for.
+    pager.setFilter({ ...filter, query: 'a' })
+    expect(pager.matching()).toBeNull()
+    await settled(pager)
+    await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
+
+    // A refresh after a write: the figures in hand are from before it.
+    pager.refresh({ summary: true })
+    expect(pager.matching()).toBeNull()
+    await vi.waitFor(() => expect(pager.matching()).not.toBeNull())
+  })
+
+  it('gives nothing when more rows match than a write on a filter may reach', async () => {
+    const source = memorySource(ledger)
+    source.readTransactionSummary = () => Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
+    const { pager } = await ready(source)
+
+    expect(pager.matching()).toBeNull()
+  })
+
+  it('gives nothing once the figures could not be read again, because they are the ones before the write', async () => {
+    const { pager, source } = await ready()
+    source.readTransactionSummary = () => Promise.reject(new Error('offline'))
+
+    pager.refresh({ summary: true })
+    await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(true))
+
+    expect(pager.matching()).toBeNull()
+  })
+})

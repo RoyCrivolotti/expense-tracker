@@ -26,6 +26,42 @@ function selectAllLabel(allSelected: boolean, partial: boolean | undefined, load
   return `${allSelected ? 'Deselect' : 'Select'} ${partial ? loaded : 'all'}`
 }
 
+/** What the count leaves out: rows a filter hides, or the delete that every matching row cannot have. */
+function SelectionNote({ matchingActive, hiddenCount }: { matchingActive: boolean; hiddenCount: number }) {
+  if (matchingActive) return <span className={styles.batchHidden}>edit only</span>
+  return hiddenCount > 0 ? <span className={styles.batchHidden}>{hiddenCount} not shown</span> : null
+}
+
+interface SelectAllProps {
+  allSelected: boolean
+  loaded: number
+  partial: boolean | undefined
+  busy: boolean
+  matchingCount: number | undefined
+  matchingActive: boolean
+  onSelectAll: () => void
+  onSelectMatching: (() => void) | undefined
+  onDeselectAll: () => void
+}
+
+/**
+ * One button that takes the next step towards everything: the rows the list holds, then every row the filter
+ * matches when that is more (and may be edited as a whole), then back to nothing. Each label says how many it selects.
+ */
+function SelectAllButton({ allSelected, loaded, partial, busy, matchingCount, matchingActive, onSelectAll, onSelectMatching, onDeselectAll }: SelectAllProps) {
+  const choosing = !matchingActive && allSelected && matchingCount !== undefined && onSelectMatching !== undefined
+  const [label, onClick] = matchingActive
+    ? ['Deselect all', onDeselectAll]
+    : choosing
+      ? [`Select all ${matchingCount}`, onSelectMatching]
+      : [selectAllLabel(allSelected, partial, loaded), allSelected ? onDeselectAll : onSelectAll]
+  return (
+    <button type="button" className={styles.batchSelectAll} disabled={busy} onClick={onClick}>
+      {label}
+    </button>
+  )
+}
+
 interface BatchBarProps {
   count: number
   totalCount: number
@@ -34,11 +70,16 @@ interface BatchBarProps {
   busy: boolean
   /** More rows match than the list holds, so the button names how many it selects instead of saying all. */
   partial?: boolean | undefined
+  /** How many rows match, when the list holds only some and the filter may be edited as a whole: they can be selected in one go. */
+  matchingCount?: number | undefined
+  /** Every matching row is selected, the ones the list has not read included. They can be edited, not deleted. */
+  matchingActive?: boolean | undefined
   /** Offline or otherwise without write access: nothing can be edited or deleted. */
   readOnly?: boolean
   editOpen: boolean
   onCancel: () => void
   onSelectAll: () => void
+  onSelectMatching?: (() => void) | undefined
   onDeselectAll: () => void
   onEdit: () => void
   onDelete: () => void
@@ -49,11 +90,14 @@ export function BatchBar({
   totalCount,
   hiddenCount = 0,
   partial,
+  matchingCount,
+  matchingActive = false,
   busy,
   readOnly = false,
   editOpen,
   onCancel,
   onSelectAll,
+  onSelectMatching,
   onDeselectAll,
   onEdit,
   onDelete,
@@ -77,20 +121,21 @@ export function BatchBar({
         </button>
         <span>
           {count} selected
-          {hiddenCount > 0 ? (
-            <span className={styles.batchHidden}>{hiddenCount} not shown</span>
-          ) : null}
+          <SelectionNote matchingActive={matchingActive} hiddenCount={hiddenCount} />
         </span>
       </div>
       <div className={styles.batchActions}>
-        <button
-          type="button"
-          className={styles.batchSelectAll}
-          disabled={busy}
-          onClick={allSelected ? onDeselectAll : onSelectAll}
-        >
-          {selectAllLabel(allSelected, partial, totalCount)}
-        </button>
+        <SelectAllButton
+          allSelected={allSelected}
+          loaded={totalCount}
+          partial={partial}
+          busy={busy}
+          matchingCount={matchingCount}
+          matchingActive={matchingActive}
+          onSelectAll={onSelectAll}
+          onSelectMatching={onSelectMatching}
+          onDeselectAll={onDeselectAll}
+        />
         <button
           type="button"
           className={styles.batchEdit}
@@ -102,7 +147,7 @@ export function BatchBar({
         <button
           type="button"
           className={styles.batchDelete}
-          disabled={!canAct}
+          disabled={!canAct || matchingActive}
           onClick={onDelete}
         >
           {deleting ? 'Deleting…' : 'Delete'}

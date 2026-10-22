@@ -15,6 +15,7 @@ import type {
   DeleteAccountResult,
   DeleteCategoryOptions,
   DeleteCategoryResult,
+  MatchingTarget,
   NewAccount,
   NewCategory,
   NewFlag,
@@ -62,6 +63,13 @@ export interface ExpenseActions {
    *  fewer than requested if some vanished elsewhere first. */
   deleteTransactions: (ids: number[]) => Promise<number>
   updateTransactions: (ids: number[], patch: BulkTransactionPatch) => Promise<number>
+  /** Adds labels to these transactions and keeps the ones they have. Resolves with how many it reached. */
+  addLabels?: (ids: number[], labelIds: number[]) => Promise<number>
+  /**
+   * Adds labels to, and edits, every transaction `target` names (the filter, with the count and revision the user was
+   * shown). Resolves with how many it changed; rejects with a 409 `ApiError` if the ledger moved since.
+   */
+  updateMatching?: (target: MatchingTarget, patch: BulkTransactionPatch, labelIds?: number[]) => Promise<number>
   setStatementPaid: (
     accountId: number,
     yearMonth: string,

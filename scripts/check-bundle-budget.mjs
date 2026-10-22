@@ -330,7 +330,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // and the two engine helpers the ledger chunk now imports). The series code itself, the words of the note that the
 // figures are not exact, and the fold of newer rows sit in the chunks only the ledger mode loads, which went from
 // 11,129 to 12,526 bytes of their 16,000.
-const TOTAL_MAX_GZIP = 286_220
+//
+// Raised from 286,220 to 286,970 bytes for writes to a ledger read in pages: choosing every row a filter matches (the
+// select button goes on to "Select all N", the bar says "edit only", the sheet closes when the server refuses the
+// count), the labels of a page added through the bulk route, and the rows and series read again after a write to rows
+// that are not held. The default path went from 286,161 to 286,913 bytes, 57 under the new limit. The entry chunk grew
+// by 657 (166,345 to 167,002, for the selection hook, the bar, the footer and what a write tells the data layer about
+// the rows it reached). The bulk writes themselves, the session's read after a write and the pager's offer sit in the
+// chunks only the ledger mode loads, which went from 12,526 to 13,279 bytes of their 16,000.
+const TOTAL_MAX_GZIP = 286_970
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 

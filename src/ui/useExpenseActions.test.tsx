@@ -4,6 +4,7 @@ import type { ExpenseDataset, Transaction } from '../types'
 import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import { defaultExpenseSettings } from '../engine'
 import { makeScenario } from '../testing/factories'
+import type { WriteReach } from '../data/ledgerSession'
 import { useExpenseActions } from './useExpenseActions'
 
 const baseDataset: ExpenseDataset = {
@@ -336,6 +337,86 @@ describe('useExpenseActions — attachments', () => {
     expect(read().goalScenarios.map((s) => [s.id, s.isActive])).toEqual([
       [1, false],
       [2, true],
+    ])
+  })
+})
+
+describe('useExpenseActions — what a write reached', () => {
+  const rows = [10, 11].map((id) => ({ ...savedTxn, id }))
+  const target = { filter: { categoryId: 1 }, expectedCount: 2, expectedRevision: 'r7' }
+
+  function setup(source: Partial<ExpenseDataSource>) {
+    const applyPatch = vi.fn<(patch: (d: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void>()
+    const { result } = renderHook(() => useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()))
+    return { applyPatch, actions: () => result.current! }
+  }
+
+  it('tells the data which rows an edit and a delete named, so those it does not hold are read again', async () => {
+    const { applyPatch, actions } = setup({
+      updateTransactions: vi.fn().mockResolvedValue({ updated: 2, transactions: rows }),
+      deleteTransactions: vi.fn().mockResolvedValue({ deleted: 1, requested: 2 }),
+    })
+
+    await act(() => actions().updateTransactions([10, 11], { categoryId: 1 }))
+    await act(() => actions().deleteTransactions([10, 11]))
+
+    expect(applyPatch.mock.calls.map(([, reach]) => reach)).toEqual([
+      { ids: [10, 11], patch: { categoryId: 1 } },
+      { ids: [10, 11] },
+    ])
+  })
+
+  it('adds labels through the bulk route and says the rows it cannot show were reached', async () => {
+    const addLabelsToTransactions = vi.fn().mockResolvedValue({ matched: 2, added: 3 })
+    const { applyPatch, actions } = setup({ addLabelsToTransactions })
+
+    await expect(actions().addLabels!([10, 11], [5])).resolves.toBe(2)
+
+    expect(addLabelsToTransactions).toHaveBeenCalledWith([10, 11], [5])
+    expect(applyPatch).toHaveBeenCalledWith(expect.any(Function), { patch: {} })
+  })
+
+  it('edits the rows a filter names and reports how many, with no ids to patch', async () => {
+    const updateMatchingTransactions = vi.fn().mockResolvedValue({ updated: 2 })
+    const { applyPatch, actions } = setup({ updateMatchingTransactions })
+
+    await expect(actions().updateMatching!(target, { categoryId: 3 }, [5])).resolves.toBe(2)
+
+    expect(updateMatchingTransactions).toHaveBeenCalledWith(target, { categoryId: 3 }, [5])
+    expect(applyPatch).toHaveBeenCalledWith(expect.any(Function), { patch: { categoryId: 3 } })
+  })
+
+  it('reads again after a bulk write fails, because part of it may have gone through, and drops nothing it did not delete', async () => {
+    const failure = new Error('500 of 1,203 were done before this failed: busy')
+    const { applyPatch, actions } = setup({ deleteTransactions: vi.fn().mockRejectedValue(failure) })
+    const dataset = { ...baseDataset, transactions: rows }
+
+    await expect(act(() => actions().deleteTransactions([10, 11]))).rejects.toBe(failure)
+
+    expect(applyPatch).toHaveBeenCalledOnce()
+    const [patch, reach] = applyPatch.mock.calls[0]!
+    expect(patch(dataset)).toBe(dataset)
+    expect(reach).toEqual({ patch: {} })
+  })
+
+  it('tells the data which row a single edit, delete or create named', async () => {
+    const { applyPatch, actions } = setup({
+      createTransaction: vi.fn().mockResolvedValue(savedTxn),
+      updateTransaction: vi.fn().mockResolvedValue(savedTxn),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      setTransactionLabels: vi.fn().mockResolvedValue(savedTxn),
+    })
+
+    await act(() => actions().createTransaction(newTxn))
+    await act(() => actions().updateTransaction(42, { description: 'Tea' }))
+    await act(() => actions().deleteTransaction(42))
+    await act(() => actions().setTransactionLabels(42, [1]))
+
+    expect(applyPatch.mock.calls.map(([, reach]) => reach)).toEqual([
+      { ids: [42] },
+      { ids: [42], patch: { description: 'Tea' } },
+      { ids: [42] },
+      { ids: [42], patch: {} },
     ])
   })
 })

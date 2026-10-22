@@ -21,7 +21,7 @@ import {
 import { readLedgerParts } from './ledgerLoader'
 import { cascadeOf } from './ledgerCascade'
 import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
-import { touchesSeries } from './touchesSeries'
+import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
 
 export interface SessionState {
@@ -63,6 +63,26 @@ const REFRESH_ATTEMPTS = 3
 /** After a read of the series failed, how long a screen mounting does not start another. */
 const SERIES_BACKOFF_MS = 60_000
 const SERIES_UNMATCHED = 'The recurring charges could not be matched to the rest of the ledger. Refresh to try again.'
+
+/**
+ * What a write did, for the rows of it that may not be held: a page of the list, or the rows a filter matches,
+ * can reach months nobody here has read as rows, and the patch that shows the write can only change those that are held.
+ */
+export interface WriteReach {
+  /** The rows the write named; absent when it named them in another way, or when the server did not answer with them. */
+  ids?: readonly number[]
+  /** The fields it wrote, if it edited; absent when it added or removed rows, which could be any series' rows. */
+  patch?: object
+}
+
+/** Whether every row the write named is held as a row, so that the patch showed all of it. */
+function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boolean {
+  if (ids === undefined) return false
+  if (held.cells === null) return true
+  const rows = new Set(held.pinned.map((row) => row.id))
+  for (const list of held.rows.values()) for (const row of list) rows.add(row.id)
+  return ids.every((id) => rows.has(id))
+}
 
 /** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
 export function rangesOfMonths(months: readonly string[]): MonthRange[] {
@@ -262,16 +282,26 @@ export class LedgerSession {
 
   /**
    * A write the user made, as the patch functions of the screens express it. One the server answered with
-   * more than the patch shows (`cascadeOf`) is followed by a read of the whole ledger. True when the write
-   * changed rows, which a list read from the server does not see until it is read again.
+   * more than the patch shows (`cascadeOf`) is followed by a read of the whole ledger, and so is one that
+   * reached rows that are not held (`reach`: the patch cannot show those, and neither the sums of their months
+   * nor a series they are in). True when the write changed rows, held or not, which a list read from the
+   * server does not see until it is read again.
    */
-  patch(patch: (dataset: ExpenseDataset) => ExpenseDataset): boolean {
+  patch(patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach): boolean {
     const held = this.state.held
     if (!held || this.state.offline) return false
+    // Asked before the patch: a row it removes is held until then.
+    const beyond = reach !== undefined && !holdsEvery(held, reach.ids)
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
-    if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return false
+    const changed = done.changed.rows || done.changed.reference || done.changed.receipts
+    if (changed) this.hold(done, before, after)
+    if (beyond) this.readBeyond(reach)
+    return beyond || done.changed.rows
+  }
+
+  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset): void {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
@@ -279,7 +309,17 @@ export class LedgerSession {
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
     if (cascadeOf(before, after)) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
-    return done.changed.rows
+  }
+
+  /**
+   * Reads the rows and sums again, once, after a write to rows that are not held. The series are read again by
+   * the refresh if a screen shows them, and only when the write could have changed them: the fields it wrote
+   * (`reshapesSeries`), or rows added or removed, of which nothing is known.
+   */
+  private readBeyond({ patch }: WriteReach): void {
+    this.epochs = bump(this.epochs, ['rows', 'cube'])
+    if (patch === undefined || reshapesSeries(patch)) this.seriesWrites += 1
+    this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
   }
 
   /**

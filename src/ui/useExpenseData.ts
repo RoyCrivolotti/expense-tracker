@@ -5,6 +5,7 @@ import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
+import type { WriteReach } from '../data/ledgerSession'
 import type { Lookup } from './format'
 import type { PagedList } from './transactionListView'
 import { buildExpenseModel } from './buildExpenseModel'
@@ -74,7 +75,11 @@ export interface ExpenseData extends LoadState {
   refreshing: boolean
   refreshOutcome: RefreshOutcome
   reload: () => void
-  applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
+  /**
+   * Shows a write in what is held. `reach` says what it did to rows that may not be held (a ledger held as a
+   * window reads those again); a model that holds every row ignores it.
+   */
+  applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
   /** Present when the model holds only the months being looked at: tells it which month the screens show. */
   viewMonth?: (month: string) => void
   /** True while the rows of the month shown are being read. */

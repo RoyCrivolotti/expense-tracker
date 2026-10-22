@@ -52,6 +52,16 @@ export type BulkTransactionPatch = Partial<
   settledBy?: number | null
 }
 
+/**
+ * The rows a bulk write on a filter is meant for, as the user was shown them: `expectedCount` and
+ * `expectedRevision` are the `count` and `revision` of the summary read for `filter`.
+ */
+export interface MatchingTarget {
+  filter: TxnFilter
+  expectedCount: number
+  expectedRevision: string
+}
+
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 // autoLabelId is optional-and-nullable here, unlike on Flag itself (optional only):
@@ -167,6 +177,17 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
     ids: number[],
     patch: BulkTransactionPatch,
   ): Promise<{ updated: number; transactions: Transaction[] }>
+  /** Adds labels to these transactions and keeps the ones they have (`setTransactionLabels` replaces them). */
+  addLabelsToTransactions?(ids: number[], labelIds: number[]): Promise<{ matched: number; added: number }>
+  /**
+   * Adds labels to, and edits, every row `target` names. Refused with a 409 (`ApiError`) if anything was written to
+   * the ledger since the count was read, in which case nothing was changed and the count is read again before a retry.
+   */
+  updateMatchingTransactions?(
+    target: MatchingTarget,
+    patch: BulkTransactionPatch,
+    labelIds?: number[],
+  ): Promise<{ updated: number }>
   setStatementPaid?(accountId: number, yearMonth: string, paid: boolean, paidOn?: string): Promise<AccountStatement>
   /** Record actual cash for a month, or pass null to clear (empty Actual field). */
   setCashActual?(yearMonth: string, actualCashCents: number | null): Promise<CashActual | null>

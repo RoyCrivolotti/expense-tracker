@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { MatchingTarget } from '../data/dataSource'
 import type { TransactionPager } from '../data/transactionPager'
 import type { TransactionListRow } from '../domain/engine/transactionListRows'
 import type { TxnFilter } from '../domain/engine/transactions'
@@ -24,6 +25,8 @@ export interface ListView {
   totalsStale?: boolean | undefined
   /** More rows match than the list holds, so the rows it holds are not all there are. */
   partial?: boolean | undefined
+  /** The rows the filter matches, as shown, when a write may name them by the filter: only a list read in pages has it. */
+  matching?: MatchingTarget | null | undefined
   /** Drawn in place of the list when its first rows could not be read. */
   failed?: ReactNode
   /** Drawn under the list: what reads the next page. */

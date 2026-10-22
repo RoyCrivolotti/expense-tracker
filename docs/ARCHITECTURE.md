@@ -221,6 +221,16 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
   is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
   `useLedgerData` returns it as `backgroundError` for the app to tell the user.
+- **A write to rows the browser may not hold is followed by a read of what it moved, not by a patch.** The patch
+  functions only map the rows the session holds, so an edit or delete of a row on a page of the list, or of the rows a
+  filter matches, whose month is held only as a sum would change nothing here: not the month's sums, not the series, not
+  the list. `useExpenseActions` passes each row write's reach (`WriteReach`: the ids it named and the fields it wrote)
+  to `LedgerSession.patch`, which reads the rows and sums again, once, if any id was not held as a row (asked before the
+  patch removes it), and notes the series stale only if the fields written could change one (`reshapesSeries`; rows
+  added or removed always could). A ledger held in full holds every id and needs nothing more. A write that answers
+  with counts and not rows (labels added through the bulk route, an edit on a filter) names no ids and is always
+  followed by the read, and so is a bulk write that fails, since part of it may have gone through.
+  `ledgerWrites.client.integration.test.ts` holds the sums after each kind of write to those of a fresh read.
 - **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
   `saveLedgerSnapshot` (`src/data/ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them
   and removes every other owner's, so a second person on the same browser never opens the first one's figures from
@@ -263,6 +273,16 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   when the summary stopped counting. A footer under the list reads the next page when the end comes near the
   screen and offers to try again when one failed, and never retries by itself. While the model is read-only the rows
   it holds are listed, since there are no pages to read.
+- **Selecting every row a filter matches is selecting the filter, with the count and revision the user was shown.**
+  `TransactionPager.matching()` gives them while the figures fit the list (the filter is not being typed, nothing is
+  being read, and the count is not capped: an edit reaches at most 1,000 rows). The choice keeps that count and revision
+  as they were, since the server answers 409 and changes nothing if either has moved. The refusal lets go of the choice
+  and the figures are read again before the user chooses once more. A new filter, or picking or clearing a row, ends it.
+  It offers no delete, because a delete names its ids (the browser sends more than 500 in several requests), and a
+  rename cannot say what it replaces, since only the rows on screen are known. With labels and an edit together the
+  labels go first, as adding them never changes which rows match, and the revision is read again between the two
+  requests. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
+  so it counts it as not shown.
 
 ## Size and complexity
 

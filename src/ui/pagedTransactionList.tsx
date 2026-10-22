@@ -46,6 +46,8 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
   }, [dataset.accountStatements, dataset.accounts, dataset.settings, dataset.cashActuals, sums, filter])
   const listRows = useMemo(() => pagedListRows(rows, payments, complete), [rows, payments, complete])
   const footer = useMemo(() => <PagedListFooter pager={pager} />, [pager])
+  // Read from the pager whenever it changes: the figures it was taken from are the ones in `state`.
+  const matching = useMemo(() => pager.matching(), [pager, state]) // eslint-disable-line react-hooks/exhaustive-deps -- `state` is what changes it
   // Offline there are no pages to read, but a ledger held in full is still there to filter.
   const held = useMemo(() => (readOnly ? listOfHeldRows(model, sums, filter) : null), [readOnly, model, sums, filter])
   if (held) return held
@@ -61,6 +63,7 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
     partial: !complete,
     failed,
     footer,
+    matching,
   }
 }
 

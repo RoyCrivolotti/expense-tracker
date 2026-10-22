@@ -10,6 +10,7 @@ import type { ExpenseDataset } from '../../domain/types'
 import { makeActions } from '../../testing/makeActions'
 import { memorySource, type TestSource } from '../../testing/ledgerSource'
 import { syntheticLedger } from '../../testing/syntheticLedger'
+import type { ExpenseActions } from '../actions'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { ConnectivityContext } from '../hooks/connectivityContext'
 import { ToastProvider } from '../hooks/ToastProvider'
@@ -68,13 +69,13 @@ function gate(source: TestSource) {
   }
 }
 
-function renderTab(source: TestSource, options: { limit?: number; settleMs?: number } = {}) {
+function renderTab(source: TestSource, options: { limit?: number; settleMs?: number; actions?: ExpenseActions } = {}) {
   const pager = new TransactionPager(source, { limit: options.limit ?? 10, settleMs: options.settleMs ?? 0 })
   const model: ExpenseModel = { ...buildExpenseModel(ledger), pagedList: pagedListOf(pager) }
   const tree = (
     <ToastProvider>
       <ConnectivityContext.Provider value={{ online: true, readOnly: false }}>
-        <TransactionsTab model={model} month={month} actions={makeActions()} />
+        <TransactionsTab model={model} month={month} actions={options.actions ?? makeActions()} />
       </ConnectivityContext.Provider>
     </ToastProvider>
   )
@@ -237,5 +238,58 @@ describe('the Transactions tab over a list read in pages: a write', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: /try again/i })).toBeNull())
     expect(document.activeElement).not.toBe(document.body)
     expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
+  })
+})
+
+describe('the Transactions tab over a list read in pages: every row that matches', () => {
+  async function selectedLoaded(source: TestSource, actions: ExpenseActions) {
+    const view = renderTab(source, { limit: 10, actions })
+    await waitFor(() => expect(view.pager.getState().rows).toHaveLength(10))
+    await waitFor(() => expect(view.pager.getState().summary).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Select 10' }))
+    return view
+  }
+
+  it('offers them once the rows read are all selected, edits them through the filter, and has no delete for them', async () => {
+    const source = memorySource(ledger)
+    const updateMatching = vi.fn((target: { expectedCount: number }) => Promise.resolve(target.expectedCount))
+    const { pager } = await selectedLoaded(source, makeActions({ updateMatching }))
+    const { count, revision } = pager.getState().summary!
+    expect(count).toBeGreaterThan(10)
+
+    fireEvent.click(await screen.findByRole('button', { name: `Select all ${count}` }))
+
+    expect(screen.getByText(`${count} selected`)).toBeInTheDocument()
+    expect(screen.getByText('edit only')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByText(`${count} transactions`)).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Category'))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    await waitFor(() => expect(updateMatching).toHaveBeenCalledOnce())
+    const [target] = updateMatching.mock.calls[0]!
+    expect(target).toMatchObject({ expectedCount: count, expectedRevision: revision })
+    expect(await screen.findByText(`Updated ${count} transactions`)).toBeInTheDocument()
+  }, 15_000)
+
+  it('does not offer them while the count has stopped at what an edit may reach', async () => {
+    const source = memorySource(ledger)
+    source.readTransactionSummary = () => Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
+    await selectedLoaded(source, makeActions())
+
+    expect(screen.getByRole('button', { name: 'Deselect 10' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Select all \d+$/ })).toBeNull()
+  })
+
+  it('keeps the rows chosen on the first page chosen when later pages are read', async () => {
+    const { pager } = await selectedLoaded(memorySource(ledger), makeActions())
+
+    act(() => FakeObserver.nearScreen())
+    await waitFor(() => expect(pager.getState().rows).toHaveLength(20))
+
+    expect(screen.getByText('10 selected')).toBeInTheDocument()
+    expect(screen.queryByText(/not shown/)).toBeNull()
   })
 })
