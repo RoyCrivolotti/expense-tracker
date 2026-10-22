@@ -8,6 +8,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { apiLedgerParts } from '../../../src/data/apiLedgerParts'
+import { LedgerUsage } from '../../../src/data/ledgerUsage'
 import { mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
 import { MAX_SUGGEST_KEYS } from '../../../src/domain/data/descriptionSuggest'
 import { usageFromDataset } from '../../../src/domain/engine/recordUsage'
@@ -20,6 +21,7 @@ import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqlit
 import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
 import { onRequestGet as getDescriptions } from './descriptions/suggest'
 import { onRequestGet as getDataset } from './index'
+import { onRequestPatch as patchBulk } from './transactions/bulk'
 import { onRequestGet as getUsage } from './usage'
 
 interface Served {
@@ -79,6 +81,32 @@ describe('the usage counts a client reads', () => {
     expect(typeof revision).toBe('string')
     const some = counts.categories.some((c) => c.transactions > 0) && counts.labels.some((l) => l.transactions > 0)
     expect(some).toBe(true)
+  })
+})
+
+describe('the usage counts a client keeps', () => {
+  it('follow a write the server made: read again after it, they are the counts over the rows as they are now', async () => {
+    const served = await serve(randomLedger(5))
+    vi.stubGlobal('fetch', routeFetch(served.world))
+    const store = new LedgerUsage(apiLedgerParts)
+    store.watch()
+    await vi.waitFor(() => expect(store.getState().usage).not.toBeNull())
+    const first = store.getState().usage!
+    const free = served.dataset.transactions.filter((t) => !t.planId && !t.settledBy && !t.flagId)
+    const from = free[0]!.categoryId
+    const other = first.categories.find((c) => c.id !== from)!
+    const ids = free.filter((t) => t.categoryId === from).map((t) => t.id)
+
+    await served.world.call(patchBulk, { method: 'PATCH', path: '/transactions/bulk', body: { ids: ids.slice(0, 100), patch: { categoryId: other.id } } })
+    store.noteWrite(true)
+
+    const now = (await (await served.world.call(getDataset)).json()) as ExpenseDataset
+    await vi.waitFor(() => {
+      const { categories, accounts, flags, labels } = store.getState().usage!
+      expect({ categories, accounts, flags, labels }).toEqual(usageFromDataset(now))
+    })
+    expect(store.getState()).toMatchObject({ stale: false, error: null })
+    expect(store.getState().usage!.revision).not.toBe(first.revision)
   })
 })
 
