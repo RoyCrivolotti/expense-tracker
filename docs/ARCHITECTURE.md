@@ -233,24 +233,18 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   after the transactions of their day, so `pagedListRows` leaves one out until a row of an older day, or the end of the
   list, shows that no more of its day is coming. A screen calls `refresh()` after a write: paging by position cannot
   show a row that moved to a place behind the cursor or drop one deleted from the pages already read. `refresh()` reads
-  the list again from its first page down to the depth it had, in pages as large as the server allows, and swaps it in
-  only when every row is there, so the reader keeps their place; a read that fails leaves the rows as they were and
-  says so. While no screen is attached (`attach()`) a refresh is only noted, and made, from the first page, when one
-  attaches. A search text is read once it has held still for the settle time and any other change of filter at once; a
-  read that a newer filter outlived is cancelled, and the rows and figures of the filter before stay on screen, marked
-  stale, until the new ones come (a first page that fails drops them). The count and net spend come from
-  `GET /transactions/summary`, apart from the rows, when the filter changes or a refresh asks, and `summaryStale` says
-  when they may no longer fit the rows.
+  the list again down to the depth it had and swaps it in when every row is there, so the reader keeps their place.
+  While no screen is attached (`attach()`) a refresh is only noted, and made when one attaches. Only a change of the
+  search text waits for the settle time, any other change of filter is read at once, and a read that a newer filter
+  outlived is cancelled. The count and net spend come from `GET /transactions/summary`, apart from the rows, when the
+  filter changes or a refresh asks, and `summaryStale` says when they may no longer fit the rows.
 - **In ledger mode the Transactions tab asks the model for its list, and the list is read in pages.** The model
   carries a `pagedList` (a `TransactionPager` and the hook that gives the tab its rows), and a model without one is
   listed from the rows it holds as always, so nothing changes with the mode off. The tab hands its filter to the
   hook and takes back the rows with the statement payments merged in, the net spend and a count that says `1000+`
-  when the summary stopped counting and is exact once the list has been read to its end. Rows or figures that belong
-  to the filter before are dimmed and marked busy, a first page that fails is said so and not passed off as an empty
-  result, and select all selects the rows that are loaded and says so. A footer under the list reads the next page
-  when the end comes near the screen and offers to try again when a read failed, and never retries by itself. The tab
-  attaches to the pager while it is mounted, so a write made while it is not costs no read, and while the model is
-  read-only the rows it holds are listed, since there are no pages to read.
+  when the summary stopped counting. A footer under the list reads the next page when the end comes near the
+  screen and offers to try again when one failed, and never retries by itself. While the model is read-only the rows
+  it holds are listed, since there are no pages to read.
 
 ## Size and complexity
 
