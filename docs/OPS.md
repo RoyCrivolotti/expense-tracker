@@ -2,8 +2,10 @@
 
 For an operator setting up and using staging. Staging is a second Pages project (`<your-staging-project>`) with its own
 D1 database (`<your-dev-d1-database>`), hostname and Cloudflare Access application, so a change can be tried on
-Cloudflare without touching production. The names and hostnames the setup scripts use are in
-`config/staging-access.json` and `config/dev.json` (copy `config/dev.example.json`).
+Cloudflare without touching production. The setup scripts read the names and hostnames from
+`config/staging-access.json`, which is tracked and holds the maintainer's values, so replace them first
+([DEPLOYMENT.md](./DEPLOYMENT.md#adapting-a-fork)), and from `config/dev.json`, your gitignored copy of
+`config/dev.example.json`.
 
 ## One-time setup
 
@@ -26,10 +28,11 @@ Then add the printed CNAME record at your DNS host.
 ```bash
 CLOUDFLARE_API_TOKEN=… npm run setup:access-apps      # create/sync the staging and production applications' hostnames
 CLOUDFLARE_API_TOKEN=… npm run setup:access-google -- --app <your-staging-access-app>
-CLOUDFLARE_API_TOKEN=… npm run setup:access-migrate   # remove legacy pages.dev hostnames from the production application
+
 ```
 
-Token needs **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this.
+Token needs **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this. If the production application still
+lists staging or `*.pages.dev` hostnames from an earlier setup, `npm run setup:access-migrate` removes them.
 
 ### 4. Deploy a staging build
 
