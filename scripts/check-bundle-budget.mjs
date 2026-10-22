@@ -315,7 +315,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // modules import it. This is a limit on what runs and on what a feature may add, not on what is downloaded:
 // the service worker precaches every built script (`globPatterns` in vite.config.ts), the ledger chunks
 // included, so each browser fetches them once per deploy.
-const TOTAL_MAX_GZIP = 285_700
+//
+// Raised from 285,700 to 285,860 for listing the Transactions in pages: the tab takes its rows from a hook the
+// model may carry, says a thousand and more when the count stopped, shows a loading empty state and draws a
+// footer. That is the whole of what the default path pays for it: the entry chunk went from 165,796 to 165,933
+// bytes and the default path from 285,603 to 285,763, with 97 bytes of headroom. The ledger chunks (the hook, its
+// footer and the pager, 10,424 bytes) are inside their own limit.
+const TOTAL_MAX_GZIP = 285_860
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
