@@ -9,7 +9,7 @@ import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction, TxnStatus } from '../domain/types'
 import type { Env } from './env'
 import { toStoredTxn, type TxnRow } from './rows'
-import { countSql, netSpendSql, oneSql, pageSql, type Sql } from './transactionQuerySql'
+import { countSql, netSpendSql, oneSql, pageSql, rowsByIdsSql, type Sql } from './transactionQuerySql'
 
 export interface QueryRow extends TxnRow {
   status: TxnStatus
@@ -42,6 +42,12 @@ export async function queryTransactions(
 export async function getTransaction(env: Env, owner: string, id: number): Promise<Transaction | null> {
   const row = await run(oneSql(owner, id), env).first<QueryRow>()
   return row ? toTransaction(row) : null
+}
+
+/** The owner's rows among `ids` in one read, with status and label ids derived as the list derives them. */
+export async function getTransactionsByIds(env: Env, owner: string, ids: readonly number[]): Promise<Transaction[]> {
+  const { results } = await run(rowsByIdsSql(owner, ids), env).all<QueryRow>()
+  return (results ?? []).map(toTransaction)
 }
 
 /** Count and sum in one batch, so both describe the same moment. */

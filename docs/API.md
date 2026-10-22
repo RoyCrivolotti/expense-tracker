@@ -241,9 +241,9 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   bound values per statement.
 
 **Cost in D1 statements**, counted on a real D1 through the real middleware, with its access checks stubbed (about five
-more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20), an edit by id is 3n + 5 (155 for 50; each
-updated row is read back and its status derived with three queries), and a delete is 6 for 1 row and for 20. The SQLite
-stand-in counts one more for each of these (6n + 5, 3n + 6 and 7). Only the stand-in has counted the edit by filter and
+more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20), an edit by id is 5 whatever the number of
+rows (they are read back in one query, with status and labels derived in SQL), and a delete is 6 for 1 row and for 20.
+The SQLite stand-in counts one more for each of these (6n + 5, 6 and 7). Only the stand-in has counted the edit by filter and
 the labels route, at 7 and 6 however many rows. Cloudflare documents a limit of 50 queries per invocation on the Free
 plan, which was not enforced when probed ([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean
 for a large request if it is, and how to check again, is in

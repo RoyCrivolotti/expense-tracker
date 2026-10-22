@@ -161,6 +161,11 @@ export function oneSql(owner: string, id: number): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id = ?`, params: [owner, id] }
 }
 
+/** The owner's rows among `ids`, in id order. The ids are bound as one JSON array, since D1 allows 100 bound values. */
+export function rowsByIdsSql(owner: string, ids: readonly number[]): Sql {
+  return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id ${IN_ID_LIST} ORDER BY t.id`, params: [owner, idList(ids)] }
+}
+
 /** Stops reading at one past the cap, so a broad filter costs the cap and not the table. */
 export function countSql(owner: string, f: TxnFilter): Sql {
   const where = whereOf(owner, f)
