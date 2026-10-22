@@ -178,13 +178,14 @@ describe('the Transactions tab over a list read in pages: a filter that changes'
 })
 
 describe('the Transactions tab over a list read in pages: select all', () => {
-  it('says the rows it selects are the loaded ones while more match, and all once the list is complete', async () => {
+  it('names how many rows it selects while more match, and says all once the list is complete', async () => {
     const source = memorySource(ledger)
     renderTab(source, { limit: 10 })
     await waitFor(() => expect(listFrame()).toHaveAttribute('aria-busy', 'false'))
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
-    expect(await screen.findByRole('button', { name: 'Select loaded' })).toBeInTheDocument()
-    for (let reads = 0; reads < 20 && screen.queryByRole('button', { name: 'Select loaded' }); reads += 1) {
+    expect(await screen.findByRole('button', { name: 'Select 10' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Select all' })).toBeNull()
+    for (let reads = 0; reads < 20 && !screen.queryByRole('button', { name: 'Select all' }); reads += 1) {
       act(() => FakeObserver.nearScreen())
       await act(() => new Promise((resolve) => setTimeout(resolve, 5)))
     }

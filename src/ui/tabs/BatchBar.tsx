@@ -21,9 +21,9 @@ function useBarExit(barRef: RefObject<HTMLElement | null>) {
   }
 }
 
-/** "Select all", or "Select loaded" when the list holds only some of the rows that match. */
-function selectAllLabel(allSelected: boolean, partial: boolean | undefined): string {
-  return `${allSelected ? 'Deselect' : 'Select'} ${partial ? 'loaded' : 'all'}`
+/** "Select all", or "Select 100" when the list holds only some of the rows that match: the rows it selects are those. */
+function selectAllLabel(allSelected: boolean, partial: boolean | undefined, loaded: number): string {
+  return `${allSelected ? 'Deselect' : 'Select'} ${partial ? loaded : 'all'}`
 }
 
 interface BatchBarProps {
@@ -32,7 +32,7 @@ interface BatchBarProps {
   /** Chosen rows the current filter hides. They stay chosen but are not acted on. */
   hiddenCount?: number
   busy: boolean
-  /** More rows match than the list holds, so what "all" means is the rows that are loaded. */
+  /** More rows match than the list holds, so the button names how many it selects instead of saying all. */
   partial?: boolean | undefined
   /** Offline or otherwise without write access: nothing can be edited or deleted. */
   readOnly?: boolean
@@ -89,7 +89,7 @@ export function BatchBar({
           disabled={busy}
           onClick={allSelected ? onDeselectAll : onSelectAll}
         >
-          {selectAllLabel(allSelected, partial)}
+          {selectAllLabel(allSelected, partial, totalCount)}
         </button>
         <button
           type="button"
