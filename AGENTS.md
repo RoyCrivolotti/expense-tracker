@@ -61,6 +61,32 @@ Two checks, both enforced in CI on every PR:
 - **Diff coverage** — 90% of lines changed in the PR must be covered. This is the
   real enforcement mechanism. See `docs/TESTING.md` for details.
 
+## Documentation
+
+[docs/README.md](docs/README.md) lists every doc and who it is for. Docs are read by people who have
+never seen this repo, so:
+
+- **One audience per doc**, named in its first line: a user, a contributor, an operator, or an
+  engineer deciding something.
+- **State what is true and why it matters, at a level that stays true as the code changes.** Do not
+  narrate how something was found, name the test that caught a bug, list mutation results, quote
+  figures from one machine (unless they are the only evidence for a limit the doc states) or keep a
+  status or roadmap list. Plans go in issues. Detail that explains one line of code is a comment next
+  to that line.
+- **Each kind of fact has one home, and nothing is said twice.** Per-route facts (request, response,
+  bounds, errors, caching, cost in rows) live in `docs/API.md`. Rules the code must keep obeying live
+  in `docs/ARCHITECTURE.md` as short invariants with the one reason. Steps an operator takes live in
+  `docs/DEPLOYMENT.md` or `docs/OPS.md`. A choice between designs lives in a short decision record in
+  `docs/decisions/`. Link to the home instead of copying from it.
+- No line numbers, private data, or references to a conversation or an internal tracker.
+
+## Pull request size
+
+A pull request should be reviewable by one person in one sitting. Tests count for less than code and
+docs, but a PR whose non-test diff goes past roughly 600 lines should be split by behavior. Stacked PRs
+are fine when each one stands alone and merges safely in order. A PR that touches a live write path or
+a migration says so in its first sentence.
+
 ## Code style
 
 - No narrating comments ("// Import the module"). A comment explains why the code is the
@@ -73,8 +99,11 @@ Two checks, both enforced in CI on every PR:
 
 ## Privacy
 
-This repo has **public GitHub source**. Never commit real PII (personal emails,
-financial figures, account IDs) in migrations, seed scripts, test fixtures, or
-any tracked file. Use placeholders like `owner@example.com` with a comment to
-substitute the real value at apply time. See `migrations/0003_multi_user.sql`
+This repo has **public GitHub source**. Never commit real personal data (personal emails, financial figures, bank
+account numbers) in migrations, seed scripts, test fixtures, or any tracked file. Use placeholders like
+`owner@example.com` with a comment to substitute the real value at apply time. See `migrations/0003_multi_user.sql`
 and `migrations/0011_user_preferences.sql` for the established pattern.
+
+Deployment identifiers (the Cloudflare account id, database, project and hostname names) are not personal data, but
+several tracked files still hold the maintainer's and a fork has to replace them (see `docs/DEPLOYMENT.md`). Do not
+add more: read such a value from config or the environment.

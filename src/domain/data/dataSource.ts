@@ -111,7 +111,7 @@ export type NewInstallmentPlan = Omit<InstallmentPlan, 'id' | 'dueDayOfMonth'> &
 }
 
 /**
- * The ledger read in parts instead of as one dataset (docs/SCALING.md, "Ledger parts"). Each part
+ * The ledger read in parts instead of as one dataset (docs/API.md). Each part
  * carries the revision it was read under; two parts with different revisions were read from different
  * states of the ledger. `loadLedger` puts them together.
  */

@@ -1,6 +1,6 @@
 # Screenshot gallery
 
-Full visual reference for the expense tracker UI. Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** use `DOCS_CAPTURE=1` mocks during capture.
+For users: a full visual reference for the expense tracker UI. Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** use `DOCS_CAPTURE=1` mocks during capture.
 
 Regenerate all images:
 
@@ -83,7 +83,7 @@ doing": five KPI tiles with change chips and sparklines, a trend chart whose unp
 are hatched, the flexible-spending pace, up to three signals, where the income went, what changed
 against your 3-month average, and the spending baseline with a handoff into Goals. **Spending**
 answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or description,
-each opening its story and a deep link into Transactions; the exact workbook grid stays as the
+each opening its story and a deep link into Transactions; the original spreadsheet grid stays as the
 Grid mode, with CSV export. **Cash** answers "do my numbers match": one dot per month close, a
 bridge from opening cash to expected cash with the count entered under it, drift bars with a ±5 €
 tolerance band, and balances labelled as cost; the full table sits in a fold. A committed/paid

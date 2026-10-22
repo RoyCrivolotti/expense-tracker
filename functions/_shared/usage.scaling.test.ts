@@ -7,7 +7,7 @@
  *
  * Node numbers on this machine, against an in-memory SQLite. `server_js_ms` (the request minus the time
  * inside SQLite) is a stand-in for Worker CPU, not a measurement of it. `rows_read_min` is the owner's
- * transaction count: the statement reads each of them once. See docs/SCALING.md.
+ * transaction count: the statement reads each of them once. See docs/API.md.
  */
 import { describe, expect, it } from 'vitest'
 import { seedDataset } from '../../src/testing/seedSqlite'
