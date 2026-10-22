@@ -44,8 +44,10 @@ import type {
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
+import { assertLinksWithinCap, idsMatching } from './inMemoryBulkEdit'
 import { exportChunkOf } from './inMemoryExport'
 import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
+import { isFilterTarget } from '../domain/data/bulkEdit'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
 export type ExpenseRepositorySeed = Partial<ExpenseDataset> & {
@@ -572,7 +574,31 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return deriveOne(stored, store.accounts, store.statements, store.transactionLabels)
   }
 
-  return {
+  function addLabels(
+    owner: string,
+    target: Parameters<ExpenseRepository['addLabelsToTransactions']>[1],
+    labelIds: number[],
+  ): { matched: number; added: number } {
+    const store = storeFor(owner)
+    for (const labelId of labelIds) assertOwnedLabel(store, labelId)
+    const ids = isFilterTarget(target) ? idsMatching(derivedTransactions(store), target) : target.ids
+    assertLinksWithinCap(ids.length, labelIds.length)
+    const wanted = new Set(ids)
+    const owned = store.transactions.filter((t) => wanted.has(t.id)).map((t) => t.id)
+    let added = 0
+    for (const transactionId of owned) {
+      for (const labelId of labelIds) {
+        const has = store.transactionLabels.some((l) => l.transactionId === transactionId && l.labelId === labelId)
+        if (!has) {
+          store.transactionLabels.push({ transactionId, labelId })
+          added += 1
+        }
+      }
+    }
+    return { matched: owned.length, added }
+  }
+
+  const repository: ExpenseRepository = {
     loadDataset: (owner) => Promise.resolve(datasetOf(owner)),
 
     readLedgerReference: (owner) => Promise.resolve(ledgerReferenceOf(datasetOf(owner))),
@@ -727,6 +753,16 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve(updated)
     },
 
+    bulkUpdateTransactionsByFilter: async (owner, target, patch) => {
+      const ids = idsMatching(derivedTransactions(storeFor(owner)), target)
+      if (ids.length > 0) await repository.bulkUpdateTransactions(owner, ids, patch)
+      return { updated: ids.length }
+    },
+
+    // A promise constructor turns a throw into a rejection, as the port promises and a database call does.
+    addLabelsToTransactions: (owner, target, labelIds) =>
+      new Promise((resolve) => resolve(addLabels(owner, target, labelIds))),
+
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) => {
       const store = storeFor(owner)
       assertOwnedAccount(store, accountId)
@@ -777,7 +813,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     listAttachments: (owner, transactionId) => {
       const store = storeFor(owner)
-      return Promise.resolve(store.attachments.filter((a) => a.transactionId === transactionId))
+      const mine = store.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
+      return Promise.resolve([...mine].sort((a, b) => a.transactionId - b.transactionId || a.id - b.id))
     },
 
     findAttachmentSource: (owner, id) => {
@@ -1199,4 +1236,5 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve()
     },
   }
+  return repository
 }

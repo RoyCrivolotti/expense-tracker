@@ -10,6 +10,6 @@ export {
 } from './hydration'
 export type { HydrationPolicy } from './hydration'
 export { buildLedger, ledgerFor } from './build'
-export { assembleRows, ledgerDataset, ledgerMonths, ledgerRowCount } from './assemble'
+export { assembleRows, byApiOrder, ledgerDataset, ledgerMonths, ledgerRowCount } from './assemble'
 export { ledgerFromParts } from './fromParts'
 export type { LedgerFromParts, LedgerParts } from './fromParts'

@@ -99,6 +99,20 @@ describe('listAttachments', () => {
 
     await expect(listAttachments(env, OWNER, 7)).resolves.toEqual([])
   })
+
+  it('returns every attachment of the owner when no transaction is named, by transaction and then id', async () => {
+    const { env, calls } = stubEnv({ all: () => ({ results: [ROW, { ...ROW, id: 4, transaction_id: 9 }] }) })
+
+    const rows = await listAttachments(env, OWNER)
+
+    expect(rows.map((r) => [r.id, r.transactionId])).toEqual([
+      [3, 7],
+      [4, 9],
+    ])
+    expect(calls[0]?.args).toEqual([OWNER])
+    expect(calls[0]?.sql).not.toContain('transaction_id = ?')
+    expect(calls[0]?.sql).toContain('ORDER BY transaction_id, id')
+  })
 })
 
 describe('findAttachmentSource', () => {

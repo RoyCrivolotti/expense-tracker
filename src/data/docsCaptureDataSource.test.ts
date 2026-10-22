@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hasLedgerParts } from '../domain/data/dataSource'
+import { byApiOrder } from '../domain/ledger'
 import { docsCaptureDataSource } from './docsCaptureDataSource'
 import { loadLedger } from './ledgerLoader'
 
@@ -471,5 +472,20 @@ describe('docsCaptureDataSource ledger parts', () => {
     expect(rows.transactions.find((t) => t.id === target.id)?.description).toBe('Edited for the parts test')
     const loaded = await loadLedger(source)
     expect(loaded.ledger.hydrated.find((t) => t.id === target.id)?.description).toBe('Edited for the parts test')
+  })
+
+  it('lists what it loads in the order the API returns rows, with the demo rows among them', async () => {
+    const { transactions } = await docsCaptureDataSource.load()
+    expect(transactions).toEqual([...transactions].sort(byApiOrder))
+    expect(transactions.some((t) => t.planId != null)).toBe(true)
+  })
+
+  it('builds the demo claim from the fixture in its own order, which sorting first would change', async () => {
+    const { transactions } = await docsCaptureDataSource.load()
+    const refund = transactions.find((t) => t.id === 970_500)
+    const settled = transactions.find((t) => t.settledBy === 970_500)
+    expect(refund?.amountCents).toBe(settled?.amountCents)
+    // The cheapest flagged expense differs when the rows are dealt out newest first.
+    expect(refund?.amountCents).toBe(1499)
   })
 })

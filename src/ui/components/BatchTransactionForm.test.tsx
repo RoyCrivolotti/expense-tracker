@@ -47,6 +47,7 @@ function model(): ExpenseModel {
       flag: () => undefined,
       label: () => undefined,
       attachments: () => [],
+      attachmentCount: () => 0,
       installmentPlan: () => undefined,
       settlementFor: () => undefined,
       settledBy: () => [],

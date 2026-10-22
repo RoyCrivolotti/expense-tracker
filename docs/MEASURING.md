@@ -47,9 +47,11 @@ in the D1 dashboard: a large excess means something else wrote.
 
 ## The 50 queries per invocation
 
-A bulk import issues about `6n + 4` D1 statements and a bulk edit about `3n + 5`, plus 5 for the access checks. An import
-of more than 6 rows or an edit of more than 13 therefore exceeds the Free plan's documented 50 queries per invocation
-whichever way a batch counts, because neither is a batch.
+Counted through the real middleware on the SQLite stand-in, a bulk import issues 6n + 5 D1 statements for n rows and a
+bulk edit by id 3n + 6, plus about 5 for the access checks, which the harness stubs. An import of more than 6 rows or an
+edit by id of more than 13 therefore exceeds the Free plan's documented 50 queries per invocation whichever way a batch
+counts, because the rows are inserted, or read back, one at a time. A bulk edit on a filter issues 7 statements, bulk
+labels 6 and a bulk delete 7, however many rows.
 
 To settle how `batch()` counts, a throwaway draft PR adds a route that runs 60 `SELECT 1` in one `batch()`
 (`?mode=batch`) or as 60 separate calls (`?mode=separate`). Batch passes while separate fails at the 51st: a batch counts

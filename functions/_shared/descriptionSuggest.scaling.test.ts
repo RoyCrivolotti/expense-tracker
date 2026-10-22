@@ -8,7 +8,7 @@
  * Node numbers on this machine, against an in-memory SQLite. `server_js_ms` (the request minus the time
  * inside SQLite) is a stand-in for Worker CPU, not a measurement of it. `rows_in_range` counts the eligible
  * rows of the prefix, which the statement does not read one by one: it reads an index entry per description
- * and then the rows of each from the newest down to an eligible one. See docs/SCALING.md.
+ * and then the rows of each from the newest down to an eligible one. See docs/API.md.
  */
 import { describe, expect, it } from 'vitest'
 import { seedDataset } from '../../src/testing/seedSqlite'

@@ -50,3 +50,15 @@
     animation: none;
   }
 }
+
+/* The rows of the month shown are being read: what is there stays visible but is not for pressing. */
+.hydrating > :not(.monthLoading) {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.monthLoading {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}

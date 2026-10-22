@@ -45,7 +45,15 @@ describe('GET /attachments?transactionId=', () => {
     expect(JSON.parse(theirs.text)).toEqual([])
   })
 
-  it.each([['none', '/attachments'], ['zero', '/attachments?transactionId=0'], ['text', '/attachments?transactionId=x'], ['a fraction', '/attachments?transactionId=1.5'], ['an extra parameter', '/attachments?transactionId=1&owner=x']])(
+  it('lists every receipt the caller has when no transaction is named, and none of another owner’s', async () => {
+    const mine = await get('/attachments')
+    expect(mine.response.status).toBe(200)
+    const list = JSON.parse(mine.text) as Array<{ id: number; transactionId: number }>
+    expect(list.map((a) => [a.id, a.transactionId])).toEqual([[ids.attachment, ids.transactions[0]]])
+    expect(JSON.parse((await get('/attachments', OTHER)).text)).toEqual([])
+  })
+
+  it.each([['zero', '/attachments?transactionId=0'], ['text', '/attachments?transactionId=x'], ['a fraction', '/attachments?transactionId=1.5'], ['an extra parameter', '/attachments?transactionId=1&owner=x']])(
     'refuses %s with a 400',
     async (_label, url) => {
       expect((await get(url)).response.status).toBe(400)

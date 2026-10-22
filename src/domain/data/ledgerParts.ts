@@ -1,6 +1,6 @@
 /**
  * The parts of a ledger the server hands out separately, so that a client does not have to load every
- * transaction (docs/SCALING.md, "Ledger parts"). Three reads, each owner-scoped from the session:
+ * transaction (docs/API.md). Three reads, each owner-scoped from the session:
  *
  * - the reference tables, the pinned rows and what the ledger holds (`LedgerReferenceRead`),
  * - every real row of a range of budget months (`MonthRowsRead`),

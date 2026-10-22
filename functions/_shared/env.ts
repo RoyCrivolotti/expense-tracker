@@ -44,4 +44,9 @@ export interface ExpensesData extends Record<string, unknown> {
   repo: ExpenseRepository
   authenticatedEmail: string
   accessRepo: AccessRepository
+  /**
+   * On a write request: the owner's dataset revision as it was before the middleware replaced it, or
+   * null when the owner had none. A route that takes `expectedRevision` compares it with this.
+   */
+  revisionBeforeWrite?: string | null
 }

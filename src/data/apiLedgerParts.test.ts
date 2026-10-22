@@ -101,6 +101,38 @@ describe('apiLedgerParts', () => {
   })
 })
 
+describe('apiLedgerParts, receipts', () => {
+  const receipt = { id: 4, transactionId: 12, contentType: 'image/jpeg', byteSize: 10, createdAt: 'x', hasThumb: true }
+
+  it('reads the receipts of one transaction from /attachments', async () => {
+    const fetchMock = serve(json([receipt]))
+    await expect(apiLedgerParts.readReceiptsPart(12)).resolves.toEqual([receipt])
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/attachments?transactionId=12')
+  })
+
+  it('reads the receipts of every transaction in one request when none is named', async () => {
+    const fetchMock = serve(json([receipt]))
+    await expect(apiLedgerParts.readReceiptsPart()).resolves.toEqual([receipt])
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/attachments')
+  })
+
+  it('accepts a transaction with none', async () => {
+    serve(json([]))
+    await expect(apiLedgerParts.readReceiptsPart(1)).resolves.toEqual([])
+  })
+
+  it('reports a body that is not a list of receipts as unavailable', async () => {
+    serve(json({ error: 'no' }), json([{ id: 'x' }]))
+    await expect(apiLedgerParts.readReceiptsPart(1)).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(apiLedgerParts.readReceiptsPart(1)).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('is served through apiDataSource', async () => {
+    serve(json([receipt]))
+    await expect(apiDataSource.readReceiptsPart!(12)).resolves.toEqual([receipt])
+  })
+})
+
 describe('apiDataSource, ledger parts', () => {
   it('serves the three parts through the same client, loaded when first used', async () => {
     const fetchMock = serve(json(reference), json(rows), json(cube))
