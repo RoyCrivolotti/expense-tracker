@@ -33,6 +33,7 @@ import { deriveTransactions } from '../domain/engine/status'
 import { computeCashReconciliation } from '../domain/engine/cashReconciliation'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { csvDataSource } from './csvDataSource'
+import { byApiOrder } from '../domain/ledger'
 import { type HeldDataset, inMemoryLedgerParts } from './inMemoryLedgerParts'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
@@ -325,13 +326,13 @@ export const docsCaptureDataSource: ExpenseDataSource = {
         wealthAccounts: docsCaptureWealthAccounts(),
         wealthCheckins: docsCaptureWealthCheckins(),
       })
-      loaded = enriched.transactions
+      loaded = [...enriched.transactions].sort(byApiOrder)
       loadedFlags = enriched.flags
       loadedLabels = enriched.labels
       loadedSettings = enriched.settings
       loadedScenarios = enriched.goalScenarios
       baseline = enriched
-      return enriched
+      return { ...enriched, transactions: loaded }
     })
   },
   ...inMemoryLedgerParts(heldDataset),
