@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import type { ExpenseDataset, ExpenseSettings } from '../types'
+import type { WriteReach } from '../data/ledgerSession'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
@@ -39,7 +40,9 @@ import {
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
-type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
+type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
+
+const unchanged = (dataset: ExpenseDataset): ExpenseDataset => dataset
 
 /** Build the write-actions object, or `undefined` for read-only sources. */
 export function useExpenseActions(
@@ -53,6 +56,20 @@ export function useExpenseActions(
   const settingsOrder = useRef({ issued: 0, applied: new Map<keyof ExpenseSettings, number>() })
   return useMemo(() => {
     if (!source.canWrite || readOnly) return undefined
+    /**
+     * A write of many rows, which may have gone through in part (a request after the first can fail), so a
+     * failure reads again what the ledger holds, as the list does. Its answer is shown by `apply`.
+     */
+    const bulkWrite = async <R, T>(write: () => Promise<R>, apply: (result: R) => void, count: (result: R) => T): Promise<T> => {
+      try {
+        const result = await write()
+        apply(result)
+        return count(result)
+      } catch (error) {
+        applyPatch(unchanged, { patch: {} })
+        throw error
+      }
+    }
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
       onDuplicate: (txn) =>
@@ -60,33 +77,48 @@ export function useExpenseActions(
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       createTransaction: async (input: NewTransaction) => {
         const txn = await source.createTransaction!(input)
-        applyPatch((d) => patchAfterTransactionCreate(d, txn))
+        applyPatch((d) => patchAfterTransactionCreate(d, txn), { ids: [txn.id] })
         return txn
       },
       createTransactions: async (inputs: NewTransaction[]) => {
         const txns = await source.createTransactions!(inputs)
-        applyPatch((d) => patchAfterBulkCreate(d, txns))
+        applyPatch((d) => patchAfterBulkCreate(d, txns), { ids: txns.map((txn) => txn.id) })
       },
       updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
         const txn = await source.updateTransaction!(id, patch)
-        applyPatch((d) => patchAfterTransactionUpdate(d, txn))
+        applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [id], patch })
       },
       deleteTransaction: async (id) => {
         await source.deleteTransaction!(id)
-        applyPatch((d) => patchAfterTransactionDelete(d, id))
+        applyPatch((d) => patchAfterTransactionDelete(d, id), { ids: [id] })
       },
-      deleteTransactions: async (ids) => {
-        const { deleted } = await source.deleteTransactions!(ids)
-        // Still drop every requested id locally: one the server did not delete is one
-        // that was already gone, so the local copy is the stale side either way.
-        applyPatch((d) => patchAfterBulkDelete(d, ids))
-        return deleted
-      },
-      updateTransactions: async (ids: number[], patch: BulkTransactionPatch) => {
-        const result = await source.updateTransactions!(ids, patch)
-        applyPatch((d) => patchAfterBulkUpdate(d, result.transactions))
-        return result.updated
-      },
+      deleteTransactions: (ids) =>
+        bulkWrite(
+          () => source.deleteTransactions!(ids),
+          // Still drop every requested id locally: one the server did not delete is one
+          // that was already gone, so the local copy is the stale side either way.
+          () => applyPatch((d) => patchAfterBulkDelete(d, ids), { ids }),
+          ({ deleted }) => deleted,
+        ),
+      updateTransactions: (ids: number[], patch: BulkTransactionPatch) =>
+        bulkWrite(
+          () => source.updateTransactions!(ids, patch),
+          (result) => applyPatch((d) => patchAfterBulkUpdate(d, result.transactions), { ids, patch }),
+          ({ updated }) => updated,
+        ),
+      // The server answers with counts and not the rows, so a ledger that shows them reads them again.
+      addLabels: (ids, labelIds) =>
+        bulkWrite(
+          () => source.addLabelsToTransactions!(ids, labelIds),
+          () => applyPatch(unchanged, { patch: {} }),
+          ({ matched }) => matched,
+        ),
+      updateMatching: (target, patch, labelIds) =>
+        bulkWrite(
+          () => source.updateMatchingTransactions!(target, patch, labelIds),
+          () => applyPatch(unchanged, { patch }),
+          ({ updated }) => updated,
+        ),
       setStatementPaid: async (accountId, yearMonth, paid, paidOn) => {
         const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)
         applyPatch((d) => patchAfterStatementPaid(d, stmt))
@@ -133,7 +165,7 @@ export function useExpenseActions(
       },
       setTransactionLabels: async (transactionId, labelIds) => {
         const txn = await source.setTransactionLabels!(transactionId, labelIds)
-        applyPatch((d) => patchAfterTransactionUpdate(d, txn))
+        applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [transactionId], patch: {} })
       },
       createCategory: async (input) => {
         const category = await source.createCategory!(input)

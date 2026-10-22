@@ -35,6 +35,8 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     // toast asserting "Deleted 3 transactions" honest.
     deleteTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
     updateTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
+    addLabels: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
+    updateMatching: vi.fn((target: { expectedCount: number }) => Promise.resolve(target.expectedCount)),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
     uploadAttachment: vi.fn().mockResolvedValue(undefined),

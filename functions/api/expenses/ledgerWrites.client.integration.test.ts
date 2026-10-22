@@ -8,6 +8,9 @@ import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDataSource } from '../../../src/data/apiDataSource'
 import { ApiError } from '../../../src/data/apiClient'
+import { LedgerSession } from '../../../src/data/ledgerSession'
+import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../../../src/domain/ledger'
+import { patchAfterBulkDelete, patchAfterBulkUpdate } from '../../../src/ui/datasetPatches'
 import { BULK_REVISION_MESSAGE } from '../../../src/domain/data/bulkEdit'
 import type { MatchingTarget } from '../../../src/domain/data/dataSource'
 import type { TxnFilter } from '../../../src/domain/engine/transactions'
@@ -15,7 +18,10 @@ import { seedDataset } from '../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { syntheticLedger } from '../../../src/testing/syntheticLedger'
 import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
+import { onRequestGet as getCube } from './cube'
+import { onRequestGet as getReference } from './reference'
 import { onRequestPut as putSettings } from './settings/index'
+import { onRequestGet as getMonths } from './transactions/months'
 import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from './transactions/bulk'
 import { onRequestPost as postLabels } from './transactions/bulk/labels'
 import { onRequestGet as getSummary } from './transactions/summary'
@@ -41,6 +47,9 @@ function routeFetch() {
     ['/api/expenses/transactions/bulk', 'PATCH', patchBulk],
     ['/api/expenses/transactions/bulk/labels', 'POST', postLabels],
     ['/api/expenses/transactions/summary', 'GET', getSummary],
+    ['/api/expenses/transactions/months', 'GET', getMonths],
+    ['/api/expenses/reference', 'GET', getReference],
+    ['/api/expenses/cube', 'GET', getCube],
   ]
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
@@ -217,5 +226,78 @@ describe('an edit on the rows a filter matches', () => {
     expect((failure as Error).message).toContain(`${target.expectedCount - 1} transactions match now, not the ${target.expectedCount} you were shown`)
     expect(sent.map((request) => request.path)).not.toContain('/api/expenses/transactions/bulk')
     expect(count('transactions', `category_id = ${category}`)).toBe(target.expectedCount - 1)
+  })
+})
+
+describe('a ledger held as a window, after a write to months it holds only as sums', () => {
+  const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
+  const wait = { timeout: 5_000, interval: 25 }
+
+  const cellsOf = (session: LedgerSession) => session.getState().held!.cells
+
+  async function opened(): Promise<LedgerSession> {
+    const session = new LedgerSession(apiDataSource as Required<typeof apiDataSource>, { policy: WINDOWED })
+    await session.open()
+    return session
+  }
+
+  /** The sums a browser would open on now. */
+  async function truth() {
+    const fresh = await opened()
+    return cellsOf(fresh)
+  }
+
+  /** Rows of months the session holds no rows for, oldest first. */
+  function unheld(session: LedgerSession, n: number): number[] {
+    const held = session.getState().held!
+    const months = new Set(held.rows.keys())
+    const rows = sqlite.prepare('SELECT id, budget_month AS month FROM transactions WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number; month: string }>
+    return rows.filter((row) => !months.has(row.month) && !held.pinned.some((p) => p.id === row.id)).slice(0, n).map((row) => row.id)
+  }
+
+  const category = (): number => (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }).id
+
+  const writes: Array<[string, (session: LedgerSession, rows: number[], reach: boolean) => Promise<void>]> = [
+    [
+      'an edit by id',
+      async (session, rows, reach) => {
+        const patch = { categoryId: category() }
+        const result = await source.updateTransactions(rows, patch)
+        session.patch((d) => patchAfterBulkUpdate(d, result.transactions), reach ? { ids: rows, patch } : undefined)
+      },
+    ],
+    [
+      'a delete by id',
+      async (session, rows, reach) => {
+        await source.deleteTransactions(rows)
+        session.patch((d) => patchAfterBulkDelete(d, rows), reach ? { ids: rows } : undefined)
+      },
+    ],
+    [
+      'an edit on a filter',
+      async (session, rows, reach) => {
+        const patch = { categoryId: category() }
+        const old = (sqlite.prepare('SELECT category_id AS id FROM transactions WHERE id = ?').get(rows[0]!) as { id: number }).id
+        await source.updateMatchingTransactions(await look({ categoryId: old }), patch)
+        session.patch((d) => d, reach ? { patch } : undefined)
+      },
+    ],
+  ]
+
+  it.each(writes)('has the sums of the months %s reached, once it reads again', async (_name, write) => {
+    const session = await opened()
+    await write(session, unheld(session, 40), true)
+
+    await vi.waitFor(async () => expect(cellsOf(session)).toEqual(await truth()), wait)
+  })
+
+  it.each(writes)('keeps the old sums of those months after %s when nothing says the write went past the rows it holds', async (_name, write) => {
+    const session = await opened()
+    const before = cellsOf(session)
+    await write(session, unheld(session, 40), false)
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
+    expect(cellsOf(session)).toEqual(before)
+    expect(before).not.toEqual(await truth())
   })
 })
