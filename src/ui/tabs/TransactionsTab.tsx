@@ -3,11 +3,12 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import { defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
-import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
+import { StaleList } from '../StaleList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
+import { ListStats } from './ListStats'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
@@ -28,8 +29,7 @@ import { useUpcoming } from './useUpcoming'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
-/** "1 item", "0 items", "2 items" — pulled out only because this component is already
- * at the complexity ceiling; every other spot in the app inlines this same ternary. */
+/** "1 item", "0 items", "2 items", for the cards that count what they hold. */
 function itemCountLabel(count: number): string {
   return `${count} item${count === 1 ? '' : 's'}`
 }
@@ -78,7 +78,7 @@ export function TransactionsTab({
   const past = usePastReports(model.dataset.transactions)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
-    `${state.listRows.length} transactions match`,
+    `${state.count}${state.capped ? '+' : ''} transactions match`,
   )
   const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
@@ -150,15 +150,12 @@ export function TransactionsTab({
         secondaryFilterCount={state.secondaryFilterCount}
         hasActiveFilters={state.hasActiveFilters}
         summary={
-          <span className={styles.resultStats}>
-            <span>{itemCountLabel(state.listRows.length)}</span>
-            <span>
-              <span className={styles.resultLabel}>Net spend </span>
-              <span className={styles.resultAmount}>
-                <Money cents={state.totalCents} signed={state.totalCents < 0} />
-              </span>
-            </span>
-          </span>
+          <ListStats
+            count={state.count}
+            capped={state.capped}
+            totalCents={state.totalCents}
+            stale={state.totalsStale}
+          />
         }
         onClearFilters={state.clearFilters}
         onQuery={state.setQuery}
@@ -185,26 +182,31 @@ export function TransactionsTab({
       <p className={styles.visuallyHidden} role="status">
         {announcement}
       </p>
-      <TransactionList
-        rows={state.listRows}
-        lookup={model.lookup}
-        selectMode={state.selectMode}
-        selectedIds={state.selected}
-        swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
-        {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
-        {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
-        onToggleSelect={state.toggleSelected}
-        onToggleDate={state.toggleDate}
-        {...(actions
-          ? {
-              onAddForDate: (date) =>
-                actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
-              onDelete: actions.deleteTransaction,
-              onLongPressSelect: state.enterAndSelect,
-              onEditStatementPayment: setEditingStatement,
-            }
-          : {})}
-      />
+      <StaleList stale={state.stale}>
+        <TransactionList
+          rows={state.listRows}
+          loading={state.loading}
+          emptyState={state.failed}
+          lookup={model.lookup}
+          selectMode={state.selectMode}
+          selectedIds={state.selected}
+          swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
+          {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
+          {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
+          onToggleSelect={state.toggleSelected}
+          onToggleDate={state.toggleDate}
+          {...(actions
+            ? {
+                onAddForDate: (date) =>
+                  actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
+                onDelete: actions.deleteTransaction,
+                onLongPressSelect: state.enterAndSelect,
+                onEditStatementPayment: setEditingStatement,
+              }
+            : {})}
+        />
+      </StaleList>
+      {state.footer}
 
       <PresenceValue value={actions ? editingStatement : null} exitMs={EXIT_MS.sheet}>
         {(statement) =>
@@ -296,6 +298,7 @@ export function TransactionsTab({
         selection={state}
         visibleIds={state.visibleIds}
         model={model}
+        partial={state.partial}
       />
     </div>
   )

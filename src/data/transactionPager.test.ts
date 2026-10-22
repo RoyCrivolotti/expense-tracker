@@ -7,11 +7,19 @@ import { memorySource, type TestSource } from '../testing/ledgerSource'
 import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
 import { TransactionPager, type PagerState } from './transactionPager'
 
+/** A pager with a screen attached to it, as the Transactions tab is while it is open. */
+function pagerOf(source: TestSource, options?: ConstructorParameters<typeof TransactionPager>[1]): TransactionPager {
+  const pager = new TransactionPager(source, options)
+  pager.attach()
+  return pager
+}
+
 /** Resolves once no page is on its way. */
 function settled(pager: TransactionPager): Promise<PagerState> {
   return new Promise((resolve) => {
     const check = () => {
-      if (pager.getState().loading) return
+      const { loading, refreshing } = pager.getState()
+      if (loading || refreshing) return
       off()
       resolve(pager.getState())
     }
@@ -38,7 +46,7 @@ describe('TransactionPager', () => {
   it('holds, for any filter and page size, the rows the engine lists, in its order, with the summary beside them', async () => {
     const source = memorySource(ledger)
     for (const [at, filter] of [{}, ...filterStream(vocabularyOf(ledger), 40, 21)].entries()) {
-      const pager = new TransactionPager(source, { limit: [7, 50, 100, 200][at % 4]! })
+      const pager = pagerOf(source, { limit: [7, 50, 100, 200][at % 4]! })
       pager.setFilter(filter)
       const state = await drain(pager)
       expect(ids(state.rows), JSON.stringify(filter)).toEqual(idsOf(filter))
@@ -59,7 +67,7 @@ describe('TransactionPager', () => {
       cursors.push(page.nextCursor)
       return page
     }
-    const pager = new TransactionPager(source, { limit: 15 })
+    const pager = pagerOf(source, { limit: 15 })
     const month = vocabularyOf(ledger).months[10]!
     const first: TxnFilter = { month, status: 'all' }
     pager.setFilter(first)
@@ -72,20 +80,24 @@ describe('TransactionPager', () => {
     expect(seen.map(([, cursor]) => cursor)).toEqual([undefined, ...cursors.slice(0, -1)])
   })
 
-  it('starts over for a filter that selects other rows, keeping the old rows, marked, until its first page arrives', async () => {
+  it('starts over for a filter that selects other rows, keeping the old rows and figures, marked, until the new ones arrive', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({ status: 'posted' })
     await settled(pager)
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
     const before = pager.getState()
     pager.setFilter({ status: 'forecast' })
-    expect(pager.getState()).toMatchObject({ stale: true, loading: true, complete: false, summary: null })
+    expect(pager.getState()).toMatchObject({ stale: true, loading: true, complete: false, summaryStale: true })
     expect(pager.getState().rows).toBe(before.rows)
+    expect(pager.getState().summary).toBe(before.summary)
     pager.loadMore()
     expect(source.calls.filter((c) => c === 'page')).toHaveLength(2)
     const state = await settled(pager)
     expect(state.stale).toBe(false)
     expect(ids(state.rows)).toEqual(idsOf({ status: 'forecast' }).slice(0, 20))
+    await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
+    expect(pager.getState().summary).toMatchObject(summaryOf(ledger.transactions, { status: 'forecast' }))
   })
 
   it('drops the answer of a page that was asked for under an earlier filter', async () => {
@@ -94,7 +106,7 @@ describe('TransactionPager', () => {
     const release: Array<() => void> = []
     source.readTransactionPage = (filter, request) =>
       new Promise((resolve) => release.push(() => resolve(read(filter, request))))
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({ status: 'posted' })
     pager.setFilter({ status: 'forecast' })
     release[1]!()
@@ -106,7 +118,7 @@ describe('TransactionPager', () => {
 
   it('treats a filter spelled differently but selecting the same rows as the list it already has', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     const month = vocabularyOf(ledger).months[10]!
     pager.setFilter({ month })
     await settled(pager)
@@ -120,7 +132,7 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
 
   async function afterFirstPage(change: (dataset: ExpenseDataset) => ExpenseDataset, limit = 25) {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit })
+    const pager = pagerOf(source, { limit })
     pager.setFilter({})
     await settled(pager)
     const changed = change(ledger)
@@ -150,7 +162,7 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
     expect(ids(state.rows)).toContain(past.id)
     expect(ids(state.rows)).not.toContain(before.id)
     pager.refresh()
-    expect(pager.getState().stale).toBe(true)
+    expect(pager.getState()).toMatchObject({ refreshing: true, stale: false })
     expect(ids((await drain(pager)).rows)).toEqual(idsOf({}, changed.transactions))
   })
 
@@ -162,17 +174,19 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
     expect(ids((await drain(pager)).rows)).toEqual(idsOf({}, changed.transactions))
   })
 
-  it('keeps the summary through a refresh and drops it for a filter that selects other rows', async () => {
+  it('keeps the summary through a refresh, and through a filter that selects other rows until the new one comes', async () => {
     const source = memorySource(ledger)
     const [january, february] = vocabularyOf(ledger).months
-    const pager = new TransactionPager(source, { limit: 50 })
+    const pager = pagerOf(source, { limit: 50 })
     pager.setFilter({ month: january! })
     await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
     const summary = pager.getState().summary
     pager.refresh()
     expect(pager.getState().summary).toBe(summary)
     pager.setFilter({ month: february! })
-    expect(pager.getState().summary).toBeNull()
+    expect(pager.getState()).toMatchObject({ summary, summaryStale: true })
+    await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
+    expect(pager.getState().summary).toMatchObject(summaryOf(ledger.transactions, { month: february! }))
   })
 })
 
@@ -195,7 +209,7 @@ describe('TransactionPager, reads that fail', () => {
       cursors.push(cursor)
       return call === 1 ? 'fail' : 'ok'
     })
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf(source, { limit: 30 })
     pager.setFilter({})
     const state = await drain(pager)
     expect(state).toMatchObject({ error: 'offline', complete: false })
@@ -209,7 +223,7 @@ describe('TransactionPager, reads that fail', () => {
   it('reports a first page that fails and reads it again when asked', async () => {
     const source = memorySource(ledger)
     failing(source, (call) => (call === 0 ? 'fail' : 'ok'))
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf(source, { limit: 30 })
     pager.setFilter({})
     expect(await drain(pager)).toMatchObject({ error: 'offline', rows: [] })
     pager.loadMore()
@@ -219,7 +233,7 @@ describe('TransactionPager, reads that fail', () => {
   it('does not mend a cursor the server refused, and recovers when the list is read again from the start', async () => {
     const source = memorySource(ledger)
     failing(source, (call) => (call === 0 ? 'bad-cursor' : 'ok'))
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf(source, { limit: 30 })
     pager.setFilter({})
     const state = await drain(pager)
     expect(state.error).toMatch(/cursor/i)
@@ -235,7 +249,7 @@ describe('TransactionPager, reads that fail', () => {
   it('leaves the rows alone when only the summary cannot be read', async () => {
     const source = memorySource(ledger)
     source.readTransactionSummary = () => Promise.reject(new Error('offline'))
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf(source, { limit: 30 })
     pager.setFilter({})
     const state = await drain(pager)
     expect(state.error).toBeNull()
@@ -243,9 +257,19 @@ describe('TransactionPager, reads that fail', () => {
     expect(ids(state.rows)).toEqual(idsOf({}))
   })
 
+  it('starts a list again for a filter set after it was disposed, as a screen mounted twice does', async () => {
+    const source = memorySource(ledger)
+    const pager = pagerOf(source, { limit: 30 })
+    pager.setFilter({ status: 'posted' })
+    pager.dispose()
+    pager.setFilter({ status: 'posted' })
+    const state = await drain(pager)
+    expect(ids(state.rows)).toEqual(idsOf({ status: 'posted' }))
+  })
+
   it('changes nothing after it is disposed', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf(source, { limit: 30 })
     pager.setFilter({})
     pager.dispose()
     await new Promise((resolve) => setTimeout(resolve, 10))
@@ -266,7 +290,7 @@ describe('TransactionPager, a filter the caller owns', () => {
     const labelIds = ledger.labels.map((label) => label.id)
     const wanted = { month, labelIds: [...labelIds], queryAmount: { fromCents: 100, toCents: 199 } }
     const original = { month, labelIds, queryAmount: { ...wanted.queryAmount } }
-    const pager = new TransactionPager(source, { limit: 3 })
+    const pager = pagerOf(source, { limit: 3 })
     pager.setFilter(original)
     await settled(pager)
     original.month = '1999-01'
@@ -289,7 +313,7 @@ describe('TransactionPager, a burst of filters', () => {
   it('reads only the filter it was left with, once the burst is over, and marks the rows stale meanwhile', async () => {
     vi.useFakeTimers()
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20, settleMs: 100 })
+    const pager = pagerOf(source, { limit: 20, settleMs: 100 })
     pager.setFilter({})
     await vi.advanceTimersByTimeAsync(100)
     await vi.waitFor(() => expect(pager.getState().rows).toHaveLength(20))
@@ -299,7 +323,7 @@ describe('TransactionPager, a burst of filters', () => {
       await vi.advanceTimersByTimeAsync(40)
     }
     expect(source.calls).toEqual([])
-    expect(pager.getState()).toMatchObject({ stale: true, loading: false, summary: null })
+    expect(pager.getState()).toMatchObject({ stale: true, loading: false })
     await vi.advanceTimersByTimeAsync(100)
     await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ query: 'rent' }).slice(0, 20)))
     expect(pager.getState().stale).toBe(false)
@@ -315,31 +339,60 @@ describe('TransactionPager, a burst of filters', () => {
       if (request?.signal) signals.push(request.signal)
       return read(filter, request)
     }
-    const pager = new TransactionPager(source, { limit: 20, settleMs: 100 })
+    const pager = pagerOf(source, { limit: 20, settleMs: 100 })
     pager.setFilter({ status: 'posted' })
     await vi.advanceTimersByTimeAsync(100)
-    pager.setFilter({ status: 'forecast' })
+    pager.setFilter({ status: 'posted', query: 'rent' })
     expect(signals[0]!.aborted).toBe(true)
     pager.refresh()
     // Stale is also false before any page has come, so what is waited for is the rows.
-    await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'forecast' }).slice(0, 20)))
+    await vi.waitFor(() =>
+      expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'posted', query: 'rent' }).slice(0, 20)),
+    )
     expect(signals).toHaveLength(2)
   })
 
-  it('reads nothing for a filter the burst came back to, and cancels what is in flight when disposed', async () => {
+  it('reads nothing for a text the burst came back to, shows the rows as they were, and cancels what is in flight when disposed', async () => {
     vi.useFakeTimers()
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20, settleMs: 100 })
+    const pager = pagerOf(source, { limit: 20, settleMs: 100 })
     pager.setFilter({ status: 'posted' })
     await vi.advanceTimersByTimeAsync(100)
+    await vi.waitFor(() => expect(pager.getState().rows).toHaveLength(20))
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
+    const held = pager.getState()
     source.calls.length = 0
+    pager.setFilter({ status: 'posted', query: 'shop' })
+    expect(pager.getState().stale).toBe(true)
     pager.setFilter({ status: 'posted' })
+    expect(pager.getState()).toMatchObject({ stale: false, rows: held.rows, summary: held.summary })
     await vi.advanceTimersByTimeAsync(300)
     expect(source.calls).toEqual([])
-    pager.setFilter({ status: 'forecast' })
+    pager.setFilter({ status: 'posted', query: 'rent' })
     pager.dispose()
     await vi.advanceTimersByTimeAsync(300)
     expect(source.calls).toEqual([])
+  })
+
+  it('waits only for the search text: any other change ends the burst and is read at once', async () => {
+    vi.useFakeTimers()
+    const source = memorySource(ledger)
+    const pager = pagerOf(source, { limit: 20, settleMs: 100 })
+    pager.setFilter({})
+    await vi.advanceTimersByTimeAsync(100)
+    await vi.waitFor(() => expect(pager.getState().rows).toHaveLength(20))
+    source.calls.length = 0
+    pager.setFilter({ status: 'forecast' })
+    expect(pager.getState()).toMatchObject({ stale: true, loading: true })
+    expect(source.calls.filter((c) => c === 'page')).toHaveLength(1)
+    pager.setFilter({ status: 'forecast', query: 'r' })
+    expect(pager.getState()).toMatchObject({ stale: true, loading: false })
+    pager.setFilter({ status: 'posted', query: 'r' })
+    expect(pager.getState()).toMatchObject({ stale: true, loading: true })
+    expect(source.calls.filter((c) => c === 'page')).toHaveLength(2)
+    await vi.waitFor(() =>
+      expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'posted', query: 'r' }).slice(0, 20)),
+    )
   })
 })
 
@@ -350,7 +403,7 @@ describe('TransactionPager, a summary that is never silently missing', () => {
 
   it('reads the summary again when a refresh cancelled the first one before it arrived', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({})
     pager.refresh()
     await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
@@ -359,27 +412,25 @@ describe('TransactionPager, a summary that is never silently missing', () => {
     expect(source.calls.filter((c) => c === 'summary')).toHaveLength(2)
   })
 
-  it('reads it again when the filter was changed and put back before it settled', async () => {
+  it('reads the list and the summary again when the text was changed and put back while they were still being read', async () => {
     vi.useFakeTimers()
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20, settleMs: 50 })
+    const pager = pagerOf(source, { limit: 20, settleMs: 50 })
     pager.setFilter({ status: 'posted' })
-    await vi.advanceTimersByTimeAsync(50)
-    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
-    pager.setFilter({ status: 'forecast' })
+    pager.setFilter({ status: 'posted', query: 'shop' })
     pager.setFilter({ status: 'posted' })
-    expect(pager.getState().summary).toBeNull()
     await vi.advanceTimersByTimeAsync(50)
     await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
     expect(pager.getState().summaryStale).toBe(false)
     expect(pager.getState().summary).toMatchObject(summaryOf(ledger.transactions, { status: 'posted' }))
     await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'posted' }).slice(0, 20)))
+    expect(pager.getState().stale).toBe(false)
   })
 
   it('flags a summary that could not be read for a new filter, so that nothing is silently missing', async () => {
     const source = memorySource(ledger)
     source.readTransactionSummary = () => Promise.reject(new Error('offline'))
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({})
     await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(true))
     expect(pager.getState().summary).toBeNull()
@@ -387,7 +438,7 @@ describe('TransactionPager, a summary that is never silently missing', () => {
 })
 
 describe('TransactionPager, the retry and the summary', () => {
-  it('reads the first page of a new filter again when asked, with the old rows still shown', async () => {
+  it('drops the old rows when the first page of a new filter fails, and reads it again when asked', async () => {
     const source = memorySource(ledger)
     const read = source.readTransactionPage.bind(source)
     let failures = 1
@@ -395,12 +446,11 @@ describe('TransactionPager, the retry and the summary', () => {
       if (filter.status === 'forecast' && failures-- > 0) throw new Error('offline')
       return read(filter, request)
     }
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({ status: 'posted' })
     await settled(pager)
     pager.setFilter({ status: 'forecast' })
-    expect(await settled(pager)).toMatchObject({ stale: true, error: 'offline' })
-    expect(pager.getState().rows).toHaveLength(20)
+    expect(await settled(pager)).toMatchObject({ stale: false, error: 'offline', rows: [], refreshFailed: false })
     pager.loadMore()
     const state = await settled(pager)
     expect(state).toMatchObject({ stale: false, error: null })
@@ -409,7 +459,7 @@ describe('TransactionPager, the retry and the summary', () => {
 
   it('leaves the summary alone on a plain refresh and says it may no longer fit, and reads it again when asked', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({})
     await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
     expect(pager.getState().summaryStale).toBe(false)
@@ -425,7 +475,7 @@ describe('TransactionPager, the retry and the summary', () => {
 
   it('keeps the old summary and flags it when reading it again fails', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 20 })
+    const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({})
     await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
     const summary = pager.getState().summary
@@ -437,7 +487,7 @@ describe('TransactionPager, the retry and the summary', () => {
 
   it('has the list the engine makes once refreshed after the ledger moved rows behind the cursor', async () => {
     const source = memorySource(ledger)
-    const pager = new TransactionPager(source, { limit: 25 })
+    const pager = pagerOf(source, { limit: 25 })
     pager.setFilter({})
     await settled(pager)
     const [moved, deleted] = [ledger.transactions[7]!, ledger.transactions[11]!]
@@ -454,5 +504,134 @@ describe('TransactionPager, the retry and the summary', () => {
     expect(ids((await drain(pager)).rows)).toEqual(idsOf({}, changed.transactions))
     await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
     expect(pager.getState().summary).toMatchObject(summaryOf(changed.transactions, {}))
+  })
+})
+
+describe('TransactionPager, a refresh after a write', () => {
+  /** Reads `pages` pages of a filter, as a reader scrolling down does. */
+  async function scrolled(source: TestSource, pages: number, limit = 20) {
+    const pager = pagerOf(source, { limit })
+    pager.setFilter({})
+    for (let at = 1; at < pages; at += 1) {
+      await settled(pager)
+      pager.loadMore()
+    }
+    await settled(pager)
+    return pager
+  }
+
+  it('reads the list again to the depth it had in as few requests as the server allows, and swaps it once, when every row is in', async () => {
+    const source = memorySource(ledger)
+    const pager = await scrolled(source, 13)
+    const held = pager.getState().rows
+    expect(held).toHaveLength(260)
+    const limits: Array<number | undefined> = []
+    const read = source.readTransactionPage.bind(source)
+    source.readTransactionPage = (filter, request) => {
+      limits.push(request?.limit)
+      return read(filter, request)
+    }
+    const counts: number[] = []
+    pager.subscribe(() => counts.push(pager.getState().rows.length))
+    const edited = held[3]!
+    const changed: ExpenseDataset = {
+      ...ledger,
+      transactions: ledger.transactions.map((t) => (t.id === edited.id ? { ...t, description: 'Edited' } : t)),
+    }
+    source.dataset = changed
+    pager.refresh({ summary: true })
+    expect(pager.getState()).toMatchObject({ refreshing: true, loading: false, stale: false, complete: false })
+    expect(pager.getState().rows).toBe(held)
+    await settled(pager)
+    expect(limits).toEqual([200, 60])
+    expect(counts.every((count) => count === 260)).toBe(true)
+    expect(ids(pager.getState().rows)).toEqual(idsOf({}, changed.transactions).slice(0, 260))
+    expect(pager.getState().rows.find((t) => t.id === edited.id)?.description).toBe('Edited')
+    expect(pager.getState()).toMatchObject({ refreshing: false, error: null })
+    pager.loadMore()
+    expect((await drain(pager)).complete).toBe(true)
+    expect(ids(pager.getState().rows)).toEqual(idsOf({}, changed.transactions))
+  })
+
+  it('does not call a list that was whole unfinished while it is read again, so nothing that waits for the end is held back', async () => {
+    const source = memorySource(ledger)
+    const month = vocabularyOf(ledger).months[10]!
+    const pager = pagerOf(source, { limit: 20 })
+    pager.setFilter({ month })
+    await drain(pager)
+    expect(pager.getState().complete).toBe(true)
+    pager.refresh()
+    expect(pager.getState()).toMatchObject({ complete: true, refreshing: true, stale: false })
+    await settled(pager)
+    expect(pager.getState().complete).toBe(true)
+  })
+
+  it('starts the read again when another write comes while one is on its way, and ends with the list after the last', async () => {
+    const source = memorySource(ledger)
+    const pager = await scrolled(source, 4)
+    const signals: AbortSignal[] = []
+    const read = source.readTransactionPage.bind(source)
+    source.readTransactionPage = (filter, request) => {
+      if (request?.signal) signals.push(request.signal)
+      return read(filter, request)
+    }
+    const [first, second] = [ledger.transactions[2]!, ledger.transactions[30]!]
+    source.dataset = { ...ledger, transactions: ledger.transactions.filter((t) => t.id !== first.id) }
+    pager.refresh()
+    const after: ExpenseDataset = { ...ledger, transactions: ledger.transactions.filter((t) => t.id !== first.id && t.id !== second.id) }
+    source.dataset = after
+    pager.refresh()
+    expect(signals[0]!.aborted).toBe(true)
+    await settled(pager)
+    expect(ids(pager.getState().rows)).toEqual(idsOf({}, after.transactions).slice(0, 80))
+  })
+
+  it('keeps the rows and says so when the refresh fails, and reads it again when asked', async () => {
+    const source = memorySource(ledger)
+    const pager = await scrolled(source, 3)
+    const held = pager.getState().rows
+    const read = source.readTransactionPage.bind(source)
+    source.readTransactionPage = () => Promise.reject(new Error('offline'))
+    pager.refresh()
+    await vi.waitFor(() => expect(pager.getState().refreshFailed).toBe(true))
+    expect(pager.getState()).toMatchObject({ error: 'offline', refreshing: false, stale: false })
+    expect(pager.getState().rows).toBe(held)
+    source.readTransactionPage = read
+    pager.loadMore()
+    expect(pager.getState()).toMatchObject({ refreshing: true, error: null, refreshFailed: false })
+    await settled(pager)
+    expect(ids(pager.getState().rows)).toEqual(idsOf({}).slice(0, 60))
+  })
+})
+
+describe('TransactionPager, with no screen showing the list', () => {
+  it('only notes a refresh, and reads the list from its first page when a screen attaches', async () => {
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 20 })
+    const detach = pager.attach()
+    pager.setFilter({})
+    await settled(pager)
+    pager.loadMore()
+    await settled(pager)
+    expect(pager.getState().rows).toHaveLength(40)
+    detach()
+    source.calls.length = 0
+    pager.refresh({ summary: true })
+    expect(source.calls).toEqual([])
+    pager.attach()
+    expect(pager.getState().refreshing).toBe(true)
+    await settled(pager)
+    expect(source.calls).toEqual(['page', 'summary'])
+    expect(pager.getState().rows).toHaveLength(20)
+    pager.attach()
+    expect(source.calls).toEqual(['page', 'summary'])
+  })
+
+  it('has nothing to refresh before a filter was ever set', () => {
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 20 })
+    pager.refresh({ summary: true })
+    pager.attach()
+    expect(source.calls).toEqual([])
   })
 })

@@ -194,6 +194,49 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
   })
 })
 
+describe('LedgerExpensesApp, the Transactions tab', () => {
+  type Served = ReturnType<typeof servingSource>
+  const pages = (source: Served) => source.calls.filter((c) => c === 'page').length
+
+  async function onTransactions(source: Served) {
+    renderApp(source)
+    await screen.findByText('Recent activity')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Transactions' })[0]!)
+    return screen.findByPlaceholderText(/Search description/)
+  }
+
+  it('lists the month from a page read from the server, with its count and net spend, not from the rows it holds', async () => {
+    const source = servingSource()
+    await onTransactions(source)
+    await waitFor(() => expect(pages(source)).toBeGreaterThan(0))
+    await screen.findByText(/\d+ items?$/)
+    await waitFor(() => expect(source.calls).toContain('summary'))
+  })
+
+  it('reads once for a burst of keys in the search box, after the text has held still', async () => {
+    const source = servingSource()
+    const search = await onTransactions(source)
+    await waitFor(() => expect(pages(source)).toBeGreaterThan(0))
+    await waitFor(() => expect(source.calls).toContain('summary'))
+    const before = pages(source)
+    for (const text of ['c', 'co', 'cof', 'coff']) fireEvent.change(search, { target: { value: text } })
+    expect(pages(source)).toBe(before)
+    await waitFor(() => expect(pages(source)).toBe(before + 1), { timeout: 2000 })
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect(pages(source)).toBe(before + 1)
+  })
+
+  it('shows what the first page of a search holds, and the rows of the filter before it cleared', async () => {
+    const source = servingSource()
+    const search = await onTransactions(source)
+    await waitFor(() => expect(pages(source)).toBeGreaterThan(0))
+    fireEvent.change(search, { target: { value: 'zzz no such description' } })
+    await screen.findByText(/No transactions match these filters/, undefined, { timeout: 2000 })
+    fireEvent.change(search, { target: { value: '' } })
+    await waitFor(() => expect(screen.queryByText(/No transactions match these filters/)).toBeNull(), { timeout: 2000 })
+  })
+})
+
 describe('LedgerExpensesApp, offline', () => {
   let fake: FakeIndexedDb
 

@@ -6,6 +6,7 @@ import type { ExpenseDataSource } from '../data/dataSource'
 import { loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
 import type { Lookup } from './format'
+import type { PagedList } from './transactionListView'
 import { buildExpenseModel } from './buildExpenseModel'
 
 /**
@@ -43,6 +44,8 @@ export interface ExpenseModel {
   receiptsPending?: number
   /** Reads the receipt lists of these transactions into `dataset.attachments`; present with `attachmentCounts`. */
   ensureReceipts?: (ids: readonly number[]) => void
+  /** Set when the Transactions list is read in pages from the server rather than filtered from `dataset`. */
+  pagedList?: PagedList
 }
 
 interface LoadState {

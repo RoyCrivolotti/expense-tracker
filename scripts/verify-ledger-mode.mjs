@@ -100,6 +100,16 @@ async function screens(page) {
   await press(page, 'Transactions')
   await page.waitForSelector('input[placeholder*="Search description"]', { timeout: 20000 })
   await grab('transactions')
+  // The same list over every date, and searched: in ledger mode these are pages read from the server, which
+  // the demo's rows fit in one of, so they must read as the whole list does.
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('dialog').getByText('All', { exact: true }).click()
+  await page.locator('[role=dialog] [aria-label="Close"]').first().click()
+  await page.waitForTimeout(700)
+  await grab('transactions (all dates)')
+  await page.getByPlaceholder(/Search description/).fill('shop')
+  await page.waitForTimeout(900)
+  await grab('transactions (all dates, searched)')
   await press(page, 'Settings')
   await page.getByRole('tab', { name: 'Setup' }).first().click()
   const text = (await paneText(page)).split('Card statements')[1] ?? ''

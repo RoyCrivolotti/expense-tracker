@@ -33,6 +33,8 @@ interface TransactionsSelectFooterProps {
   selection: SelectionState
   visibleIds: number[]
   model: ExpenseModel
+  /** More rows match than the list holds. */
+  partial?: boolean | undefined
 }
 
 export function TransactionsSelectFooter({
@@ -41,6 +43,7 @@ export function TransactionsSelectFooter({
   selection,
   visibleIds,
   model,
+  partial,
 }: TransactionsSelectFooterProps) {
   const { selectMode, pendingBatchDelete, pendingBulkEdit, hiddenCount } = selection
   const count = selection.selected.size
@@ -48,8 +51,8 @@ export function TransactionsSelectFooter({
   // What each surface shows is held while it leaves. Deleting clears the selection, and
   // without this the words "3 selected" would change to "0 selected" as the bar slid away.
   const bar = useMemo(
-    () => (selectMode ? { count, total, hiddenCount } : null),
-    [selectMode, count, total, hiddenCount],
+    () => (selectMode ? { count, total, hiddenCount, partial: partial ?? false } : null),
+    [selectMode, count, total, hiddenCount, partial],
   )
   const deleting = useMemo(
     () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
@@ -74,6 +77,7 @@ export function TransactionsSelectFooter({
             count={shown.count}
             totalCount={shown.total}
             hiddenCount={shown.hiddenCount}
+            partial={shown.partial}
             busy={selection.busy}
             readOnly={!actionsEnabled}
             editOpen={pendingBulkEdit}
