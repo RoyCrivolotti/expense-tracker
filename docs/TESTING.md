@@ -1,6 +1,6 @@
 # Testing — expense-tracker
 
-Stack: **Vitest** + **React Testing Library** (hooks) + in-memory D1 (Pages Functions).
+For contributors writing or running tests. Stack: **Vitest** + **React Testing Library** (hooks) + in-memory D1 (Pages Functions).
 
 ## Commands
 
@@ -31,6 +31,8 @@ Use `functions/_shared/testing/invokeExpenseApiRoute.ts` for expense routes (rea
 
 Use `functions/_shared/invokePagesRoute.ts` for transaction write validation against mocked D1 ownership checks.
 
+Use `functions/_shared/testing/expenseWorld.ts` (with `seedLedger.ts`) to run the whole expense API over a real SQLite database: the real middleware, the real D1 repository, and a log of every statement a request ran. The caller supplies the database, because the `functions/` typecheck has no Node types.
+
 Example flows in `access.integration.test.ts`:
 
 1. Owner reads all groups on `GET /api/access/grants`
@@ -49,15 +51,19 @@ change that must be all-or-nothing.
 
 ## Running the real SQL locally, and measuring scale
 
-`src/testing/sqliteD1.ts` wraps node:sqlite in a `D1Database`-shaped object over the real
-migrations, and `src/testing/seedSqlite.ts` loads an `ExpenseDataset` into it, so `loadDataset` and any later query code run
-against real SQL without Cloudflare. It rejects a statement that binds more than 100 values, as D1 does
-(`maxBoundParameters` changes that), but it cannot reproduce D1's billing.
-`src/testing/syntheticLedger.ts` builds a deterministic dataset of any size. `SCALING_MEASURE=1 npx vitest run
-functions/_shared/loadDataset.scaling.test.ts` prints what the current load path costs by ledger size; the
-results are in [SCALING.md](./SCALING.md). `SCALING_MEASURE=1 npx vitest run functions/_shared/ledgerParts.scaling.test.ts`
-does the same for the ledger parts routes, and `functions/_shared/ledgerPartPlans.test.ts` runs each of their statements
-through `EXPLAIN QUERY PLAN`.
+- `src/testing/sqliteD1.ts` and `seedSqlite.ts`: the real migrations and a D1-shaped wrapper over node:sqlite, so the real
+  SQL runs in tests without Cloudflare. It rejects a statement that binds more than 100 values, as D1 does
+  (`maxBoundParameters` changes that), but it cannot reproduce D1's billing or its limit of five terms in a compound
+  `SELECT`. They live in `src/testing/` because the `functions/` typecheck has no Node types.
+- `src/testing/syntheticLedger.ts`: a deterministic dataset of any size, in the shape and order the API returns, with fixed,
+  quarterly and yearly series, plan instalments, flagged rows settled by a refund, negative investments, cancelled rows and
+  refunds. Placeholder data only.
+- `src/domain/ledger/partsOfDataset.ts`: the ledger parts computed from a whole dataset, which the SQL is held to
+  (`dbLedgerParts.parity.test.ts`).
+- `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
+  account), a stand-in that records every statement it ran, and a seeded generator of filters, for the paged-read tests.
+- `*.scaling.test.ts` print what a route costs by ledger size when run with `SCALING_MEASURE=1` and `--reporter=verbose`
+  (the command for the load path is in [SCALING.md](./SCALING.md)). The query-plan tests (`*Plans.test.ts`) run each statement through `EXPLAIN QUERY PLAN` and fail on a full scan of `transactions`.
 
 ## Real-browser checks (manual)
 
