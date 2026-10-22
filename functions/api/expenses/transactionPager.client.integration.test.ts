@@ -54,10 +54,18 @@ function routeFetch({ world }: Served, tamper: (url: URL, call: number) => void 
 
 const source = apiDataSource as Required<typeof apiDataSource>
 
+/** A pager with a screen attached to it, as the Transactions tab is while it is open. */
+function pagerOf(options: ConstructorParameters<typeof TransactionPager>[1]): TransactionPager {
+  const pager = new TransactionPager(source, options)
+  pager.attach()
+  return pager
+}
+
 function settled(pager: TransactionPager): Promise<PagerState> {
   return new Promise((resolve) => {
     const check = () => {
-      if (pager.getState().loading) return
+      const { loading, refreshing } = pager.getState()
+      if (loading || refreshing) return
       off()
       resolve(pager.getState())
     }
@@ -106,7 +114,7 @@ describe('a list read in pages from the routes', () => {
     for (const c of cases) {
       vi.stubGlobal('fetch', routeFetch(c))
       for (const [at, filter] of [{}, ...filterStream(vocabularyOf(c.dataset), 25, 4242)].entries()) {
-        const pager = new TransactionPager(source, { limit: [13, 100, 200][at % 3]! })
+        const pager = pagerOf({ limit: [13, 100, 200][at % 3]! })
         pager.setFilter(filter)
         const state = await drain(pager)
         expect(state.rows.map(withSortedLabels), `${c.name} ${JSON.stringify(filter)}`).toEqual(expected(c, filter))
@@ -122,7 +130,7 @@ describe('a list read in pages from the routes', () => {
   it('holds a row once when it is edited to an older day between two pages', async () => {
     vi.stubGlobal('fetch', routeFetch(main))
     const { sqlite } = main
-    const pager = new TransactionPager(source, { limit: 25 })
+    const pager = pagerOf({ limit: 25 })
     pager.setFilter({})
     const first = await settled(pager)
     const moved = first.rows[3]!
@@ -148,7 +156,7 @@ describe('a list read in pages from the routes', () => {
         if (cursor) url.searchParams.set('cursor', `${cursor}x`)
       }),
     )
-    const pager = new TransactionPager(source, { limit: 40 })
+    const pager = pagerOf({ limit: 40 })
     pager.setFilter({ status: 'posted' })
     const state = await drain(pager)
     expect(state.error).toMatch(/cursor/i)
@@ -161,7 +169,7 @@ describe('a list read in pages from the routes', () => {
   it('starts a new filter at its first page, never at the cursor of the one before', async () => {
     const seen: string[] = []
     vi.stubGlobal('fetch', routeFetch(main, (url) => seen.push(url.search)))
-    const pager = new TransactionPager(source, { limit: 30 })
+    const pager = pagerOf({ limit: 30 })
     pager.setFilter({ status: 'posted' })
     await settled(pager)
     const before = seen.length
@@ -184,7 +192,7 @@ describe('a list read in pages from the routes', () => {
         init.signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))),
       )
     })
-    const pager = new TransactionPager(source, { limit: 40 })
+    const pager = pagerOf({ limit: 40 })
     pager.setFilter({ status: 'posted' })
     await vi.waitFor(() => expect(signals).toHaveLength(2))
     pager.setFilter({ status: 'forecast' })
@@ -203,7 +211,7 @@ describe('a list read in pages while the ledger is written to', () => {
     const pick = <T,>(items: T[]): T => items[Math.floor(rnd() * items.length)]!
     let behind = 0
     for (let walk = 0; walk < 15; walk += 1) {
-      const pager = new TransactionPager(source, { limit: 20 + Math.floor(rnd() * 80) })
+      const pager = pagerOf({ limit: 20 + Math.floor(rnd() * 80) })
       pager.setFilter({})
       await settled(pager)
       for (let more = Math.floor(rnd() * 3); more > 0; more -= 1) {
