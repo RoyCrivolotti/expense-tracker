@@ -343,9 +343,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // description box takes the list it shows from a hook the ledger mode may supply, and the Settings screens ask a
 // per-record view for their counts (the held rows' own, which is what a ledger held in full keeps using, or the
 // server's) and show a note beside a count that is being read, may be out of date or could not be read. The default
-// path went from 286,913 to 287,188 bytes, 57 under the new limit. The entry chunk grew by 308 (167,002 to 167,310).
+// path went from 286,913 to 287,188 bytes, 57 under the new limit. The entry chunk grew by 310 (167,002 to 167,312).
 // The merge of older descriptions, the store that reads and keeps the counts, and the words of the notes sit in the
-// chunks only the ledger mode loads, which went from 13,279 to 14,884 bytes of their 16,000.
+// chunks only the ledger mode loads, which went from 13,279 to 14,886 bytes of their 16,000.
 const TOTAL_MAX_GZIP = 287_245
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
