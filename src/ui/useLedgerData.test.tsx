@@ -379,3 +379,59 @@ describe('useLedgerData, a read in the background that fails', () => {
     await refreshClears(result)
   })
 })
+
+describe('useLedgerData, the list read in pages', () => {
+  const pageReads = (source: ReturnType<typeof memorySource>) => source.calls.filter((c) => c === 'page').length
+
+  async function started() {
+    const source = memorySource(small)
+    const hook = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+    const { pager } = hook.result.current.model!.pagedList!
+    pager.setFilter({})
+    await waitFor(() => expect(pager.getState().rows.length).toBeGreaterThan(0))
+    return { source, pager, ...hook }
+  }
+
+  it('gives the model a pager that waits for the filter to settle, one read for a burst of keys', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const { pager } = result.current.model!.pagedList!
+    for (const query of ['r', 're', 'ren']) pager.setFilter({ query })
+    expect(pageReads(source)).toBe(0)
+    await waitFor(() => expect(pageReads(source)).toBe(1))
+  })
+
+  it('reads the list again after a write that changed rows, and not after one that did not', async () => {
+    const { source, pager, result } = await started()
+    const before = pageReads(source)
+    const target = result.current.model!.dataset.transactions[0]!
+    act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' })))
+    await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+    await waitFor(() => expect(pager.getState().summaryStale).toBe(false))
+    act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 4242 } })))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(pageReads(source)).toBe(before + 1)
+  })
+
+  it('reads the list and its summary again when the user refreshes', async () => {
+    const { source, result } = await started()
+    const before = pageReads(source)
+    const summaries = source.calls.filter((c) => c === 'summary').length
+    act(() => result.current.reload())
+    await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+    await waitFor(() => expect(source.calls.filter((c) => c === 'summary')).toHaveLength(summaries + 1))
+  })
+
+  it('cancels what the pager has in flight when it is unmounted', async () => {
+    const source = memorySource(small)
+    const { result, unmount } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const { pager } = result.current.model!.pagedList!
+    pager.setFilter({})
+    unmount()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(pager.getState().rows).toEqual([])
+  })
+})

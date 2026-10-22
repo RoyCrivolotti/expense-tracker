@@ -143,11 +143,16 @@ export class TransactionPager {
     if (this.filter && (this.cursor !== undefined || error !== null)) void this.readPage()
   }
 
-  /** Drops what is in flight and what is waiting: an answer that comes after this changes nothing. */
+  /**
+   * Drops what is in flight and what is waiting: an answer that comes after this changes nothing. The filter is
+   * forgotten too, so that one set afterwards starts a list again, as a screen mounted twice in development does.
+   */
   dispose(): void {
     this.supersede()
     clearTimeout(this.timer)
     this.waiting = null
+    this.filter = null
+    this.key = ''
     this.listeners.clear()
   }
 

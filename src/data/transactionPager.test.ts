@@ -243,6 +243,16 @@ describe('TransactionPager, reads that fail', () => {
     expect(ids(state.rows)).toEqual(idsOf({}))
   })
 
+  it('starts a list again for a filter set after it was disposed, as a screen mounted twice does', async () => {
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 30 })
+    pager.setFilter({ status: 'posted' })
+    pager.dispose()
+    pager.setFilter({ status: 'posted' })
+    const state = await drain(pager)
+    expect(ids(state.rows)).toEqual(idsOf({ status: 'posted' }))
+  })
+
   it('changes nothing after it is disposed', async () => {
     const source = memorySource(ledger)
     const pager = new TransactionPager(source, { limit: 30 })

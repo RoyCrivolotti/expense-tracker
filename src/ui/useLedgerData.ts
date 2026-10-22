@@ -3,10 +3,14 @@ import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions } from '../data/ledgerSession'
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
+import { TransactionPager } from '../data/transactionPager'
 import { buildLedgerModel } from './buildLedgerModel'
+import { pagedListOf } from './pagedTransactionList'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
 const MIN_REFRESH_MS = 700
+/** A search box sets the filter at every key; the list is read once the text has held still this long. */
+const LIST_SETTLE_MS = 250
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
@@ -79,6 +83,9 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   })
   const session = useMemo(() => new LedgerSession(source, options), [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
   const state = useSyncExternalStore(session.subscribe, session.getState)
+  const pager = useMemo(() => new TransactionPager(source, { settleMs: LIST_SETTLE_MS }), [source])
+  const pagedList = useMemo(() => pagedListOf(pager), [pager])
+  useEffect(() => () => pager.dispose(), [pager])
   const [phase, setPhase] = useState<Phase>('loading')
   const [failure, setFailure] = useState<string | undefined>(undefined)
   const [snapshotAt, setSnapshotAt] = useState<string | undefined>(undefined)
@@ -113,8 +120,8 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
     const built = buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts })
-    return { ...built, receiptsPending: receiptsPending(held), ensureReceipts: session.loadReceipts }
-  }, [held, session])
+    return { ...built, receiptsPending: receiptsPending(held), ensureReceipts: session.loadReceipts, pagedList }
+  }, [held, session, pagedList])
 
   const reload = useCallback(() => {
     if (phase === 'error') {
@@ -135,13 +142,20 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     session.refresh().then(
       () => {
         keep(session, owner, settled.current)
+        pager.refresh({ summary: true })
         return finish('ok')
       },
       () => finish('fail'),
     )
-  }, [session, phase, owner])
+  }, [session, pager, phase, owner])
 
-  const applyPatch = useCallback<ExpenseData['applyPatch']>((patch) => session.patch(patch), [session])
+  // A list read from the server does not see a write until it is read again.
+  const applyPatch = useCallback<ExpenseData['applyPatch']>(
+    (patch) => {
+      if (session.patch(patch)) pager.refresh({ summary: true })
+    },
+    [session, pager],
+  )
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 
   return {
