@@ -1,8 +1,9 @@
 import type { Env } from './env'
 
 /**
- * Chunked backup is off unless `BACKUP_MODE` is exactly `chunked`. Unset, empty or anything else keeps the
- * daily single-file snapshot, so deploying this code changes nothing until someone sets the variable.
+ * Chunked backup is off unless `BACKUP_MODE` is `chunked`, ignoring case and surrounding spaces. Unset, empty or
+ * anything else keeps the daily single-file snapshot, so deploying this code changes nothing until someone sets the
+ * variable.
  */
 export interface ChunkedBackupSettings {
   enabled: boolean
