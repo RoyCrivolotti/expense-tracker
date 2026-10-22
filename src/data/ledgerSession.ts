@@ -329,7 +329,8 @@ export class LedgerSession {
   private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset, cascade: Cascade | null): void {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
-    if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
+    // A cascade turns rows into, or out of, series that the patch does not show.
+    if (cascade !== null || touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
     this.set({ held: done.held })
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
     if (cascade !== null) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
