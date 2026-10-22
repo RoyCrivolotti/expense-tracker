@@ -239,8 +239,9 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   bound values per statement.
 
 **Cost in D1 statements**, counted on the SQLite stand-in through the real middleware, so the revision bumps are
-included and the access checks (about five more in production) are not: a create is 6n + 5 for n rows, an edit by id is
-3n + 6 (each updated row is read back and its status derived with three queries), and an edit by filter, the labels
-route and a delete are 7, 6 and 7 however many rows. The Free plan allows 50 queries per invocation, so a create of more
-than 6 rows or an edit by id of more than 13 exceeds it whichever way a `batch()` counts, and the 500-id cap is not
-usable there. [MEASURING.md](./MEASURING.md) says how to settle how a batch counts.
+included and the access checks (about five more in production, an estimate, since the harness stubs them) are not: a
+create is 6n + 5 for n rows, an edit by id is 3n + 6 (each updated row is read back and its status derived with three
+queries), and an edit by filter, the labels route and a delete are 7, 6 and 7 however many rows. Cloudflare documents a
+limit of 50 queries per invocation on the Free plan ([SCALING.md](./SCALING.md#constraints)). What the counts would mean
+for a large request if that limit is enforced, and how to find out, is in
+[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).

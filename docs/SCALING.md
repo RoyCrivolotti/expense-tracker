@@ -77,7 +77,7 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
    milliseconds on a desktop, but a phone is several times slower and pays for the clone on every mutation.
 3. **D1 rows read.** Every load reads every row, so the daily 5 million covers about 440 loads at 10,000 transactions,
    90 at 50,000 and 18 at 250,000. A 304 skips the load, so the figure counts opens that follow a change.
-4. **The backup meets the same limit.** It runs the same load for every owner in one invocation.
+4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
 5. **A load issues 16 D1 queries**, inside the limit of 50.
 
 Not measured: Worker CPU on workerd, rows billed per route on a deployed D1, and how the 50-query limit counts a

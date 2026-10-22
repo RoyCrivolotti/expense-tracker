@@ -4,9 +4,9 @@ For an engineer changing how backups are taken. The runbook is in [BACKUPS.md](.
 [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 **Context.** The single-file snapshot loads and serialises a whole ledger in one invocation, which the Free plan's CPU
-and subrequest limits stop allowing as the ledger grows. A backup then has to span several invocations, and D1 gives no
-read transaction that lasts from one invocation to the next, so what the later ones read is not the moment the first one
-did. A restore of rows from two moments can fail on a reference (a transaction whose category was deleted in between).
+and subrequest limits would stop allowing as the ledger grows, if enforced as documented ([SCALING.md](../SCALING.md)).
+A backup then spans several invocations, and D1 has no read transaction across them, so a restore can mix two moments
+and fail on a reference (a transaction whose category was deleted in between).
 
 **Decision.** The backup walks the export a bounded number of calls and rows at a time, writes parts, and saves its place.
 It takes the owner's revision token when it starts and again before it finishes, and writes the manifest only if the

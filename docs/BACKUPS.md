@@ -6,9 +6,9 @@ invocation, or has to restore. The schedule, bucket and retention policy are in
 
 ## Two forms
 
-- **Single-file snapshot** (the default): the whole dataset as JSON at `{owner-email}/{YYYY-MM-DD}.json`, written by
-  one invocation. It loads and serialises everything at once, so it stops fitting in a Worker invocation as the ledger
-  grows.
+- **Single-file snapshot** (the default): the whole dataset as JSON at `{owner-email}/{YYYY-MM-DD}.json`, written by one
+  invocation. It loads and serialises everything at once, so it is expected to stop fitting in a Worker invocation as
+  the ledger grows ([SCALING.md](./SCALING.md)).
 - **Resumable backup**: a folder `{owner-email}/{YYYY-MM-DD}/` of `part-NNNNNN.ndjson` files, each line `{"t": table,
   "r": row}` in the shape of the [export](./API.md), a `state.json` while it runs, and a `manifest.json` written last.
   A folder without a manifest is not a backup. The retention policy keeps or drops a folder as a whole.
