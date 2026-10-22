@@ -315,7 +315,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // modules import it. This is a limit on what runs and on what a feature may add, not on what is downloaded:
 // the service worker precaches every built script (`globPatterns` in vite.config.ts), the ledger chunks
 // included, so each browser fetches them once per deploy.
-const TOTAL_MAX_GZIP = 285_700
+//
+// Raised from 285,700 to 286,200 bytes for the recurring series of a windowed ledger. Turning the served series into
+// the groups the detectors take happens in the ledger chunk and uses code the Analytics chunk holds too, so the
+// bundler moved that code into a chunk they share: the default path went from 285,603 to 286,076 bytes. The entry
+// chunk grew by 83 (165,796 to 165,879, for the screens that say they use the series and the Upcoming card
+// reading them), the Analytics chunk shrank by 550 and the shared chunk grew by 943. The chunks only the ledger
+// mode loads went from 8,769 to 9,412 bytes.
+const TOTAL_MAX_GZIP = 286_200
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
