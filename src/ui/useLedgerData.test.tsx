@@ -209,6 +209,20 @@ describe('useLedgerData, a read in the background that fails', () => {
     expect(result.current.status).toBe('ready')
   })
 
+  it('tells the screens when a receipt list cannot be read', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const id = Number(Object.keys(result.current.model!.attachmentCounts!)[0])
+    const read = source.readReceiptsPart.bind(source)
+    source.readReceiptsPart = () => Promise.reject(new Error('receipts down'))
+    act(() => result.current.model!.ensureReceipts!([id]))
+    await waitFor(() => expect(result.current.backgroundError).toBe('receipts down'))
+    expect(result.current.status).toBe('ready')
+    source.readReceiptsPart = read
+    await refreshClears(result)
+  })
+
   it('tells the screens when the rows of the month shown cannot be read, and stops saying the month is loading', async () => {
     const { source, result } = await ready(WINDOWED)
     const read = source.readMonthsPart.bind(source)

@@ -3,7 +3,7 @@ import { shiftBudgetMonth } from '../domain/engine/dates'
 import type { MonthRange } from '../domain/data/ledgerParts'
 import { DEFAULT_HYDRATION_POLICY, type HydrationPolicy } from '../domain/ledger'
 import { planRowRanges } from '../domain/ledger/partsPlan'
-import type { ExpenseDataset } from '../domain/types'
+import type { ExpenseDataset, TransactionAttachment } from '../domain/types'
 import {
   type HeldLedger,
   evictMonths,
@@ -224,18 +224,38 @@ export class LedgerSession {
     const wanted = (again ? [...ids] : receiptsToRead(held, ids)).filter((id) => !this.readingReceipts.has(id))
     for (const id of wanted) this.readingReceipts.add(id)
     try {
-      for (let at = 0; at < wanted.length; at += RECEIPT_REQUESTS_AT_ONCE) {
-        const chunk = wanted.slice(at, at + RECEIPT_REQUESTS_AT_ONCE)
-        const lists = await Promise.all(chunk.map((id) => this.source.readReceiptsPart(id)))
-        const now = this.state.held
-        if (!now) return
-        this.set({ held: holdReceiptLists(now, chunk, lists, again) })
-      }
+      if (!again && wanted.length > RECEIPT_REQUESTS_AT_ONCE) await this.readAllReceipts(wanted)
+      else await this.readReceiptLists(wanted, again)
     } catch (error) {
       this.set({ error: reason(error) })
     } finally {
       for (const id of wanted) this.readingReceipts.delete(id)
     }
+  }
+
+  /** A list a request at a time, a few at once. */
+  private async readReceiptLists(wanted: number[], again: boolean): Promise<void> {
+    for (let at = 0; at < wanted.length; at += RECEIPT_REQUESTS_AT_ONCE) {
+      const chunk = wanted.slice(at, at + RECEIPT_REQUESTS_AT_ONCE)
+      const lists = await Promise.all(chunk.map((id) => this.source.readReceiptsPart(id)))
+      const now = this.state.held
+      if (!now) return
+      this.set({ held: holdReceiptLists(now, chunk, lists, again) })
+    }
+  }
+
+  /** More than a few lists are one request for every receipt, as the dataset carries them, not a request each. */
+  private async readAllReceipts(wanted: number[]): Promise<void> {
+    const all = await this.source.readReceiptsPart()
+    const now = this.state.held
+    if (!now) return
+    const byTransaction = new Map<number, TransactionAttachment[]>()
+    for (const receipt of all) {
+      const list = byTransaction.get(receipt.transactionId)
+      if (list) list.push(receipt)
+      else byTransaction.set(receipt.transactionId, [receipt])
+    }
+    this.set({ held: holdReceiptLists(now, wanted, wanted.map((id) => byTransaction.get(id) ?? []), false) })
   }
 
   /** Reads again the sums of the months a write moved, until none is waiting. */

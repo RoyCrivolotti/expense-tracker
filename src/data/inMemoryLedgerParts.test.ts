@@ -66,6 +66,11 @@ describe('inMemoryLedgerParts', () => {
     const served = inMemoryLedgerParts(() => ({ dataset: withReceipts, revision: 'v1' }))
     expect((await served.readReceiptsPart(1)).map((a) => a.id)).toEqual([1, 2])
     expect(await served.readReceiptsPart(9)).toEqual([])
+    expect((await served.readReceiptsPart()).map((a) => [a.transactionId, a.id])).toEqual([
+      [1, 1],
+      [1, 2],
+      [2, 3],
+    ])
   })
 
   it('accepts a dataset that arrives later', async () => {

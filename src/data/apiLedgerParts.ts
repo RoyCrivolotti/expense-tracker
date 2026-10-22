@@ -115,5 +115,6 @@ export const apiLedgerParts: LedgerPartsSource = {
   readReferencePart: () => readPart(`${BASE}/reference`, isReferencePart),
   readMonthsPart: (range) => readPart(`${BASE}/transactions/months?${query(range)}`, isMonthRowsPart),
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
-  readReceiptsPart: (transactionId) => readPart(`${BASE}/attachments?transactionId=${transactionId}`, isReceiptList),
+  readReceiptsPart: (transactionId) =>
+    readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
 }

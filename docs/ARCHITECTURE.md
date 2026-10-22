@@ -187,7 +187,9 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   parts has no receipt list (`reference.attachments` is empty): the parts count a row's receipts, and a screen that
   shows them asks for the lists it needs through `model.ensureReceipts` (the edit sheet for its transaction, a claim
   for its rows, the storage meter for all of them). The row mark reads the count, a claim and the meter wait for
-  the lists, and a model that holds every receipt list never has `ensureReceipts`. The demo data sources serve
+  the lists, and a model that holds every receipt list never has `ensureReceipts`. A few lists are read one request
+  each (`GET /attachments?transactionId=`); more than a few are one request for every receipt the owner has
+  (`GET /attachments`, the rows the dataset route carries). The demo data sources serve
   their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
 - **The screens read one of two row lists, and an engine that is given the wrong one is wrong only when the model
   holds a window.** `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what
