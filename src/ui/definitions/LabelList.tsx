@@ -39,7 +39,8 @@ export function LabelList({ model, actions }: { model: ExpenseModel; actions: Ex
                 </span>
                 <span className={styles.rowMeta}>
                   {label.description ? `${label.description} · ` : ''}
-                  {usage.count('label', label.id) ?? '—'} tagged
+                  {usage.count('label', label.id) ?? '—'}{' '}
+                  tagged
                 </span>
               </div>
             </div>
