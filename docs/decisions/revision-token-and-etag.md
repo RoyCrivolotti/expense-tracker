@@ -13,7 +13,7 @@ changes the JSON shape never meets a browser holding the old shape under a match
 data, so a concurrent write leaves it older than the data and never newer.
 
 **Consequences.**
-- A match costs two rows read and runs no dataset query or backfill. Each write request costs two more rows written.
+- A match costs two rows read and runs no dataset query or backfill. A write request costs two more rows written and one read.
 - The token is per owner, so any write invalidates every part and range.
 - A new write route needs nothing. Anything that writes the dataset's tables outside the API must delete the owner's
   row, and `datasetRevision.integration.test.ts` fails for a write route with no test case.
