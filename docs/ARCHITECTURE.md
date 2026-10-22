@@ -182,8 +182,8 @@ under `src/`, `functions/` and `workers/` (see `eslint.config.js`). Tests, confi
 The limits are a proxy for "this file or function is doing one thing", so split before disabling.
 
 The files that were already over a size limit when it was switched back on are listed in `eslint.config.js`, each
-exempt from that one rule. Do not add to the lists: a new file or function that is too long gets split. Take a file off
-its list when it fits.
+capped at the size it had, so a listed file cannot grow. Do not add to the lists: a new file or function that is too
+long gets split. Lower an entry when its file shrinks, and take the file off the list when it fits.
 
 ## Testing
 
