@@ -460,8 +460,9 @@ describe('an invocation killed part way', () => {
 
   it('and so is one that fills a part inside a single invocation, so the save after the part is held to its order', async () => {
     // The test above reads 4 rows an invocation, so it never reaches the save that `drain` makes once SAVE_ROWS have been
-    // read. If that save came before the part that holds those rows, a kill between the two calls would lose up to
-    // SAVE_ROWS rows silently, and the restore would still look complete.
+    // read. If that save came before the part that holds those rows, a kill between the two calls would leave a state
+    // that counts up to SAVE_ROWS rows no part holds. The backup would still finish and write its manifest, so the day
+    // would count as done, and only the restore would refuse it ("the manifest records N rows and the parts hold 0").
     const source = await sourceOf('fills a part', syntheticLedger({ months: 12, perMonth: 100, seed: 51 }))
     expect(source.dataset.transactions.length).toBeGreaterThan(2 * SAVE_ROWS)
     const reference = memoryBackupStore()
