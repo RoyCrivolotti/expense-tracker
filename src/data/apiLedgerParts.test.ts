@@ -235,6 +235,10 @@ describe('apiLedgerParts, series', () => {
     ['a series with no dates', { revision: 'abc', series: [{ ...series, newestDates: [] }] }],
     ['a series with no label', { revision: 'abc', series: [{ ...series, label: undefined }] }],
     ['a series with no gaps list', { revision: 'abc', series: [{ ...series, olderGaps: 4 }] }],
+    ['dates that are numbers', { revision: 'abc', series: [{ ...series, newestDates: [20260105] }] }],
+    ['gaps that are text', { revision: 'abc', series: [{ ...series, olderGaps: ['3'] }] }],
+    ['budget offsets that are text', { revision: 'abc', series: [{ ...series, budgetOffsets: ['0'] }] }],
+    ['budget months that are numbers', { revision: 'abc', series: [{ ...series, budgetMonths: [202601] }] }],
   ])('reports %s as unavailable', async (_name, body) => {
     serve(json(body))
     await expect(apiLedgerParts.readSeriesPart()).rejects.toBeInstanceOf(PartsUnavailableError)
@@ -243,5 +247,33 @@ describe('apiLedgerParts, series', () => {
   it('is served through apiDataSource', async () => {
     serve(json({ revision: 'abc', series: [] }))
     await expect(apiDataSource.readSeriesPart!()).resolves.toEqual({ revision: 'abc', series: [] })
+  })
+
+  describe('while the server is still preparing the descriptions it groups on', () => {
+    const preparing = () => json({ error: 'Descriptions are being prepared' }, { status: 503 })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('asks again a second later, and gets the series once it can give them', async () => {
+      vi.useFakeTimers()
+      const fetchMock = serve(preparing(), preparing(), json({ revision: 'abc', series: [] }))
+      const read = apiLedgerParts.readSeriesPart()
+      await vi.advanceTimersByTimeAsync(2500)
+      await expect(read).resolves.toEqual({ revision: 'abc', series: [] })
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+    })
+
+    it('gives the 503 to the caller after a few tries, and does not ask again for any other failure', async () => {
+      vi.useFakeTimers()
+      const fetchMock = serve(preparing(), preparing(), preparing(), preparing(), preparing())
+      const gave = apiLedgerParts.readSeriesPart().catch((error: unknown) => error)
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await gave).toEqual(new ApiError('Descriptions are being prepared', 503))
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+      serve(json({ error: 'Boom' }, { status: 500 }))
+      await expect(apiLedgerParts.readSeriesPart()).rejects.toEqual(new ApiError('Boom', 500))
+    })
   })
 })
