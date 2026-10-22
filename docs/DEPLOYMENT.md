@@ -290,8 +290,8 @@ days of snapshots, deleting the oldest first when over budget. The Pages env var
 add matching `[vars]` in `workers/backup-cron/wrangler.toml`.
 
 **Verify.** Cloudflare dashboard → Workers & Pages → expense-backup-cron → Triggers shows the cron (`0 4 * * *` UTC).
-After the first run, check the backups bucket.  To restore, download the JSON from R2 and re-import it with `wrangler d1
-execute` or a one-off script.
+After the first run, check the backups bucket. Restoring, and the resumable form for a large ledger, are in
+[BACKUPS.md](./BACKUPS.md), which also covers a merge that leaves this worker undeployed.
 
 **Alerts.** A large snapshot, or bucket usage above 80% of the cap, notifies through the `BackupAlerts` port. Put
 recipients in gitignored `config/backup-alerts.json` (copy `backup-alerts.example.json`) and run `npm run

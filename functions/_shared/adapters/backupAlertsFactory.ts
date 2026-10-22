@@ -49,7 +49,7 @@ function formatIncomplete({ owner, dateKey }: IncompleteBackupDetails): string {
     'Expense tracker backup alert: a backup did not finish',
     `Owner: ${owner}`,
     `Day: ${dateKey}`,
-    'The last complete backup is the one before it. Check that the worker has the extra cron triggers that chunked mode needs (docs/DEPLOYMENT.md).',
+    'The last complete backup is the one before it. Check that the worker has the frequent cron trigger that chunked mode needs (docs/BACKUPS.md).',
   ].join('\n')
 }
 

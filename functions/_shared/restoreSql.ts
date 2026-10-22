@@ -1,7 +1,7 @@
 /**
  * A backup turned back into rows: the INSERT statements that rebuild one owner's ledger in a database that has
  * the schema and none of their data. It only writes text. Nothing here connects to a database; a person looks
- * at the statements and applies them (docs/DEPLOYMENT.md, "Restoring from a backup").
+ * at the statements and applies them (docs/BACKUPS.md, "Restoring").
  *
  * Rows are inserted with the ids they had, in the order of `EXPORT_TABLES`, so every reference points at a row
  * that is already there. The dataset holds everything the app reads, which is not every column: timestamps the

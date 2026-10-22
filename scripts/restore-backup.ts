@@ -4,14 +4,14 @@
  *
  *   # 1. Download the backup from the bucket (the key is  <owner>/<YYYY-MM-DD>/  for a chunked backup, or
  *   #    <owner>/<YYYY-MM-DD>.json  for a single-file snapshot):
- *   npx wrangler r2 object get roy-expenses-backups/<owner>/<date>/manifest.json --file backup/<owner>/<date>/manifest.json
+ *   npx wrangler r2 object get <bucket>/<owner>/<date>/manifest.json --file backup/<owner>/<date>/manifest.json
  *   #    ...and each part the manifest lists, to the same path under backup/.
  *   # 2. Generate the SQL:
  *   npx tsx scripts/restore-backup.ts --dir backup --owner <owner> --date <YYYY-MM-DD> --out restore.sql
  *   # 3. Apply it to an EMPTY database that has every migration (a new D1 database, or a local one), never to the
  *   #    live one:  npx wrangler d1 execute <new-database> --remote --file=restore.sql
  *
- * Add `--as <email>` to restore the rows under another owner. See docs/DEPLOYMENT.md, "Restoring from a backup".
+ * Add `--as <email>` to restore the rows under another owner. See docs/BACKUPS.md, "Restoring".
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

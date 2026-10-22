@@ -1,5 +1,5 @@
 /**
- * The resumable backup (docs/DEPLOYMENT.md, "Chunked backups"). The single-file snapshot loads the whole
+ * The resumable backup (docs/BACKUPS.md). The single-file snapshot loads the whole
  * dataset and stringifies it in one invocation, which meets the Worker's CPU limit at a few thousand
  * transactions. This walks the ledger with the export, one chunk of one table at a time, and writes what it
  * reads as parts. An invocation does as much as its budget allows (D1 queries plus bucket calls, and rows),
