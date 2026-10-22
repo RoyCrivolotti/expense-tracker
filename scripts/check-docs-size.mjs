@@ -9,7 +9,10 @@ import { join, relative } from 'node:path'
 
 export const LIMIT = 300
 
-/** Docs allowed past the limit, each with the reason. Prefer splitting a doc to adding one here. */
+/**
+ * Docs allowed past the limit, each with the reason. Prefer splitting a doc to adding one here.
+ * @type {Record<string, string>}
+ */
 export const EXCEPTIONS = {
   'docs/CHANGELOG.md': 'An append-only record of product changes, read by date and never as one document.',
 }
@@ -23,7 +26,13 @@ export function markdownFiles(root, dir = join(root, 'docs')) {
   })
 }
 
-/** What is wrong with `sizes`, a map of doc path to line count. Empty when nothing is. */
+/**
+ * What is wrong with `sizes`, a map of doc path to line count. Empty when nothing is.
+ * @param {Record<string, number>} sizes
+ * @param {number} [limit]
+ * @param {Record<string, string>} [exceptions]
+ * @returns {string[]}
+ */
 export function sizeProblems(sizes, limit = LIMIT, exceptions = EXCEPTIONS) {
   const problems = []
   for (const [file, lines] of Object.entries(sizes)) {
