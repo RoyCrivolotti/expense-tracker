@@ -602,7 +602,8 @@ export async function bulkUpdateTransactions(
 ): Promise<Transaction[]> {
   if (ids.length === 0) return []
   await runBulkBatch(env, await planBulkUpdate(env, owner, ids, patch))
-  // One read however many rows were edited; reading each back with deriveOne cost three queries a row.
+  // One read for all the rows, with status and labels derived in SQL, so an edit costs the same statements for 1 id
+  // as for 500.
   return getTransactionsByIds(env, owner, ids)
 }
 

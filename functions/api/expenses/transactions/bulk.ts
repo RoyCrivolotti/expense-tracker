@@ -56,7 +56,8 @@ interface BulkUpdateBody {
 /**
  * Two forms. `{ ids, patch }` edits the rows named (up to 500) and answers `{ updated, transactions }`.
  * `{ filter, expectedCount, expectedRevision, patch }` edits the rows a filter matches and answers
- * `{ updated }`; the rows are not sent back, because reading each one back costs three queries.
+ * `{ updated }`; the rows are not sent back, because a filter can match up to `MAX_FILTER_EDIT_ROWS` of them and the
+ * caller reads back the ones it shows.
  *
  * The filter is a `TxnFilter` as JSON, validated by the function the paged reads use. `expectedCount` and
  * `expectedRevision` are what the user was shown: `count` and `revision` of `GET /transactions/summary` for that

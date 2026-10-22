@@ -140,8 +140,8 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   requests. A write from another tab in between that swaps one matching row for another leaves the count as it was, so
   the edit can reach a row the user was not shown; the server has no single request for both. Rows chosen one by one
   are edited through the filter too when they are exactly the rows it matches: that costs about a statement for every
-  twenty rows, an edit by id three for each, so by id a request names at most 100 until a larger one has been measured
-  on D1. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
+  twenty rows. An edit by id is a handful of statements however many ids it names, but nothing larger than 100 has been
+  run on D1, so by id a request names at most 100 until one has. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
   so it counts it as not shown.
 
 ## What a window cannot work out from its rows
