@@ -164,6 +164,7 @@ export function makeLookup(overrides: Partial<Lookup> = {}): Lookup {
     flag: () => undefined,
     label: () => undefined,
     attachments: () => [],
+    attachmentCount: () => 0,
     categoryName: () => '',
     accountName: () => '',
     installmentPlan: () => undefined,

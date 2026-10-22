@@ -1,5 +1,6 @@
 import { buildDescriptionIndex } from '../data/descriptionIndex'
 import { recurringFixedGroups } from '../domain/engine'
+import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import { type Ledger, assembleRows, ledgerDataset, ledgerMonths } from '../domain/ledger'
 import type { Transaction } from '../types'
 import { buildLookup } from './format'
@@ -11,6 +12,8 @@ export interface LedgerModelOptions {
    * for one that does: the engines then build their own from the rows they are handed, as they do today.
    */
   history?: FixedHistory
+  /** Receipts per transaction, for a ledger whose receipt lists are read on request. */
+  attachmentCounts?: AttachmentCounts
 }
 
 /** The series of `rows`, which must be the whole history. */
@@ -29,9 +32,10 @@ export function buildLedgerModel(ledger: Ledger, options: LedgerModelOptions = {
   return {
     dataset,
     ...(linear.length === real.length ? {} : { sums: ledgerDataset(ledger, linear) }),
-    lookup: buildLookup(dataset),
+    lookup: buildLookup(dataset, options.attachmentCounts),
     descriptionIndex: buildDescriptionIndex(real),
     months: ledgerMonths(ledger),
     ...(options.history ? { history: options.history } : {}),
+    ...(options.attachmentCounts ? { attachmentCounts: options.attachmentCounts } : {}),
   }
 }

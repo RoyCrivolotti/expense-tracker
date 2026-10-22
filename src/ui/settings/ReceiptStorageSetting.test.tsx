@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { makeAttachment } from '../../testing/factories'
 import { ReceiptStorageSetting } from './ReceiptStorageSetting'
 
@@ -54,5 +54,20 @@ describe('ReceiptStorageSetting', () => {
   it('reports a full store as 100%', () => {
     render(<ReceiptStorageSetting attachments={[makeAttachment({ id: 1, byteSize: 3 * GB })]} />)
     expect(screen.getByText('100%')).toBeInTheDocument()
+  })
+
+  it('asks for every receipt list once when the model reads them on request', () => {
+    const ensureAll = vi.fn()
+    const { rerender } = render(<ReceiptStorageSetting attachments={[]} pending={2} ensureAll={ensureAll} />)
+    rerender(<ReceiptStorageSetting attachments={[]} pending={1} ensureAll={ensureAll} />)
+    expect(ensureAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows no figure while lists are pending, since it would be partial, and shows it once they are in', () => {
+    const attachments = [makeAttachment({ id: 1, byteSize: 900 })]
+    const { container, rerender } = render(<ReceiptStorageSetting attachments={attachments} pending={1} />)
+    expect(container).toBeEmptyDOMElement()
+    rerender(<ReceiptStorageSetting attachments={attachments} pending={0} />)
+    expect(screen.getByText(/1 receipt stored/)).toBeInTheDocument()
   })
 })

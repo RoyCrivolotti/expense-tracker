@@ -79,12 +79,15 @@ pinned rows are in no cell. Code: [`cube.ts`](../functions/api/expenses/cube.ts)
 
 ## GET /attachments
 
-The receipts of one transaction, oldest first. Code:
+The receipts of one transaction, oldest first, or of every transaction the caller has when none is named. Code:
 [`attachments/index.ts`](../functions/api/expenses/attachments/index.ts).
 
-- Parameters: `transactionId`. A missing or non-positive id is a 400. A transaction that is not the caller's has no
-  receipts as far as the caller can tell.
-- Not conditional. Cost: the transaction's receipt rows.
+- Parameters: `transactionId`, optional. Without it the answer is every receipt the caller has, by transaction and then
+  id, which is what the dataset route carries and what a screen that needs them all asks for (the storage meter). A
+  non-positive or non-integer id is a 400. A transaction that is not the caller's has no receipts as far as the caller
+  can tell.
+- Not conditional. Cost: the receipt rows asked for. Without a `transactionId` that is every receipt the owner has,
+  which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
 
 ## GET /transactions/list
 

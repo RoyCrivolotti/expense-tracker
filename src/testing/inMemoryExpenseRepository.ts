@@ -813,7 +813,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     listAttachments: (owner, transactionId) => {
       const store = storeFor(owner)
-      return Promise.resolve(store.attachments.filter((a) => a.transactionId === transactionId))
+      const mine = store.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
+      return Promise.resolve([...mine].sort((a, b) => a.transactionId - b.transactionId || a.id - b.id))
     },
 
     findAttachmentSource: (owner, id) => {

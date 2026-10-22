@@ -121,6 +121,11 @@ export interface LedgerPartsSource {
   readMonthsPart(range: MonthRange): Promise<MonthRowsPart>
   /** The per-month sums of the unpinned rows in the range, inclusive. */
   readCubePart(range: MonthRange): Promise<CubePart>
+  /**
+   * The receipts of one transaction, oldest first, or of every transaction when none is named. The parts
+   * only say which transactions have any.
+   */
+  readReceiptsPart(transactionId?: number): Promise<TransactionAttachment[]>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
@@ -176,11 +181,12 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   deleteWealthCheckin?(id: number): Promise<void>
 }
 
-/** Whether a source can serve the ledger in parts. Every source that can serve one part serves all three. */
+/** Whether a source can serve the ledger in parts. Every source that can serve one part serves all of them. */
 export function hasLedgerParts(source: ExpenseDataSource): source is ExpenseDataSource & LedgerPartsSource {
   return (
     source.readReferencePart !== undefined &&
     source.readMonthsPart !== undefined &&
-    source.readCubePart !== undefined
+    source.readCubePart !== undefined &&
+    source.readReceiptsPart !== undefined
   )
 }

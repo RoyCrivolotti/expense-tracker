@@ -9,14 +9,18 @@
  * newest rows by date and by when they were added) and the counts of how many transactions carry each label,
  * in Settings (docs/ENGINE-HISTORY.md).
  */
-import { cleanup, fireEvent, render, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { sortedMonths } from '../domain/engine/dates'
+import { ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
+import { LedgerSession } from '../data/ledgerSession'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy, ledgerFor } from '../domain/ledger'
+import { memorySource } from '../testing/ledgerSource'
 import type { ExpenseDataset } from '../domain/types'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { installFakeMatchMedia } from '../testing/fakeMatchMedia'
+import { makeAttachment } from '../testing/factories'
 import { makeActions } from '../testing/makeActions'
 import { samplePlan } from '../testing/samplePlan'
 import { syntheticLedger } from '../testing/syntheticLedger'
@@ -26,6 +30,8 @@ import type { ExpenseModel } from './useExpenseData'
 import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { DashboardTab } from './tabs/DashboardTab'
 import { SettingsTab } from './tabs/SettingsTab'
+import { ExpenseReportView } from './tabs/ExpenseReportView'
+import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { GoalsTab } from './tabs/goals/GoalsTab'
 
@@ -150,3 +156,96 @@ describe('the screens over a window, compared with every row', () => {
   }, 120_000)
 })
 
+
+/** What the receipts show in the places that read them: the marks on the rows, the storage meter, a claim. */
+describe('the screens that show receipts, over a model that reads the lists on request', () => {
+  const base = adversarialLedger()
+  const flagged = base.transactions.filter((t) => t.flagId != null && t.type === 'expense').slice(0, 2)
+  // Receipts only on rows that exist (the server cannot hold any other), and two on claimed rows.
+  const dataset = {
+    ...base,
+    attachments: [
+      ...base.attachments.filter((a) => base.transactions.some((t) => t.id === a.transactionId)),
+      ...flagged.map((t, i) => makeAttachment({ id: 9_000 + i, transactionId: t.id, byteSize: 50_000 })),
+    ],
+  }
+  const month = sortedMonths(dataset.transactions.map((t) => t.budgetMonth)).at(-1)!
+  const counted = [...new Set(dataset.attachments.map((a) => a.transactionId))]
+  const withoutLists = (ledger: ReturnType<typeof ledgerFor>) => ({ ...ledger, reference: { ...ledger.reference, attachments: [] } })
+
+  async function readAll(): Promise<ExpenseModel> {
+    const session = new LedgerSession(memorySource(dataset))
+    await session.open()
+    session.loadReceipts(counted)
+    await waitFor(() => expect(receiptsPending(session.getState().held!)).toBe(0))
+    const held = session.getState().held!
+    return { ...buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts }), receiptsPending: 0 }
+  }
+
+  const marks = (model: ExpenseModel, shown: string) => {
+    const { container } = render(<TransactionsTab model={model} month={shown} />)
+    const labels = [...container.querySelectorAll('[role="img"][aria-label$="receipt"], [role="img"][aria-label$="receipts"]')]
+    cleanup()
+    return labels.map((el) => el.getAttribute('aria-label'))
+  }
+  const receiptMonths = [
+    ...new Set(dataset.transactions.filter((t) => counted.includes(t.id)).map((t) => t.budgetMonth)),
+  ]
+
+  it('has receipts in the data to compare', () => {
+    expect(counted.length).toBeGreaterThan(0)
+    expect(receiptMonths.length).toBeGreaterThan(0)
+  })
+
+  it('marks the rows the same, from the counts alone and after the lists are read', async () => {
+    const whole = buildExpenseModel(dataset)
+    const unread = buildLedgerModel(withoutLists(ledgerFor(dataset, month)), {
+      attachmentCounts: Object.fromEntries(counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length])),
+    })
+    const read = await readAll()
+    expect(unread.dataset.attachments).toEqual([])
+    for (const shown of receiptMonths.slice(0, 4)) {
+      const expected = marks(whole, shown)
+      expect(expected.length, shown).toBeGreaterThan(0)
+      expect(marks(unread, shown), shown).toEqual(expected)
+      expect(marks(read, shown), shown).toEqual(expected)
+    }
+  })
+
+  it('shows the same storage meter once the lists are read, and none while they are pending', async () => {
+    const meter = (model: ExpenseModel) => {
+      const { container } = render(<SettingsTab model={model} month={month} actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />)
+      fireEvent.click(within(container).getAllByRole('tab', { name: 'Data' })[0]!)
+      const text = container.textContent ?? ''
+      cleanup()
+      return text.slice(Math.max(0, text.indexOf('Receipt storage')))
+    }
+    const whole = meter(buildExpenseModel(dataset))
+    expect(whole).toContain('Receipt storage')
+    expect(meter(await readAll())).toBe(whole)
+    const pending = { ...buildExpenseModel(dataset), dataset: { ...dataset, attachments: [] }, receiptsPending: counted.length }
+    expect(meter(pending)).not.toContain('Receipt storage')
+  })
+
+  it('shows a claim the same once its rows’ lists are read, and waits until then', async () => {
+    const flagId = dataset.flags.find((f) => dataset.transactions.some((t) => t.flagId === f.id && dataset.attachments.some((a) => a.transactionId === t.id)))?.id
+    expect(flagId).toBeDefined()
+    const report = (model: ExpenseModel) => {
+      const { container } = render(
+        <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+          <ExpenseReportView dataset={model.dataset} lookup={model.lookup} flagId={flagId!} onClose={vi.fn()} issuedOn="2026-09-12" />
+        </MoneyFormatProvider>,
+      )
+      const text = document.body.textContent ?? ''
+      cleanup()
+      void container
+      return text
+    }
+    const whole = report(buildExpenseModel(dataset))
+    expect(report(await readAll())).toBe(whole)
+    const unread = buildLedgerModel(withoutLists(ledgerFor(dataset, month)), {
+      attachmentCounts: Object.fromEntries(counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length])),
+    })
+    expect(report(unread)).toContain('Loading receipts…')
+  })
+})

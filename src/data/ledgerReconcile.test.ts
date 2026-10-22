@@ -6,17 +6,19 @@ import type { Ledger } from '../domain/ledger'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { sortedMonths } from '../domain/engine/dates'
 import {
+  patchAfterAttachmentAdd,
+  patchAfterAttachmentDelete,
   patchAfterFlagDelete,
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
-import { makeTransaction } from '../testing/factories'
+import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { randomLedger } from '../testing/randomLedger'
 import { syntheticLedger } from '../testing/syntheticLedger'
-import { type HeldLedger, holdCells, holdParts } from './ledgerHold'
+import { type HeldLedger, holdCells, holdParts, holdReceipts } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
 import { datasetOfHeld, reconcileHeld } from './ledgerReconcile'
 import { inMemoryLedgerParts } from './inMemoryLedgerParts'
@@ -76,7 +78,7 @@ describe('reconcileHeld, for one change at a time', () => {
     const before = datasetOfHeld(held)
     const reconciled = reconcileHeld(held, before, structuredClone(before), newest)
     expect(reconciled.held).toBe(held)
-    expect(reconciled.changed).toEqual({ reference: false, rows: false })
+    expect(reconciled.changed).toEqual({ reference: false, rows: false, receipts: false })
     expect(reconciled.stale).toEqual([])
   })
 
@@ -156,7 +158,7 @@ describe('reconcileHeld, for one change at a time', () => {
     const before = datasetOfHeld(held)
     const after = { ...before, settings: { ...before.settings, openingCashCents: 7 } }
     const reconciled = reconcileHeld(held, before, after, newest)
-    expect(reconciled.changed).toEqual({ reference: true, rows: false })
+    expect(reconciled.changed).toEqual({ reference: true, rows: false, receipts: false })
     expect(reconciled.held.reference.settings.openingCashCents).toBe(7)
     expect(reconciled.held.rows).toEqual(held.rows)
     expect(reconciled.held.revision).toBeNull()
@@ -203,4 +205,57 @@ describe('reconcileHeld, for sequences of changes', () => {
       }
     }
   }, 60_000)
+})
+
+describe('reconcileHeld, receipts', () => {
+  const withReceipts: ExpenseDataset = makeDataset({
+    transactions: [row(1, '2026-01'), row(2, '2026-01'), row(3, '2026-02')],
+    attachments: [makeAttachment({ id: 1, transactionId: 1 }), makeAttachment({ id: 2, transactionId: 1 }), makeAttachment({ id: 3, transactionId: 2 })],
+  })
+
+  async function loaded(read: number[]) {
+    let held = await hold(withReceipts, '2026-02')
+    for (const id of read) {
+      const list = withReceipts.attachments.filter((a) => a.transactionId === id)
+      held = holdReceipts(held, id, list)
+    }
+    return held
+  }
+
+  it('holds a receipt added to a transaction whose list was read, and counts it', async () => {
+    const held = await loaded([1])
+    const added = makeAttachment({ id: 9, transactionId: 1 })
+    const done = reconcileHeld(held, datasetOfHeld(held), patchAfterAttachmentAdd(datasetOfHeld(held), added), '2026-02')
+    expect(done.changed.receipts).toBe(true)
+    expect(done.held.receipts.get(1)!.map((a) => a.id)).toEqual([1, 2, 9])
+    expect(done.held.attachmentCounts[1]).toBe(3)
+    expect(done.partialReceipts).toEqual([])
+  })
+
+  it('says the list is partial when a receipt is added before the transaction’s list was read', async () => {
+    const held = await loaded([])
+    const added = makeAttachment({ id: 9, transactionId: 1 })
+    const done = reconcileHeld(held, datasetOfHeld(held), patchAfterAttachmentAdd(datasetOfHeld(held), added), '2026-02')
+    expect(done.partialReceipts).toEqual([1])
+    expect(done.held.receipts.get(1)!.map((a) => a.id)).toEqual([9])
+  })
+
+  it('drops a deleted receipt and the count when it was the last', async () => {
+    const held = await loaded([1, 2])
+    const before = datasetOfHeld(held)
+    const once = reconcileHeld(held, before, patchAfterAttachmentDelete(before, 3), '2026-02')
+    expect(once.held.receipts.get(2)).toEqual([])
+    expect(once.held.attachmentCounts[2]).toBeUndefined()
+    const twice = reconcileHeld(once.held, datasetOfHeld(once.held), patchAfterAttachmentDelete(datasetOfHeld(once.held), 1), '2026-02')
+    expect(twice.held.attachmentCounts[1]).toBe(1)
+  })
+
+  it('forgets the receipts of a deleted transaction', async () => {
+    const held = await loaded([1, 2])
+    const before = datasetOfHeld(held)
+    const done = reconcileHeld(held, before, patchAfterTransactionDelete(before, 1), '2026-02')
+    expect(done.held.receipts.has(1)).toBe(false)
+    expect(done.held.attachmentCounts[1]).toBeUndefined()
+    expect(done.held.receipts.get(2)).toHaveLength(1)
+  })
 })

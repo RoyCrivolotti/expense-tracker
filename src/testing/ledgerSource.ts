@@ -10,7 +10,7 @@ import type { ExpenseDataset, Transaction } from '../domain/types'
 export interface TestSource extends LedgerPartsSource {
   /** What is served. A test replaces it to add a row under a read. */
   dataset: ExpenseDataset
-  /** Every call made, in order: `reference`, `months:<from>..<to>` or `cube:<from>..<to>`. */
+  /** Every call made, in order: `reference`, `months:<from>..<to>`, `cube:<from>..<to>` or `receipts:<id>`. */
   calls: string[]
   /** The revision parts are served under. */
   revision: string
@@ -46,6 +46,10 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
     readCubePart(range) {
       note(`cube:${range.from}..${range.to}`)
       return served.readCubePart(range)
+    },
+    readReceiptsPart(transactionId) {
+      note(transactionId === undefined ? 'receipts' : `receipts:${transactionId}`)
+      return served.readReceiptsPart(transactionId)
     },
   }
   return source

@@ -35,18 +35,19 @@ function optionalNumber(form: FormData, field: string): number | undefined {
 }
 
 /**
- * The receipts of one transaction, oldest first: `?transactionId=`. The reference and rows parts say
- * which rows have any (`attachmentCounts`) instead of listing every receipt. A transaction that is not
- * the caller's has no receipts as far as the caller can tell.
+ * The receipts of one transaction, oldest first: `?transactionId=`. Without it, every receipt the caller has
+ * (metadata, as the dataset lists them), for a screen that needs them all and would otherwise ask one
+ * transaction at a time. The reference and rows parts say which rows have any (`attachmentCounts`) instead
+ * of listing every receipt. A transaction that is not the caller's has no receipts as far as the caller can
+ * tell.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const { repo, owner } = context.data
   try {
     const { transactionId } = singleParams(new URL(context.request.url), ['transactionId'])
+    if (transactionId === undefined) return json(await repo.listAttachments(owner))
     const id = Number(transactionId)
-    if (transactionId === undefined || !Number.isInteger(id) || id <= 0) {
-      throw new HttpError(400, 'Invalid transactionId')
-    }
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Invalid transactionId')
     return json(await repo.listAttachments(owner, id))
   } catch (error) {
     mapAppError(error)

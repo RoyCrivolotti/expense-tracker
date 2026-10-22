@@ -51,6 +51,7 @@ function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cas
       flag: () => undefined,
       label: () => undefined,
       attachments: () => [],
+      attachmentCount: () => 0,
       installmentPlan: () => undefined,
       settlementFor: () => undefined,
       settledBy: () => [],

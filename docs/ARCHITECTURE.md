@@ -163,8 +163,10 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   cache does the revalidation: a request that names `If-None-Match` itself skips that cache, so the client sends none,
   and a 304 that reaches it anyway is read again past the cache. A server without the routes, or a body of another
   shape, is a `PartsUnavailableError`, and the caller loads the whole dataset. Requests stay inside the route bounds
-  (`planRowRanges`, `planCubeRanges`), and a ledger built from parts has no receipt list, since a row's receipts are
-  read when needed.
+  (`planRowRanges`, `planCubeRanges`), and a ledger built from parts has no receipt list: the parts count a row's
+  receipts, and a screen that shows them asks for the lists it needs through `model.ensureReceipts` (the edit sheet for
+  its transaction, a claim for its rows, the storage meter for all of them). A few lists are one request each; more
+  than a few are one request for every receipt the owner has ([`GET /attachments`](./API.md#get-attachments)).
 - **A screen reads one of two row lists, and the wrong one is wrong only when the model holds a window.**
   `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what engines that read dates,
   descriptions, labels or links are given. `sumsOf(model)` adds one row per summed cell and goes to the engines that

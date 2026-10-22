@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ExpenseTheme } from '../hooks/useExpenseTheme'
 import type { ExpenseModel } from '../useExpenseData'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -231,6 +231,11 @@ function DataView({
   month: string
   actions: ExpenseActions | undefined
 }) {
+  const { ensureReceipts, attachmentCounts } = model
+  const ensureAll = useMemo(
+    () => (ensureReceipts ? () => ensureReceipts(Object.keys(attachmentCounts ?? {}).map(Number)) : undefined),
+    [ensureReceipts, attachmentCounts],
+  )
   return (
     <>
       <SectionTitle>Export</SectionTitle>
@@ -247,7 +252,11 @@ function DataView({
         </>
       )}
 
-      <ReceiptStorageSetting attachments={model.dataset.attachments} />
+      <ReceiptStorageSetting
+        attachments={model.dataset.attachments}
+        pending={model.receiptsPending ?? 0}
+        {...(ensureAll ? { ensureAll } : {})}
+      />
     </>
   )
 }

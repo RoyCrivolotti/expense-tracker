@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { computeReceiptStorage, formatStorageSize } from '../../domain/engine/receiptStorage'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { TransactionAttachment } from '../../types'
@@ -19,6 +20,10 @@ function toneFor(ratio: number): Tone {
 
 interface Props {
   attachments: TransactionAttachment[]
+  /** Transactions with receipts whose list has not been read: the figures would be partial until it has. */
+  pending?: number
+  /** Reads every receipt list, for a model that reads them on request. */
+  ensureAll?: () => void
 }
 
 /**
@@ -28,8 +33,11 @@ interface Props {
  * on a screen nobody scrolls, and the limit is enforced server-side with a clear
  * message whether or not this is on screen.
  */
-export function ReceiptStorageSetting({ attachments }: Props) {
-  if (attachments.length === 0) return null
+export function ReceiptStorageSetting({ attachments, pending = 0, ensureAll }: Props) {
+  useEffect(() => {
+    ensureAll?.()
+  }, [ensureAll])
+  if (pending > 0 || attachments.length === 0) return null
 
   const usage = computeReceiptStorage(attachments, RECEIPT_CLIENT_POLICY.maxOwnerBytes)
   const pct = Math.round(usage.ratio * 100)

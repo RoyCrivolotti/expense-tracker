@@ -3,15 +3,17 @@ import { shiftBudgetMonth } from '../domain/engine/dates'
 import type { MonthRange } from '../domain/data/ledgerParts'
 import { DEFAULT_HYDRATION_POLICY, type HydrationPolicy } from '../domain/ledger'
 import { planRowRanges } from '../domain/ledger/partsPlan'
-import type { ExpenseDataset } from '../domain/types'
+import type { ExpenseDataset, TransactionAttachment } from '../domain/types'
 import {
   type HeldLedger,
   evictMonths,
   holdCells,
   holdParts,
+  holdReceiptLists,
   holdRows,
   missingMonths,
   monthsToHold,
+  receiptsToRead,
   touchMonths,
   wantedMonths,
 } from './ledgerHold'
@@ -37,6 +39,8 @@ export interface SessionOptions {
 }
 
 const DEFAULT_MAX_HELD_MONTHS = 48
+/** Receipt lists asked for at once: one request each, and a screen may ask for hundreds. */
+const RECEIPT_REQUESTS_AT_ONCE = 6
 const REFRESH_ATTEMPTS = 3
 
 /** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
@@ -62,6 +66,7 @@ export class LedgerSession {
   private epochs: Epochs = NO_EPOCHS
   private readonly stale = new Set<string>()
   private flushing = false
+  private readonly readingReceipts = new Set<number>()
   /** How many refreshes have started, and the newest one's outcome. */
   private refreshes = 0
   private latest: Promise<void> = Promise.resolve()
@@ -190,7 +195,7 @@ export class LedgerSession {
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
-    if (!done.changed.rows && !done.changed.reference) return
+    if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return
     const touched: Array<'reference' | 'rows' | 'cube'> = [
       ...(done.changed.reference ? (['reference'] as const) : []),
       ...(done.changed.rows ? (['rows'] as const) : []),
@@ -199,8 +204,58 @@ export class LedgerSession {
     this.epochs = bump(this.epochs, touched)
     for (const month of done.stale) this.stale.add(month)
     this.set({ held: done.held })
+    if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
     if (cascadeOf(before, after)) this.refresh().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
+  }
+
+  /**
+   * Reads the receipts of these transactions into what is held. The parts only count them, and a screen that
+   * shows them asks here. Lists already read are not read again; a failed read is kept in `error`.
+   */
+  loadReceipts = (ids: readonly number[]): void => {
+    void this.readReceipts(ids, false)
+  }
+
+  /** `again` reads a list that is held too, for one that a write left partial. */
+  private async readReceipts(ids: readonly number[], again: boolean): Promise<void> {
+    const held = this.state.held
+    if (!held) return
+    const wanted = (again ? [...ids] : receiptsToRead(held, ids)).filter((id) => !this.readingReceipts.has(id))
+    for (const id of wanted) this.readingReceipts.add(id)
+    try {
+      if (!again && wanted.length > RECEIPT_REQUESTS_AT_ONCE) await this.readAllReceipts(wanted)
+      else await this.readReceiptLists(wanted, again)
+    } catch (error) {
+      this.set({ error: reason(error) })
+    } finally {
+      for (const id of wanted) this.readingReceipts.delete(id)
+    }
+  }
+
+  /** A list a request at a time, a few at once. */
+  private async readReceiptLists(wanted: number[], again: boolean): Promise<void> {
+    for (let at = 0; at < wanted.length; at += RECEIPT_REQUESTS_AT_ONCE) {
+      const chunk = wanted.slice(at, at + RECEIPT_REQUESTS_AT_ONCE)
+      const lists = await Promise.all(chunk.map((id) => this.source.readReceiptsPart(id)))
+      const now = this.state.held
+      if (!now) return
+      this.set({ held: holdReceiptLists(now, chunk, lists, again) })
+    }
+  }
+
+  /** More than a few lists are one request for every receipt, as the dataset carries them, not a request each. */
+  private async readAllReceipts(wanted: number[]): Promise<void> {
+    const all = await this.source.readReceiptsPart()
+    const now = this.state.held
+    if (!now) return
+    const byTransaction = new Map<number, TransactionAttachment[]>()
+    for (const receipt of all) {
+      const list = byTransaction.get(receipt.transactionId)
+      if (list) list.push(receipt)
+      else byTransaction.set(receipt.transactionId, [receipt])
+    }
+    this.set({ held: holdReceiptLists(now, wanted, wanted.map((id) => byTransaction.get(id) ?? []), false) })
   }
 
   /** Reads again the sums of the months a write moved, until none is waiting. */
