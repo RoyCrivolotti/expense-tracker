@@ -48,10 +48,10 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
 - **Pickers and reassign targets offer only active categories and accounts**, so nothing new is linked to something
   archived. The one exception is a form's own current value, so editing an unrelated field never breaks the form
   (`src/ui/components/pickerOptions.ts`).
-- **A field the running client reads is dropped in a later release.** An installed app keeps its old code until its owner
-  taps the update banner, and re-reads the data meanwhile. `GoalScenarioDto` (`functions/_shared/rows.ts`) still sends
-  `annualContributionGrowth` as 0 for that reason: without it a client opened before the deploy multiplies `undefined`
-  into every projection and the Goals tab shows NaN until reload.
+- **A field the running client reads is dropped in a later release.** An installed app keeps its old code until its
+  owner taps the update banner, and re-reads the data meanwhile. `GoalScenarioDto` (`functions/_shared/rows.ts`) still
+  sends `annualContributionGrowth` as 0 for that reason: without it a client opened before the deploy multiplies
+  `undefined` into every projection and the Goals tab shows NaN until reload.
 - **Real emails, figures and identifiers never reach a tracked file.** The source is public. Commit a placeholder
   (`owner@example.com`) with a comment telling whoever applies the change to substitute the real value, and keep real
   per-deployment config gitignored beside a committed `*.example.json`. `scripts/check-pii.mjs` fails `npm run verify`
@@ -63,7 +63,10 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   leaves browsers on stale data until the owner's next write. The paths that change the dataset's tables are:
   - `functions/api/_middleware.ts`, which replaces it before and after every request that is not a GET, HEAD or OPTIONS.
     The second replacement also runs when the handler throws or answers an error, since the write may have landed, and
-    is retried once.
+    is retried once. The first one reads the token it replaces in the same batch and hands it to the handler as
+    `context.data.revisionBeforeWrite`. A route that takes the revision its user was looking at (`expectedRevision`)
+    compares it with that, through `assertRevisionUnchanged`, and never with the table, which by then holds the new
+    token.
   - `backfillInstallments`, when it inserted rows. It writes during a GET (the dataset, reference and usage routes), and
     the backup reaches it through `loadDataset`.
   - `purgeOwnerData`, which deletes the row, and anything else that writes those tables outside the API (a seed script,
@@ -127,6 +130,19 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore order and `EXPORT_CHUNK_ROWS`
   bounds every table. A new dataset table or column needs a new entry or mapper there and a raise of `EXPORT_FORMAT`. A
   parity test fails when the chunks put end to end stop equalling `loadDataset`'s table.
+
+### Bulk writes
+
+- **A bulk write on a filter is refused unless the user's view still holds, and it is one atomic batch.** `PATCH
+  /transactions/bulk` and `POST /transactions/bulk/labels` with a filter find the ids with `idsSql` (the list's WHERE,
+  capped at `MAX_FILTER_EDIT_ROWS`, the summary's count cap: refused above it and never cut), compare the count and the
+  revision, and write through `planBulkUpdate`, which the ids form uses too, so a new rule for a bulk patch goes there.
+  The batch starts with a guard (`matchGuardSql`, built on `batchGuard.ts`) that fails unless exactly the ids that were
+  read still match, so nothing is written when the ledger moved in between, and a settling batch ends with a second one.
+  A settle conflict that appears after the check undoes the batch (409) instead of committing the rows that qualified.
+  The filter is validated by `validateTxnFilter`, the validator of the paged reads, and `dbBulkEdit.parity.test.ts`
+  holds the SQL to the engine's own filter. The cap is raised only after the rows written per edit are measured on a
+  deployed D1. A delete never takes a filter ([decision](./decisions/no-filter-based-delete.md)).
 
 ### In the browser
 
