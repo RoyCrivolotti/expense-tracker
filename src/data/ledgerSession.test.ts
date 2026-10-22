@@ -5,9 +5,17 @@ import { sortedMonths } from '../domain/engine/dates'
 import { withoutFlag } from '../domain/engine/flagGroups'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import {
+  patchAfterAccountDelete,
   patchAfterAttachmentAdd,
+  patchAfterBulkUpdate,
+  patchAfterCategoryDelete,
+  patchAfterFlag,
   patchAfterFlagDelete,
   patchAfterInstallmentPlanCreate,
+  patchAfterInstallmentPlanDelete,
+  patchAfterInstallmentPlanUpdate,
+  patchAfterLabelDelete,
+  patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
@@ -20,6 +28,7 @@ import { readLedgerParts } from './ledgerLoader'
 import { LedgerSession, rangesOfMonths } from './ledgerSession'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
+const FULL: HydrationPolicy = { fullBelowRows: 1_000_000, dataMonths: HYDRATED_DATA_MONTHS }
 const dataset = adversarialLedger()
 const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
 const newest = months.at(-1)!
@@ -823,5 +832,73 @@ describe('LedgerSession, an empty ledger', () => {
     await session.open()
     expect(session.getState().held!.months).toEqual([])
     expect(session.getState().viewed).toBe('')
+  })
+})
+
+/**
+ * `dataset` with a category, an account and a label that only rows of the oldest month use, which a window does not
+ * hold: what a delete of them reaches is rows the patch cannot show.
+ */
+const OLD = 9_999
+function withOldOnly(): ExpenseDataset {
+  const oldest = months[0]!
+  const rows = dataset.transactions.filter((t) => t.budgetMonth === oldest && t.type === 'expense' && !t.planId && t.flagId == null && !t.settledBy)
+  const used = new Set(rows.slice(0, 2).map((t) => t.id))
+  return {
+    ...dataset,
+    categories: [...dataset.categories, { id: OLD, name: 'Old', monthlyBudgetCents: 0, sortOrder: 99, active: true }],
+    accounts: [...dataset.accounts, { id: OLD, name: 'Old', kind: 'debit', settlement: 'immediate', active: true }],
+    labels: [...dataset.labels, { id: OLD, name: 'Old', color: '#10b981', sortOrder: 99, active: true }],
+    transactions: dataset.transactions.map((t) => (used.has(t.id) ? { ...t, categoryId: OLD, accountId: OLD, labelIds: [OLD] } : t)),
+  }
+}
+
+type Write = (d: ExpenseDataset) => ExpenseDataset
+
+/** Writes the server answers with more than the patch shows, as a screen makes them. */
+const CASCADES: Array<[string, Write]> = [
+  ['a plan deleted, whose instalments the server unlinks', (d) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id)],
+  [
+    'a plan added, whose instalments the server inserts',
+    (d) => patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Laptop' }),
+  ],
+  ['a plan changed', (d) => patchAfterInstallmentPlanUpdate(d, { ...d.installmentPlans[0]!, totalCount: d.installmentPlans[0]!.totalCount + 1 })],
+  ['a flag given an auto-label, which the server puts on the rows it flags', (d) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })],
+  ['a flag deleted', (d) => patchAfterFlagDelete(d, d.flags[0]!.id)],
+  ['a category deleted, its rows moved', (d) => patchAfterCategoryDelete(d, OLD, { reassignedToId: d.categories[0]!.id })],
+  ['an account deleted, its rows moved', (d) => patchAfterAccountDelete(d, OLD, { reassignedToId: d.accounts[0]!.id })],
+  ['a label deleted, taken off its rows', (d) => patchAfterLabelDelete(d, OLD)],
+  [
+    'a statement of the oldest month toggled, which changes whether its rows are posted',
+    (d) => patchAfterStatementPaid(d, { accountId: 3, yearMonth: months[0]!, paid: true, paidOn: '2000-01-01' }),
+  ],
+  [
+    'a row settled by a payment, which the server stamps with what it covered',
+    (d) => patchAfterBulkUpdate(d, [{ ...d.transactions.find((t) => t.type === 'expense' && !t.settledBy && !t.planId)!, settledBy: d.transactions.find((t) => (t.reportCount ?? 0) > 0)!.id }]),
+  ],
+]
+
+describe('LedgerSession, what patch() tells a screen, which reads its list again when it is true', () => {
+  it.each(CASCADES.flatMap(([name, write]) => [[name, 'a ledger held in full', write, FULL] as const, [name, 'a window', write, WINDOWED] as const]))(
+    'is true for %s, in %s',
+    async (_name, _config, write, policy) => {
+      const source = memorySource(withOldOnly())
+      const session = new LedgerSession(source, { policy })
+      await session.open()
+      await flush()
+
+      expect(session.patch(write)).toBe(true)
+    },
+  )
+
+  it('is false for a patch that changed nothing, and for a write to a held row the patch shows in full', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const held = [...session.getState().held!.rows.values()].flat().find((t) => !t.planId && t.flagId == null && !t.settledBy)!
+
+    expect(session.patch((d) => d)).toBe(false)
+    expect(session.patch((d) => patchAfterTransactionUpdate(d, { ...held, notes: 'noted' }))).toBe(true)
+    expect(session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 7 } }))).toBe(false)
   })
 })

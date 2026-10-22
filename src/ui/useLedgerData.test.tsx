@@ -10,10 +10,15 @@ import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexed
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { makeTransaction } from '../testing/factories'
+import type { ExpenseDataset } from '../domain/types'
 import {
   patchAfterCategoryDelete,
+  patchAfterFlag,
   patchAfterFlagDelete,
   patchAfterInstallmentPlanCreate,
+  patchAfterInstallmentPlanDelete,
+  patchAfterLabelDelete,
+  patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
 } from './datasetPatches'
@@ -514,6 +519,20 @@ describe('useLedgerData, the list read in pages', () => {
     act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 4242 } })))
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(pageReads(source)).toBe(before + 1)
+  })
+
+  it.each([
+    ['a plan deleted, whose instalments the server unlinks', (d: ExpenseDataset) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id)],
+    ['a flag given an auto-label, which the server puts on its rows', (d: ExpenseDataset) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })],
+    ['a label deleted, which the server takes off its rows', (d: ExpenseDataset) => patchAfterLabelDelete(d, d.labels[0]!.id)],
+    ['a card statement marked unpaid', (d: ExpenseDataset) => patchAfterStatementPaid(d, { accountId: 3, yearMonth: months[2]!, paid: false })],
+  ])('reads the list again after %s, which the patch alone does not show', async (_name, write) => {
+    const { source, result } = await started()
+    const before = pageReads(source)
+
+    act(() => result.current.applyPatch(write))
+
+    await waitFor(() => expect(pageReads(source)).toBe(before + 1))
   })
 
   it('reads nothing for a write made while no screen shows the list, and reads the list when one does', async () => {

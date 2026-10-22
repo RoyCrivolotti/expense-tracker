@@ -19,7 +19,7 @@ import {
   wantedMonths,
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
-import { cascadeOf } from './ledgerCascade'
+import { type Cascade, cascadeOf } from './ledgerCascade'
 import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
 import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
@@ -93,6 +93,16 @@ function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boole
   const rows = new Set(held.pinned.map((row) => row.id))
   for (const list of held.rows.values()) for (const row of list) rows.add(row.id)
   return ids.every((id) => rows.has(id))
+}
+
+/**
+ * Whether a write changed rows, those held and those it did not show: a cascade does (the server moved, unlinked or
+ * inserted rows) and so does marking a card statement paid or unpaid (it decides whether the rows it covers are posted),
+ * so a list read from the server is read again.
+ */
+function showsRowsChanged(done: Reconciled, cascade: Cascade | null, before: ExpenseDataset, after: ExpenseDataset): boolean {
+  const statements = JSON.stringify(before.accountStatements) !== JSON.stringify(after.accountStatements)
+  return done.changed.rows || cascade !== null || statements
 }
 
 /** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
@@ -308,20 +318,21 @@ export class LedgerSession {
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
-    const changed = done.changed.rows || done.changed.reference || done.changed.receipts
-    if (changed) this.hold(done, before, after)
+    const changed = Object.values(done.changed).some(Boolean)
+    const cascade = changed ? cascadeOf(before, after) : null
+    if (changed) this.hold(done, before, after, cascade)
     if (beyond) this.readBeyond(reach)
     if (changed || beyond) this.onWrite?.({ before, after, beyond, reach })
-    return beyond || done.changed.rows
+    return beyond || showsRowsChanged(done, cascade, before, after)
   }
 
-  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset): void {
+  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset, cascade: Cascade | null): void {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
     this.set({ held: done.held })
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
-    if (cascadeOf(before, after)) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
+    if (cascade !== null) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
   }
 
