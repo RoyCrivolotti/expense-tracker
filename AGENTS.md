@@ -99,8 +99,11 @@ a migration says so in its first sentence.
 
 ## Privacy
 
-This repo has **public GitHub source**. Never commit real PII (personal emails,
-financial figures, account IDs) in migrations, seed scripts, test fixtures, or
-any tracked file. Use placeholders like `owner@example.com` with a comment to
-substitute the real value at apply time. See `migrations/0003_multi_user.sql`
+This repo has **public GitHub source**. Never commit real personal data (personal emails, financial figures, bank
+account numbers) in migrations, seed scripts, test fixtures, or any tracked file. Use placeholders like
+`owner@example.com` with a comment to substitute the real value at apply time. See `migrations/0003_multi_user.sql`
 and `migrations/0011_user_preferences.sql` for the established pattern.
+
+Deployment identifiers (the Cloudflare account id, database, project and hostname names) are not personal data, but
+several tracked files still hold the maintainer's and a fork has to replace them (see `docs/DEPLOYMENT.md`). Do not
+add more: read such a value from config or the environment.

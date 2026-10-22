@@ -1,5 +1,5 @@
 /**
- * SQL for the ledger parts (docs/SCALING.md, "Ledger parts"). As in `transactionQuerySql.ts`, every
+ * SQL for the ledger parts (docs/API.md). As in `transactionQuerySql.ts`, every
  * statement is built here, every value is bound, and the owner is the first predicate of each one and
  * the only thing that scopes it. Nothing here binds more than a handful of values whatever the data
  * holds (D1 allows 100): an id list is a subquery, never a bound list.
