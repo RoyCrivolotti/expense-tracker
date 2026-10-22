@@ -108,7 +108,8 @@ Keyset pages of the owner's transactions. Code: [`list.ts`](../functions/api/exp
   SQLite lowers only ASCII and each such letter's capital has to be folded by hand (`CAFÉ` matches `café`). Letters
   whose capital is not one character that lower-cases back (`ß`, final sigma, the Kelvin sign, `İ`) are not folded. A
   row whose account is missing counts as posted even when cancelled.
-- Not conditional. Cost: the rows returned plus any the filter rules out on the way; it stops at the limit.
+- Not conditional, and never cached: `Cache-Control: private, no-store`. Cost: the rows returned plus any the filter
+  rules out on the way; it stops at the limit.
 
 ## GET /transactions/summary
 
@@ -118,6 +119,7 @@ Count and net spend for a filter. Code: [`summary.ts`](../functions/api/expenses
 - Response: `{ revision, count, capped, netSpendCents }`. `revision` is the owner's token read before the count, and a
   bulk edit on this filter names it as `expectedRevision`. `count` stops at 1,000 and `capped` says there were more.
   `netSpendCents` is exact over every match.
+- Never cached: `Cache-Control: private, no-store`.
 - Cost: the token is two rows. The count reads at most 1,001 matches. The exact net spend reads every row the filter
   cannot rule out by index, so an unfiltered summary reads the whole ledger (about one dataset load) and a month or date
   range reads only that range.

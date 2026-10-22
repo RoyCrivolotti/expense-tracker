@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { ValidationError } from '../domain/application/validationError'
 import { MAX_CUBE_CELLS, MAX_ROWS_PER_REQUEST } from '../domain/data/ledgerParts'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
+import { filterTransactions, netSpendCents } from '../domain/engine/transactions'
+import type { Transaction } from '../domain/types'
 import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
+import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
 import { inMemoryLedgerParts } from './inMemoryLedgerParts'
 
 const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
@@ -71,6 +74,42 @@ describe('inMemoryLedgerParts', () => {
       [1, 2],
       [2, 3],
     ])
+  })
+
+  it('serves the rows of a filter in pages that put end to end are what the engine lists, with a revision on the summary', async () => {
+    const ledger = awkwardLedger()
+    const held = inMemoryLedgerParts(() => ({ dataset: ledger, revision: 'v3' }))
+    for (const filter of filterStream(vocabularyOf(ledger), 25, 5)) {
+      const read: Transaction[] = []
+      let cursor: string | undefined
+      do {
+        const page = await held.readTransactionPage(filter, { limit: 37, ...(cursor ? { cursor } : {}) })
+        read.push(...page.items)
+        cursor = page.nextCursor ?? undefined
+      } while (cursor)
+      const expected = filterTransactions(ledger.transactions, filter)
+      expect(read.map((t) => t.id)).toEqual(expected.map((t) => t.id))
+      const summary = await held.readTransactionSummary(filter)
+      expect(summary).toMatchObject({ revision: 'v3', netSpendCents: netSpendCents(expected) })
+    }
+  })
+
+  it('refuses a cursor that was edited or belongs to another filter, as the route does', async () => {
+    const ledger = awkwardLedger()
+    const held = inMemoryLedgerParts(() => ({ dataset: ledger, revision: 'v3' }))
+    const { nextCursor } = await held.readTransactionPage({}, { limit: 5 })
+    expect(nextCursor).not.toBeNull()
+    await expect(held.readTransactionPage({ status: 'posted' }, { cursor: nextCursor! })).rejects.toBeInstanceOf(ValidationError)
+    await expect(held.readTransactionPage({}, { cursor: `${nextCursor!}x` })).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('refuses a read whose signal has been aborted', async () => {
+    const held = inMemoryLedgerParts(() => ({ dataset, revision: 'v1' }))
+    const controller = new AbortController()
+    controller.abort()
+    await expect(held.readTransactionPage({}, { signal: controller.signal })).rejects.toThrow()
+    await expect(held.readTransactionSummary({}, { signal: controller.signal })).rejects.toThrow()
+    expect((await held.readTransactionPage({})).items.length).toBeGreaterThan(0)
   })
 
   it('accepts a dataset that arrives later', async () => {

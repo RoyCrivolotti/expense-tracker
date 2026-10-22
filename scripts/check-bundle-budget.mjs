@@ -3,15 +3,15 @@
  * Fail verify if the production JS bundle grows past budget. Guards the win from
  * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a heavy
  * chart/vendor lib would blow these limits. Budgets are gzip bytes with headroom; bump
- * deliberately when a real feature needs the room. Two are kept: the whole bundle, and the
- * code only the Goals tab loads (its own chunk, the chunks split out of it and its lazy
- * card, found from the imports in the built files by `bundleGraph.mjs`), which is what
- * the second figure below counts.
+ * deliberately when a real feature needs the room. Three are kept: the bundle a browser
+ * that never turns the ledger mode on downloads, the code only the Goals tab loads (its own chunk,
+ * the chunks split out of it and its lazy card), and the code only the ledger mode loads, all
+ * found from the imports in the built files by `bundleGraph.mjs`.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { goalsOnlyChunks } from './bundleGraph.mjs'
+import { goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
@@ -304,7 +304,19 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // shadow comparison and the app over it are one chunk of about 7 KB gzip that is loaded only by a browser that
 // asked for it, and the receipt lists, the entry's flag read and the loading state add about 1 KB to the entry
 // chunk. The total went from 285,6 KB to 293,2 KB. No new library.
-const TOTAL_MAX_GZIP = 294_000
+//
+// Split in two for the ledger mode: the 294 KB limit above counted the chunks only the ledger mode runs, so
+// a feature that lives only there pushed out the room of every other change, and a change to the default path
+// could hide behind the room the ledger chunks had left. The limit below is what the default path loads on
+// first use, the entry and every lazy chunk the rest of the app reaches (285,603 bytes when this was split, 12
+// more than before the page and summary reads were added to the API source, with 97 bytes of headroom), and the
+// chunks only the ledger mode runs (8,769 bytes then) have a limit of their own, with room for the Transactions
+// list to be read in pages. A chunk the rest of the app can reach stays in the first figure however many ledger
+// modules import it. This is a limit on what runs and on what a feature may add, not on what is downloaded:
+// the service worker precaches every built script (`globPatterns` in vite.config.ts), the ledger chunks
+// included, so each browser fetches them once per deploy.
+const TOTAL_MAX_GZIP = 285_700
+const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {
@@ -335,19 +347,35 @@ if (goalsOnly.size === 0) {
   console.error('check-bundle-budget: found no Goals-only chunk in dist/assets, so the Goals limit would count nothing')
   process.exit(1)
 }
+const ledgerOnly = new Set(
+  ledgerOnlyChunks({
+    files: jsFiles,
+    read: (name) => readFileSync(join(assetsDir, name), 'utf8'),
+    indexHtml: readFileSync(join(assetsDir, '..', 'index.html'), 'utf8'),
+  }),
+)
+if (ledgerOnly.size === 0) {
+  console.error('check-bundle-budget: found no ledger-only chunk in dist/assets, so the ledger limit would count nothing')
+  process.exit(1)
+}
 
 let total = 0
 let goals = 0
+let ledger = 0
 for (const name of jsFiles) {
   const size = gzipBytes(join(assetsDir, name))
-  total += size
+  if (ledgerOnly.has(name)) ledger += size
+  else total += size
   if (goalsOnly.has(name)) goals += size
 }
 
 const kb = (n) => `${(n / 1000).toFixed(1)} KB`
 const failures = []
 if (total > TOTAL_MAX_GZIP) {
-  failures.push(`total JS ${kb(total)} gzip exceeds budget ${kb(TOTAL_MAX_GZIP)}`)
+  failures.push(`JS without the ledger-only chunks ${kb(total)} gzip exceeds budget ${kb(TOTAL_MAX_GZIP)}`)
+}
+if (ledger > LEDGER_MAX_GZIP) {
+  failures.push(`ledger-only JS ${kb(ledger)} gzip exceeds budget ${kb(LEDGER_MAX_GZIP)}`)
 }
 if (goals > GOALS_MAX_GZIP) {
   failures.push(`Goals-only JS ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
@@ -358,4 +386,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(`bundle budget OK (total ${kb(total)} gzip, Goals-only ${kb(goals)} gzip)`)
+console.log(`bundle budget OK (${kb(total)} gzip without the ledger chunks, ledger-only ${kb(ledger)}, Goals-only ${kb(goals)})`)

@@ -63,7 +63,7 @@ function matchesLabelFilter(filter: TxnFilter): boolean {
   return !filter.labelIds || filter.labelIds.length === 0
 }
 
-function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): boolean {
+export function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): boolean {
   if (!matchesPeriod(row, filter)) return false
   if (!matchesAccount(row, filter)) return false
   if (!matchesType(filter)) return false
@@ -75,7 +75,7 @@ function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): b
   return true
 }
 
-function rowSortKey(row: TransactionListRow): string {
+export function rowSortKey(row: TransactionListRow): string {
   if (row.kind === 'transaction') {
     return `${row.txn.date}:1:${String(row.txn.id).padStart(10, '0')}`
   }

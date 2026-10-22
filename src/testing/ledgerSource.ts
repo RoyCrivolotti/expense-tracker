@@ -47,6 +47,14 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note(`cube:${range.from}..${range.to}`)
       return served.readCubePart(range)
     },
+    readTransactionPage(filter, request) {
+      note('page')
+      return served.readTransactionPage(filter, request)
+    },
+    readTransactionSummary(filter, request) {
+      note('summary')
+      return served.readTransactionSummary(filter, request)
+    },
     readReceiptsPart(transactionId) {
       note(transactionId === undefined ? 'receipts' : `receipts:${transactionId}`)
       return served.readReceiptsPart(transactionId)

@@ -21,7 +21,15 @@ import type {
   WealthCheckin,
   WealthCheckinEntry,
 } from '../types'
-import type { CubePart, MonthRange, MonthRowsPart, ReferencePart } from './ledgerParts'
+import type {
+  CubePart,
+  MonthRange,
+  MonthRowsPart,
+  ReferencePart,
+  TransactionPagePart,
+  TransactionSummaryPart,
+} from './ledgerParts'
+import type { TxnFilter } from '../engine/transactions'
 
 export type NewTransaction = Omit<
   StoredTransaction,
@@ -126,6 +134,16 @@ export interface LedgerPartsSource {
    * only say which transactions have any.
    */
   readReceiptsPart(transactionId?: number): Promise<TransactionAttachment[]>
+  /**
+   * One keyset page of the rows `filter` matches, newest first. `cursor` is the previous page's `nextCursor`,
+   * handed back as it came: the server ties it to the filter and refuses a changed one.
+   */
+  readTransactionPage(
+    filter: TxnFilter,
+    request?: { limit?: number; cursor?: string; signal?: AbortSignal },
+  ): Promise<TransactionPagePart>
+  /** How many rows `filter` matches (counted to a cap) and what they net to. `signal` cancels the read. */
+  readTransactionSummary(filter: TxnFilter, request?: { signal?: AbortSignal }): Promise<TransactionSummaryPart>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
@@ -181,12 +199,10 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   deleteWealthCheckin?(id: number): Promise<void>
 }
 
-/** Whether a source can serve the ledger in parts. Every source that can serve one part serves all of them. */
+/**
+ * Whether a source can serve the ledger in parts. A source serves all of the reads or none: `apiDataSource` and
+ * `inMemoryLedgerParts` are built whole, so the first read and the newest stand for every one of them.
+ */
 export function hasLedgerParts(source: ExpenseDataSource): source is ExpenseDataSource & LedgerPartsSource {
-  return (
-    source.readReferencePart !== undefined &&
-    source.readMonthsPart !== undefined &&
-    source.readCubePart !== undefined &&
-    source.readReceiptsPart !== undefined
-  )
+  return source.readReferencePart !== undefined && source.readTransactionPage !== undefined
 }

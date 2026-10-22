@@ -1,16 +1,16 @@
+import { filterTransactions, netSpendCents, type TxnFilter } from '../engine/transactions'
+import type { Transaction } from '../types'
 import {
   SUMMARY_COUNT_CAP,
   type TransactionPage,
   type TransactionPageRequest,
   type TransactionSummary,
-} from '../domain/data/transactionQuery'
-import { filterTransactions, netSpendCents, type TxnFilter } from '../domain/engine/transactions'
-import type { Transaction } from '../domain/types'
+} from './transactionQuery'
 
 /**
- * The reference the SQL path is held to: the engine's own filter and sort, cut at a position. A
- * position is a place in the order, not an offset, so a row that comes or goes between two calls
- * moves nothing that was already read.
+ * The reference the SQL path is held to, and what a source that holds the whole dataset answers with: the
+ * engine's own filter and sort, cut at a position. A position is a place in the order, not an offset, so a
+ * row that comes or goes between two calls moves nothing that was already read.
  */
 const withAscendingLabels = (t: Transaction): Transaction => ({
   ...t,
