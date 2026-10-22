@@ -207,6 +207,18 @@ well as descriptions and can catch rows you did not mean. Renaming a row linked 
 keeps the link but it no longer matches the plan's own description. A reimbursement payment row's
 description is the report's name in Past reports, so renaming it renames the report.
 
+## Reading the ledger in parts (browser switch)
+
+By default the app loads the whole ledger with one `GET /api/expenses`. A browser can instead be switched to read it in parts (`/api/expenses/reference`, `/transactions/months`, `/cube`, and a row's receipts when asked) and build the same screens from them. It is a switch kept in that browser, so it needs no deploy, and a build that has never heard of it keeps using the old route.
+
+- `?ledger=on` in the address turns it on for this browser and `?ledger=off` turns it off again. The choice is kept in local storage under `expenses-ledger-mode`.
+- `?ledger=shadow` does the same and also loads the whole dataset after the ledger settles and compares the two. It counts as `off` anywhere but a development or `--mode staging` build, so production never pays for the second read. Differences go to the console as `[ledger shadow]` and to `window.__ledgerShadow` (`checks` and `differences`); an empty `differences` after a few checks and a few edits means the parts agree with the dataset.
+- A ledger of more than 5,000 rows (`FULL_HYDRATION_ROW_LIMIT`, by the `rowCount` the server reports) is loaded the old way even when the switch is on, because a window of the ledger cannot answer "All" or a search. So is a server that does not have the parts routes.
+- Offline, the ledger path opens the last snapshot it saved for the signed-in owner and nothing else, read-only. With no snapshot for that owner it loads the old way.
+- Moving to an older month reads that month's rows, and the month shows a loading note until they arrive.
+
+`npm run verify:ledger-mode` compares the screens of the demo instance under `?ledger=off` and `?ledger=on` (see `docs/TESTING.md`).
+
 ## Gitignored local paths
 
 | Path | Purpose |

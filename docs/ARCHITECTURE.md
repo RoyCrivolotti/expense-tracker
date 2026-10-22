@@ -231,6 +231,13 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   another ledger format or another owner is discarded when it is found. Saving and loading never throw. Offline, or
   when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a refresh that reads ends
   it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key.
+- **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old
+  load unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`); `off` renders the whole-dataset app
+  and nothing else is loaded. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view
+  as a prop (importing it back makes the bundler split shared code into files every browser loads at startup). That
+  chunk falls back to the whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts
+  and for an offline browser with no snapshot of the owner's. `shadow` is honoured in development and staging builds
+  only; there `ledgerShadow.ts` compares the held ledger with the whole dataset and reports, and shows nothing.
 
 ## Size and complexity
 
