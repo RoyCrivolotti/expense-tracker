@@ -46,7 +46,7 @@ import { RepoHttpError } from './repoHttpError'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import { assertLinksWithinCap, idsMatching } from './inMemoryBulkEdit'
 import { exportChunkOf } from './inMemoryExport'
-import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
+import { oneOf, pageOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { isFilterTarget } from '../domain/data/bulkEdit'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
