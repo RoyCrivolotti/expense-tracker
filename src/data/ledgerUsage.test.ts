@@ -134,6 +134,25 @@ describe('LedgerUsage', () => {
     expect(usage.getState()).toMatchObject({ usage: part('r3', 3), error: null, stale: false })
   })
 
+  it('reads again for the next screen when a read that nothing overtook failed, though the counts are not out of date', async () => {
+    const source = {
+      readUsagePart: vi.fn().mockResolvedValueOnce(part('r1', 1)).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(part('r1', 1)),
+    }
+    const usage = new LedgerUsage(source)
+    const off = usage.watch()
+    await flush()
+    usage.refresh()
+    await flush()
+    expect(usage.getState()).toMatchObject({ usage: part('r1', 1), error: 'offline', stale: false })
+
+    off()
+    usage.watch()
+    await flush()
+
+    expect(source.readUsagePart).toHaveBeenCalledTimes(3)
+    expect(usage.getState()).toMatchObject({ usage: part('r1', 1), error: null, stale: false })
+  })
+
   it('has no counts and says why when the first read fails, and reads again on request', async () => {
     const source = { readUsagePart: vi.fn().mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(part('r1', 1)) }
     const usage = new LedgerUsage(source)
