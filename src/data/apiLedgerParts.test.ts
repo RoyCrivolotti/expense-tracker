@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './apiClient'
 import { apiDataSource } from './apiDataSource'
 import { apiLedgerParts } from './apiLedgerParts'
+import { ValidationError } from '../domain/application/validationError'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 import { ledgerReferenceOf } from '../domain/ledger/partsOfDataset'
 import { makeDataset, makeTransaction } from '../testing/factories'
@@ -164,9 +165,15 @@ describe('apiLedgerParts, transactions', () => {
     await expect(apiLedgerParts.readTransactionSummary({})).rejects.toBeInstanceOf(PartsUnavailableError)
   })
 
-  it('passes on the server refusing a cursor or a filter, with its own words', async () => {
-    serve(json({ error: 'Invalid cursor' }, { status: 400 }))
-    await expect(apiLedgerParts.readTransactionPage({}, { cursor: 'x' })).rejects.toThrow('Invalid cursor')
+  it('reads the server refusing a cursor or a filter as a validation error with its own words, as the demo source does', async () => {
+    serve(json({ error: 'Invalid cursor' }, { status: 400 }), json({ error: 'month must be YYYY-MM' }, { status: 400 }))
+    await expect(apiLedgerParts.readTransactionPage({}, { cursor: 'x' })).rejects.toThrow(ValidationError)
+    await expect(apiLedgerParts.readTransactionSummary({ month: 'soon' })).rejects.toThrow('month must be YYYY-MM')
+  })
+
+  it('still reads a refused range of months as too large', async () => {
+    serve(json({ error: 'The range holds more than 5000 rows' }, { status: 400 }))
+    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartTooLargeError)
   })
 
   it('is served through apiDataSource', async () => {
