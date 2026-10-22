@@ -237,6 +237,15 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   the filter matches at that moment. A filter is read once it has held still for the settle time, and a read that a
   newer filter outlived is cancelled. The count and net spend come from `GET /transactions/summary`, apart from the
   rows, when the filter changes or a refresh asks, and `summaryStale` says when they may no longer fit the rows.
+- **In ledger mode the Transactions tab asks the model for its list, and the list is read in pages.** The model
+  carries a `pagedList` (a `TransactionPager` and the hook that gives the tab its rows), and a model without one is
+  listed from the rows it holds as always, so nothing changes with the mode off. The tab hands its filter to the
+  hook and takes back the rows with the statement payments merged in, the net spend and a count that says `1000+`
+  when the summary stopped counting. A footer under the list reads the next page when the end comes near the
+  screen and offers to try again when one failed, and never retries by itself. The search box sets the filter at
+  every key, so the pager waits for it to hold still before reading (`LIST_SETTLE_MS`). The list is read again after
+  a write that changed rows and after a refresh, and while the model is read-only the rows it holds are listed, since
+  there are no pages to read.
 
 ## Size and complexity
 
