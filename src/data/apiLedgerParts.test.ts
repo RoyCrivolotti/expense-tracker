@@ -154,6 +154,15 @@ describe('apiLedgerParts, transactions', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/transactions/summary?categoryId=4')
   })
 
+  it('hands the abort signal to fetch, so a read that is no longer wanted is cancelled', async () => {
+    const fetchMock = serve(json(page), json(summary))
+    const controller = new AbortController()
+    await apiLedgerParts.readTransactionPage({}, { signal: controller.signal })
+    await apiLedgerParts.readTransactionSummary({}, { signal: controller.signal })
+    for (const call of fetchMock.mock.calls) expect((call[1] as RequestInit).signal).toBe(controller.signal)
+    expect(fetchMock.mock.calls[0]?.[0]).not.toContain('signal')
+  })
+
   it('takes a last page, which has no cursor', async () => {
     serve(json({ items: [], nextCursor: null }))
     await expect(apiLedgerParts.readTransactionPage({})).resolves.toEqual({ items: [], nextCursor: null })

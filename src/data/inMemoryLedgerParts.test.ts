@@ -103,6 +103,15 @@ describe('inMemoryLedgerParts', () => {
     await expect(held.readTransactionPage({}, { cursor: `${nextCursor!}x` })).rejects.toBeInstanceOf(ValidationError)
   })
 
+  it('refuses a read whose signal has been aborted', async () => {
+    const held = inMemoryLedgerParts(() => ({ dataset, revision: 'v1' }))
+    const controller = new AbortController()
+    controller.abort()
+    await expect(held.readTransactionPage({}, { signal: controller.signal })).rejects.toThrow()
+    await expect(held.readTransactionSummary({}, { signal: controller.signal })).rejects.toThrow()
+    expect((await held.readTransactionPage({})).items.length).toBeGreaterThan(0)
+  })
+
   it('accepts a dataset that arrives later', async () => {
     const later = inMemoryLedgerParts(() => Promise.resolve({ dataset, revision: 'v9' }))
     expect((await later.readReferencePart()).revision).toBe('v9')
