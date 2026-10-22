@@ -2,7 +2,7 @@
  * Generate D1 seed SQL for the staging demo account from public fixtures.
  *
  *   EXPENSE_OWNER=expenses.tracker.demo@gmail.com \
- *     npx tsx scripts/gen-demo-seed-sql.ts /tmp/demo-seed.sql
+ *     node_modules/.bin/tsx scripts/gen-demo-seed-sql.ts /tmp/demo-seed.sql
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
