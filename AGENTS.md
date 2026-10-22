@@ -42,7 +42,7 @@ All changes — code, docs, config — must go through a pull request with the
 
 `npm run verify` is the baseline local gate. It runs, in order:
 
-- Symlink checks, migration doc checks, PII scan
+- Symlink checks, migration doc checks, docs size check, PII scan
 - ESLint
 - TypeScript type checking
 - Vitest with coverage (global thresholds enforced)
@@ -79,6 +79,7 @@ never seen this repo, so:
   `docs/DEPLOYMENT.md` or `docs/OPS.md`. A choice between designs lives in a short decision record in
   `docs/decisions/`. Link to the home instead of copying from it.
 - No line numbers, private data, or references to a conversation or an internal tracker.
+- A doc over 300 lines fails `npm run verify` unless `scripts/check-docs-size.mjs` lists it with a reason.
 
 ## Pull request size
 
