@@ -187,6 +187,13 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   parts has no receipt list (`reference.attachments` is empty): a row's receipts are read when needed. The demo data
   sources serve their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
 
+- **The export reads a ledger in chunks of one table, by primary key, and the dataset is its specification.**
+  `readExportChunk` on `ExpenseRepository` backs `GET /api/expenses/export` and, in the same process, the backup
+  (a worker with D1 and R2 bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore
+  order, `EXPORT_CHUNK_ROWS` bounds every table, and rows are the shapes `rows.ts` maps for the dataset, so a new
+  dataset table or column means a new entry or mapper there and a raise of `EXPORT_FORMAT`. A parity test fails
+  when the chunks put end to end stop equalling `loadDataset`'s table, and a plan test fails on a scan or a sort.
+
 ## Size and complexity
 
 ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12`, `max-depth: 3`

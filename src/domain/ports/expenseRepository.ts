@@ -41,6 +41,7 @@ import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../dat
 import type { Usage } from '../data/usage'
 import type { RecurringSeries } from '../engine/recurringSeries'
 import type { TxnFilter } from '../engine/transactions'
+import type { ExportChunk, ExportChunkRequest } from '../data/exportTables'
 import type { LedgerReferenceRead, MonthRange, MonthRowsRead } from '../data/ledgerParts'
 import type { MonthCell } from '../ledger/types'
 
@@ -101,6 +102,13 @@ export interface ExpenseRepository {
    * labels, with zero counts included. `usageFromDataset` in the engine is the reference.
    */
   readUsage(owner: string): Promise<Usage>
+  /**
+   * Up to `request.limit` rows of one table, in primary-key order, after the position `request.after` names,
+   * in the shape `loadDataset` carries them, and the position to continue from (null at the end). Reads that
+   * table and nothing else, so it does not run the installment backfill. The CSV export and the backup walk
+   * a ledger with it; `loadDataset` is the reference for what the rows are.
+   */
+  readExportChunk(owner: string, request: ExportChunkRequest): Promise<ExportChunk>
   insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
   updateTransaction(
     owner: string,
