@@ -5,7 +5,14 @@ import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
-import { patchAfterFlagDelete, patchAfterTransactionUpdate } from './datasetPatches'
+import { makeTransaction } from '../testing/factories'
+import {
+  patchAfterCategoryDelete,
+  patchAfterFlagDelete,
+  patchAfterInstallmentPlanCreate,
+  patchAfterTransactionCreate,
+  patchAfterTransactionUpdate,
+} from './datasetPatches'
 import { buildExpenseModel } from './buildExpenseModel'
 import { useLedgerData } from './useLedgerData'
 
@@ -134,5 +141,83 @@ describe('useLedgerData', () => {
     act(() => result.current.model!.ensureReceipts!(ids))
     await waitFor(() => expect(result.current.model!.receiptsPending).toBe(0))
     expect(result.current.model!.dataset.attachments).toHaveLength(small.attachments.length)
+  })
+})
+
+describe('useLedgerData, a read in the background that fails', () => {
+  async function ready(policy?: HydrationPolicy) {
+    const source = memorySource(big)
+    const hook = renderHook(() => useLedgerData(source, policy ? { policy } : undefined))
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+    return { source, ...hook }
+  }
+
+  /** A refresh that works clears the error, which is how the user gets out of it. */
+  async function refreshClears(result: { current: ReturnType<typeof useLedgerData> }) {
+    act(() => result.current.reload())
+    await waitFor(() => expect(result.current.backgroundError).toBeNull(), { timeout: 3000 })
+    await waitFor(() => expect(result.current.refreshOutcome).toBe('ok'), { timeout: 3000 })
+  }
+
+  it('is null while nothing has failed', async () => {
+    const { result } = await ready()
+    expect(result.current.backgroundError).toBeNull()
+  })
+
+  it('tells the screens when the read after a deleted category fails, and keeps the write it patched in', async () => {
+    const { source, result } = await ready()
+    const [gone, kept] = result.current.model!.dataset.categories
+    const read = source.readReferencePart.bind(source)
+    source.readReferencePart = () => Promise.reject(new Error('reference down'))
+    act(() => result.current.applyPatch((d) => patchAfterCategoryDelete(d, gone!.id, { reassignedToId: kept!.id })))
+    await waitFor(() => expect(result.current.backgroundError).toBe('reference down'))
+    expect(result.current.model!.dataset.categories.some((c) => c.id === gone!.id)).toBe(false)
+    expect(result.current.status).toBe('ready')
+    source.readReferencePart = read
+    await refreshClears(result)
+  })
+
+  it('tells the screens when the read after an added plan fails', async () => {
+    const { source, result } = await ready()
+    const read = source.readReferencePart.bind(source)
+    source.readReferencePart = () => Promise.reject(new Error('plans down'))
+    const plan = {
+      id: 9_001,
+      description: 'Laptop',
+      totalCount: 6,
+      amountCents: 1_000,
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense' as const,
+      anchorBudgetMonth: months.at(-1)!,
+      startInstallmentIndex: 1,
+      active: true,
+    }
+    act(() => result.current.applyPatch((d) => patchAfterInstallmentPlanCreate(d, plan)))
+    await waitFor(() => expect(result.current.backgroundError).toBe('plans down'))
+    expect(result.current.model!.dataset.installmentPlans.some((p) => p.id === 9_001)).toBe(true)
+    source.readReferencePart = read
+    await refreshClears(result)
+  })
+
+  it('tells the screens when the sums of a month a write moved cannot be read', async () => {
+    const { source, result } = await ready(WINDOWED)
+    source.readCubePart = () => Promise.reject(new Error('sums down'))
+    const added = makeTransaction({ id: 900_001, date: `${months[3]!}-12`, budgetMonth: months[3]!, description: 'Added' })
+    act(() => result.current.applyPatch((d) => patchAfterTransactionCreate(d, added)))
+    await waitFor(() => expect(result.current.backgroundError).toBe('sums down'))
+    expect(result.current.status).toBe('ready')
+  })
+
+  it('tells the screens when the rows of the month shown cannot be read, and stops saying the month is loading', async () => {
+    const { source, result } = await ready(WINDOWED)
+    const read = source.readMonthsPart.bind(source)
+    source.readMonthsPart = () => Promise.reject(new Error('months down'))
+    act(() => result.current.viewMonth!(months[10]!))
+    await waitFor(() => expect(result.current.backgroundError).toBe('months down'))
+    expect(result.current.hydrating).toBe(false)
+    expect(result.current.status).toBe('ready')
+    source.readMonthsPart = read
+    await refreshClears(result)
   })
 })

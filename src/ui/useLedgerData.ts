@@ -86,5 +86,6 @@ export function useLedgerData(source: LedgerPartsSource, options?: SessionOption
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
+    backgroundError: ready ? state.error : null,
   }
 }

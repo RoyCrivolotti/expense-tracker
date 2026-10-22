@@ -64,6 +64,12 @@ export interface ExpenseData extends LoadState {
   viewMonth?: (month: string) => void
   /** True while the rows of the month shown are being read. */
   hydrating?: boolean
+  /**
+   * Why a read in the background failed, while what is shown may be out of date because of it: set by a read
+   * after a write that moved more than the patch shows, of a month or of a receipt list, and cleared by the next
+   * refresh that works. Absent when the data has no such reads.
+   */
+  backgroundError?: string | null
 }
 
 function isOnline(): boolean {
