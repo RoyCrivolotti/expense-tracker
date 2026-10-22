@@ -52,10 +52,14 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   owner taps the update banner, and re-reads the data meanwhile. `GoalScenarioDto` (`functions/_shared/rows.ts`) still
   sends `annualContributionGrowth` as 0 for that reason: without it a client opened before the deploy multiplies
   `undefined` into every projection and the Goals tab shows NaN until reload.
-- **Real emails, figures and identifiers never reach a tracked file.** The source is public. Commit a placeholder
-  (`owner@example.com`) with a comment telling whoever applies the change to substitute the real value, and keep real
-  per-deployment config gitignored beside a committed `*.example.json`. `scripts/check-pii.mjs` fails `npm run verify`
-  on a tracked email outside an allowlist of exact addresses.
+- **Personal data never reaches a tracked file, and new deployment identifiers should not.** The source is public.
+  Commit a placeholder (`owner@example.com`) with a comment telling whoever applies the change to substitute the real
+  value, and keep real per-deployment config gitignored beside a committed `*.example.json`. `scripts/check-pii.mjs`
+  fails `npm run verify` on a tracked email outside an allowlist of exact addresses, and it does not look for deployment
+  identifiers. Several tracked files still hold the maintainer's (the Cloudflare account id, database, project and
+  hostname names in the workflows, `workers/backup-cron/wrangler.toml`, the `.env.*` files, `config/staging-access.json`
+  and some scripts), and a fork has to replace them ([DEPLOYMENT.md](./DEPLOYMENT.md)). New code reads such values from
+  config or the environment.
 
 ### Dataset revision
 
