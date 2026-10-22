@@ -541,6 +541,12 @@
   margin-left: auto;
   white-space: nowrap;
   text-align: right;
+  transition: opacity var(--motion-enter-fade) var(--motion-ease-out);
+}
+
+/* Figures read for the filter before this one, until the new ones come. */
+.resultStats[data-stale] {
+  opacity: 0.55;
 }
 
 .resultAmount {

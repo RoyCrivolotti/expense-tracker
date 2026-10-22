@@ -6,6 +6,10 @@
   font-size: 0.9rem;
 }
 
+.footer:focus {
+  outline: none;
+}
+
 .retry {
   font: inherit;
   font-weight: 600;

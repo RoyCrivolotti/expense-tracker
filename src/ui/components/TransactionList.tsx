@@ -17,6 +17,8 @@ interface TransactionListProps {
   rows: TransactionListRow[]
   /** The rows are on their way, so an empty list is not yet the answer. */
   loading?: boolean | undefined
+  /** Drawn instead of the usual words when there are no rows, for a list whose rows could not be read. */
+  emptyState?: ReactNode
   lookup: Lookup
   flat?: boolean | undefined
   showDate?: boolean | undefined
@@ -77,11 +79,12 @@ function renderRow(
   )
 }
 
-export function TransactionList({ rows, loading, lookup, flat = false, ...props }: TransactionListProps) {
+export function TransactionList({ rows, loading, emptyState, lookup, flat = false, ...props }: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
   const groups = useMemo(() => (flat ? [] : groupListRowsByDay(rows)), [rows, flat])
 
   if (rows.length === 0) {
+    if (emptyState) return <>{emptyState}</>
     return (
       <EmptyState
         actionLabel={props.onClearFilters && !loading ? 'Clear filters' : undefined}
