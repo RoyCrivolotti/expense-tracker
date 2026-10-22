@@ -423,6 +423,98 @@ describe('LedgerSession, a refresh and a write at once', () => {
   })
 })
 
+describe('LedgerSession, two refreshes at once', () => {
+  /** Holds every read of rows separately, so a test answers them in the order it likes. */
+  function holdEachRead(source: TestSource) {
+    const waiting: Array<() => void> = []
+    const read = source.readMonthsPart.bind(source)
+    source.readMonthsPart = async (range) => {
+      const answer = await read(range)
+      await new Promise<void>((resolve) => waiting.push(resolve))
+      return answer
+    }
+    return waiting
+  }
+
+  it('keeps the answer of the refresh that started last when an older one answers after it', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const target = [...session.getState().held!.rows.get(newest)!].find((t) => t.amountCents > 0)!
+    const waiting = holdEachRead(source)
+    const older = session.refresh()
+    await flush()
+    const olderReads = waiting.length
+    expect(olderReads).toBeGreaterThan(0)
+    // A write reaches the server, and the refresh that starts after it reads it.
+    const renamed = { ...target, description: 'Renamed on the server' }
+    source.dataset = { ...dataset, transactions: dataset.transactions.map((t) => (t.id === target.id ? renamed : t)) }
+    source.move('r1')
+    const newer = session.refresh()
+    await flush()
+    expect(waiting.length).toBe(2 * olderReads)
+    for (const release of waiting.slice(olderReads)) release()
+    await newer
+    const fresh = new LedgerSession(memorySource(source.dataset), { policy: WINDOWED })
+    await fresh.open()
+    const descriptionOf = () => session.getState().held!.rows.get(newest)!.find((t) => t.id === target.id)!.description
+    expect(descriptionOf()).toBe('Renamed on the server')
+    for (const release of waiting.slice(0, olderReads)) release()
+    await older
+    expect(descriptionOf()).toBe('Renamed on the server')
+    expect(session.getState().held!.revision).toBe('r1')
+    expect(listsOf(ledgerOfHeld(session.getState().held!))).toEqual(listsOf(ledgerOfHeld(fresh.getState().held!)))
+  })
+
+  it('does not report the failure of an older refresh that a newer one has overtaken', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const read = source.readReferencePart.bind(source)
+    let first = true
+    let failOlder = () => {}
+    source.readReferencePart = () => {
+      if (!first) return read()
+      first = false
+      return new Promise((_, reject) => (failOlder = () => reject(new Error('the older read failed'))))
+    }
+    const older = session.refresh()
+    await flush()
+    await session.refresh()
+    failOlder()
+    await expect(older).resolves.toBeUndefined()
+    expect(session.getState().error).toBeNull()
+  })
+
+  it('still reports a refresh that fails when no newer one has started', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    source.readReferencePart = () => Promise.reject(new Error('the read failed'))
+    await expect(session.refresh()).rejects.toThrow('the read failed')
+  })
+
+  it('ends with the newer answer too when the older refresh answers first', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const waiting = holdEachRead(source)
+    const older = session.refresh()
+    await flush()
+    const olderReads = waiting.length
+    source.move('r1')
+    source.dataset = { ...dataset, transactions: dataset.transactions.slice(1) }
+    const newer = session.refresh()
+    await flush()
+    for (const release of waiting.slice(0, olderReads)) release()
+    await flush()
+    for (const release of waiting.slice(olderReads)) release()
+    await Promise.all([older, newer])
+    expect(session.getState().held!.revision).toBe('r1')
+    expect(session.getState().held!.rowCount).toBe(dataset.transactions.length - 1)
+  })
+})
+
 describe('LedgerSession, an empty ledger', () => {
   it('opens with nothing held and no month', async () => {
     const empty: ExpenseDataset = { ...dataset, transactions: [] }
