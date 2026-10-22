@@ -7,6 +7,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDataSource } from '../../../src/data/apiDataSource'
+import { withLedgerWrites } from '../../../src/data/apiLedgerWrites'
 import { ApiError } from '../../../src/data/apiClient'
 import { LedgerSession } from '../../../src/data/ledgerSession'
 import { TransactionPager } from '../../../src/data/transactionPager'
@@ -28,7 +29,7 @@ import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from './tr
 import { onRequestPost as postLabels } from './transactions/bulk/labels'
 import { onRequestGet as getSummary } from './transactions/summary'
 
-const source = apiDataSource as Required<typeof apiDataSource>
+const source = withLedgerWrites(apiDataSource) as Required<typeof apiDataSource>
 
 interface Sent {
   method: string

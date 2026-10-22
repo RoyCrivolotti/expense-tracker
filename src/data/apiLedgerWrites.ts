@@ -1,8 +1,9 @@
 /**
- * The bulk writes that a request cannot hold in one piece, or that name their rows by a filter. Imported
- * when one is made, so a browser that edits rows one at a time never loads them.
+ * The bulk writes that a request cannot hold in one piece, or that name their rows by a filter. A ledger read in
+ * pages lists more rows than one request may name, so `withLedgerWrites` gives its source these in place of the
+ * single-request ones, and the whole-dataset app, which never selects that many, does not carry them.
  */
-import type { BulkTransactionPatch, MatchingTarget } from './dataSource'
+import type { BulkTransactionPatch, ExpenseDataSource, MatchingTarget } from './dataSource'
 import { req } from './apiClient'
 import { apiLedgerParts } from './apiLedgerParts'
 import { MAX_BULK_LABEL_LINKS } from '../domain/data/bulkEdit'
@@ -91,4 +92,8 @@ export async function updateMatchingTransactions(
     expectedRevision = now.revision
   }
   return send<{ updated: number }>('PATCH', BULK, { filter, expectedCount, expectedRevision, patch })
+}
+
+export function withLedgerWrites<S extends ExpenseDataSource>(source: S): S {
+  return { ...source, deleteTransactions, updateTransactions, addLabelsToTransactions, updateMatchingTransactions }
 }

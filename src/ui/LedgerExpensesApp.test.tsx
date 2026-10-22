@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { apiDataSource } from '../data/apiDataSource'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
@@ -116,6 +117,47 @@ describe('LedgerExpensesApp', () => {
     await screen.findByText('Recent activity')
     await waitFor(() => expect(source.load).toHaveBeenCalled())
     expect((globalThis as { __ledgerShadow?: unknown }).__ledgerShadow).toBeUndefined()
+  })
+})
+
+describe('LedgerExpensesApp, the source the view writes to', () => {
+  /** Renders the app over `source` with a view that only says which source it was given. */
+  async function sourceGiven(source: ExpenseDataSource): Promise<ExpenseDataSource | undefined> {
+    let given: ExpenseDataSource | undefined
+    const view = ((props: { source: ExpenseDataSource }) => {
+      given = props.source
+      return <p>the view</p>
+    }) as unknown as typeof ExpensesAppView
+    render(
+      <ToastProvider>
+        <LedgerExpensesApp source={source} mode="on" fallback={<p>the whole dataset app</p>} view={view} hubGrants={allGroupsGranted()} />
+      </ToastProvider>,
+    )
+    await screen.findByText('the view')
+    return given
+  }
+
+  it('is the source it was handed, unless that is the API', async () => {
+    const source = servingSource()
+    expect(await sourceGiven(source)).toBe(source)
+  })
+
+  it('is the API with the bulk writes that split a list longer than a request, and edit on a filter', async () => {
+    // The API's reads are served from memory, so that the app opens; its writes are the ones under test.
+    const served = memorySource(dataset)
+    const original = { ...apiDataSource }
+    Object.assign(apiDataSource, served)
+    try {
+      const given = await sourceGiven(apiDataSource)
+      expect(given).not.toBe(apiDataSource)
+      expect(Object.keys(given ?? {})).toEqual(expect.arrayContaining(['updateMatchingTransactions', 'addLabelsToTransactions']))
+      expect('updateMatchingTransactions' in apiDataSource).toBe(false)
+    } finally {
+      for (const key of Object.keys(served)) {
+        if (key in original) Object.assign(apiDataSource, { [key]: original[key as keyof typeof original] })
+        else Reflect.deleteProperty(apiDataSource, key)
+      }
+    }
   })
 })
 

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import { apiDataSource } from '../data/apiDataSource'
+import { withLedgerWrites } from '../data/apiLedgerWrites'
 import { type ExpenseDataSource, type LedgerPartsSource, hasLedgerParts } from '../data/dataSource'
 import { reportShadow, shadowDifferences } from '../data/ledgerShadow'
 import { loadLedgerSnapshot } from '../data/ledgerSnapshot'
@@ -63,13 +65,15 @@ function LedgerApp({
     [ledger, mode],
   )
   const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled, refuseWindow: true })
+  // The lists of a ledger read in pages are longer than a request may name, so its writes to the API are the ones that split them.
+  const source = useMemo(() => (props.source === apiDataSource ? withLedgerWrites(props.source) : props.source), [props.source])
   useBackgroundErrorToast(data.backgroundError, data.reload)
   // A read that found more rows than the list shows in full was kept out, so what is on screen is never part of
   // the ledger under the name of all of it: the whole dataset app takes over.
   useEffect(() => {
     if (data.outsized) onOutsized()
   }, [data.outsized, onOutsized])
-  return <View {...props} data={data} />
+  return <View {...props} source={source} data={data} />
 }
 
 /**
