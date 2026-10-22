@@ -132,7 +132,7 @@ describe('bulk writes larger than a request', () => {
     expect(ids()).toHaveLength(all.length - 500)
   })
 
-  it('edits more rows than one request may name and answers every row it changed', async () => {
+  it('edits rows in requests of at most 100 ids, however few the route would take, and answers every row it changed', async () => {
     const all = ids()
     const category = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }).id
     const edited = all.slice(0, 1_100)
@@ -141,7 +141,7 @@ describe('bulk writes larger than a request', () => {
 
     expect(result.updated).toBe(1_100)
     expect(result.transactions.map((row) => row.id).sort((a, b) => a - b)).toEqual(edited)
-    expect(sent).toHaveLength(3)
+    expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([...Array.from({ length: 11 }, () => 100)])
     expect(ids(`category_id = ${category}`).filter((id) => edited.includes(id))).toEqual(edited)
   })
 
