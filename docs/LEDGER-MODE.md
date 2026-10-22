@@ -152,7 +152,9 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   asked for that prefix with the browser's locale, and `mergeDescriptionMatches` makes the answer equal the index over
   every row. Typing is never held up: a read that more typing overtook is cancelled, one that fails or is refused keeps the
   matches shown, a prefix the server calls `tooBroad` keeps the rows held until more is typed, and the matches of the
-  shorter prefix that still fit stay on screen while the next is read. What was read lasts as long as the index, which
+  shorter prefix that still fit stay on screen while the next is read. The older matches are merged in key order, so they
+  can move what is listed: the combobox keeps the highlight as the suggestion's label and sends a click to the row that
+  was pressed, so Enter and a tap accept the suggestion that was chosen. What was read lasts as long as the index, which
   is rebuilt when the rows held change. A model that holds every row has no hook and its `search` is the whole answer.
 - **A window's usage counts are the server's, and a count that is not known is never zero.** Settings reads them through
   `useRecordUsage(model)`: a model that holds every row counts them from its rows, and one that holds a window carries
@@ -162,5 +164,7 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   those fields, none, or added or removed rows), and once when the rows are read at another revision than the counts.
   The browser's cache answers a read of an unchanged ledger for two rows. The counts show as a dash while none has been
   read and the delete of a category or account waits for them; when they could not be read it is left to the server's
-  409, which sends the user to a reassignment. `UsageView.note` says why counts cannot be taken as they are (being
-  read, read before a write, or not readable) and `UsageNote` shows it.
+  409, which sends the user to a reassignment. A flag or label has no such answer, since deleting one unflags its rows
+  without a word, so its delete waits for counts that can be taken (`settledCount`: none while they are being read, may
+  be out of date or could not be read) and its sheet says what is not known. `UsageView.note` says why counts cannot be
+  taken as they are (being read, read before a write, or not readable) and `UsageNote` shows it.
