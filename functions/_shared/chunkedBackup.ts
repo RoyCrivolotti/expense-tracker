@@ -306,11 +306,21 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
     if (outcome === 'failed') failed += 1
     if (outcome === 'complete') finished += 1
   }
-  await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
   const open = { owners: owners.length, dateKey, complete: false, failed, pruned: 0, usedBytes: 0 }
-  if (waiting || failed > 0) return open
-  if (finished === 0) return { ...open, complete: true }
-  const usedBytes = await maybeAlertBucketUsage(deps)
-  const pruned = await pruneBackups(deps, dateKey, owners, true)
-  return { ...open, complete: true, pruned, usedBytes }
+  if (waiting) {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+    return open
+  }
+  // No owner is waiting for a later run, so the day's clean-up runs even when an owner failed: a failure that repeats
+  // every day must not stop old backups being pruned or the bucket measured, and each owner keeps their newest
+  // complete backup either way.
+  const stuck = failures.length > 0 || failed > 0
+  if (finished === 0 && !stuck) return { ...open, complete: true }
+  try {
+    const usedBytes = await maybeAlertBucketUsage(deps)
+    const pruned = await pruneBackups(deps, dateKey, owners, true)
+    return { ...open, complete: !stuck, pruned, usedBytes }
+  } finally {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+  }
 }

@@ -165,6 +165,68 @@ describe('the resumable backup, with the first of two owners failing', () => {
     expect(store.objects.has(manifestKey(A, TODAY))).toBe(false)
     expect(spy.onBackupFailed).toHaveBeenCalledWith({ owner: A, dateKey: TODAY, reason: 'D1 hiccup' })
   })
+
+  const oldBackup = (owner: string) => ({
+    [`${owner}/2026-09-01/part-000001.ndjson`]: 'x'.repeat(100),
+    [`${owner}/2026-09-01/manifest.json`]: '{}',
+  })
+
+  it('still prunes and measures the bucket once nobody is waiting, so a failure every day cannot stop the clean-up', async () => {
+    const { store, spy, deps } = setup()
+    for (const [key, body] of Object.entries({ ...oldBackup(A), ...oldBackup(B) })) store.objects.set(key, body)
+
+    await expect(
+      runChunkedBackups({ ...deps, policy: { ...policy, bucketAlertThresholdFraction: 0 } }, () => new Date(`${TODAY}T04:00:00Z`)),
+    ).rejects.toThrow('have no backup')
+
+    expect(spy.onBucketNearLimit).toHaveBeenCalledOnce()
+    // B has today's backup, so its old one goes; A has only the old one, which is kept as the last there is.
+    expect(store.objects.has(`${B}/2026-09-01/manifest.json`)).toBe(false)
+    expect(store.objects.has(`${A}/2026-09-01/manifest.json`)).toBe(true)
+  })
+
+  it('does the same when the ledger of the owner kept changing and not an error', async () => {
+    const store = memoryBackupStore(oldBackup(B))
+    const spy = alerts()
+    let reads = 0
+    const repo = {
+      listOwners: () => Promise.resolve([A, B]),
+      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+    } as unknown as ExpenseRepository
+    const deps = {
+      repo,
+      store,
+      alerts: spy,
+      policy: { ...policy, bucketAlertThresholdFraction: 0 },
+      chunked: resolveChunkedBackup({ BACKUP_MODE: 'chunked' }),
+      // Moves on every look, so no pass can ever end on the revision it began with.
+      readRevision: (owner: string) => Promise.resolve(owner === A ? `r${(reads += 1)}` : 'steady'),
+    }
+
+    let result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
+    for (let i = 0; i < 6 && result.failed === 0; i += 1) result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
+
+    expect(result).toMatchObject({ failed: 1, complete: false })
+    expect(spy.onBucketNearLimit).toHaveBeenCalled()
+    expect(store.objects.has(`${B}/2026-09-01/manifest.json`)).toBe(false)
+  })
+
+  it('does not prune, and says nothing of the bucket, while an owner is still waiting for a later run', async () => {
+    const { store, spy, deps } = setup()
+    for (const [key, body] of Object.entries(oldBackup(B))) store.objects.set(key, body)
+
+    // A throws at once; B is started with what is left of the budget and does not finish.
+    await expect(
+      runChunkedBackups(
+        { ...deps, chunked: { enabled: true, maxOperations: 14, maxRows: 3_000 }, policy: { ...policy, bucketAlertThresholdFraction: 0 } },
+        () => new Date(`${TODAY}T04:00:00Z`),
+      ),
+    ).rejects.toThrow('have no backup')
+
+    expect(store.objects.has(manifestKey(B, TODAY))).toBe(false)
+    expect(spy.onBucketNearLimit).not.toHaveBeenCalled()
+    expect(store.objects.has(`${B}/2026-09-01/manifest.json`)).toBe(true)
+  })
 })
 
 describe('the resumable backup, when it is done for the day', () => {
