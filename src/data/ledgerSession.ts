@@ -21,6 +21,7 @@ import {
 import { readLedgerParts } from './ledgerLoader'
 import { cascadeOf } from './ledgerCascade'
 import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
+import { touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
 
 export interface SessionState {
@@ -40,6 +41,8 @@ export interface SessionState {
    * mounted (`watchSeries`). Null until the first read lands, and for a ledger held in full, whose rows are the series.
    */
   series: RecurringSeries[] | null
+  /** True when reading the series failed and none is held, so what depends on them is worked out from the loaded months. */
+  seriesFailed: boolean
 }
 
 export interface SessionOptions {
@@ -57,6 +60,9 @@ const DEFAULT_MAX_HELD_MONTHS = 48
 /** Receipt lists asked for at once: one request each, and a screen may ask for hundreds. */
 const RECEIPT_REQUESTS_AT_ONCE = 6
 const REFRESH_ATTEMPTS = 3
+/** After a read of the series failed, how long a screen mounting does not start another. */
+const SERIES_BACKOFF_MS = 60_000
+const SERIES_UNMATCHED = 'The recurring charges could not be matched to the rest of the ledger. Refresh to try again.'
 
 /** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
 export function rangesOfMonths(months: readonly string[]): MonthRange[] {
@@ -94,6 +100,7 @@ export class LedgerSession {
     offline: false,
     outsized: false,
     series: null,
+    seriesFailed: false,
   }
   private epochs: Epochs = NO_EPOCHS
   private readonly stale = new Set<string>()
@@ -102,8 +109,13 @@ export class LedgerSession {
   /** Screens that read the series right now, and whether a read of it is on its way. */
   private watching = 0
   private readingSeries = false
-  /** The revision the held series was read under and how many writes to rows the session had seen. */
-  private seriesRead: { revision: string; rows: number } | null = null
+  /** The revision the held series were read under, and how many writes that touched series the session had seen. */
+  private seriesRead: { revision: string; writes: number } | null = null
+  private seriesWrites = 0
+  /** No read of the series is started before this time, after one failed or gave up, until the user refreshes. */
+  private seriesRetryAt = 0
+  /** The error the series set, so that a read that works can take it away and no other. */
+  private seriesMessage: string | null = null
   /** How many refreshes have started, and the newest one's outcome. */
   private refreshes = 0
   private latest: Promise<void> = Promise.resolve()
@@ -172,6 +184,11 @@ export class LedgerSession {
    * is dropped, and so is its failure, and it waits for the newer one's outcome instead.
    */
   refresh(): Promise<void> {
+    this.seriesRetryAt = 0
+    return this.refreshLedger()
+  }
+
+  private refreshLedger(): Promise<void> {
     const mine = ++this.refreshes
     this.latest = this.readAgain(mine)
     return this.latest
@@ -214,7 +231,7 @@ export class LedgerSession {
     try {
       // After a write the revision the parts were read under is not known, so what is read now could not be
       // told from a later state of the ledger: read it all again, which also settles the revision.
-      if (held.revision === null) await this.refresh()
+      if (held.revision === null) await this.refreshLedger()
       else await this.hydrate(missing)
     } catch (error) {
       this.set({ error: reason(error) })
@@ -231,7 +248,7 @@ export class LedgerSession {
     const parts = await Promise.all(ranges.map((range) => this.source.readMonthsPart(range)))
     const now = this.state.held
     if (!now) return
-    if (parts.some((part) => part.revision !== now.revision)) return this.refresh()
+    if (parts.some((part) => part.revision !== now.revision)) return this.refreshLedger()
     // A write meanwhile may have changed rows of these months, so what was read is read again.
     if (started.rows !== this.epochs.rows) return this.hydrate(missingMonths(now, missing))
     this.set({ held: this.tidy(holdRows(now, parts)) })
@@ -256,20 +273,23 @@ export class LedgerSession {
     if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
+    if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
     this.set({ held: done.held })
-    if (done.changed.rows) void this.readSeries()
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
-    if (cascadeOf(before, after)) this.refresh().catch((error: unknown) => this.set({ error: reason(error) }))
+    if (cascadeOf(before, after)) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
   }
 
   /**
    * A screen reads the recurring series of the whole history (the fixed and flexible split, the Upcoming card),
-   * which a ledger held as a window cannot work out from its rows. The series is read once a screen is watching,
-   * and again while one is after a write that changed rows, after a read of the ledger that found it at another
-   * revision and when the ledger moved under the read. A write that changed no row (a setting, a flag's name)
-   * reads nothing, and neither does a screen that is not mounted: the server works the series out from every row,
-   * so a read that finds the ledger changed costs about nine rows per transaction. Returns the call that stops watching.
+   * which a ledger held as a window cannot work out from its rows. They are read when a screen that uses them
+   * mounts and they are not current: never read, written to since by something that could change them
+   * (`touchesSeries`), or read at another revision than the rows. A screen that is already mounted when such a
+   * write is made reads nothing: the server reads every row for them, about nine rows per transaction, so a
+   * read per write would cost more than the writes do. The Upcoming card folds the rows written since into them
+   * (`foldNewerRows`) and the rest waits for the next screen to mount or for a refresh. A read that failed or gave
+   * up is not started again by a screen mounting for a minute, and a refresh lifts that.
+   * Returns the call that says the screen has gone.
    */
   watchSeries = (): (() => void) => {
     this.watching += 1
@@ -281,35 +301,41 @@ export class LedgerSession {
 
   private wantsSeries(): boolean {
     const { held, offline } = this.state
-    return this.watching > 0 && held !== null && held.cells !== null && !offline
+    return this.watching > 0 && held !== null && held.cells !== null && !offline && Date.now() >= this.seriesRetryAt
   }
 
-  /** The series held was read after the last write to rows, and under the revision the rows were read under. */
+  /** The series held were read after the last write that touched them, under the revision the rows were read under. */
   private seriesCurrent(): boolean {
     const read = this.seriesRead
     const revision = this.state.held?.revision ?? null
-    return read !== null && read.rows === this.epochs.rows && (revision === null || revision === read.revision)
+    return read !== null && read.writes === this.seriesWrites && (revision === null || revision === read.revision)
+  }
+
+  /** Says why the series are not what they should be, and holds off reading them again for a while. */
+  private seriesFailedWith(message: string): void {
+    this.seriesMessage = message
+    this.seriesRetryAt = Date.now() + SERIES_BACKOFF_MS
+    this.set({ error: message, seriesFailed: this.state.series === null })
   }
 
   private async readSeries(): Promise<void> {
     if (this.readingSeries) return
     this.readingSeries = true
-    let moved = 0
     try {
-      while (this.wantsSeries() && !this.seriesCurrent()) {
-        const rows = this.epochs.rows
+      for (let tries = 1; this.wantsSeries() && !this.seriesCurrent(); tries += 1) {
+        const writes = this.seriesWrites
         const part = await this.source.readSeriesPart()
-        // A write to rows meanwhile makes the answer old before it lands: read again.
-        if (rows !== this.epochs.rows) continue
-        this.seriesRead = { revision: part.revision, rows }
-        this.set({ series: part.series })
+        // A write that touched them while they were read is not in them: they are held as read, and stale.
+        this.seriesRead = { revision: part.revision, writes }
+        const cleared = this.state.error !== null && this.state.error === this.seriesMessage
+        this.set({ series: part.series, seriesFailed: false, ...(cleared ? { error: null } : {}) })
         // The rows were read under another revision, so the ledger moved since: bring them level with the series.
-        if ((this.state.held?.revision ?? part.revision) === part.revision) continue
-        if (++moved >= REFRESH_ATTEMPTS) break
-        await this.refresh()
+        if ((this.state.held?.revision ?? part.revision) === part.revision) break
+        if (tries >= REFRESH_ATTEMPTS) return this.seriesFailedWith(SERIES_UNMATCHED)
+        await this.refreshLedger()
       }
     } catch (error) {
-      this.set({ error: reason(error) })
+      this.seriesFailedWith(reason(error))
     } finally {
       this.readingSeries = false
     }

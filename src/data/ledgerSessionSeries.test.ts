@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { sortedMonths } from '../domain/engine/dates'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { ExpenseDataset, Transaction } from '../domain/types'
-import { patchAfterCategory, patchAfterTransactionCreate } from '../ui/datasetPatches'
+import { patchAfterCategory, patchAfterTransactionCreate, patchAfterTransactionUpdate } from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeTransaction } from '../testing/factories'
 import { memorySource, type TestSource } from '../testing/ledgerSource'
@@ -31,6 +31,10 @@ async function open(source = memorySource(dataset), policy = WINDOWED) {
   return { session, source }
 }
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('LedgerSession, the recurring series', () => {
   it('reads nothing until a screen watches, then the series of every row, once', async () => {
     const { session, source } = await open()
@@ -56,31 +60,39 @@ describe('LedgerSession, the recurring series', () => {
     expect(session.getState().series).toBeNull()
   })
 
-  it('reads it again after a write that changed rows, and holds the series of the rows then', async () => {
+  it('reads nothing after a write that could change a series while the screen that uses them is mounted, and reads them when the next one mounts', async () => {
     const { session, source } = await open()
-    session.watchSeries()
+    const stop = session.watchSeries()
     await flush()
     const added = [charge(900_001, 1), charge(900_002, 2), charge(900_003, 3)]
     source.dataset = after(...added)
     session.patch((d) => added.reduce(patchAfterTransactionCreate, d))
     await flush()
+    expect(seriesCalls(source)).toBe(1)
+    expect(session.getState().series).toEqual(seriesFromTransactions(dataset.transactions))
+    session.watchSeries()
+    await flush()
     expect(seriesCalls(source)).toBe(2)
-    const held = session.getState().series!
-    expect(held).toEqual(seriesFromTransactions(source.dataset.transactions))
-    expect(held.some((s) => s.label === 'Cloud backup')).toBe(true)
+    expect(session.getState().series).toEqual(seriesFromTransactions(source.dataset.transactions))
+    stop()
   })
 
-  it('reads nothing after a write that changed no row', async () => {
+  it.each([
+    ['a category renamed', (d: ExpenseDataset) => patchAfterCategory(d, { ...d.categories[0]!, name: 'Renamed' })],
+    ['a flag put on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, flagId: d.flags[0]!.id })],
+    ['labels set on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, labelIds: [d.labels[0]!.id] })],
+    ['a note written on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, notes: 'noted' })],
+  ])('treats the series as current after %s', async (_name, write) => {
     const { session, source } = await open()
     session.watchSeries()
     await flush()
-    const category = dataset.categories[0]!
-    session.patch((d) => patchAfterCategory(d, { ...category, name: `${category.name} renamed` }))
+    session.patch(write)
+    session.watchSeries()
     await flush()
     expect(seriesCalls(source)).toBe(1)
   })
 
-  it('reads it once, not once a write, when several land while a read is on its way', async () => {
+  it('holds the series as they were read when a write lands while they are being read, and reads them again at the next mount', async () => {
     const { session, source } = await open()
     let release = () => {}
     const gate = new Promise<void>((resolve) => (release = resolve))
@@ -97,6 +109,10 @@ describe('LedgerSession, the recurring series', () => {
     for (const row of added) session.patch((d) => patchAfterTransactionCreate(d, row))
     source.readSeriesPart = read
     release()
+    await flush()
+    expect(seriesCalls(source)).toBe(1)
+    expect(session.getState().series).toEqual(seriesFromTransactions(dataset.transactions))
+    session.watchSeries()
     await flush()
     expect(seriesCalls(source)).toBe(2)
     expect(session.getState().series).toEqual(seriesFromTransactions(source.dataset.transactions))
@@ -128,7 +144,9 @@ describe('LedgerSession, the recurring series', () => {
     expect(session.getState().held!.revision).toBe('r1')
   })
 
-  it('gives up after a few tries when the ledger will not hold still, instead of reading for ever', async () => {
+  it('says so, after a few tries, when the series will not match the rows, and does not start again until a refresh', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T10:00:00Z'))
     const { session, source } = await open()
     const read = source.readSeriesPart.bind(source)
     source.readSeriesPart = async () => ({ ...(await read()), revision: 'elsewhere' })
@@ -136,21 +154,53 @@ describe('LedgerSession, the recurring series', () => {
     await flush()
     expect(seriesCalls(source)).toBe(3)
     expect(source.calls.filter((c) => c === 'reference')).toHaveLength(2)
+    expect(session.getState().error).toMatch(/could not be matched/i)
+    expect(session.getState().series).not.toBeNull()
+    session.watchSeries()
+    await flush()
+    expect(seriesCalls(source)).toBe(3)
+    vi.setSystemTime(new Date('2026-10-22T10:02:00Z'))
+    session.watchSeries()
+    await flush()
+    expect(seriesCalls(source)).toBe(6)
   })
 
-  it('reports a read that fails, keeps what it held, and reads again at the next refresh', async () => {
+  it('reports a read that fails, says nothing is held, holds off for a minute, and reads again at a refresh, which clears the report', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T10:00:00Z'))
+    const { session, source } = await open()
+    const read = source.readSeriesPart.bind(source)
+    source.readSeriesPart = () => {
+      source.calls.push('series')
+      return Promise.reject(new Error('series are down'))
+    }
+    session.watchSeries()
+    await flush()
+    expect(session.getState()).toMatchObject({ error: 'series are down', series: null, seriesFailed: true })
+    session.watchSeries()
+    await flush()
+    expect(seriesCalls(source)).toBe(1)
+    source.readSeriesPart = read
+    await session.refresh()
+    await flush()
+    expect(session.getState().series).toEqual(seriesFromTransactions(dataset.transactions))
+    expect(session.getState()).toMatchObject({ error: null, seriesFailed: false })
+  })
+
+  it('takes away the report of a failed read when a later read works, and no other report', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T10:00:00Z'))
     const { session, source } = await open()
     const read = source.readSeriesPart.bind(source)
     source.readSeriesPart = () => Promise.reject(new Error('series are down'))
     session.watchSeries()
     await flush()
     expect(session.getState().error).toBe('series are down')
-    expect(session.getState().series).toBeNull()
     source.readSeriesPart = read
-    await session.refresh()
+    vi.setSystemTime(new Date('2026-10-22T10:05:00Z'))
+    session.watchSeries()
     await flush()
-    expect(session.getState().series).toEqual(seriesFromTransactions(dataset.transactions))
-    expect(session.getState().error).toBeNull()
+    expect(session.getState()).toMatchObject({ error: null, seriesFailed: false })
   })
 
   it('reads nothing from a snapshot, which is offline', async () => {
