@@ -173,21 +173,25 @@ describe('the flag and label managers over a window', () => {
     expect(screen.queryByText(NOTE_WORDS.stale)).toBeNull()
   })
 
-  it('say it without a number, and with the note, when the counts stop being current while the sheet is open', async () => {
+  it.each([
+    ['flag', FlagsModal, /Every transaction flagged with it will be unflagged/, /7 transactions/],
+    ['label', LabelsModal, /Every transaction with this label will lose it/, /9 transactions/],
+  ] as const)('say it without a number, and with the note, when the counts of a %s stop being current while the sheet is open', async (kind, Modal, generic, number) => {
     const wrap = (model: ExpenseModel) => (
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <FlagsModal model={model} actions={actions} onClose={vi.fn()} />
+        <Modal model={model} actions={actions} onClose={vi.fn()} />
       </MoneyFormatProvider>
     )
     const shown = render(wrap(windowOf({})))
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+    await userEvent.click(screen.getByRole('button', { name: `Delete ${kind}` }))
+    expect(within(screen.getByRole('alertdialog')).getByText(number)).toBeInTheDocument()
 
     shown.rerender(wrap(windowOf({ note: 'stale' })))
 
     const sheet = within(screen.getByRole('alertdialog'))
-    expect(sheet.getByText(/Every transaction flagged with it will be unflagged/)).toBeInTheDocument()
+    expect(sheet.getByText(generic)).toBeInTheDocument()
     expect(sheet.getByText(NOTE_WORDS.stale)).toBeInTheDocument()
-    expect(sheet.queryByText(/7 transactions/)).toBeNull()
+    expect(sheet.queryByText(number)).toBeNull()
   })
 })
