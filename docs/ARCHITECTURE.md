@@ -209,7 +209,8 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   `reconcileHeld` returns the months whose sums it moved (a row in a month that is not held, a row that stops
   being pinned) for the session to read again, because the browser cannot tell what a write did to months it does not
   hold. Reads are guarded per resource (`ledgerResources.ts`): a write to the rows drops a read of the rows that
-  started before it, and leaves a read of the reference alone, so the old value is never shown again. A write also
+  started before it, and leaves a read of the reference alone, so the old value is never shown again. Refreshes are
+  numbered: one that a later refresh has overtaken is dropped, with its failure, whichever answers first. A write also
   makes the held revision unknown until a part is read again, so the next read of another month reads everything
   again rather than mixing two states. The months held beyond the window around the month shown and the newest
   window are given up oldest first; a ledger held in full gives up nothing.
