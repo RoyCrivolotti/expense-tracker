@@ -130,7 +130,7 @@ the design depends on, each held by a query-plan test that fails on a full scan 
 | `idx_txn_owner_desc_norm (owner, description_norm, date)` | 0038 | Grouping and prefix search by normalized description, and the newest row of a description |
 
 The cube has no index of its own: a covering one would be eleven columns wide and add a written row to every insert on a
-table that already has eleven indexes. Two older indexes are not needed any more. `idx_txn_budget_month` is read by no
+table that already has twelve indexes. Two older indexes are not needed any more. `idx_txn_budget_month` is read by no
 statement the repository issues, and `idx_txn_owner` is the first column of `idx_txn_owner_date`, so with both dropped
 every statement is planned over the same tables (`transactionIndexUsage.test.ts`). Dropping them would save two written
 rows per insert. It is a migration for a later change, since the deploy applies every file in `migrations/` on merge.
