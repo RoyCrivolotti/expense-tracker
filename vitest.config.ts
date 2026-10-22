@@ -79,10 +79,10 @@ export default defineConfig({
         // New and changed code is held to a far higher bar by the diff-coverage check in
         // CI (scripts/check-diff-coverage.mjs), not by this. See docs/TESTING.md.
         //
-        // Set about two points under the measured figure, which leaves room for the
-        // run-to-run wobble without letting a real drop through. Re-measure and raise these
-        // when coverage rises, or they stop catching anything.
-        // Measured 2026-10-07: 90.4 / 85.0 / 89.0 / 92.1
+        // Loose on purpose: 7 to 8 points under the measured figure, so these catch the loss of a
+        // large share of the tests and not a slow slide. Diff coverage is what keeps new code tested.
+        // Raise them if the global number should be held more tightly.
+        // Measured 2026-10-23: 95.6 / 90.8 / 94.9 / 97.0
         statements: 88,
         branches: 83,
         functions: 87,
