@@ -1,6 +1,7 @@
 {
   "name": "expense-tracker",
   "private": true,
+  "license": "UNLICENSED",
   "version": "1.0.0",
   "engines": {
     "node": ">=22.13.0"
