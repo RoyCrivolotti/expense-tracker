@@ -1,6 +1,7 @@
-import { useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense, type ReactNode } from 'react'
 import type { ExpenseDataSource } from '../data/dataSource'
-import { useExpenseData, type ExpenseModel } from './useExpenseData'
+import { useExpenseData, type ExpenseData, type ExpenseModel } from './useExpenseData'
+import { currentLedgerMode } from '../config/ledgerMode'
 import { useExpenseActions } from './useExpenseActions'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { useExpenseTheme, type ExpenseTheme } from './hooks/useExpenseTheme'
@@ -32,10 +33,12 @@ import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useRefreshToast } from './hooks/useRefreshToast'
 import { useToast } from './hooks/useToast'
 import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
+import { fullMonthLabel } from '../engine'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
 const AnalyticsTab = lazy(() => import('./tabs/AnalyticsTab'))
+const LedgerExpensesApp = lazy(() => import('./LedgerExpensesApp'))
 import type { GoalsEntry } from './tabs/goals/GoalsTab'
 import type { TransactionsEntry } from './tabs/transactionsEntry'
 
@@ -51,6 +54,27 @@ function monthLockedFor(tab: TabId, txnSelecting: boolean): boolean {
 /** The month the user picked, else the one a selection is holding, else the newest. */
 function shownMonth(picked: string | null, held: string | null, months: string[]): string {
   return picked ?? held ?? months[months.length - 1] ?? ''
+}
+
+/** A model that holds only the months looked at reads the rows of the month shown. */
+function useViewMonth(viewMonth: ((month: string) => void) | undefined, month: string): void {
+  useEffect(() => {
+    viewMonth?.(month)
+  }, [viewMonth, month])
+}
+
+/** The pane of the tab shown. While the rows of the month are being read it says so and is not for pressing. */
+function TabPane({ hydrating, month, children }: { hydrating: boolean; month: string; children: ReactNode }) {
+  return (
+    <div className={hydrating ? `${styles.tabPane} ${styles.hydrating}` : styles.tabPane} aria-busy={hydrating}>
+      {hydrating ? (
+        <p role="status" className={styles.monthLoading}>
+          Loading {fullMonthLabel(month)}…
+        </p>
+      ) : null}
+      {children}
+    </div>
+  )
 }
 
 function TabView({
@@ -150,19 +174,40 @@ function TabView({
   }
 }
 
-export function ExpensesApp({
-  source,
-  ownerAccess,
-  accountEmail,
-  hubGrants,
-}: {
+export interface ExpensesAppProps {
   source: ExpenseDataSource
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
   hubGrants: GroupGrants
-}) {
-  const data = useExpenseData(source)
+}
 
+/**
+ * Reads the whole dataset, as it always has, unless this browser asked to read the ledger in parts
+ * (`src/config/ledgerMode.ts`). That path is a separate chunk: nothing of it is loaded otherwise, and it hands
+ * back to `DatasetApp` for a ledger too large to hold in full.
+ */
+export function ExpensesApp(props: ExpensesAppProps) {
+  const [mode] = useState(currentLedgerMode)
+  if (mode === 'off') return <DatasetApp {...props} />
+  return (
+    <Suspense fallback={<AppLoadingSkeleton label="Loading expenses" />}>
+      <LedgerExpensesApp {...props} mode={mode} fallback={<DatasetApp {...props} />} />
+    </Suspense>
+  )
+}
+
+function DatasetApp(props: ExpensesAppProps) {
+  return <ExpensesAppView {...props} data={useExpenseData(props.source)} />
+}
+
+/** The app over data a hook has loaded: the whole dataset (`useExpenseData`) or a ledger (`useLedgerData`). */
+export function ExpensesAppView({
+  source,
+  ownerAccess,
+  accountEmail,
+  hubGrants,
+  data,
+}: ExpensesAppProps & { data: ExpenseData }) {
   if (data.status === 'loading') return <AppLoadingSkeleton label="Loading expenses" />
   if (data.status === 'error' || !data.model) {
     return (
@@ -185,6 +230,8 @@ export function ExpensesApp({
       refreshOutcome={data.refreshOutcome}
       fromCache={data.fromCache ?? false}
       {...(data.snapshotAt ? { snapshotAt: data.snapshotAt } : {})}
+      {...(data.viewMonth ? { viewMonth: data.viewMonth } : {})}
+      hydrating={data.hydrating ?? false}
       hubGrants={hubGrants}
       {...(ownerAccess ? { ownerAccess } : {})}
       {...(accountEmail ? { accountEmail } : {})}
@@ -201,6 +248,8 @@ function ExpensesAppLoaded({
   refreshOutcome,
   fromCache,
   snapshotAt,
+  viewMonth,
+  hydrating,
   ownerAccess,
   accountEmail,
   hubGrants,
@@ -213,6 +262,8 @@ function ExpensesAppLoaded({
   refreshOutcome: ReturnType<typeof useExpenseData>['refreshOutcome']
   fromCache: boolean
   snapshotAt?: string
+  viewMonth?: (month: string) => void
+  hydrating: boolean
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
   hubGrants: GroupGrants
@@ -233,6 +284,8 @@ function ExpensesAppLoaded({
                 reload={reload}
                 refreshing={refreshing}
                 refreshOutcome={refreshOutcome}
+                {...(viewMonth ? { viewMonth } : {})}
+                hydrating={hydrating}
                 hubGrants={hubGrants}
                 {...(ownerAccess ? { ownerAccess } : {})}
                 {...(accountEmail ? { accountEmail } : {})}
@@ -252,6 +305,8 @@ function ExpensesAppReady({
   reload,
   refreshing,
   refreshOutcome,
+  viewMonth,
+  hydrating,
   ownerAccess,
   accountEmail,
   hubGrants,
@@ -262,6 +317,8 @@ function ExpensesAppReady({
   reload: () => void
   refreshing: boolean
   refreshOutcome: ReturnType<typeof useExpenseData>['refreshOutcome']
+  viewMonth?: (month: string) => void
+  hydrating: boolean
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
   hubGrants: GroupGrants
@@ -337,6 +394,7 @@ function ExpensesAppReady({
   const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
   const activeMonth = shownMonth(month, selectionMonth, model.months)
+  useViewMonth(viewMonth, activeMonth)
   const holdMonthForSelection = (selecting: boolean) => {
     setSelectionMonth(selecting ? activeMonth : null)
   }
@@ -390,7 +448,7 @@ function ExpensesAppReady({
           />
         }
       >
-        <div key={tab} className={styles.tabPane}>
+        <TabPane key={tab} hydrating={hydrating} month={activeMonth}>
           <TabView
             tab={tab}
             model={model}
@@ -415,7 +473,7 @@ function ExpensesAppReady({
               setOnboardingOpen(true)
             }}
           />
-        </div>
+        </TabPane>
       </AppShell>
       <PresenceValue value={actions ? modal : null} exitMs={EXIT_MS.sheet}>
         {(shown) =>
