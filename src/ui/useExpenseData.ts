@@ -214,10 +214,12 @@ export function useExpenseData(source: ExpenseDataSource, owner?: string): Expen
 
     const handleLoadError = async (err: unknown) => {
       if (!active) return
+      // The server answered and said no, so what this device kept is not for anyone to see in its place. That
+      // holds for a refresh as well: the model already on screen stays, but the copy is not left on disk.
+      const denied = isAccessDenied(err)
+      if (denied) await forgetOfflineSnapshot()
       if (modelRef.current) return void finish('fail')
-      // The server answered and said no, so what this device kept is not for anyone to see in its place.
-      if (isAccessDenied(err)) await forgetOfflineSnapshot()
-      else if (await applyCached('fail')) return
+      if (!denied && (await applyCached('fail'))) return
       setState({ status: 'error', error: err instanceof Error ? err.message : String(err) })
       void finish('fail')
     }

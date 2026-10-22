@@ -3,8 +3,8 @@
  * fails for someone else, or for the same person once the server has refused them, shows an error and not it.
  * The offline cache here is the real one over a fake IndexedDB.
  */
-import { renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../data/apiClient'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { defaultExpenseSettings } from '../engine'
@@ -118,6 +118,34 @@ describe('the saved copy of the dataset', () => {
     expect(refused.status).toBe('error')
     expect(refused.model).toBeUndefined()
     expect(saved()).toBeUndefined()
+  })
+
+  it.each([401, 403])('is removed when a refresh is refused with %i, though the model already on screen stays', async (status) => {
+    const load = vi.fn().mockResolvedValueOnce(datasetWith(12_345)).mockRejectedValue(new ApiError('Refused', status))
+    const source: ExpenseDataSource = { canWrite: false, load }
+    const view = renderHook(() => useExpenseData(source, ALICE))
+    await waitFor(() => expect(view.result.current.status).toBe('ready'))
+    expect(saved()?.owner).toBe(ALICE)
+
+    act(() => view.result.current.reload())
+
+    await waitFor(() => expect(view.result.current.refreshOutcome).toBe('fail'))
+    expect(saved()).toBeUndefined()
+    expect(view.result.current.status).toBe('ready')
+    view.unmount()
+  })
+
+  it('is kept when a refresh fails for any other reason', async () => {
+    const load = vi.fn().mockResolvedValueOnce(datasetWith(12_345)).mockRejectedValue(new Error('503 Service Unavailable'))
+    const source: ExpenseDataSource = { canWrite: false, load }
+    const view = renderHook(() => useExpenseData(source, ALICE))
+    await waitFor(() => expect(view.result.current.status).toBe('ready'))
+
+    act(() => view.result.current.reload())
+
+    await waitFor(() => expect(view.result.current.refreshOutcome).toBe('fail'))
+    expect(saved()?.owner).toBe(ALICE)
+    view.unmount()
   })
 
   it('is neither kept nor shown when nobody is known to own it', async () => {
