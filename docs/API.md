@@ -15,13 +15,14 @@ fit together is in [SCALING.md](./SCALING.md).
 - **Bounds are refused, never cut.** A request over a bound is a 400 that names the bound, because a client that
   silently received part of a month would add up the wrong total. The bounds are conservative, not derived from a
   deployed Worker: raise one only after measuring CPU on a deployed Worker.
-- **Conditional reads.** The dataset, reference, months, cube, series and usage routes send a weak `ETag` and
-  `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before anything
-  else runs. The tag is built from the owner's revision token, which every write request replaces
+- **Conditional reads.** The dataset, reference, months, cube, series, usage and receipt list routes send a weak
+  `ETag` and `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before
+  anything else runs. The tag is built from the owner's revision token, which every write request replaces
   ([decision](./decisions/revision-token-and-etag.md)).
 - **Tags.** `W/"<token>-<budget month>-<DATASET_FORMAT>"` for the dataset, and `W/"<token>-<budget
-  month>-<part><PARTS_FORMAT>[-<from>..<to>]"` for a part, so a tag held for one range never matches another. A change
-  to a response's JSON shape moves the format number in [`datasetEtag.ts`](../functions/_shared/datasetEtag.ts).
+  month>-<part><PARTS_FORMAT>[-<from>..<to>]"` for a part (one transaction's receipt list ends `-txn<id>`), so a tag held
+  for one range never matches another. A change to a response's JSON shape moves the format number in
+  [`datasetEtag.ts`](../functions/_shared/datasetEtag.ts).
 - **`revision`.** A part's body starts with the token it was read under. Two responses with different `revision`s were
   read from different states of the ledger, so fetch again.
 
