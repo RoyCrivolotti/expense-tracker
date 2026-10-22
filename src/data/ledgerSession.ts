@@ -78,6 +78,9 @@ export class LedgerSession {
   private readonly stale = new Set<string>()
   private flushing = false
   private readonly readingReceipts = new Set<number>()
+  /** How many refreshes have started, and the newest one's outcome. */
+  private refreshes = 0
+  private latest: Promise<void> = Promise.resolve()
   private readonly listeners = new Set<() => void>()
   private readonly source: LedgerPartsSource
   private readonly policy: HydrationPolicy
@@ -128,12 +131,26 @@ export class LedgerSession {
   /**
    * Reads everything again, as pull to refresh does and as a write whose effects reach rows nobody here
    * has does. A resource written to meanwhile keeps its local value and is read again, up to
-   * {@link REFRESH_ATTEMPTS} times.
+   * {@link REFRESH_ATTEMPTS} times. Refreshes can overlap (a pull to refresh while the read after a cascade is
+   * still going), and the one that started last read the ledger last, so an older one that answers after it
+   * is dropped, and so is its failure, and it waits for the newer one's outcome instead.
    */
-  async refresh(): Promise<void> {
+  refresh(): Promise<void> {
+    const mine = ++this.refreshes
+    this.latest = this.readAgain(mine)
+    return this.latest
+  }
+
+  private async readAgain(mine: number): Promise<void> {
     for (let attempt = 0; attempt < REFRESH_ATTEMPTS; attempt++) {
       const started = this.epochs
-      const parts = await readLedgerParts(this.source, this.readOptions(this.state.viewed || undefined))
+      const parts = await readLedgerParts(this.source, this.readOptions(this.state.viewed || undefined)).catch(
+        (error: unknown) => {
+          if (mine === this.refreshes) throw error
+          return null
+        },
+      )
+      if (mine !== this.refreshes || !parts) return this.latest
       const read = holdParts(parts)
       const current = stillCurrent(started, this.epochs)
       const held = this.state.held ? mergeRead(this.state.held, read, current) : read
