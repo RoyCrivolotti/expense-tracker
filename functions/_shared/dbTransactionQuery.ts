@@ -11,14 +11,14 @@ import type { Env } from './env'
 import { toStoredTxn, type TxnRow } from './rows'
 import { countSql, netSpendSql, oneSql, pageSql, type Sql } from './transactionQuerySql'
 
-interface QueryRow extends TxnRow {
+export interface QueryRow extends TxnRow {
   status: TxnStatus
   /** JSON array of label ids. */
   label_ids: string
 }
 
 /** The shape `loadDataset` returns for a transaction, label ids in ascending order. */
-function toTransaction(row: QueryRow): Transaction {
+export function toTransaction(row: QueryRow): Transaction {
   const labelIds = (JSON.parse(row.label_ids) as number[]).sort((a, b) => a - b)
   return { ...toStoredTxn(row), status: row.status, labelIds }
 }

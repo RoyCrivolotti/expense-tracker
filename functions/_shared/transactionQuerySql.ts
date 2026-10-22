@@ -13,6 +13,7 @@
 import { SUMMARY_COUNT_CAP, caseFolds } from '../domain/data/transactionQuery'
 import type { TransactionKey } from '../domain/data/transactionQuery'
 import type { TxnFilter } from '../domain/engine/transactions'
+import { guardSql } from './batchGuard'
 import { IN_ID_LIST, idList } from './sqlIdList'
 
 export type SqlParam = string | number
@@ -179,5 +180,33 @@ export function netSpendSql(owner: string, f: TxnFilter): Sql {
         WHEN 'refund' THEN -t.amount_cents ELSE t.amount_cents END), 0) AS net
       FROM transactions t ${joinsFor(f)} ${where.sql}`,
     params: where.params,
+  }
+}
+
+/**
+ * The ids of the rows a filter matches, `limit` of them at most. Same WHERE as the list and the summary,
+ * so a bulk edit reaches the rows those showed. No ORDER BY: the caller refuses a result that reaches
+ * its cap, so which rows a cut-short result holds never matters.
+ */
+export function idsSql(owner: string, f: TxnFilter, limit: number): Sql {
+  const where = whereOf(owner, f)
+  return { sql: `SELECT t.id FROM transactions t ${joinsFor(f)} ${where.sql} LIMIT ${limit}`, params: where.params }
+}
+
+/**
+ * A guard (see `batchGuard.ts`) that holds only while the rows `filter` matches are exactly `ids`: as
+ * many as there are ids, and each of them among the matches. Put first in a batch, it makes the check
+ * that was made when the ids were read hold again at the moment the batch writes. The filter is read
+ * once, into `m`, and reads at most one row past the cap.
+ */
+export function matchGuardSql(owner: string, f: TxnFilter, ids: readonly number[], cap: number): Sql {
+  const where = whereOf(owner, f)
+  const n = ids.length
+  return {
+    sql: guardSql(
+      `(SELECT COUNT(*) FROM m) = ? AND (SELECT COUNT(*) FROM m WHERE id ${IN_ID_LIST}) = ?`,
+      `WITH m AS (SELECT t.id FROM transactions t ${joinsFor(f)} ${where.sql} LIMIT ${cap + 1}) `,
+    ),
+    params: [...where.params, n, idList(ids), n],
   }
 }

@@ -88,6 +88,7 @@ describe('the statements that write a transaction description', () => {
         '/scripts/gen-seed-sql.ts',
         '/scripts/gen-demo-seed-sql.ts',
         '/src/testing/seedSqlite.ts',
+        '/src/testing/smallLedgerDb.ts',
       ]),
     )
     expect(updates().length).toBeGreaterThan(5)
