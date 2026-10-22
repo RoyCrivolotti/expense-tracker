@@ -27,13 +27,20 @@ export function DescriptionCombobox({
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [focused, setFocused] = useState(false)
-  const [highlight, setHighlight] = useState(-1)
+  // The suggestion that is highlighted, not its place in the list: older matches can arrive and move it, and Enter has to
+  // accept the one the user chose.
+  const [highlighted, setHighlighted] = useState<string | null>(null)
   const useSuggestions = index.useSuggestions ?? useOwnSuggestions
   const suggestions = useSuggestions(index, value)
+  const highlight = suggestions.findIndex((s) => s.label === highlighted)
+  const setHighlight = (next: number | ((h: number) => number)) => {
+    const at = typeof next === 'function' ? next(highlight) : next
+    setHighlighted(suggestions[at]?.label ?? null)
+  }
   const open = focused && suggestions.length > 0
   const dismiss = () => {
     setFocused(false)
-    setHighlight(-1)
+    setHighlighted(null)
   }
   const pick = (suggestion: DescriptionSuggestion) => {
     onAccept(suggestion)
