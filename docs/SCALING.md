@@ -88,10 +88,45 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 3. **D1 rows read.** Every load reads every row, so the daily 5 million covers about 440 loads at 10,000 transactions,
    90 at 50,000 and 18 at 250,000. A 304 skips the load, so the figure counts opens that follow a change.
 4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
-5. **A load issues 16 D1 queries**, inside the limit of 50.
+5. **A load issues 19 D1 queries** on a deployed D1 (the table below), inside the limit of 50.
 
-Not measured: Worker CPU on workerd and rows billed per route on a deployed D1. [MEASURING.md](./MEASURING.md) says how
-to measure the rows billed safely.
+### On a deployed D1
+
+`scripts/measure-d1.mjs` ran the route handlers against a development D1 database through Cloudflare's REST API, which
+reports the rows each statement read and wrote ([MEASURING.md](./MEASURING.md)). The ledger was synthetic: 303
+transactions and 11 statements under a reserved example owner, removed afterwards. A call is one round trip, with a
+`batch()` counted once, and the statements count each member of a batch. The harness stubs the middleware's access
+checks, about five statements a request, so they are in none of the counts.
+
+| Route | Calls | Statements | Rows read | Rows written |
+| --- | --- | --- | --- | --- |
+| `GET /api/expenses` | 19 | 19 | 774 | 0 |
+| `GET /api/expenses`, unchanged (304) | 1 | 1 | 1 | 0 |
+| `GET /reference` | 20 | 20 | 546 | 0 |
+| `GET /transactions/months`, 3 months | 2 | 2 | 863 | 0 |
+| `GET /cube`, 12 months | 2 | 2 | 890 | 0 |
+| `GET /series` | 3 | 3 | 3,027 | 0 |
+| `GET /descriptions/suggest`, one letter | 2 | 2 | 139 | 0 |
+| `GET /usage` | 6 | 6 | 756 | 0 |
+| `GET /transactions/list`, first page | 1 | 1 | 277 | 0 |
+| `GET /transactions/list`, second page | 1 | 1 | 283 | 0 |
+| `GET /transactions/list`, one month | 1 | 1 | 208 | 0 |
+| `GET /transactions/summary` | 1 | 2 | 608 | 0 |
+| `GET /transactions/summary`, one month | 1 | 2 | 78 | 0 |
+| `GET /transactions/:id` | 1 | 1 | 5 | 0 |
+| `POST /transactions`, one row | 8 | 8 | 10 | 11 |
+| `POST /transactions/bulk`, 20 rows | 124 | 124 | 164 | 182 |
+| `PATCH /transactions/bulk`, 50 ids | 155 | 155 | 628 | 102 |
+| `DELETE /transactions/bulk`, 20 rows | 3 | 6 | 264 | 22 |
+| `DELETE /transactions/:id` | 3 | 6 | 6 | 3 |
+
+A delete wrote about one row per row removed, so D1 did not appear to bill the index entries it removed. That is one run
+on a small ledger. The statement counts of the bulk routes are the formulas in
+[API.md](./API.md#bulk-transaction-routes).
+
+Not measured: the CPU of the app's own routes on workerd (the REST API reports none, and the probe above ran a loop),
+and any ledger larger than the seed. [MEASURING.md](./MEASURING.md) says how to repeat the run with a larger seed and
+compare.
 
 ## The design
 
