@@ -1,6 +1,5 @@
-import { useMemo } from 'react'
-import type { Usage } from '../../domain/data/usage'
-import { usageFromDataset } from '../../domain/engine/recordUsage'
+import { type ReactNode, useMemo } from 'react'
+import type { ExpenseDataset } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 
 export type UsageKind = 'category' | 'account' | 'flag' | 'label'
@@ -11,37 +10,39 @@ export type UsageKind = 'category' | 'account' | 'flag' | 'label'
  * model), which takes time and can fail.
  */
 export interface UsageView {
-  /** The counts, or null before any has been read. */
-  usage: Usage | null
-  /** Why they cannot be taken as they are: being read, read before a write that could change them, or not readable. */
+  /**
+   * How many records name this one, as the server's delete check counts it: a category or account is in use by a
+   * transaction of any status, an instalment plan or (an account) a month statement, a flag or label by a transaction.
+   * Null when the counts have not been read, which is not zero and must not be taken for it.
+   */
+  count: (kind: UsageKind, id: number) => number | null
+  /** Why the counts cannot be taken as they are: being read, read before a write that could change them, or not readable. */
   note: 'reading' | 'stale' | 'failed' | null
-  /** Reads them again. */
-  refresh: () => void
+  /** Says so beside the counts, with a way to read them again where that helps. Nothing when they can be taken. */
+  notice: ReactNode
 }
 
-/**
- * What names one record, as the server's delete check counts it: a category or account is in use by a transaction of
- * any status, an instalment plan or (an account) a month statement, a flag or label by a transaction. Null when the
- * counts have not been read, which is not zero and must not be taken for it.
- */
-export function usageCount(usage: Usage | null, kind: UsageKind, id: number): number | null {
-  if (usage === null) return null
-  if (kind === 'flag') return usage.flags.find((f) => f.id === id)?.transactions ?? 0
-  if (kind === 'label') return usage.labels.find((l) => l.id === id)?.transactions ?? 0
-  if (kind === 'category') {
-    const c = usage.categories.find((record) => record.id === id)
-    return c ? c.transactions + c.plans : 0
+/** The count of one record, from every row of a dataset. */
+export function heldCount(d: ExpenseDataset, kind: UsageKind, id: number): number {
+  switch (kind) {
+    case 'category':
+      return d.transactions.filter((t) => t.categoryId === id).length + d.installmentPlans.filter((p) => p.categoryId === id).length
+    case 'account':
+      return (
+        d.transactions.filter((t) => t.accountId === id).length +
+        d.installmentPlans.filter((p) => p.accountId === id).length +
+        d.accountStatements.filter((s) => s.accountId === id).length
+      )
+    case 'flag':
+      return d.transactions.filter((t) => t.flagId === id).length
+    case 'label':
+      return d.transactions.filter((t) => t.labelIds?.includes(id)).length
   }
-  const a = usage.accounts.find((record) => record.id === id)
-  return a ? a.transactions + a.plans + a.statements : 0
 }
-
-const noRefresh = (): void => undefined
 
 /** The counts of a model that holds every row. */
 function useHeldUsage(model: ExpenseModel): UsageView {
-  const usage = useMemo(() => usageFromDataset(model.dataset), [model.dataset])
-  return useMemo(() => ({ usage, note: null, refresh: noRefresh }), [usage])
+  return useMemo(() => ({ count: (kind, id) => heldCount(model.dataset, kind, id), note: null, notice: null }), [model.dataset])
 }
 
 /** The counts for the Settings screens, from the model's own rows or, for a window, from the server. */

@@ -16,6 +16,8 @@ import { FlagList } from './FlagList'
 import { FlagsModal } from './FlagsModal'
 import { LabelList } from './LabelList'
 import { LabelsModal } from './LabelsModal'
+import { usageCount } from '../ledgerUsage'
+import { UsageNote } from '../ledgerUsageNote'
 import type { UsageView } from './recordUsage'
 
 const DINING = { id: 1, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 0, active: true }
@@ -39,10 +41,15 @@ const counted: Usage = {
   labels: [{ id: 4, transactions: 9 }],
 }
 
-function windowOf(view: Partial<UsageView>): ExpenseModel {
+/** What the model says of the counts: `usage` null is none read yet, and `note` is why they cannot be taken as they are. */
+function windowOf({ usage = counted, note = null, refresh = vi.fn() }: { usage?: Usage | null; note?: UsageView['note']; refresh?: () => void } = {}): ExpenseModel {
   const dataset = makeDataset({ categories: [DINING, GROCERIES], accounts: [CHECKING, CARD], flags: [work], labels: [trip] })
-  const full: UsageView = { usage: counted, note: null, refresh: vi.fn(), ...view }
-  return { ...buildExpenseModel(dataset), useUsage: () => full }
+  const view: UsageView = {
+    count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
+    note,
+    notice: note === null ? null : <UsageNote note={note} refresh={refresh} />,
+  }
+  return { ...buildExpenseModel(dataset), useUsage: () => view }
 }
 
 const actions = { deleteCategory: vi.fn(), deleteAccount: vi.fn(), deleteFlag: vi.fn(), deleteLabel: vi.fn() } as unknown as ExpenseActions

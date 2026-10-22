@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { usageFromDataset } from '../domain/engine/recordUsage'
+import type { Usage } from '../domain/data/usage'
 import type { LedgerUsage } from '../data/ledgerUsage'
-import type { UsageView } from './definitions/recordUsage'
+import { type UsageKind, type UsageView, heldCount } from './definitions/recordUsage'
+import { UsageNote } from './ledgerUsageNote'
 import type { ExpenseModel } from './useExpenseData'
 
-const noRefresh = (): void => undefined
+/** What names one record according to the server's counts, which are the whole ledger's. */
+export function usageCount(usage: Usage, kind: UsageKind, id: number): number {
+  if (kind === 'flag') return usage.flags.find((f) => f.id === id)?.transactions ?? 0
+  if (kind === 'label') return usage.labels.find((l) => l.id === id)?.transactions ?? 0
+  if (kind === 'category') {
+    const c = usage.categories.find((record) => record.id === id)
+    return c ? c.transactions + c.plans : 0
+  }
+  const a = usage.accounts.find((record) => record.id === id)
+  return a ? a.transactions + a.plans + a.statements : 0
+}
 
 function useCounts(store: LedgerUsage, heldRevision: string | null, model: ExpenseModel): UsageView {
   const state = useSyncExternalStore(store.subscribe, store.getState)
@@ -14,14 +25,18 @@ function useCounts(store: LedgerUsage, heldRevision: string | null, model: Expen
     const { usage } = store.getState()
     if (windowed && usage !== null && heldRevision !== null && usage.revision !== heldRevision) store.refresh()
   }, [store, windowed, heldRevision])
-  const own = useMemo(() => (windowed ? null : usageFromDataset(model.dataset)), [windowed, model.dataset])
+  const { dataset } = model
   return useMemo<UsageView>(() => {
-    if (!windowed) return { usage: own, note: null, refresh: noRefresh }
+    if (!windowed) return { count: (kind, id) => heldCount(dataset, kind, id), note: null, notice: null }
     const { usage, loading, stale, error } = state
     const behind = usage !== null && heldRevision !== null && usage.revision !== heldRevision
     const note = error !== null ? 'failed' : loading || usage === null ? 'reading' : stale || behind ? 'stale' : null
-    return { usage, note, refresh: store.refresh }
-  }, [store, windowed, own, state, heldRevision])
+    return {
+      count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
+      note,
+      notice: note === null ? null : <UsageNote note={note} refresh={store.refresh} />,
+    }
+  }, [store, windowed, dataset, state, heldRevision])
 }
 
 /**

@@ -6,8 +6,7 @@ import { LabelGlyph } from '../components/LabelGlyph'
 import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { LabelsModal } from './LabelsModal'
-import { UsageNote } from './UsageNote'
-import { usageCount, useRecordUsage } from './recordUsage'
+import { useRecordUsage } from './recordUsage'
 import styles from './definitions.module.css'
 // Reused for .rowGlyph only: the settings-row glyph sizing is identical to the
 // flag list's own, and duplicating one class was not worth a second stylesheet.
@@ -40,13 +39,13 @@ export function LabelList({ model, actions }: { model: ExpenseModel; actions: Ex
                 </span>
                 <span className={styles.rowMeta}>
                   {label.description ? `${label.description} · ` : ''}
-                  {usageCount(usage.usage, 'label', label.id) ?? '—'} tagged
+                  {usage.count('label', label.id) ?? '—'} tagged
                 </span>
               </div>
             </div>
           ))
         )}
-        <UsageNote view={usage} />
+        {usage.notice}
         <button type="button" className={styles.addBtn} onClick={() => setManaging(true)}>
           {labels.length === 0 ? '+ Add label' : 'Manage labels'}
         </button>

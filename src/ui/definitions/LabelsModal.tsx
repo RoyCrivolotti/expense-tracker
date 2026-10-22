@@ -6,9 +6,8 @@ import { EmptyState } from '../components/primitives'
 import { Modal } from '../components/Modal'
 import { LabelGlyph } from '../components/LabelGlyph'
 import { LabelForm } from './LabelForm'
-import { UsageNote } from './UsageNote'
 import { transactionCountLabel } from '../components/flagPickerOptions'
-import { usageCount, useRecordUsage } from './recordUsage'
+import { useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 // Reused wholesale: a label row (glyph, name, meta, archived tag, Edit button)
 // is laid out identically to a flag row, so this borrows that stylesheet
@@ -47,7 +46,7 @@ export function LabelsModal({
         <LabelForm
           label={editing.label}
           existing={labels}
-          usageCount={editing.label ? usageCount(usage.usage, 'label', editing.label.id) : 0}
+          usageCount={editing.label ? usage.count('label', editing.label.id) : 0}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}
@@ -73,9 +72,7 @@ export function LabelsModal({
                   </span>
                   <span className={styles.rowMeta}>
                     {label.description ? `${label.description} · ` : ''}
-                    {usageCount(usage.usage, 'label', label.id) === null
-                      ? '—'
-                      : transactionCountLabel(usageCount(usage.usage, 'label', label.id))}
+                    {usage.count('label', label.id) === null ? '—' : transactionCountLabel(usage.count('label', label.id))}
                   </span>
                 </div>
                 <button
@@ -88,7 +85,7 @@ export function LabelsModal({
               </div>
             ))
           )}
-          <UsageNote view={usage} />
+          {usage.notice}
           <button
             type="button"
             className={defStyles.addBtn}

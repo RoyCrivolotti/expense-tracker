@@ -16,8 +16,7 @@ import { RecordForm } from './RecordForm'
 import { EXIT_MS, afterExit } from '../hooks/motion'
 import { useHeldWhileLeaving } from '../hooks/usePresence'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { type UsageView, usageCount, useRecordUsage } from './recordUsage'
-import { UsageNote } from './UsageNote'
+import { type UsageView, useRecordUsage } from './recordUsage'
 import type { FieldSpec, FieldValue } from './recordFields'
 import styles from './definitions.module.css'
 
@@ -96,7 +95,7 @@ function categoryDeleteConfig(
   return {
     label: record.name,
     noun: 'category',
-    usageCount: usageCount(usage.usage, 'category', record.id),
+    usageCount: usage.count('category', record.id),
     usage,
     // Active = archive: reassigning should never link records to an already-inactive
     // category, same rule as the transaction/installment pickers (PR3). If every other
@@ -128,7 +127,7 @@ function accountDeleteConfig(
   return {
     label: record.name,
     noun: 'account',
-    usageCount: usageCount(usage.usage, 'account', record.id),
+    usageCount: usage.count('account', record.id),
     usage,
     // See the matching comment in categoryDeleteConfig: reassign targets stay active-only.
     otherOptions: model.dataset.accounts
@@ -288,7 +287,7 @@ function DeleteControl({
       >
         Delete {config.noun}
       </button>
-      <UsageNote view={config.usage} />
+      {config.usage.notice}
       {err && <p className={styles.deleteError}>{err}</p>}
       <Presence show={mode === 'confirm'} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet

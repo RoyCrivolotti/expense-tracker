@@ -1,12 +1,14 @@
-import { act, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { usageFromDataset } from '../domain/engine/recordUsage'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
+import type { ExpenseDataset } from '../domain/types'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { patchAfterBulkUpdate } from './datasetPatches'
-import { type UsageView, useRecordUsage } from './definitions/recordUsage'
+import { type UsageKind, type UsageView, useRecordUsage } from './definitions/recordUsage'
+import { usageCount } from './ledgerUsage'
 import { type ExpenseData } from './useExpenseData'
 import { useLedgerData } from './useLedgerData'
 
@@ -24,7 +26,7 @@ function open(source: TestSource, policy?: HydrationPolicy) {
   const sink: Sink = { data: null, usage: null }
   function Counts({ data }: { data: ExpenseData }) {
     sink.usage = useRecordUsage(data.model!)
-    return null
+    return <>{sink.usage.notice}</>
   }
   function Probe() {
     const data = useLedgerData(source, policy ? { policy } : undefined)
@@ -36,12 +38,20 @@ function open(source: TestSource, policy?: HydrationPolicy) {
 }
 
 const ready = (sink: Sink) => waitFor(() => expect(sink.usage).not.toBeNull())
-/** The first counts are in. */
-const loaded = (sink: Sink) => waitFor(() => expect(sink.usage?.usage ?? null).not.toBeNull())
-const counts = (sink: Sink) => {
-  const { categories, accounts, flags, labels } = sink.usage!.usage!
-  return { categories, accounts, flags, labels }
-}
+/** The first counts are in: no record's count is unknown any more. */
+const loaded = (sink: Sink) => waitFor(() => expect(sink.usage?.count('flag', big.flags[0]!.id) ?? null).not.toBeNull())
+const KINDS: Array<[UsageKind, (ds: ExpenseDataset) => Array<{ id: number }>]> = [
+  ['category', (ds) => ds.categories],
+  ['account', (ds) => ds.accounts],
+  ['flag', (ds) => ds.flags],
+  ['label', (ds) => ds.labels],
+]
+/** The count of every record of `ds`, as the view gives it. */
+const counts = (sink: Sink, ds: ExpenseDataset) =>
+  Object.fromEntries(KINDS.flatMap(([kind, records]) => records(ds).map(({ id }) => [`${kind} ${id}`, sink.usage!.count(kind, id)])))
+/** The count of every record of `ds`, as the engine counts it over every row. */
+const truth = (ds: ExpenseDataset) =>
+  Object.fromEntries(KINDS.flatMap(([kind, records]) => records(ds).map(({ id }) => [`${kind} ${id}`, usageCount(usageFromDataset(ds), kind, id)])))
 
 afterEach(() => {
   vi.useRealTimers()
@@ -53,7 +63,7 @@ describe('the counts of a window', () => {
     const sink = open(source, WINDOWED)
     await loaded(sink)
 
-    expect(counts(sink)).toEqual(usageFromDataset(big))
+    expect(counts(sink, big)).toEqual(truth(big))
     expect(source.calls.filter((call) => call === 'usage')).toHaveLength(1)
     expect(sink.usage!.note).toBeNull()
     const own = usageFromDataset(sink.data!.model!.dataset)
@@ -71,10 +81,11 @@ describe('the counts of a window', () => {
     }
     const sink = open(source, WINDOWED)
     await ready(sink)
-    expect(sink.usage).toMatchObject({ usage: null, note: 'reading' })
+    expect(sink.usage!.note).toBe('reading')
+    expect(sink.usage!.count('flag', big.flags[0]!.id)).toBeNull()
 
     release()
-    await waitFor(() => expect(sink.usage!.usage).not.toBeNull())
+    await loaded(sink)
     expect(sink.usage!.note).toBeNull()
   })
 
@@ -88,12 +99,12 @@ describe('the counts of a window', () => {
     const to = big.categories.find((c) => c.id !== older[0]!.categoryId)!
     const moved = older.map((t) => ({ ...t, categoryId: to.id }))
     source.dataset = { ...big, transactions: big.transactions.map((t) => moved.find((m) => m.id === t.id) ?? t) }
-    const before = counts(sink)
+    const before = counts(sink, big)
 
     act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, moved), { ids: older.map((t) => t.id), patch: { categoryId: to.id } }))
 
-    await waitFor(() => expect(counts(sink)).toEqual(usageFromDataset(source.dataset)))
-    expect(counts(sink)).not.toEqual(before)
+    await waitFor(() => expect(counts(sink, big)).toEqual(truth(source.dataset)))
+    expect(counts(sink, big)).not.toEqual(before)
     expect(sink.usage!.note).toBeNull()
   })
 
@@ -115,17 +126,17 @@ describe('the counts of a window', () => {
     source.readUsagePart = vi.fn().mockRejectedValueOnce(new Error('down')).mockImplementation(read)
     const sink = open(source, WINDOWED)
     await waitFor(() => expect(sink.usage?.note).toBe('failed'))
-    expect(sink.usage!.usage).toBeNull()
+    expect(sink.usage!.count('flag', big.flags[0]!.id)).toBeNull()
 
-    act(() => sink.usage!.refresh())
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(sink.usage!.note).toBeNull())
-    expect(counts(sink)).toEqual(usageFromDataset(big))
+    expect(counts(sink, big)).toEqual(truth(big))
 
     source.readUsagePart = vi.fn().mockRejectedValue(new Error('down again'))
     const first = sink.data!.model!.dataset.transactions.find((t) => !t.planId && !t.settledBy && !t.reportCount)!
     act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [{ ...first, categoryId: first.categoryId === 1 ? 2 : 1 }]), { ids: [first.id], patch: { categoryId: 2 } }))
     await waitFor(() => expect(sink.usage!.note).toBe('failed'))
-    expect(counts(sink)).toEqual(usageFromDataset(big))
+    expect(counts(sink, big)).toEqual(truth(big))
   })
 
   it('say they may be out of date while the rows are at another revision than the counts, and ask once', async () => {
@@ -168,7 +179,7 @@ describe('the counts of a ledger held in full', () => {
     const sink = open(source)
     await waitFor(() => expect(sink.usage).not.toBeNull())
 
-    expect(counts(sink)).toEqual(usageFromDataset(small))
+    expect(counts(sink, small)).toEqual(truth(small))
     expect(sink.usage!.note).toBeNull()
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(source.calls).not.toContain('usage')

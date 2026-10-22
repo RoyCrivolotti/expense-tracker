@@ -9,9 +9,8 @@ import { FlagGlyph } from '../components/FlagGlyph'
 import { ChevronIcon } from '../icons'
 import { FlagForm } from './FlagForm'
 import { FlagAutoLabelEditor } from './FlagAutoLabelEditor'
-import { UsageNote } from './UsageNote'
 import { transactionCountLabel } from '../components/flagPickerOptions'
-import { usageCount, useRecordUsage } from './recordUsage'
+import { useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 import styles from './FlagsModal.module.css'
 
@@ -72,7 +71,7 @@ export function FlagsModal({
         <FlagForm
           flag={editing.flag}
           existing={flags}
-          usageCount={editing.flag ? usageCount(usage.usage, 'flag', editing.flag.id) : 0}
+          usageCount={editing.flag ? usage.count('flag', editing.flag.id) : 0}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}
@@ -110,9 +109,7 @@ export function FlagsModal({
                     </span>
                     <span className={styles.rowMeta}>
                       {flag.description ? `${flag.description} · ` : ''}
-                      {usageCount(usage.usage, 'flag', flag.id) === null
-                        ? '—'
-                        : transactionCountLabel(usageCount(usage.usage, 'flag', flag.id))}
+                      {usage.count('flag', flag.id) === null ? '—' : transactionCountLabel(usage.count('flag', flag.id))}
                     </span>
                   </div>
                   <ChevronIcon className={styles.rowChevron} aria-hidden="true" />
@@ -139,7 +136,7 @@ export function FlagsModal({
               </div>
             ))
           )}
-          <UsageNote view={usage} />
+          {usage.notice}
           <button
             type="button"
             className={defStyles.addBtn}
