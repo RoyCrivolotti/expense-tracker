@@ -305,12 +305,16 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // asked for it, and the receipt lists, the entry's flag read and the loading state add about 1 KB to the entry
 // chunk. The total went from 285,6 KB to 293,2 KB. No new library.
 //
-// Split in two for the ledger mode: the 294 KB limit above counted the chunks only the ledger mode loads, so
+// Split in two for the ledger mode: the 294 KB limit above counted the chunks only the ledger mode runs, so
 // a feature that lives only there pushed out the room of every other change, and a change to the default path
-// could hide behind the room the ledger chunks had left. The limit below is what a browser that has not turned
-// the ledger mode on downloads (285,605 bytes when this was split, 14 more than before the page and summary
-// reads were added to the API source, with 95 bytes of headroom), and the ledger chunks (8,696 bytes then)
-// have a limit of their own, with room for the Transactions list to be read in pages.
+// could hide behind the room the ledger chunks had left. The limit below is what the default path loads on
+// first use, the entry and every lazy chunk the rest of the app reaches (285,605 bytes when this was split, 14
+// more than before the page and summary reads were added to the API source, with 95 bytes of headroom), and the
+// chunks only the ledger mode runs (8,696 bytes then) have a limit of their own, with room for the Transactions
+// list to be read in pages. A chunk the rest of the app can reach stays in the first figure however many ledger
+// modules import it. This is a limit on what runs and on what a feature may add, not on what is downloaded:
+// the service worker precaches every built script (`globPatterns` in vite.config.ts), the ledger chunks
+// included, so each browser fetches them once per deploy.
 const TOTAL_MAX_GZIP = 285_700
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
