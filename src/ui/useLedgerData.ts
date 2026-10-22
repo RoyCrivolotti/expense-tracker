@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { LedgerPartsSource } from '../data/dataSource'
 import { ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions } from '../data/ledgerSession'
+import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { buildLedgerModel } from './buildLedgerModel'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
@@ -9,20 +10,40 @@ const MIN_REFRESH_MS = 700
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
+const isOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
+
+export interface LedgerDataOptions extends SessionOptions {
+  /**
+   * Whose snapshot to keep and to fall back on, or none to keep no snapshot. The snapshot is the signed-in
+   * owner's alone (see `ledgerSnapshot.ts`).
+   */
+  owner?: string | undefined
+}
+
 type Phase = 'loading' | 'ready' | 'error'
+
+/** Keeps what is held as the owner's snapshot. It never throws and nothing waits for it. */
+function keep(session: LedgerSession, owner: string | undefined): void {
+  const { held, viewed } = session.getState()
+  if (owner && held) void saveLedgerSnapshot(owner, held, viewed)
+}
 
 /**
  * The model of a ledger held open, for the screens that `useExpenseData` serves from the whole dataset. A
  * write is patched in at once; one the server answered with more than the patch shows is followed by a read
  * of the whole ledger (`LedgerSession`). `viewMonth` tells it which month the screens show, so that the
  * rows of that month's window are read. Receipt lists are read when a screen asks for them (`ensureReceipts`).
- * The offline snapshot is not read or written here.
+ *
+ * Offline, or when the read fails, the owner's snapshot is shown instead and the session is read-only until a
+ * refresh reads. Every read that works replaces the snapshot.
  */
-export function useLedgerData(source: LedgerPartsSource, options?: SessionOptions): ExpenseData {
+export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOptions): ExpenseData {
+  const owner = options?.owner
   const session = useMemo(() => new LedgerSession(source, options), [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const [phase, setPhase] = useState<Phase>('loading')
   const [failure, setFailure] = useState<string | undefined>(undefined)
+  const [snapshotAt, setSnapshotAt] = useState<string | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome>(null)
@@ -30,18 +51,34 @@ export function useLedgerData(source: LedgerPartsSource, options?: SessionOption
 
   useEffect(() => {
     alive.current = true
-    session.open().then(
-      () => alive.current && setPhase('ready'),
-      (error: unknown) => {
-        if (!alive.current) return
-        setFailure(reason(error))
-        setPhase('error')
-      },
-    )
+    const restore = async (): Promise<boolean> => {
+      const snapshot = owner ? await loadLedgerSnapshot(owner) : null
+      if (!snapshot || !alive.current) return false
+      session.restore(snapshot.held, snapshot.viewed)
+      setSnapshotAt(snapshot.savedAt)
+      return true
+    }
+    const begin = async () => {
+      let error = 'You are offline and no saved data is available.'
+      if (isOnline()) {
+        try {
+          await session.open()
+          keep(session, owner)
+          return setPhase('ready')
+        } catch (failed) {
+          error = reason(failed)
+        }
+      }
+      if (await restore()) return setPhase('ready')
+      if (!alive.current) return
+      setFailure(error)
+      setPhase('error')
+    }
+    void begin()
     return () => {
       alive.current = false
     }
-  }, [session, attempt])
+  }, [session, owner, attempt])
 
   const { held } = state
   const model = useMemo<ExpenseModel | undefined>(() => {
@@ -67,10 +104,13 @@ export function useLedgerData(source: LedgerPartsSource, options?: SessionOption
       setRefreshOutcome(outcome)
     }
     session.refresh().then(
-      () => finish('ok'),
+      () => {
+        keep(session, owner)
+        return finish('ok')
+      },
       () => finish('fail'),
     )
-  }, [session, phase])
+  }, [session, phase, owner])
 
   const applyPatch = useCallback<ExpenseData['applyPatch']>((patch) => session.patch(patch), [session])
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
@@ -78,7 +118,8 @@ export function useLedgerData(source: LedgerPartsSource, options?: SessionOption
   const ready = phase === 'ready' && model !== undefined
   return {
     status: ready ? 'ready' : phase === 'error' ? 'error' : 'loading',
-    ...(ready ? { model, fromCache: false } : {}),
+    ...(ready ? { model, fromCache: state.offline } : {}),
+    ...(ready && state.offline && snapshotAt ? { snapshotAt } : {}),
     ...(phase === 'error' && failure !== undefined ? { error: failure } : {}),
     refreshing,
     refreshOutcome,

@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
+import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { makeTransaction } from '../testing/factories'
@@ -141,6 +142,120 @@ describe('useLedgerData', () => {
     act(() => result.current.model!.ensureReceipts!(ids))
     await waitFor(() => expect(result.current.model!.receiptsPending).toBe(0))
     expect(result.current.model!.dataset.attachments).toHaveLength(small.attachments.length)
+  })
+})
+
+describe('useLedgerData, snapshots', () => {
+  let fake: FakeIndexedDb
+  const OWNER = 'alex@example.com'
+  const keys = () => [...(fake.stores.get('snapshots')?.keys() ?? [])]
+
+  /** jsdom has no navigator.onLine setter; replace just that property. */
+  function setOnline(online: boolean) {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => online })
+  }
+
+  beforeEach(() => {
+    fake = installFakeIndexedDb()
+    setOnline(true)
+  })
+
+  afterEach(() => {
+    fake.uninstall()
+    setOnline(true)
+  })
+
+  /** Opens once online so that a snapshot of `small` exists for the owner. */
+  async function withSnapshot(owner = OWNER) {
+    const source = memorySource(small)
+    const first = renderHook(() => useLedgerData(source, { owner }))
+    await waitFor(() => expect(first.result.current.status).toBe('ready'))
+    await waitFor(() => expect(keys()).toContain(`ledger:${owner}`))
+    first.unmount()
+  }
+
+  it('keeps the owner’s snapshot once a load works, and none without an owner', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    await waitFor(() => expect(keys()).toEqual([`ledger:${OWNER}`]))
+    fake.stores.clear()
+    const bare = memorySource(small)
+    const anonymous = renderHook(() => useLedgerData(bare))
+    await waitFor(() => expect(anonymous.result.current.status).toBe('ready'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(keys()).toEqual([])
+  })
+
+  it('shows the snapshot, read-only, when offline, without reading anything', async () => {
+    await withSnapshot()
+    setOnline(false)
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.fromCache).toBe(true)
+    expect(result.current.snapshotAt).toBeDefined()
+    expect(source.calls).toEqual([])
+    expect(comparable(result.current.model!.dataset.transactions)).toEqual(comparable(buildExpenseModel(small).dataset.transactions))
+    const before = result.current.model
+    act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 1 } })))
+    expect(result.current.model).toBe(before)
+  })
+
+  it('says so when offline with no snapshot, and for another owner’s snapshot', async () => {
+    setOnline(false)
+    const empty = memorySource(small)
+    const none = renderHook(() => useLedgerData(empty, { owner: OWNER }))
+    await waitFor(() => expect(none.result.current.status).toBe('error'))
+    expect(none.result.current.error).toBe('You are offline and no saved data is available.')
+    none.unmount()
+    setOnline(true)
+    await withSnapshot('sam@example.com')
+    setOnline(false)
+    const other = memorySource(small)
+    const foreign = renderHook(() => useLedgerData(other, { owner: OWNER }))
+    await waitFor(() => expect(foreign.result.current.status).toBe('error'))
+  })
+
+  it('shows the snapshot when a load fails online, and the failure when there is none', async () => {
+    const down = memorySource(small)
+    down.readReferencePart = () => Promise.reject(new Error('down'))
+    const bare = renderHook(() => useLedgerData(down, { owner: OWNER }))
+    await waitFor(() => expect(bare.result.current.status).toBe('error'))
+    expect(bare.result.current.error).toBe('down')
+    bare.unmount()
+    await withSnapshot()
+    const fallback = renderHook(() => useLedgerData(down, { owner: OWNER }))
+    await waitFor(() => expect(fallback.result.current.status).toBe('ready'))
+    expect(fallback.result.current.fromCache).toBe(true)
+  })
+
+  it('leaves the snapshot when a refresh reads, and keeps the new ledger as the snapshot', async () => {
+    await withSnapshot()
+    setOnline(false)
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER }))
+    await waitFor(() => expect(result.current.fromCache).toBe(true))
+    setOnline(true)
+    const before = (fake.stores.get('snapshots')!.get(`ledger:${OWNER}`) as { savedAt: string }).savedAt
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
+    act(() => result.current.reload())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+    vi.useRealTimers()
+    expect(result.current.fromCache).toBe(false)
+    expect(result.current.refreshOutcome).toBe('ok')
+    await waitFor(() => expect((fake.stores.get('snapshots')!.get(`ledger:${OWNER}`) as { savedAt: string }).savedAt).not.toBe(before))
+  })
+
+  it('does not turn a load that worked into one that failed when the snapshot cannot be written', async () => {
+    fake.failNext('put')
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source, { owner: OWNER }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.fromCache).toBe(false)
   })
 })
 

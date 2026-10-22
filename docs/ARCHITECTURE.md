@@ -195,6 +195,15 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
   is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
   `useLedgerData` returns it as `backgroundError` for the app to tell the user.
+- **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
+  `saveLedgerSnapshot` (`src/data/ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them
+  and removes every other owner's, so a second person on the same browser never opens the first one's figures from
+  this snapshot. A record from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the
+  whole-dataset snapshot), another ledger format or another owner is discarded when it is found. Saving and loading
+  never throw. Offline, or when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a
+  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it and is not kept per
+  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset app
+  offline, that app can still show it.
 
 ## Size and complexity
 
