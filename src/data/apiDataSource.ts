@@ -60,6 +60,8 @@ const PART_READS = [
   'readTransactionPage',
   'readTransactionSummary',
   'readSeriesPart',
+  'readUsagePart',
+  'readDescriptionSuggest',
 ] as const
 const lazyParts = Object.fromEntries(
   PART_READS.map((name) => [name, (...args: unknown[]) => parts().then((p) => (p[name] as (...a: unknown[]) => unknown)(...args))]),

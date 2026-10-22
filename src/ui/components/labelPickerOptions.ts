@@ -31,7 +31,8 @@ export function selectableLabels(labels: Label[], selectedIds: number[]): Label[
 }
 
 /** What deleting a label will actually do, in the user's terms. */
-export function labelDeleteMessage(usageCount: number): string {
+export function labelDeleteMessage(usageCount: number | null): string {
   if (usageCount === 0) return 'Nothing is labeled with it, so nothing else changes.'
+  if (usageCount === null) return 'Every transaction with this label will lose it. Nothing else changes — no transaction is deleted.'
   return `${transactionCountLabel(usageCount)} will lose this label. Nothing else changes — no transaction is deleted.`
 }

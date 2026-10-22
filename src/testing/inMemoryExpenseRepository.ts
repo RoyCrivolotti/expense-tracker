@@ -16,9 +16,7 @@ import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { addDaysIso } from '../domain/engine/dates'
 import { usageFromDataset } from '../domain/engine/recordUsage'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
-import { MAX_SUGGEST_KEYS } from '../domain/data/descriptionSuggest'
-import { normalizeDesc } from '../domain/engine/normalizeDescription'
-import { buildDescriptionIndex } from '../data/descriptionIndex'
+import { suggestDescriptionsOf } from '../data/descriptionIndex'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
@@ -626,16 +624,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     readUsage: (owner) => Promise.resolve(usageFromDataset(datasetOf(owner))),
 
-    suggestDescriptions: (owner, { prefix, before, limit, locale }) => {
-      const all = derivedTransactions(storeFor(owner))
-      // The server walks every description of the owner in the prefix range, whatever its status or month,
-      // and counts those against the cap; the matches are then the eligible rows among them.
-      const walked = new Set(all.map((t) => normalizeDesc(t.description)).filter((key) => key.startsWith(prefix)))
-      if (walked.size > MAX_SUGGEST_KEYS) return Promise.resolve({ items: [], tooBroad: true })
-      const rows = all.filter((t) => before === undefined || t.budgetMonth < before)
-      const index = buildDescriptionIndex(rows, { order: 'key', ...(locale ? { locale } : {}) })
-      return Promise.resolve({ items: index.searchEntries(prefix, limit), tooBroad: false })
-    },
+    suggestDescriptions: (owner, request) => Promise.resolve(suggestDescriptionsOf(derivedTransactions(storeFor(owner)), request)),
 
     insertTransaction: (owner, input) => Promise.resolve(insertOne(owner, input)),
 

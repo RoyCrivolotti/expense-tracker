@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions, type SessionState } from '../data/ledgerSession'
+import { LedgerUsage, touchesUsage } from '../data/ledgerUsage'
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { TransactionPager } from '../data/transactionPager'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
+import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
+import { ledgerUsageHook } from './ledgerUsage'
 import { pagedListOf } from './pagedTransactionList'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
@@ -93,7 +96,12 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   useEffect(() => {
     settled.current = options?.onSettled
   })
-  const session = useMemo(() => new LedgerSession(source, options), [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
+  // The counts of what names each record are read apart from the session, which tells them of the writes that could change them.
+  const [session, usage] = useMemo(() => {
+    const counts = new LedgerUsage(source)
+    const held = new LedgerSession(source, { ...options, onWrite: (write) => counts.noteWrite(touchesUsage(write)) })
+    return [held, counts] as const
+  }, [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const pager = useMemo(() => new TransactionPager(source, { settleMs: LIST_SETTLE_MS }), [source])
   const pagedList = useMemo(() => pagedListOf(pager), [pager])
@@ -134,17 +142,30 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const note = historyNoteOf(windowed && !series, state)
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
-    const built = buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts })
+    // A window's older descriptions are the server's: its own are in the server's order so that the two can be merged.
+    const older = olderThan(held)
+    const descriptions = older
+      ? {
+          index: { order: 'key' as const, locale: BROWSER_LOCALE },
+          wrap: (index: Parameters<typeof withOlderDescriptions>[0]) =>
+            withOlderDescriptions(index, source, { before: older.before, locale: BROWSER_LOCALE }),
+        }
+      : undefined
+    const built = buildLedgerModel(ledgerOfHeld(held), {
+      attachmentCounts: held.attachmentCounts,
+      ...(descriptions ? { descriptions } : {}),
+    })
     const withSeries = windowed && series ? withHistory(built, series) : built
     return {
       ...withSeries,
       receiptsPending: receiptsPending(held),
       ensureReceipts: session.loadReceipts,
       watchHistory: session.watchSeries,
+      useUsage: ledgerUsageHook(usage, held.revision),
       pagedList,
       ...(note ? { historyNote: note } : {}),
     }
-  }, [held, series, windowed, note, session, pagedList])
+  }, [held, series, windowed, note, session, usage, pagedList, source])
 
   const reload = useCallback(() => {
     if (phase === 'error') {

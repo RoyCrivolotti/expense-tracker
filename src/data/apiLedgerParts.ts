@@ -8,7 +8,9 @@ import type {
   SeriesPart,
   TransactionPagePart,
   TransactionSummaryPart,
+  UsagePart,
 } from '../domain/data/ledgerParts'
+import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../domain/data/descriptionSuggest'
 import { transactionQueryString } from './transactionQueryString'
 import type { TransactionAttachment } from '../domain/types'
 import { ValidationError } from '../domain/application/validationError'
@@ -89,6 +91,39 @@ function isSeriesPart(body: unknown): body is SeriesPart {
         isNumbers(s.olderGaps) &&
         isStrings(s.budgetMonths) &&
         isNumbers(s.budgetOffsets),
+    )
+  )
+}
+
+const USAGE_LISTS = ['categories', 'accounts', 'flags', 'labels'] as const
+
+/** Every record of every kind with a count, which is all the Settings screens read of it. */
+function isUsagePart(body: unknown): body is UsagePart {
+  return (
+    isObject(body) &&
+    typeof body.revision === 'string' &&
+    USAGE_LISTS.every((kind) => {
+      const list = body[kind]
+      return (
+        Array.isArray(list) &&
+        list.every((record) => isObject(record) && typeof record.id === 'number' && typeof record.transactions === 'number')
+      )
+    })
+  )
+}
+
+function isSuggestResult(body: unknown): body is DescriptionSuggestResult {
+  return (
+    isObject(body) &&
+    typeof body.tooBroad === 'boolean' &&
+    Array.isArray(body.items) &&
+    body.items.every(
+      (match) =>
+        isObject(match) &&
+        typeof match.label === 'string' &&
+        typeof match.date === 'string' &&
+        typeof match.id === 'number' &&
+        isObject(match.template),
     )
   )
 }
@@ -189,15 +224,29 @@ const query = (range: MonthRange): string => `from=${range.from}&to=${range.to}`
  * descriptions some rows still wait for theirs: the route answers 503 with a one second retry, and each try gets
  * further. A few tries are made at that pace before the 503 is given to the caller.
  */
-async function readSeries(): Promise<SeriesPart> {
+async function whileFilling<T>(read: () => Promise<T>, signal?: AbortSignal): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await readPart(`${BASE}/series`, isSeriesPart)
+      return await read()
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 503 || attempt >= SERIES_ATTEMPTS) throw error
       await new Promise((resolve) => setTimeout(resolve, SERIES_RETRY_MS))
+      signal?.throwIfAborted()
     }
   }
+}
+
+const readSeries = (): Promise<SeriesPart> => whileFilling(() => readPart(`${BASE}/series`, isSeriesPart))
+
+/** The matches among rows booked before a budget month, as now: a request is one prefix and the answer follows every write. */
+function readSuggest(
+  { prefix, before, limit, locale }: DescriptionSuggestRequest,
+  signal: AbortSignal | undefined,
+): Promise<DescriptionSuggestResult> {
+  const params = new URLSearchParams({ q: prefix, limit: String(limit) })
+  if (before !== undefined) params.set('before', before)
+  if (locale !== undefined) params.set('locale', locale)
+  return whileFilling(() => readFresh(`${BASE}/descriptions/suggest?${params}`, isSuggestResult, signal), signal)
 }
 
 export const apiLedgerParts: LedgerPartsSource = {
@@ -205,6 +254,8 @@ export const apiLedgerParts: LedgerPartsSource = {
   readMonthsPart: (range) => readPart(`${BASE}/transactions/months?${query(range)}`, isMonthRowsPart),
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
   readSeriesPart: () => readSeries(),
+  readUsagePart: () => readPart(`${BASE}/usage`, isUsagePart),
+  readDescriptionSuggest: (request, options) => readSuggest(request, options?.signal),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
   readTransactionPage: (filter, request) =>

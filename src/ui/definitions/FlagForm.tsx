@@ -5,6 +5,7 @@ import { SCENARIO_COLORS } from '../../engine'
 import { ColorSwatchPicker } from '../components/ColorSwatchPicker'
 import { transactionCountLabel } from '../components/flagPickerOptions'
 import { FlagFormActions } from './FlagFormActions'
+import type { UsageView } from './recordUsage'
 import { initialFlagDraft, useFlagFormSave } from './useFlagFormSave'
 import styles from './FlagForm.module.css'
 
@@ -14,7 +15,9 @@ interface Props {
   flag: Flag | null
   /** Used to place a new flag at the end of the user's ordering. */
   existing: Flag[]
-  usageCount: number
+  usageCount: number | null
+  /** The counts the figure comes from, which the delete waits for and says when they cannot be taken. */
+  usage: UsageView
   actions: ExpenseActions
   onDone: () => void
   /** Lets the enclosing Modal pause its focus trap while the sheet is open. */
@@ -51,7 +54,7 @@ function ActiveToggle({
   onChange,
 }: {
   active: boolean
-  usageCount: number
+  usageCount: number | null
   onChange: (active: boolean) => void
 }) {
   return (
@@ -72,6 +75,7 @@ export function FlagForm({
   flag,
   existing,
   usageCount,
+  usage,
   actions,
   onDone,
   onConfirmingChange,
@@ -142,6 +146,7 @@ export function FlagForm({
       <FlagFormActions
         flag={flag}
         usageCount={usageCount}
+        usage={usage}
         busy={busy}
         confirming={confirming}
         onSave={() => save(draft)}

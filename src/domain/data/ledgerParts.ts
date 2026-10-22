@@ -13,6 +13,7 @@ import type { RecurringSeries } from '../engine/recurringSeries'
 import type { LedgerReference, MonthCell } from '../ledger/types'
 import type { ExpenseDataset, Transaction } from '../types'
 import type { TransactionSummary } from './transactionQuery'
+import type { Usage } from './usage'
 
 /**
  * Everything in a ledger's reference except receipts. A row's receipts are listed on demand
@@ -97,6 +98,11 @@ export interface CubePart extends MonthRange {
 export interface SeriesPart {
   revision: string
   series: RecurringSeries[]
+}
+
+/** How many records name each category, account, flag and label, as `GET /usage` answers. */
+export interface UsagePart extends Usage {
+  revision: string
 }
 
 /** A keyset page of the rows a filter matches, and the cursor to hand back for the page after it. */

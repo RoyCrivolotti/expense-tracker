@@ -88,6 +88,12 @@
   color: var(--exp-danger, #e5484d);
   opacity: 0.85;
 }
+/* Not offered while the counts it needs are being read. */
+.deleteBtn:disabled,
+.deleteBtn:disabled:hover {
+  opacity: 0.45;
+  cursor: default;
+}
 
 .deleteNote {
   margin: 0.85rem 0 0;
@@ -101,4 +107,21 @@
   font-size: 0.82rem;
   color: var(--exp-danger, #e5484d);
   text-align: center;
+}
+
+.usageNote {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.usageNoteButton {
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }

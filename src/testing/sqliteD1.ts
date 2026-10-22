@@ -6,7 +6,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
+import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import type { D1Database } from '@cloudflare/workers-types'
 
 export interface SqliteD1Stats {
@@ -54,7 +54,10 @@ export function applyMigration(db: DatabaseSync, file: string): void {
 
 /** All the migrations, or those up to and including the file whose name starts with `through` (`'0037'`). */
 export function migratedDatabase(through?: string): DatabaseSync {
-  const db = new DatabaseSync(':memory:')
+  // Taken from the process and not imported: a test that runs in jsdom resolves its imports as a browser would, and Vite
+  // refuses `node:sqlite` there on Node 22, whose list of built-in modules does not have it.
+  const { DatabaseSync: Database } = process.getBuiltinModule('node:sqlite')
+  const db = new Database(':memory:')
   for (const file of migrationFiles()) {
     if (through !== undefined && file.slice(0, through.length) > through) break
     applyMigration(db, file)

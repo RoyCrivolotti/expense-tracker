@@ -208,6 +208,33 @@ describe('useLedgerData, the recurring series', () => {
   })
 })
 
+describe('useLedgerData, the descriptions of a window', () => {
+  it('gives a window an index that asks the server for the descriptions of the rows it does not hold, and a ledger held in full the plain one', async () => {
+    const windowed = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(windowed, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model!.descriptionIndex.useSuggestions).toBeTypeOf('function')
+
+    const full = memorySource(small)
+    const whole = renderHook(() => useLedgerData(full))
+    await waitFor(() => expect(whole.result.current.status).toBe('ready'))
+    expect(whole.result.current.model!.descriptionIndex.useSuggestions).toBeUndefined()
+  })
+
+  it('asks for the rows before the oldest month of the run held up to the newest', async () => {
+    const source = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const index = result.current.model!.descriptionIndex
+    const typed = renderHook(() => index.useSuggestions!(index, 'a'))
+    await waitFor(() => expect(source.calls.some((call) => call.startsWith('suggest:a|'))).toBe(true))
+    const before = source.calls.find((call) => call.startsWith('suggest:a|'))!.split('|')[1]
+    expect(months).toContain(before)
+    expect(before! > months[0]!).toBe(true)
+    typed.unmount()
+  })
+})
+
 describe('useLedgerData, snapshots', () => {
   let fake: FakeIndexedDb
   const OWNER = 'alex@example.com'

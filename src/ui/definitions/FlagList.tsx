@@ -6,6 +6,7 @@ import { FlagGlyph } from '../components/FlagGlyph'
 import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { FlagsModal } from './FlagsModal'
+import { useRecordUsage } from './recordUsage'
 import styles from './definitions.module.css'
 import flagStyles from './FlagsModal.module.css'
 
@@ -17,6 +18,7 @@ import flagStyles from './FlagsModal.module.css'
 export function FlagList({ model, actions }: { model: ExpenseModel; actions: ExpenseActions }) {
   const [managing, setManaging] = useState(false)
   const flags = model.dataset.flags
+  const usage = useRecordUsage(model)
 
   return (
     <>
@@ -39,12 +41,13 @@ export function FlagList({ model, actions }: { model: ExpenseModel; actions: Exp
                 </span>
                 <span className={styles.rowMeta}>
                   {flag.description ? `${flag.description} · ` : ''}
-                  {model.dataset.transactions.filter((t) => t.flagId === flag.id).length} tagged
+                  {usage.count('flag', flag.id) ?? '—'} tagged
                 </span>
               </div>
             </div>
           ))
         )}
+        {usage.notice}
         <button type="button" className={styles.addBtn} onClick={() => setManaging(true)}>
           {flags.length === 0 ? '+ Add flag' : 'Manage flags'}
         </button>

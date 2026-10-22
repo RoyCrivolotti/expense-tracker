@@ -16,7 +16,7 @@ import { RecordForm } from './RecordForm'
 import { EXIT_MS, afterExit } from '../hooks/motion'
 import { useHeldWhileLeaving } from '../hooks/usePresence'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { accountUsageCount, categoryUsageCount } from './recordUsage'
+import { type UsageView, useRecordUsage } from './recordUsage'
 import type { FieldSpec, FieldValue } from './recordFields'
 import styles from './definitions.module.css'
 
@@ -62,7 +62,10 @@ const settingsFields = (cur: string): FieldSpec[] => [
 interface DeleteConfig {
   label: string
   noun: 'category' | 'account'
-  usageCount: number
+  /** How many records name it, or null while that is not known (see `UsageView`). */
+  usageCount: number | null
+  /** The counts it was taken from, which the delete says when they cannot be taken as they are. */
+  usage: UsageView
   otherOptions: ReassignOption[]
   /** True when this is the tenant's only record of this kind — deleting it is blocked. */
   isLast: boolean
@@ -87,11 +90,13 @@ function categoryDeleteConfig(
   record: Category,
   model: ExpenseModel,
   actions: ExpenseActions,
+  usage: UsageView,
 ): DeleteConfig {
   return {
     label: record.name,
     noun: 'category',
-    usageCount: categoryUsageCount(model.dataset, record.id),
+    usageCount: usage.count('category', record.id),
+    usage,
     // Active = archive: reassigning should never link records to an already-inactive
     // category, same rule as the transaction/installment pickers (PR3). If every other
     // category is inactive, the list is empty and ReassignDeleteSheet falls back to
@@ -117,11 +122,13 @@ function accountDeleteConfig(
   record: Account,
   model: ExpenseModel,
   actions: ExpenseActions,
+  usage: UsageView,
 ): DeleteConfig {
   return {
     label: record.name,
     noun: 'account',
-    usageCount: accountUsageCount(model.dataset, record.id),
+    usageCount: usage.count('account', record.id),
+    usage,
     // See the matching comment in categoryDeleteConfig: reassign targets stay active-only.
     otherOptions: model.dataset.accounts
       .filter((a) => a.id !== record.id && a.active)
@@ -145,6 +152,7 @@ function categoryConfig(
   model: ExpenseModel,
   actions: ExpenseActions,
   cur: string,
+  usage: UsageView,
 ): Config {
   const nextOrder = Math.max(0, ...model.dataset.categories.map((c) => c.sortOrder)) + 1
   const record = target.record
@@ -157,7 +165,7 @@ function categoryConfig(
       record
         ? actions.updateCategory(record.id, patch)
         : actions.createCategory(patch as unknown as NewCategory),
-    ...(record ? { delete: categoryDeleteConfig(record, model, actions) } : {}),
+    ...(record ? { delete: categoryDeleteConfig(record, model, actions, usage) } : {}),
   }
 }
 
@@ -165,6 +173,7 @@ function accountConfig(
   target: Extract<EditTarget, { kind: 'account' }>,
   model: ExpenseModel,
   actions: ExpenseActions,
+  usage: UsageView,
 ): Config {
   const record = target.record
   return {
@@ -176,7 +185,7 @@ function accountConfig(
       record
         ? actions.updateAccount(record.id, patch)
         : actions.createAccount(patch as unknown as NewAccount),
-    ...(record ? { delete: accountDeleteConfig(record, model, actions) } : {}),
+    ...(record ? { delete: accountDeleteConfig(record, model, actions, usage) } : {}),
   }
 }
 
@@ -185,9 +194,10 @@ function buildConfig(
   model: ExpenseModel,
   actions: ExpenseActions,
   cur: string,
+  usage: UsageView,
 ): Config {
-  if (target.kind === 'category') return categoryConfig(target, model, actions, cur)
-  if (target.kind === 'account') return accountConfig(target, model, actions)
+  if (target.kind === 'category') return categoryConfig(target, model, actions, cur, usage)
+  if (target.kind === 'account') return accountConfig(target, model, actions, usage)
   return {
     title: 'Opening balances',
     submitLabel: 'Save balances',
@@ -268,18 +278,22 @@ function DeleteControl({
       <button
         type="button"
         className={`${styles.editBtn} ${styles.deleteBtn}`}
+        // What uses it is not known until the server has counted: it is asked for, and not taken to be nothing.
+        disabled={config.usageCount === null && config.usage.note === 'reading'}
         onClick={() => {
           setErr(null)
-          changeMode(config.usageCount > 0 ? 'reassign' : 'confirm')
+          changeMode((config.usageCount ?? 0) > 0 ? 'reassign' : 'confirm')
         }}
       >
         Delete {config.noun}
       </button>
+      {config.usage.notice}
       {err && <p className={styles.deleteError}>{err}</p>}
       <Presence show={mode === 'confirm'} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet
           title={`Delete ${config.label}?`}
           message="This can't be undone."
+          {...(config.usage.words === null ? {} : { footnote: config.usage.words })}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void runPlainDelete()}
@@ -293,7 +307,7 @@ function DeleteControl({
           // runPlainDelete), not the normal usageCount > 0 path — the exact count isn't
           // trustworthy in that case, so use a generic message instead of "0 records".
           message={
-            config.usageCount > 0
+            (config.usageCount ?? 0) > 0
               ? `This ${config.noun} is used by ${config.usageCount} record${config.usageCount === 1 ? '' : 's'}. Move them to another ${config.noun} first, or create a new one.`
               : `This ${config.noun} turned out to still be in use elsewhere. Move its records to another ${config.noun} first, or create a new one.`
           }
@@ -320,7 +334,8 @@ export function ConfigModal({ target, model, actions, onClose }: ConfigModalProp
   // from that, the delete sheets would reword themselves, or give way to the "you need at
   // least one" note, while they are still leaving.
   const shownModel = useHeldWhileLeaving(model)
-  const cfg = buildConfig(target, shownModel, actions, symbol)
+  const usage = useRecordUsage(shownModel)
+  const cfg = buildConfig(target, shownModel, actions, symbol, usage)
   const [deleteMode, setDeleteMode] = useState<DeleteMode>('idle')
   // While a delete confirm/reassign sheet is open, Escape/backdrop should close just that
   // sheet — otherwise the sheet's own Escape handler and this Modal's both fire (they're

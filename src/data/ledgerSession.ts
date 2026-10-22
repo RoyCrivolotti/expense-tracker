@@ -45,7 +45,18 @@ export interface SessionState {
   seriesFailed: boolean
 }
 
+/** A write the session was told of, as the screens expressed it: what the rows and reference were before and after. */
+export interface WriteEvent {
+  before: ExpenseDataset
+  after: ExpenseDataset
+  /** True when it reached rows that are not held, which `before` and `after` cannot show. */
+  beyond: boolean
+  reach: WriteReach | undefined
+}
+
 export interface SessionOptions {
+  /** Told of every write that changed something, for what depends on it and is read apart from the session. */
+  onWrite?: ((write: WriteEvent) => void) | undefined
   policy?: HydrationPolicy
   /** Months held as rows at most; months the screens want are never given up. */
   maxHeldMonths?: number
@@ -144,9 +155,11 @@ export class LedgerSession {
   private readonly policy: HydrationPolicy
   private readonly cap: number
   private readonly refuseWindow: boolean
+  private readonly onWrite: ((write: WriteEvent) => void) | undefined
 
   constructor(source: LedgerPartsSource, options: SessionOptions = {}) {
     this.source = source
+    this.onWrite = options.onWrite
     this.policy = options.policy ?? DEFAULT_HYDRATION_POLICY
     this.cap = options.maxHeldMonths ?? DEFAULT_MAX_HELD_MONTHS
     this.refuseWindow = options.refuseWindow ?? false
@@ -298,6 +311,7 @@ export class LedgerSession {
     const changed = done.changed.rows || done.changed.reference || done.changed.receipts
     if (changed) this.hold(done, before, after)
     if (beyond) this.readBeyond(reach)
+    if (changed || beyond) this.onWrite?.({ before, after, beyond, reach })
     return beyond || done.changed.rows
   }
 
