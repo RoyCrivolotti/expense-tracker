@@ -85,6 +85,21 @@ describe('ledgerOnlyChunks', () => {
     ])
   })
 
+  it('leaves out a chunk another lazy chunk of the default path also loads, so that nothing a ledger module imports can move it out of the default total', () => {
+    // The parts client importing a library the receipts download also uses must not take that chunk with it.
+    const shared = {
+      ...ledgerBuild,
+      'index-a.js': `${ledgerBuild['index-a.js']};const d=()=>import(\`./DownloadReceipts-m.js\`)`,
+      'DownloadReceipts-m.js': 'import{f}from"./fflate-n.js"',
+      'fflate-n.js': 'export const f=1',
+      'apiLedgerParts-i.js': `${ledgerBuild['apiLedgerParts-i.js']};import{f}from"./fflate-n.js"`,
+    }
+    const found = runLedger(shared)
+    expect(found).not.toContain('fflate-n.js')
+    expect(found).not.toContain('DownloadReceipts-m.js')
+    expect(found).toContain('apiLedgerParts-i.js')
+  })
+
   it('leaves out a chunk the page loads at once', () => {
     const eagerErrors = { ...ledgerBuild, 'index-a.js': `${ledgerBuild['index-a.js']};import"./ledgerPartsErrors-k.js"` }
     expect(runLedger(eagerErrors)).not.toContain('ledgerPartsErrors-k.js')

@@ -51,9 +51,9 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note('page')
       return served.readTransactionPage(filter, request)
     },
-    readTransactionSummary(filter) {
+    readTransactionSummary(filter, request) {
       note('summary')
-      return served.readTransactionSummary(filter)
+      return served.readTransactionSummary(filter, request)
     },
     readReceiptsPart(transactionId) {
       note(transactionId === undefined ? 'receipts' : `receipts:${transactionId}`)

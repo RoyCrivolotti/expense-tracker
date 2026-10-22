@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './apiClient'
 import { apiDataSource } from './apiDataSource'
 import { apiLedgerParts } from './apiLedgerParts'
+import { ValidationError } from '../domain/application/validationError'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 import { ledgerReferenceOf } from '../domain/ledger/partsOfDataset'
 import { makeDataset, makeTransaction } from '../testing/factories'
@@ -153,6 +154,15 @@ describe('apiLedgerParts, transactions', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/transactions/summary?categoryId=4')
   })
 
+  it('hands the abort signal to fetch, so a read that is no longer wanted is cancelled', async () => {
+    const fetchMock = serve(json(page), json(summary))
+    const controller = new AbortController()
+    await apiLedgerParts.readTransactionPage({}, { signal: controller.signal })
+    await apiLedgerParts.readTransactionSummary({}, { signal: controller.signal })
+    for (const call of fetchMock.mock.calls) expect((call[1] as RequestInit).signal).toBe(controller.signal)
+    expect(fetchMock.mock.calls[0]?.[0]).not.toContain('signal')
+  })
+
   it('takes a last page, which has no cursor', async () => {
     serve(json({ items: [], nextCursor: null }))
     await expect(apiLedgerParts.readTransactionPage({})).resolves.toEqual({ items: [], nextCursor: null })
@@ -164,9 +174,15 @@ describe('apiLedgerParts, transactions', () => {
     await expect(apiLedgerParts.readTransactionSummary({})).rejects.toBeInstanceOf(PartsUnavailableError)
   })
 
-  it('passes on the server refusing a cursor or a filter, with its own words', async () => {
-    serve(json({ error: 'Invalid cursor' }, { status: 400 }))
-    await expect(apiLedgerParts.readTransactionPage({}, { cursor: 'x' })).rejects.toThrow('Invalid cursor')
+  it('reads the server refusing a cursor or a filter as a validation error with its own words, as the demo source does', async () => {
+    serve(json({ error: 'Invalid cursor' }, { status: 400 }), json({ error: 'month must be YYYY-MM' }, { status: 400 }))
+    await expect(apiLedgerParts.readTransactionPage({}, { cursor: 'x' })).rejects.toThrow(ValidationError)
+    await expect(apiLedgerParts.readTransactionSummary({ month: 'soon' })).rejects.toThrow('month must be YYYY-MM')
+  })
+
+  it('still reads a refused range of months as too large', async () => {
+    serve(json({ error: 'The range holds more than 5000 rows' }, { status: 400 }))
+    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartTooLargeError)
   })
 
   it('is served through apiDataSource', async () => {

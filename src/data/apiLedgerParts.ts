@@ -10,6 +10,7 @@ import type {
 } from '../domain/data/ledgerParts'
 import { transactionQueryString } from './transactionQueryString'
 import type { TransactionAttachment } from '../domain/types'
+import { ValidationError } from '../domain/application/validationError'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 
 const BASE = '/api/expenses'
@@ -101,13 +102,18 @@ function unavailable(url: string, detail: string): PartsUnavailableError {
  * What a response means for a part. A server that has no such route answers 404, or the single-page
  * app's index.html with a 200 that is not JSON; a body that is JSON but the wrong shape is a deploy
  * whose parts changed format. Both mean the caller should load the way it always has. A 400 is the
- * server refusing a range for its size, which the caller answers with a smaller range.
+ * server refusing a range for its size, which the caller answers with a smaller range, unless `refused` says
+ * what else a 400 means for this read (a list or summary refuses a filter or a cursor).
  */
-async function bodyOf(url: string, res: Response): Promise<unknown> {
+async function bodyOf(
+  url: string,
+  res: Response,
+  refused: (message: string) => Error = (message) => new PartTooLargeError(message),
+): Promise<unknown> {
   if (!res.ok) {
     const error = await toApiError(res)
     if (res.status === 404 || res.status === 405 || res.status === 501) throw unavailable(url, `HTTP ${res.status}`)
-    if (res.status === 400) throw new PartTooLargeError(error.message)
+    if (res.status === 400) throw refused(error.message)
     throw error
   }
   try {
@@ -136,9 +142,17 @@ async function readPart<T>(url: string, check: (body: unknown) => body is T): Pr
   return body
 }
 
-/** A list or summary is read as it is now, and never from a cache: the server sends no validator for it. */
-async function readFresh<T>(url: string, check: (body: unknown) => body is T): Promise<T> {
-  const body = await bodyOf(url, await fetchPart(url, { cache: 'no-store' }))
+/**
+ * A list or summary is read as it is now, and never from a cache. A 400 is the server refusing the filter or the
+ * cursor, a `ValidationError` as the demo source throws for the same input, and not a range too large to read.
+ */
+async function readFresh<T>(
+  url: string,
+  check: (body: unknown) => body is T,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  const res = await fetchPart(url, { cache: 'no-store', ...(signal ? { signal } : {}) })
+  const body = await bodyOf(url, res, (message) => new ValidationError(message))
   if (!check(body)) throw unavailable(url, 'unexpected shape')
   return body
 }
@@ -152,7 +166,7 @@ export const apiLedgerParts: LedgerPartsSource = {
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
   readTransactionPage: (filter, request) =>
-    readFresh(`${BASE}/transactions/list?${transactionQueryString(filter, request)}`, isTransactionPage),
-  readTransactionSummary: (filter) =>
-    readFresh(`${BASE}/transactions/summary?${transactionQueryString(filter)}`, isTransactionSummary),
+    readFresh(`${BASE}/transactions/list?${transactionQueryString(filter, request)}`, isTransactionPage, request?.signal),
+  readTransactionSummary: (filter, request) =>
+    readFresh(`${BASE}/transactions/summary?${transactionQueryString(filter)}`, isTransactionSummary, request?.signal),
 }

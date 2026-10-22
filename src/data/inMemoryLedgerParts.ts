@@ -49,14 +49,16 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
       const { dataset } = await current()
       return dataset.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
     },
-    async readTransactionPage(filter, { limit, cursor } = {}) {
+    async readTransactionPage(filter, { limit, cursor, signal } = {}) {
       const { dataset } = await current()
+      signal?.throwIfAborted()
       const queryTransactions = (_owner: string, f: TxnFilter, page: TransactionPageRequest) =>
         Promise.resolve(pageOf(dataset.transactions, f, page))
       return listTransactions({ queryTransactions }, '', { filter, limit, cursor })
     },
-    async readTransactionSummary(filter) {
+    async readTransactionSummary(filter, { signal } = {}) {
       const { dataset, revision } = await current()
+      signal?.throwIfAborted()
       const summarize = (_owner: string, f: TxnFilter) => Promise.resolve(summaryOf(dataset.transactions, f))
       return { revision, ...(await summarizeTransactions({ summarizeTransactions: summarize }, '', filter)) }
     },

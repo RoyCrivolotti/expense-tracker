@@ -138,9 +138,12 @@ export interface LedgerPartsSource {
    * One keyset page of the rows `filter` matches, newest first. `cursor` is the previous page's `nextCursor`,
    * handed back as it came: the server ties it to the filter and refuses a changed one.
    */
-  readTransactionPage(filter: TxnFilter, request?: { limit?: number; cursor?: string }): Promise<TransactionPagePart>
-  /** How many rows `filter` matches (counted to a cap) and what they net to. */
-  readTransactionSummary(filter: TxnFilter): Promise<TransactionSummaryPart>
+  readTransactionPage(
+    filter: TxnFilter,
+    request?: { limit?: number; cursor?: string; signal?: AbortSignal },
+  ): Promise<TransactionPagePart>
+  /** How many rows `filter` matches (counted to a cap) and what they net to. `signal` cancels the read. */
+  readTransactionSummary(filter: TxnFilter, request?: { signal?: AbortSignal }): Promise<TransactionSummaryPart>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {

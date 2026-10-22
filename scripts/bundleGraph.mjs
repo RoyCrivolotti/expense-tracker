@@ -58,15 +58,17 @@ export function goalsOnlyChunks(build) {
 }
 
 /**
- * The chunks only a browser that turned the ledger mode on loads: the app over the ledger and what it
- * imports, and the client of the parts routes, which the entry imports on first use. What the entry loads at
- * once, or a tab loads too, is not the ledger's.
+ * The chunks only a browser that turned the ledger mode on runs: the app over the ledger and what it imports,
+ * and the client of the parts routes, which the entry imports on first use. A chunk the rest of the app can load
+ * is not the ledger's, however many ledger modules also import it, so the default path is walked first, through
+ * everything the entry loads at once or later (the tabs and every other lazy chunk) but not through the ledger's
+ * own two roots, and what it reaches is taken out.
  * @param {{ files: string[], read: (file: string) => string, indexHtml: string }} build
  * @returns {string[]}
  */
 export function ledgerOnlyChunks(build) {
   const { allEdges, eager, named } = graphOf(build)
-  const ledger = reach(named('LedgerExpensesApp', 'apiLedgerParts'), allEdges, eager)
-  const tabs = reach(named('GoalsTab', 'AnalyticsTab'), allEdges, eager)
-  return [...ledger].filter((file) => !eager.has(file) && !tabs.has(file)).sort()
+  const roots = named('LedgerExpensesApp', 'apiLedgerParts')
+  const defaultPath = reach([...eager], allEdges, new Set(roots))
+  return [...reach(roots, allEdges, eager)].filter((file) => !defaultPath.has(file)).sort()
 }
