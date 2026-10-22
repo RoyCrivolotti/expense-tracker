@@ -6,7 +6,7 @@ import { mapAppError } from '../../_shared/mapAppError'
 
 /**
  * How many transactions, plans and statements name each category, account, flag and label of the owner
- * (docs/SCALING.md, "Usage counts"). Served and cached like the ledger parts: a request that holds the
+ * (docs/API.md, "GET /usage"). Served and cached like the ledger parts: a request that holds the
  * current tag gets a 304 after two rows are read, before anything is counted. When it is not current it
  * runs the installment backfill first, as `GET /api/expenses` does, because a plan's payments are
  * transactions that name a category and an account, and the counts must be the ones the dataset gives.
