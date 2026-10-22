@@ -194,9 +194,15 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   nothing changes for a ledger under the size policy. For a window the model also carries `history` (the recurring
   series of the whole history), which the Overview and Spending hand to the engines that would otherwise classify fixed
   spend from the rows they are given. `docs/ENGINE-HISTORY.md` says which engine is which class. A new screen that
-  adds amounts reads `sumsOf(model)`, and one that lists or searches rows reads `dataset`; `ledgerModelSweep.test.ts`
-  and `ledgerModelRender.test.tsx` fail for a screen wired to the wrong list. What a window cannot give is the newest
-  rows by date (recent activity), the description index and counts of how many rows carry a label, category or account.
+  adds amounts reads `sumsOf(model)`, and one that lists or searches rows reads `dataset`. `ledgerModelSweep.test.ts`
+  runs the readings the screens make over a window for every viewed month and holds them to the same readings over
+  every row, which catches a wrong list in the Overview, the Spending view and the monthly tables; the wiring written
+  inline in the Dashboard, the statement rows and the newest month of Goals has no test that fails for a wrong list.
+  What a window cannot give is the newest rows by date (recent activity), the description index, counts of how many
+  rows carry a label, category or account, and the export of every transaction, which writes only the rows held.
+  A list of rows that shows a month the model holds only as sums shows nothing for it, never a cell. A model built
+  from `dataset` alone (`applyPatch` in `useExpenseData.ts`) has no `sums` or `history`, so it is only right for a
+  model that holds every row.
 - **A ledger held open is changed by writes in place, and what a write moved is read again.** `LedgerSession`
   (`src/data/ledgerSession.ts`) holds the reference, the pinned rows, the rows of the months being looked at and
   the sums of every month (`ledgerHold.ts`). A write is patched into the rows held at once, and
