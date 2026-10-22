@@ -132,7 +132,7 @@ describe('the counts of a window', () => {
     const source = memorySource(big)
     const read = source.readUsagePart.bind(source)
     // The counts keep the revision they were first read at, as ones the server could not serve again would.
-    let frozen: string | undefined
+    let frozen = undefined as string | undefined
     source.readUsagePart = async () => ({ ...(await read()), revision: frozen ?? source.revision })
     const sink = open(source, WINDOWED)
     await loaded(sink)
