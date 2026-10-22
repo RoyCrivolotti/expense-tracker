@@ -28,10 +28,10 @@ import { useUpcoming } from './useUpcoming'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
-/** "1 item", "0 items", "2 items" — pulled out only because this component is already
+/** "1 item", "0 items", "2 items", "1000+ items" — pulled out only because this component is already
  * at the complexity ceiling; every other spot in the app inlines this same ternary. */
-function itemCountLabel(count: number): string {
-  return `${count} item${count === 1 ? '' : 's'}`
+function itemCountLabel(count: number, capped = false): string {
+  return `${count}${capped ? '+' : ''} item${count === 1 ? '' : 's'}`
 }
 
 /** The tapped row is a snapshot, so a date edit made in the sheet would never reach it.
@@ -78,7 +78,7 @@ export function TransactionsTab({
   const past = usePastReports(model.dataset.transactions)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
-    `${state.listRows.length} transactions match`,
+    `${state.count}${state.capped ? '+' : ''} transactions match`,
   )
   const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
@@ -151,7 +151,7 @@ export function TransactionsTab({
         hasActiveFilters={state.hasActiveFilters}
         summary={
           <span className={styles.resultStats}>
-            <span>{itemCountLabel(state.listRows.length)}</span>
+            <span>{itemCountLabel(state.count, state.capped)}</span>
             <span>
               <span className={styles.resultLabel}>Net spend </span>
               <span className={styles.resultAmount}>
@@ -187,6 +187,7 @@ export function TransactionsTab({
       </p>
       <TransactionList
         rows={state.listRows}
+        loading={state.loading}
         lookup={model.lookup}
         selectMode={state.selectMode}
         selectedIds={state.selected}
@@ -205,6 +206,7 @@ export function TransactionsTab({
             }
           : {})}
       />
+      {state.footer}
 
       <PresenceValue value={actions ? editingStatement : null} exitMs={EXIT_MS.sheet}>
         {(statement) =>

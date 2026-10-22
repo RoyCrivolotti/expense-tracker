@@ -15,6 +15,8 @@ const NO_SELECTION: ReadonlySet<number> = new Set()
 
 interface TransactionListProps {
   rows: TransactionListRow[]
+  /** The rows are on their way, so an empty list is not yet the answer. */
+  loading?: boolean | undefined
   lookup: Lookup
   flat?: boolean | undefined
   showDate?: boolean | undefined
@@ -75,17 +77,17 @@ function renderRow(
   )
 }
 
-export function TransactionList({ rows, lookup, flat = false, ...props }: TransactionListProps) {
+export function TransactionList({ rows, loading, lookup, flat = false, ...props }: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
   const groups = useMemo(() => (flat ? [] : groupListRowsByDay(rows)), [rows, flat])
 
   if (rows.length === 0) {
     return (
       <EmptyState
-        actionLabel={props.onClearFilters ? 'Clear filters' : undefined}
+        actionLabel={props.onClearFilters && !loading ? 'Clear filters' : undefined}
         onAction={props.onClearFilters}
       >
-        No transactions match these filters.
+        {loading ? 'Loading…' : 'No transactions match these filters.'}
       </EmptyState>
     )
   }
