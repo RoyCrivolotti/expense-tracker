@@ -135,3 +135,27 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   labels go first, as adding them never changes which rows match, and the revision is read again between the two
   requests. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
   so it counts it as not shown.
+
+## What a window cannot work out from its rows
+
+- **A window's autocomplete is its own matches at once and the server's older ones once the typing settles.**
+  `useLedgerData` gives a model that holds a window an index in the server's order (`order: 'key'`) that carries a
+  `useSuggestions` hook, which `DescriptionCombobox` calls in place of `search` when it is there
+  (`withOlderDescriptions`). The rows held are the browser's side and the rows booked before `olderThan(held)` are the
+  server's: the oldest month of the run of months held up to the newest, so a month held beyond a gap is found on both
+  sides and taken once. After `SETTLE_MS` without a keystroke, when the browser is online, `GET /descriptions/suggest` is
+  asked for that prefix with the browser's locale, and `mergeDescriptionMatches` makes the answer equal the index over
+  every row. Typing is never held up: a read that more typing overtook is cancelled, one that fails or is refused keeps the
+  matches shown, a prefix the server calls `tooBroad` keeps the rows held until more is typed, and the matches of the
+  shorter prefix that still fit stay on screen while the next is read. What was read lasts as long as the index, which
+  is rebuilt when the rows held change. A model that holds every row has no hook and its `search` is the whole answer.
+- **A window's usage counts are the server's, and a count that is not known is never zero.** Settings reads them through
+  `useRecordUsage(model)`: a model that holds every row counts them from its rows, and one that holds a window carries
+  `useUsage`, backed by `LedgerUsage` (`src/data/ledgerUsage.ts`). `GET /usage` is read when a screen that shows the
+  counts mounts and they are missing, flagged or failed, again after a write that could change one (`touchesUsage`: a
+  held row's category, account, flag or labels, or a record added or removed, or a write to rows not held that wrote
+  those fields, none, or added or removed rows), and once when the rows are read at another revision than the counts.
+  The browser's cache answers a read of an unchanged ledger for two rows. The counts show as a dash while none has been
+  read and the delete of a category or account waits for them; when they could not be read it is left to the server's
+  409, which sends the user to a reassignment. `UsageView.note` says why counts cannot be taken as they are (being
+  read, read before a write, or not readable) and `UsageNote` shows it.

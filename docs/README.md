@@ -7,7 +7,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [CHANGELOG.md](./CHANGELOG.md) | User | What changed in the product |
 | [SCREENSHOT-GALLERY.md](./SCREENSHOT-GALLERY.md) | User | The UI, screen by screen |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Contributor | Layers, and the rules the code must keep obeying |
-| [LEDGER-MODE.md](./LEDGER-MODE.md) | Contributor | How the browser holds and reads a ledger in parts: the switch, the session, the lists in pages, the writes |
+| [LEDGER-MODE.md](./LEDGER-MODE.md) | Contributor | How the browser holds and reads a ledger in parts: the switch, the session, the lists in pages, the writes, and what a window asks the server |
 | [API.md](./API.md) | Contributor | Every read and bulk route: parameters, bounds, errors, caching, cost |
 | [BEHAVIOR.md](./BEHAVIOR.md) | Contributor | How import, instalment plans, recurring suggestions and budget months behave |
 | [TESTING.md](./TESTING.md) | Contributor | Test layers, coverage gates, local test tooling |
