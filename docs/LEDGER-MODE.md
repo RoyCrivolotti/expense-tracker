@@ -43,7 +43,10 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md) says which engine is which. A list that shows a month the model holds only as
   sums shows nothing for it, never a cell. A model built from `dataset` alone (`applyPatch` in `useExpenseData.ts`) has
   no `sums` or `history`, so it is right only for a model that holds every row. `ledgerModelSweep.test.ts` holds the
-  readings the Overview, the Spending view and the monthly tables make to the same readings over every row.
+  readings the Overview, the Spending view and the monthly tables make to the same readings over every row, and
+  `ledgerPinnedReadings.client.integration.test.ts` those the Flagged card, expense and past reports, reimbursement
+  links and instalment plans make, from a session moved between months and written to, over the real routes. They
+  read rows whatever their age, so they are right only while every row they follow is pinned.
 
 ## The session
 

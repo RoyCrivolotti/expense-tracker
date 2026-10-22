@@ -29,7 +29,7 @@ import {
 } from '../../../src/domain/engine'
 import { sortedMonths } from '../../../src/domain/engine/dates'
 import type { BulkTransactionPatch } from '../../../src/domain/data/dataSource'
-import { HYDRATED_DATA_MONTHS, type HydrationPolicy, partitionPinned, settlementPaymentIds } from '../../../src/domain/ledger'
+import { HYDRATED_DATA_MONTHS, type HydrationPolicy, settlementPaymentIds } from '../../../src/domain/ledger'
 import type { ExpenseDataset, TransactionAttachment } from '../../../src/domain/types'
 import { adversarialLedger } from '../../../src/testing/adversarialLedger'
 import { linkedOutputs } from '../../../src/testing/rowOutputs'
@@ -53,7 +53,7 @@ import { onRequestGet as getMonths } from './transactions/months'
 const SLOW = 180_000
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 /** Few enough that the session lets go of months it has read when the screen moves on. */
-const HELD_MONTHS = 14
+const HELD_MONTHS = 13
 
 interface Served {
   name: string
@@ -128,10 +128,33 @@ function withOldPayments(ds: ExpenseDataset): ExpenseDataset {
   return { ...ds, transactions: [...settled, legacy, orphan] }
 }
 
+/**
+ * Links that point at nothing: an old row settled by a payment that is gone, and one flagged with a flag that is gone,
+ * as a delete in another tab leaves them until the dataset is read again. The server pins a row by the link, not by
+ * what it points at, and the readings have to cope with both lists the same.
+ */
+function withDanglingLinks(ds: ExpenseDataset): ExpenseDataset {
+  const plainRows = ds.transactions.filter(
+    (t) => t.type === 'expense' && !t.cancelled && t.planId == null && t.flagId == null && t.settledBy == null && (t.reportCount ?? 0) === 0,
+  )
+  const oldest = sortedMonths(plainRows.map((t) => t.budgetMonth))[0]
+  const [settled, flagged] = plainRows.filter((t) => t.budgetMonth === oldest)
+  if (!settled || !flagged) return ds
+  const gone = Math.max(...ds.transactions.map((t) => t.id)) + 1_000
+  return {
+    ...ds,
+    transactions: ds.transactions.map((t) => {
+      if (t.id === settled.id) return { ...t, settledBy: gone }
+      if (t.id === flagged.id) return { ...t, flagId: 9_999 }
+      return t
+    }),
+  }
+}
+
 async function serve(name: string, source: ExpenseDataset): Promise<Served> {
   const sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
-  seedDataset(sqlite, OWNER, withReceipts(withOldPayments(source)))
+  seedDataset(sqlite, OWNER, withReceipts(withDanglingLinks(withOldPayments(source))))
   const world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
   return { name, world, dataset }
@@ -260,8 +283,7 @@ describe('what follows rows across months, read from a window over the real rout
 
 describe('a write that changes which rows are pinned', () => {
   it('leaves the readings equal to the whole dataset after each write and after the months it was made in are let go', async () => {
-    let checked = 0
-    const ran = new Set<string>()
+    const seen = { checked: 0, letGo: 0, steps: new Set<string>() }
     for (const [name, source] of sources(3)) {
       const c = await serve(name, source)
       vi.stubGlobal('fetch', routeFetch(c.world))
@@ -271,16 +293,20 @@ describe('a write that changes which rows are pinned', () => {
       const flag = c.dataset.flags[0]
       const payment = [...settlementPaymentIds(c.dataset.transactions)][0]
       if (!flag || payment === undefined) continue
-      const plain = new Set(partitionPinned(c.dataset.transactions).rest.filter((t) => t.type === 'expense').map((t) => t.id))
       const session = new LedgerSession(apiLedgerParts, { policy: WINDOWED, maxHeldMonths: HELD_MONTHS })
       await session.open(newest)
 
-      const heldPlain = () =>
-        [...session.getState().held!.rows.values()].flat().filter((t) => plain.has(t.id) && t.flagId == null && t.settledBy == null).map((t) => t.id)
-      const heldPinned = (keep: (t: { flagId?: number | undefined; settledBy?: number | undefined }) => boolean) => {
-        const held = session.getState().held!
-        const months = new Set(held.rows.keys())
-        return held.pinned.filter((t) => !months.has(t.budgetMonth) && keep(t)).map((t) => t.id)
+      const held = () => session.getState().held!
+      /** Rows held as rows that nothing pins now, oldest month first: a window always holds the newest months, so the old ones are the ones that get let go. */
+      const plainRows = (fromOldest: boolean) =>
+        [...held().rows.values()]
+          .flat()
+          .filter((t) => t.type === 'expense' && t.flagId == null && t.settledBy == null && t.planId == null && !t.cancelled && !(t.reportCount ?? 0))
+          .sort((a, b) => (fromOldest ? 1 : -1) * (a.budgetMonth.localeCompare(b.budgetMonth) || a.id - b.id))
+          .map((t) => t.id)
+      const unheldPinned = (keep: (t: { flagId?: number | undefined }) => boolean) => {
+        const months = new Set(held().rows.keys())
+        return held().pinned.filter((t) => !months.has(t.budgetMonth) && keep(t)).map((t) => t.id)
       }
       const write = async (ids: number[], patch: BulkTransactionPatch) => {
         const result = await apiDataSource.updateTransactions!(ids, patch)
@@ -298,42 +324,67 @@ describe('a write that changes which rows are pinned', () => {
         // cannot show, so the session reads the ledger again (`cascadeOf`) and the readings are given until it has.
         if (settles) await vi.waitFor(compare, { timeout: 10_000 })
         else await compare()
-        checked += 1
-        ran.add(step)
+        seen.checked += 1
+        seen.steps.add(step)
       }
 
-      const fresh = heldPlain().slice(0, 3)
-      expect(fresh.length, name).toBeGreaterThan(0)
-      await write(fresh, { flagId: flag.id })
-      await same('flagged three rows in the months held', newest)
+      const recent = plainRows(false).slice(0, 3)
+      expect(recent.length, name).toBeGreaterThan(0)
+      await write(recent, { flagId: flag.id })
+      await same('flagged three rows of the newest months', newest)
+
       await session.view(oldest)
-      await same('looked at the oldest month, so the newest were let go', oldest)
+      await same('looked at the oldest month', oldest)
+      const old = plainRows(true)
+      const [flagged, settled, invested] = [old.slice(0, 2), old.slice(2, 4), old.slice(4, 6)]
+      if (flagged.length > 0) {
+        await write(flagged, { flagId: flag.id })
+        await same('flagged two rows of the oldest months', oldest)
+      }
+      if (settled.length > 0) {
+        await write(settled, { settledBy: payment })
+        await same('settled two rows of the oldest months', oldest, true)
+      }
+      if (invested.length > 0) {
+        await write(invested, { type: 'investment' })
+        await same('turned two rows of the oldest months into investments', oldest)
+      }
 
-      const old = heldPinned((t) => t.flagId != null).slice(0, 2)
-      if (old.length > 0) {
-        await write(old, { flagId: null })
-        await same('cleared the flag of rows in months not held', oldest)
+      await session.view(newest)
+      const touched = [...flagged, ...settled, ...invested]
+      const rowsHeld = new Set(held().rows.keys())
+      const letGo = touched.filter((id) => !rowsHeld.has(held().pinned.find((t) => t.id === id)!.budgetMonth))
+      expect(letGo.length === 0 || letGo.length === touched.length, name).toBe(true)
+      if (months.length > 2 * HELD_MONTHS) expect(letGo.length, `${name}: the months of the written rows are let go`).toBe(touched.length)
+      seen.letGo += letGo.length
+      await same('looked at the newest month, so the written rows lost their months', newest, true)
+
+      if (flagged.length > 0) {
+        await write(flagged, { flagId: null })
+        await same('cleared the flag of rows in months not held', newest)
       }
-      const toSettle = heldPlain().slice(0, 2)
-      if (toSettle.length > 0) {
-        await write(toSettle, { settledBy: payment })
-        await same('settled two rows in the months held', oldest, true)
-        await session.view(newest)
-        await same('looked at the newest month, so the settled rows were let go', newest, true)
-        await write(toSettle, { settledBy: null })
-        await same('un-settled them while their months were not held', newest, true)
+      if (settled.length > 0) {
+        await write(settled, { settledBy: null })
+        await same('un-settled rows in months not held', newest, true)
       }
-      const edited = heldPinned((t) => t.flagId != null).slice(0, 1)
-      if (edited.length > 0) {
-        const category = c.dataset.categories.find((x) => x.id !== c.dataset.transactions.find((t) => t.id === edited[0])?.categoryId)!
-        await write(edited, { categoryId: category.id })
-        await same('moved a flagged row in a month not held to another category', newest)
+      if (invested.length > 0) {
+        await write(invested, { type: 'expense' })
+        await same('turned investments in months not held back into expenses', newest)
       }
-      await write(fresh, { flagId: null })
-      await same('cleared the flag again of the three rows, whose months were not held', newest)
+      const oldFlagged = unheldPinned((t) => t.flagId != null).slice(0, 2)
+      if (oldFlagged.length > 0) {
+        const category = c.dataset.categories.find((x) => x.id !== c.dataset.transactions.find((t) => t.id === oldFlagged[0])?.categoryId)!
+        await write(oldFlagged, { categoryId: category.id })
+        await same('moved flagged rows in months not held to another category', newest)
+        await write(oldFlagged, { flagId: null })
+        await same('cleared their flags', newest)
+      }
+      await write(recent, { flagId: null })
+      await same('cleared the flag of the three newest rows', newest)
     }
-    expect(checked).toBeGreaterThan(10)
+    expect(seen.checked).toBeGreaterThan(30)
+    expect(seen.letGo).toBeGreaterThan(10)
     // Every kind of step ran for some ledger.
-    expect(ran.size).toBe(8)
+    expect(seen.steps.size).toBe(12)
   }, SLOW)
 })
