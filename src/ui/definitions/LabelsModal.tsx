@@ -6,6 +6,9 @@ import { EmptyState } from '../components/primitives'
 import { Modal } from '../components/Modal'
 import { LabelGlyph } from '../components/LabelGlyph'
 import { LabelForm } from './LabelForm'
+import { UsageNote } from './UsageNote'
+import { transactionCountLabel } from '../components/flagPickerOptions'
+import { usageCount, useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 // Reused wholesale: a label row (glyph, name, meta, archived tag, Edit button)
 // is laid out identically to a flag row, so this borrows that stylesheet
@@ -13,10 +16,6 @@ import defStyles from './definitions.module.css'
 import styles from './FlagsModal.module.css'
 
 type Editing = { label: Label } | { label: null } | null
-
-function usageCount(model: ExpenseModel, labelId: number): number {
-  return model.dataset.transactions.filter((t) => t.labelIds?.includes(labelId)).length
-}
 
 /** Mirrors FlagsModal exactly, minus the "Expense report" button — labels have no reports. */
 export function LabelsModal({
@@ -31,6 +30,7 @@ export function LabelsModal({
   const [editing, setEditing] = useState<Editing>(null)
   const [confirming, setConfirming] = useState(false)
   const labels = model.dataset.labels
+  const usage = useRecordUsage(model)
 
   const title = editing ? (editing.label ? `Edit ${editing.label.name}` : 'New label') : 'Labels'
 
@@ -47,7 +47,7 @@ export function LabelsModal({
         <LabelForm
           label={editing.label}
           existing={labels}
-          usageCount={editing.label ? usageCount(model, editing.label.id) : 0}
+          usageCount={editing.label ? usageCount(usage.usage, 'label', editing.label.id) : 0}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}
@@ -73,8 +73,9 @@ export function LabelsModal({
                   </span>
                   <span className={styles.rowMeta}>
                     {label.description ? `${label.description} · ` : ''}
-                    {usageCount(model, label.id)} transaction
-                    {usageCount(model, label.id) === 1 ? '' : 's'}
+                    {usageCount(usage.usage, 'label', label.id) === null
+                      ? '—'
+                      : transactionCountLabel(usageCount(usage.usage, 'label', label.id))}
                   </span>
                 </div>
                 <button
@@ -87,6 +88,7 @@ export function LabelsModal({
               </div>
             ))
           )}
+          <UsageNote view={usage} />
           <button
             type="button"
             className={defStyles.addBtn}

@@ -14,7 +14,7 @@ interface Props {
   flag: Flag | null
   /** Used to place a new flag at the end of the user's ordering. */
   existing: Flag[]
-  usageCount: number
+  usageCount: number | null
   actions: ExpenseActions
   onDone: () => void
   /** Lets the enclosing Modal pause its focus trap while the sheet is open. */
@@ -51,7 +51,7 @@ function ActiveToggle({
   onChange,
 }: {
   active: boolean
-  usageCount: number
+  usageCount: number | null
   onChange: (active: boolean) => void
 }) {
   return (

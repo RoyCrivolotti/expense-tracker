@@ -8,7 +8,7 @@ import styles from './FlagForm.module.css'
 
 interface Props {
   label: Label | null
-  usageCount: number
+  usageCount: number | null
   busy: boolean
   confirming: boolean
   onSave: () => void

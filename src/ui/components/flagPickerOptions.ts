@@ -28,12 +28,14 @@ export function selectableFlags(flags: Flag[], value: number | null): Flag[] {
 }
 
 /** "3 transactions" / "1 transaction" — used in several flag messages. */
-export function transactionCountLabel(count: number): string {
+export function transactionCountLabel(count: number | null): string {
+  if (count === null) return 'transactions'
   return `${count} transaction${count === 1 ? '' : 's'}`
 }
 
 /** What deleting a flag will actually do, in the user's terms. */
-export function flagDeleteMessage(usageCount: number): string {
+export function flagDeleteMessage(usageCount: number | null): string {
   if (usageCount === 0) return 'Nothing is flagged with it, so nothing else changes.'
+  if (usageCount === null) return 'Every transaction flagged with it will be unflagged. Nothing else changes — no transaction is deleted.'
   return `${transactionCountLabel(usageCount)} will be unflagged. Nothing else changes — no transaction is deleted.`
 }

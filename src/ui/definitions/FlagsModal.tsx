@@ -9,14 +9,13 @@ import { FlagGlyph } from '../components/FlagGlyph'
 import { ChevronIcon } from '../icons'
 import { FlagForm } from './FlagForm'
 import { FlagAutoLabelEditor } from './FlagAutoLabelEditor'
+import { UsageNote } from './UsageNote'
+import { transactionCountLabel } from '../components/flagPickerOptions'
+import { usageCount, useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 import styles from './FlagsModal.module.css'
 
 type Editing = { flag: Flag } | { flag: null } | null
-
-function usageCount(model: ExpenseModel, flagId: number): number {
-  return model.dataset.transactions.filter((t) => t.flagId === flagId).length
-}
 
 /**
  * Whether a report would actually build. A raw usage count is not the same
@@ -50,6 +49,7 @@ export function FlagsModal({
   const [confirming, setConfirming] = useState(false)
   const [configuringLabel, setConfiguringLabel] = useState<Flag | null>(null)
   const flags = model.dataset.flags
+  const usage = useRecordUsage(model)
 
   const title = editing
     ? editing.flag
@@ -72,7 +72,7 @@ export function FlagsModal({
         <FlagForm
           flag={editing.flag}
           existing={flags}
-          usageCount={editing.flag ? usageCount(model, editing.flag.id) : 0}
+          usageCount={editing.flag ? usageCount(usage.usage, 'flag', editing.flag.id) : 0}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}
@@ -110,8 +110,9 @@ export function FlagsModal({
                     </span>
                     <span className={styles.rowMeta}>
                       {flag.description ? `${flag.description} · ` : ''}
-                      {usageCount(model, flag.id)} transaction
-                      {usageCount(model, flag.id) === 1 ? '' : 's'}
+                      {usageCount(usage.usage, 'flag', flag.id) === null
+                        ? '—'
+                        : transactionCountLabel(usageCount(usage.usage, 'flag', flag.id))}
                     </span>
                   </div>
                   <ChevronIcon className={styles.rowChevron} aria-hidden="true" />
@@ -138,6 +139,7 @@ export function FlagsModal({
               </div>
             ))
           )}
+          <UsageNote view={usage} />
           <button
             type="button"
             className={defStyles.addBtn}

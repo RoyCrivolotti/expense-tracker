@@ -14,7 +14,7 @@ interface Props {
   label: Label | null
   /** Used to place a new label at the end of the user's ordering. */
   existing: Label[]
-  usageCount: number
+  usageCount: number | null
   actions: ExpenseActions
   onDone: () => void
   /** Lets the enclosing Modal pause its focus trap while the sheet is open. */
@@ -51,7 +51,7 @@ function ActiveToggle({
   onChange,
 }: {
   active: boolean
-  usageCount: number
+  usageCount: number | null
   onChange: (active: boolean) => void
 }) {
   return (

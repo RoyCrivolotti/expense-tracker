@@ -7,6 +7,7 @@ import { loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
 import type { WriteReach } from '../data/ledgerSession'
 import type { Lookup } from './format'
+import type { UsageView } from './definitions/recordUsage'
 import type { PagedList } from './transactionListView'
 import { buildExpenseModel } from './buildExpenseModel'
 
@@ -42,6 +43,12 @@ export interface ExpenseModel {
    * Returns the call that says the screen has gone.
    */
   watchHistory?: () => () => void
+  /**
+   * Present for a ledger read in parts: the counts of what names each category, account, flag and label, which a window
+   * must ask the server for (`useRecordUsage` calls it while a Settings screen that shows them is on). Its presence
+   * does not change while the model lives.
+   */
+  useUsage?: (model: ExpenseModel) => UsageView
   /**
    * Set while a model that holds only some of the rows has no `history` yet: the words that say the figures that
    * need it (the split of fixed from flexible spend, the pace) are worked out from the months loaded and are not

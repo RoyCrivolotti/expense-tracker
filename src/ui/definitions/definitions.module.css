@@ -102,3 +102,20 @@
   color: var(--exp-danger, #e5484d);
   text-align: center;
 }
+
+.usageNote {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.usageNoteButton {
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
