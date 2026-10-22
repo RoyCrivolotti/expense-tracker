@@ -22,9 +22,14 @@ const MODEL = buildExpenseModel(
 
 /** Three of the five visible rows chosen, select mode on, nothing pending. */
 function makeSelection(overrides: Partial<SelectionState> = {}): SelectionState {
+  const selected = overrides.selected ?? new Set([1, 2, 3])
   return {
     selectMode: true,
-    selected: new Set([1, 2, 3]),
+    selected,
+    selectedCount: selected.size,
+    allMatching: null,
+    matchingOffer: null,
+    selectMatching: vi.fn(),
     hiddenCount: 0,
     busy: false,
     pendingBatchDelete: false,

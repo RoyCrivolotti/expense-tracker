@@ -280,6 +280,11 @@ export function useTransactionsTabState(
     () => (model.sums === undefined ? model.dataset.transactions.map((t) => t.id) : undefined),
     [model.dataset.transactions, model.sums],
   )
+  const filterKey = JSON.stringify(filters.filter)
+  const paged = useMemo(
+    () => (model.pagedList ? { matching: list.matching ?? null, filterKey } : undefined),
+    [model.pagedList, list.matching, filterKey],
+  )
 
   // This tab does not remount on a filter or month change, so the selection is told what
   // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
@@ -289,7 +294,7 @@ export function useTransactionsTabState(
     existingIds,
     shell.onSelectModeChange,
     model.dataset.transactions,
-    model.pagedList !== undefined,
+    paged,
   )
 
   return {

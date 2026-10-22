@@ -4,6 +4,7 @@ import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
 import { toggleDateSelection } from './selectionUtils'
+import { type PagedSelection, useMatchingSelection } from './useMatchingSelection'
 
 /**
  * The chosen rows an action will leave alone because they are not on screen, said at
@@ -61,6 +62,9 @@ export function bulkOutcomeCopy(
  * as visible. `existingIds` is for a list that holds every row there is: one that does not
  * cannot tell a row it has not read from a row that was deleted elsewhere, so it leaves
  * `existingIds` out and a chosen row it no longer shows counts as hidden.
+ *
+ * A list read in pages passes `paged`, which lets the user choose every row the filter matches
+ * (`selectMatching`) for an edit. That choice has no rows to name, so a delete is not offered for it.
  */
 export function useTransactionSelection(
   actions?: ExpenseActions,
@@ -69,8 +73,7 @@ export function useTransactionSelection(
   onSelectModeChange?: (selecting: boolean) => void,
   /** Looked up by id to union onto each row's own labels — see confirmBulkEdit. */
   transactions?: readonly Pick<Transaction, 'id' | 'labelIds'>[],
-  /** The list is read in pages, so the rows chosen are not all held and their labels cannot be looked up here. */
-  labelsByBulkRoute = false,
+  paged?: PagedSelection,
 ) {
   const { showToast } = useToast()
   const [selectMode, setSelectModeState] = useState(false)
@@ -88,6 +91,7 @@ export function useTransactionSelection(
   const [busy, setBusy] = useState(false)
   const [pendingBatchDelete, setPendingBatchDelete] = useState(false)
   const [pendingBulkEdit, setPendingBulkEdit] = useState(false)
+  const matching = useMatchingSelection(paged)
 
   const selected = useMemo(() => {
     if (!visibleIds || picked.size === 0) return picked
@@ -111,8 +115,12 @@ export function useTransactionSelection(
     return stillThere - selected.size
   }, [picked, selected, existingIds])
 
+  /** What the bar says is selected: every matching row if they were chosen, otherwise the rows picked and shown. */
+  const selectedCount = matching.target ? matching.target.expectedCount : selected.size
+
   const exitSelect = () => {
     setSelectMode(false)
+    matching.clear()
     setPicked(new Set())
     setPendingBatchDelete(false)
     setPendingBulkEdit(false)
@@ -127,6 +135,7 @@ export function useTransactionSelection(
   }
 
   const toggleSelected = (id: number) => {
+    matching.clear()
     setPicked((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -136,26 +145,36 @@ export function useTransactionSelection(
   }
 
   const toggleDate = (ids: number[]) => {
+    matching.clear()
     setPicked((prev) => toggleDateSelection(prev, ids))
   }
 
   /** Adds every row on screen. A row already chosen behind a filter stays chosen. */
   const selectAll = (ids: number[]) => {
+    matching.clear()
     setPicked((prev) => new Set([...prev, ...ids]))
+  }
+
+  /** Every row the filter matches, the ones the list holds and the ones it has not read. */
+  const selectMatching = () => {
+    matching.choose()
+    setPicked((prev) => new Set([...prev, ...(visibleIds ?? [])]))
   }
 
   /** Clears the lot, hidden rows included: "all" means all, and clearing is never destructive. */
   const deselectAll = () => {
+    matching.clear()
     setPicked(new Set())
   }
 
   const enterAndSelect = (id: number) => {
+    matching.clear()
     setSelectMode(true)
     setPicked(new Set([id]))
   }
 
   const requestBatchDelete = () => {
-    if (!actions || selected.size === 0) return
+    if (!actions || selected.size === 0 || matching.target) return
     setPendingBatchDelete(true)
   }
 
@@ -178,7 +197,7 @@ export function useTransactionSelection(
   }
 
   const requestBulkEdit = () => {
-    if (!actions || selected.size === 0) return
+    if (!actions || selectedCount === 0) return
     setPendingBulkEdit(true)
   }
 
@@ -190,14 +209,15 @@ export function useTransactionSelection(
    * removed by hand everywhere else in the app (see bulkEditFields.ts). Each
    * selected row keeps whatever it already has, plus whatever was picked.
    *
-   * A list read in pages adds them through the bulk route, which keeps the labels a row has.
-   * Otherwise one request per row: a transaction's labels are replaced one at a time
-   * (setTransactionLabels). If any of them fails this throws like the patch above, landing in
-   * the same catch: a partial label application with no count attached would be a worse
-   * outcome than one "could not update" toast covering both.
+   * A list read in pages adds them through the bulk route, which keeps the labels a row has
+   * (the rows are not all held, so their labels cannot be looked up here). Otherwise one
+   * request per row: a transaction's labels are replaced one at a time (setTransactionLabels).
+   * If any of them fails this throws like the patch above, landing in the same catch: a
+   * partial label application with no count attached would be a worse outcome than one
+   * "could not update" toast covering both.
    */
   const applyLabelAdditions = async (ids: number[], labelIdsToAdd: number[]) => {
-    if (labelsByBulkRoute && actions!.addLabels) {
+    if (paged && actions!.addLabels) {
       await actions!.addLabels(ids, labelIdsToAdd)
       return
     }
@@ -211,24 +231,34 @@ export function useTransactionSelection(
     )
   }
 
-  const confirmBulkEdit = async (patch: BulkTransactionPatch, labelIdsToAdd: number[] = []) => {
-    if (!actions || selected.size === 0) return
-    const count = selected.size
+  const editSelected = async (patch: BulkTransactionPatch, labelIdsToAdd: number[]): Promise<number> => {
     const ids = [...selected]
+    // A patch with nothing in it is rejected server-side as an empty edit — a
+    // labels-only bulk edit has no column to set, so this is skipped rather
+    // than sent.
+    const updated = Object.keys(patch).length > 0 ? await actions!.updateTransactions(ids, patch) : ids.length
+    if (labelIdsToAdd.length > 0) await applyLabelAdditions(ids, labelIdsToAdd)
+    return updated
+  }
+
+  const confirmBulkEdit = async (patch: BulkTransactionPatch, labelIdsToAdd: number[] = []) => {
+    if (!actions || selectedCount === 0) return
+    const asked = selectedCount
+    const everyMatch = matching.target
     setBusy(true)
     try {
-      // A patch with nothing in it is rejected server-side as an empty edit — a
-      // labels-only bulk edit has no column to set, so this is skipped rather
-      // than sent.
-      const updated = Object.keys(patch).length > 0 ? await actions.updateTransactions(ids, patch) : count
-      if (labelIdsToAdd.length > 0) await applyLabelAdditions(ids, labelIdsToAdd)
+      const updated = everyMatch
+        ? await actions.updateMatching!(everyMatch, patch, labelIdsToAdd)
+        : await editSelected(patch, labelIdsToAdd)
       exitSelect()
       const toast =
         patch.description === undefined
-          ? bulkOutcomeCopy('Updated', updated, count)
-          : bulkOutcomeCopy('Renamed', updated, count, patch.description)
+          ? bulkOutcomeCopy('Updated', updated, asked)
+          : bulkOutcomeCopy('Renamed', updated, asked, patch.description)
       showToast(toast, 'success')
     } catch (err) {
+      // The count they were shown is not to be trusted after a refusal: the list reads it again, and they choose again.
+      matching.clear()
       showToast(err instanceof Error ? err.message : 'Could not update', 'error')
     } finally {
       setBusy(false)
@@ -253,6 +283,10 @@ export function useTransactionSelection(
   return {
     selectMode,
     selected,
+    selectedCount,
+    allMatching: matching.target,
+    matchingOffer: matching.offer,
+    selectMatching,
     busy,
     pendingBatchDelete,
     pendingBulkEdit,

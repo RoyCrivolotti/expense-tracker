@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDataSource } from '../../../src/data/apiDataSource'
 import { ApiError } from '../../../src/data/apiClient'
 import { LedgerSession } from '../../../src/data/ledgerSession'
+import { TransactionPager } from '../../../src/data/transactionPager'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../../../src/domain/ledger'
 import { patchAfterBulkDelete, patchAfterBulkUpdate } from '../../../src/ui/datasetPatches'
 import { BULK_REVISION_MESSAGE } from '../../../src/domain/data/bulkEdit'
@@ -21,6 +22,7 @@ import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '.
 import { onRequestGet as getCube } from './cube'
 import { onRequestGet as getReference } from './reference'
 import { onRequestPut as putSettings } from './settings/index'
+import { onRequestGet as getList } from './transactions/list'
 import { onRequestGet as getMonths } from './transactions/months'
 import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from './transactions/bulk'
 import { onRequestPost as postLabels } from './transactions/bulk/labels'
@@ -48,6 +50,7 @@ function routeFetch() {
     ['/api/expenses/transactions/bulk/labels', 'POST', postLabels],
     ['/api/expenses/transactions/summary', 'GET', getSummary],
     ['/api/expenses/transactions/months', 'GET', getMonths],
+    ['/api/expenses/transactions/list', 'GET', getList],
     ['/api/expenses/reference', 'GET', getReference],
     ['/api/expenses/cube', 'GET', getCube],
   ]
@@ -299,5 +302,26 @@ describe('a ledger held as a window, after a write to months it holds only as su
 
     expect(cellsOf(session)).toEqual(before)
     expect(before).not.toEqual(await truth())
+  })
+})
+
+describe('a list read in pages, after an edit on the filter it shows', () => {
+  it('offers the filter as it was read, and shows what the edit moved once it reads again', async () => {
+    const category = (sqlite.prepare('SELECT category_id AS id FROM transactions WHERE owner = ? GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1').get(OWNER) as { id: number }).id
+    const to = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? AND id <> ? ORDER BY id LIMIT 1').get(OWNER, category) as { id: number }).id
+    const pager = new TransactionPager(source, { limit: 100 })
+    pager.attach()
+    pager.setFilter({ categoryId: category })
+    await vi.waitFor(() => expect(pager.matching()).not.toBeNull(), { timeout: 5_000 })
+    const target = pager.matching()!
+    expect(pager.getState().rows).toHaveLength(100)
+    expect(target.expectedCount).toBeGreaterThan(100)
+
+    await source.updateMatchingTransactions(target, { categoryId: to })
+    pager.refresh({ summary: true })
+
+    await vi.waitFor(() => expect(pager.getState().summary?.count).toBe(0), { timeout: 5_000 })
+    expect(pager.getState().rows).toHaveLength(0)
+    expect(ids(`category_id = ${to}`).length).toBeGreaterThanOrEqual(target.expectedCount)
   })
 })

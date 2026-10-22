@@ -1,4 +1,4 @@
-import type { LedgerPartsSource } from '../domain/data/dataSource'
+import type { LedgerPartsSource, MatchingTarget } from '../domain/data/dataSource'
 import type { TransactionSummaryPart } from '../domain/data/ledgerParts'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
@@ -195,6 +195,19 @@ export class TransactionPager {
       return
     }
     this.reload(this.state.rows.length, summary)
+  }
+
+  /**
+   * The rows the list's filter matches, as the figures on screen count them, for a write that names them by the filter
+   * (it is refused if the count or the revision has moved). Null whenever the figures may not be what the user is
+   * looking at: the filter is being typed, the list or the figures are being read, or failed to be, and when more rows
+   * match than a write on a filter may reach.
+   */
+  matching(): MatchingTarget | null {
+    const { summary, summaryStale, stale, loading, refreshing, refreshFailed } = this.state
+    const reading = stale || loading || refreshing || refreshFailed || summaryStale || this.summaryPending
+    if (!this.filter || this.waiting || reading || !summary || summary.capped || this.summaryKey !== this.key) return null
+    return { filter: this.filter, expectedCount: summary.count, expectedRevision: summary.revision }
   }
 
   /**
