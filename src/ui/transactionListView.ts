@@ -4,6 +4,8 @@ import type { TransactionPager } from '../data/transactionPager'
 import type { TransactionListRow } from '../domain/engine/transactionListRows'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
+import type { ExpenseActions } from './actions'
+import type { useSelectionCore } from './tabs/useTransactionSelection'
 import type { ExpenseModel } from './useExpenseData'
 
 /** What the Transactions tab lists for a filter, however the rows came to be here. */
@@ -35,8 +37,46 @@ export interface ListView {
 
 export type ListHook = (model: ExpenseModel, filter: TxnFilter) => ListView
 
+/** What a selection needs to know of the list it is over, beyond the ids on screen. */
+export interface SelectionView {
+  model: ExpenseModel
+  list: ListView
+  filter: TxnFilter
+}
+
+/**
+ * What the select bar says differently when a list read in pages offers more than the rows it holds: the select button
+ * (`matching` says whether it chooses every matching row or lets go of them), a note, and a delete that cannot be made.
+ */
+export interface BarOverrides {
+  allLabel?: string
+  matching?: boolean
+  note?: string
+  deleteBlocked?: boolean
+}
+
+export type Selection = ReturnType<typeof useSelectionCore> & {
+  /** What the bar and the sheet count, when that is not the rows selected (every matching row was chosen). */
+  selectedCount?: number
+  /** Whether a rename can say which descriptions it replaces. */
+  describable?: boolean
+  bar?: BarOverrides
+  /** Chooses every row the filter matches. */
+  selectMatching?: () => void
+}
+
+export type SelectionHook = (
+  actions: ExpenseActions | undefined,
+  visibleIds: readonly number[],
+  existingIds: readonly number[],
+  onSelectModeChange: ((selecting: boolean) => void) | undefined,
+  transactions: readonly Transaction[],
+  view: SelectionView,
+) => Selection
+
 /** A list that is read in pages from the server instead of filtered from the rows the model holds. */
 export interface PagedList {
   pager: TransactionPager
   useList: ListHook
+  useSelection: SelectionHook
 }
