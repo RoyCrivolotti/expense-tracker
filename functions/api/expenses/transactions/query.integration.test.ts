@@ -63,6 +63,13 @@ async function pagesOf(query: string, email = OWNER): Promise<Transaction[]> {
   throw new Error('paging did not end')
 }
 
+describe('the list and the summary are never cached', () => {
+  it('send private, no-store, so nothing keeps a page or a count across a write', async () => {
+    expect((await list('limit=5')).headers.get('cache-control')).toBe('private, no-store')
+    expect((await summary('')).headers.get('cache-control')).toBe('private, no-store')
+  })
+})
+
 describe('GET /transactions/list', () => {
   it('serves the owner’s rows in pages that put end to end are the dataset’s order', async () => {
     const rows = await pagesOf('')
