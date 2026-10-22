@@ -36,6 +36,7 @@ import type {
   NewWealthAccount,
   NewWealthCheckin,
 } from './dataSource'
+import { MAX_BULK_DELETE } from '../domain/data/transactionIds'
 import { RECEIPT_CLIENT_POLICY } from './receiptClientPolicy'
 import { downscaleImage, renderThumbnail } from './imageDownscale'
 import { req, reqMultipart } from './apiClient'
@@ -52,6 +53,8 @@ const BASE = '/api/expenses'
  * the code that reads them.
  */
 const parts = () => import('./apiLedgerParts').then((m) => m.apiLedgerParts)
+/** Bulk writes too large for one request, or on a filter, are imported the same way. */
+const writes = () => import('./apiLedgerWrites')
 const PART_READS = [
   'readReferencePart',
   'readMonthsPart',
@@ -91,17 +94,24 @@ export const apiDataSource: ExpenseDataSource = {
     await req(`${BASE}/transactions/${id}`, { method: 'DELETE' })
   },
   deleteTransactions: (ids: number[]) =>
-    req<{ deleted: number; requested: number }>(`${BASE}/transactions/bulk`, {
-      method: 'DELETE',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    }),
+    ids.length > MAX_BULK_DELETE
+      ? writes().then((m) => m.deleteTransactions(ids))
+      : req<{ deleted: number; requested: number }>(`${BASE}/transactions/bulk`, {
+          method: 'DELETE',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        }),
   updateTransactions: (ids: number[], patch: BulkTransactionPatch) =>
-    req<{ updated: number; transactions: Transaction[] }>(`${BASE}/transactions/bulk`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ids, patch }),
-    }),
+    ids.length > MAX_BULK_DELETE
+      ? writes().then((m) => m.updateTransactions(ids, patch))
+      : req<{ updated: number; transactions: Transaction[] }>(`${BASE}/transactions/bulk`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ids, patch }),
+        }),
+  addLabelsToTransactions: (ids, labelIds) => writes().then((m) => m.addLabelsToTransactions(ids, labelIds)),
+  updateMatchingTransactions: (target, patch, labelIds) =>
+    writes().then((m) => m.updateMatchingTransactions(target, patch, labelIds)),
   setStatementPaid: (accountId: number, yearMonth: string, paid: boolean, paidOn?: string) =>
     req<AccountStatement>(`${BASE}/statements`, {
       method: 'PUT',
