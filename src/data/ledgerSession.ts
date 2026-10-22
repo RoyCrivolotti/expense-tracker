@@ -1,5 +1,6 @@
 import type { LedgerPartsSource } from './dataSource'
 import { shiftBudgetMonth } from '../domain/engine/dates'
+import type { RecurringSeries } from '../domain/engine/recurringSeries'
 import type { MonthRange } from '../domain/data/ledgerParts'
 import { DEFAULT_HYDRATION_POLICY, type HydrationPolicy } from '../domain/ledger'
 import { planRowRanges } from '../domain/ledger/partsPlan'
@@ -34,6 +35,11 @@ export interface SessionState {
   offline: boolean
   /** True once a read found a ledger held as a window and `refuseWindow` kept it out; nothing more is read. */
   outsized: boolean
+  /**
+   * The recurring series of the whole history, for a ledger held as a window while a screen that reads them is
+   * mounted (`watchSeries`). Null until the first read lands, and for a ledger held in full, whose rows are the series.
+   */
+  series: RecurringSeries[] | null
 }
 
 export interface SessionOptions {
@@ -80,11 +86,24 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
  * overtook (`ledgerResources.ts`). `subscribe` and `getState` are what a screen reads it through.
  */
 export class LedgerSession {
-  private state: SessionState = { held: null, viewed: '', hydrating: false, error: null, offline: false, outsized: false }
+  private state: SessionState = {
+    held: null,
+    viewed: '',
+    hydrating: false,
+    error: null,
+    offline: false,
+    outsized: false,
+    series: null,
+  }
   private epochs: Epochs = NO_EPOCHS
   private readonly stale = new Set<string>()
   private flushing = false
   private readonly readingReceipts = new Set<number>()
+  /** Screens that read the series right now, and whether a read of it is on its way. */
+  private watching = 0
+  private readingSeries = false
+  /** The revision the held series was read under and how many writes to rows the session had seen. */
+  private seriesRead: { revision: string; rows: number } | null = null
   /** How many refreshes have started, and the newest one's outcome. */
   private refreshes = 0
   private latest: Promise<void> = Promise.resolve()
@@ -123,6 +142,7 @@ export class LedgerSession {
     const held = holdParts(parts)
     if (this.refuses(held)) return this.set({ outsized: true })
     this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null, offline: false })
+    void this.readSeries()
   }
 
   /**
@@ -173,6 +193,7 @@ export class LedgerSession {
       const held = this.state.held ? mergeRead(this.state.held, read, current) : read
       if (current.cube) this.stale.clear()
       this.set({ held, error: null, offline: false })
+      void this.readSeries()
       if (current.reference && current.rows && current.cube) return
     }
   }
@@ -236,9 +257,62 @@ export class LedgerSession {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     this.set({ held: done.held })
+    if (done.changed.rows) void this.readSeries()
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
     if (cascadeOf(before, after)) this.refresh().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
+  }
+
+  /**
+   * A screen reads the recurring series of the whole history (the fixed and flexible split, the Upcoming card),
+   * which a ledger held as a window cannot work out from its rows. The series is read once a screen is watching,
+   * and again while one is after a write that changed rows, after a read of the ledger that found it at another
+   * revision and when the ledger moved under the read. A write that changed no row (a setting, a flag's name)
+   * reads nothing, and neither does a screen that is not mounted: the server works the series out from every row,
+   * so a read that finds the ledger changed costs about nine rows per transaction. Returns the call that stops watching.
+   */
+  watchSeries = (): (() => void) => {
+    this.watching += 1
+    void this.readSeries()
+    return () => {
+      this.watching -= 1
+    }
+  }
+
+  private wantsSeries(): boolean {
+    const { held, offline } = this.state
+    return this.watching > 0 && held !== null && held.cells !== null && !offline
+  }
+
+  /** The series held was read after the last write to rows, and under the revision the rows were read under. */
+  private seriesCurrent(): boolean {
+    const read = this.seriesRead
+    const revision = this.state.held?.revision ?? null
+    return read !== null && read.rows === this.epochs.rows && (revision === null || revision === read.revision)
+  }
+
+  private async readSeries(): Promise<void> {
+    if (this.readingSeries) return
+    this.readingSeries = true
+    let moved = 0
+    try {
+      while (this.wantsSeries() && !this.seriesCurrent()) {
+        const rows = this.epochs.rows
+        const part = await this.source.readSeriesPart()
+        // A write to rows meanwhile makes the answer old before it lands: read again.
+        if (rows !== this.epochs.rows) continue
+        this.seriesRead = { revision: part.revision, rows }
+        this.set({ series: part.series })
+        // The rows were read under another revision, so the ledger moved since: bring them level with the series.
+        if ((this.state.held?.revision ?? part.revision) === part.revision) continue
+        if (++moved >= REFRESH_ATTEMPTS) break
+        await this.refresh()
+      }
+    } catch (error) {
+      this.set({ error: reason(error) })
+    } finally {
+      this.readingSeries = false
+    }
   }
 
   /**
