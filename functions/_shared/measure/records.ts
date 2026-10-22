@@ -56,11 +56,39 @@ export function markOf(recorder: Recorder): { records: number; calls: number } {
   return { records: recorder.records.length, calls: recorder.calls }
 }
 
+/** One SQL text and what it cost across every time a request ran it. */
+export interface StatementTotal {
+  sql: string
+  runs: number
+  rowsRead: number
+  rowsWritten: number
+  sqlMs: number
+  /** Sent as part of `batch()`. */
+  batch: boolean
+}
+
+/** Statements since `mark`, one entry per distinct SQL text in the order first run. The text is the template, never its values. */
+export function statementsSince(recorder: Recorder, mark: { records: number }): StatementTotal[] {
+  const byText = new Map<string, StatementTotal>()
+  for (const record of recorder.records.slice(mark.records)) {
+    const key = `${record.batch ? 'batch' : 'single'} ${record.sql}`
+    const total = byText.get(key) ?? { sql: record.sql, runs: 0, rowsRead: 0, rowsWritten: 0, sqlMs: 0, batch: record.batch }
+    total.runs += 1
+    total.rowsRead += record.rowsRead
+    total.rowsWritten += record.rowsWritten
+    total.sqlMs += record.durationMs
+    byText.set(key, total)
+  }
+  return [...byText.values()]
+}
+
 export interface RouteResult {
   name: string
   status: number
   bytes: number
   summary: Summary
+  /** What each distinct statement of the request cost, so a total can be traced to the query that caused it. */
+  statements: StatementTotal[]
   /** A case that is not meant to write wrote. */
   unexpectedWrite: boolean
 }

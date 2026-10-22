@@ -44,7 +44,7 @@ function harness(transport: Transport, over: Partial<Deps> = {}): Harness {
     measureRoutes: (options) => {
       routes.push(options)
       const summary = { calls: 1, statements: 1, rowsRead: 5, rowsWritten: 0, sqlMs: 0, writes: 0 }
-      const result: RouteResult = { name: 'GET stub', status: 200, bytes: 10, summary, unexpectedWrite: false }
+      const result: RouteResult = { name: 'GET stub', status: 200, bytes: 10, summary, statements: [], unexpectedWrite: false }
       return Promise.resolve([result])
     },
     ...over,
@@ -190,7 +190,7 @@ describe('a whole exercise through the commands', () => {
 
   it('reports a failing route as a failed run', async () => {
     const { db } = await seededDatabase(200)
-    const failing: RouteResult = { name: 'GET stub', status: 500, bytes: 0, unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: 0, rowsWritten: 0, sqlMs: 0, writes: 0 } }
+    const failing: RouteResult = { name: 'GET stub', status: 500, bytes: 0, statements: [], unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: 0, rowsWritten: 0, sqlMs: 0, writes: 0 } }
     const h = harness(sqliteTransport(db), { measureRoutes: () => Promise.resolve([failing]) })
     expect(await run(['measure', '--database', 'roy-expenses-dev'], h)).toBe(1)
     const wrote: RouteResult = { ...failing, status: 200, unexpectedWrite: true }
@@ -238,7 +238,7 @@ describe('the stop file', () => {
 describe('compare', () => {
   it('shows the growth per 1,000 transactions between two runs', async () => {
     const h = harness(sqliteTransport(databaseWithAnotherOwner()))
-    const result = (read: number): RouteResult => ({ name: 'GET series', status: 200, bytes: 1, unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: read, rowsWritten: 0, sqlMs: 0, writes: 0 } })
+    const result = (read: number): RouteResult => ({ name: 'GET series', status: 200, bytes: 1, statements: [], unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: read, rowsWritten: 0, sqlMs: 0, writes: 0 } })
     h.files.set('a.json', { day: 'd', transactions: 300, results: [result(2_700)] })
     h.files.set('b.json', { day: 'd', transactions: 1_200, results: [result(10_800)] })
     expect(await run(['compare', 'a.json', 'b.json'], h)).toBe(0)

@@ -32,7 +32,9 @@ use today; otherwise pass `--account-written-today N` from the D1 dashboard. `pl
    Note a Time Travel bookmark first: `npx wrangler d1 time-travel info D`.
 3. `snapshot --database D`: read-only; hashes every row that is not the synthetic owner's.
 4. `seed --database D --write --confirm D --snapshot <file> --transactions 300`.
-5. `measure --database D` (reads), then again with `--write --confirm D` (adds the write routes).
+5. `measure --database D` (reads), then again with `--write --confirm D` (adds the write routes). The table it prints is
+   per route; the `.tmp/scaling/routes-*.json` it saves also has each route's statements, one entry per distinct SQL
+   template, with how often it ran and the rows read and written, so a total can be traced to the query behind it.
 6. `cleanup --database D --write --confirm D --transactions 300`, then `verify --database D --snapshot <file>`.
 7. Repeat with a larger seed on another day, then `compare <run-a> <run-b>` for the growth per 1,000 transactions.
 
