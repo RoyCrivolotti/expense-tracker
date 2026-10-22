@@ -40,6 +40,6 @@ describe('the command line', () => {
   })
 
   it('prints the usage with the refusal', () => {
-    expect(() => parseArgs(['plan', '--force'])).toThrow(/Usage: npx tsx scripts\/measure-d1\.mjs/)
+    expect(() => parseArgs(['plan', '--force'])).toThrow(/Usage: npm run measure:d1 -- <command>/)
   })
 })

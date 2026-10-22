@@ -25,7 +25,7 @@ use today; otherwise pass `--account-written-today N` from the D1 dashboard. `pl
 
 ## Commands
 
-`npx tsx scripts/measure-d1.mjs <command>`, with `D` standing for `<your-dev-d1-database>`.
+`npm run measure:d1 -- <command>`, with `D` standing for `<your-dev-d1-database>`.
 
 1. `plan --transactions 300`, `seed`, `cleanup`: offline; print the budget and the statements.
 2. `check --database D`: read-only. Reports the target, indexes, `sqlite_stat1`, `batch` through the API and today's use.
