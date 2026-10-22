@@ -214,6 +214,9 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   makes the held revision unknown until a part is read again, so the next read of another month reads everything
   again rather than mixing two states. The months held beyond the window around the month shown and the newest
   window are given up oldest first; a ledger held in full gives up nothing.
+  A read in the background that fails (after a cascade, of a month or of a receipt list) is kept in
+  `SessionState.error` until a refresh works, because what is shown may then be out of date; `useLedgerData` returns it as
+  `backgroundError` for the app to tell the user.
 
   A write the server answers with more than the patch shows is followed by a read of the whole ledger instead of a
   hand mirror of the cascade (`cascadeOf` in `ledgerCascade.ts` recognises it from what the patch did to the
