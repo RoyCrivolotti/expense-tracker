@@ -12,6 +12,14 @@ import type { Transaction } from '../domain/types'
 
 const BULK = '/api/expenses/transactions/bulk'
 
+/**
+ * An edit by id writes every row and reads each one back: three statements a row in one request. The route takes
+ * 500 ids, but nothing that large has been run on D1, so a request names at most this many until it has. An edit of
+ * every row a filter matches is one request that costs about a statement for every twenty rows (12 for 266), so it
+ * is preferred wherever it applies.
+ */
+const MAX_EDIT_IDS = 100
+
 const send = <T>(method: string, url: string, body: unknown): Promise<T> =>
   req<T>(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
@@ -48,7 +56,7 @@ export async function updateTransactions(
   ids: number[],
   patch: BulkTransactionPatch,
 ): Promise<{ updated: number; transactions: Transaction[] }> {
-  const parts = await inChunks(ids, MAX_BULK_DELETE, (chunk) =>
+  const parts = await inChunks(ids, MAX_EDIT_IDS, (chunk) =>
     send<{ updated: number; transactions: Transaction[] }>('PATCH', BULK, { ids: chunk, patch }),
   )
   return { updated: total(parts, 'updated'), transactions: parts.flatMap((part) => part.transactions) }

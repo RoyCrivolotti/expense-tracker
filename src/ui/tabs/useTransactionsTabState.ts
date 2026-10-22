@@ -13,7 +13,7 @@ import {
 } from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import type { ListView } from '../transactionListView'
+import type { ListView, SelectionHook } from '../transactionListView'
 import { parseAmountBound, parseQueryAmount } from './txnAmountFilter'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
@@ -275,27 +275,19 @@ export function useTransactionsTabState(
     [list.listRows],
   )
 
-  // Only a model that holds every row can say a row is gone: one that holds a window has not read the rest.
   const existingIds = useMemo(
-    () => (model.sums === undefined ? model.dataset.transactions.map((t) => t.id) : undefined),
-    [model.dataset.transactions, model.sums],
-  )
-  const filterKey = JSON.stringify(filters.filter)
-  const paged = useMemo(
-    () => (model.pagedList ? { matching: list.matching ?? null, filterKey } : undefined),
-    [model.pagedList, list.matching, filterKey],
+    () => model.dataset.transactions.map((t) => t.id),
+    [model.dataset.transactions],
   )
 
   // This tab does not remount on a filter or month change, so the selection is told what
   // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
-  const selection = useTransactionSelection(
-    actions,
-    visibleIds,
-    existingIds,
-    shell.onSelectModeChange,
-    model.dataset.transactions,
-    paged,
-  )
+  const useSelection: SelectionHook = model.pagedList?.useSelection ?? useTransactionSelection
+  const selection = useSelection(actions, visibleIds, existingIds, shell.onSelectModeChange, model.dataset.transactions, {
+    model,
+    list,
+    filter: filters.filter,
+  })
 
   return {
     ...filters,

@@ -5,6 +5,7 @@ import { filteredStatementPayments, pagedListRows } from '../domain/engine/paged
 import { netSpendCents, type TxnFilter } from '../domain/engine/transactions'
 import { useConnectivityState } from './hooks/useConnectivityState'
 import { sumsOf } from './modelSums'
+import { usePagedSelection } from './pagedSelection'
 import { ListFailed, PagedListFooter } from './PagedListFooter'
 import { listOfHeldRows } from './tabs/useTransactionsTabState'
 import type { ListView, PagedList } from './transactionListView'
@@ -69,5 +70,5 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
 
 /** The pager as the Transactions tab takes it: its filter set from the screen's, its rows and count read back. */
 export function pagedListOf(pager: TransactionPager): PagedList {
-  return { pager, useList: (model, filter) => usePagedRows(pager, model, filter) }
+  return { pager, useList: (model, filter) => usePagedRows(pager, model, filter), useSelection: usePagedSelection }
 }

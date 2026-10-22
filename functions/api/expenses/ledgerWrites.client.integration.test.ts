@@ -12,7 +12,7 @@ import { ApiError } from '../../../src/data/apiClient'
 import { LedgerSession } from '../../../src/data/ledgerSession'
 import { TransactionPager } from '../../../src/data/transactionPager'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../../../src/domain/ledger'
-import { patchAfterBulkDelete, patchAfterBulkUpdate } from '../../../src/ui/datasetPatches'
+import { patchAfterBulkDelete, patchAfterBulkUpdate, patchAfterTransactionCreate } from '../../../src/ui/datasetPatches'
 import { BULK_REVISION_MESSAGE } from '../../../src/domain/data/bulkEdit'
 import type { MatchingTarget } from '../../../src/domain/data/dataSource'
 import type { TxnFilter } from '../../../src/domain/engine/transactions'
@@ -24,6 +24,7 @@ import { onRequestGet as getCube } from './cube'
 import { onRequestGet as getReference } from './reference'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestGet as getList } from './transactions/list'
+import { onRequestPost as postTransaction } from './transactions/index'
 import { onRequestGet as getMonths } from './transactions/months'
 import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from './transactions/bulk'
 import { onRequestPost as postLabels } from './transactions/bulk/labels'
@@ -52,6 +53,7 @@ function routeFetch() {
     ['/api/expenses/transactions/summary', 'GET', getSummary],
     ['/api/expenses/transactions/months', 'GET', getMonths],
     ['/api/expenses/transactions/list', 'GET', getList],
+    ['/api/expenses/transactions', 'POST', postTransaction],
     ['/api/expenses/reference', 'GET', getReference],
     ['/api/expenses/cube', 'GET', getCube],
   ]
@@ -130,7 +132,7 @@ describe('bulk writes larger than a request', () => {
     expect(ids()).toHaveLength(all.length - 500)
   })
 
-  it('edits more rows than one request may name and answers every row it changed', async () => {
+  it('edits rows in requests of at most 100 ids, however few the route would take, and answers every row it changed', async () => {
     const all = ids()
     const category = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }).id
     const edited = all.slice(0, 1_100)
@@ -139,7 +141,7 @@ describe('bulk writes larger than a request', () => {
 
     expect(result.updated).toBe(1_100)
     expect(result.transactions.map((row) => row.id).sort((a, b) => a - b)).toEqual(edited)
-    expect(sent).toHaveLength(3)
+    expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([...Array.from({ length: 11 }, () => 100)])
     expect(ids(`category_id = ${category}`).filter((id) => edited.includes(id))).toEqual(edited)
   })
 
@@ -292,6 +294,32 @@ describe('a ledger held as a window, after a write to months it holds only as su
     const session = await opened()
     await write(session, unheld(session, 40), true)
 
+    await vi.waitFor(async () => expect(cellsOf(session)).toEqual(await truth()), wait)
+  })
+
+  it('reads only the sums of the month a new row is in, since the patch already counts the row and cannot know the sums', async () => {
+    const session = await opened()
+    const [unheldRow] = unheld(session, 1)
+    const month = (sqlite.prepare('SELECT budget_month AS month FROM transactions WHERE id = ?').get(unheldRow!) as { month: string }).month
+    const account = (sqlite.prepare('SELECT id FROM accounts WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }).id
+    const added = await source.createTransaction({
+      date: `${month}-15`,
+      budgetMonth: month,
+      description: 'Added in a month held as a sum',
+      accountId: account,
+      categoryId: category(),
+      type: 'expense',
+      amountCents: 1_234,
+      cancelled: false,
+    })
+    sent.length = 0
+
+    session.patch((d) => patchAfterTransactionCreate(d, added))
+
+    // What the session read for itself, before a fresh read of the truth adds its own requests to the record.
+    await vi.waitFor(() => expect(sent.some((request) => request.path.endsWith('/cube'))).toBe(true), wait)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(sent.map((request) => request.path.replace('/api/expenses', ''))).toEqual(['/cube'])
     await vi.waitFor(async () => expect(cellsOf(session)).toEqual(await truth()), wait)
   })
 
