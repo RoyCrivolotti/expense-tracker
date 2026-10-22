@@ -92,6 +92,22 @@ describe('the suggestions of a window', () => {
     expect(signals[0]?.aborted).toBe(true)
   })
 
+  it('are asked for again when the rows held change under the same prefix, because what was read belongs to the old rows', async () => {
+    const dataset = descriptionDataset(9)
+    const first = windowOf(dataset, '2026-01')
+    const second = windowOf(dataset, '2026-01')
+    const view = renderHook(({ index, value }) => index.useSuggestions!(index, value), {
+      initialProps: { index: first.index, value: 'ca' },
+    })
+    await settle()
+    expect(first.source.calls).toEqual(['suggest:ca|2026-01'])
+
+    view.rerender({ index: second.index, value: 'ca' })
+    await settle()
+
+    expect(second.source.calls).toEqual(['suggest:ca|2026-01'])
+  })
+
   it('keep the older matches that still fit while the next prefix is read, so they do not drop out and come back', async () => {
     const dataset = descriptionDataset(6)
     const { index, whole } = windowOf(dataset, '2026-04')

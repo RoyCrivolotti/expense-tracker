@@ -70,7 +70,7 @@ export function withOlderDescriptions(
         clearTimeout(timer)
         controller.abort()
       }
-    }, [prefix])
+    }, [prefix, asked]) // a new index is a new set of rows, and what was read for the old ones no longer holds
     // Until the read for this prefix is in, the matches of the shorter one that still fit it are shown, so that older
     // matches do not drop out of the list and come back as the typing goes on.
     const older =

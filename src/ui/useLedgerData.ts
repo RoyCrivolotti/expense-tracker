@@ -136,7 +136,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
     // A window's older descriptions are the server's: its own are in the server's order so that the two can be merged.
-    const older = windowed ? olderThan(held) : null
+    const older = olderThan(held)
     const descriptions = older
       ? {
           index: { order: 'key' as const, locale: BROWSER_LOCALE },
