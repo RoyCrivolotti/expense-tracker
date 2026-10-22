@@ -156,6 +156,33 @@ describe('the suggestions of a window', () => {
     expect(view.result.current).toEqual(keyed(dataset.transactions.filter((t) => t.budgetMonth >= '2026-01'), { locale: BROWSER_LOCALE }).search('ren'))
   })
 
+  it('leave the older matches that still fit on view when the read for the next prefix fails', async () => {
+    const { index, whole, source } = windowOf(descriptionDataset(6), '2026-04')
+    const view = typing(index, 'ca')
+    await settle()
+    const older = labels(whole.search('ca')).filter((l) => !labels(index.search('ca')).includes(l))
+    const fit = older.filter((l) => l.toLowerCase().startsWith('caf'))
+    expect(fit.length).toBeGreaterThan(0)
+
+    source.readDescriptionSuggest = () => Promise.reject(new Error('offline'))
+    view.rerender({ value: 'caf' })
+    await settle()
+
+    for (const label of fit) expect(labels(view.result.current)).toContain(label)
+  })
+
+  it('take nothing from the items of an answer that says the prefix is too broad, which are not all its matches', async () => {
+    const { index, whole, source } = windowOf(descriptionDataset(6), '2026-04')
+    const answer = source.readDescriptionSuggest.bind(source)
+    source.readDescriptionSuggest = async (request, options) => ({ ...(await answer(request, options)), tooBroad: true })
+    const view = typing(index, 'ca')
+    const own = view.result.current
+    await settle()
+
+    expect(labels(whole.search('ca'))).not.toEqual(labels(own))
+    expect(view.result.current).toEqual(own)
+  })
+
   it('treat a prefix the server calls too broad as the rows held, as the server counts', async () => {
     const wide = makeDataset({
       transactions: Array.from({ length: MAX_SUGGEST_KEYS + 5 }, (_, i) =>
