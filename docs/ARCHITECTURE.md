@@ -187,7 +187,9 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   parts has no receipt list (`reference.attachments` is empty): the parts count a row's receipts, and a screen that
   shows them asks for the lists it needs through `model.ensureReceipts` (the edit sheet for its transaction, a claim
   for its rows, the storage meter for all of them). The row mark reads the count, a claim and the meter wait for
-  the lists, and a model that holds every receipt list never has `ensureReceipts`. The demo data sources serve
+  the lists, and a model that holds every receipt list never has `ensureReceipts`. A few lists are read one request
+  each (`GET /attachments?transactionId=`); more than a few are one request for every receipt the owner has
+  (`GET /attachments`, the rows the dataset route carries). The demo data sources serve
   their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
 - **The screens read one of two row lists, and an engine that is given the wrong one is wrong only when the model
   holds a window.** `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what
@@ -217,6 +219,9 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   makes the held revision unknown until a part is read again, so the next read of another month reads everything
   again rather than mixing two states. The months held beyond the window around the month shown and the newest
   window are given up oldest first; a ledger held in full gives up nothing.
+  A read in the background that fails (after a cascade, of a month or of a receipt list) is kept in
+  `SessionState.error` until a refresh works, because what is shown may then be out of date; `useLedgerData` returns it as
+  `backgroundError` for the app to tell the user.
 
   A write the server answers with more than the patch shows is followed by a read of the whole ledger instead of a
   hand mirror of the cascade (`cascadeOf` in `ledgerCascade.ts` recognises it from what the patch did to the
@@ -233,11 +238,14 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   | Statement paid, cash actual, settings, scenarios, wealth, receipts, a definition added or renamed | Nothing the patch lacks | Patch |
 - **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
   `saveLedgerSnapshot` (`ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them and
-  removes every other owner's, so a second person on the same browser never opens the first one's figures. A record
+  removes every other owner's, so a second person on the same browser never opens the first one's figures from this
+  snapshot. A record
   from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the whole-dataset snapshot),
   another ledger format or another owner is discarded when it is found. Saving and loading never throw. Offline, or
   when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a refresh that reads ends
-  it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key.
+  it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key. It is not kept per
+  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset
+  app offline, that app can still show it.
 - **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old
   load unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`); `off` renders the whole-dataset app
   and nothing else is loaded. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view

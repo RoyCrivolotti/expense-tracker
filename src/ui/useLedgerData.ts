@@ -138,5 +138,6 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
+    backgroundError: ready ? state.error : null,
   }
 }

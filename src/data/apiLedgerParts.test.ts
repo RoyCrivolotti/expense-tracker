@@ -110,6 +110,12 @@ describe('apiLedgerParts, receipts', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/attachments?transactionId=12')
   })
 
+  it('reads the receipts of every transaction in one request when none is named', async () => {
+    const fetchMock = serve(json([receipt]))
+    await expect(apiLedgerParts.readReceiptsPart()).resolves.toEqual([receipt])
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/attachments')
+  })
+
   it('accepts a transaction with none', async () => {
     serve(json([]))
     await expect(apiLedgerParts.readReceiptsPart(1)).resolves.toEqual([])
