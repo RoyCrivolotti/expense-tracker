@@ -100,6 +100,8 @@ function useRebaselinePrompt(
 
 interface ProgressPaneProps {
   dataset: ExpenseDataset
+  /** The dataset whose transactions the sums are taken from; `dataset` when the model holds every one. */
+  sums?: ExpenseDataset
   actions: ExpenseActions | undefined
   /** The owner's plan, which Progress measures against. */
   plan: GoalScenario | null
@@ -118,6 +120,7 @@ interface ProgressPaneProps {
 /** Progress, and the question it asks before moving the plan's start to the latest check-in. */
 export function ProgressPane({
   dataset,
+  sums = dataset,
   actions,
   plan,
   latestSnapshot,
@@ -143,6 +146,7 @@ export function ProgressPane({
         accounts={dataset.wealthAccounts}
         checkins={dataset.wealthCheckins}
         transactions={dataset.transactions}
+        sumTransactions={sums.transactions}
         milestones={dataset.settings.milestones}
         reached={reached}
         plan={plan}
