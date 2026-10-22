@@ -1,5 +1,7 @@
 import { buildDescriptionIndex } from '../data/descriptionIndex'
 import { recurringFixedGroups } from '../domain/engine'
+import { foldNewerRows } from '../domain/engine/recurringFold'
+import { type RecurringSeries, recurringFixedGroupsFromSeries } from '../domain/engine/recurringSeries'
 import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import { type Ledger, assembleRows, ledgerDataset, ledgerMonths } from '../domain/ledger'
 import type { Transaction } from '../types'
@@ -19,6 +21,19 @@ export interface LedgerModelOptions {
 /** The series of `rows`, which must be the whole history. */
 export function fixedHistoryOf(rows: Transaction[]): FixedHistory {
   return { groups: recurringFixedGroups(rows) }
+}
+
+/**
+ * The series of the whole history as the server serves them, for a ledger that does not hold every row, with the
+ * rows written since they were read folded in (`foldNewerRows`), so that what a write adds to a series is seen at once.
+ */
+export function historyOfSeries(series: RecurringSeries[], rows: readonly Transaction[] = []): FixedHistory {
+  return { groups: foldNewerRows(recurringFixedGroupsFromSeries(series), rows) }
+}
+
+/** The model with the history of those series, which are those of the whole ledger as the model's own rows add to them. */
+export function withHistory(model: ExpenseModel, series: RecurringSeries[]): ExpenseModel {
+  return { ...model, history: historyOfSeries(series, model.dataset.transactions) }
 }
 
 /**

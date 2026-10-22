@@ -31,6 +31,21 @@ export function regularityScore(gaps: number[]): number {
   return inRange / gaps.length
 }
 
+/** The share of a series' gaps that must lie near the median for the series to count as regular. */
+export const MIN_REGULARITY = 0.6
+
+/**
+ * The rhythm of a series the fixed-spend split trusts, from the days between its consecutive dates (in any
+ * order: only their spread counts), or null when it is not regular enough to call its members fixed. Weekly
+ * rhythm is a habit, not an obligation: weekly groceries are exactly the spending the pace clock exists to watch.
+ */
+export function fixedRhythmFromGaps(gaps: number[]): Exclude<RecurringFrequency, 'weekly'> | null {
+  if (gaps.length === 0) return null
+  const frequency = classifyFrequency(median(gaps))
+  if (!frequency || frequency === 'weekly') return null
+  return regularityScore(gaps) >= MIN_REGULARITY ? frequency : null
+}
+
 /**
  * How many of a series' newest occurrences say where it lands next. Older ones describe a
  * billing day it has since left, and a median over all of them keeps predicting the old day

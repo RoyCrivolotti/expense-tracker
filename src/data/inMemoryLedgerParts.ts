@@ -10,6 +10,7 @@ import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
 import { pageOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import type { TransactionPageRequest } from '../domain/data/transactionQuery'
+import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset } from '../domain/types'
 
@@ -48,6 +49,10 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
     async readReceiptsPart(transactionId?: number) {
       const { dataset } = await current()
       return dataset.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
+    },
+    async readSeriesPart() {
+      const { dataset, revision } = await current()
+      return { revision, series: seriesFromTransactions(dataset.transactions) }
     },
     async readTransactionPage(filter, { limit, cursor, signal } = {}) {
       const { dataset } = await current()

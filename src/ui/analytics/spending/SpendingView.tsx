@@ -5,6 +5,8 @@ import { downloadCsv, monthlySummaryCsv } from '../../../data/exportCsv'
 import { fullMonthLabel } from '../../../engine'
 import { monthlySummaryRows } from '../monthlySummaryRows'
 import type { ExpenseModel } from '../../useExpenseData'
+import { useHistoryWatch } from '../../useHistoryWatch'
+import { HistoryNote } from '../HistoryNote'
 import type { TransactionsEntry } from '../../tabs/transactionsEntry'
 import { Card, EmptyState } from '../../components/primitives'
 import { Modal } from '../../components/Modal'
@@ -69,6 +71,7 @@ interface Props {
 
 /** Where does the money go? Ranked rows with drill-down, or the exact grid with export. */
 export function SpendingView({ model, month, basis, today, openMonth, onOpenTransactions }: Props) {
+  useHistoryWatch(model)
   const isMobile = useIsMobile()
   const [groupBy, setGroupBy] = useState<SpendingGroupBy>('category')
   const [mode, setMode] = useState<SpendingMode>('list')
@@ -101,6 +104,7 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
 
   return (
     <div className={styles.stack}>
+      <HistoryNote model={model} />
       <SpendingControls
         mode={mode}
         onMode={setMode}

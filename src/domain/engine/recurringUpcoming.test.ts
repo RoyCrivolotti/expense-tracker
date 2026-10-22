@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
 import { addDaysIso } from './dates'
+import { recurringFixedGroups } from './fixedFlexible'
+import { MIN_REGULARITY, regularityScore } from './recurringPredict'
 import { detectUpcoming, stillStopped } from './recurringUpcoming'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
@@ -437,5 +439,21 @@ describe('detectUpcoming', () => {
       expect(answers[0]).toEqual(['', '2026-11-01', '2026-11-01', '2026-11-01', ''])
       for (const answer of answers) expect(answer).toEqual(answers[0])
     })
+  })
+})
+
+describe('the regularity floor', () => {
+  // Median 31 days, so a gap within 15% of it is regular: three of five gaps sit at the floor, four of seven below it.
+  const atTheFloor = withGaps('2026-01-05', [30, 31, 30, 50, 52])
+  const belowIt = withGaps('2026-01-05', [30, 31, 30, 29, 50, 52, 70])
+  const gapsOfRows = (rows: Transaction[]) => rows.slice(1).map((r, i) => (Date.parse(r.date) - Date.parse(rows[i]!.date)) / 86_400_000)
+
+  it('is shared by the card and the fixed split, so a series is on one exactly when it is trusted by the other', () => {
+    expect(regularityScore(gapsOfRows(atTheFloor))).toBe(MIN_REGULARITY)
+    expect(regularityScore(gapsOfRows(belowIt))).toBeLessThan(MIN_REGULARITY)
+    expect(recurringFixedGroups(atTheFloor)).toHaveLength(1)
+    expect(mornings(atTheFloor, 60).length).toBeGreaterThan(0)
+    expect(recurringFixedGroups(belowIt)).toHaveLength(0)
+    expect(mornings(belowIt, 60)).toEqual([])
   })
 })

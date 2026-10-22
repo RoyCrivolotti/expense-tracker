@@ -36,6 +36,18 @@ export interface ExpenseModel {
   /** Set when `dataset.transactions` is not the whole history. */
   history?: FixedHistory
   /**
+   * Present when `history` is read from the server rather than worked out from the rows: a screen that reads
+   * `history` calls it while it is mounted (`useHistoryWatch`), and the model has it once it has been read.
+   * Returns the call that says the screen has gone.
+   */
+  watchHistory?: () => () => void
+  /**
+   * Set while a model that holds only some of the rows has no `history` yet: the words that say the figures that
+   * need it (the split of fixed from flexible spend, the pace) are worked out from the months loaded and are not
+   * exact, whether the read is still on its way, failed, or has no one to ask because the browser is offline.
+   */
+  historyNote?: string
+  /**
    * Set when `dataset.attachments` holds only the receipt lists that were asked for: how many receipts each
    * transaction has, for the ones whose list has not been read.
    */

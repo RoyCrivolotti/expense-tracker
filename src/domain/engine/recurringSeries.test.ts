@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Category, Transaction } from '../types'
 import { daysBetween } from './dates'
 import { detectedFixedCosts } from './fixedCosts'
-import { classifierFromGroups, classifyFixedSpend, fixedRhythm, fixedRhythmFromGaps, recurringFixedGroups } from './fixedFlexible'
+import { classifierFromGroups, classifyFixedSpend, fixedRhythm, recurringFixedGroups } from './fixedFlexible'
+import { fixedRhythmFromGaps } from './recurringPredict'
 import { groupKeyString, groupTransactions, newestChargeBySeries } from './recurringDetect'
 import {
   SERIES_TAIL_DATES,

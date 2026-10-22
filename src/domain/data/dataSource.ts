@@ -26,6 +26,7 @@ import type {
   MonthRange,
   MonthRowsPart,
   ReferencePart,
+  SeriesPart,
   TransactionPagePart,
   TransactionSummaryPart,
 } from './ledgerParts'
@@ -144,6 +145,13 @@ export interface LedgerPartsSource {
   ): Promise<TransactionPagePart>
   /** How many rows `filter` matches (counted to a cap) and what they net to. `signal` cancels the read. */
   readTransactionSummary(filter: TxnFilter, request?: { signal?: AbortSignal }): Promise<TransactionSummaryPart>
+  /**
+   * The recurring series of the whole history, which a client that holds only some of the rows needs to
+   * tell what is fixed and what is due (a series needs every row it is made of). The server works it out
+   * from every row, so a read that changed nothing is answered cheaply and one that did is not: read it
+   * when a screen needs it, not after every write.
+   */
+  readSeriesPart(): Promise<SeriesPart>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {

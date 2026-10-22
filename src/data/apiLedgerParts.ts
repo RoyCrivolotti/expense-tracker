@@ -1,10 +1,11 @@
 import type { LedgerPartsSource } from './dataSource'
-import { toApiError } from './apiClient'
+import { ApiError, toApiError } from './apiClient'
 import type {
   CubePart,
   MonthRange,
   MonthRowsPart,
   ReferencePart,
+  SeriesPart,
   TransactionPagePart,
   TransactionSummaryPart,
 } from '../domain/data/ledgerParts'
@@ -14,6 +15,8 @@ import { ValidationError } from '../domain/application/validationError'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 
 const BASE = '/api/expenses'
+const SERIES_ATTEMPTS = 4
+const SERIES_RETRY_MS = 1_100
 
 const REFERENCE_TABLES = [
   'categories',
@@ -65,6 +68,28 @@ function isCubePart(body: unknown): body is CubePart {
     typeof body.from === 'string' &&
     typeof body.to === 'string' &&
     Array.isArray(body.cells)
+  )
+}
+
+const isStrings = (list: unknown): boolean => Array.isArray(list) && list.every((item) => typeof item === 'string')
+const isNumbers = (list: unknown): boolean => Array.isArray(list) && list.every((item) => typeof item === 'number')
+
+/** A series as the detectors read it: text where they split text, numbers where they add them, and dates they can step back from. */
+function isSeriesPart(body: unknown): body is SeriesPart {
+  return (
+    isObject(body) &&
+    typeof body.revision === 'string' &&
+    Array.isArray(body.series) &&
+    body.series.every(
+      (s) =>
+        isObject(s) &&
+        typeof s.label === 'string' &&
+        isStrings(s.newestDates) &&
+        (s.newestDates as string[]).length > 0 &&
+        isNumbers(s.olderGaps) &&
+        isStrings(s.budgetMonths) &&
+        isNumbers(s.budgetOffsets),
+    )
   )
 }
 
@@ -159,10 +184,27 @@ async function readFresh<T>(
 
 const query = (range: MonthRange): string => `from=${range.from}&to=${range.to}`
 
+/**
+ * The series are worked out from every row, and for a while after the migration that stores the normalized
+ * descriptions some rows still wait for theirs: the route answers 503 with a one second retry, and each try gets
+ * further. A few tries are made at that pace before the 503 is given to the caller.
+ */
+async function readSeries(): Promise<SeriesPart> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await readPart(`${BASE}/series`, isSeriesPart)
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 503 || attempt >= SERIES_ATTEMPTS) throw error
+      await new Promise((resolve) => setTimeout(resolve, SERIES_RETRY_MS))
+    }
+  }
+}
+
 export const apiLedgerParts: LedgerPartsSource = {
   readReferencePart: () => readPart(`${BASE}/reference`, isReferencePart),
   readMonthsPart: (range) => readPart(`${BASE}/transactions/months?${query(range)}`, isMonthRowsPart),
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
+  readSeriesPart: () => readSeries(),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
   readTransactionPage: (filter, request) =>

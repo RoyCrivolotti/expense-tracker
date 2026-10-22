@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ValidationError } from '../domain/application/validationError'
 import { MAX_CUBE_CELLS, MAX_ROWS_PER_REQUEST } from '../domain/data/ledgerParts'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
+import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { filterTransactions, netSpendCents } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
 import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
@@ -115,5 +116,16 @@ describe('inMemoryLedgerParts', () => {
   it('accepts a dataset that arrives later', async () => {
     const later = inMemoryLedgerParts(() => Promise.resolve({ dataset, revision: 'v9' }))
     expect((await later.readReferencePart()).revision).toBe('v9')
+  })
+
+  it('serves the series of every row, as the route does, under the revision it is at', async () => {
+    const monthly = Array.from({ length: 5 }, (_, i) =>
+      makeTransaction({ id: 10 + i, description: 'Gym', date: `2026-0${i + 1}-05`, budgetMonth: `2026-0${i + 1}`, amountCents: 2500 }),
+    )
+    const gym = makeDataset({ transactions: [...dataset.transactions, ...monthly] })
+    const held = inMemoryLedgerParts(() => ({ dataset: gym, revision: 'v4' }))
+    const part = await held.readSeriesPart()
+    expect(part).toEqual({ revision: 'v4', series: seriesFromTransactions(gym.transactions) })
+    expect(part.series.find((s) => s.label === 'Gym')?.newestDates).toHaveLength(5)
   })
 })

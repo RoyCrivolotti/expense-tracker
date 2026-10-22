@@ -2,6 +2,7 @@ import type { Transaction } from '../types'
 import { addDaysIso, daysBetween, isDueSoon, shiftBudgetMonth } from './dates'
 import { groupKeyString, groupTransactions, newestChargeBySeries } from './recurringDetect'
 import {
+  MIN_REGULARITY,
   PREDICT_HISTORY,
   type UsualDay,
   classifyFrequency,
@@ -12,8 +13,6 @@ import {
   usualDay,
 } from './recurringPredict'
 import type { OccurrenceGroup, RecurringSuggestion } from './recurringTypes'
-
-const MIN_REGULARITY = 0.6
 
 /**
  * Days after its date that a charge nobody has logged stays on the card. Charges are logged within

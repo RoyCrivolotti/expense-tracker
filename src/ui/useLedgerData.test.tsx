@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HeldLedger } from '../data/ledgerHold'
+import { type HeldLedger, holdParts } from '../data/ledgerHold'
+import { readLedgerParts } from '../data/ledgerLoader'
+import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
@@ -16,6 +18,7 @@ import {
   patchAfterTransactionUpdate,
 } from './datasetPatches'
 import { buildExpenseModel } from './buildExpenseModel'
+import { fixedHistoryOf } from './buildLedgerModel'
 import { useLedgerData } from './useLedgerData'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
@@ -146,6 +149,65 @@ describe('useLedgerData', () => {
   })
 })
 
+describe('useLedgerData, the recurring series', () => {
+  const labels = (history: { groups: Array<{ label: string }> }) => history.groups.map((g) => g.label).sort()
+
+  it('gives a windowed model the series of the whole history once a screen has asked for them', async () => {
+    const source = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model!.history).toBeUndefined()
+    expect(source.calls).not.toContain('series')
+    act(() => void result.current.model!.watchHistory!())
+    await waitFor(() => expect(result.current.model!.history).toBeDefined())
+    const whole = fixedHistoryOf(big.transactions)
+    expect(labels(result.current.model!.history!)).toEqual(labels(whole))
+    expect(whole.groups.length).toBeGreaterThan(0)
+  })
+
+  it('says the figures use the loaded months only until the series arrive, and nothing once they have', async () => {
+    const source = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model!.historyNote).toMatch(/Reading the recurring charges/)
+    act(() => void result.current.model!.watchHistory!())
+    await waitFor(() => expect(result.current.model!.history).toBeDefined())
+    expect(result.current.model!.historyNote).toBeUndefined()
+  })
+
+  it('says so when the series could not be read, and holds off asking again until the user refreshes', async () => {
+    const source = memorySource(big)
+    const read = source.readSeriesPart.bind(source)
+    source.readSeriesPart = vi.fn().mockRejectedValueOnce(new Error('down')).mockImplementation(read)
+    const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    act(() => void result.current.model!.watchHistory!())
+    await waitFor(() => expect(result.current.model!.historyNote).toMatch(/Couldn't read the recurring charges/))
+    expect(result.current.backgroundError).toBe('down')
+    act(() => result.current.reload())
+    await waitFor(() => expect(result.current.model!.history).toBeDefined())
+    expect(result.current.model!.historyNote).toBeUndefined()
+    expect(result.current.backgroundError).toBeNull()
+  })
+
+  it('says nothing about a model that holds every row', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model!.historyNote).toBeUndefined()
+  })
+
+  it('gives a model that holds every row no series, since the rows are the series', async () => {
+    const source = memorySource(small)
+    const { result } = renderHook(() => useLedgerData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    act(() => void result.current.model!.watchHistory!())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(result.current.model!.history).toBeUndefined()
+    expect(source.calls).not.toContain('series')
+  })
+})
+
 describe('useLedgerData, snapshots', () => {
   let fake: FakeIndexedDb
   const OWNER = 'alex@example.com'
@@ -174,6 +236,19 @@ describe('useLedgerData, snapshots', () => {
     await waitFor(() => expect(keys()).toContain(`ledger:${owner}`))
     first.unmount()
   }
+
+  it('says the figures that need the series use the months saved, for a window kept offline', async () => {
+    const source = memorySource(big)
+    const parts = await readLedgerParts(source, { policy: WINDOWED })
+    await saveLedgerSnapshot(OWNER, holdParts(parts), months.at(-1)!)
+    setOnline(false)
+    const offline = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(offline, { owner: OWNER, policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.fromCache).toBe(true)
+    expect(result.current.model!.historyNote).toMatch(/You're offline/)
+    expect(offline.calls).toEqual([])
+  })
 
   it('keeps the owner’s snapshot once a load works, and none without an owner', async () => {
     const source = memorySource(small)

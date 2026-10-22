@@ -8,17 +8,9 @@
 import type { Transaction } from '../types'
 import { daysBetween } from './dates'
 import { groupTransactions, normalizeDesc, occurrenceKey } from './recurringDetect'
-import { classifyFrequency, regularityScore } from './recurringPredict'
+import { fixedRhythmFromGaps } from './recurringPredict'
 import type { GroupKey, OccurrenceGroup, RecurringFrequency } from './recurringTypes'
 import { type AnalyticsBasis, type SameDaysCut, basisOptions, signedExpense, withinCut } from './analyticsPeriod'
-
-const MIN_REGULARITY = 0.6
-
-function median(nums: number[]): number {
-  const sorted = [...nums].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
-}
 
 function gapsOf(group: OccurrenceGroup): number[] {
   const sorted = [...group.dates].sort()
@@ -32,14 +24,6 @@ function gapsOf(group: OccurrenceGroup): number[] {
  */
 export function fixedRhythm(group: OccurrenceGroup): Exclude<RecurringFrequency, 'weekly'> | null {
   return fixedRhythmFromGaps(gapsOf(group))
-}
-
-/** `fixedRhythm` from the days between a series' consecutive dates, in any order: only their spread counts. */
-export function fixedRhythmFromGaps(gaps: number[]): Exclude<RecurringFrequency, 'weekly'> | null {
-  if (gaps.length === 0) return null
-  const frequency = classifyFrequency(median(gaps))
-  if (!frequency || frequency === 'weekly') return null
-  return regularityScore(gaps) >= MIN_REGULARITY ? frequency : null
 }
 
 function isRecurringGroup(group: OccurrenceGroup): boolean {

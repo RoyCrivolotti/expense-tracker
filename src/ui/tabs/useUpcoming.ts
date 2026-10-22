@@ -1,11 +1,26 @@
 import { useMemo } from 'react'
-import type { RecurringSuggestion } from '../../engine'
+import type { RecurringSuggestion, StoppedSeries } from '../../engine'
 import { defaultBudgetMonth, detectUpcoming } from '../../engine'
 import { todayLocalIso } from '../dates'
 import { useStoppedSuggestions } from './stoppedSuggestions'
-import type { ExpenseModel } from '../useExpenseData'
+import { useHistoryWatch } from '../useHistoryWatch'
+import type { ExpenseModel, FixedHistory } from '../useExpenseData'
+import type { Transaction } from '../../types'
 
 const NONE: RecurringSuggestion[] = []
+
+/**
+ * The charges due on `today`: from the series of the whole history when the model carries them (it holds only
+ * some of the rows, and a series needs every row it is made of), otherwise from the rows.
+ */
+export function upcomingOf(
+  transactions: Transaction[],
+  history: FixedHistory | undefined,
+  today: string,
+  stopped: StoppedSeries,
+): RecurringSuggestion[] {
+  return detectUpcoming(transactions, { today, stopped, ...(history ? { groups: history.groups } : {}) })
+}
 
 export interface Upcoming {
   suggestions: RecurringSuggestion[]
@@ -24,13 +39,17 @@ export interface Upcoming {
 export function useUpcoming(model: ExpenseModel, month: string): Upcoming {
   const today = todayLocalIso()
   const { transactions, settings } = model.dataset
+  const { history } = model
+  useHistoryWatch(model)
   const { stopped } = useStoppedSuggestions()
   const suggestions = useMemo(
-    () => detectUpcoming(transactions, { today, stopped }),
-    [transactions, today, stopped],
+    () => upcomingOf(transactions, history, today, stopped),
+    [transactions, history, today, stopped],
   )
   const currentMonth = defaultBudgetMonth(today, settings.budgetRolloverDay)
   const newestMonth = model.months[model.months.length - 1] ?? currentMonth
   const oldestShown = currentMonth < newestMonth ? currentMonth : newestMonth
-  return { suggestions: month >= oldestShown ? suggestions : NONE, today }
+  // A model that holds only some of the rows has no series to go on until they arrive, and offers nothing.
+  const waiting = model.sums !== undefined && history === undefined
+  return { suggestions: month >= oldestShown && !waiting ? suggestions : NONE, today }
 }

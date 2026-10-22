@@ -323,7 +323,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // bytes (137 of them for the hook point, the rest for the states) and the default path from 285,603 to 286,052,
 // with 48 bytes of headroom. The ledger chunks (the hook, its footer and failure state, and the pager, 11,129
 // bytes) are inside their own limit.
-const TOTAL_MAX_GZIP = 286_100
+//
+// Raised from 286,100 to 286,220 bytes for the recurring series of a windowed ledger, on top of the paged list:
+// the default path went from 286,052 to 286,161 bytes, 59 under the new limit. The entry chunk grew by 126 (166,219 to
+// 166,345, for the hook that tells the model a screen reads the series, the card holding back until they arrive,
+// and the two engine helpers the ledger chunk now imports). The series code itself, the words of the note that the
+// figures are not exact, and the fold of newer rows sit in the chunks only the ledger mode loads, which went from
+// 11,129 to 12,526 bytes of their 16,000.
+const TOTAL_MAX_GZIP = 286_220
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
