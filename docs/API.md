@@ -240,8 +240,10 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   delete never costs a file (receipts are in no backup), and a file the bucket then fails to delete is left behind and
   costs only space. `DELETE /transactions/:id` does the same. There is no filter form
   ([decision](./decisions/no-filter-based-delete.md)).
-- `ids` holds at most 500 positive integers (duplicates are dropped), bound as one JSON string because D1 allows 100
-  bound values per statement.
+- `ids` holds at most 500 positive whole numbers, sent as JSON numbers (a string or `true` is a 400, never coerced;
+  duplicates are dropped), bound as one JSON string because D1 allows 100 bound values per statement.
+- `POST /transactions/bulk` takes at most 1,000 rows, and a note is at most 2,000 characters wherever one is written.
+  A body of JSON `null` is a 400 on every route that reads one.
 
 **Cost in D1 statements**, counted on a real D1 through the real middleware, with its access checks stubbed (about five
 more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20), an edit by id is 3n + 5 (155 for 50; each

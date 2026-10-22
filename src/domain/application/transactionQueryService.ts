@@ -151,7 +151,8 @@ export function validateTxnFilter(input: unknown): TxnFilter {
   if (!isPlainObject(input)) throw new ValidationError('filter must be an object')
   const parsed: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(input)) {
-    const parse = (PARSERS as Record<string, Parse | undefined>)[key]
+    // Own keys only: `__proto__`, `constructor` and the other members every object inherits are not filters.
+    const parse = Object.hasOwn(PARSERS, key) ? (PARSERS as Record<string, Parse>)[key] : undefined
     if (!parse) throw new ValidationError(`Unknown filter: ${key}`)
     if (value !== undefined) parsed[key] = parse(value, key)
   }
