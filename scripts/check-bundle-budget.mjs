@@ -316,13 +316,21 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // the service worker precaches every built script (`globPatterns` in vite.config.ts), the ledger chunks
 // included, so each browser fetches them once per deploy.
 //
+// Raised from 285,700 to 286,100 for listing the Transactions in pages: the tab takes its rows from a hook the
+// model may carry, says a thousand and more when the count stopped and the exact count after it, dims what belongs
+// to the filter before, says when the first rows could not be read, names how many rows select all selects and draws
+// a footer. That is the whole of what the default path pays for it: the entry chunk went from 165,796 to 166,219
+// bytes (137 of them for the hook point, the rest for the states) and the default path from 285,603 to 286,052,
+// with 48 bytes of headroom. The ledger chunks (the hook, its footer and failure state, and the pager, 11,129
+// bytes) are inside their own limit.
+//
 // Raised from 285,700 to 285,800 bytes for the recurring series of a windowed ledger: the default path went from
 // 285,603 to 285,743 bytes. The entry chunk grew by 124 (165,796 to 165,920, for the hook that tells the model a
 // screen reads the series, the card holding back until they arrive, and the two engine helpers the ledger chunk now
 // imports), the Analytics chunk by 13 and the Goals chunk by 7 (their share of the same helpers). The series code
 // itself, the words of the note that the figures are not exact, and the fold of newer rows sit in the chunks only
 // the ledger mode loads, which went from 8,769 to 10,199 bytes of their 16,000.
-const TOTAL_MAX_GZIP = 285_800
+const TOTAL_MAX_GZIP = 286_100
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 

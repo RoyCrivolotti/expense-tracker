@@ -262,15 +262,16 @@ export class LedgerSession {
 
   /**
    * A write the user made, as the patch functions of the screens express it. One the server answered with
-   * more than the patch shows (`cascadeOf`) is followed by a read of the whole ledger.
+   * more than the patch shows (`cascadeOf`) is followed by a read of the whole ledger. True when the write
+   * changed rows, which a list read from the server does not see until it is read again.
    */
-  patch(patch: (dataset: ExpenseDataset) => ExpenseDataset): void {
+  patch(patch: (dataset: ExpenseDataset) => ExpenseDataset): boolean {
     const held = this.state.held
-    if (!held || this.state.offline) return
+    if (!held || this.state.offline) return false
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
-    if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return
+    if (!done.changed.rows && !done.changed.reference && !done.changed.receipts) return false
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
@@ -278,6 +279,7 @@ export class LedgerSession {
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
     if (cascadeOf(before, after)) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
     else if (done.stale.length > 0) void this.flushCube()
+    return done.changed.rows
   }
 
   /**

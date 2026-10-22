@@ -9,9 +9,11 @@ import {
   computeCashReconciliation,
   filterTransactions,
   netSpendCents,
+  type TxnFilter,
 } from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import type { ListView } from '../transactionListView'
 import { parseAmountBound, parseQueryAmount } from './txnAmountFilter'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
@@ -218,6 +220,27 @@ function useTxnListFilters(
   }
 }
 
+/** The list when the model holds every row it can show: filtered here, in one go. */
+export function listOfHeldRows(model: ExpenseModel, sums: ExpenseModel['dataset'], filter: TxnFilter): ListView {
+  const { dataset } = model
+  const results = filterTransactions(dataset.transactions, filter)
+  const cashRows = computeCashReconciliation(sums.transactions, dataset.accounts, dataset.settings, dataset.cashActuals)
+  const listRows = buildTransactionListRows(
+    dataset.transactions,
+    filter,
+    dataset.accountStatements,
+    cashRows,
+    dataset.accounts,
+    dataset.settings,
+  )
+  return { results, listRows, totalCents: netSpendCents(results), count: listRows.length }
+}
+
+function useHeldList(model: ExpenseModel, filter: TxnFilter): ListView {
+  const sums = sumsOf(model)
+  return useMemo(() => listOfHeldRows(model, sums, filter), [model.dataset, sums, filter]) // eslint-disable-line react-hooks/exhaustive-deps -- the model's dataset and sums are the inputs
+}
+
 /** What the app shell tells the tab about things that happen outside it. */
 export interface TransactionsShell {
   /** Told when row selection starts and ends, so the shell can hold the month still. */
@@ -243,34 +266,13 @@ export function useTransactionsTabState(
   )
   const isMobile = useIsMobile()
 
-  const results = useMemo(
-    () => filterTransactions(model.dataset.transactions, filters.filter),
-    [model.dataset, filters.filter],
-  )
-
-  const sums = sumsOf(model)
-  const listRows = useMemo(() => {
-    const cashRows = computeCashReconciliation(
-      sums.transactions,
-      model.dataset.accounts,
-      model.dataset.settings,
-      model.dataset.cashActuals,
-    )
-    return buildTransactionListRows(
-      model.dataset.transactions,
-      filters.filter,
-      model.dataset.accountStatements,
-      cashRows,
-      model.dataset.accounts,
-      model.dataset.settings,
-    )
-  }, [model.dataset, sums, filters.filter])
-
-  const totalCents = useMemo(() => netSpendCents(results), [results])
+  // A model whose list is read in pages brings its own hook; its presence does not change while it lives.
+  const useList = model.pagedList?.useList ?? useHeldList
+  const list = useList(model, filters.filter)
 
   const visibleIds = useMemo(
-    () => listRows.flatMap((r) => (r.kind === 'transaction' ? [r.txn.id] : [])),
-    [listRows],
+    () => list.listRows.flatMap((r) => (r.kind === 'transaction' ? [r.txn.id] : [])),
+    [list.listRows],
   )
 
   const existingIds = useMemo(
@@ -291,9 +293,7 @@ export function useTransactionsTabState(
   return {
     ...filters,
     isMobile,
-    results,
-    listRows,
-    totalCents,
+    ...list,
     visibleIds,
     canDelete: Boolean(actions?.deleteTransaction),
     ...selection,

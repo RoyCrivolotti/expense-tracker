@@ -804,6 +804,18 @@ describe('LedgerSession, refusing a ledger held as a window', () => {
   })
 })
 
+describe('LedgerSession, what a write changed', () => {
+  it('says whether the write changed rows, which a list read from the server must read again', async () => {
+    const session = new LedgerSession(memorySource(dataset), { policy: WINDOWED })
+    expect(session.patch((d) => d)).toBe(false)
+    await session.open()
+    const target = [...session.getState().held!.rows.get(newest)!][0]!
+    expect(session.patch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' }))).toBe(true)
+    expect(session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 4242 } }))).toBe(false)
+    expect(session.patch((d) => d)).toBe(false)
+  })
+})
+
 describe('LedgerSession, an empty ledger', () => {
   it('opens with nothing held and no month', async () => {
     const empty: ExpenseDataset = { ...dataset, transactions: [] }
