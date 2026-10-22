@@ -128,9 +128,9 @@ The first three rows go away when the engines are handed the classifier and the 
 `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`, `computeSpendingPace` takes `fixedGroups`, and
 `expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them with `classifyFixedSpend` and
 `recurringFixedGroups` over every row. With none passed the engines build their own from the rows they are given. The
-Overview model and the Spending view pass the model's `history` when it has one. Each difference is written down in
-`src/testing/intendedDifferences.ts`, and the sweep fails if something else differs and if a listed difference never shows
-up.
+Overview model, the Spending view and `useUpcoming` pass the model's `history` when it has one. Each difference is
+written down in `src/testing/intendedDifferences.ts`, and the sweep fails if something else differs and if a listed
+difference never shows up.
 
 ## Reading a series
 
