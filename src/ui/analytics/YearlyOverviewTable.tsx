@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../modelSums'
 import type { MonthOverview } from '../../engine'
 import { computeYearlyOverview } from '../../engine'
 import { LedgerTable, type LedgerColumn } from './LedgerTable'
@@ -9,10 +10,8 @@ import styles from './analytics.module.css'
 /** Per-month flows plus the cumulative cash / investment / net-worth trajectory. */
 export function YearlyOverviewTable({ model }: { model: ExpenseModel }) {
   const { money, moneyAlways } = useMoneyCells()
-  const rows = useMemo(
-    () => computeYearlyOverview(model.dataset.transactions, model.dataset.settings),
-    [model.dataset],
-  )
+  const sums = sumsOf(model)
+  const rows = useMemo(() => computeYearlyOverview(sums.transactions, sums.settings), [sums])
   const columns: LedgerColumn<MonthOverview>[] = [
     { label: 'Income', value: (r) => money(r.incomeCents), cls: () => styles.pos },
     { label: 'Actual', value: (r) => money(r.actualExpensesCents) },

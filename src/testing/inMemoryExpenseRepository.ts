@@ -44,6 +44,7 @@ import type {
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
+import { exportChunkOf } from './inMemoryExport'
 import { oneOf, pageOf, summaryOf } from './inMemoryTransactionQuery'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
@@ -583,6 +584,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       Promise.resolve(monthCellsOf(datasetOf(owner), range, maxCells)),
 
     listOwners: () => Promise.resolve([...stores.keys()]),
+
+    readExportChunk: (owner, request) => Promise.resolve(exportChunkOf(datasetOf(owner), request)),
 
     queryTransactions: (owner, filter, page) =>
       Promise.resolve(pageOf(derivedTransactions(storeFor(owner)), filter, page)),

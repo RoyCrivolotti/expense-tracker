@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
+import { sumsOf } from '../modelSums'
 import type { AnalyticsBasis, MonthlyTotals } from '../../engine'
 import { basisOptions, computeMonthlyTotals } from '../../engine'
 import { LedgerTable, type LedgerColumn } from './LedgerTable'
@@ -23,12 +24,13 @@ export function MonthlyTotalsTable({
   basis?: AnalyticsBasis
 }) {
   const { money, moneyAlways } = useMoneyCells()
+  const sums = sumsOf(model)
   const rows = useMemo(
     () =>
-      [...computeMonthlyTotals(model.dataset.transactions, basisOptions(basis)).values()].sort(
+      [...computeMonthlyTotals(sums.transactions, basisOptions(basis)).values()].sort(
         (a, b) => a.month.localeCompare(b.month),
       ),
-    [model.dataset, basis],
+    [sums, basis],
   )
   const columns: LedgerColumn<MonthlyTotals>[] = [
     { label: 'Income', value: (r) => money(r.incomeCents), cls: () => styles.pos },
