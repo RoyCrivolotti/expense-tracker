@@ -17,7 +17,10 @@ export interface PagerState {
   stale: boolean
   /** Why the last read of a page failed, or null. */
   error: string | null
-  /** How many rows match (counted to a cap) and what they net to. Null until read, and for a new filter. */
+  /**
+   * How many rows match (counted to a cap) and what they net to. Null never means there is none: the figures
+   * are being read (a new filter), or reading them failed and `summaryStale` says so.
+   */
   summary: TransactionSummaryPart | null
   /** The summary was read before the rows were last read, or its read again failed, so it may no longer fit them. */
   summaryStale: boolean
@@ -175,8 +178,9 @@ export class TransactionPager {
       ...(changed ? { summary: null, summaryStale: false } : {}),
     })
     void this.readPage()
-    if (summary === 'read' || changed) void this.readSummary()
-    else if (this.state.summary) this.set({ summaryStale: true })
+    // A summary that was cancelled with the list it belonged to leaves none behind, so one is always read then.
+    if (summary === 'read' || changed || this.state.summary === null) void this.readSummary()
+    else this.set({ summaryStale: true })
   }
 
   private async readPage(): Promise<void> {

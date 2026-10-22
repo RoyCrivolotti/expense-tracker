@@ -301,9 +301,9 @@ describe('TransactionPager, a burst of filters', () => {
     expect(source.calls).toEqual([])
     expect(pager.getState()).toMatchObject({ stale: true, loading: false, summary: null })
     await vi.advanceTimersByTimeAsync(100)
-    await vi.waitFor(() => expect(pager.getState().stale).toBe(false))
+    await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ query: 'rent' }).slice(0, 20)))
+    expect(pager.getState().stale).toBe(false)
     expect(source.calls).toEqual(['page', 'summary'])
-    expect(ids(pager.getState().rows)).toEqual(idsOf({ query: 'rent' }).slice(0, 20))
   })
 
   it('cancels the read of a list a new filter replaces, and a refresh need not wait for the burst to end', async () => {
@@ -321,9 +321,9 @@ describe('TransactionPager, a burst of filters', () => {
     pager.setFilter({ status: 'forecast' })
     expect(signals[0]!.aborted).toBe(true)
     pager.refresh()
-    await vi.waitFor(() => expect(pager.getState().stale).toBe(false))
+    // Stale is also false before any page has come, so what is waited for is the rows.
+    await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'forecast' }).slice(0, 20)))
     expect(signals).toHaveLength(2)
-    expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'forecast' }).slice(0, 20))
   })
 
   it('reads nothing for a filter the burst came back to, and cancels what is in flight when disposed', async () => {
@@ -340,6 +340,49 @@ describe('TransactionPager, a burst of filters', () => {
     pager.dispose()
     await vi.advanceTimersByTimeAsync(300)
     expect(source.calls).toEqual([])
+  })
+})
+
+describe('TransactionPager, a summary that is never silently missing', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('reads the summary again when a refresh cancelled the first one before it arrived', async () => {
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 20 })
+    pager.setFilter({})
+    pager.refresh()
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
+    expect(pager.getState()).toMatchObject({ summaryStale: false })
+    expect(pager.getState().summary).toMatchObject(summaryOf(ledger.transactions, {}))
+    expect(source.calls.filter((c) => c === 'summary')).toHaveLength(2)
+  })
+
+  it('reads it again when the filter was changed and put back before it settled', async () => {
+    vi.useFakeTimers()
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 20, settleMs: 50 })
+    pager.setFilter({ status: 'posted' })
+    await vi.advanceTimersByTimeAsync(50)
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
+    pager.setFilter({ status: 'forecast' })
+    pager.setFilter({ status: 'posted' })
+    expect(pager.getState().summary).toBeNull()
+    await vi.advanceTimersByTimeAsync(50)
+    await vi.waitFor(() => expect(pager.getState().summary).not.toBeNull())
+    expect(pager.getState().summaryStale).toBe(false)
+    expect(pager.getState().summary).toMatchObject(summaryOf(ledger.transactions, { status: 'posted' }))
+    await vi.waitFor(() => expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'posted' }).slice(0, 20)))
+  })
+
+  it('flags a summary that could not be read for a new filter, so that nothing is silently missing', async () => {
+    const source = memorySource(ledger)
+    source.readTransactionSummary = () => Promise.reject(new Error('offline'))
+    const pager = new TransactionPager(source, { limit: 20 })
+    pager.setFilter({})
+    await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(true))
+    expect(pager.getState().summary).toBeNull()
   })
 })
 
