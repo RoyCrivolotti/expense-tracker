@@ -479,4 +479,13 @@ describe('docsCaptureDataSource ledger parts', () => {
     expect(transactions).toEqual([...transactions].sort(byApiOrder))
     expect(transactions.some((t) => t.planId != null)).toBe(true)
   })
+
+  it('builds the demo claim from the fixture in its own order, which sorting first would change', async () => {
+    const { transactions } = await docsCaptureDataSource.load()
+    const refund = transactions.find((t) => t.id === 970_500)
+    const settled = transactions.find((t) => t.settledBy === 970_500)
+    expect(refund?.amountCents).toBe(settled?.amountCents)
+    // The cheapest flagged expense differs when the rows are dealt out newest first.
+    expect(refund?.amountCents).toBe(1499)
+  })
 })
