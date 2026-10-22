@@ -195,9 +195,10 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
 })
 
 describe('LedgerExpensesApp, the Transactions tab', () => {
-  const pages = (source: TestSource) => source.calls.filter((c) => c === 'page').length
+  type Served = ReturnType<typeof servingSource>
+  const pages = (source: Served) => source.calls.filter((c) => c === 'page').length
 
-  async function onTransactions(source: TestSource) {
+  async function onTransactions(source: Served) {
     renderApp(source)
     await screen.findByText('Recent activity')
     fireEvent.click(screen.getAllByRole('button', { name: 'Transactions' })[0]!)
