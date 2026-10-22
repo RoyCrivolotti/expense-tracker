@@ -79,12 +79,15 @@ pinned rows are in no cell. Code: [`cube.ts`](../functions/api/expenses/cube.ts)
 
 ## GET /attachments
 
-The receipts of one transaction, oldest first. Code:
+The receipts of one transaction, oldest first, or of every transaction the caller has when none is named. Code:
 [`attachments/index.ts`](../functions/api/expenses/attachments/index.ts).
 
-- Parameters: `transactionId`. A missing or non-positive id is a 400. A transaction that is not the caller's has no
-  receipts as far as the caller can tell.
-- Not conditional. Cost: the transaction's receipt rows.
+- Parameters: `transactionId`, optional. Without it the answer is every receipt the caller has, by transaction and then
+  id, which is what the dataset route carries and what a screen that needs them all asks for (the storage meter). A
+  non-positive or non-integer id is a 400. A transaction that is not the caller's has no receipts as far as the caller
+  can tell.
+- Not conditional. Cost: the receipt rows asked for. Without a `transactionId` that is every receipt the owner has,
+  which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
 
 ## GET /transactions/list
 
@@ -236,8 +239,9 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   bound values per statement.
 
 **Cost in D1 statements**, counted on the SQLite stand-in through the real middleware, so the revision bumps are
-included and the access checks (about five more in production) are not: a create is 6n + 5 for n rows, an edit by id is
-3n + 6 (each updated row is read back and its status derived with three queries), and an edit by filter, the labels
-route and a delete are 7, 6 and 7 however many rows. The Free plan allows 50 queries per invocation, so a create of more
-than 6 rows or an edit by id of more than 13 exceeds it whichever way a `batch()` counts, and the 500-id cap is not
-usable there. [MEASURING.md](./MEASURING.md) says how to settle how a batch counts.
+included and the access checks (about five more in production, an estimate, since the harness stubs them) are not: a
+create is 6n + 5 for n rows, an edit by id is 3n + 6 (each updated row is read back and its status derived with three
+queries), and an edit by filter, the labels route and a delete are 7, 6 and 7 however many rows. Cloudflare documents a
+limit of 50 queries per invocation on the Free plan ([SCALING.md](./SCALING.md#constraints)). What the counts would mean
+for a large request if that limit is enforced, and how to find out, is in
+[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).

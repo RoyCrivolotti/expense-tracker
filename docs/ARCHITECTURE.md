@@ -134,6 +134,14 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore order and `EXPORT_CHUNK_ROWS`
   bounds every table. A new dataset table or column needs a new entry or mapper there and a raise of `EXPORT_FORMAT`. A
   parity test fails when the chunks put end to end stop equalling `loadDataset`'s table.
+- **The resumable backup is a bounded walk of the export, and a backup exists when its manifest does.**
+  `runScheduledBackup` is the one place that chooses: `runChunkedBackups` when `BACKUP_MODE` is `chunked`, otherwise
+  `runAllBackups`, the single-file snapshot, whose calls `backupOldPath.test.ts` pins (a merge redeploys the worker). An
+  invocation spends a budget of calls and rows and keeps back what it needs to finish. State is saved only after the
+  rows it counts are in a part, and the manifest is written last, so a kill at any point leaves a run the next
+  invocation continues. A pass is redone if the owner's revision moved. A new `EXPORT_TABLES` entry needs a row in
+  `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows a restore cannot write. Nothing in
+  the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
 
 ### Bulk writes
 
@@ -163,8 +171,10 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   cache does the revalidation: a request that names `If-None-Match` itself skips that cache, so the client sends none,
   and a 304 that reaches it anyway is read again past the cache. A server without the routes, or a body of another
   shape, is a `PartsUnavailableError`, and the caller loads the whole dataset. Requests stay inside the route bounds
-  (`planRowRanges`, `planCubeRanges`), and a ledger built from parts has no receipt list, since a row's receipts are
-  read when needed.
+  (`planRowRanges`, `planCubeRanges`), and a ledger built from parts has no receipt list: the parts count a row's
+  receipts, and a screen that shows them asks for the lists it needs through `model.ensureReceipts` (the edit sheet for
+  its transaction, a claim for its rows, the storage meter for all of them). A few lists are one request each; more
+  than a few are one request for every receipt the owner has ([`GET /attachments`](./API.md#get-attachments)).
 - **A screen reads one of two row lists, and the wrong one is wrong only when the model holds a window.**
   `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what engines that read dates,
   descriptions, labels or links are given. `sumsOf(model)` adds one row per summed cell and goes to the engines that
@@ -176,6 +186,44 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   sums shows nothing for it, never a cell. A model built from `dataset` alone (`applyPatch` in `useExpenseData.ts`) has
   no `sums` or `history`, so it is right only for a model that holds every row. `ledgerModelSweep.test.ts` holds the
   readings the Overview, the Spending view and the monthly tables make to the same readings over every row.
+- **A ledger held open changes by patching writes in, and what a write moved is read again.** `LedgerSession`
+  (`src/data/ledgerSession.ts`) holds the reference, the pinned rows, the rows of the months being looked at and the
+  sums of every month. A write is patched into the rows held at once, and `reconcileHeld` names the months whose sums
+  it moved (a row in a month that is not held, a row that stops being pinned) for the session to read again, because
+  the browser cannot tell what a write did to months it does not hold. Reads are guarded per resource: a write to the
+  rows drops a read of the rows that started before it and leaves a read of the reference alone, so an old value is
+  never shown again, and a refresh that a later refresh has overtaken is dropped, failure included, whichever answers
+  first. A write also makes the held revision unknown until a part is read again, so the next read of another month
+  reads everything rather than mixing two states. Months held beyond the window around the month shown are given up
+  oldest first, and a ledger held in full gives up nothing.
+- **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
+  mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
+  dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
+  adding or changing a plan, and settling rows or deleting the payment that settled them. A new server-side cascade
+  needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
+  is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
+  `useLedgerData` returns it as `backgroundError` for the app to tell the user.
+- **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
+  `saveLedgerSnapshot` (`src/data/ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them
+  and removes every other owner's, so a second person on the same browser never opens the first one's figures from
+  this snapshot. A record from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the
+  whole-dataset snapshot), another ledger format or another owner is discarded when it is found. Saving and loading
+  never throw. Offline, or when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a
+  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it and is not kept per
+  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset app
+  offline, that app can still show it.
+- **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
+  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `off` renders the whole-dataset app and
+  nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop
+  (importing it back makes the bundler split shared code into files every browser loads at startup). The service
+  worker precaches the chunk for every browser, so it is downloaded and not run. The chunk hands back to the
+  whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts, and for an offline
+  browser whose snapshot is missing, another owner's, or holds only a window. The limit holds for the life of the
+  session (`refuseWindow`): a read or a snapshot that would hold only a window is kept out and the app hands back,
+  which starts it over, so a screen that lists every row never lists part of the ledger and the switch only ever holds
+  a ledger in full. `shadow` is honoured in development and staging builds only; there `ledgerShadow.ts` compares the
+  held ledger with the whole dataset and reports, and shows nothing. A read in the background that fails raises a
+  toast that offers to read again.
 
 ## Size and complexity
 

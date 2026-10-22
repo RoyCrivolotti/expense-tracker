@@ -72,6 +72,19 @@ describe('the route matrix, over a seeded database', () => {
     expect(bulk?.summary.calls).toBeGreaterThan(50)
   })
 
+  it('attributes every statement, row read and row written of a route to a distinct SQL text', async () => {
+    const { results } = await run(true)
+    for (const result of results) {
+      const { statements, summary } = result
+      expect(statements.reduce((sum, s) => sum + s.runs, 0), result.name).toBe(summary.statements)
+      expect(statements.reduce((sum, s) => sum + s.rowsRead, 0), result.name).toBe(summary.rowsRead)
+      expect(statements.reduce((sum, s) => sum + s.rowsWritten, 0), result.name).toBe(summary.rowsWritten)
+    }
+    const bulk = results.find((r) => r.name === 'POST transactions/bulk, 20 rows')
+    expect(bulk?.statements.length).toBeLessThan(bulk?.summary.statements ?? 0)
+    expect(JSON.stringify(results)).not.toContain(SYNTHETIC_OWNER)
+  })
+
   it('stops at the first route that fails, since later ones lean on its answer', async () => {
     const seeded = await seededDatabase(200)
     const { db, recorder } = measuredDb({ transport: sqliteTransport(seeded.db), ledger: ledgerOf(), writesEnabled: false })

@@ -39,6 +39,7 @@ function mockStore(objects: { key: string; size: number }[] = []): BackupStore &
 } {
   let stored = [...objects]
   return {
+    get: vi.fn().mockResolvedValue(null),
     put: vi.fn().mockImplementation(async (key: string, body: string) => {
       stored = stored.filter((o) => o.key !== key)
       stored.push({ key, size: body.length })
@@ -57,6 +58,8 @@ function mockAlerts(): BackupAlerts & {
   return {
     onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
     onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
+    onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
+    onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
   }
 }
 

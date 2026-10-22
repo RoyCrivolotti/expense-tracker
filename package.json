@@ -44,11 +44,13 @@
     "setup:backups": "node scripts/setup-backup-infrastructure.mjs",
     "setup:receipts": "node scripts/setup-receipts-infrastructure.mjs",
     "sync:backup-alerts": "node scripts/sync-backup-alerts.mjs",
+    "restore:backup": "npx tsx scripts/restore-backup.ts",
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "verify:goals-tabs": "node scripts/verify-goals-mobile-tabs.mjs",
     "verify:goals-nav": "node scripts/verify-goals-nav.mjs",
     "verify:goals-desktop": "node scripts/verify-goals-desktop.mjs",
-    "verify:section-tabs": "node scripts/verify-section-tabs.mjs"
+    "verify:section-tabs": "node scripts/verify-section-tabs.mjs",
+    "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

@@ -172,7 +172,8 @@ export interface ExpenseRepository {
    */
   /** Ownership gate for attachment writes; the handler holds no SQL. */
   transactionExists(owner: string, id: number): Promise<boolean>
-  listAttachments(owner: string, transactionId: number): Promise<TransactionAttachment[]>
+  /** One transaction's receipts, or every receipt the owner has when no transaction is named. */
+  listAttachments(owner: string, transactionId?: number): Promise<TransactionAttachment[]>
   /**
    * What the serve route needs to stream one attachment. Returns null rather
    * than throwing so a miss and a foreign id are indistinguishable to the

@@ -791,3 +791,51 @@ describe('ExpenseReportView leaving', () => {
     expect(screen.queryByText('Txn 1')).toBeNull()
   })
 })
+
+describe('ExpenseReportView, when receipt lists are read on request', () => {
+  const rows = [txn(1, '2026-05-02'), txn(2, '2026-05-09'), txn(3, '2026-05-10', { type: 'refund' })]
+
+  function renderWith(dataset: ExpenseDataset, counts: Record<number, number>, ensureReceipts = vi.fn()) {
+    const view = (ds: ExpenseDataset) => (
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ExpenseReportView
+          dataset={ds}
+          lookup={buildLookup(ds, counts)}
+          flagId={1}
+          onClose={vi.fn()}
+          issuedOn="2026-09-12"
+          ensureReceipts={ensureReceipts}
+        />
+      </MoneyFormatProvider>
+    )
+    const rendered = render(view(dataset))
+    return { ...rendered, ensureReceipts, view }
+  }
+
+  it('asks for the lists of the claimed rows and of the credits', () => {
+    const { ensureReceipts } = renderWith(datasetWith(rows), {})
+    expect(ensureReceipts).toHaveBeenCalledWith([1, 2, 3])
+  })
+
+  it('waits for a list that is on its way rather than reporting the row as having no receipt', () => {
+    renderWith(datasetWith(rows), { 1: 2 })
+    expect(screen.getByText('Loading receipts…')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Download CSV' })).toBeNull()
+    expect(screen.queryByText('Txn 1')).toBeNull()
+  })
+
+  it('shows the report once the lists have arrived', () => {
+    const lists = [makeAttachment({ id: 1, transactionId: 1 }), makeAttachment({ id: 2, transactionId: 1 })]
+    const { rerender, view } = renderWith(datasetWith(rows), { 1: 2 })
+    rerender(view(datasetWith(rows, lists)))
+    expect(screen.queryByText('Loading receipts…')).toBeNull()
+    expect(screen.getByText('Txn 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download CSV' })).toBeInTheDocument()
+  })
+
+  it('shows the report at once when no list is pending, and asks for nothing without a reader', () => {
+    renderPack(datasetWith(rows))
+    expect(screen.getByText('Txn 1')).toBeInTheDocument()
+    expect(screen.queryByText('Loading receipts…')).toBeNull()
+  })
+})

@@ -32,7 +32,9 @@ use today; otherwise pass `--account-written-today N` from the D1 dashboard. `pl
    Note a Time Travel bookmark first: `npx wrangler d1 time-travel info D`.
 3. `snapshot --database D`: read-only; hashes every row that is not the synthetic owner's.
 4. `seed --database D --write --confirm D --snapshot <file> --transactions 300`.
-5. `measure --database D` (reads), then again with `--write --confirm D` (adds the write routes).
+5. `measure --database D` (reads), then again with `--write --confirm D` (adds the write routes). The table it prints is
+   per route; the `.tmp/scaling/routes-*.json` it saves also has each route's statements, one entry per distinct SQL
+   template, with how often it ran and the rows read and written, so a total can be traced to the query behind it.
 6. `cleanup --database D --write --confirm D --transactions 300`, then `verify --database D --snapshot <file>`.
 7. Repeat with a larger seed on another day, then `compare <run-a> <run-b>` for the growth per 1,000 transactions.
 
@@ -47,11 +49,13 @@ in the D1 dashboard: a large excess means something else wrote.
 
 ## The 50 queries per invocation
 
-Counted through the real middleware on the SQLite stand-in, a bulk import issues 6n + 5 D1 statements for n rows and a
-bulk edit by id 3n + 6, plus about 5 for the access checks, which the harness stubs. An import of more than 6 rows or an
-edit by id of more than 13 therefore exceeds the Free plan's documented 50 queries per invocation whichever way a batch
-counts, because the rows are inserted, or read back, one at a time. A bulk edit on a filter issues 7 statements, bulk
-labels 6 and a bulk delete 7, however many rows.
+The statements each bulk route issues are counted in [API.md](./API.md#bulk-transaction-routes), and Cloudflare
+documents a limit of 50 queries per invocation on the Free plan. **If the plan enforces that limit for these routes as
+documented**, a create of more than 6 rows or an edit by id of more than 13 would exceed it whichever way a batch
+counts, because the rows are inserted, or read back, one at a time, and the 500-id cap would not be usable on the Free
+plan. Nobody has seen the limit enforced for these routes on a deployed Worker. The counts are measured on the SQLite
+stand-in, and the thresholds also rest on the access checks, an estimate of about five statements. The throwaway route
+below would settle both.
 
 To settle how `batch()` counts, a throwaway draft PR adds a route that runs 60 `SELECT 1` in one `batch()`
 (`?mode=batch`) or as 60 separate calls (`?mode=separate`). Batch passes while separate fails at the 51st: a batch counts

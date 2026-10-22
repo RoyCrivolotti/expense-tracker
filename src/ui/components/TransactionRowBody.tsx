@@ -83,7 +83,7 @@ export function TransactionRowBody({
         <span className={styles.desc}>
           {flag ? <FlagGlyph flag={flag} /> : null}
           {txn.description || lookup.categoryName(txn.categoryId)}
-          <ReceiptMark count={lookup.attachments(txn.id).length} />
+          <ReceiptMark count={lookup.attachmentCount(txn.id)} />
         </span>
         <span className={styles.meta}>{metaParts.join(' · ')}</span>
         <LabelRow labelIds={txn.labelIds ?? []} lookup={lookup} />

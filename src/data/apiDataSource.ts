@@ -58,6 +58,7 @@ export const apiDataSource: ExpenseDataSource = {
   readReferencePart: () => parts().then((p) => p.readReferencePart()),
   readMonthsPart: (range) => parts().then((p) => p.readMonthsPart(range)),
   readCubePart: (range) => parts().then((p) => p.readCubePart(range)),
+  readReceiptsPart: (transactionId) => parts().then((p) => p.readReceiptsPart(transactionId)),
   createTransaction: (input: NewTransaction) =>
     req<Transaction>(`${BASE}/transactions`, {
       method: 'POST',

@@ -4,7 +4,7 @@ import { cellRows } from './cells'
 import type { Ledger, LedgerRows } from './types'
 
 /** The order the API returns rows in: newest date first, then highest id. */
-function byApiOrder(a: Transaction, b: Transaction): number {
+export function byApiOrder(a: Transaction, b: Transaction): number {
   if (a.date !== b.date) return a.date < b.date ? 1 : -1
   return b.id - a.id
 }

@@ -16,16 +16,21 @@ export async function transactionExists(
   return row != null
 }
 
+/**
+ * The receipts of one transaction, or of every transaction the owner has when none is named, in the order
+ * the dataset lists them (by transaction, then id).
+ */
 export async function listAttachments(
   env: Env,
   owner: string,
-  transactionId: number,
+  transactionId?: number,
 ): Promise<TransactionAttachment[]> {
+  const one = transactionId !== undefined
   const { results } = await env.DB.prepare(
     `SELECT * FROM transaction_attachments
-     WHERE owner = ? AND transaction_id = ? ORDER BY id`,
+     WHERE owner = ?${one ? ' AND transaction_id = ?' : ''} ORDER BY transaction_id, id`,
   )
-    .bind(owner, transactionId)
+    .bind(...(one ? [owner, transactionId] : [owner]))
     .all<AttachmentRow>()
   return (results ?? []).map(toAttachment)
 }

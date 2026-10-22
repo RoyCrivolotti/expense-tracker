@@ -51,6 +51,7 @@ export function TransactionsFlagOverlays({
             dataset={model.dataset}
             lookup={model.lookup}
             flagId={flagId}
+            ensureReceipts={model.ensureReceipts}
             onClose={onCloseReport}
             {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
           />
@@ -63,6 +64,7 @@ export function TransactionsFlagOverlays({
             dataset={model.dataset}
             lookup={model.lookup}
             settledByPaymentId={paymentId}
+            ensureReceipts={model.ensureReceipts}
             onClose={onClosePast}
             {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
           />

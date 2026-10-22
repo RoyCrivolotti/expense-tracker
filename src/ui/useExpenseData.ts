@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import type { OccurrenceGroup } from '../domain/engine'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
@@ -33,6 +34,15 @@ export interface ExpenseModel {
   months: string[]
   /** Set when `dataset.transactions` is not the whole history. */
   history?: FixedHistory
+  /**
+   * Set when `dataset.attachments` holds only the receipt lists that were asked for: how many receipts each
+   * transaction has, for the ones whose list has not been read.
+   */
+  attachmentCounts?: AttachmentCounts
+  /** How many transactions have receipts whose list has not been read. */
+  receiptsPending?: number
+  /** Reads the receipt lists of these transactions into `dataset.attachments`; present with `attachmentCounts`. */
+  ensureReceipts?: (ids: readonly number[]) => void
 }
 
 interface LoadState {
@@ -50,6 +60,21 @@ export interface ExpenseData extends LoadState {
   refreshOutcome: RefreshOutcome
   reload: () => void
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
+  /** Present when the model holds only the months being looked at: tells it which month the screens show. */
+  viewMonth?: (month: string) => void
+  /** True while the rows of the month shown are being read. */
+  hydrating?: boolean
+  /**
+   * Why a read in the background failed, while what is shown may be out of date because of it: set by a read
+   * after a write that moved more than the patch shows, of a month or of a receipt list, and cleared by the next
+   * refresh that works. Absent when the data has no such reads.
+   */
+  backgroundError?: string | null
+  /**
+   * True when a read found more rows than the app lists in full and kept them out, so there is no model to show
+   * and the caller hands back to the app that loads everything.
+   */
+  outsized?: boolean
 }
 
 function isOnline(): boolean {

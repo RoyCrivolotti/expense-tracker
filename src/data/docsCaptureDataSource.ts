@@ -32,7 +32,8 @@ import type {
 import { deriveTransactions } from '../domain/engine/status'
 import { computeCashReconciliation } from '../domain/engine/cashReconciliation'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
-import { csvDataSource } from './csvDataSource'
+import { parseDemoFixture } from './csvDataSource'
+import { byApiOrder } from '../domain/ledger'
 import { type HeldDataset, inMemoryLedgerParts } from './inMemoryLedgerParts'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
@@ -318,20 +319,20 @@ function applyAutoLabelToFlagged(flagId: number, labelId: number): void {
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
   load(): Promise<ExpenseDataset> {
-    return csvDataSource.load().then((dataset) => {
+    return Promise.resolve(parseDemoFixture()).then((dataset) => {
       const enriched = enrichDocsCaptureDataset({
         ...dataset,
         goalScenarios: docsCaptureGoalScenarios(),
         wealthAccounts: docsCaptureWealthAccounts(),
         wealthCheckins: docsCaptureWealthCheckins(),
       })
-      loaded = enriched.transactions
+      loaded = [...enriched.transactions].sort(byApiOrder)
       loadedFlags = enriched.flags
       loadedLabels = enriched.labels
       loadedSettings = enriched.settings
       loadedScenarios = enriched.goalScenarios
       baseline = enriched
-      return enriched
+      return { ...enriched, transactions: loaded }
     })
   },
   ...inMemoryLedgerParts(heldDataset),

@@ -40,6 +40,7 @@ function model(plan?: InstallmentPlan, labels: Label[] = []): ExpenseModel {
       flag: () => undefined,
       label: (id) => labels.find((l) => l.id === id),
       attachments: () => [],
+      attachmentCount: () => 0,
       installmentPlan: (id) => (plan && plan.id === id ? plan : undefined),
       settlementFor: () => undefined,
       settledBy: () => [],
