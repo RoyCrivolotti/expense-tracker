@@ -5,8 +5,9 @@ engine and each screen that feeds one, how much of that history its output depen
 app is showing (M) and from today (T). It matters to anything that stops handing an engine the whole ledger, such as
 the model in [SCALING.md](./SCALING.md) (real rows for some months, per-month sums for the rest, pinned rows that
 are always real): an engine can be given less history only if its output does not change. That model is built, in
-`src/domain/ledger` (see [The ledger model](#the-ledger-model)). The screens read it through the model's `sums` and
-`history` (see the invariant on the two row lists in [ARCHITECTURE.md](./ARCHITECTURE.md)).
+`src/domain/ledger` (see [The ledger model](#the-ledger-model)). The screens read a model through its `sums` and
+`history`, but the app does not build a model from a ledger yet (see the invariant on the two row lists in
+[ARCHITECTURE.md](./ARCHITECTURE.md)).
 
 `src/testing/engineHistory.test.ts` pins the properties marked *tested*. It assembles the ledger with that model
 (real rows for some months, one summed row per (budget month, account, category, type, cancelled, sign) cell for the
