@@ -26,6 +26,7 @@ jobs:
       - uses: ./.github/actions/setup-node-deps
       - run: node scripts/ensure-function-symlinks.mjs
       - run: node scripts/check-migration-docs.mjs
+      - run: node scripts/check-docs-size.mjs
       - run: node scripts/check-pii.mjs
       - run: npm run typecheck
       - run: npm run build
