@@ -23,6 +23,7 @@ import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { SettingsTab } from './tabs/SettingsTab'
 import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
+import { AccountOwnerContext, forgetUnownedSettings } from './hooks/accountOwner'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
 import { AssumedInflationContext } from './hooks/assumedInflationContext'
 import { MarketVolatilityContext } from './hooks/marketVolatilityContext'
@@ -268,33 +269,39 @@ function ExpensesAppLoaded({
   accountEmail?: string
   hubGrants: GroupGrants
 }) {
+  // What earlier builds kept on this device under keys that named no one cannot be told apart, so it is dropped.
+  useEffect(() => {
+    if (accountEmail) forgetUnownedSettings()
+  }, [accountEmail])
   return (
-    <ConnectivityProvider fromCache={fromCache} {...(snapshotAt ? { snapshotAt } : {})}>
-      <MoneyFormatProvider
-        currencyCode={model.dataset.settings.currencyCode}
-        numberLocale={model.dataset.settings.numberLocale}
-      >
-        <AssumedInflationContext.Provider value={model.dataset.settings.assumedInflation}>
-          <MarketVolatilityContext.Provider value={model.dataset.settings.marketVolatility}>
-            <LeaveGuardProvider>
-              <ExpensesAppReady
-                source={source}
-                model={model}
-                applyPatch={applyPatch}
-                reload={reload}
-                refreshing={refreshing}
-                refreshOutcome={refreshOutcome}
-                {...(viewMonth ? { viewMonth } : {})}
-                hydrating={hydrating}
-                hubGrants={hubGrants}
-                {...(ownerAccess ? { ownerAccess } : {})}
-                {...(accountEmail ? { accountEmail } : {})}
-              />
-            </LeaveGuardProvider>
-          </MarketVolatilityContext.Provider>
-        </AssumedInflationContext.Provider>
-      </MoneyFormatProvider>
-    </ConnectivityProvider>
+    <AccountOwnerContext value={accountEmail}>
+      <ConnectivityProvider fromCache={fromCache} {...(snapshotAt ? { snapshotAt } : {})}>
+        <MoneyFormatProvider
+          currencyCode={model.dataset.settings.currencyCode}
+          numberLocale={model.dataset.settings.numberLocale}
+        >
+          <AssumedInflationContext.Provider value={model.dataset.settings.assumedInflation}>
+            <MarketVolatilityContext.Provider value={model.dataset.settings.marketVolatility}>
+              <LeaveGuardProvider>
+                <ExpensesAppReady
+                  source={source}
+                  model={model}
+                  applyPatch={applyPatch}
+                  reload={reload}
+                  refreshing={refreshing}
+                  refreshOutcome={refreshOutcome}
+                  {...(viewMonth ? { viewMonth } : {})}
+                  hydrating={hydrating}
+                  hubGrants={hubGrants}
+                  {...(ownerAccess ? { ownerAccess } : {})}
+                  {...(accountEmail ? { accountEmail } : {})}
+                />
+              </LeaveGuardProvider>
+            </MarketVolatilityContext.Provider>
+          </AssumedInflationContext.Provider>
+        </MoneyFormatProvider>
+      </ConnectivityProvider>
+    </AccountOwnerContext>
   )
 }
 
@@ -384,7 +391,7 @@ function ExpensesAppReady({
   const useBaselineInGoals = (monthlyCents: number) => goTo('goals', { kind: 'baseline', monthlyCents })
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
-    () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
+    () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(accountEmail),
   )
   // Captured once per wizard run rather than re-derived from `model.dataset`, since the
   // wizard's own setup adds categories/accounts as it goes — re-checking `needsOnboarding`
@@ -468,7 +475,7 @@ function ExpensesAppReady({
             onTxnSelectModeChange={holdMonthForSelection}
             monthNavigation={monthNavigation}
             onRunSetup={() => {
-              clearOnboardingSkip()
+              clearOnboardingSkip(accountEmail)
               setOnboardingFirstRun(false)
               setOnboardingOpen(true)
             }}
