@@ -10,6 +10,7 @@ import type { ExpenseDataset } from '../domain/types'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
+import { ExpensesAppView } from './ExpensesApp'
 import LedgerExpensesApp from './LedgerExpensesApp'
 import { ToastProvider } from './hooks/ToastProvider'
 
@@ -42,6 +43,7 @@ function renderApp(source: ExpenseDataSource, mode: 'on' | 'shadow' = 'on', acco
         source={source}
         mode={mode}
         fallback={<p>the whole dataset app</p>}
+        view={ExpensesAppView}
         hubGrants={allGroupsGranted()}
         {...(accountEmail ? { accountEmail } : {})}
       />

@@ -299,7 +299,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // checks, the planner, the assembler and the loader, all imported on first use, so a browser that loads the whole
 // dataset never fetches them): about 1.1 KB gzip took the total from 283,885 to 284,990 bytes, 10 under the old
 // limit. The entry chunk grew by 67 bytes. No new library.
-const TOTAL_MAX_GZIP = 286_000
+//
+// Raised from 286 KB to 294 KB for the ledger read in parts: the session that holds it, its snapshot, the
+// shadow comparison and the app over it are one chunk of about 7 KB gzip that is loaded only by a browser that
+// asked for it, and the receipt lists, the entry's flag read and the loading state add about 1 KB to the entry
+// chunk. The total went from 285,6 KB to 293,2 KB. No new library.
+const TOTAL_MAX_GZIP = 294_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

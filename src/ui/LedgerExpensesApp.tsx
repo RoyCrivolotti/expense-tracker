@@ -6,7 +6,7 @@ import type { HeldLedger } from '../data/ledgerHold'
 import type { LedgerMode } from '../config/ledgerMode'
 import { FULL_HYDRATION_ROW_LIMIT } from '../domain/ledger'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
-import { ExpensesAppView, type ExpensesAppProps } from './ExpensesApp'
+import type { ExpensesAppProps, ExpensesAppView } from './ExpensesApp'
 import { useLedgerData } from './useLedgerData'
 
 type LedgerSource = ExpenseDataSource & LedgerPartsSource
@@ -37,7 +37,12 @@ async function choose(source: ExpenseDataSource, owner: string | undefined): Pro
   }
 }
 
-function LedgerApp({ mode, ledger, ...props }: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; ledger: LedgerSource }) {
+function LedgerApp({
+  mode,
+  ledger,
+  view: View,
+  ...props
+}: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; ledger: LedgerSource; view: typeof ExpensesAppView }) {
   // Shadow mode reads the whole dataset after the ledger settles and holds the two to each other.
   const settled = useCallback(
     (held: HeldLedger) => {
@@ -46,18 +51,20 @@ function LedgerApp({ mode, ledger, ...props }: ExpensesAppProps & { mode: Exclud
     [ledger, mode],
   )
   const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled })
-  return <ExpensesAppView {...props} data={data} />
+  return <View {...props} data={data} />
 }
 
 /**
  * The app over a ledger read in parts (`src/config/ledgerMode.ts` turns this on). It lives in its own chunk,
- * so a browser that has not asked for it never loads it.
+ * so a browser that has not asked for it never loads it. It is handed the app's view rather than importing it:
+ * a lazy chunk that imports its entry makes the bundler split shared code into more files loaded at startup.
  */
 export default function LedgerExpensesApp({
   mode,
   fallback,
+  view,
   ...props
-}: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; fallback: ReactElement }) {
+}: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; fallback: ReactElement; view: typeof ExpensesAppView }) {
   const [choice, setChoice] = useState<Choice>('checking')
   const { source, accountEmail } = props
   useEffect(() => {
@@ -69,5 +76,5 @@ export default function LedgerExpensesApp({
   }, [source, accountEmail])
   if (choice === 'checking') return <AppLoadingSkeleton label="Loading expenses" />
   if (choice === 'fallback') return fallback
-  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} />
+  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} view={view} />
 }

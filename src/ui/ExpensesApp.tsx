@@ -191,7 +191,7 @@ export function ExpensesApp(props: ExpensesAppProps) {
   if (mode === 'off') return <DatasetApp {...props} />
   return (
     <Suspense fallback={<AppLoadingSkeleton label="Loading expenses" />}>
-      <LedgerExpensesApp {...props} mode={mode} fallback={<DatasetApp {...props} />} />
+      <LedgerExpensesApp {...props} mode={mode} fallback={<DatasetApp {...props} />} view={ExpensesAppView} />
     </Suspense>
   )
 }
