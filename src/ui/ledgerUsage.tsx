@@ -3,6 +3,7 @@ import type { Usage } from '../domain/data/usage'
 import type { LedgerUsage } from '../data/ledgerUsage'
 import { type UsageKind, type UsageView, heldCount } from './definitions/recordUsage'
 import { UsageNote } from './ledgerUsageNote'
+import { NOTE_WORDS } from './ledgerUsageWords'
 import type { ExpenseModel } from './useExpenseData'
 
 /** What names one record according to the server's counts, which are the whole ledger's. */
@@ -27,7 +28,7 @@ function useCounts(store: LedgerUsage, heldRevision: string | null, model: Expen
   }, [store, windowed, heldRevision])
   const { dataset } = model
   return useMemo<UsageView>(() => {
-    if (!windowed) return { count: (kind, id) => heldCount(dataset, kind, id), note: null, notice: null }
+    if (!windowed) return { count: (kind, id) => heldCount(dataset, kind, id), note: null, notice: null, words: null }
     const { usage, loading, stale, error } = state
     const behind = usage !== null && heldRevision !== null && usage.revision !== heldRevision
     const note = error !== null ? 'failed' : loading || usage === null ? 'reading' : stale || behind ? 'stale' : null
@@ -35,6 +36,7 @@ function useCounts(store: LedgerUsage, heldRevision: string | null, model: Expen
       count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
       note,
       notice: note === null ? null : <UsageNote note={note} refresh={store.refresh} />,
+      words: note === null ? null : NOTE_WORDS[note],
     }
   }, [store, windowed, dataset, state, heldRevision])
 }

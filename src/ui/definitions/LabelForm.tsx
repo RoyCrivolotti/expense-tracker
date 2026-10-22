@@ -5,6 +5,7 @@ import { SCENARIO_COLORS } from '../../engine'
 import { ColorSwatchPicker } from '../components/ColorSwatchPicker'
 import { transactionCountLabel } from '../components/flagPickerOptions'
 import { LabelFormActions } from './LabelFormActions'
+import type { UsageView } from './recordUsage'
 import { initialLabelDraft, useLabelFormSave } from './useLabelFormSave'
 import styles from './FlagForm.module.css'
 
@@ -15,6 +16,8 @@ interface Props {
   /** Used to place a new label at the end of the user's ordering. */
   existing: Label[]
   usageCount: number | null
+  /** The counts the figure comes from, which the delete waits for and says when they cannot be taken. */
+  usage: UsageView
   actions: ExpenseActions
   onDone: () => void
   /** Lets the enclosing Modal pause its focus trap while the sheet is open. */
@@ -73,6 +76,7 @@ export function LabelForm({
   label,
   existing,
   usageCount,
+  usage,
   actions,
   onDone,
   onConfirmingChange,
@@ -124,6 +128,7 @@ export function LabelForm({
       <LabelFormActions
         label={label}
         usageCount={usageCount}
+        usage={usage}
         busy={busy}
         confirming={confirming}
         onSave={() => save(draft)}

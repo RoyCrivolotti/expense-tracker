@@ -10,7 +10,7 @@ import { ChevronIcon } from '../icons'
 import { FlagForm } from './FlagForm'
 import { FlagAutoLabelEditor } from './FlagAutoLabelEditor'
 import { transactionCountLabel } from '../components/flagPickerOptions'
-import { useRecordUsage } from './recordUsage'
+import { settledCount, useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 import styles from './FlagsModal.module.css'
 
@@ -71,7 +71,8 @@ export function FlagsModal({
         <FlagForm
           flag={editing.flag}
           existing={flags}
-          usageCount={editing.flag ? usage.count('flag', editing.flag.id) : 0}
+          usageCount={editing.flag ? settledCount(usage, 'flag', editing.flag.id) : 0}
+          usage={usage}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}

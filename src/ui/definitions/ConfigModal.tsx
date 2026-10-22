@@ -293,6 +293,7 @@ function DeleteControl({
         <ConfirmSheet
           title={`Delete ${config.label}?`}
           message="This can't be undone."
+          {...(config.usage.words === null ? {} : { footnote: config.usage.words })}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void runPlainDelete()}

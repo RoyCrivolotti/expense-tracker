@@ -7,7 +7,7 @@ import { Modal } from '../components/Modal'
 import { LabelGlyph } from '../components/LabelGlyph'
 import { LabelForm } from './LabelForm'
 import { transactionCountLabel } from '../components/flagPickerOptions'
-import { useRecordUsage } from './recordUsage'
+import { settledCount, useRecordUsage } from './recordUsage'
 import defStyles from './definitions.module.css'
 // Reused wholesale: a label row (glyph, name, meta, archived tag, Edit button)
 // is laid out identically to a flag row, so this borrows that stylesheet
@@ -46,7 +46,8 @@ export function LabelsModal({
         <LabelForm
           label={editing.label}
           existing={labels}
-          usageCount={editing.label ? usage.count('label', editing.label.id) : 0}
+          usageCount={editing.label ? settledCount(usage, 'label', editing.label.id) : 0}
+          usage={usage}
           actions={actions}
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}

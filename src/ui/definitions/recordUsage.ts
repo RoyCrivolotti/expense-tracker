@@ -20,6 +20,16 @@ export interface UsageView {
   note: 'reading' | 'stale' | 'failed' | null
   /** Says so beside the counts, with a way to read them again where that helps. Nothing when they can be taken. */
   notice: ReactNode
+  /** The same, as the words a confirm sheet can carry. */
+  words: string | null
+}
+
+/**
+ * A count to say aloud, null when it is unknown or may be out of date. What deleting a flag or label does is told from
+ * it, and nothing but this count stands between that and unflagging rows the screen has not read.
+ */
+export function settledCount(usage: UsageView, kind: UsageKind, id: number): number | null {
+  return usage.note === null ? usage.count(kind, id) : null
 }
 
 /** The count of one record, from every row of a dataset. */
@@ -42,7 +52,7 @@ export function heldCount(d: ExpenseDataset, kind: UsageKind, id: number): numbe
 
 /** The counts of a model that holds every row. */
 function useHeldUsage(model: ExpenseModel): UsageView {
-  return useMemo(() => ({ count: (kind, id) => heldCount(model.dataset, kind, id), note: null, notice: null }), [model.dataset])
+  return useMemo(() => ({ count: (kind, id) => heldCount(model.dataset, kind, id), note: null, notice: null, words: null }), [model.dataset])
 }
 
 /** The counts for the Settings screens, from the model's own rows or, for a window, from the server. */

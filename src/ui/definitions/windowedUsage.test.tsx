@@ -2,7 +2,7 @@
  * The Settings screens over a model that holds a window: what names a record is the server's count, which says more than the
  * rows held and takes time. A count that is not known is never shown as zero and never decides a delete.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Usage } from '../../domain/data/usage'
@@ -17,6 +17,7 @@ import { FlagsModal } from './FlagsModal'
 import { LabelList } from './LabelList'
 import { LabelsModal } from './LabelsModal'
 import { usageCount } from '../ledgerUsage'
+import { NOTE_WORDS } from '../ledgerUsageWords'
 import { UsageNote } from '../ledgerUsageNote'
 import type { UsageView } from './recordUsage'
 
@@ -48,6 +49,7 @@ function windowOf({ usage = counted, note = null, refresh = vi.fn() }: { usage?:
     count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
     note,
     notice: note === null ? null : <UsageNote note={note} refresh={refresh} />,
+    words: note === null ? null : NOTE_WORDS[note],
   }
   return { ...buildExpenseModel(dataset), useUsage: () => view }
 }
@@ -78,16 +80,14 @@ describe('deleting a category or account from a window', () => {
     expect(screen.getByText("This can't be undone.")).toBeTruthy()
   })
 
-  it('cannot be asked while the counts are being read, and says they are', () => {
+  it.each([
+    ['category', GROCERIES],
+    ['account', CARD],
+  ] as const)('cannot be asked of a %s while the counts are being read, and says they are', (kind, record) => {
     render(
-      <ConfigModal
-        target={{ kind: 'category', record: GROCERIES }}
-        model={windowOf({ usage: null, note: 'reading' })}
-        actions={actions}
-        onClose={vi.fn()}
-      />,
+      <ConfigModal target={{ kind, record } as never} model={windowOf({ usage: null, note: 'reading' })} actions={actions} onClose={vi.fn()} />,
     )
-    expect(screen.getByRole('button', { name: 'Delete category' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: `Delete ${kind}` })).toBeDisabled()
     expect(screen.getByRole('status')).toHaveTextContent('Reading the counts…')
   })
 
@@ -107,6 +107,7 @@ describe('deleting a category or account from a window', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
     expect(screen.getByText("This can't be undone.")).toBeTruthy()
+    expect(within(screen.getByRole('alertdialog')).getByText("Couldn't read the counts.")).toBeInTheDocument()
   })
 
   it('goes by the counts it has while they may be out of date, and says so', () => {
@@ -150,10 +151,43 @@ describe('the flag and label managers over a window', () => {
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't read the counts.")
   })
 
-  it('say what a delete will do without a number when the count is not known', async () => {
-    inSettings(<FlagsModal model={windowOf({ usage: null, note: 'failed' })} actions={actions} onClose={vi.fn()} />)
+  it.each([
+    ['reading', null],
+    ['failed', null],
+    ['stale', counted],
+  ] as const)('keep the delete of a flag or label shut while the counts are %s, and say so', async (note, usage) => {
+    for (const [Modal, kind] of [[FlagsModal, 'flag'], [LabelsModal, 'label']] as const) {
+      const shown = inSettings(<Modal model={windowOf({ usage, note })} actions={actions} onClose={vi.fn()} />)
+      await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+      expect(screen.getByRole('button', { name: `Delete ${kind}` })).toBeDisabled()
+      expect(screen.getByText(NOTE_WORDS[note])).toBeInTheDocument()
+      shown.unmount()
+    }
+  })
+
+  it('open the delete of a flag or label once the counts can be taken, and tell the number', async () => {
+    inSettings(<FlagsModal model={windowOf({})} actions={actions} onClose={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await userEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
-    expect(screen.getByText(/Every transaction flagged with it will be unflagged/)).toBeInTheDocument()
+    expect(screen.getByText(/7 transactions will be unflagged/)).toBeInTheDocument()
+    expect(screen.queryByText(NOTE_WORDS.stale)).toBeNull()
+  })
+
+  it('say it without a number, and with the note, when the counts stop being current while the sheet is open', async () => {
+    const wrap = (model: ExpenseModel) => (
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <FlagsModal model={model} actions={actions} onClose={vi.fn()} />
+      </MoneyFormatProvider>
+    )
+    const shown = render(wrap(windowOf({})))
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+
+    shown.rerender(wrap(windowOf({ note: 'stale' })))
+
+    const sheet = within(screen.getByRole('alertdialog'))
+    expect(sheet.getByText(/Every transaction flagged with it will be unflagged/)).toBeInTheDocument()
+    expect(sheet.getByText(NOTE_WORDS.stale)).toBeInTheDocument()
+    expect(sheet.queryByText(/7 transactions/)).toBeNull()
   })
 })

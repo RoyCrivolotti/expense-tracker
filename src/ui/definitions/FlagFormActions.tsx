@@ -4,11 +4,13 @@ import { ConfirmSheet } from '../components/ConfirmSheet'
 import { flagDeleteMessage } from '../components/flagPickerOptions'
 import { Presence } from '../components/Presence'
 import { EXIT_MS, afterExit } from '../hooks/motion'
+import type { UsageView } from './recordUsage'
 import styles from './FlagForm.module.css'
 
 interface Props {
   flag: Flag | null
   usageCount: number | null
+  usage: UsageView
   busy: boolean
   confirming: boolean
   onSave: () => void
@@ -25,6 +27,7 @@ function saveLabel(busy: boolean, flag: Flag | null): string {
 export function FlagFormActions({
   flag,
   usageCount,
+  usage,
   busy,
   confirming,
   onSave,
@@ -71,18 +74,22 @@ export function FlagFormActions({
         <button
           type="button"
           className={styles.deleteBtn}
-          disabled={busy || awaitingDelete}
+          // Nothing but this count stands between the delete and unflagging rows the screen has not read, so it waits
+          // for counts that can be taken, unlike a category, whose delete the server refuses while it is in use.
+          disabled={busy || awaitingDelete || usage.note !== null}
           onClick={() => onConfirmingChange(true)}
         >
           Delete flag
         </button>
       ) : null}
+      {flag ? usage.notice : null}
 
       {flag ? (
         <Presence show={confirming} exitMs={EXIT_MS.sheet}>
           <ConfirmSheet
             title={`Delete ${flag.name}?`}
             message={flagDeleteMessage(usageCount)}
+            {...(usage.words === null ? {} : { footnote: usage.words })}
             confirmLabel="Delete"
             destructive
             onConfirm={() => void confirmDelete()}
