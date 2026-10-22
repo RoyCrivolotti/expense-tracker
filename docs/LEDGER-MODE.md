@@ -64,7 +64,10 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
   adding or changing a plan, and settling rows or deleting the payment that settled them. A new server-side cascade
-  needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
+  needs a case there and a test. `patch()` answers true for a cascade, and for a card statement marked paid or
+  unpaid, as it does for a change to a row, so the list read in pages is read again (`applyWrite`): the server moved
+  rows the patch cannot show. A plan's instalments are inserted by the server when the ledger is read, so for a plan the
+  list is read after that read has finished (`afterPlanWrite`). A read in the background that fails (after a cascade, of a month or of a receipt list)
   is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
   `useLedgerData` returns it as `backgroundError` for the app to tell the user.
 - **A write to rows the browser may not hold is followed by a read of what it moved, not by a patch.** The patch
@@ -84,8 +87,9 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   [`GET /series`](./API.md#get-series) into `SessionState.series` when they are missing or stale. The server reads every
   row for them whenever the revision has moved, about ten rows per transaction, so they go stale only after a write that
   could change one (`touchesSeries`: a row that counts was added, removed or edited in what a series is made of, which a
-  flag, a label or a note is not), after a refresh that found another revision, or when the rows and the series were read
-  at different revisions. They are read when the next screen mounts, never on a timer, and not while a screen that uses
+  flag, a label or a note is not), after a write the server cascaded (a plan deleted turns its instalments into rows of a
+  series), after a refresh that found another revision, or when the rows and the series were read at different
+  revisions. They are read when the next screen mounts, never on a timer, and not while a screen that uses
   them is already showing, except on a refresh (the user's, or the one a write that moves more than its patch shows
   starts), which reads them once. `useLedgerData` folds the rows written since they were read into them (`foldNewerRows`), so
   logging the charge the Upcoming card offers clears it at once, and the Overview and Spending keep the split as of the
