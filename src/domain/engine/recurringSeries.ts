@@ -20,9 +20,8 @@
  */
 import type { Transaction, TxnType } from '../types'
 import { addDaysIso, daysBetween } from './dates'
-import { fixedRhythmFromGaps } from './fixedFlexible'
 import { groupKeyString, groupTransactions, normalizeDesc } from './recurringDetect'
-import { PREDICT_HISTORY, WINDOW_HISTORY } from './recurringPredict'
+import { PREDICT_HISTORY, WINDOW_HISTORY, fixedRhythmFromGaps } from './recurringPredict'
 import type { OccurrenceGroup } from './recurringTypes'
 
 /** Newest dates a series carries as dates; every older one is known only by the gap before it. */
