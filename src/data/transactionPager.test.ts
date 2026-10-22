@@ -292,6 +292,7 @@ describe('TransactionPager, a burst of filters', () => {
     const pager = new TransactionPager(source, { limit: 20, settleMs: 100 })
     pager.setFilter({})
     await vi.advanceTimersByTimeAsync(100)
+    await vi.waitFor(() => expect(pager.getState().rows).toHaveLength(20))
     source.calls.length = 0
     for (const query of ['r', 're', 'ren', 'rent']) {
       pager.setFilter({ query })
@@ -300,10 +301,9 @@ describe('TransactionPager, a burst of filters', () => {
     expect(source.calls).toEqual([])
     expect(pager.getState()).toMatchObject({ stale: true, loading: false, summary: null })
     await vi.advanceTimersByTimeAsync(100)
+    await vi.waitFor(() => expect(pager.getState().stale).toBe(false))
     expect(source.calls).toEqual(['page', 'summary'])
-    const state = pager.getState()
-    expect(state.stale).toBe(false)
-    expect(ids(state.rows)).toEqual(idsOf({ query: 'rent' }).slice(0, 20))
+    expect(ids(pager.getState().rows)).toEqual(idsOf({ query: 'rent' }).slice(0, 20))
   })
 
   it('cancels the read of a list a new filter replaces, and a refresh need not wait for the burst to end', async () => {
@@ -321,7 +321,7 @@ describe('TransactionPager, a burst of filters', () => {
     pager.setFilter({ status: 'forecast' })
     expect(signals[0]!.aborted).toBe(true)
     pager.refresh()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.waitFor(() => expect(pager.getState().stale).toBe(false))
     expect(signals).toHaveLength(2)
     expect(ids(pager.getState().rows)).toEqual(idsOf({ status: 'forecast' }).slice(0, 20))
   })
