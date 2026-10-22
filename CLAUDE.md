@@ -16,7 +16,8 @@ No Supabase, Prisma, Drizzle, Stripe or AWS.
 
 ## Requirements
 
-Node ≥ 22.12.0. `.nvmrc` pins 22.23.2; CI runs Node 22.
+Node ≥ 22.13.0, the release where `node:sqlite`, which the tests use, lost its flag. `.nvmrc` pins 22.23.2; CI runs
+Node 22.
 
 ```bash
 nvm use && npm ci
