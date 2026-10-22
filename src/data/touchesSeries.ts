@@ -14,7 +14,7 @@ function reshaped(was: Transaction, now: Transaction): boolean {
  * Whether a write could have changed a recurring series: a row that counts towards one was added or removed, or
  * edited in what a series is made of. A flag, a label, a note, a receipt or the paid state of a row cannot, and
  * neither can a row that never counts (cancelled, without a description, a plan's payment). The server works the
- * series out from every row, so a read costs about nine rows per transaction: it is made for a write that could
+ * series out from every row, so a read costs about ten rows per transaction: it is made for a write that could
  * have changed them and not for one that could not.
  */
 export function touchesSeries(before: readonly Transaction[], after: readonly Transaction[]): boolean {

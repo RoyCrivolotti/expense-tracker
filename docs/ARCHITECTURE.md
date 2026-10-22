@@ -200,11 +200,12 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   needs every row it is made of, which a window does not hold. A screen that reads `history` (the Overview, Spending,
   the Upcoming card) calls `useHistoryWatch(model)`, and `LedgerSession.watchSeries` reads
   [`GET /series`](./API.md#get-series) into `SessionState.series` when they are missing or stale. The server reads every
-  row for them whenever the revision has moved, about nine rows per transaction, so they go stale only after a write that
+  row for them whenever the revision has moved, about ten rows per transaction, so they go stale only after a write that
   could change one (`touchesSeries`: a row that counts was added, removed or edited in what a series is made of, which a
   flag, a label or a note is not), after a refresh that found another revision, or when the rows and the series were read
-  at different revisions. They are read when the next screen mounts, never on a timer and never while a screen that uses
-  them is already showing. `useLedgerData` folds the rows written since they were read into them (`foldNewerRows`), so
+  at different revisions. They are read when the next screen mounts, never on a timer, and not while a screen that uses
+  them is already showing, except on a refresh (the user's, or the one a write that moves more than its patch shows
+  starts), which reads them once. `useLedgerData` folds the rows written since they were read into them (`foldNewerRows`), so
   logging the charge the Upcoming card offers clears it at once, and the Overview and Spending keep the split as of the
   last read until then. While the model has no `history` (the first read has not landed, it failed, or the browser is
   offline) it says so (`historyNote`, which `HistoryNote` shows): the figures that need it use the months loaded, and the

@@ -287,10 +287,12 @@ export class LedgerSession {
    * which a ledger held as a window cannot work out from its rows. They are read when a screen that uses them
    * mounts and they are not current: never read, written to since by something that could change them
    * (`touchesSeries`), or read at another revision than the rows. A screen that is already mounted when such a
-   * write is made reads nothing: the server reads every row for them, about nine rows per transaction, so a
-   * read per write would cost more than the writes do. The Upcoming card folds the rows written since into them
-   * (`foldNewerRows`) and the rest waits for the next screen to mount or for a refresh. A read that failed or gave
-   * up is not started again by a screen mounting for a minute, and a refresh lifts that.
+   * write is made reads nothing until a refresh: the server reads every row for them, about ten rows per
+   * transaction, so a read per write would cost more than the writes do. The Upcoming card folds the rows written
+   * since into them (`foldNewerRows`) and the rest waits for the next screen to mount or for a refresh. A refresh
+   * reads them once, whether the user asked for it or a write the server answered with more than the patch
+   * shows started it. A read that failed or gave up is not started again by a screen mounting for a minute, and a
+   * refresh lifts that.
    * Returns the call that says the screen has gone.
    */
   watchSeries = (): (() => void) => {
