@@ -42,6 +42,8 @@ interface Props {
   plan: GoalScenario | null
   /** Investment transactions are the contributions taken out of the measured return. */
   transactions?: Transaction[]
+  /** For the pace and the cash reserve, which only add amounts; the transactions when absent. */
+  sumTransactions?: Transaction[] | undefined
   /** Re-baselines the plan from the latest check-in; absent in a read-only session. */
   onRebaseline?: (() => void) | undefined
   /** The emergency-fund target from Assumptions; 0 means none. */
@@ -64,18 +66,18 @@ const PACE_TOLERANCE = 0.98
  */
 function PaceHint({
   plan,
-  transactions,
+  sumTransactions,
   openBudgetMonth,
   format,
 }: {
   plan: GoalScenario
-  transactions: Transaction[]
+  sumTransactions: Transaction[]
   openBudgetMonth: string | undefined
   format: MoneyFormat
 }) {
   const { months, sincePlanStart } = useMemo(
-    () => paceMonths(monthlyFlows(computeMonthlyTotals(transactions)), plan.planStartDate, openBudgetMonth),
-    [transactions, plan.planStartDate, openBudgetMonth],
+    () => paceMonths(monthlyFlows(computeMonthlyTotals(sumTransactions)), plan.planStartDate, openBudgetMonth),
+    [sumTransactions, plan.planStartDate, openBudgetMonth],
   )
   // The plan's figure over these same months: one amount for a plan that never changes it, and
   // otherwise what it averages, with where it started and where it is now.
@@ -348,11 +350,13 @@ function SnapshotHints({
   accounts,
   plan,
   transactions,
+  sumTransactions,
   cashReserveMonths,
   openBudgetMonth,
   onRebaseline,
   format,
 }: Required<Pick<Props, 'checkins' | 'accounts' | 'plan' | 'transactions' | 'cashReserveMonths'>> & {
+  sumTransactions: Transaction[]
   openBudgetMonth: string | undefined
   latest: WealthCheckin
   status: TrackStatus | null
@@ -362,12 +366,12 @@ function SnapshotHints({
 }) {
   const inflationRate = useAssumedInflation()
   const reading = readReturn(checkins, accounts, transactions, plan)
-  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
+  const reserve = cashReserve(latest, accounts, sumTransactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status ? <PlanGapHint status={status} fromTheMarket={isBehindFromTheMarket(gap)} /> : null}
       {gap ? <GapSplitHint reading={gap} planStartDate={plan?.planStartDate ?? null} format={format} onRebaseline={onRebaseline} /> : null}
-      {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
+      {plan ? <PaceHint plan={plan} sumTransactions={sumTransactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
       {reading ? <ReturnHint reading={reading} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
     </>
@@ -398,6 +402,7 @@ export function WealthSummaryCard({
   accounts,
   plan,
   transactions = [],
+  sumTransactions = transactions,
   onRebaseline,
   cashReserveMonths = 0,
   openBudgetMonth,
@@ -465,6 +470,7 @@ export function WealthSummaryCard({
           accounts={accounts}
           plan={plan}
           transactions={transactions}
+          sumTransactions={sumTransactions}
           cashReserveMonths={cashReserveMonths}
           openBudgetMonth={openBudgetMonth}
           onRebaseline={onRebaseline}

@@ -81,7 +81,8 @@ Read-only queries against a deployed database through the D1 query API:
   never a scan of `transactions`. `sqlite_version()` is refused ("not authorized to use function"), so the version is
   not readable.
 
-Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50.
+Not yet measured on a deployed Worker: CPU time, and whether `batch()` counts as one query toward the 50. The plan for
+measuring both, and the rows per statement and the table statistics, is in [MEASURING.md](./MEASURING.md).
 
 ## Proposed design
 
@@ -635,7 +636,7 @@ Built:
   [ENGINE-HISTORY.md](./ENGINE-HISTORY.md#the-ledger-model));
 - an optional classifier or recurring series, built from the whole history, on the four engines that rebuilt their own
   from the rows they were handed (the spending groups, the group detail, the pace envelope and the fixed cost list).
-  No screen uses the model or passes one in yet;
+  The screens read a model through `sumsOf(model)` and its `history`, but the app builds no model from a ledger yet;
 - the recurring series route (`GET /api/expenses/series`) with the stored normalized description it groups by, its
   backfill, and tests that hold every consumer to the answer over every row. See "Recurring series". Nothing in the
   app calls it yet;
@@ -652,8 +653,8 @@ work, in dependency order:
    and per-month sums (built); series (built).
 3. The ledger model and differential tests against the pure engines (built), and the optional classifier or series on
    the four engines (built).
-4. The client data layer: hydration, invalidation, snapshot per owner, version skew, and passing the whole history's
-   classifier and series to the Overview model and the Spending view, which still build their own.
+4. The client data layer: hydration, invalidation, snapshot per owner and version skew. The Overview model and the
+   Spending view already take the whole history's classifier and series from a model that carries them.
 5. The Transactions tab on server pages, with selection and bulk edit on a filter.
 6. The remaining consumers and a resumable backup.
 7. Switching the default behind a runtime flag, with the old route kept for stale clients.

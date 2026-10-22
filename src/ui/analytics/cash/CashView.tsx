@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseActions } from '../../actions'
 import type { ExpenseModel } from '../../useExpenseData'
+import { sumsOf } from '../../modelSums'
 import type { BalancesAtCost, CashRow, MonthCloseStatus } from '../../../engine'
 import {
   balancesAtCost,
@@ -114,15 +115,10 @@ export function CashView({
   openMonth: string
   actions?: ExpenseActions | undefined
 }) {
+  const sums = sumsOf(model)
   const rows = useMemo(
-    () =>
-      computeCashReconciliation(
-        model.dataset.transactions,
-        model.dataset.accounts,
-        model.dataset.settings,
-        model.dataset.cashActuals,
-      ),
-    [model.dataset],
+    () => computeCashReconciliation(sums.transactions, sums.accounts, sums.settings, sums.cashActuals),
+    [sums],
   )
   const [picked, setPicked] = useState<string | null>(null)
   // The header month picker outranks a dot tapped earlier: changing it means
@@ -140,9 +136,9 @@ export function CashView({
   const balances = useMemo(
     () =>
       selected
-        ? balancesAtCost(rows, model.dataset.settings, model.dataset.transactions, selected.month)
+        ? balancesAtCost(rows, sums.settings, sums.transactions, selected.month)
         : null,
-    [rows, model.dataset, selected],
+    [rows, sums, selected],
   )
 
   if (rows.length === 0 || !selected) {

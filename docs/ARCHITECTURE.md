@@ -190,6 +190,30 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   bounds (`planRowRanges`, `planCubeRanges`); a month over the row bound cannot be read this way. A ledger built from
   parts has no receipt list (`reference.attachments` is empty): a row's receipts are read when needed. The demo data
   sources serve their parts from the dataset they hold (`partsOfDataset.ts`), so a dev instance takes the same path.
+- **The screens read one of two row lists, and an engine that is given the wrong one is wrong only when the model
+  holds a window.** `ExpenseModel.dataset.transactions` is the real rows: what is shown as a transaction and what
+  every engine that reads dates, descriptions, labels or links is given. `sums` (`sumsOf(model)`) adds one row per
+  summed cell and goes to the engines that only add amounts and to the spending groups, which read a 12 month trend of
+  sums. While the model holds every row there are no cells, `sums` is absent and both lists are the same array, so
+  nothing changes for a ledger under the size policy. For a window the model also carries `history` (the recurring
+  series of the whole history), which the Overview and Spending hand to the engines that would otherwise classify fixed
+  spend from the rows they are given. `docs/ENGINE-HISTORY.md` says which engine is which class. A new screen that
+  adds amounts reads `sumsOf(model)`, and one that lists or searches rows reads `dataset`. `ledgerModelSweep.test.ts`
+  runs the readings the screens make over a window for every viewed month and holds them to the same readings over
+  every row, which catches a wrong list in the Overview, the Spending view and the monthly tables; the wiring written
+  inline in the Dashboard, the statement rows and the newest month of Goals has no test that fails for a wrong list.
+  What a window cannot give is the newest rows by date (recent activity), the description index, counts of how many
+  rows carry a label, category or account, and the export of every transaction, which writes only the rows held.
+  A list of rows that shows a month the model holds only as sums shows nothing for it, never a cell. A model built
+  from `dataset` alone (`applyPatch` in `useExpenseData.ts`) has no `sums` or `history`, so it is only right for a
+  model that holds every row.
+
+- **The export reads a ledger in chunks of one table, by primary key, and the dataset is its specification.**
+  `readExportChunk` on `ExpenseRepository` backs `GET /api/expenses/export` and, in the same process, the backup
+  (a worker with D1 and R2 bindings has no Access session to call the route with). `EXPORT_TABLES` is in restore
+  order, `EXPORT_CHUNK_ROWS` bounds every table, and rows are the shapes `rows.ts` maps for the dataset, so a new
+  dataset table or column means a new entry or mapper there and a raise of `EXPORT_FORMAT`. A parity test fails
+  when the chunks put end to end stop equalling `loadDataset`'s table, and a plan test fails on a scan or a sort.
 
 - **A bulk write on a filter is refused unless the user's view still holds, and is one atomic batch.**
   `PATCH /api/expenses/transactions/bulk` with `{ filter, expectedCount, expectedRevision, patch }` and
