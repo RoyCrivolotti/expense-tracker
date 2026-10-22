@@ -23,7 +23,7 @@ import {
 } from '../../api/expenses/transactions/bulk'
 import type { Env } from '../env'
 import { invokePagesRoute } from '../invokePagesRoute'
-import { markOf, summarize, type MeasureOptions, type RouteResult } from './records'
+import { markOf, statementsSince, summarize, type MeasureOptions, type RouteResult } from './records'
 
 const BASE = 'https://expenses.test/api/expenses'
 
@@ -136,6 +136,7 @@ async function runCase(options: MeasureOptions, state: State, item: Case): Promi
     status: response.status,
     bytes: new TextEncoder().encode(text).length,
     summary,
+    statements: statementsSince(recorder, mark),
     unexpectedWrite: !item.writes && summary.rowsWritten > 0,
   }
 }
