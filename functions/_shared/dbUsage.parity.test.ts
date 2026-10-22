@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import { usageFromDataset } from '../../src/domain/engine/recordUsage'
 import type { ExpenseDataset } from '../../src/domain/types'
-import { accountUsageCount, categoryUsageCount } from '../../src/ui/definitions/recordUsage'
+import { heldCount } from '../../src/ui/definitions/recordUsage'
 import { adversarialLedger } from '../../src/testing/adversarialLedger'
 import { makeDataset, makeTransaction } from '../../src/testing/factories'
 import { inMemoryExpenseRepository } from '../../src/testing/inMemoryExpenseRepository'
@@ -75,10 +75,10 @@ describe('the counts the Settings lists show today', () => {
   it('are the SQL’s: transactions of any status, plans and statements for an account, tagged rows for a flag or label', async () => {
     for (const ledger of [randomLedger(2), randomLedger(21), adversarialLedger()]) {
       const { dataset, usage } = await served(ledger)
-      for (const c of usage.categories) expect(c.transactions + c.plans).toBe(categoryUsageCount(dataset, c.id))
-      for (const a of usage.accounts) expect(a.transactions + a.plans + a.statements).toBe(accountUsageCount(dataset, a.id))
-      for (const f of usage.flags) expect(f.transactions).toBe(dataset.transactions.filter((t) => t.flagId === f.id).length)
-      for (const l of usage.labels) expect(l.transactions).toBe(dataset.transactions.filter((t) => t.labelIds?.includes(l.id)).length)
+      for (const c of usage.categories) expect(c.transactions + c.plans).toBe(heldCount(dataset, 'category', c.id))
+      for (const a of usage.accounts) expect(a.transactions + a.plans + a.statements).toBe(heldCount(dataset, 'account', a.id))
+      for (const f of usage.flags) expect(f.transactions).toBe(heldCount(dataset, 'flag', f.id))
+      for (const l of usage.labels) expect(l.transactions).toBe(heldCount(dataset, 'label', l.id))
     }
   })
 
