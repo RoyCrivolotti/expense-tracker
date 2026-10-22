@@ -98,7 +98,7 @@ By default the app loads the whole ledger with one `GET /api/expenses`. A browse
   counts as `off` anywhere but a development or `--mode staging` build. Differences go to the console as
   `[ledger shadow]` and to `window.__ledgerShadow` (`checks` and `differences`); an empty `differences` after a few
   edits means the parts agree with the dataset.
-- When it falls back to the old load, and what it holds, are in [ARCHITECTURE.md](./ARCHITECTURE.md#in-the-browser).
+- When it falls back to the old load, and what it holds, are in [LEDGER-MODE.md](./LEDGER-MODE.md#the-switch-and-the-hand-back).
   With it on, the Transactions list is read a page at a time from the list and summary routes, and its count says
   `1000+` once there are more matches than the summary counts.
 - `npm run verify:ledger-mode` compares the demo instance's screens under `?ledger=off` and `?ledger=on`
