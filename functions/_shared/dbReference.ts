@@ -35,7 +35,7 @@ export async function rows<T>(db: D1Database, sql: string, owner: string): Promi
 }
 
 /** Group entries by checkin_id for O(1) lookup when assembling checkins. */
-function checkinsOf(
+export function checkinsOf(
   checkinRows: WealthCheckinRow[],
   entryRows: Array<WealthCheckinEntryRow & { checkin_id: number }>,
 ): WealthCheckin[] {

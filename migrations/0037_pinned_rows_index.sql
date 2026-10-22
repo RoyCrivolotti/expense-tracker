@@ -1,5 +1,5 @@
--- An index of the rows that stay real in any month, for GET /api/expenses/reference (docs/SCALING.md,
--- "Ledger parts"). That route sends every pinned row whatever its age: investments, rows tied to an
+-- An index of the rows that stay real in any month, for GET /api/expenses/reference (docs/API.md,
+-- "GET /reference"). That route sends every pinned row whatever its age: investments, rows tied to an
 -- instalment plan, a flag or a settlement, and payments that cover other rows. Three of those already
 -- have a partial index (plan_id, flag_id, settled_by). Investments and payments with a covered count
 -- have none, and a statement that has to look for them reads every row the owner has.

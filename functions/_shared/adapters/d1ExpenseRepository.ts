@@ -3,6 +3,8 @@ import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import { readSeries } from '../dbSeries'
 import { suggestDescriptions } from '../dbDescriptionSuggest'
+import { addLabelsToTransactions, bulkUpdateTransactionsByFilter } from '../dbBulkEdit'
+import { readExportChunk } from '../dbExport'
 import { readUsage } from '../dbUsage'
 import { getTransaction, queryTransactions, summarizeTransactions } from '../dbTransactionQuery'
 import { readLedgerReference, readMonthCells, readMonthRows } from '../dbLedgerParts'
@@ -69,12 +71,17 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     readSeries: (owner) => readSeries(env, owner),
     suggestDescriptions: (owner, request) => suggestDescriptions(env, owner, request),
     readUsage: (owner) => readUsage(env, owner),
+    readExportChunk: (owner, request) => readExportChunk(env, owner, request),
     insertTransaction: (owner, input) => insertTransaction(env, owner, input),
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
     deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
     bulkUpdateTransactions: (owner, ids, patch) =>
       bulkUpdateTransactions(env, owner, ids, patch),
+    bulkUpdateTransactionsByFilter: (owner, target, patch) =>
+      bulkUpdateTransactionsByFilter(env, owner, target, patch),
+    addLabelsToTransactions: (owner, target, labelIds) =>
+      addLabelsToTransactions(env, owner, target, labelIds),
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) =>
       setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
     setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
