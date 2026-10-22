@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
+import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { PresenceValue } from '../components/Presence'
@@ -32,6 +33,8 @@ interface TransactionsSelectFooterProps {
   actions?: ExpenseActions | undefined
   selection: SelectionState
   visibleIds: number[]
+  /** The rows on screen, which the chosen ones are among: what a rename says it replaces is read from them. */
+  rows: readonly Pick<Transaction, 'id' | 'description'>[]
   model: ExpenseModel
   /** More rows match than the list holds. */
   partial?: boolean | undefined
@@ -42,6 +45,7 @@ export function TransactionsSelectFooter({
   actions,
   selection,
   visibleIds,
+  rows,
   model,
   partial,
 }: TransactionsSelectFooterProps) {
@@ -58,14 +62,13 @@ export function TransactionsSelectFooter({
     () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
     [actionsEnabled, pendingBatchDelete, count, hiddenCount],
   )
-  const transactions = model.dataset.transactions
   const selected = selection.selected
   const editing = useMemo(
     () =>
       actionsEnabled && pendingBulkEdit
-        ? { count, hiddenCount, descriptions: summarizeDescriptions(transactions, selected) }
+        ? { count, hiddenCount, descriptions: summarizeDescriptions(rows, selected) }
         : null,
-    [actionsEnabled, pendingBulkEdit, count, hiddenCount, transactions, selected],
+    [actionsEnabled, pendingBulkEdit, count, hiddenCount, rows, selected],
   )
   return (
     <>

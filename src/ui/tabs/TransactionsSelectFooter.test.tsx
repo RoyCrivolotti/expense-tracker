@@ -48,6 +48,7 @@ function footer(selection: SelectionState, props: Partial<Props> = {}) {
       actionsEnabled
       selection={selection}
       visibleIds={VISIBLE}
+      rows={MODEL.dataset.transactions}
       model={MODEL}
       {...props}
     />
@@ -215,7 +216,7 @@ describe('TransactionsSelectFooter bulk edit', () => {
       }),
     )
     const selection = makeSelection({ pendingBulkEdit: true, selected: new Set([1, 2, 3]) })
-    render(footer(selection, { model }))
+    render(footer(selection, { model, rows: model.dataset.transactions }))
 
     await userEvent.click(screen.getByLabelText('Description'))
 

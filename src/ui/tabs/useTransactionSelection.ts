@@ -58,7 +58,9 @@ export function bulkOutcomeCopy(
  * but cannot be deleted or edited from where the user cannot see it.
  *
  * Pass `visibleIds` and `existingIds` from the list; without them every picked row counts
- * as visible.
+ * as visible. `existingIds` is for a list that holds every row there is: one that does not
+ * cannot tell a row it has not read from a row that was deleted elsewhere, so it leaves
+ * `existingIds` out and a chosen row it no longer shows counts as hidden.
  */
 export function useTransactionSelection(
   actions?: ExpenseActions,
@@ -67,6 +69,8 @@ export function useTransactionSelection(
   onSelectModeChange?: (selecting: boolean) => void,
   /** Looked up by id to union onto each row's own labels — see confirmBulkEdit. */
   transactions?: readonly Pick<Transaction, 'id' | 'labelIds'>[],
+  /** The list is read in pages, so the rows chosen are not all held and their labels cannot be looked up here. */
+  labelsByBulkRoute = false,
 ) {
   const { showToast } = useToast()
   const [selectMode, setSelectModeState] = useState(false)
@@ -186,13 +190,17 @@ export function useTransactionSelection(
    * removed by hand everywhere else in the app (see bulkEditFields.ts). Each
    * selected row keeps whatever it already has, plus whatever was picked.
    *
-   * One request per row, since there is no bulk label-set endpoint — a
-   * transaction's labels are replaced one at a time (setTransactionLabels). If
-   * any of them fails this throws like the patch above, landing in the same
-   * catch: a partial label application with no count attached would be a worse
+   * A list read in pages adds them through the bulk route, which keeps the labels a row has.
+   * Otherwise one request per row: a transaction's labels are replaced one at a time
+   * (setTransactionLabels). If any of them fails this throws like the patch above, landing in
+   * the same catch: a partial label application with no count attached would be a worse
    * outcome than one "could not update" toast covering both.
    */
   const applyLabelAdditions = async (ids: number[], labelIdsToAdd: number[]) => {
+    if (labelsByBulkRoute && actions!.addLabels) {
+      await actions!.addLabels(ids, labelIdsToAdd)
+      return
+    }
     const byId = new Map((transactions ?? []).map((t) => [t.id, t.labelIds]))
     await Promise.all(
       ids.map((id) => {

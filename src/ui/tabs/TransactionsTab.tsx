@@ -297,6 +297,7 @@ export function TransactionsTab({
         actions={actions}
         selection={state}
         visibleIds={state.visibleIds}
+        rows={state.results}
         model={model}
         partial={state.partial}
       />

@@ -275,9 +275,10 @@ export function useTransactionsTabState(
     [list.listRows],
   )
 
+  // Only a model that holds every row can say a row is gone: one that holds a window has not read the rest.
   const existingIds = useMemo(
-    () => model.dataset.transactions.map((t) => t.id),
-    [model.dataset.transactions],
+    () => (model.sums === undefined ? model.dataset.transactions.map((t) => t.id) : undefined),
+    [model.dataset.transactions, model.sums],
   )
 
   // This tab does not remount on a filter or month change, so the selection is told what
@@ -288,6 +289,7 @@ export function useTransactionsTabState(
     existingIds,
     shell.onSelectModeChange,
     model.dataset.transactions,
+    model.pagedList !== undefined,
   )
 
   return {
