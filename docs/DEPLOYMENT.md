@@ -267,7 +267,7 @@ the receipts matter.
 because the `transaction_attachments` rows are the only record of which objects are theirs. The R2 half is best-effort:
 if it fails the revoke completes and logs `revoke: <n> receipt object(s) for <email> were not deleted (<reason>)`, and
 then, or to catch objects no row ever named, sweep the `{owner-email}/` prefix with `npx wrangler r2 object delete`. If
-the D1 half fails the user is already revoked, so send the same revoke again and it finishes the purge.
+the D1 half fails the user is already revoked (or has lost the `expenses` group), so send the same request again.
 
 ## Scheduled backups (R2)
 

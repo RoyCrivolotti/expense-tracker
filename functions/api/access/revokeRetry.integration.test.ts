@@ -10,6 +10,7 @@ import { OTHER, OWNER, createExpenseWorld, pinClock, type World } from '../../_s
 import { invokeApiRoute } from '../../_shared/testing/invokeApiRoute'
 import { seedLedger } from '../../_shared/testing/seedLedger'
 import { onRequestPost as revoke } from './admin/revoke'
+import { onRequestPatch as patchGrants } from './admin/users/[email]/grants'
 
 let world: World
 let sqlite: DatabaseSync
@@ -18,6 +19,7 @@ beforeEach(async () => {
   pinClock('2026-10-15')
   sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
+  await seedLedger(world)
   const asOther = { ...world, call: (h, o = {}) => world.call(h, { ...o, email: OTHER }) } as World
   await seedLedger(asOther)
 })
@@ -79,5 +81,44 @@ describe('revoking a user whose purge failed', () => {
 
   it('still refuses to revoke the owner', async () => {
     expect((await revokeOther(OWNER)).status).toBe(400)
+  })
+})
+
+describe('switching the expenses group off for a user whose purge failed', () => {
+  const switchOff = () =>
+    invokeApiRoute({
+      handler: patchGrants,
+      env: world.env,
+      url: `https://expenses.test/api/access/admin/users/${OTHER}/grants`,
+      method: 'PATCH',
+      params: { email: OTHER },
+      body: { groups: { expenses: false } },
+      email: OWNER,
+    })
+
+  it('finishes the purge when the request is repeated', async () => {
+    let failures = 1
+    world.intercept((sql) => {
+      if (sql.startsWith('DELETE FROM transactions WHERE owner') && failures-- > 0) throw new Error('D1 is down')
+    })
+
+    expect((await switchOff()).status).toBe(500)
+    expect(rowsOf('user_group_grants', 'email')).toBe(0)
+    expect(rowsOf('transactions')).toBeGreaterThan(0)
+
+    expect((await switchOff()).status).toBe(200)
+
+    expect(rowsOf('transactions')).toBe(0)
+    expect(rowsOf('categories')).toBe(0)
+    expect(status()).toBe('active')
+  })
+
+  it('leaves the other owner’s data alone', async () => {
+    const before = (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n
+
+    expect((await switchOff()).status).toBe(200)
+    expect((await switchOff()).status).toBe(200)
+
+    expect((sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n).toBe(before)
   })
 })

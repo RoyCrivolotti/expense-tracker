@@ -230,10 +230,10 @@ export async function updateUserGroupGrants(
       await deps.repo.grantGroup(email, rawId, approverEmail)
       continue
     }
-    const hadGrant = await deps.repo.revokeGroup(email, rawId)
-    if (rawId === 'expenses' && hadGrant) {
-      await purgeOwnerData(deps.env, email)
-    }
+    await deps.repo.revokeGroup(email, rawId)
+    // Not only when a grant was removed: a purge that failed leaves no grant to remove on the repeat, and nothing
+    // else would ever purge the data. The purge is safe to repeat.
+    if (rawId === 'expenses') await purgeOwnerData(deps.env, email)
   }
 
   return { email, groups: await resolveGroupGrants(deps, email) }
