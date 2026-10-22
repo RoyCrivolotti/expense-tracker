@@ -146,6 +146,8 @@ export class LedgerSession {
   private epochs: Epochs = NO_EPOCHS
   /** Views that are reading months right now. */
   private hydratingViews = 0
+  /** The read of the ledger that the last write of a plan started. */
+  private planRead: Promise<void> | null = null
   private readonly stale = new Set<string>()
   private flushing = false
   private readonly readingReceipts = new Set<number>()
@@ -338,8 +340,21 @@ export class LedgerSession {
     if (cascade !== null || touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
     this.set({ held: done.held })
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
-    if (cascade !== null) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
-    else if (done.stale.length > 0) void this.flushCube()
+    if (cascade === null) {
+      if (done.stale.length > 0) void this.flushCube()
+      return
+    }
+    const read = this.refreshLedger()
+    read.catch((error: unknown) => this.set({ error: reason(error) }))
+    if (cascade === 'plan') this.planRead = read
+  }
+
+  /**
+   * Resolves at once, or when the read of the ledger a write of a plan started has finished. That read is what makes
+   * the server insert the instalments that are due, so a list read before it does not have them.
+   */
+  afterPlanWrite(): Promise<void> {
+    return (this.planRead ?? Promise.resolve()).catch(() => undefined)
   }
 
   /**

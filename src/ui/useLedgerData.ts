@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { applyWrite } from '../data/applyWrite'
 import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import { LedgerSession, type SessionOptions, type SessionState } from '../data/ledgerSession'
@@ -195,9 +196,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
 
   // A list read from the server does not see a write until it is read again.
   const applyPatch = useCallback<ExpenseData['applyPatch']>(
-    (patch, reach) => {
-      if (session.patch(patch, reach)) pager.refresh({ summary: true })
-    },
+    (patch, reach) => applyWrite(session, pager, patch, reach),
     [session, pager],
   )
   const viewMonth = useCallback((month: string) => void session.view(month), [session])

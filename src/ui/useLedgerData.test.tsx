@@ -535,6 +535,44 @@ describe('useLedgerData, the list read in pages', () => {
     await waitFor(() => expect(pageReads(source)).toBe(before + 1))
   })
 
+  describe('while the ledger is being read again after a cascade', () => {
+    /** Holds the read of the reference, which is where the server inserts a plan's instalments, until `release`. */
+    async function gatedReference() {
+      const started_ = await started()
+      const read = started_.source.readReferencePart.bind(started_.source)
+      let release = () => {}
+      const gate = new Promise<void>((resolve) => (release = resolve))
+      started_.source.readReferencePart = async () => {
+        await gate
+        return read()
+      }
+      return { ...started_, release }
+    }
+    const plan = (d: ExpenseDataset) => patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Sofa' })
+
+    it('reads the list after the ledger when a plan was written, so that its instalments are in it', async () => {
+      const { source, result, release } = await gatedReference()
+      const before = pageReads(source)
+
+      act(() => result.current.applyPatch(plan))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      expect(pageReads(source)).toBe(before)
+
+      release()
+      await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+    })
+
+    it('reads the list at once for a cascade that inserts nothing, since the ledger tells it nothing it lacks', async () => {
+      const { source, result, release } = await gatedReference()
+      const before = pageReads(source)
+
+      act(() => result.current.applyPatch((d) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })))
+
+      await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+      release()
+    })
+  })
+
   it('reads nothing for a write made while no screen shows the list, and reads the list when one does', async () => {
     const { source, pager, detach, result } = await started()
     detach()
