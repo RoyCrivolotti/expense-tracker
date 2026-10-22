@@ -338,7 +338,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // by 657 (166,345 to 167,002, for the selection hook, the bar, the footer and what a write tells the data layer about
 // the rows it reached). The bulk writes themselves, the session's read after a write and the pager's offer sit in the
 // chunks only the ledger mode loads, which went from 12,526 to 13,279 bytes of their 16,000.
-const TOTAL_MAX_GZIP = 286_970
+//
+// Lowered from 286,970 to 286,660 bytes once what a list read in pages adds to the selection (the way on to "Select all
+// N", the note, the delete that cannot be made, the edit through the filter) moved into the chunk only the ledger mode
+// loads: the default path measures 286,602, 311 under what it was and 441 over its size before the write side landed
+// (the entry chunk 166,705, from 167,002). The seams that stay are the model's `useSelection`, the bar's overrides and
+// what a row write tells the data about the rows it reached. The ledger-only chunks went from 13,279 to 13,834 of 16,000.
+const TOTAL_MAX_GZIP = 286_660
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 

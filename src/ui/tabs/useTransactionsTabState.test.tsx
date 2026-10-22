@@ -473,14 +473,4 @@ describe('useTransactionsTabState — rows that are not held', () => {
 
     expect(result.current.hiddenCount).toBe(0)
   })
-
-  it('keeps a chosen row nobody holds as a row not shown, when the model holds only a window', () => {
-    // A row that is not held is a row nobody here has read, not one that was deleted elsewhere.
-    const windowed = { ...held(), sums: held().dataset }
-    const { result } = renderHook(() => useTransactionsTabState(windowed, '2026-05', undefined))
-
-    act(() => result.current.selectAll([1, 999]))
-
-    expect(result.current.hiddenCount).toBe(1)
-  })
 })

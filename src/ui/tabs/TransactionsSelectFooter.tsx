@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { BulkTransactionPatch, MatchingTarget } from '../../data/dataSource'
+import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -9,20 +9,22 @@ import { BatchBar } from './BatchBar'
 import { BatchDeleteConfirm } from './BatchDeleteConfirm'
 import { BulkEditSheet } from './BulkEditSheet'
 import { summarizeDescriptions } from './bulkEditFields'
+import type { BarOverrides } from '../transactionListView'
 
 interface SelectionState {
   selectMode: boolean
   selected: ReadonlySet<number>
-  selectedCount: number
-  allMatching: MatchingTarget | null
-  matchingOffer: MatchingTarget | null
+  /** What the bar and the sheet count, when that is not `selected` (see `Selection`). */
+  selectedCount?: number | undefined
+  describable?: boolean | undefined
+  bar?: BarOverrides | undefined
+  selectMatching?: (() => void) | undefined
   hiddenCount: number
   busy: boolean
   pendingBatchDelete: boolean
   pendingBulkEdit: boolean
   toggleSelectMode: () => void
   selectAll: (ids: number[]) => void
-  selectMatching: () => void
   deselectAll: () => void
   requestBatchDelete: () => void
   cancelBatchDelete: () => void
@@ -53,31 +55,28 @@ export function TransactionsSelectFooter({
   model,
   partial,
 }: TransactionsSelectFooterProps) {
-  const { selectMode, pendingBatchDelete, pendingBulkEdit, selectedCount: count, allMatching, matchingOffer } = selection
-  // Rows picked and then hidden by a filter are not part of an edit on every matching row.
-  const hiddenCount = allMatching ? 0 : selection.hiddenCount
+  const { selectMode, pendingBatchDelete, pendingBulkEdit, hiddenCount } = selection
+  const count = selection.selectedCount ?? selection.selected.size
   const total = visibleIds.length
-  // The count the bar offers is the one the filter was last read to have, when it is more than the list holds.
-  const matchingCount = partial && matchingOffer && matchingOffer.expectedCount > total ? matchingOffer.expectedCount : undefined
-  const matchingActive = allMatching !== null
+  const overrides = selection.bar
   // What each surface shows is held while it leaves. Deleting clears the selection, and
   // without this the words "3 selected" would change to "0 selected" as the bar slid away.
   const bar = useMemo(
-    () => (selectMode ? { count, total, hiddenCount, partial: partial ?? false, matchingCount, matchingActive } : null),
-    [selectMode, count, total, hiddenCount, partial, matchingCount, matchingActive],
+    () => (selectMode ? { count, total, hiddenCount, partial: partial ?? false, overrides } : null),
+    [selectMode, count, total, hiddenCount, partial, overrides],
   )
   const deleting = useMemo(
     () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
     [actionsEnabled, pendingBatchDelete, count, hiddenCount],
   )
   const selected = selection.selected
-  // Of every matching row only the ones on screen are known, so a rename cannot say what it replaces.
+  const describable = selection.describable !== false
   const editing = useMemo(
     () =>
       actionsEnabled && pendingBulkEdit
-        ? { count, hiddenCount, descriptions: matchingActive ? [] : summarizeDescriptions(rows, selected) }
+        ? { count, hiddenCount, descriptions: describable ? summarizeDescriptions(rows, selected) : [] }
         : null,
-    [actionsEnabled, pendingBulkEdit, count, hiddenCount, matchingActive, rows, selected],
+    [actionsEnabled, pendingBulkEdit, count, hiddenCount, describable, rows, selected],
   )
   return (
     <>
@@ -90,14 +89,21 @@ export function TransactionsSelectFooter({
             totalCount={shown.total}
             hiddenCount={shown.hiddenCount}
             partial={shown.partial}
-            matchingCount={shown.matchingCount}
-            matchingActive={shown.matchingActive}
+            selectAll={
+              shown.overrides?.allLabel === undefined
+                ? undefined
+                : {
+                    label: shown.overrides.allLabel,
+                    onClick: shown.overrides.matching ? selection.selectMatching! : selection.deselectAll,
+                  }
+            }
+            note={shown.overrides?.note}
+            deleteBlocked={shown.overrides?.deleteBlocked}
             busy={selection.busy}
             readOnly={!actionsEnabled}
             editOpen={pendingBulkEdit}
             onCancel={selection.toggleSelectMode}
             onSelectAll={() => selection.selectAll(visibleIds)}
-            onSelectMatching={selection.selectMatching}
             onDeselectAll={selection.deselectAll}
             onEdit={selection.requestBulkEdit}
             onDelete={selection.requestBatchDelete}

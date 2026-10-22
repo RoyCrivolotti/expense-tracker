@@ -77,12 +77,12 @@ export function useExpenseActions(
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       createTransaction: async (input: NewTransaction) => {
         const txn = await source.createTransaction!(input)
-        applyPatch((d) => patchAfterTransactionCreate(d, txn), { ids: [txn.id] })
+        applyPatch((d) => patchAfterTransactionCreate(d, txn))
         return txn
       },
       createTransactions: async (inputs: NewTransaction[]) => {
         const txns = await source.createTransactions!(inputs)
-        applyPatch((d) => patchAfterBulkCreate(d, txns), { ids: txns.map((txn) => txn.id) })
+        applyPatch((d) => patchAfterBulkCreate(d, txns))
       },
       updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
         const txn = await source.updateTransaction!(id, patch)

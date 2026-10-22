@@ -26,9 +26,6 @@ function makeSelection(overrides: Partial<SelectionState> = {}): SelectionState 
   return {
     selectMode: true,
     selected,
-    selectedCount: selected.size,
-    allMatching: null,
-    matchingOffer: null,
     selectMatching: vi.fn(),
     hiddenCount: 0,
     busy: false,
@@ -115,12 +112,11 @@ describe('TransactionsSelectFooter selection bar', () => {
   })
 })
 
-describe('TransactionsSelectFooter, every row the filter matches', () => {
-  const target = { filter: { categoryId: 4 }, expectedCount: 342, expectedRevision: 'r9' }
+describe('TransactionsSelectFooter, a list that can select more than the rows it holds', () => {
   const all = new Set(VISIBLE)
 
-  it('goes on from the rows the list holds to all that match, once those are all selected and more match', async () => {
-    const selection = makeSelection({ selected: all, matchingOffer: target })
+  it('puts its select button in place of the usual one, and its handler under it', async () => {
+    const selection = makeSelection({ selected: all, bar: { allLabel: 'Select all 342', matching: true } })
     render(footer(selection, { partial: true }))
 
     await userEvent.click(screen.getByRole('button', { name: 'Select all 342' }))
@@ -129,45 +125,27 @@ describe('TransactionsSelectFooter, every row the filter matches', () => {
     expect(selection.deselectAll).not.toHaveBeenCalled()
   })
 
-  it.each([
-    ['some of the rows the list holds are not selected', { selected: new Set([1, 2]) }, true],
-    ['the list holds every row there is', { selected: all }, false],
-  ])('does not offer them when %s', (_name, overrides, partial) => {
-    render(footer(makeSelection({ ...overrides, matchingOffer: target }), { partial }))
-
-    expect(screen.queryByRole('button', { name: 'Select all 342' })).toBeNull()
-  })
-
-  it('does not offer them when no more match than the list holds', () => {
-    render(footer(makeSelection({ selected: all, matchingOffer: { ...target, expectedCount: VISIBLE.length } }), { partial: true }))
-
-    expect(screen.queryByRole('button', { name: /^Select all \d+$/ })).toBeNull()
-  })
-
-  it('counts them, offers no delete, and lets go of them with one press', async () => {
-    const selection = makeSelection({ selected: all, selectedCount: 342, allMatching: target, matchingOffer: target, hiddenCount: 4 })
+  it('counts what the selection says, notes that it can be edited only, and lets go with one press', async () => {
+    const selection = makeSelection({
+      selected: all,
+      selectedCount: 342,
+      hiddenCount: 0,
+      bar: { allLabel: 'Deselect all', matching: false, note: 'edit only', deleteBlocked: true },
+    })
     render(footer(selection, { partial: true }))
 
     expect(screen.getByText('342 selected')).toBeInTheDocument()
     expect(screen.getByText('edit only')).toBeInTheDocument()
-    expect(screen.queryByText(/not shown/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Deselect all' }))
     expect(selection.deselectAll).toHaveBeenCalledTimes(1)
   })
 
-  it('edits them as that many transactions, with no hidden rows and nothing to say a rename replaces', async () => {
-    const selection = makeSelection({
-      selected: all,
-      selectedCount: 342,
-      allMatching: target,
-      pendingBulkEdit: true,
-      hiddenCount: 4,
-    })
+  it('edits that many transactions, and has nothing to say a rename replaces', async () => {
+    const selection = makeSelection({ selected: all, selectedCount: 342, describable: false, pendingBulkEdit: true })
     render(footer(selection, { rows: [makeTransaction({ id: 1, description: 'NETFLIX.COM' })] }))
 
     expect(screen.getByText('342 transactions')).toBeInTheDocument()
-    expect(screen.queryByRole('note')).toBeNull()
     await userEvent.click(screen.getByLabelText('Description'))
     expect(screen.queryByText(/^Replaces/)).toBeNull()
   })

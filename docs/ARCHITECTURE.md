@@ -227,8 +227,9 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   the list. `useExpenseActions` passes each row write's reach (`WriteReach`: the ids it named and the fields it wrote)
   to `LedgerSession.patch`, which reads the rows and sums again, once, if any id was not held as a row (asked before the
   patch removes it), and notes the series stale only if the fields written could change one (`reshapesSeries`; rows
-  added or removed always could). A ledger held in full holds every id and needs nothing more. A write that answers
-  with counts and not rows (labels added through the bulk route, an edit on a filter) names no ids and is always
+  removed always could). A ledger held in full holds every id and needs nothing more, and a row the write added is not
+  one the session can be missing: the patch counts it in its month and that month's sums are read again. A write that
+  answers with counts and not rows (labels added through the bulk route, an edit on a filter) names no ids and is always
   followed by the read, and so is a bulk write that fails, since part of it may have gone through.
   `ledgerWrites.client.integration.test.ts` holds the sums after each kind of write to those of a fresh read.
 - **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
@@ -281,7 +282,11 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   It offers no delete, because a delete names its ids (the browser sends more than 500 in several requests), and a
   rename cannot say what it replaces, since only the rows on screen are known. With labels and an edit together the
   labels go first, as adding them never changes which rows match, and the revision is read again between the two
-  requests. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
+  requests. A write from another tab in between that swaps one matching row for another leaves the count as it was, so
+  the edit can reach a row the user was not shown; the server has no single request for both. Rows chosen one by one
+  are edited through the filter too when they are exactly the rows it matches: that costs about a statement for every
+  twenty rows, an edit by id three for each, so by id a request names at most 100 until a larger one has been measured
+  on D1. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
   so it counts it as not shown.
 
 ## Size and complexity

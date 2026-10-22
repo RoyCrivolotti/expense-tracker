@@ -399,21 +399,25 @@ describe('useExpenseActions — what a write reached', () => {
     expect(reach).toEqual({ patch: {} })
   })
 
-  it('tells the data which row a single edit, delete or create named', async () => {
+  it('tells the data which row a single edit, delete or label change named, and nothing of a row it created', async () => {
     const { applyPatch, actions } = setup({
       createTransaction: vi.fn().mockResolvedValue(savedTxn),
+      createTransactions: vi.fn().mockResolvedValue([savedTxn]),
       updateTransaction: vi.fn().mockResolvedValue(savedTxn),
       deleteTransaction: vi.fn().mockResolvedValue(undefined),
       setTransactionLabels: vi.fn().mockResolvedValue(savedTxn),
     })
 
     await act(() => actions().createTransaction(newTxn))
+    await act(() => actions().createTransactions([newTxn]))
     await act(() => actions().updateTransaction(42, { description: 'Tea' }))
     await act(() => actions().deleteTransaction(42))
     await act(() => actions().setTransactionLabels(42, [1]))
 
+    // A row that did not exist is not one the session can be missing: the patch adds it, whichever month it is in.
     expect(applyPatch.mock.calls.map(([, reach]) => reach)).toEqual([
-      { ids: [42] },
+      undefined,
+      undefined,
       { ids: [42], patch: { description: 'Tea' } },
       { ids: [42] },
       { ids: [42], patch: {} },
