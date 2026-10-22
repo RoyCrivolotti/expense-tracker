@@ -48,7 +48,7 @@ export function withOlderDescriptions(
 ): DescriptionIndex {
   const asked = new Map<string, DescriptionMatch[]>()
 
-  function useSuggestions(_index: DescriptionIndex, value: string): DescriptionSuggestion[] {
+  function useSuggestions(current: DescriptionIndex, value: string): DescriptionSuggestion[] {
     const prefix = normalizeDescriptionKey(value)
     const own = useMemo(() => (prefix ? index.searchEntries(value) : []), [prefix, value])
     const [last, setLast] = useState<{ prefix: string; items: DescriptionMatch[] } | null>(null)
@@ -70,7 +70,7 @@ export function withOlderDescriptions(
         clearTimeout(timer)
         controller.abort()
       }
-    }, [prefix, asked]) // a new index is a new set of rows, and what was read for the old ones no longer holds
+    }, [prefix, current]) // a new index is a new set of rows, and what was read for the old ones no longer holds
     // Until the read for this prefix is in, the matches of the shorter one that still fit it are shown, so that older
     // matches do not drop out of the list and come back as the typing goes on.
     const older =
