@@ -109,6 +109,7 @@ const CASES: Record<string, (ids: SeededIds) => Request & { status: number }> = 
   'PATCH /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[0]}`, params: id(ids.transactions[0]!), body: { description: 'Edited' } }),
   'DELETE /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.spareTransaction}`, params: id(ids.spareTransaction) }),
   'PUT /transactions/:id/labels': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[1]}/labels`, params: id(ids.transactions[1]!), body: { labelIds: [] } }),
+  'POST /transactions/bulk/labels': (ids) => ({ status: 200, path: '/transactions/bulk/labels', body: { ids: [ids.transactions[0]], labelIds: [ids.label] } }),
   'POST /transactions/bulk': (ids) => ({ status: 201, path: '/transactions/bulk', body: { transactions: [expense(ids, '2026-10-09', 'Bulk one'), expense(ids, '2026-10-10', 'Bulk two')] } }),
   'PATCH /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.transactions[0]], patch: { categoryId: ids.travel } } }),
   'DELETE /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.spareTransaction] } }),
@@ -126,6 +127,7 @@ const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
   'GET /attachments/:id': (ids) => ({ path: `/attachments/${ids.attachment}`, params: id(ids.attachment) }),
   'GET /cube': () => ({ path: '/cube?from=2026-01&to=2026-12' }),
   'GET /descriptions/suggest': () => ({ path: '/descriptions/suggest?q=ma' }),
+  'GET /export': () => ({ path: '/export?table=transactions' }),
   'GET /reference': () => ({ path: '/reference' }),
   'GET /usage': () => ({ path: '/usage' }),
   'GET /transactions/months': () => ({ path: '/transactions/months?from=2026-01&to=2026-12' }),
@@ -232,6 +234,56 @@ describe('a read never moves the revision', () => {
       expect(response.status).toBe(200)
     }
     expect(world.token()).toBe(tokenBefore)
+  })
+})
+
+describe('the token a write replaced', () => {
+  const seeing = (record: (value: unknown) => void): Handler => (context) => {
+    record(context.data.revisionBeforeWrite)
+    return new Response('ok')
+  }
+
+  it('reaches the handler, so a write can tell whether the ledger moved since it was looked at', async () => {
+    const before = world.token()
+    let seen: unknown = 'unset'
+
+    await world.call(seeing((value) => (seen = value)), { method: 'PATCH', path: '/anything' })
+
+    expect(before).not.toBeNull()
+    expect(seen).toBe(before)
+    expect(world.token()).not.toBe(before)
+  })
+
+  it('is the token the previous write left behind', async () => {
+    const first = world.token()
+    let seen: unknown = 'unset'
+    await world.call(seeing(() => undefined), { method: 'POST', path: '/anything' })
+    const second = world.token()
+
+    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything' })
+
+    expect(seen).toBe(second)
+    expect(seen).not.toBe(first)
+  })
+
+  it('is null for an owner who has no token yet', async () => {
+    let seen: unknown = 'unset'
+    expect(world.token(OTHER)).toBeNull()
+
+    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything', email: OTHER })
+
+    expect(seen).toBeNull()
+    expect(world.token(OTHER)).not.toBeNull()
+  })
+
+  it('is not read for a request that cannot write', async () => {
+    let seen: unknown = 'unset'
+    world.clearLog()
+
+    await world.call(seeing((value) => (seen = value)), { path: '/anything' })
+
+    expect(seen).toBeUndefined()
+    expect(world.log.some((sql) => sql.includes('FROM owner_revision'))).toBe(false)
   })
 })
 

@@ -1,19 +1,14 @@
 # How much history each engine reads
 
-Every screen runs the engines in `src/domain/engine/` over the full `Transaction[]`. This page records, for each
-engine and each screen that feeds one, how much of that history its output depends on, measured from the month the
-app is showing (M) and from today (T). It matters to anything that stops handing an engine the whole ledger, such as
-the model in [SCALING.md](./SCALING.md) (real rows for some months, per-month sums for the rest, pinned rows that
-are always real): an engine can be given less history only if its output does not change. That model is built, in
-`src/domain/ledger` (see [The ledger model](#the-ledger-model)). The screens read a model through its `sums` and
-`history`, but the app does not build a model from a ledger yet (see the invariant on the two row lists in
-[ARCHITECTURE.md](./ARCHITECTURE.md)).
+For an engineer deciding how little of the ledger an engine or screen can be given. Every screen runs the engines in
+`src/domain/engine/` over the full `Transaction[]`. This page records, for each engine and each screen that feeds one, how
+much of that history its output depends on, measured from the month the app is showing (M) and from today (T). An engine can
+be given less history (real rows for some months, per-month sums for the rest, pinned rows always real, as in
+[SCALING.md](./SCALING.md)) only if its output does not change.
 
-`src/testing/engineHistory.test.ts` pins the properties marked *tested*. It assembles the ledger with that model
-(real rows for some months, one summed row per (budget month, account, category, type, cancelled, sign) cell for the
-rest, pinned rows kept real) and compares each engine's output with its output on the full 60 month synthetic ledger
-from `src/testing/syntheticLedger.ts`. `ledgerDifferential.test.ts` and `ledgerSweep.test.ts` repeat the comparison
-for every consumer below on 80 seeded random ledgers and on every viewed month of a 60 month adversarial one.
+`src/testing/engineHistory.test.ts`, `ledgerDifferential.test.ts` and `ledgerSweep.test.ts` hold these properties. They
+assemble a ledger with the model in `src/domain/ledger` and compare each engine's output with its output over every row, on a
+60 month synthetic ledger, on 80 seeded random ledgers and on every viewed month of a 60 month adversarial one.
 
 ## Terms
 
@@ -24,7 +19,7 @@ for every consumer below on 80 seeded random ledgers and on every viewed month o
   `analyticsPeriod.ts` returns no cut for any other month).
 - **Windows count months with data, not calendar months.** `monthsForPeriod`, `computeMovers`,
   `computeSpendingGroups` and `computeSpendingBaseline` slice the `months` list, so a gap in the data stretches every
-  one of them. Tested: with a five month gap the three month average reaches eight months back.
+  one of them: with a five month gap the three month average reaches eight months back.
 - **S** only sums amounts, so one summed row per cell gives the same output. **R** needs real rows (dates,
   descriptions, labels, or a per-row fixed or flexible call) for some months. **P** reads rows by link or by exact
   date: investments, and rows with a plan, flag or settlement. **X** needs a whole series across time.
@@ -44,7 +39,7 @@ for every consumer below on 80 seeded random ledgers and on every viewed month o
 | `averageMonthlySpendCents`, `cashReserve` (`cashReserve.ts`) | none | The 12 newest months before the open month whose net expense is not zero | S | Forecast rows are left out (the `computeMonthlyTotals` default) |
 | `monthlyFlows`, `paceMonths`, `averageMonthlyCents` (`goals.ts`) | none | From the plan start (or the first month with a row) to the last month before the open month. The Goals mean runs over every month; the savings chart keeps 24 | S | A month with no row inside the range counts as zero, so month presence matters |
 | `computeSpendingBaseline` (`spendingBaseline.ts`) | The 12 months with data before M, whole months | none | S | Instalment plans, not rows |
-| `computeOverviewKpis` (`overviewKpis.ts`) | The period: M, January to M, or 12 months with data. The baseline: the previous month with data, the 3 before M, M-12, or the period shifted back a year (to M-23 without gaps). Sparklines: 12 months with data ending at M | Only when M is the open month: M and every comparison month are cut by date (`withinCut`); a window baseline cuts just its M-12 month | S for a closed M (tested: all 18 period, compare and basis combinations with no real rows). R, for dates, in M and the comparison months while M is open | |
+| `computeOverviewKpis` (`overviewKpis.ts`) | The period: M, January to M, or 12 months with data. The baseline: the previous month with data, the 3 before M, M-12, or the period shifted back a year (to M-23 without gaps). Sparklines: 12 months with data ending at M | Only when M is the open month: M and every comparison month are cut by date (`withinCut`); a window baseline cuts just its M-12 month | S for a closed M, whatever the period, comparison and basis. R, for dates, in M and the comparison months while M is open | |
 | `unpaidExpenseCents` (`analyticsPeriod.ts`) | The sparkline months | none | S | |
 | `computeAllocation` (`allocation.ts`) | M only | Cut while M is open | R (M) and X (classifier) | |
 | `computeMovers` (`movers.ts`) | M and the 3 months with data before it | Cut while M is open | R and X | Per-row fixed call |
@@ -66,12 +61,11 @@ The remaining engines in `src/domain/engine/` take no `Transaction[]`: `reimburs
 `receiptFiles` a report, `receiptStorage` attachments, `analyticsSignals` cash rows, and the projection and goal
 engines take `MonthlyFlow` or scenarios.
 
-Measured on the synthetic ledger, the fewest real months before M that make an engine match the full ledger, with
-pinned rows kept (0 means M itself). While M is the open month: 0 for the allocation, 1 for the previous month
-baseline, 2 for the pace, 3 for movers, category groups and the 3 month baseline, about 11 for label and description
-rows, and 12 for the year-ago baselines. For a closed month the KPIs need no real rows at all, the allocation and
-category groups need M (the row count and the per-row call), and movers and pace still need 3 and 2. The label and
-description figures depend on how the generator spreads labels; the 1, 3, 12 and the gap behaviour do not.
+The fewest real months before M that make an engine match the full ledger, with pinned rows kept (0 means M itself). While
+M is the open month: 0 for the allocation, 1 for the previous month baseline, 2 for the pace, 3 for movers, category groups
+and the 3 month baseline, and 12 for the year-ago baselines. For a closed month the KPIs need no real rows at all, the
+allocation and category groups need M (the row count and the per-row call), and movers and pace still need 3 and 2. Label
+and description rows have no fixed bound: it depends on how labels are spread across months.
 
 ## Screens
 
@@ -94,48 +88,49 @@ description figures depend on how the generator spreads labels; the 1, 3, 12 and
 | Upcoming (`useUpcoming`) | T, no M: the whole series |
 | Settings: statement toggles (`StatementToggles`), stopped suggestions (`StoppedSuggestionsSetting`) | Every month and card; the whole series |
 
-## The ledger model
+## The ledger's row lists
 
-`src/domain/ledger` splits a full dataset into a `Ledger` and assembles the row lists the engines take. It is pure
-code with no I/O, and it changes no engine.
+`src/domain/ledger` splits a dataset into a `Ledger` and assembles the row lists the engines take. It is pure code and
+changes no engine. The parts of a ledger are in [SCALING.md](./SCALING.md). These are the details the engines depend on.
 
-- **Pinned rows** (`isPinned`) stay real in any month: every investment, any row with a `planId`, `flagId` or
-  `settledBy`, any row another row points at through `settledBy`, and any payment with a `reportCount`.
-- **Hydrated months** hold every row dated in them. `chooseHydratedMonths` takes the 13 newest months with data up
-  to and including the viewed month (`HYDRATED_DATA_MONTHS`). `hydratedMonthsFor` is the size policy: a ledger of at
-  most `FULL_HYDRATION_ROW_LIMIT` (5,000) rows hydrates every month and has no cells, so the lists it assembles are
-  the dataset's own rows and today's behavior is the degenerate case.
-- **Cells** (`buildCells`) sum every other row, one per (budget month, account, category, type, cancelled, sign) with
-  the summed cents and a row count. They never contain a pinned row, or an investment would be counted twice (the
-  differential tests show it). A cell is kept when its sum is zero or every row in it is cancelled. A cell is a
-  `MonthCell`, not a `Transaction`, so it cannot be put in `dataset.transactions` by accident. `cellRows` makes one
-  row from each (negative id, empty description, the first day of its month) and derives its status from the account
-  and the statements as they are then, so toggling a statement needs no change to a cell.
-- **Two lists** come out of `assembleRows`. `linear` is pinned rows, hydrated rows and the cell rows: it goes to the
-  engines that only add amounts, to the list of months, and to the spending groups and their detail, which read a 12
-  month trend of sums beside the rows of the viewed month. `real` is pinned and hydrated rows only: it goes to the
-  engines that read dates, descriptions, labels, links or whole series, and to anything shown to the user as a
-  transaction. `src/testing/engineOutputs.ts` lists which consumer gets which.
+- **Pinned rows** (`isPinned`) stay real in any month: every investment, any row with a `planId`, `flagId` or `settledBy`,
+  any row another row points at through `settledBy`, and any payment with a `reportCount`. Unpinned, the portfolio return,
+  gap split, flagged groups, past reports and plan progress all change.
+- **Hydrated months** are chosen by budget month. `chooseHydratedMonths` takes the 13 newest months with data up to and
+  including the viewed month (`HYDRATED_DATA_MONTHS`), and every row booked to them is real. A calendar window of M-13 to M
+  is one month more than the readers need when there is no gap and too short across one. `hydratedMonthsFor` is the size
+  policy: a ledger of at most `FULL_HYDRATION_ROW_LIMIT` (5,000) rows hydrates every month and has no cells.
+- **Cells** (`buildCells`) never contain a pinned row, or an investment would be counted twice. A cell is kept when its sum
+  is zero or every row in it is cancelled, because a month exists as soon as it has a row and the Goals pace counts a month
+  from its first counted row. A cell is a `MonthCell`, not a `Transaction`, so it cannot be put in `dataset.transactions`
+  by accident. `cellRows` makes one row from each (negative id, empty description, the first day of its month) and derives
+  its status from the account and the statements as they are then, so toggling a statement needs no change to a cell.
+- **Two lists** come out of `assembleRows`. `linear` is pinned rows, hydrated rows and the cell rows. It goes to the
+  engines that only add amounts, to the list of months, and to the spending groups and their detail, which read a 12 month
+  trend of sums beside the rows of the viewed month. `real` is pinned and hydrated rows only. It goes to the engines that
+  read dates, descriptions, labels, links or whole series, and to anything shown as a transaction.
+  `src/testing/engineOutputs.ts` lists which consumer gets which.
+- **Counts come from real or pinned rows**: the three row floor for a series, the Spending `txnCount`, plan progress and
+  the Transactions list's match count.
 
-On the 80 random ledgers and on every month of the adversarial ledger, run once as a closed month and once as the
-open month, these consumers give a different answer from the lists than from the whole ledger, and nothing else does:
+Run once as a closed month and once as the open month, these consumers give a different answer from the lists than from
+the whole ledger, and nothing else does:
 
 | Consumer | Why it differs |
 |---|---|
 | Groups and detail by fixed or flexible, `detectedFixedCosts` | Unless handed one, they build their own classifier or recurring groups from the rows they get, and a series needs three rows and every gap |
 | `computeSpendingPace` | Only `flexibleBudgetCents` and `shouldBeTodayCents`, which come from the envelope (`expectedFixedCents`), built the same way |
 | `computeSignals` | While M is the open month it reads the pace |
-| `buildOverviewData` | Builds the classifier from the rows it is handed and does not take one, so the allocation, movers, pace, fixed costs and signals differ. KPIs, baseline and unpaid caps match |
 | `latestTransactions`, `recentlyAdded` | Global and relative to today; the window around a past M does not hold them |
-| `filterTransactions` over every date | Needs any month's rows: it is read through the paged transaction reads described in [SCALING.md](./SCALING.md), not from these lists |
+| `filterTransactions` over every date | Needs any month's rows: it is read through the paged transaction reads ([API.md](./API.md)), not from these lists |
 
-The first three rows go away when the engines are handed the classifier and the recurring series of the whole
-history, which is tested: `computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`,
-`computeSpendingPace` takes `fixedGroups`, and `expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them
-with `classifyFixedSpend` and `recurringFixedGroups` over every row. With none passed the engines build their own from
-the rows they are given, as they always did. `buildOverviewData` and the Spending view pass the model's `history` when
-it has one, so the Overview model matches too. Each difference is written down in `src/testing/intendedDifferences.ts`, and the
-sweep fails both if something else differs and if a listed difference never shows up.
+The first three rows go away when the engines are handed the classifier and the recurring series of the whole history:
+`computeSpendingGroups` and `computeSpendingGroupDetail` take `classifier`, `computeSpendingPace` takes `fixedGroups`, and
+`expectedFixedCents` and `detectedFixedCosts` take `groups`. Build them with `classifyFixedSpend` and
+`recurringFixedGroups` over every row. With none passed the engines build their own from the rows they are given. The
+Overview model and the Spending view pass the model's `history` when it has one. Each difference is written down in
+`src/testing/intendedDifferences.ts`, and the sweep fails if something else differs and if a listed difference never shows
+up.
 
 ## Reading a series
 
@@ -154,14 +149,15 @@ A series needs the whole history, but what the detectors read of it is small. Re
 | Last month of a fixed cost | `detectedFixedCosts` | The newest budget month |
 | Name, amount, account, category, type | every consumer | The newest row |
 
-So a series is carried as the newest 5 dates, the gaps before them, every distinct budget month, 3 offsets and
-the newest row (`RecurringSeries`). The budget months are the part the earlier proposal of "every gap and the
-newest 5 dates" left out: `activeInMonth` is asked about the viewed month, which can be years back, so the
-newest few cannot answer it. They cost one short string per month a series was booked in. The dates before
-the newest 5 are known only by their gaps, which is all anything reads: the group built back from a series
-has the right gaps in those places and not the day each one fell on. A series of 5 or fewer rows has no
-older gaps. Each of these is needed: the consumer tests (`seriesConsumers.parity.test.ts`) fail if the tail
-is cut to 3 or 4 dates, the budget months to the newest 3, one older gap dropped, or the offsets to one.
+So a series is carried as the newest 5 dates, the gaps before them, every distinct budget month, 3 offsets and the newest
+row (`RecurringSeries`). The budget months are needed because `activeInMonth` is asked about the viewed month, which can be
+years back, so the newest few cannot answer it. The dates before the newest 5 are known only by their gaps, which is all
+anything reads, so a group built back from a series has the right gaps and not the day each one fell on. A series of 5 or
+fewer rows has no older gaps.
+
+`GET /series` serves every series in this shape. `classifierFromGroups(recurringFixedGroupsFromSeries(series))` is the
+classifier to pass to an engine and `recurringFixedGroupsFromSeries(series)` the groups. `detectUpcoming` takes `groups`
+the same way, and `stillStopped` takes the series' newest charges (`newestChargesOfSeries`).
 
 The one input that is not part of a served series is a stopped series with fewer than three rows left.
 `stillStopped` knows the newest charge of any series key it is given, including a series too short to be a
@@ -174,86 +170,52 @@ three rows, so this needs the owner to have deleted rows afterwards.
 
 **Recurring detection and the fixed or flexible split**
 
-- A series needs three rows. They are rows, not distinct dates (`MIN_OCCURRENCES` in `recurringDetect.ts`). Tested.
-- A yearly series has gaps of 340 to 395 days (`classifyFrequency`), so three yearly rows span 680 to 790 days, 22 to
-  26 months. Tested at 340, 395, 339 and 396.
-- Only the fixed or flexible split and the fixed cost list act on a yearly series. `detectUpcoming` returns nothing for
-  one and the pace envelope takes monthly series only. Tested.
-- The median and the regularity are taken over every gap of the series, so a shorter history can classify the same
-  series differently. A row is also classified by rows dated after it. Tested.
-- So no window of history gives the same split. On the 60 month ledger it matches only once the window reaches the
-  start of the ledger, and for a closed month only with the rows after M too. Tested.
+- A series needs three rows. They are rows, not distinct dates (`MIN_OCCURRENCES` in `recurringDetect.ts`).
+- A yearly series has gaps of 340 to 395 days (`classifyFrequency`), so three yearly rows span 680 to 790 days, 22 to 26
+  months.
+- Only the fixed or flexible split and the fixed cost list act on a yearly series. `detectUpcoming` returns nothing for one
+  and the pace envelope takes monthly series only.
+- The median and the regularity are taken over every gap of the series, so a shorter history can classify the same series
+  differently. A row is also classified by rows dated after it.
+- So no window of history gives the same split. It matches only once the window reaches the start of the ledger, and for a
+  closed month only with the rows after M too.
 
 **Portfolio return and gap split**
 
-- Both read investment rows by exact date and sign: dropping an old row, dropping a withdrawal, moving a row to the
-  first of its month, or moving a row one day across a check-in each change the return. Tested.
-- `portfolioReturn` starts at the first check-in, not the first one with money, and a flow in an empty stretch makes
-  the result null.
-- `splitGap` starts at the first check-in on or after the plan start. It also matches flows to plan events from the
-  plan start less 45 days to the newest row (`EVENT_MATCH_DAYS`).
+- Both read investment rows by exact date and sign: dropping an old row, dropping a withdrawal, moving a row to the first of
+  its month, or moving a row one day across a check-in each change the return.
+- `portfolioReturn` starts at the first check-in, not the first one with money, and a flow in an empty stretch makes the
+  result null.
+- `splitGap` starts at the first check-in on or after the plan start. It also matches flows to plan events from the plan
+  start less 45 days to the newest row (`EVENT_MATCH_DAYS`).
 
 **Cash reserve**
 
-- It averages the 12 newest months that have spend, which can span more than 12 calendar months: 12 spending months
-  spread over 18 in the test, and a 12 calendar month window gives a different average. Tested.
+- It averages the 12 newest months that have spend, which can span more than 12 calendar months, so a 12 calendar month
+  window gives a different average.
 - It is relative to T, not M. A month whose net expense is exactly zero is skipped, and forecast rows are not counted.
 
 **Engines that only add amounts**
 
-`computeMonthlyTotals`, `computeCategoryActuals`, `computeYearlyOverview`, `computeCashReconciliation`,
-`balancesAtCost`, `buildStatementPayments` amounts, the Goals flows, `averageMonthlySpendCents` and
-`computeSpendingBaseline` give the same output from summed cells. Tested for three viewed months with no real rows.
-Two properties come with that:
+`computeMonthlyTotals`, `computeCategoryActuals`, `computeYearlyOverview`, `computeCashReconciliation`, `balancesAtCost`,
+`buildStatementPayments` amounts, the Goals flows, `averageMonthlySpendCents` and `computeSpendingBaseline` give the same
+output from summed cells. `computeYearlyOverview` and `computeCashReconciliation` are running totals from the opening
+balance, so they need the sum of every earlier month, not a window. `computeOverviewKpis` is linear only for a closed M:
+while M is the open month, M and the months it is compared with are cut by date, so those months need their rows.
 
-- `computeYearlyOverview` and `computeCashReconciliation` are running totals from the opening balance, so they need the
-  sum of every earlier month, not a window.
-- A month exists for the Goals pace as soon as it has a counted row, so a cell whose sum is zero must still exist.
+**Transactions list**
 
-`computeOverviewKpis` is linear only for a closed M. While M is the open month, M and the months it is compared with
-are cut by date, so those months need their rows. Tested, including a previous month with one row before the cut and
-one after.
+It filters the 3 month and custom scopes by calendar date, and a row dated 31 March can belong to April, so those scopes
+are read by date and not mapped onto budget months.
 
 ## Where a bound changes the output
 
 | Engine | Why | Constant to read it with |
 |---|---|---|
 | Fixed or flexible split, recurring detection, Upcoming (`classifyFixedSpend`, `recurringFixedGroups`, `detectedFixedCosts`, `detectUpcoming`, `stillStopped`) | The median and regularity run over every gap, three rows make a series, and later rows reclassify earlier ones | `SERIES_TAIL_DATES = 5` (`recurringSeries.ts`, the larger of `PREDICT_HISTORY` = 3 and `WINDOW_HISTORY` = 5): per series key, the newest 5 dates, every older gap, every distinct budget month, the newest 3 budget offsets and the newest row (see [Reading a series](#reading-a-series)). No history bound: a cap would have to cover three yearly charges at 395 days, about 39 months, and would still reclassify long series |
-| `averageMonthlySpendCents`, `cashReserve` | 12 months with spend, not 12 calendar months | `CASH_RESERVE_SPEND_MONTHS = 12` (exists), applied to month sums as the 12 newest months with a non-zero net expense before the open month |
-| `computeSpendingBaseline` | 12 months with data | `BASELINE_MONTHS = 12` (exists), counted in months with data |
-| `computeOverviewKpis`, `computeMovers`, `computeSpendingPace`, `computeSpendingGroups`, `computeSpendingGroupDetail`, `computeAllocation` | The same-days cut and the per-row reads reach 12 months back, and further across a gap | `HYDRATED_DATA_MONTHS = 13` (`src/domain/ledger/hydration.ts`): the 13 newest months with data up to and including M. Tested with and without a gap; 12 is one short for the year-ago baseline |
+| `averageMonthlySpendCents`, `cashReserve` | 12 months with spend, not 12 calendar months | `CASH_RESERVE_SPEND_MONTHS = 12`, applied to month sums as the 12 newest months with a non-zero net expense before the open month |
+| `computeSpendingBaseline` | 12 months with data | `BASELINE_MONTHS = 12`, counted in months with data |
+| `computeOverviewKpis`, `computeMovers`, `computeSpendingPace`, `computeSpendingGroups`, `computeSpendingGroupDetail`, `computeAllocation` | The same-days cut and the per-row reads reach 12 months back, and further across a gap | `HYDRATED_DATA_MONTHS = 13` (`src/domain/ledger/hydration.ts`): the 13 newest months with data up to and including M. 12 is one short for the year-ago baseline |
 | `portfolioReturn`, `readReturn`, `splitGap` | Exact dates and signs from the first check-in; plan events matched within 45 days | None: keep every investment row. If a bound is ever wanted, the first check-in, or the plan start less `EVENT_MATCH_DAYS = 45` |
-| `latestTransactions`, `recentlyAdded` | Global, relative to T | `RECENT_ACTIVITY_LIMIT = 8` (exists as `LIMIT` in `transactions.ts`), served as a top-N by date and by `createdAt` |
+| `latestTransactions`, `recentlyAdded` | Global, relative to T | `LIMIT = 8` in `transactions.ts`, served as a top-N by date and by `createdAt` |
 | `computeYearlyOverview`, `computeCashReconciliation`, `balancesAtCost` | Running totals from the opening balances | None: the summed months from the first month are the bound |
-
-## What follows for a bounded read
-
-1. Hydrate by months with data, not by calendar. A calendar window of M-13 to M is one month more than the readers
-   need when there is no gap and too short across one. 13 months with data is exact (tested).
-2. The classifier is the larger dependency. Movers, pace, allocation, fixed or flexible groups, group detail and
-   fixed costs need the series as well as the rows. Four of them build their own classifier or groups from the rows
-   they are handed (`computeSpendingGroups`, `computeSpendingGroupDetail`, `expectedFixedCents` and
-   `detectedFixedCosts`). Left to build their own, three answer differently on a window (tested), and the pace
-   envelope matched only because every monthly series on the generated ledger has three rows inside it. Each takes
-   the classifier or series of the whole history as an optional argument, and with it a window matches (tested).
-   The server holds that history: `GET /api/expenses/series` returns every series in the shape of
-   `RecurringSeries`, and `classifierFromGroups(recurringFixedGroupsFromSeries(series))` and
-   `recurringFixedGroupsFromSeries(series)` are the classifier and groups to pass. Upcoming charges
-   (`detectUpcoming`) take `groups` the same way, and `stillStopped` takes the series' newest charges
-   (`newestChargesOfSeries`). The result is tested to match the answer over every row.
-3. The same-days cut reaches the months a month is compared with, so while M is the open month the 12 months back
-   need dates. A closed month does not.
-4. Recent activity is relative to today and global. The window around a past M never contains it.
-5. The Transactions list filters 3 months and custom ranges by calendar date, and a row dated 31 March can belong to
-   April. Those scopes have to be read by date, not mapped onto budget months.
-6. Keep a cell for cancelled rows and for sums of zero: `months` includes cancelled-only months and the Goals pace
-   counts a month from its first counted row.
-7. Pinned rows need the payments that settled rows (`reportCount`) and the labels on settled rows (`settledFlagId`
-   reads them). Unpinned, the portfolio return, gap split, flagged groups, past reports and plan progress all change
-   (tested). Summed cells must leave pinned rows out, or investments are counted twice.
-8. Row counts matter in a few places and have to come from real or pinned rows: the three row floor for a series, the
-   Spending `txnCount`, plan progress and the Transactions list's match count.
-
-This is measured on one generated ledger, so a window found by scanning (11 for label rows, say) belongs to that
-generator. The structural results do not: the cut reaching a year back, three rows for a series, windows counted in
-months with data, and everything pinned or summed.

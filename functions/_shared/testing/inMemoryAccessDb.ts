@@ -81,10 +81,10 @@ export function createAccessDb(state: AccessState): D1Database {
       }
     },
     batch(stmts: BoundStmt[]) {
-      for (const stmt of stmts) {
-        void stmt.run()
-      }
-      return Promise.resolve([])
+      // A read in a batch (the revision token before a bump) finds nothing here: the fake keeps no tokens.
+      return Promise.resolve(
+        stmts.map((stmt) => (/^\s*select/i.test(stmt.sql) ? { results: [] } : (void stmt.run(), { results: [] }))),
+      )
     },
   } as unknown as D1Database
 }

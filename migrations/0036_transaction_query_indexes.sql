@@ -12,7 +12,7 @@
 --                                 newer row first.
 --
 -- Each index costs one written row per inserted transaction (Cloudflare's Free plan allows 100,000
--- rows written a day), so docs/SCALING.md records the query plan that justifies each one and which
+-- rows written a day), so docs/SCALING.md says what each one serves and which
 -- older indexes these make redundant. Nothing is dropped here.
 --
 -- No owner-scoped statement here, so nothing to substitute before applying. Applying it before or
