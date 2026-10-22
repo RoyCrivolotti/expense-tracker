@@ -6,6 +6,9 @@ import type { ExpenseModel } from '../../useExpenseData'
 import { sumsOf } from '../../modelSums'
 import type { AnalyticsBasis, SpendingGroupBy } from '../../../engine'
 import { classifierFromGroups, computeSpendingGroupDetail, computeSpendingGroups } from '../../../engine'
+import { isCellRow } from '../../../domain/ledger'
+
+const TOP_COUNT = 5
 
 export interface SpendingQuery {
   month: string
@@ -35,9 +38,17 @@ export function spendingRows(model: ExpenseModel, query: SpendingQuery) {
   )
 }
 
+/**
+ * The detail lists the month's biggest expenses from the rows it is given, which are the sums. A month the
+ * model holds only as sums has a cell row where its spending is, and a cell is not a transaction to show, so
+ * only real rows are listed: the engine hands back every candidate and the largest real ones are kept, and a
+ * month that is not held lists none of the rows it has not got.
+ */
 export function spendingDetail(model: ExpenseModel, query: SpendingQuery & { months: string[]; key: string }) {
-  return computeSpendingGroupDetail(source(model), {
+  const detail = computeSpendingGroupDetail(source(model), {
     ...query,
+    topCount: Infinity,
     rolloverDay: model.dataset.settings.budgetRolloverDay,
   })
+  return { ...detail, topTransactions: detail.topTransactions.filter((t) => !isCellRow(t)).slice(0, TOP_COUNT) }
 }
