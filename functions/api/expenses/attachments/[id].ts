@@ -20,7 +20,7 @@ import { error, HttpError, json } from '../../../_shared/http'
  * people share, a receipt one of them opened is shown to the other, who types
  * its URL, without a request to this server until the entry expires or the cache
  * is cleared. Attachment ids are one sequence for every owner, so the URL is the
- * same only for the same receipt, and the other person has to know it.
+ * same only for the same receipt, and anyone can try every id.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseNumericId(context.params, 'id')
