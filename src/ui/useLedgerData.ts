@@ -10,11 +10,12 @@ import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescri
 import { ledgerUsageHook } from './ledgerUsage'
 import { pagedListOf } from './pagedTransactionList'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
-import { reason } from '../data/reason'
 
 const MIN_REFRESH_MS = 700
 /** A search box sets the filter at every key; the list is read once the text has held still this long. */
 const LIST_SETTLE_MS = 250
+
+const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 const isOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
 
