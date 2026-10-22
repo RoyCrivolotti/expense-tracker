@@ -18,8 +18,9 @@ are both adapters around it.
 | **Driving side, API** | `functions/api/` | Application, ports | Cloudflare Pages Functions HTTP handlers ([API.md](./API.md)) |
 | **Driving side, UI** | `src/ui/` | Application, engine, data | React components; no direct D1 or HTTP, always through `src/data/` |
 
-`src/engine/`, `src/types.ts` and similar top-level re-export barrels exist only so older imports keep working. The real
-implementation is always in `src/domain/`, so import from there in new code. Functions reach `src/domain` and `config/`
+`src/engine/` and `src/types.ts` are re-export barrels over `src/domain/`, and most of what the UI and data layers import
+comes through them. Both paths reach the same code. The implementation is always in `src/domain/`, so that is where new
+logic goes. Functions reach `src/domain` and `config/`
 through the symlinks `functions/domain` and `functions/config`, because Cloudflare's Pages Functions bundler ignores
 Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-symlinks.mjs`), while the Vite app uses the
 `@domain/*` and `@config/*` aliases.
