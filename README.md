@@ -75,7 +75,7 @@ Copy [`.env.example`](./.env.example) → `.env` for hub cross-links (`VITE_*_UR
 
 ## Self-hosting
 
-Example configs are in the repo; your values go in gitignored copies:
+This section describes how the deployment is put together. The [license](#license) still applies: running your own copy needs written permission. Example configs are in the repo; your values go in gitignored copies:
 
 | Example | Copy to | Purpose |
 | --- | --- | --- |
@@ -100,4 +100,4 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## License
 
-Proprietary — see [LICENSE](./LICENSE). Source is public for transparency; unauthorized use is prohibited.
+Source-available, not open source. The code is public so that it can be read; all rights are reserved, and any use beyond reading it needs written permission. See [LICENSE](./LICENSE).
