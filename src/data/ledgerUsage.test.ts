@@ -126,7 +126,7 @@ describe('LedgerUsage', () => {
     await flush()
     usage.noteWrite(true)
     await flush()
-    expect(usage.getState()).toMatchObject({ usage: part('r1', 1), error: 'offline', stale: true, loading: false })
+    expect(usage.getState()).toMatchObject({ usage: part('r1', 1), error: 'offline', loading: false })
 
     off()
     usage.watch()

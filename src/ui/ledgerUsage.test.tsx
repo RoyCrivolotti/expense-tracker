@@ -128,6 +128,25 @@ describe('the counts of a window', () => {
     expect(counts(sink)).toEqual(usageFromDataset(big))
   })
 
+  it('say they may be out of date while the rows are at another revision than the counts, and ask once', async () => {
+    const source = memorySource(big)
+    const read = source.readUsagePart.bind(source)
+    // The counts keep the revision they were first read at, as ones the server could not serve again would.
+    let frozen: string | undefined
+    source.readUsagePart = async () => ({ ...(await read()), revision: frozen ?? source.revision })
+    const sink = open(source, WINDOWED)
+    await loaded(sink)
+    expect(sink.usage!.note).toBeNull()
+
+    frozen = source.revision
+    source.move('after-the-other-tab')
+    act(() => sink.data!.reload())
+
+    await waitFor(() => expect(sink.usage!.note).toBe('stale'))
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(source.calls.filter((call) => call === 'usage')).toHaveLength(2)
+  })
+
   it('are read again when the rows are read at another revision than the counts, once', async () => {
     const source = memorySource(big)
     const sink = open(source, WINDOWED)

@@ -40,7 +40,7 @@ export function touchesUsage({ before, after, beyond, reach }: WriteEvent): bool
  * They are read again while a screen is on after such a write, so that what is shown follows what the user did, and
  * the browser's cache answers a read of an unchanged ledger for two rows. A read that a write overtook is read again,
  * up to {@link READ_ATTEMPTS} times, and flagged as stale after that. The counts of the last read stay on view
- * when a read fails, flagged, and are never replaced by zeros.
+ * when a read fails, with the reason beside them, and are never replaced by zeros.
  */
 export class LedgerUsage {
   private state: UsageState = { usage: null, loading: false, stale: false, error: null }
@@ -101,7 +101,7 @@ export class LedgerUsage {
         if (current || tries >= READ_ATTEMPTS) break
       }
     } catch (error) {
-      this.set({ error: reason(error), stale: true })
+      this.set({ error: reason(error) })
     } finally {
       this.reading = false
       this.set({ loading: false })

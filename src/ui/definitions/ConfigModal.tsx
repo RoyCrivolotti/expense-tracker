@@ -283,7 +283,7 @@ function DeleteControl({
         disabled={config.usageCount === null && config.usage.note === 'reading'}
         onClick={() => {
           setErr(null)
-          changeMode(config.usageCount !== null && config.usageCount > 0 ? 'reassign' : 'confirm')
+          changeMode((config.usageCount ?? 0) > 0 ? 'reassign' : 'confirm')
         }}
       >
         Delete {config.noun}
@@ -307,7 +307,7 @@ function DeleteControl({
           // runPlainDelete), not the normal usageCount > 0 path — the exact count isn't
           // trustworthy in that case, so use a generic message instead of "0 records".
           message={
-            config.usageCount !== null && config.usageCount > 0
+            (config.usageCount ?? 0) > 0
               ? `This ${config.noun} is used by ${config.usageCount} record${config.usageCount === 1 ? '' : 's'}. Move them to another ${config.noun} first, or create a new one.`
               : `This ${config.noun} turned out to still be in use elsewhere. Move its records to another ${config.noun} first, or create a new one.`
           }
