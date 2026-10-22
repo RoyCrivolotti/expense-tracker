@@ -65,7 +65,7 @@ local dev and the `CLOUDFLARE_API_TOKEN` GitHub secret, and a read-only token fo
 monitoring. `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` belong in your shell
 profile. Rolling the write token means updating the GitHub secret too, or CI deploys fail.
 
-**GitHub Actions secrets**: `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`, `ALLOWED_EMAILS`.
+**GitHub Actions secrets**: `CLOUDFLARE_API_TOKEN` and `OWNER_EMAIL`.
 
 Deployment-specific values (database ids, project names, account id) live in the
 gitignored `.claude/deploy-context.md`.
