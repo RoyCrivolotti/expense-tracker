@@ -29,6 +29,9 @@ export default defineConfig({
         // on launch so Cloudflare Access can set cookies in the PWA context (iOS
         // does not share Safari's session with the installed app).
         globPatterns: ['**/*.{js,css,svg,png,ico,webmanifest,woff2}'],
+        // `/index.html` is not in the precache above, so the route this adds throws when the worker is
+        // evaluated and the `app-shell` route after it is never registered. Both keep the API and Access
+        // prefixes out of what they answer, for the day they are registered.
         navigateFallback: '/index.html',
         navigateFallbackDenylist: NAVIGATION_DENYLIST,
         runtimeCaching: [
