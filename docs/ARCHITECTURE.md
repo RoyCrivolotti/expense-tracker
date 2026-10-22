@@ -248,11 +248,15 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   app offline, that app can still show it.
 - **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old
   load unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`); `off` renders the whole-dataset app
-  and nothing else is loaded. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view
-  as a prop (importing it back makes the bundler split shared code into files every browser loads at startup). That
-  chunk falls back to the whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts
-  and for an offline browser with no snapshot of the owner's. `shadow` is honoured in development and staging builds
-  only; there `ledgerShadow.ts` compares the held ledger with the whole dataset and reports, and shows nothing.
+  and nothing else runs (the service worker still precaches the chunk below). `on` and `shadow` load
+  `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop (importing it back makes the bundler
+  split shared code into files every browser loads at startup). That chunk falls back to the whole-dataset app for a
+  ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts and for an offline browser with no snapshot of
+  the owner's that holds every row. The limit is also held for the life of the session (`refuseWindow`): a read or
+  snapshot that would hold only a window is kept out and the app hands back, so a screen that lists every row never
+  lists part of the ledger. For that reason the session's month-by-month hydration is not reached through the
+  switch. `shadow` is honoured in development and staging builds only; there `ledgerShadow.ts` compares the held
+  ledger with the whole dataset and reports, and shows nothing.
 
 ## Size and complexity
 

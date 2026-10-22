@@ -22,12 +22,17 @@ const isOnline = (): boolean => (typeof navigator === 'undefined' ? true : navig
  * the screens of a ledger that holds only a window list only the rows it holds, and "All" would then show
  * part of the ledger as if it were all. The reference read is the one the session makes next, and the
  * browser answers that from its cache, so asking first costs one conditional request. Offline, or when that
- * read fails, a snapshot of this owner's is enough to go on.
+ * read fails, a snapshot of this owner's is enough to go on, if it holds every row.
+ *
+ * The limit is checked here for the start of a session only. A ledger that grows past it later is caught by the
+ * session itself (`refuseWindow`), and the app hands back from there.
  */
 async function choose(source: ExpenseDataSource, owner: string | undefined): Promise<Choice> {
   if (!hasLedgerParts(source)) return 'fallback'
-  const saved = async (): Promise<Choice> =>
-    owner && (await loadLedgerSnapshot(owner)) ? { ledger: source } : 'fallback'
+  const saved = async (): Promise<Choice> => {
+    const snapshot = owner ? await loadLedgerSnapshot(owner) : null
+    return snapshot && snapshot.held.cells === null ? { ledger: source } : 'fallback'
+  }
   if (!isOnline()) return saved()
   try {
     const reference = await source.readReferencePart()
@@ -41,8 +46,14 @@ function LedgerApp({
   mode,
   ledger,
   view: View,
+  onOutsized,
   ...props
-}: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; ledger: LedgerSource; view: typeof ExpensesAppView }) {
+}: ExpensesAppProps & {
+  mode: Exclude<LedgerMode, 'off'>
+  ledger: LedgerSource
+  view: typeof ExpensesAppView
+  onOutsized: () => void
+}) {
   // Shadow mode reads the whole dataset after the ledger settles and holds the two to each other.
   const settled = useCallback(
     (held: HeldLedger) => {
@@ -50,7 +61,12 @@ function LedgerApp({
     },
     [ledger, mode],
   )
-  const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled })
+  const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled, refuseWindow: true })
+  // A read that found more rows than the list shows in full was kept out, so what is on screen is never part of
+  // the ledger under the name of all of it: the whole dataset app takes over.
+  useEffect(() => {
+    if (data.outsized) onOutsized()
+  }, [data.outsized, onOutsized])
   return <View {...props} data={data} />
 }
 
@@ -66,6 +82,7 @@ export default function LedgerExpensesApp({
   ...props
 }: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; fallback: ReactElement; view: typeof ExpensesAppView }) {
   const [choice, setChoice] = useState<Choice>('checking')
+  const handBack = useCallback(() => setChoice('fallback'), [])
   const { source, accountEmail } = props
   useEffect(() => {
     let alive = true
@@ -76,5 +93,5 @@ export default function LedgerExpensesApp({
   }, [source, accountEmail])
   if (choice === 'checking') return <AppLoadingSkeleton label="Loading expenses" />
   if (choice === 'fallback') return fallback
-  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} view={view} />
+  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} view={view} onOutsized={handBack} />
 }

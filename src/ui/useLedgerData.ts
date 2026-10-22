@@ -44,6 +44,24 @@ function keep(session: LedgerSession, owner: string | undefined, settled: Ledger
   settled?.(held)
 }
 
+interface Shown {
+  phase: Phase
+  model: ExpenseModel | undefined
+  offline: boolean
+  outsized: boolean
+  snapshotAt: string | undefined
+  failure: string | undefined
+}
+
+/** What the screens are given of the model: nothing while it loads, after a failure, or when a read was kept out. */
+function shown({ phase, model, offline, outsized, snapshotAt, failure }: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
+  if (phase === 'ready' && model !== undefined && !outsized) {
+    return { status: 'ready', model, fromCache: offline, ...(offline && snapshotAt ? { snapshotAt } : {}) }
+  }
+  if (phase === 'error') return { status: 'error', ...(failure !== undefined ? { error: failure } : {}) }
+  return { status: 'loading' }
+}
+
 /**
  * The model of a ledger held open, for the screens that `useExpenseData` serves from the whole dataset. A
  * write is patched in at once; one the server answered with more than the patch shows is followed by a read
@@ -74,7 +92,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     const restore = async (): Promise<boolean> => {
       const snapshot = owner ? await loadLedgerSnapshot(owner) : null
       if (!snapshot || !alive.current) return false
-      session.restore(snapshot.held, snapshot.viewed)
+      if (!session.restore(snapshot.held, snapshot.viewed)) return false
       setSnapshotAt(snapshot.savedAt)
       return true
     }
@@ -126,18 +144,15 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const applyPatch = useCallback<ExpenseData['applyPatch']>((patch) => session.patch(patch), [session])
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 
-  const ready = phase === 'ready' && model !== undefined
   return {
-    status: ready ? 'ready' : phase === 'error' ? 'error' : 'loading',
-    ...(ready ? { model, fromCache: state.offline } : {}),
-    ...(ready && state.offline && snapshotAt ? { snapshotAt } : {}),
-    ...(phase === 'error' && failure !== undefined ? { error: failure } : {}),
+    ...shown({ phase, model, offline: state.offline, outsized: state.outsized, snapshotAt, failure }),
     refreshing,
     refreshOutcome,
     reload,
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
-    backgroundError: ready ? state.error : null,
+    backgroundError: phase === 'ready' && model !== undefined && !state.outsized ? state.error : null,
+    outsized: state.outsized,
   }
 }

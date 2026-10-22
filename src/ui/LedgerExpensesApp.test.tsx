@@ -1,11 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { allGroupsGranted } from '../domain/accessGroups'
-import { FULL_HYDRATION_ROW_LIMIT } from '../domain/ledger'
+import { FULL_HYDRATION_ROW_LIMIT, HYDRATED_DATA_MONTHS } from '../domain/ledger'
 import type { ExpenseDataset } from '../domain/types'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
@@ -29,6 +29,8 @@ beforeAll(() => {
 })
 
 const dataset = syntheticLedger({ months: 8, perMonth: 8, seed: 6 })
+/** More months with data than a window holds as rows. */
+const long = syntheticLedger({ months: HYDRATED_DATA_MONTHS + 11, perMonth: 8, seed: 6 })
 
 /** A source that serves parts and, as the app's own does, the whole dataset. */
 function servingSource(data: ExpenseDataset = dataset): TestSource & ExpenseDataSource & { load: ReturnType<typeof vi.fn> } {
@@ -116,6 +118,65 @@ describe('LedgerExpensesApp', () => {
   })
 })
 
+describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /** A view that records what the screens were given, and keeps the handles to refresh and to write. */
+  function watched() {
+    const seen: Array<number | undefined> = []
+    const handle: { data?: Parameters<typeof ExpensesAppView>[0]['data'] } = {}
+    const view: typeof ExpensesAppView = (props) => {
+      handle.data = props.data
+      seen.push(props.data.model?.dataset.transactions.length)
+      return <ExpensesAppView {...props} />
+    }
+    return { seen, handle, view }
+  }
+
+  function renderWatched(source: ExpenseDataSource, view: typeof ExpensesAppView) {
+    return render(
+      <ToastProvider>
+        <LedgerExpensesApp
+          source={source}
+          mode="on"
+          fallback={<p>the whole dataset app</p>}
+          view={view}
+          hubGrants={allGroupsGranted()}
+        />
+      </ToastProvider>,
+    )
+  }
+
+  it('hands back, and never shows part of the ledger as all of it, when it grows past the limit between two refreshes', async () => {
+    const source = servingSource(long)
+    const { seen, handle, view } = watched()
+    renderWatched(source, view)
+    await screen.findByText('Recent activity')
+    const all = long.transactions.length
+    expect(seen.at(-1)).toBe(all)
+    // The next read finds more rows than the app lists in full.
+    const read = source.readReferencePart.bind(source)
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT + 1 })
+    act(() => handle.data!.reload())
+    await screen.findByText('the whole dataset app')
+    expect(seen.filter((rows) => rows !== undefined && rows < all)).toEqual([])
+  })
+
+  it('hands back the same way when the ledger had grown before the first read was held', async () => {
+    const source = servingSource(long)
+    const read = source.readReferencePart.bind(source)
+    let reads = 0
+    // The check at the start sees a ledger that fits; the read that opens the session sees one that does not.
+    source.readReferencePart = async () => ({ ...(await read()), ...(++reads > 1 ? { rowCount: FULL_HYDRATION_ROW_LIMIT + 1 } : {}) })
+    const { seen, view } = watched()
+    renderWatched(source, view)
+    await screen.findByText('the whole dataset app')
+    expect(seen.filter((rows) => rows !== undefined)).toEqual([])
+  })
+})
+
 describe('LedgerExpensesApp, offline', () => {
   let fake: FakeIndexedDb
 
@@ -140,6 +201,17 @@ describe('LedgerExpensesApp, offline', () => {
     renderApp(source, 'on', 'alex@example.com')
     await screen.findByText('Recent activity')
     expect(source.calls).toEqual([])
+  })
+
+  it('hands back when the only snapshot holds a window, which would show part of the ledger as all of it', async () => {
+    const held = holdParts(
+      await readLedgerParts(memorySource(long), { policy: { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS } }),
+    )
+    expect(held.cells).not.toBeNull()
+    await saveLedgerSnapshot('alex@example.com', held, held.months.at(-1)!)
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false })
+    renderApp(servingSource(), 'on', 'alex@example.com')
+    await screen.findByText('the whole dataset app')
   })
 
   it('hands back to the whole dataset, whose own snapshot may serve, when offline with no ledger snapshot or another owner’s', async () => {

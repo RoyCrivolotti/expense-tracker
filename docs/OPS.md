@@ -213,9 +213,9 @@ By default the app loads the whole ledger with one `GET /api/expenses`. A browse
 
 - `?ledger=on` in the address turns it on for this browser and `?ledger=off` turns it off again. The choice is kept in local storage under `expenses-ledger-mode`.
 - `?ledger=shadow` does the same and also loads the whole dataset after the ledger settles and compares the two. It counts as `off` anywhere but a development or `--mode staging` build, so production never pays for the second read. Differences go to the console as `[ledger shadow]` and to `window.__ledgerShadow` (`checks` and `differences`); an empty `differences` after a few checks and a few edits means the parts agree with the dataset.
-- A ledger of more than 5,000 rows (`FULL_HYDRATION_ROW_LIMIT`, by the `rowCount` the server reports) is loaded the old way even when the switch is on, because a window of the ledger cannot answer "All" or a search. So is a server that does not have the parts routes.
-- Offline, the ledger path opens the last snapshot it saved for the signed-in owner and nothing else, read-only. With no snapshot for that owner it loads the old way.
-- Moving to an older month reads that month's rows, and the month shows a loading note until they arrive.
+- A ledger of more than 5,000 rows (`FULL_HYDRATION_ROW_LIMIT`, by the `rowCount` the server reports) is loaded the old way even when the switch is on, because a window of the ledger cannot answer "All" or a search. So is a server that does not have the parts routes. A ledger that grows past 5,000 rows while the app is open is caught by the next read of it, and the app then loads the old way, which starts it over (anything not yet saved on screen is lost).
+- Offline, the ledger path opens the last snapshot it saved for the signed-in owner and nothing else, read-only. With no snapshot for that owner, or one that holds only part of the ledger, it loads the old way.
+- With the switch on every month is held as rows, so moving between months reads nothing more.
 
 `npm run verify:ledger-mode` compares the screens of the demo instance under `?ledger=off` and `?ledger=on` (see `docs/TESTING.md`).
 
