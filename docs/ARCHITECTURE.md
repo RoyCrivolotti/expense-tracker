@@ -238,11 +238,14 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   | Statement paid, cash actual, settings, scenarios, wealth, receipts, a definition added or renamed | Nothing the patch lacks | Patch |
 - **The offline snapshot of a ledger is one record per owner, read-only, and never fails a load.**
   `saveLedgerSnapshot` (`ledgerSnapshot.ts`) keeps the current owner's held ledger under a key that names them and
-  removes every other owner's, so a second person on the same browser never opens the first one's figures. A record
+  removes every other owner's, so a second person on the same browser never opens the first one's figures from this
+  snapshot. A record
   from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the whole-dataset snapshot),
   another ledger format or another owner is discarded when it is found. Saving and loading never throw. Offline, or
   when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a refresh that reads ends
-  it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key.
+  it. The whole-dataset snapshot in `offlineCache.ts` is unchanged and the two share no key. It is not kept per
+  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset
+  app offline, that app can still show it.
 
 ## Size and complexity
 
