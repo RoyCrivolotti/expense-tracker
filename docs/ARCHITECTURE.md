@@ -231,8 +231,12 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   starts a new list. A row edited after its page was read can arrive again on a later page, and the later copy
   replaces the earlier. Statement payments are not served: they come from the statements and the cash rows and sort
   after the transactions of their day, so `pagedListRows` leaves one out until a row of an older day, or the end of the
-  list, shows that no more of its day is coming. The count and net spend come from `GET /transactions/summary`, apart
-  from the rows.
+  list, shows that no more of its day is coming. A screen calls `refresh()` after a write: paging by position cannot
+  show a row that moved to a place behind the cursor or drop one deleted from the pages already read, and `refresh()`
+  reads the list again from its first page (the rows stay on screen until it arrives), after which the rows are what
+  the filter matches at that moment. A filter is read once it has held still for the settle time, and a read that a
+  newer filter outlived is cancelled. The count and net spend come from `GET /transactions/summary`, apart from the
+  rows, when the filter changes or a refresh asks, and `summaryStale` says when they may no longer fit the rows.
 
 ## Size and complexity
 
