@@ -39,7 +39,17 @@ D1 is stricter than the SQLite the tests run on, in ways a test on SQLite cannot
 parameters, which is why id lists are bound as one JSON string read with `json_each`
 ([`sqlIdList.ts`](../functions/_shared/sqlIdList.ts)), and it refuses a compound `SELECT` of more than five terms. The
 test stand-in enforces the first rule and not the second. Cloudflare's documentation does not say whether each statement
-of a `batch()` counts toward the 50, and that has not been measured.
+of a `batch()` counts toward the 50.
+
+### Observed on a Free account
+
+The design stays inside the documented limits, so it holds on any plan and in any fork, and would hold if enforcement
+changed. A probe on 2026-10-22 did not see the 50 queries or the 10 ms enforced on one Free-plan account. A throwaway
+route on a deployed preview of this app (never merged) ran 60 `SELECT 1` as separate D1 calls in one request, and the
+same 60 in one `batch()`. All succeeded, with no failure at the 51st. It also ran about 10 million and about 100 million
+loop iterations in a request. Both completed, and the larger used about 275 ms of CPU by the platform's own analytics.
+This is one account on one day: an observation that may change, not a guarantee. The recipe to repeat it is in
+[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
 
 Two constraints come from the product. Output must not change: the pure functions in `src/domain/engine/` are the
 reference for every number. Offline is read-only (a snapshot, no offline writes, no sync).
@@ -69,10 +79,10 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 
 "clone" is what every local mutation pays today.
 
-1. **Worker CPU is the first limit, at a few thousand to about ten thousand transactions.** Mapping rows and deriving
-   status costs 1.1 to 1.5 ms per 1,000 rows and stringifying another 0.2, so 10 ms is crossed between roughly 6,500 and
-   9,000 rows. This is an estimate from Node. workerd's meter differs, so confirm it on a deployed Worker before relying
-   on it.
+1. **Worker CPU against the documented 10 ms.** Mapping rows and deriving status costs 1.1 to 1.5 ms per 1,000 rows and
+   stringifying another 0.2, so a full load passes 10 ms between roughly 6,500 and 9,000 rows if the limit is enforced.
+   This is an estimate from Node, and workerd's meter differs. The probe above saw no enforcement, so a load of that
+   size is not known to fail, and the design still keeps the CPU of one request small.
 2. **The network is not the constraint.** The response is 1.5 MB gzipped at 100,000 rows. Parse and clone are tens of
    milliseconds on a desktop, but a phone is several times slower and pays for the clone on every mutation.
 3. **D1 rows read.** Every load reads every row, so the daily 5 million covers about 440 loads at 10,000 transactions,
@@ -80,8 +90,8 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
 5. **A load issues 16 D1 queries**, inside the limit of 50.
 
-Not measured: Worker CPU on workerd, rows billed per route on a deployed D1, and how the 50-query limit counts a
-`batch()`. [MEASURING.md](./MEASURING.md) says how to measure the rows billed and the `batch()` count safely.
+Not measured: Worker CPU on workerd and rows billed per route on a deployed D1. [MEASURING.md](./MEASURING.md) says how
+to measure the rows billed safely.
 
 ## The design
 
