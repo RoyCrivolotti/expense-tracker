@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 import { sortedMonths } from '../domain/engine/dates'
 import type { AnalyticsBasis, AnalyticsPeriod, CompareMode, SpendingGroupBy } from '../domain/engine'
 import { computeCashReconciliation, computeMonthlyTotals, computeYearlyOverview } from '../domain/engine'
-import { HYDRATED_DATA_MONTHS, type HydrationPolicy, ledgerFor } from '../domain/ledger'
+import { HYDRATED_DATA_MONTHS, type HydrationPolicy, isCellRow, ledgerFor } from '../domain/ledger'
 import type { ExpenseDataset } from '../domain/types'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { LATER, openAt, plain } from '../testing/outputContext'
@@ -161,6 +161,37 @@ describe('a closed month with only that month held as rows', () => {
       const model = buildLedgerModel(ledgerFor(dataset, month, ONE_MONTH), { history })
       expect(differing(sumReadings(whole, month), sumReadings(model, month)), month).toEqual([])
     }
+  }, 120_000)
+})
+
+describe('a month the window does not hold', () => {
+  const dataset = adversarialLedger()
+  const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+  const history = fixedHistoryOf(dataset.transactions)
+  const realIds = new Set(dataset.transactions.map((t) => t.id))
+  const whole = buildExpenseModel(dataset)
+  const windowed = buildLedgerModel(ledgerFor(dataset, months[months.length - 1]!, WINDOWED), { history })
+
+  /** The biggest expenses of every group of one month, on a window and on every row. */
+  function biggest(month: string, groupBy: SpendingGroupBy) {
+    const query = { month, basis: 'committed' as const, groupBy, ...LATER }
+    return spendingRows(whole, query).map((row) => {
+      const detail = (model: ExpenseModel) => spendingDetail(model, { ...query, months: model.months, key: row.key })
+      return { key: row.key, held: detail(windowed).topTransactions, all: detail(whole).topTransactions }
+    })
+  }
+
+  it("lists no cell row among a group's biggest expenses, only rows the ledger really has", () => {
+    let candidates = 0
+    for (const month of months.slice(0, months.length - 14)) {
+      const groups = GROUPS.flatMap((groupBy) => biggest(month, groupBy))
+      for (const { key, held, all } of groups) {
+        candidates += all.length
+        expect(held.filter(isCellRow), `${month} ${key}`).toEqual([])
+        expect(held.filter((t) => !realIds.has(t.id)), `${month} ${key}`).toEqual([])
+      }
+    }
+    expect(candidates).toBeGreaterThan(0)
   }, 120_000)
 })
 
