@@ -18,8 +18,9 @@ export function renderPlan(budget: SeedBudget, largest: { requested: number; bud
     '',
     `A seed of about ${n(budget.transactions)} transactions:`,
     `  insert ${n(budget.insertWrites)} + reference ${n(budget.referenceWrites)} + write routes ${n(budget.routeWrites)} = day one ${n(budget.dayOne)}`,
-    `  delete ${n(budget.deleteWrites)} + reference ${n(budget.referenceWrites)} = day two ${n(budget.dayTwo)}`,
+    `  delete ${n(budget.deleteWrites)} (one written row per row removed) = day two ${n(budget.dayTwo)}`,
     `  total ${n(budget.total)} rows written: ${budget.fitsTotalCap && budget.fitsDailyCap ? 'within' : 'OVER'} the caps`,
+    `  all on one UTC day: ${budget.fitsOneDay ? 'within' : 'OVER'} the ${n(CAPS.rowsWrittenPerDay)} daily cap`,
     `  one pass over the read routes reads about ${n(readPassEstimate(budget.transactions))} rows`,
     `The largest seed that fits the total cap is about ${n(largest.requested)} transactions (${n(largest.budget.total)} rows written).`,
   ]

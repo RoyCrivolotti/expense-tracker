@@ -74,45 +74,73 @@ export function referenceInsertWrites(dataset: ExpenseDataset): number {
 }
 
 /**
- * Rows written by the write routes in the measurement (a single create, a bulk create of 20, a bulk edit of
- * 50 and a bulk delete of 20, each with the revision bumps around it). An estimate; the run records the
- * real figure.
+ * Rows written to remove a whole synthetic ledger. D1 counts the rows a delete removes and not the index
+ * entries that go with them, so each row costs one: the transactions, their label links, the reference rows and
+ * the revision row.
  */
-export const ROUTE_WRITES_ESTIMATE = 800
+export function datasetDeleteWrites(dataset: ExpenseDataset): number {
+  const links = dataset.transactions.reduce((sum, t) => sum + (t.labelIds?.length ?? 0), 0)
+  const small = [
+    dataset.categories,
+    dataset.accounts,
+    dataset.flags,
+    dataset.labels,
+    dataset.installmentPlans,
+    dataset.accountStatements,
+    dataset.cashActuals,
+  ]
+  return dataset.transactions.length + links + small.reduce((sum, list) => sum + list.length, 0) + 1
+}
+
+/** What a cleanup reserves before it starts: twice the model, since the ledger stops a delete that costs more. */
+export function cleanupReserve(dataset: ExpenseDataset): number {
+  return 2 * datasetDeleteWrites(dataset)
+}
+
+/**
+ * Rows written by the write routes in the measurement (a single create, a bulk create of 20, a bulk edit of
+ * 50 and a bulk delete of 20, each with the revision bumps around it). They act on fixed row counts, so this
+ * does not grow with the ledger. The margin is for routes that write a little more as they change.
+ */
+export const ROUTE_WRITES_ESTIMATE = 400
 
 /** Exactly what the plan says a seed of this dataset spends, in rows written, and when. */
 export interface SeedBudget {
   transactions: number
   insertWrites: number
-  /** Deleting a row is assumed to cost what inserting it did. The first chunk of the run measures it. */
   deleteWrites: number
   referenceWrites: number
   routeWrites: number
   total: number
   fitsTotalCap: boolean
-  /** Day one: seed and measure. Day two (after 00:00 UTC): clean up. */
+  /** Seed and measure. */
   dayOne: number
+  /** Clean up, on the next UTC day or the same one when `fitsOneDay`. */
   dayTwo: number
+  /** Each of the two days fits the daily cap. */
   fitsDailyCap: boolean
+  /** Everything on a single UTC day fits the daily cap. */
+  fitsOneDay: boolean
 }
 
 export function seedBudget(dataset: ExpenseDataset): SeedBudget {
   const insert = datasetInsertWrites(dataset)
   const reference = referenceInsertWrites(dataset)
+  const remove = datasetDeleteWrites(dataset)
   const dayOne = insert + reference + ROUTE_WRITES_ESTIMATE
-  const dayTwo = insert + reference
-  const total = dayOne + dayTwo
+  const total = dayOne + remove
   return {
     transactions: dataset.transactions.length,
     insertWrites: insert,
-    deleteWrites: insert,
+    deleteWrites: remove,
     referenceWrites: reference,
     routeWrites: ROUTE_WRITES_ESTIMATE,
     total,
     fitsTotalCap: total <= CAPS.rowsWrittenTotal,
     dayOne,
-    dayTwo,
-    fitsDailyCap: Math.max(dayOne, dayTwo) <= CAPS.rowsWrittenPerDay,
+    dayTwo: remove,
+    fitsDailyCap: Math.max(dayOne, remove) <= CAPS.rowsWrittenPerDay,
+    fitsOneDay: total <= CAPS.rowsWrittenPerDay,
   }
 }
 

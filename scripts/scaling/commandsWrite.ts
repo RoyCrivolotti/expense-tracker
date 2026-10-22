@@ -2,7 +2,7 @@
  * The commands that can write: seed, measure with the write routes, and cleanup. Without `--write` the first
  * and last are dry runs that print what they would send and never open a connection. verify only reads.
  */
-import { readPassEstimate, ROUTE_WRITES_ESTIMATE, seedBudget } from './budget'
+import { cleanupReserve, readPassEstimate, ROUTE_WRITES_ESTIMATE, seedBudget } from './budget'
 import { cleanUp, DELETE_CHUNK, ownerRowCounts, tableDeletes } from './cleanup'
 import { measuredDb } from './d1Adapter'
 import { SYNTHETIC_OWNER } from './guard'
@@ -79,7 +79,8 @@ export async function cleanup(args: Args, deps: Deps): Promise<number> {
     deps.print('every delete binds the synthetic owner; nothing else can match')
     return 0
   }
-  const session = await openSession(args, deps, args.transactions * 9 + 200)
+  const reserve = cleanupReserve(ledgerOfAbout(args.transactions, currentBudgetMonth(deps.now())))
+  const session = await openSession(args, deps, reserve)
   const result = await cleanUp(session.transport, session.ledger, deps.stopRequested)
   const left = await ownerRowCounts(session.transport, session.ledger)
   session.saveSpend()

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { migratedDatabase } from '../../src/testing/sqliteD1'
+import { datasetDeleteWrites } from './budget'
 import { OWNER_TABLES, NOT_OWNER_SCOPED, cleanUp, ownerRowCounts, tableDeletes, transactionChunk } from './cleanup'
 import { SYNTHETIC_OWNER, assertStatementAllowed } from './guard'
 import { ledgerOfAbout } from './ledgerSize'
@@ -106,6 +107,12 @@ describe('cleaning up', () => {
     expect(Object.values(left).every((n) => n === 0)).toBe(true)
     expect(Object.keys(left)).toContain('transaction_labels_without_transaction')
     expect(differences(before, await fingerprintOthers(others, ledgerOf()))).toEqual([])
+  })
+
+  it('writes one row per row it removes, as the delete model says', async () => {
+    const { transport } = await seededDatabase(300)
+    const result = await cleanUp(transport, ledgerOf())
+    expect(result.rowsWritten).toBe(datasetDeleteWrites(ledgerOfAbout(300, MONTH)))
   })
 
   it('deletes transactions in chunks until none are left', async () => {
