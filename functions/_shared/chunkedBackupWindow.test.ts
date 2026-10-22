@@ -16,7 +16,10 @@ import { DEFAULT_STEP_OPERATIONS, DEFAULT_STEP_ROWS, resolveChunkedBackup } from
 
 /** `*\/10 4-7 * * *`: every ten minutes from 04:00 to 07:50 UTC. */
 const RUNS_IN_WINDOW = 24
-/** Runs that may fail, or be missed, or start a pass again, before a day is lost. */
+/**
+ * Runs that may fail or be missed before a day is lost. A write to the ledger while it is backed up is not covered: it
+ * restarts the pass from the first table and costs every run already spent, so it fits only if it lands early.
+ */
 const SPARE_RUNS = 4
 
 const policy = { retentionDays: 14, maxBucketBytes: 512 * 1024 * 1024, maxSnapshotBytes: 100 * 1024 * 1024, bucketAlertThresholdFraction: 0.8 }

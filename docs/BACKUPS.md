@@ -36,11 +36,18 @@ ledger that does not finish in one invocation would never finish).
 **Capacity.** A day's backup can hold as many rows as the runs in the window times the rows of a run, all owners
 together. The trigger above fires 24 times, from 04:00 to 07:50 UTC, so the default holds 72,000 rows. Every
 transaction, receipt row and check-in is a row: a ledger of 50,000 transactions is about 50,300 rows and takes 18 runs
-(three hours), which leaves six for a run that fails, one that is missed or a pass that has to start again. A bigger
-ledger needs more rows a run or a longer window. A run's calls stop at `BACKUP_STEP_MAX_OPERATIONS` whatever the rows,
-but its CPU time grows with them, and that is what limits the rows. The default was sized from the JavaScript time on
-the test stand-in, not from a Worker, so after turning the mode on watch the first runs' CPU time in the worker's logs
-and lower `BACKUP_STEP_MAX_ROWS` if one is cut off. The next run carries on from the last save either way.
+(three hours). The six spare runs cover runs that fail or are missed. They do not cover a write: a write to the ledger
+while it is being backed up throws the pass away and starts it again from the first table, so it costs every run
+already spent, not one. For this ledger a write after run N finishes the backup on run N + 19, which fits in the 24 only
+up to N = 5, so a write before 04:50 UTC is survived. A write after run 6 leaves no backup of that day (the previous
+day's stands), and one after run 10 would finish on run 29. A ledger that large needs a longer window (`4-9` gives 36
+runs) or a cheaper restart, which is not built.
+
+A run's calls stop at `BACKUP_STEP_MAX_OPERATIONS` whatever the rows, but its CPU time grows with them, and that is what
+limits the rows. The default was sized from the JavaScript time on the test stand-in, not from a Worker: about 7 ms at
+most for a run of 3,000 rows on a cold start, against the Free plan's 10 ms, so a slower Worker could cut one off. After
+turning the mode on watch the first runs' CPU time in the worker's logs and lower `BACKUP_STEP_MAX_ROWS` if one is cut
+off. The next run carries on from the last save either way.
 
 If the ledger is written to during a pass, the pass is thrown away and started again, and the owner is alerted. After
 three passes there is no backup of that owner for the day and an alert says so; the previous day's stands. A run left
