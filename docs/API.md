@@ -112,11 +112,12 @@ Keyset pages of the owner's transactions. Code: [`list.ts`](../functions/api/exp
 Count and net spend for a filter. Code: [`summary.ts`](../functions/api/expenses/transactions/summary.ts).
 
 - Parameters: the list's filter. `limit` and `cursor` are a 400.
-- Response: `{ count, capped, netSpendCents }`. `count` stops at 1,000 and `capped` says there were more.
+- Response: `{ revision, count, capped, netSpendCents }`. `revision` is the owner's token read before the count, and a
+  bulk edit on this filter names it as `expectedRevision`. `count` stops at 1,000 and `capped` says there were more.
   `netSpendCents` is exact over every match.
-- Cost: the count reads at most 1,001 matches. The exact net spend reads every row the filter cannot rule out by index,
-  so an unfiltered summary reads the whole ledger (about one dataset load) and a month or date range reads only that
-  range.
+- Cost: the token is two rows. The count reads at most 1,001 matches. The exact net spend reads every row the filter
+  cannot rule out by index, so an unfiltered summary reads the whole ledger (about one dataset load) and a month or date
+  range reads only that range.
 
 ## GET /transactions/:id
 
@@ -201,18 +202,42 @@ One chunk of one table of the owner's ledger as NDJSON, for the CSV export and t
 
 ## Bulk transaction routes
 
-All three are in [`bulk.ts`](../functions/api/expenses/transactions/bulk.ts) at `/transactions/bulk`. The single-row
-`POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit beside it.
+`POST`, `PATCH` and `DELETE /transactions/bulk` are in [`bulk.ts`](../functions/api/expenses/transactions/bulk.ts) and
+`POST /transactions/bulk/labels` in [`bulk/labels.ts`](../functions/api/expenses/transactions/bulk/labels.ts). The
+single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit beside them.
 
-- `POST` with `{ transactions: [...] }` answers 201 with `{ created, transactions }`. The whole batch is validated
-  before anything is written and a bad row is a 400 that names it ("Row 7: ..."). Rows are inserted one at a time,
-  because a plan-linked row reads the installment index of the row before it.
-- `PATCH` with `{ ids, patch }` answers `{ updated, transactions }`. `patch` may hold `categoryId`, `accountId`, `type`,
-  `date`, `budgetMonth`, `flagId`, `settledBy` and `description`, and at least one. A reimbursement that would settle a
-  row already settled by another is a 409. Cost: each updated row is read back and its status derived with three
-  queries.
-- `DELETE` with `{ ids }` answers `{ deleted, requested }`. The receipt files go first, then the rows, their receipt
-  rows and label links in one batch, and `settled_by` is cleared on any row a deleted payment had settled. There is no
-  filter form ([decision](./decisions/no-filter-based-delete.md)).
+- **`POST /transactions/bulk`** with `{ transactions: [...] }` answers 201 with `{ created, transactions }`. The whole
+  batch is validated before anything is written and a bad row is a 400 that names it ("Row 7: ..."). Rows are inserted
+  one at a time, because a plan-linked row reads the installment index of the row before it.
+- **`PATCH /transactions/bulk`** takes rows by id or by filter. `patch` may hold `categoryId`, `accountId`, `type`,
+  `date`, `budgetMonth`, `flagId`, `settledBy` and `description`, and at least one.
+  - By id, `{ ids, patch }` answers `{ updated, transactions }`. A reimbursement that would settle a row already settled
+    by another is a 409.
+  - By filter, `{ filter, expectedCount, expectedRevision, patch }` answers `{ updated }`, with no rows sent back. The
+    filter is a `TxnFilter` as JSON, validated as the list's is. `expectedCount` and `expectedRevision` are the `count`
+    and `revision` that `GET /transactions/summary` gave for that filter. Both the count and the matches are at most
+    1,000 (`MAX_FILTER_EDIT_ROWS`, the summary's count cap), and more is a 400, never cut.
+  - A filter edit is a 400 for an invalid body, filter or patch, a patch that names another owner's account, category,
+    flag or payment, and a type change that would leave a withdrawal on an expense. It is a 409 if anything was written
+    to the ledger since that revision (an edit in another tab counts), if the filter now matches another number of rows,
+    if a row is settled by another payment, or if a row changed between the check and the write. The batch starts with a
+    guard that fails unless exactly the ids that were read still match, so nothing is written when the ledger moved. A
+    refused request still moves the revision, as every write request does, so look again before retrying.
+- **`POST /transactions/bulk/labels`** adds labels and keeps the labels rows already have (the single-row `PUT` replaces
+  the set). Rows are given by `{ ids, labelIds }` or by `{ filter, expectedCount, expectedRevision, labelIds }`, with
+  the filter refusals above. It answers `{ matched, added }`: the owner's rows reached (an id that is another owner's,
+  or missing, is not counted) and the label links that were new. A label that is not the owner's is a 400. A request
+  names at most 20 labels and adds at most 5,000 links (rows times labels), because each new link writes a row in the
+  table and in three indexes against the daily written-row budget.
+- **`DELETE /transactions/bulk`** with `{ ids }` answers `{ deleted, requested }`. The receipt files go first, then the
+  rows, their receipt rows and label links in one batch, and `settled_by` is cleared on any row a deleted payment had
+  settled. There is no filter form ([decision](./decisions/no-filter-based-delete.md)).
 - `ids` holds at most 500 positive integers (duplicates are dropped), bound as one JSON string because D1 allows 100
   bound values per statement.
+
+**Cost in D1 statements**, counted on the SQLite stand-in through the real middleware, so the revision bumps are
+included and the access checks (about five more in production) are not: a create is 6n + 5 for n rows, an edit by id is
+3n + 6 (each updated row is read back and its status derived with three queries), and an edit by filter, the labels
+route and a delete are 7, 6 and 7 however many rows. The Free plan allows 50 queries per invocation, so a create of more
+than 6 rows or an edit by id of more than 13 exceeds it whichever way a `batch()` counts, and the 500-id cap is not
+usable there. [MEASURING.md](./MEASURING.md) says how to settle how a batch counts.

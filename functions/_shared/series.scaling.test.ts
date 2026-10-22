@@ -7,7 +7,7 @@
  *
  * Node numbers on this machine, against an in-memory SQLite. `server_js_ms` (the request minus the time
  * inside SQLite) is a stand-in for Worker CPU, not a measurement of it. `rows_read_min` is the number of
- * rows the statement has to visit at least once; D1 may bill index entries as well. See docs/SCALING.md.
+ * rows the statement has to visit at least once; D1 may bill index entries as well. See docs/API.md.
  */
 import { gzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'

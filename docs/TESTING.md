@@ -31,6 +31,8 @@ Use `functions/_shared/testing/invokeExpenseApiRoute.ts` for expense routes (rea
 
 Use `functions/_shared/invokePagesRoute.ts` for transaction write validation against mocked D1 ownership checks.
 
+Use `functions/_shared/testing/expenseWorld.ts` (with `seedLedger.ts`) to run the whole expense API over a real SQLite database: the real middleware, the real D1 repository, and a log of every statement a request ran. The caller supplies the database, because the `functions/` typecheck has no Node types.
+
 Example flows in `access.integration.test.ts`:
 
 1. Owner reads all groups on `GET /api/access/grants`

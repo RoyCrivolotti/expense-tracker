@@ -5,7 +5,7 @@ import { mapAppError } from '../../_shared/mapAppError'
 
 /**
  * The owner's recurring series over the whole history, newest first, in the shape the detectors take
- * (`RecurringSeries`; docs/SCALING.md, "Recurring series"). It is served and cached like the ledger
+ * (`RecurringSeries`; docs/API.md, "GET /series"). It is served and cached like the ledger
  * parts: a request that holds the current tag gets a 304 after two rows are read, before any series
  * is computed. There is nothing for the installment backfill to add, since a plan's payments are not
  * part of a series.

@@ -7,7 +7,7 @@ import { createD1AccessRepository } from '../_shared/adapters/d1AccessRepository
 import { createD1ExpenseRepository } from '../_shared/adapters/d1ExpenseRepository'
 import { error } from '../_shared/http'
 import { toHttpError } from '../_shared/mapAppError'
-import { bumpRevision } from '../_shared/dbRevision'
+import { bumpRevision, bumpRevisionReadingPrevious } from '../_shared/dbRevision'
 
 function isAccessApiPath(pathname: string): boolean {
   return pathname.startsWith('/api/access')
@@ -19,6 +19,9 @@ const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
  * Replace the owner's dataset revision before the handler runs and again after it, whether it
  * returned, answered with an error or threw (a write can land and the request still fail).
  *
+ * The token the first bump replaced goes to the handler as `revisionBeforeWrite`, so that a write
+ * made from a view of the ledger can be refused when the ledger has changed since that view.
+ *
  * Before: if the Worker is cut off mid-write, nothing after the handler runs, and the token has
  * still moved for everyone who cached earlier. After: a reader who arrives mid-write caches the old
  * data under the first token, and only the second bump makes that copy miss. That one is retried
@@ -27,9 +30,10 @@ const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 async function aroundWrite(
   db: D1Database,
   owner: string,
+  data: ExpensesData,
   run: () => Promise<Response>,
 ): Promise<Response> {
-  await bumpRevision(db, owner)
+  data.revisionBeforeWrite = await bumpRevisionReadingPrevious(db, owner)
   let response: Response
   try {
     response = await run()
@@ -64,7 +68,7 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
     const deps = createAccessDeps(context.env)
     await touchLastSeenIfNeeded(deps, email)
     if (READ_ONLY_METHODS.has(context.request.method)) return await context.next()
-    return await aroundWrite(context.env.DB, email, () => context.next())
+    return await aroundWrite(context.env.DB, email, context.data, () => context.next())
   } catch (e) {
     // Routes that do not catch their own errors land here, and used to answer a
     // validation failure with 500 while the routes that did catch answered 400. The

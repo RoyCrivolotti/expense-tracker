@@ -6,7 +6,7 @@ import { mapAppError } from '../../_shared/mapAppError'
 
 /**
  * The per-month sums of the unpinned rows in a range of budget months: `?from=YYYY-MM&to=YYYY-MM`, both
- * inclusive. A cell is what `buildCells` makes of the rows (see docs/SCALING.md, "Ledger parts").
+ * inclusive. A cell is what `buildCells` makes of the rows (see docs/API.md).
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const { repo, owner } = context.data

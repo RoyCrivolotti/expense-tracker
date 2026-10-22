@@ -33,7 +33,7 @@ export function isExportTable(value: unknown): value is ExportTable {
 
 /**
  * The most rows one chunk may hold. Reading and serialising 5,000 transactions takes about 1.3 ms of
- * JavaScript on the SQLite stand-in (`docs/SCALING.md`, "Ledger parts", "What it costs"), which stands in for
+ * JavaScript on the SQLite stand-in (`functions/_shared/ledgerParts.scaling.test.ts`), which stands in for
  * Worker CPU against the Free plan's 10 ms and does not measure it. The other tables are small. A `limit`
  * above the bound is refused, never trimmed.
  */
