@@ -179,6 +179,26 @@ before a delete. Code: [`usage.ts`](../functions/api/expenses/usage.ts).
 - Cost: one pass over the owner's transactions. D1 billed about two rows read per transaction plus about two per label
   link when measured.
 
+## GET /export
+
+One chunk of one table of the owner's ledger as NDJSON, for the CSV export and the backup. Code:
+[`export.ts`](../functions/api/expenses/export.ts).
+
+- Parameters: `table` (one of `EXPORT_TABLES`, listed in restore order in
+  [`exportTables.ts`](../src/domain/data/exportTables.ts)), `after` (the position to start from, absent for the first
+  chunk) and `limit` (1 to the table's bound, default the bound). A position is the id, a month for `cashActuals` or
+  `accountId:month` for `accountStatements`, and carries no owner. `settings` has one row and no position.
+- Response: one JSON row per line, in primary-key order, as the dataset carries it (a transaction with its derived
+  status and ascending label ids, a check-in with its entries, an attachment as metadata only). Headers:
+  `X-Export-Table`, `X-Export-Format`, `X-Export-Revision` and, while the table has more rows, `X-Export-Next`, which is
+  the next `after`. Follow it until it is absent, for every table, to read the ledger.
+- Bounds: 5,000 rows for transactions and attachments, 500 for check-ins, 1 for settings and 1,000 for the rest. A
+  larger `limit` is a 400, never trimmed. An unknown table or a position that is not one of that table's is a 400.
+- Caching: `Cache-Control: private, no-store`. A walk is not a snapshot. `X-Export-Revision` is the token read before
+  the rows, so a reader that needs one consistent state compares it across chunks and starts again when it moved.
+- It writes nothing and does not run the installment backfill, so an instalment that has fallen due and not yet been
+  created is not in an export. Cost: the chunk's rows plus one, read in primary-key order with no sort.
+
 ## Bulk transaction routes
 
 All three are in [`bulk.ts`](../functions/api/expenses/transactions/bulk.ts) at `/transactions/bulk`. The single-row
