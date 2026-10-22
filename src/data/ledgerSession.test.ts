@@ -902,3 +902,47 @@ describe('LedgerSession, what patch() tells a screen, which reads its list again
     expect(session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 7 } }))).toBe(false)
   })
 })
+
+describe('LedgerSession, overlapping views', () => {
+  it('keeps hydrating on until every month it was asked for has been read, however the reads finish', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    // Each read of rows is let through by the test.
+    const gates: Array<() => void> = []
+    const read = source.readMonthsPart.bind(source)
+    source.readMonthsPart = (range) =>
+      new Promise((resolve, reject) =>
+        gates.push(() => {
+          void read(range).then(resolve, reject)
+        }),
+      )
+
+    const first = session.view(months[8]!)
+    const second = session.view(months[30]!)
+    await flush()
+    expect(gates.length).toBeGreaterThanOrEqual(2)
+
+    gates[0]!()
+    await first
+    expect(session.getState().hydrating).toBe(true)
+    expect(session.getState().held!.rows.has(months[30]!)).toBe(false)
+
+    for (const open of gates.slice(1)) open()
+    await second
+    expect(session.getState().hydrating).toBe(false)
+    expect(session.getState().held!.rows.has(months[30]!)).toBe(true)
+  })
+
+  it('turns hydrating off again when a read fails, and again when it is the last of several', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    source.readMonthsPart = () => Promise.reject(new Error('down'))
+
+    await Promise.all([session.view(months[8]!), session.view(months[30]!)])
+
+    expect(session.getState().hydrating).toBe(false)
+    expect(session.getState().error).toBe('down')
+  })
+})

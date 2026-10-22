@@ -28,7 +28,7 @@ export interface SessionState {
   held: HeldLedger | null
   /** The month the screens are showing. */
   viewed: string
-  /** True while rows of other months are being read for the month shown. */
+  /** True while rows of other months are being read for the month shown, by any view: views overlap. */
   hydrating: boolean
   /** Why the last read in the background failed, or null. */
   error: string | null
@@ -144,6 +144,8 @@ export class LedgerSession {
     seriesFailed: false,
   }
   private epochs: Epochs = NO_EPOCHS
+  /** Views that are reading months right now. */
+  private hydratingViews = 0
   private readonly stale = new Set<string>()
   private flushing = false
   private readonly readingReceipts = new Set<number>()
@@ -270,6 +272,7 @@ export class LedgerSession {
     const missing = missingMonths(held, wanted)
     if (this.state.offline) return
     if (missing.length === 0) return this.set({ held: this.tidy(touchMonths(held, wanted)) })
+    this.hydratingViews += 1
     this.set({ hydrating: true })
     try {
       // After a write the revision the parts were read under is not known, so what is read now could not be
@@ -279,7 +282,9 @@ export class LedgerSession {
     } catch (error) {
       this.set({ error: reason(error) })
     } finally {
-      this.set({ hydrating: false })
+      // Views overlap: the first read to answer must not say the month on screen has been read while another still is.
+      this.hydratingViews -= 1
+      this.set({ hydrating: this.hydratingViews > 0 })
     }
   }
 
