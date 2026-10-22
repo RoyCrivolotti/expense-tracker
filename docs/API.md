@@ -86,8 +86,10 @@ The receipts of one transaction, oldest first, or of every transaction the calle
   id, which is what the dataset route carries and what a screen that needs them all asks for (the storage meter). A
   non-positive or non-integer id is a 400. A transaction that is not the caller's has no receipts as far as the caller
   can tell.
-- Not conditional. Cost: the receipt rows asked for. Without a `transactionId` that is every receipt the owner has,
-  which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
+- Conditional like the ledger parts: a weak `ETag` from the owner's revision token (scoped to the transaction when
+  `transactionId` is given), `Cache-Control: private, no-cache`, and a 304 after two rows are read when `If-None-Match`
+  is current. The body stays a bare array. Cost of a 200: the receipt rows asked for. Without a `transactionId` that is
+  every receipt the owner has, which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
 
 ## GET /transactions/list
 
