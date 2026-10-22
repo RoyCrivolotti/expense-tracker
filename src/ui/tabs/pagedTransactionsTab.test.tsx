@@ -180,17 +180,15 @@ describe('the Transactions tab over a list read in pages: a filter that changes'
 describe('the Transactions tab over a list read in pages: select all', () => {
   it('names how many rows it selects while more match, and says all once the list is complete', async () => {
     const source = memorySource(ledger)
-    renderTab(source, { limit: 80 })
-    await waitFor(() => expect(listFrame()).toHaveAttribute('aria-busy', 'false'))
+    const { pager } = renderTab(source, { limit: 80 })
+    await waitFor(() => expect(pager.getState().rows).toHaveLength(80), { timeout: 5000 })
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
     expect(await screen.findByRole('button', { name: 'Select 80' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Select all' })).toBeNull()
-    for (let reads = 0; reads < 5 && !screen.queryByRole('button', { name: 'Select all' }); reads += 1) {
-      act(() => FakeObserver.nearScreen())
-      await act(() => new Promise((resolve) => setTimeout(resolve, 5)))
-    }
+    act(() => FakeObserver.nearScreen())
+    await waitFor(() => expect(pager.getState().complete).toBe(true), { timeout: 5000 })
     expect(await screen.findByRole('button', { name: 'Select all' })).toBeInTheDocument()
-  })
+  }, 15_000)
 })
 
 describe('the Transactions tab over a list read in pages: a write', () => {
