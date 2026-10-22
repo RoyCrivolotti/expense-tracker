@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
-import { LedgerSession, type SessionOptions } from '../data/ledgerSession'
+import { LedgerSession, type SessionOptions, type SessionState } from '../data/ledgerSession'
 import { loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
-import { buildLedgerModel, historyOfSeries } from './buildLedgerModel'
+import { buildLedgerModel, withHistory } from './buildLedgerModel'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
 const MIN_REFRESH_MS = 700
@@ -42,6 +42,18 @@ function keep(session: LedgerSession, owner: string | undefined, settled: Ledger
   if (!held) return
   if (owner) void saveLedgerSnapshot(owner, held, viewed)
   settled?.(held)
+}
+
+const HISTORY_WORDS = {
+  loading: 'Reading the recurring charges. Until they arrive, the fixed and flexible figures use only the months loaded.',
+  failed: "Couldn't read the recurring charges, so the fixed and flexible figures use only the months loaded.",
+  offline: "You're offline, so the fixed and flexible figures use only the months saved on this device.",
+} as const
+
+/** What a windowed model says about having no history: it is being read, the read failed, or there is no one to ask. */
+function historyNoteOf(missing: boolean, { offline, seriesFailed }: SessionState): string | undefined {
+  if (!missing) return undefined
+  return HISTORY_WORDS[offline ? 'offline' : seriesFailed ? 'failed' : 'loading']
 }
 
 interface Shown {
@@ -112,20 +124,19 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const { held, series } = state
   // A ledger held in full has every row to work the series out from, as the screens do without a history.
   const windowed = held !== null && held.cells !== null
-  const history = useMemo(() => (windowed && series ? historyOfSeries(series) : undefined), [windowed, series])
+  const note = historyNoteOf(windowed && !series, state)
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
-    const built = buildLedgerModel(ledgerOfHeld(held), {
-      attachmentCounts: held.attachmentCounts,
-      ...(history ? { history } : {}),
-    })
+    const built = buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts })
+    const withSeries = windowed && series ? withHistory(built, series) : built
     return {
-      ...built,
+      ...withSeries,
       receiptsPending: receiptsPending(held),
       ensureReceipts: session.loadReceipts,
       watchHistory: session.watchSeries,
+      ...(note ? { historyNote: note } : {}),
     }
-  }, [held, history, session])
+  }, [held, series, windowed, note, session])
 
   const reload = useCallback(() => {
     if (phase === 'error') {

@@ -2,9 +2,10 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { recurringFixedGroupsFromSeries, seriesFromTransactions } from '../../domain/engine/recurringSeries'
 import { makeDataset, makeTransaction } from '../../testing/factories'
+import { withHistory } from '../buildLedgerModel'
 import type { ExpenseModel } from '../useExpenseData'
 import { resetStoppedSuggestionsForTests, useStoppedSuggestions } from './stoppedSuggestions'
-import { useUpcoming } from './useUpcoming'
+import { upcomingOf, useUpcoming } from './useUpcoming'
 
 /** Gym, on the 20th from January to September; the next charge is on 20 October. */
 const GYM = Array.from({ length: 9 }, (_, i) =>
@@ -112,10 +113,6 @@ describe('useUpcoming', () => {
       ...extra,
     })
 
-    it('offers nothing until the series of the whole history arrive', () => {
-      expect(dates(windowed(), '2026-10')).toEqual([])
-    })
-
     it('offers the charge the series say is due, though the rows it holds are too few to show it', () => {
       expect(dates(windowed({ history }), '2026-10')).toEqual(['2026-10-20'])
       expect(dates(modelWith(window), '2026-10')).toEqual([])
@@ -129,6 +126,48 @@ describe('useUpcoming', () => {
       expect(stop).not.toHaveBeenCalled()
       unmount()
       expect(stop).toHaveBeenCalledTimes(1)
+    })
+
+    it('goes once the charge is logged, without waiting for the series to be read again, because the model folds it in', () => {
+      const logged = makeTransaction({ id: 50, description: 'Gym', date: '2026-10-19', budgetMonth: '2026-10' })
+      const stale = windowed({ dataset: makeDataset({ transactions: [...window, logged] }) })
+      expect(dates({ ...stale, history }, '2026-10')).toEqual(['2026-10-20'])
+      expect(dates(withHistory(stale, seriesFromTransactions(GYM)), '2026-10')).toEqual([])
+    })
+  })
+
+  describe('a window whose rows look regular though the whole history is not', () => {
+    // A cleaner who came at odd intervals and then every month on the 20th: the loaded rows alone are a monthly
+    // charge, and with the older ones it is not regular enough to be one. The rent is monthly all the way through.
+    const IRREGULAR = [3, 61, 8, 75, 12, 48, 15, 90]
+    const before: string[] = []
+    let at = Date.parse('2026-01-20T00:00:00Z')
+    for (const gap of IRREGULAR) {
+      at -= gap * 86_400_000
+      before.push(new Date(at).toISOString().slice(0, 10))
+    }
+    const monthly = GYM.map((g) => g.date)
+    const rows = (description: string, dates: string[], firstId: number) =>
+      dates.map((date, i) => makeTransaction({ id: firstId + i, description, date, budgetMonth: date.slice(0, 7) }))
+    const everything = [...rows('Cleaner', [...before, ...monthly], 100), ...rows('Rent', monthly, 300)]
+    const loaded = [...rows('Cleaner', monthly.slice(3), 200), ...rows('Rent', monthly.slice(3), 400)]
+    const history = { groups: recurringFixedGroupsFromSeries(seriesFromTransactions(everything)) }
+    const windowed = (extra: Partial<ExpenseModel> = {}): ExpenseModel => ({
+      ...modelWith(loaded),
+      sums: makeDataset({ transactions: loaded }),
+      ...extra,
+    })
+    const offered = (model: ExpenseModel) =>
+      renderHook(() => useUpcoming(model, '2026-10')).result.current.suggestions.map((s) => s.description)
+
+    it('would offer both from the loaded rows, which is why it offers nothing until the series arrive', () => {
+      expect(offered(modelWith(loaded))).toEqual(['Cleaner', 'Rent'])
+      expect(offered(windowed())).toEqual([])
+    })
+
+    it('offers what the whole history says once they have, the rent and not the cleaner', () => {
+      expect(offered(windowed({ history }))).toEqual(['Rent'])
+      expect(upcomingOf(everything, undefined, '2026-10-19', {}).map((s) => s.description)).toEqual(['Rent'])
     })
   })
 })

@@ -6,6 +6,7 @@ import { fullMonthLabel } from '../../../engine'
 import { monthlySummaryRows } from '../monthlySummaryRows'
 import type { ExpenseModel } from '../../useExpenseData'
 import { useHistoryWatch } from '../../useHistoryWatch'
+import { HistoryNote } from '../HistoryNote'
 import type { TransactionsEntry } from '../../tabs/transactionsEntry'
 import { Card, EmptyState } from '../../components/primitives'
 import { Modal } from '../../components/Modal'
@@ -103,6 +104,7 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
 
   return (
     <div className={styles.stack}>
+      <HistoryNote model={model} />
       <SpendingControls
         mode={mode}
         onMode={setMode}

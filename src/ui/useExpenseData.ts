@@ -41,6 +41,12 @@ export interface ExpenseModel {
    */
   watchHistory?: () => () => void
   /**
+   * Set while a model that holds only some of the rows has no `history` yet: the words that say the figures that
+   * need it (the split of fixed from flexible spend, the pace) are worked out from the months loaded and are not
+   * exact, whether the read is still on its way, failed, or has no one to ask because the browser is offline.
+   */
+  historyNote?: string
+  /**
    * Set when `dataset.attachments` holds only the receipt lists that were asked for: how many receipts each
    * transaction has, for the ones whose list has not been read.
    */

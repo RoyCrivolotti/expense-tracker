@@ -18,12 +18,12 @@ export function groupKeyString(key: GroupKey): string {
 }
 
 /** Months from a transaction's calendar month to its assigned budget month. */
-function budgetOffset(txn: Transaction): number {
+export function budgetOffset(txn: Transaction): number {
   return monthsBetweenBudget(txn.date.slice(0, 7), txn.budgetMonth)
 }
 
 /** Whether a row can be an occurrence of a series: not cancelled, described, and not a plan's payment. */
-function countsAsOccurrence(txn: Transaction): boolean {
+export function countsAsOccurrence(txn: Transaction): boolean {
   if (txn.cancelled) return false
   if (!txn.description.trim()) return false
   // Installment-plan payments are a declared schedule, not a detected pattern.
