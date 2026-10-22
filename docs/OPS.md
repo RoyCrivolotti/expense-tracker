@@ -216,6 +216,8 @@ By default the app loads the whole ledger with one `GET /api/expenses`. A browse
 - A ledger of more than 5,000 rows (`FULL_HYDRATION_ROW_LIMIT`, by the `rowCount` the server reports) is loaded the old way even when the switch is on, because a window of the ledger cannot answer "All" or a search. So is a server that does not have the parts routes. A ledger that grows past 5,000 rows while the app is open is caught by the next read of it, and the app then loads the old way, which starts it over (anything not yet saved on screen is lost).
 - Offline, the ledger path opens the last snapshot it saved for the signed-in owner and nothing else, read-only. With no snapshot for that owner, or one that holds only part of the ledger, it loads the old way.
 - With the switch on every month is held as rows, so moving between months reads nothing more.
+- If a read in the background fails after a change (a deleted category, a receipt list, a month), a toast says some figures may be out of date and offers to read them again.
+- The service worker precaches the ledger chunk (about 7 KB gzipped) for every browser, switched on or not, so it is downloaded once per deploy even where it is never run.
 
 `npm run verify:ledger-mode` compares the screens of the demo instance under `?ledger=off` and `?ledger=on` (see `docs/TESTING.md`).
 

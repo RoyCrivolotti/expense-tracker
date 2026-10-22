@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { holdParts } from '../data/ledgerHold'
@@ -10,6 +10,7 @@ import type { ExpenseDataset } from '../domain/types'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
+import { patchAfterFlagDelete } from './datasetPatches'
 import { ExpensesAppView } from './ExpensesApp'
 import LedgerExpensesApp from './LedgerExpensesApp'
 import { ToastProvider } from './hooks/ToastProvider'
@@ -174,6 +175,22 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
     renderWatched(source, view)
     await screen.findByText('the whole dataset app')
     expect(seen.filter((rows) => rows !== undefined)).toEqual([])
+  })
+
+  it('tells the user, with a way to read again, when a read in the background fails', async () => {
+    const source = servingSource(long)
+    const { handle, view } = watched()
+    renderWatched(source, view)
+    await screen.findByText('Recent activity')
+    const read = source.readReferencePart.bind(source)
+    source.readReferencePart = () => Promise.reject(new Error('down'))
+    const flagId = handle.data!.model!.dataset.flags[0]!.id
+    act(() => handle.data!.applyPatch((d) => patchAfterFlagDelete(d, flagId)))
+    await screen.findByText('Some figures may be out of date.')
+    source.readReferencePart = read
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await screen.findByText('Updated', undefined, { timeout: 3000 })
+    await waitFor(() => expect(handle.data!.backgroundError).toBeNull())
   })
 })
 

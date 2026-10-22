@@ -7,6 +7,7 @@ import type { LedgerMode } from '../config/ledgerMode'
 import { FULL_HYDRATION_ROW_LIMIT } from '../domain/ledger'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import type { ExpensesAppProps, ExpensesAppView } from './ExpensesApp'
+import { useBackgroundErrorToast } from './hooks/useBackgroundErrorToast'
 import { useLedgerData } from './useLedgerData'
 
 type LedgerSource = ExpenseDataSource & LedgerPartsSource
@@ -62,6 +63,7 @@ function LedgerApp({
     [ledger, mode],
   )
   const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled, refuseWindow: true })
+  useBackgroundErrorToast(data.backgroundError, data.reload)
   // A read that found more rows than the list shows in full was kept out, so what is on screen is never part of
   // the ledger under the name of all of it: the whole dataset app takes over.
   useEffect(() => {
