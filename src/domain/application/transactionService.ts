@@ -1,7 +1,7 @@
 import type { BulkTransactionPatch, NewTransaction } from '../data/dataSource'
 import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
-import type { ExpenseSettings, TxnType } from '../types'
+import type { TxnType } from '../types'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../data/amountSign'
 import { parseIsoDate } from '../engine/dates'
 import { MAX_DESCRIPTION_LENGTH } from './entityValidation'
@@ -273,12 +273,4 @@ export async function patchTransaction(
 
 export async function removeTransaction(repo: ExpenseRepository, owner: string, id: number) {
   return repo.deleteTransaction(owner, id)
-}
-
-export async function saveSettings(
-  repo: ExpenseRepository,
-  owner: string,
-  patch: Partial<ExpenseSettings>,
-) {
-  return repo.updateSettings(owner, patch)
 }
