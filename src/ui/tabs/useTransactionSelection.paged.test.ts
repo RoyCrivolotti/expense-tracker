@@ -122,17 +122,19 @@ describe('choosing every row a filter matches', () => {
     expect(result.current.pendingBatchDelete).toBe(false)
   })
 
-  it('is let go of when the server refuses it, because the count it was shown cannot be trusted', async () => {
+  it('is let go of, and the sheet closed, when the server refuses it, because the count it was shown cannot be trusted', async () => {
     const refused = new Error('The ledger changed since you looked at these transactions. Nothing was changed; look again and retry')
     const actions = actionsOf({ updateMatching: vi.fn().mockRejectedValue(refused) })
     const { result, showToast } = render(actions, offered())
     act(() => result.current.toggleSelectMode())
     act(() => result.current.selectMatching())
+    act(() => result.current.requestBulkEdit())
 
     await act(() => result.current.confirmBulkEdit({ categoryId: 7 }))
 
     expect(showToast).toHaveBeenCalledWith(refused.message, 'error')
     expect(result.current.allMatching).toBeNull()
+    expect(result.current.pendingBulkEdit).toBe(false)
     expect(result.current.selectMode).toBe(true)
   })
 

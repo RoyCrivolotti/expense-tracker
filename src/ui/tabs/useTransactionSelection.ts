@@ -258,7 +258,11 @@ export function useTransactionSelection(
       showToast(toast, 'success')
     } catch (err) {
       // The count they were shown is not to be trusted after a refusal: the list reads it again, and they choose again.
-      matching.clear()
+      // The sheet closes with it, since pressing Apply there would edit the rows on screen and not the ones it named.
+      if (everyMatch) {
+        matching.clear()
+        setPendingBulkEdit(false)
+      }
       showToast(err instanceof Error ? err.message : 'Could not update', 'error')
     } finally {
       setBusy(false)
