@@ -1,8 +1,11 @@
 # Deployment — expense-tracker
 
-## URL and DNS (one-time)
+For an operator hosting the app on Cloudflare: Pages, D1, Access, migrations, backups and receipt storage.
 
-The app is one Cloudflare Pages project, named `expense-tracker` unless `EXPENSE_PROJECT_NAME` says otherwise (`scripts/deploy.sh`). Add `<your-hostname>` as a custom domain on it and point your DNS at the project:
+## Hostname and DNS (one-time)
+
+The app is one Cloudflare Pages project, named `expense-tracker` unless `EXPENSE_PROJECT_NAME` says otherwise
+(`scripts/deploy.sh`). Add `<your-hostname>` as a custom domain on it and point your DNS at the project:
 
 | Record name | Type | Target |
 | --- | --- | --- |
@@ -10,191 +13,138 @@ The app is one Cloudflare Pages project, named `expense-tracker` unless `EXPENSE
 
 ## Cloudflare Access
 
-Add `<your-hostname>` to your Cloudflare Access application. The application names the scripts use are in `config/staging-access.json`.
+Add `<your-hostname>` to your Cloudflare Access application. The application names the scripts use are in
+`config/staging-access.json`.
 
-**Authentication only:** set the Allow policy to **Login methods → Google** (any Google account may sign in). The app enforces who may use the tracker via D1 (`allowed_users`), not per-email Access rules.
-
-One-time dashboard change: Zero Trust → Access → your application → Policies → Allow → replace email rules with a Google identity provider rule.
-
-Or, with a token that has Zero Trust Access edit scope (the CI `CLOUDFLARE_API_TOKEN` usually works):
+**Authentication only:** set the Allow policy to **Login methods → Google** (any Google account may sign in). The app
+enforces who may use the tracker via D1 (`allowed_users`), not per-email Access rules. In the dashboard: Zero Trust →
+Access → your application → Policies → Allow → replace email rules with a Google identity provider rule. Or, with a
+token that has Zero Trust Access edit scope (the CI `CLOUDFLARE_API_TOKEN` usually works):
 
 ```bash
 CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 ```
 
-**Sign out:** Hub menu and Settings show a link to `/cdn-cgi/access/logout`, which clears the Cloudflare Access session cookie only (D1 allowlist unchanged). Optional redirect: `/cdn-cgi/access/logout?redirect_url=<encoded-url>`.
+**Sign out:** Settings shows a link to `/cdn-cgi/access/logout`, which clears the Cloudflare Access session cookie only
+(the D1 allowlist is unchanged). `?redirect_url=<encoded-url>` sets where it lands.
 
-**Staging:** staging has its own Pages project, hostname and Access application. See [docs/OPS.md](./OPS.md) for the setup scripts.
+**Staging** has its own Pages project, hostname and Access application. See [OPS.md](./OPS.md) for the setup scripts.
 
-## App access control (D1 + in-app admin)
+## App access control (D1 and the in-app admin)
 
-The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves from **Settings → Manage access** or `/access/admin`.
+The allowlist lives in D1 (`allowed_users`). New users request access in the app, and the owner approves from **Settings
+→ Manage access** or `/access/admin`.
 
-**Setup:**
+1. Run all migrations in order. Access control needs `0005_access_control.sql`, `0006_user_group_grants.sql` and
+   `0007_oncall_group.sql`.
+2. Copy `config/access.example.json` to `config/access.json` (owner email only).
+3. Sync the Pages env: `npm run sync:access-env` (locally from `config/access.json`, in CI from the `OWNER_EMAIL`
+   secret).
+4. Bootstrap D1 from an existing list, once or when adding emails: `npm run bootstrap:allowed-users` (reads gitignored
+   `config/allowed-emails.json`).
 
-1. Run all migrations in order (see [Migrations](#migrations) below for the current last one). Access control specifically needs `0005_access_control.sql`, `0006_user_group_grants.sql`, and `0007_oncall_group.sql`.
-2. Copy `config/access.example.json` → `config/access.json` (owner email only).
-3. Sync Pages env: `npm run sync:access-env` (local: `config/access.json`; CI: `OWNER_EMAIL` secret).
-4. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users`.
+The `ALLOWED_EMAILS` Pages env is a bootstrap fallback when `allowed_users` is empty, and only if `ALLOW_BOOTSTRAP=1` is
+also set. After bootstrap, D1 is authoritative and the fallback is ignored. The D1 binding is `DB`, bound to
+`<your-d1-database>`.
 
-**GitHub secrets:** `OWNER_EMAIL`, `CLOUDFLARE_API_TOKEN`. (`ALLOWED_EMAILS` is optional for local `bootstrap:allowed-users` only — not read by CI deploy.)
-
-**Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
-
-**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (the groups are listed in `src/domain/accessGroups.ts`); **Revoke all** removes the user and deletes expense data (including `goal_scenarios`). New approvals grant the `expenses` group only by default; enable the others manually. Settings shows a badge when requests are pending.
-
-**Group access:** D1 table `user_group_grants` stores which resource groups each user may see. The cross-app navigation filters client-side, and the expense API requires the `expenses` group.
-
-**R2 backups:** daily snapshots under `{email}/` in the backups bucket are not deleted on revoke (manual cleanup if needed).
-
-## D1 + legacy ALLOWED_EMAILS
-
-D1 binding: `DB`, bound to `<your-d1-database>`. `ALLOWED_EMAILS` Pages env is a **bootstrap fallback** when `allowed_users` is empty, but only if `ALLOW_BOOTSTRAP=1` is also set. After bootstrap, D1 is authoritative and the env fallback is ignored.
-
-```bash
-npm run bootstrap:allowed-users
-npm run sync:access-env
-```
+**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (the groups are
+in `src/domain/accessGroups.ts`). New approvals get the `expenses` group only, and the expense API requires it
+(`user_group_grants`). **Revoke all** removes the user and deletes their expense data, including `goal_scenarios`, and
+their receipt files. Daily backups under `{email}/` in the backups bucket are not deleted on revoke (manual cleanup if
+needed).
 
 ## CI
 
-Push to `main` → verify → sync access env → deploy the **production** and **staging** Pages projects → deploy backup cron worker.
+A push to `main` runs the **Deploy** workflow (`.github/workflows/deploy.yml`): `ci` (verify), then `schema`,
+`migrate-dev` and `migrate-prod` (see Migrations), then the `ship` job. `ship` syncs the access env, deploys the
+production and staging Pages projects, and redeploys the backup cron worker (`npm run deploy:backup-cron`) every time. A
+pull request runs verify and deploys a staging preview only (`.github/workflows/deploy-dev.yml`, see
+[OPS.md](./OPS.md)).
 
-Pull requests → verify + deploy **staging** only (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
-
-Secrets: `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`.
-
-**`CLOUDFLARE_API_TOKEN` permissions** (Cloudflare dashboard → My Profile → API Tokens → edit token):
+Secrets: `CLOUDFLARE_API_TOKEN` and `OWNER_EMAIL`. Token permissions (Cloudflare dashboard → My Profile → API Tokens):
 
 | Scope | Permission | Used for |
 | ----- | ---------- | -------- |
 | Account → Cloudflare Pages | Edit | Pages deploy |
-| Account → D1 | Edit | bootstrap / migrations (optional in CI) |
+| Account → D1 | Edit | bootstrap and migrations |
 | Account → Workers Scripts | Edit | `expense-backup-cron` deploy |
 | Account → Workers R2 Storage | Edit | backup bucket bindings |
 
-If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails until the token is updated. Deploy the worker locally once after updating the token, or run `npm run deploy:backup-cron` with `wrangler login`.
+If Workers Scripts Edit is missing, the `ship` job fails at the backup cron worker until the token is updated. Run `npm
+run deploy:backup-cron` locally with `wrangler login` to deploy it meanwhile.
 
 ## Migrations
 
-```bash
-npx wrangler d1 execute <your-d1-database> --remote --file=migrations/NNNN_name.sql
-npx wrangler d1 execute <your-d1-database> --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
-```
+**The deploy applies them.** `schema` reads both databases, read-only, and says what each needs. Dev is migrated
+automatically. Production is migrated after you approve it in GitHub (the `production` environment), and only when it
+has something pending. Each apply first takes a D1 Time Travel restore point. The code ships only after every migration
+it needs has applied and the columns have been checked, and if a database's record cannot be trusted or a migration
+fails, nothing ships. So a migration merges, applies, and then the code that needs it ships, in that order. Deploys
+queue and are never cancelled, so a migration is not cut off partway, and a production migration left waiting for
+approval holds the queue until you approve or reject it.
 
-`npm run migrate -- <database>` does the same with the checks below built in, and writes nothing unless
-given `--apply`. It exits 0 when the database is up to date, 1 when migrations are pending, and 2 when
-it cannot trust what it sees (a hole in the record, an unseeded database, or a database it could not
-read), so a caller that must not ship code ahead of its schema can stop on anything but 0.
+Because the running code keeps serving while a migration lands, a migration is additions only. A drop or rename ships in
+a later release, once nothing reads what it removes.
 
-`--apply` first takes a D1 Time Travel restore point and prints it with the command that goes back to it
-(`npx wrangler d1 time-travel restore <database> --bookmark=<bookmark>`), and refuses to apply if it cannot
-get one (`--no-restore-point` overrides that). A restore overwrites the whole database as it was at that
-moment, so it also discards every write since, user data included. It is for a migration that damaged data;
-for a migration that only added columns, the previous code still works and rolling the code back loses
-nothing. Cloudflare keeps 30 days of history on the paid plan and 7 on the free one.
+By hand, `npm run migrate -- <database>` reports what a database lacks and writes nothing unless given `--apply`. It
+exits 0 when the database is current, 1 when migrations are pending and 2 when it cannot trust what it sees (a hole in
+the record, an unseeded database, or one it could not read). `npm run migrate:dev` applies what the dev database lacks.
+Each file is recorded in `_migrations` by its name without `.sql`. Do not run a file with `wrangler d1 execute` on its
+own: it applies the change without the record, and the next deploy tries to apply it again and fails with a duplicate
+column.
 
-**The deploy applies migrations.** On a push to `main`, a `schema` job reads both databases, read-only, and
-says what each needs. Dev is migrated automatically. Production is migrated after you approve it in GitHub
-(the `production` environment), and only when it has something pending, so a deploy with no migration never
-waits. Each apply takes a restore point first. The code ships only after every migration it needs has applied
-and the columns have been checked; if a database's record cannot be trusted, or a migration fails, nothing
-is deployed. So a migration merges, applies, and then the code that needs it ships, in that order.
+**Check what a database has before trusting the record.** `_migrations` can be wrong when a file was applied by hand and
+never recorded, or recorded without having run. The schema settles it. `npm run check:schema -- <db>` builds a database
+from `migrations/`, reads the real one's columns over wrangler and lists what is missing with the migration that adds
+it, and anything the database has that no migration makes. It only reads, exits 1 on a difference and 2 when the
+database could not be read, and compares column names only, not types, defaults or indexes.
 
-Because the code now running keeps serving while a migration lands, a migration has to be one it can live
-with: additions only. A drop or rename ships in a later release, once nothing reads what it removes (see
-"Writing a migration"). Deploys queue and are never cancelled, so a migration is not cut off partway; a
-production migration left waiting for approval holds the queue, and rejecting it lets the next deploy through.
-`npm run migrate -- <database> --apply` still does the same by hand.
-
-The same holds for what the API sends. An installed app keeps its old code until its owner taps the update banner, and re-reads the data meanwhile, so a field the running client reads is dropped in a later release, once no client reads it. `annualContributionGrowth` was removed from scenarios, and the API still sends it as 0 (`GoalScenarioDto` in `functions/_shared/rows.ts`) for one release: without it a client opened before the deploy multiplies `undefined` into every projection and the Goals tab goes to NaN until reload.
-
-The deploy applies migrations through `0038_description_norm.sql` and records each file in `_migrations` by its name without `.sql`. By hand, `npm run migrate:dev` does that for the dev database and `npm run migrate -- <your-d1-database> --apply` for production. Do not run a migration's file with `wrangler d1 execute` on its own: it applies the change without the record, and the next deploy tries to apply it again and fails with a duplicate column. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happens.
-
-**Check what a database actually has before trusting the record.** `_migrations` can be wrong, for
-example when a file was applied by hand and never recorded, or recorded without having run. The record is
-the thing to query, and the schema is the thing that settles it:
-
-```bash
-npx wrangler d1 execute <db> --remote --command="SELECT name FROM _migrations ORDER BY name"
-npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_info('transactions') WHERE name IN ('settled_by','report_count')"
-```
-
-`npm run check:schema -- <db>` does that second check for every column at once. It builds a database
-from `migrations/`, reads the real one's columns over wrangler, and lists what is missing with the
-migration that adds it (and anything the database has that no migration makes). It only reads, and it
-exits 1 on a difference and 2 when the database could not be read. Run it after applying a migration
-and before trusting `_migrations` for anything: a migration recorded as applied with its column absent
-shows up here as a missing column. It compares column names only, not types, defaults or indexes.
+**A dev database that is ahead of `main`** (a column `main` does not make) fails the schema job on `EXTRA
+<table>.<column>` and stops every deploy until that migration is merged. Apply a migration to dev by hand so that a
+preview can save only when its merge is near, or remove the column again.
 
 ### If a migration goes wrong
-
-Start with what actually broke, because the ways back lose different things.
 
 | What happened | What to do | What it costs |
 | ------------- | ---------- | ------------- |
 | The migration job failed, so nothing shipped | Read the log: the restore point and `npm run check:schema -- <database>` say what state it is in. Fix the migration in a new PR, or finish it by hand. The queued deploy then ships. | Nothing is lost. The database may be partly changed until you do. |
-| The migration applied and the new code is broken | Roll the code back: Cloudflare dashboard, Workers & Pages, `expense-tracker`, Deployments, pick the last good one, Rollback. The schema stays as it is. | Nothing is lost, provided the migration only added things, which is why a migration is meant to be additive. |
+| The migration applied and the new code is broken | Roll the code back: Cloudflare dashboard, Workers & Pages, `expense-tracker`, Deployments, pick the last good one, Rollback. The schema stays as it is. | Nothing is lost, provided the migration only added things. |
 | The migration damaged or lost data | Run the **Restore database** workflow (Actions, Run workflow) with the database, the bookmark from the deploy run's summary, and the database name again to confirm. It waits for your approval. | **Every write since the bookmark is lost, user data included.** The workflow records the database's state just before, so running it again with that bookmark undoes the restore. |
 
-The bookmark is on the summary page of the deploy run that applied the migration, under "Restore point",
-and in the log. Cloudflare keeps 30 days of history on the paid plan and 7 on the free one. The daily
-backup in R2 is a further fallback but is coarser than a bookmark. After a restore, `npm run migrate --
-<database>` will list the migrations it went back past as pending, and the next deploy applies them again,
-so fix the migration first.
+The bookmark is on the summary page of the deploy run that applied the migration, under "Restore point", and in the log.
+Cloudflare keeps 30 days of history on the paid plan and 7 on the free one. The daily backup in R2 is a coarser
+fallback. After a restore, `npm run migrate -- <database>` lists the migrations it went back past as pending and the
+next deploy applies them again, so fix the migration first. The restore command by hand is `npx wrangler d1 time-travel
+restore <database> --bookmark=<bookmark>`.
 
 ### Writing a migration
 
-`scripts/lint-migrations.mjs` runs in the test suite on every migration numbered above 31, so these fail
-the PR before it can merge:
+`scripts/lint-migrations.mjs` runs in the test suite on every migration numbered above 31:
 
-- **Name and number:** `NNNN_lower_snake_case.sql`, numbered upwards with none missing or repeated. Two PRs
-  that each add the next number collide here, on whichever merges second.
-- **Nothing the running code may still read goes away.** `DROP TABLE`, `DROP COLUMN` and `RENAME` need a
-  `-- lint-allow: destructive <why it is safe>` comment above them. The old code keeps serving while a
-  migration runs, so ship the code that stops using a column first, then drop it in a later release.
-- **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs
-  `-- lint-allow: unscoped <why every row is meant>`.
+- **Name and number:** `NNNN_lower_snake_case.sql`, numbered upwards with none missing or repeated. Two PRs that each
+  add the next number collide on whichever merges second.
+- **Nothing the running code may still read goes away.** `DROP TABLE`, `DROP COLUMN` and `RENAME` need a `-- lint-allow:
+  destructive <why it is safe>` comment above them. Ship the code that stops using a column first, then drop it in a
+  later release.
+- **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs `-- lint-allow: unscoped <why every row is
+  meant>`.
 - **`IF NOT EXISTS`** on every `CREATE TABLE` and `CREATE INDEX`.
-
-The reason after `lint-allow:` is required, so the decision is written down where a reviewer sees it.
+- `npm run verify` also checks that this page mentions the latest migration (`scripts/check-migration-docs.mjs`), so add
+  a row to the table below.
 
 ### Migration tracking (read before re-running anything)
 
-`0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
-only files not recorded there, and records each one after it applies.
+`0020_migrations_table.sql` adds `_migrations(name, applied_at)`, and `npm run migrate:dev` applies only files not
+recorded there. This exists because **re-running a migration is destructive, not merely noisy.** `0003_multi_user.sql`
+starts with `ALTER TABLE categories ADD COLUMN owner`, which fails with "duplicate column" on an already-migrated
+database, and that failure is the only thing that stops it. Past it the file continues into three unscoped `UPDATE … SET
+owner = 'owner@example.com'` statements and four `DROP TABLE` rebuilds, which against multi-owner data reassign every
+row to the placeholder and drop four tables. `0012` ends with an `UPDATE goal_scenarios SET plan_start_date = …`, now
+scoped with `WHERE plan_start_date IS NULL`. SQLite has no `ADD COLUMN IF NOT EXISTS`, so idempotent SQL cannot fix
+this, and not running the file twice is the fix. **Never run `0003` or `0012` through `--command`.**
 
-This exists because **re-running a migration was never merely noisy — it was destructive.**
-`0003_multi_user.sql` starts with `ALTER TABLE categories ADD COLUMN owner`, which fails "duplicate
-column" on an already-migrated database. That failure is the only thing that protected you. Past it
-the file continues into three *unscoped* `UPDATE … SET owner = 'owner@example.com'` statements and
-four `DROP TABLE` rebuilds — against today's multi-owner data that reassigns every row to the
-placeholder and drops four tables. `0012` likewise ends with an unscoped
-`UPDATE goal_scenarios SET plan_start_date = date(created_at)`, which overwrites a user-edited value.
-
-Which makes the `--command` fallback below the dangerous path, not the safe one: it runs statements
-individually, so it walks straight past the very error that was doing the protecting. **Never point
-it at `0003` or `0012`.**
-
-SQLite has no `ADD COLUMN IF NOT EXISTS`, so idempotent SQL cannot fix this on its own — 12 of the 20
-files carry an `ADD COLUMN`. Not running the file at all is the fix.
-
-Two things make that safer rather than replacing it:
-
-- `IF NOT EXISTS` on every bare `CREATE TABLE`/`CREATE INDEX`, so a retry between "applied" and
-  "recorded" is a no-op rather than an error.
-- **Backfills are scoped to the rows they mean.** `0003` and `0012` said `UPDATE … SET owner = …`
-  and `SET plan_start_date = …` with no `WHERE`, which is not just non-idempotent but wrong on its
-  own terms: each means "the rows that do not have one yet". Both now carry
-  `WHERE owner = ''` / `WHERE plan_start_date IS NULL` — identical on a first run, since the `ALTER`
-  immediately above sets that state, and a no-op instead of a tenancy wipe on a re-run.
-
-**Write new backfills scoped.** Table rebuilds (`DROP TABLE` + rename) cannot be made safe this way,
-which is why the tracking table, not idempotency, carries the guarantee.
-
-**One-time seeding, for a database that was fully migrated before `0020` existed.** Deliberately not a
-migration — a brand-new database must genuinely execute `0001`–`0019`. Apply `0020` first, then, once
-per such database:
+**Seeding a database that was fully migrated before `0020` existed.** This is deliberately not a migration, because a
+brand-new database must execute `0001` to `0019`. Apply `0020` first, then once per such database:
 
 ```bash
 npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES \
@@ -206,97 +156,64 @@ npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migratio
  ('0018_reimbursement_links'),('0019_reimbursable_flags')"
 ```
 
-`INSERT OR IGNORE` on a `PRIMARY KEY`, so running it twice is harmless. Until you do this,
-`migrate:dev` refuses to run: an unseeded record makes every file look pending, and applying
-`0001` onward to a populated database means handing it `0003`'s four `DROP TABLE`s.
+It is safe to run twice. Until it is done, `migrate:dev` refuses, on either of two signals: a pending file numbered
+below the highest recorded one (a database cannot have reached `0020` without them), or an empty record on a database
+that already has a `transactions` table. Applying `0001` onward to a populated database would hand it `0003`'s four
+`DROP TABLE`s.
 
-It refuses on either of two signals, because the table being *empty* is not the only way the
-record can be wrong. A database that had `0020` applied but never the seed above holds exactly
-`0020_migrations_table` and nothing else, so every earlier file looks pending and `migrate:dev` would
-start re-applying `0001`. Only a failure on `INSERT INTO settings (id)` (the `settings` table has had no
-`id` column since `0003` rebuilt it) would stop it, two files short of `0003`, which is not a guard.
-So the check is: any pending file numbered *below* the highest recorded one means the
-record is incomplete, since a database cannot have reached `0020` without them; and an empty
-record on a database that already has a `transactions` table means the same thing.
+**If `--file` fails with `fetch failed`, use `--command` for a pending file.** `wrangler d1 execute --file` can fail
+with a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, straight after "Uploading complete",
+while `--command` queries against the same database succeed. Node 24 is the suspect, so try Node 22 first. Running the
+statements one at a time through `--command` reaches the same end state: strip the `--` comments, split on `;`, run them
+in order, then record the file in `_migrations`. Only do this for a pending file, since on an applied one it skips past
+the error that would have stopped `--file`. The trade is atomicity: `--file` leaves the database untouched if the import
+fails partway, and statement by statement can stop half-applied, so compare the result with `npm run check:schema`.
 
-> **If `--file` fails with `fetch failed`, use `--command` instead.** `wrangler d1 execute --file` can
-> fail with a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, straight after
-> "Uploading complete". It is specific to the *import* path: `--command` queries against the same
-> database in the same shell succeed, and upgrading wrangler did not change it. Node 24 is the suspect,
-> so try Node 22 first. For a file that has not been applied yet, running its statements individually
-> through `--command` reaches the same end state — strip the `--` comments, split on `;`, and run them in
-> order, then record it in `_migrations` yourself.
->
-> Only ever do this for a *pending* file. On an already-applied one it skips past the error that
-> would have stopped a `--file` run — see the warning about `0003` and `0012` above.
->
-> The trade is atomicity: `--file` leaves the database untouched if the import fails partway, whereas
-> statement-by-statement can stop half-applied. Verify after, comparing the resolved schema (via
-> `pragma_table_info`) against dev rather than trusting the statements were transcribed correctly. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+### Migrations that need more than the deploy
 
-`0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
+| Migration | What to know |
+| --------- | ------------ |
+| `0003`, `0012` | Never re-run (above). |
+| `0011_user_preferences` | Its last `UPDATE` sets a day-13 budget rollover for the placeholder owner `owner@example.com`. Replace the placeholder with your Access email before applying, or delete the statement to keep calendar months. |
+| `0016_transaction_attachments` | Uploads need the `RECEIPTS` R2 binding (`npm run setup:receipts`, below). Without it the upload route answers 503 and the rest of the app is unaffected. |
+| `0020_migrations_table` | Seed any database migrated before it (above). |
+| `0023_drop_goal_inputs` | Drops a table and a column; the data is gone. |
+| `0035_owner_revision` | Creates `owner_revision`. SQL by hand that writes the dataset's tables must also delete the owner's row (below). |
+| `0036_transaction_query_indexes`, `0037_pinned_rows_index` | Each index is built by reading every row once and adds a written row per insert (0037 only for investments and rows tied to a plan, flag or settlement). |
+| `0038_description_norm` | See below. |
 
-`0010_installment_due_day.sql` adds the nullable `due_day_of_month` column on `installment_plans` (existing rows stay `NULL`). Apply it before (or with) the code deploy that reads it: the column dates each suggested and auto-created installment.
+Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 
-`0011_user_preferences.sql` adds three nullable `settings` columns — `currency_code`, `number_locale`, `budget_rollover_day` — so currency, number format and the budget period are not fixed to one convention. `NULL` falls back to the built-in defaults (EUR, `de-DE` grouping, rollover day 1 = plain calendar months). The migration's final `UPDATE` sets a day-13 rollover for the placeholder owner `owner@example.com`: replace the placeholder with your Access email before applying, or delete the statement to keep calendar months. Users change all three later under Settings → Money & months (also set during onboarding).
+**Changing data by hand.** SQL by hand, a data migration or a seed script that writes the dataset's tables has to delete
+that owner's revision, or a browser that cached the old data is told nothing changed: `DELETE FROM owner_revision WHERE
+owner = '<email>'`. A Time Travel restore needs nothing, because the table goes back with the data it describes.
 
-`0012_wealth_checkins.sql` adds three new tables (`wealth_accounts`, `wealth_checkins`, `wealth_checkin_entries`) and a `plan_start_date` column on `goal_scenarios`. The new tables start empty (accounts are created through the Goals UI). The `plan_start_date` backfill is owner-agnostic — no placeholder substitution needed.
+**Index cost on the Free plan.** Every index on `transactions` adds one written row per insert against the 100,000 a
+day, so two new indexes make a 5,000-row import write 10,000 more rows. An inserted transaction costs its row and one
+entry per index.
 
-`0013_life_events.sql` adds a `life_events TEXT NOT NULL DEFAULT '[]'` column to `goal_scenarios`. Stores a JSON array of one-off cash events per scenario. Existing rows automatically get the empty-array default — no data migration needed.
+#### 0038: the stored normalized description
 
-`0014_custom_milestones.sql` adds a nullable `milestones TEXT` column to `settings`. Stores a JSON array of `{label, amountCents}` net-worth milestones per owner. `NULL` falls back to the built-in €100k–€1M defaults, so existing owners see no change until they edit the list from the Goals tab's Assumptions view; an empty array is a deliberate "no milestones" choice. Owner-agnostic — no placeholder substitution needed. Apply it before (or with) the code deploy that reads the column.
-
-`0015_transaction_flags.sql` adds the `flags` table plus a nullable `flag_id` column on `transactions`. Flags are reusable named markers (name + colour + optional description) for tracking work that outlives a budget month — the motivating case is "expenses I still have to claim back from an employer". The table starts empty; no defaults are seeded, and flags are created through Settings → Flags or the picker in the transaction editor. `flag_id` stays `NULL` on every existing row, so there is no backfill and no placeholder substitution. Deleting a flag clears `flag_id` on its transactions rather than reassigning them (the column is nullable, unlike `category_id`). Apply it before (or with) the code deploy that reads the column.
-
-`0016_transaction_attachments.sql` adds the `transaction_attachments` table — metadata only, for receipt photos and PDFs whose bytes live in R2. It starts empty and nothing reads it until an attachment is uploaded, so it is safe to apply ahead of the code deploy. It needs the `RECEIPTS` R2 binding to be useful: run `npm run setup:receipts` first (see **Receipt storage (R2)** below). Without the binding the upload route returns a clean 503 and the rest of the app is unaffected. Owner-agnostic — no placeholder substitution needed.
-
-`0017_claimant_name.sql` adds a nullable `claimant_name` column on `settings` — the name printed at the top of an expense report, so the document identifies who is submitting it. `NULL` reads as `''` and the report simply omits the name line, so existing owners see no change until they fill it in under Settings → Expense reports. Deliberately not derived from the Cloudflare Access email: that identifies the account, not the person, and an address on an expense form reads as a mistake. Owner-agnostic — no placeholder substitution needed.
-
-`0018_reimbursement_links.sql` adds a nullable `settled_by` column on `transactions`, holding the id of the `refund` transaction that reimbursed that row, plus a partial index. It is set when a reimbursement is recorded and cleared if that reimbursement is deleted, so the link is reversible. Deliberately *not* a clearing of `flag_id`: unflagging on settlement would empty the Flagged card just as well, but it throws away which transactions were in which claim — the thing this column exists to record — and cannot be undone, since nothing would remember the flag. `groupTransactionsByFlag` skips settled rows instead, so the card empties and the history survives. Every existing row stays `NULL`, so there is no backfill and no placeholder substitution.
-
-`0019_reimbursable_flags.sql` adds a `reimbursable INTEGER NOT NULL DEFAULT 1` column on `flags`. Flags are generic markers: "Work travel" is money an employer will repay, "Tax deductible" is a note for an accountant that nobody is going to pay. Only a reimbursable flag offers an expense report and a Record reimbursement action — on the others they produce a document headed EXPENSE REPORT with a signature line, addressed to nobody. It defaults to `1` rather than `0` on purpose: the flags that already exist were created when flagging *was* reimbursement, so every one of them is reimbursable, and defaulting to `0` would silently take the buttons away from a feature already in use. Owner-agnostic — no placeholder substitution needed.
-
-`0021_report_snapshot.sql` adds two nullable columns on `transactions`, `report_count` and `report_covered_cents`. They hold what a reimbursement covered at the moment it was recorded. Past expense reports are otherwise rebuilt entirely from the rows still pointing at the payment, so editing or deleting one of those rows afterwards rewrites the record of what was submitted; with the snapshot the app shows the recorded figures and says when the live rows no longer match. Written by the settle itself, so no backfill: payments recorded before this migration stay `NULL` and are shown without a match check. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — the settle writes these columns and will fail against a database that lacks them.
-
-`0022_backfill_completed_installment_plans.sql` flips `active` to `0` on any installment plan whose linked, non-cancelled transactions already cover every installment. Recording a plan's final installment now does this automatically going forward (see `maybeCompletePlan` in `functions/_shared/dbWrite.ts`); this is the one-time catch-up for plans that finished before that code shipped. Idempotent — running it again against an already-caught-up database updates zero rows. Owner-agnostic — no placeholder substitution needed.
-
-`0023_drop_goal_inputs.sql` drops the `goal_inputs` table and the `liquid_net_worth_cents` column on `settings`. Both were import leftovers that only ever seeded the first unsaved Goals draft: every saved scenario carries its own house and return assumptions, and a new plan now starts from the latest wealth check-in. Owner-agnostic, no backfill, and the data is gone with it. **Apply it with or after the code deploy**, the other way round from `0021`: the previous release selects from `goal_inputs` on every dataset load and would 500 against a database that no longer has it.
-
-`0024_goal_scenario_active.sql` adds `is_active INTEGER NOT NULL DEFAULT 0` on `goal_scenarios`, backfills each owner's newest scenario as their plan (what the app was already comparing against, so nothing moves on deploy), and adds a partial unique index so an owner can never hold two. The backfill is scoped to owners with no plan yet. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — creating and activating a scenario both write the column.
-
-`0025_cash_reserve_months.sql` adds a nullable `cash_reserve_months` on `settings`: the emergency-fund target Progress measures cash accounts against, read as 0 (no target) when null. Owner-agnostic, nothing to backfill. **Apply it before (or with) the code deploy** — saving the target from Assumptions writes the column, and the previous release never reads it.
-
-`0026_investment_category.sql` adds a nullable `investment_category_id` on `settings`: the category every investment transaction is filed under, in both directions, chosen under Settings → New transactions. Null falls back to a category named for investments. Owner-agnostic, nothing to backfill, same timing as `0025`.
-
-`0027_assumed_inflation.sql` adds a nullable `assumed_inflation` on `settings`: the yearly inflation the Goals tab assumes wherever it brings a nominal figure back to today's money, read as 2% when null. It is one value for the owner, not one per plan, so every scenario and the comparison table share a basis. Owner-agnostic, nothing to backfill, same timing as `0025`: apply it before (or with) the code deploy, since changing the rate writes the column.
-
-`0028_labels.sql` adds a `labels` table and a `transaction_labels` join table: a persistent, multi-value tag a transaction can carry, distinct from a flag (which is transient and clears on reimbursement — see `0018`). A transaction can hold any number of labels, which is why this needed a join table rather than another single column like `flag_id`. Both tables are brand new and nothing in the shipped app reads or writes them yet, so there is no backfill and no deploy-order constraint — apply it whenever is convenient before the code that uses it lands.
-
-`0029_flag_auto_label.sql` adds a nullable `auto_label_id` on `flags`: configuring it applies that label to every transaction currently carrying the flag, and to every one the flag is assigned to afterward. Nullable and no enforced FK, same reasoning as `flag_id` itself (`0015`) and `settled_by` (`0018`) — D1/SQLite's `ALTER TABLE` cannot add one. Nothing defaults it on existing flags, so there is no backfill; apply it whenever is convenient before the code that reads it lands.
-
-`0030_goal_levers.sql` adds a nullable `goal_levers` text column to `settings`: a JSON array of up to five scenario input names, in the order the Goals page's bar shows them. NULL means the owner never chose and reads as the built-in five, so there is no backfill, and an empty array is a deliberate empty bar. Apply it before the code that saves a choice is deployed: a database without the column still reads as the defaults, but saving a choice fails until it is there.
-
-`0031_contribution_schedule.sql` adds a `contribution_schedule TEXT NOT NULL DEFAULT '[]'` column to `goal_scenarios`: a JSON array of `{from, monthlyCents}` changes to what a scenario invests each month, from the first of the month `from` on. Existing rows get the empty array, so every scenario reads as having no changes and nothing needs a backfill. Apply it before the code that saves a schedule is deployed: a database without the column still loads scenarios, but creating or saving one fails until it is there. Afterwards run `npm run check:schema` against the database, since `0013`, the same kind of column, was once recorded as applied and never ran.
-
-`0032_home_carry_rate.sql` adds a `home_carry_rate REAL NOT NULL DEFAULT 0.015` column to `goal_scenarios`: what owning the house costs a year beyond the mortgage (repairs, property tax, insurance), as a fraction of its value, which Rent vs buy counts against the buyer. It had been a rate of 1,5% written into the code and shown nowhere. Existing rows get 0.015, the rate they were always compared with, so nothing needs a backfill and no scenario's figures move. The server holds it between 0 and 0.1 and fills 0.015 in for a client that posts without it. Apply it before the code that saves it is deployed: a database without the column still loads scenarios (they read as 1,5%), but creating or saving one fails until it is there. Afterwards run `npm run check:schema`.
-
-`0033_retirement_years.sql` adds a `retirement_years INTEGER NOT NULL DEFAULT 30` column to `goal_scenarios`: how many years the invested money must pay for the spending after financial independence, which the FI drawdown chart runs for and the suggested withdrawal rate follows. The drawdown had been drawn over 30 years, or the plan's horizon if that was shorter, written into the code. Existing rows get 30, so nothing needs a backfill and no existing figure moves apart from a plan with a horizon under 30 years, whose drawdown is no longer cut short by it. The server holds it to a whole number of years from 1 to 100 (the chart loops over every one) and fills 30 in for a client that posts without it. Apply it before the code that saves it is deployed: a database without the column still loads scenarios (they read as 30 years), but creating or saving one fails until it is there. Afterwards run `npm run check:schema` against the database.
-
-`0034_market_volatility.sql` adds a nullable `market_volatility REAL` on `settings`: how far a year's return strays from the typical one when the spread card replays the plan with random returns, as a fraction (0.15 is 15%), one value for the owner. Nullable and read as 15% until it is set, so nothing needs a backfill. The server holds it between 0 and 0.5. Apply it before the code that saves it is deployed: a database without the column still loads settings (they read as 15%), but saving this setting fails until it is there. Afterwards run `npm run check:schema` against the database.
-
-`0035_owner_revision.sql` creates `owner_revision`, one row per owner holding an opaque random token that every write request replaces (`docs/ARCHITECTURE.md`, "Dataset revision"). `GET /api/expenses` turns it into a weak ETag and answers 304 when the browser's copy is current. Nothing needs a backfill: an owner with no row gets one on their first read. Apply it before the code that uses it is deployed: every write request replaces the token, so a database without the table fails every write until it is there. Afterwards run `npm run check:schema` against the database. Anything that writes the dataset's tables without going through the API (SQL by hand, a data migration) must also delete that owner's row (`DELETE FROM owner_revision WHERE owner = '<email>'`), or a browser that cached the old data is told nothing changed. A Time Travel restore needs nothing: the table goes back together with the data it describes.
-
-`0036_transaction_query_indexes.sql` adds two indexes on `transactions`, `(owner, date)` and `(owner, budget_month, date)`, for the paged list and summary routes (`GET /api/expenses/transactions/list` and `/summary`). It changes no column and no row. Without them those queries sort the owner's whole ledger to return one page; with them a page reads about a page of rows. Each index adds one written row per inserted transaction, so a bulk import of 5,000 rows writes 10,000 more than before (Free plan: 100,000 a day). Applying it before or after the code that reads through the indexes changes how many rows a page reads, not what it returns. On a large table the build reads every row once. The query plans that justify each index, and the older indexes they make redundant (not dropped), are in `docs/SCALING.md`.
-
-`0037_pinned_rows_index.sql` adds a partial index on `transactions`, `idx_txn_pinned (owner, date)`, which holds only the rows that stay real in any month (investments, and rows tied to an instalment plan, a flag or a settlement, or that carry a covered count), for `GET /api/expenses/reference`. It changes no column and no row. An ordinary expense is not in the index and pays no written row for it; an inserted investment, plan row, flagged row or settled row pays one (Free plan: 100,000 a day). Applying it before or after the code that reads through it changes how many rows the reference route reads (the owner's whole ledger without it), not what it returns. On a large table the build reads every row once. The query plan and the cost are in `docs/SCALING.md`, "Ledger parts".
-
-`0038_description_norm.sql` adds a nullable `description_norm TEXT` on `transactions` and one index, `(owner, description_norm, date)`. The column holds what the app's own `normalizeDesc` (trim, then `toLowerCase`) makes of the description, and every statement that writes a description writes it too. SQLite cannot compute that value (its `lower` is ASCII-only and its `trim` strips only spaces), so the migration leaves every existing row NULL and the server fills them in, a few hundred at a time, the first time a route that needs the column is read (`functions/_shared/descriptionNormBackfill.ts`); until then that route answers 503 with a `Retry-After` and a retry gets further. Nothing is lost or changed in the meantime: no response carries the column, and the dataset revision does not move. Apply it before the code that writes the column is deployed, because the INSERT and UPDATE statements name it. Afterwards run `npm run check:schema` against the database, and look for the index too, which that check does not (it compares columns only): `SELECT name FROM sqlite_master WHERE name = 'idx_txn_owner_desc_norm'`.
-
-The cost on the Free plan (100,000 rows written a day), as D1 reports it: building the index writes one row per existing transaction, the fill writes two per transaction, and an inserted transaction is eight written rows with its indexes, one of them this migration's. An UPDATE that names `description` or `date` in its SET list rewrites the index entry whether or not the value changed, and the edit form always sends both, so every ordinary edit writes one more row than before. A ledger of about 33,000 transactions uses a day's budget for the migration and the fill together; the fill resumes where it stopped if it hits the limit. Anything that inserts into `transactions` outside the API has to write the column as well (the seed generators in `scripts/` do); a row left NULL is simply filled in later.
-
-**If it is only half applied.** `ALTER TABLE ... ADD COLUMN` cannot be run twice. If the column is there and the index is not, finish by hand and record it: `CREATE INDEX IF NOT EXISTS idx_txn_owner_desc_norm ON transactions (owner, description_norm, date)`, then `INSERT OR IGNORE INTO _migrations (name) VALUES ('0038_description_norm')`.
-
-**Rolling back.** Rolling the code back in Pages is safe for the schema: the column is nullable and the previous code ignores it. But the previous code edits a description without touching the column, so a row edited while it was live keeps a value that is no longer its own, and nothing recomputes a value that is not NULL (only NULL rows are filled). The same happens on the dev database for every open PR preview that does not have this code. After rolling forward again, repair it, then drop the revisions so that a browser holding a cached series is told it changed:
+- **Order.** Apply it before the code that writes the column, because the INSERT and UPDATE statements name it. The
+  deploy does this.
+- **Afterwards.** Run `npm run check:schema -- <database>`, then check the index, which that command does not: `SELECT
+  name FROM sqlite_master WHERE name = 'idx_txn_owner_desc_norm'`. Existing rows are NULL and the server fills them a
+  few hundred at a time, the first time a route that needs the column is read. Until none wait, that route answers 503
+  with `Retry-After`, and each retry gets further. No response carries the column and the dataset revision does not
+  move.
+- **Cost.** Building the index writes one row per existing transaction and the fill writes two, so a ledger of about
+  33,000 transactions uses a day's write budget for both, and the fill resumes the next day if it runs out. An UPDATE
+  that names `description` or `date` rewrites the index entry whether or not the value changed, and the edit form always
+  sends both, so every edit writes one more row. Anything that inserts into `transactions` outside the API has to write
+  the column (the seed generators in `scripts/` do), and a row left NULL is filled in later.
+- **Half applied.** `ALTER TABLE ... ADD COLUMN` cannot be run twice. If the column is there and the index is not,
+  finish by hand and record it: `CREATE INDEX IF NOT EXISTS idx_txn_owner_desc_norm ON transactions (owner,
+  description_norm, date)`, then `INSERT OR IGNORE INTO _migrations (name) VALUES ('0038_description_norm')`.
+- **Rolling back.** Rolling the code back in Pages is safe for the schema, since the column is nullable. But the
+  previous code edits a description without the column, so a row edited while it was live keeps a value that is no
+  longer its own, and only NULL rows are filled. The same happens on the dev database for every open PR preview without
+  this code. After rolling forward, repair it and then drop the revisions so that a browser holding a cached series is
+  told it changed:
 
 ```sql
 -- every row (the default)
@@ -307,68 +224,70 @@ UPDATE transactions SET description_norm = NULL WHERE updated_at >= '<when the r
 DELETE FROM owner_revision
 ```
 
-Use the first (the next read that needs the values refills them, two written rows each) unless the ledger is too large to refill whole, and the second (for rows updated since the rollback began) then. `functions/_shared/descriptionNormRepair.test.ts` runs these statements after simulated edits by the previous code and checks that every value is right again, and fails if this page stops quoting them. A Time Travel restore needs nothing if it goes back to a point after this migration, because the column goes back with the rows it describes. A restore to a point before it, with this code live, makes every INSERT and every description UPDATE fail with "no column named description_norm" until the migration is applied again, so roll the code back first or run `npm run migrate -- <database> --apply` straight after.
-
-**A dev database that is ahead of `main`.** The deploy's schema job compares each database's columns with what `migrations/` on `main` produces and fails on an extra one (`EXTRA transactions.description_norm`), which stops every deploy, not only this one, until the migration is merged. Applying a migration to dev by hand so that a preview can save is the documented way to try a change (docs/OPS.md), so do it when the merge is near, or remove the column again if it is not.
+Use the first, which the next read refills at two written rows each, unless the ledger is too large to refill whole, and
+then the second. A Time Travel restore to a point after the migration needs nothing. A restore to a point before it,
+with this code live, makes every INSERT and every description UPDATE fail with "no column named description_norm", so
+roll the code back first or run `npm run migrate -- <database> --apply` straight after.
 
 ## Receipt storage (R2)
 
-Receipt photos and PDFs attached to a transaction. Bytes live in R2; only metadata lives in D1.
+Receipt photos and PDFs attached to a transaction. Bytes live in R2, and only metadata lives in D1.
 
-**Cost:** R2's free tier is 10 GB-month storage, 1M Class A ops and 10M Class B, with no egress charge. `config/receipt-policy.json` caps one owner at **2 GB** (~20% of the tier, roughly 10,000 downscaled receipts) alongside the backups bucket's 512 MB. An upload costs 2 Class A ops (file + thumbnail) and a view 1–2 Class B, which `immutable` caching turns into 304s on repeat. The quota check is a single D1 aggregate, not an R2 list, so it burns no Class A ops.
-
-1. Enable R2 on the account (dashboard) — already done if backups are running.
-2. Run `npm run setup:receipts` — creates bucket `receipts` and binds `RECEIPTS` on production **and** preview.
+1. Enable R2 on the account (already done if backups are running).
+2. Run `npm run setup:receipts`. It creates the bucket `receipts` and binds `RECEIPTS` on production and preview.
 3. Redeploy (`npm run deploy`) so the binding reaches the running Functions.
 
-Objects are stored at `{owner-email}/{transaction-id}/{sha256}.{ext}`, plus `…_thumb.jpg` for raster images. Keys are server-generated and contain no user-supplied string.
+Objects are stored at `{owner-email}/{transaction-id}/{sha256}.{ext}`, plus `…_thumb.jpg` for raster images. Keys are
+server-generated and contain no user-supplied string. Without the binding the app still works: the upload and serve
+routes answer 503 and nothing else is affected, which is why the binding is optional in `functions/_shared/env.ts`.
 
-**Without the binding the app still works**: the upload and serve routes return a clean 503 and nothing else is affected. That is the same degradation `BACKUPS` uses, and it is why the binding is optional in `functions/_shared/env.ts`.
+**Cost.** R2's free tier is 10 GB-month of storage, 1M Class A and 10M Class B operations, with no egress charge.
+`config/receipt-policy.json` caps one owner at 2 GB (about 20% of the tier, roughly 10,000 downscaled receipts)
+alongside the backups bucket's 512 MB. An upload costs 2 Class A operations (file and thumbnail) and a view 1 to 2 Class
+B, which `immutable` caching turns into 304s on repeat. The quota check is a single D1 aggregate, not an R2 list.
+`RECEIPT_MAX_FILE_BYTES`, `RECEIPT_MAX_PER_TRANSACTION` and `RECEIPT_MAX_OWNER_BYTES` override the policy as Pages env
+vars.
 
-Optional Pages env vars override the policy JSON: `RECEIPT_MAX_FILE_BYTES`, `RECEIPT_MAX_PER_TRANSACTION`, `RECEIPT_MAX_OWNER_BYTES`.
+**Receipts are not in the daily backup.** The D1 snapshot carries attachment metadata, so a restore knows which receipts
+existed, but the bytes are not copied: base64 in the JSON snapshot would add about 33% and trip the 5 MiB snapshot
+alert, and copying R2 to R2 would multiply Class A operations without protecting against what the backup is for (D1
+corruption or a bad migration). The real risk is an accidental bucket delete, which R2 object versioning addresses, so
+enable it on the bucket if the receipts matter.
 
-> **Receipts are not covered by the daily backup.** The D1 snapshot carries attachment *metadata*, so a restore knows which receipts existed — but the bytes are not copied. Base64 in the JSON snapshot would add ~33% and immediately trip the 5 MiB snapshot alert, and R2→R2 copying would multiply Class A ops for no protection against the risk the backup exists for (D1 corruption or a bad migration). The real receipt-loss risk is an accidental bucket delete, which R2 object versioning addresses properly. Enable it on the bucket if the receipts matter.
-
-**Revoking a user** deletes their receipt bytes from R2 *and* their rows from D1, via `purgeOwnerData` — in that order, because the `transaction_attachments` rows are the only record of which objects are theirs, and the D1 batch deletes those rows. The R2 half is best-effort: if it fails the revoke still completes (leaving the rows and their access in place would be worse) and logs `revoke: receipt bytes for <email> were not deleted`.
-
-Sweep manually with `npx wrangler r2 object delete` against the `{owner-email}/` prefix only if you see that warning, or to catch objects no row ever named (an upload whose row insert failed).
+**Revoking a user** deletes their receipt bytes from R2 and then their rows from D1, via `purgeOwnerData`, in that
+order, because the `transaction_attachments` rows are the only record of which objects are theirs. The R2 half is
+best-effort: if it fails the revoke still completes and logs `revoke: receipt bytes for <email> were not deleted`. Sweep
+the `{owner-email}/` prefix manually with `npx wrangler r2 object delete` only if you see that warning, or to catch
+objects no row ever named (an upload whose row insert failed).
 
 ## Scheduled backups (R2)
 
-Daily cron exports each owner's full dataset to R2 as JSON. **Pages does not support cron triggers**, so scheduling runs on a standalone Worker (`expense-backup-cron` in `workers/backup-cron/`).
+A daily cron writes each owner's full dataset to R2 as JSON, at `{owner-email}/{YYYY-MM-DD}.json`. Pages has no cron
+triggers, so it runs on a standalone Worker (`expense-backup-cron`, in `workers/backup-cron/`), which the `ship` job
+redeploys on every merge to `main`.
 
-**Cost:** one cron invocation per day fits Cloudflare Workers free tier (100k requests/day). R2 free tier (10 GB-month storage, 1M Class A ops) is ample; policy defaults in [`config/backup-policy.json`](../config/backup-policy.json) cap total backup storage at **512 MB** (~5% of free tier) and retain **14 days** of daily snapshots. Oldest files are deleted first when over budget.
+1. Enable R2 on the account.
+2. Run `npm run setup:backups`. It creates the backups bucket (its name is set in
+   `scripts/setup-backup-infrastructure.mjs`) and binds `BACKUPS` on the Pages project, production and preview.
+3. Deploy the worker with `npm run deploy:backup-cron`, or merge to `main`.
 
-1. Enable R2 on the account (dashboard).
-2. Run `npm run setup:backups` — creates the backups R2 bucket (its name is set in `scripts/setup-backup-infrastructure.mjs`) and binds `BACKUPS` on the expense-tracker Pages project (production + preview).
-3. Deploy the cron worker: `npm run deploy:backup-cron` (also runs automatically on push to `main` via CI).
-4. Backups are stored at `{owner-email}/{YYYY-MM-DD}.json`.
+If `setup:backups` ran before R2 was enabled it may have bound `BACKUPS` to a missing bucket and blocked deploys. Remove
+the binding with `node scripts/remove-backups-binding.mjs`, deploy, and re-run `npm run setup:backups` once R2 works. If
+the Worker's `BACKUPS` binding is missing it logs a warning and skips, without failing the deploy.
 
-Optional Pages env vars override policy JSON: `BACKUP_RETENTION_DAYS`, `BACKUP_MAX_BUCKET_BYTES`, `BACKUP_MAX_SNAPSHOT_BYTES`. The Worker uses the same defaults from `config/backup-policy.json` unless you add matching `[vars]` in `workers/backup-cron/wrangler.toml`.
+**Policy.** `config/backup-policy.json` caps total backup storage at 512 MB (about 5% of the free tier) and keeps 14
+days of snapshots, deleting the oldest first when over budget. The Pages env vars `BACKUP_RETENTION_DAYS`,
+`BACKUP_MAX_BUCKET_BYTES` and `BACKUP_MAX_SNAPSHOT_BYTES` override it, and the Worker uses the same defaults unless you
+add matching `[vars]` in `workers/backup-cron/wrangler.toml`. One invocation a day fits the Workers free tier (100,000
+requests a day), and R2's free tier is ample.
 
-If `setup:backups` was run before R2 was enabled, it may have bound `BACKUPS` to a missing bucket and **blocked deploy**. Remove the binding with `node scripts/remove-backups-binding.mjs`, then deploy; re-run `npm run setup:backups` once R2 works.
+**Verify.** Cloudflare dashboard → Workers & Pages → expense-backup-cron → Triggers shows the cron (`0 4 * * *` UTC).
+After the first run, check the backups bucket. Locally: `npx wrangler dev --config workers/backup-cron/wrangler.toml
+--test-scheduled`, then `curl "http://localhost:8787/cdn-cgi/handler/scheduled"`. To restore, download the JSON from R2
+and re-import it with `wrangler d1 execute` or a one-off script.
 
-Restore: download JSON from R2 and re-import via `wrangler d1 execute` or a one-off script.
-
-If the Worker's `BACKUPS` binding is missing, the handler logs a warning and skips (no deploy failure).
-
-**Verify:** Cloudflare dashboard → Workers & Pages → expense-backup-cron → Triggers (cron `0 4 * * *` UTC). After the first run, check the backups R2 bucket. To test locally: `npx wrangler dev --config workers/backup-cron/wrangler.toml --test-scheduled` then `curl "http://localhost:8787/cdn-cgi/handler/scheduled"`.
-
-**Backup alerts (email + logs):** large snapshots and bucket usage above **80%** of the cap (`bucketAlertThresholdFraction` in `config/backup-policy.json`) notify via the `BackupAlerts` port. Configure recipients in gitignored `config/backup-alerts.json` (copy from `backup-alerts.example.json`), then:
-
-```bash
-npm run sync:backup-alerts
-```
-
-Requires Cloudflare **Email Sending** enabled on your domain and an `EMAIL` binding on this Pages project. The cron Worker logs alerts to Workers observability when `EMAIL` is not bound. Env vars: `BACKUP_ALERT_TO`, `BACKUP_ALERT_FROM`, `BACKUP_ALERT_FROM_NAME`.
-
-**Ports & adapters** (for swapping vendors): persistence → `ExpenseRepository`; object storage → `BackupStore`; auth → `AuthProvider`; email → `EmailSender`. Interfaces live in `src/domain/ports/`.
-
-Functions import domain code via `functions/domain` → `../src/domain` (symlink). Cloudflare’s Pages Functions bundler does not honour Wrangler `alias` config, so `@domain/...` cannot be used in `functions/` — the Vite app still uses `@domain/*` / `@config/*` path aliases.
-
-One-time setup (R2 bucket + Pages binding) — uses wrangler OAuth when logged in locally:
-
-```bash
-npm run setup:backups
-npm run deploy:backup-cron
-```
+**Alerts.** A large snapshot, or bucket usage above 80% of the cap (`bucketAlertThresholdFraction`), notifies through
+the `BackupAlerts` port. Put recipients in gitignored `config/backup-alerts.json` (copy `backup-alerts.example.json`)
+and run `npm run sync:backup-alerts`. It needs Cloudflare Email Sending on your domain and an `EMAIL` binding on the
+Pages project, and the cron Worker logs alerts to Workers observability when `EMAIL` is not bound. The env vars are
+`BACKUP_ALERT_TO`, `BACKUP_ALERT_FROM` and `BACKUP_ALERT_FROM_NAME`.
