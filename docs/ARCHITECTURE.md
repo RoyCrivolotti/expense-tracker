@@ -196,16 +196,23 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   first. A write also makes the held revision unknown until a part is read again, so the next read of another month
   reads everything rather than mixing two states. Months held beyond the window around the month shown are given up
   oldest first, and a ledger held in full gives up nothing.
-- **A windowed model's `history` is the server's recurring series, held while a screen uses it.** A series needs every
-  row it is made of, which a window does not hold. A screen that reads `history` (the Overview, Spending, the Upcoming
-  card) calls `useHistoryWatch(model)`, and `LedgerSession.watchSeries` then reads
-  [`GET /series`](./API.md#get-series) into `SessionState.series`, which `useLedgerData` turns into `history`. The
-  server reads every row for it whenever the revision has moved, so it is read again only after a write that changed
-  rows, after a refresh that found another revision, or when the rows and the series were read at different
-  revisions, never after a write to settings or flags and never while no screen is mounted. Until the first read lands
-  the Upcoming card offers nothing, because the rows of a window can show a charge as regular that the whole history
-  does not. A screen that starts reading `history` calls the hook. `ledgerSeries.client.integration.test.ts` holds the
-  readings of a window with the served series to those of every row, over the real routes.
+- **A windowed model's `history` is the server's recurring series, read when a screen that uses them mounts.** A series
+  needs every row it is made of, which a window does not hold. A screen that reads `history` (the Overview, Spending,
+  the Upcoming card) calls `useHistoryWatch(model)`, and `LedgerSession.watchSeries` reads
+  [`GET /series`](./API.md#get-series) into `SessionState.series` when they are missing or stale. The server reads every
+  row for them whenever the revision has moved, about nine rows per transaction, so they go stale only after a write that
+  could change one (`touchesSeries`: a row that counts was added, removed or edited in what a series is made of, which a
+  flag, a label or a note is not), after a refresh that found another revision, or when the rows and the series were read
+  at different revisions. They are read when the next screen mounts, never on a timer and never while a screen that uses
+  them is already showing. `useLedgerData` folds the rows written since they were read into them (`foldNewerRows`), so
+  logging the charge the Upcoming card offers clears it at once, and the Overview and Spending keep the split as of the
+  last read until then. While the model has no `history` (the first read has not landed, it failed, or the browser is
+  offline) it says so (`historyNote`, which `HistoryNote` shows): the figures that need it use the months loaded, and the
+  Upcoming card offers nothing, because the rows of a window can show a charge as regular that the whole history does
+  not. A read that fails, or finds the ledger at another revision three times, is reported and not started again for a
+  minute, and a refresh lifts that. A screen that starts reading `history` calls the hook.
+  `ledgerSeries.client.integration.test.ts` holds those readings, and the card after a write, to those of every row, over
+  the real routes.
 - **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
