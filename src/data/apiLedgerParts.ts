@@ -1,6 +1,14 @@
 import type { LedgerPartsSource } from './dataSource'
 import { toApiError } from './apiClient'
-import type { CubePart, MonthRange, MonthRowsPart, ReferencePart } from '../domain/data/ledgerParts'
+import type {
+  CubePart,
+  MonthRange,
+  MonthRowsPart,
+  ReferencePart,
+  TransactionPagePart,
+  TransactionSummaryPart,
+} from '../domain/data/ledgerParts'
+import { transactionQueryString } from './transactionQueryString'
 import type { TransactionAttachment } from '../domain/types'
 import { PartTooLargeError, PartsUnavailableError } from '../domain/data/ledgerPartsErrors'
 
@@ -66,6 +74,25 @@ function isReceiptList(body: unknown): body is TransactionAttachment[] {
   )
 }
 
+function isTransactionPage(body: unknown): body is TransactionPagePart {
+  return (
+    isObject(body) &&
+    (body.nextCursor === null || typeof body.nextCursor === 'string') &&
+    Array.isArray(body.items) &&
+    body.items.every((row) => isObject(row) && typeof row.id === 'number' && typeof row.date === 'string')
+  )
+}
+
+function isTransactionSummary(body: unknown): body is TransactionSummaryPart {
+  return (
+    isObject(body) &&
+    typeof body.revision === 'string' &&
+    typeof body.count === 'number' &&
+    typeof body.capped === 'boolean' &&
+    typeof body.netSpendCents === 'number'
+  )
+}
+
 function unavailable(url: string, detail: string): PartsUnavailableError {
   return new PartsUnavailableError(`${url} is not served here (${detail})`)
 }
@@ -109,6 +136,13 @@ async function readPart<T>(url: string, check: (body: unknown) => body is T): Pr
   return body
 }
 
+/** A list or summary is read as it is now, and never from a cache: the server sends no validator for it. */
+async function readFresh<T>(url: string, check: (body: unknown) => body is T): Promise<T> {
+  const body = await bodyOf(url, await fetchPart(url, { cache: 'no-store' }))
+  if (!check(body)) throw unavailable(url, 'unexpected shape')
+  return body
+}
+
 const query = (range: MonthRange): string => `from=${range.from}&to=${range.to}`
 
 export const apiLedgerParts: LedgerPartsSource = {
@@ -117,4 +151,8 @@ export const apiLedgerParts: LedgerPartsSource = {
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
+  readTransactionPage: (filter, request) =>
+    readFresh(`${BASE}/transactions/list?${transactionQueryString(filter, request)}`, isTransactionPage),
+  readTransactionSummary: (filter) =>
+    readFresh(`${BASE}/transactions/summary?${transactionQueryString(filter)}`, isTransactionSummary),
 }

@@ -133,6 +133,49 @@ describe('apiLedgerParts, receipts', () => {
   })
 })
 
+describe('apiLedgerParts, transactions', () => {
+  const page = { items: [makeTransaction({ id: 7 })], nextCursor: 'next' }
+  const summary = { revision: 'abc', count: 3, capped: false, netSpendCents: 1200 }
+
+  it('reads a page with the filter, the page size and the cursor in the query, and never from a cache', async () => {
+    const fetchMock = serve(json(page))
+    await expect(
+      apiLedgerParts.readTransactionPage({ month: '2026-03', query: 'rent' }, { limit: 100, cursor: 'c1' }),
+    ).resolves.toEqual(page)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/expenses/transactions/list?month=2026-03&query=rent&limit=100&cursor=c1')
+    expect(init).toMatchObject({ cache: 'no-store', credentials: 'same-origin' })
+  })
+
+  it('reads the summary of a filter, with no page parameters', async () => {
+    const fetchMock = serve(json(summary))
+    await expect(apiLedgerParts.readTransactionSummary({ categoryId: 4 })).resolves.toEqual(summary)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/expenses/transactions/summary?categoryId=4')
+  })
+
+  it('takes a last page, which has no cursor', async () => {
+    serve(json({ items: [], nextCursor: null }))
+    await expect(apiLedgerParts.readTransactionPage({})).resolves.toEqual({ items: [], nextCursor: null })
+  })
+
+  it('reports a body of another shape as unavailable', async () => {
+    serve(json({ items: [{ id: 'x' }], nextCursor: null }), json({ count: 1 }))
+    await expect(apiLedgerParts.readTransactionPage({})).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(apiLedgerParts.readTransactionSummary({})).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('passes on the server refusing a cursor or a filter, with its own words', async () => {
+    serve(json({ error: 'Invalid cursor' }, { status: 400 }))
+    await expect(apiLedgerParts.readTransactionPage({}, { cursor: 'x' })).rejects.toThrow('Invalid cursor')
+  })
+
+  it('is served through apiDataSource', async () => {
+    serve(json(page), json(summary))
+    await expect(apiDataSource.readTransactionPage!({})).resolves.toEqual(page)
+    await expect(apiDataSource.readTransactionSummary!({})).resolves.toEqual(summary)
+  })
+})
+
 describe('apiDataSource, ledger parts', () => {
   it('serves the three parts through the same client, loaded when first used', async () => {
     const fetchMock = serve(json(reference), json(rows), json(cube))

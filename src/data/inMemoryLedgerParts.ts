@@ -1,12 +1,16 @@
 import type { LedgerPartsSource } from './dataSource'
 import { rowsRange, cubeRange } from '../domain/application/ledgerPartsService'
+import { listTransactions, summarizeTransactions } from '../domain/application/transactionQueryService'
 import {
   MAX_CUBE_CELLS,
   MAX_ROWS_PER_REQUEST,
   type MonthRange,
 } from '../domain/data/ledgerParts'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
+import { pageOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
+import type { TransactionPageRequest } from '../domain/data/transactionQuery'
+import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset } from '../domain/types'
 
 /** A dataset held in memory and the revision it is at: it changes whenever the dataset does. */
@@ -44,6 +48,17 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
     async readReceiptsPart(transactionId?: number) {
       const { dataset } = await current()
       return dataset.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
+    },
+    async readTransactionPage(filter, { limit, cursor } = {}) {
+      const { dataset } = await current()
+      const queryTransactions = (_owner: string, f: TxnFilter, page: TransactionPageRequest) =>
+        Promise.resolve(pageOf(dataset.transactions, f, page))
+      return listTransactions({ queryTransactions }, '', { filter, limit, cursor })
+    },
+    async readTransactionSummary(filter) {
+      const { dataset, revision } = await current()
+      const summarize = (_owner: string, f: TxnFilter) => Promise.resolve(summaryOf(dataset.transactions, f))
+      return { revision, ...(await summarizeTransactions({ summarizeTransactions: summarize }, '', filter)) }
     },
   }
 }

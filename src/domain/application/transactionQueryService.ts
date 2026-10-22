@@ -168,7 +168,7 @@ function pageLimit(value: unknown): number {
 
 /** One page of the owner's transactions, newest first, and the cursor for the one after it. */
 export async function listTransactions(
-  repo: ExpenseRepository,
+  repo: Pick<ExpenseRepository, 'queryTransactions'>,
   owner: string,
   request: TransactionListRequest,
 ): Promise<TransactionListResult> {
@@ -184,7 +184,7 @@ export async function listTransactions(
 
 /** How many rows match (counted up to a cap) and what they net to. */
 export async function summarizeTransactions(
-  repo: ExpenseRepository,
+  repo: Pick<ExpenseRepository, 'summarizeTransactions'>,
   owner: string,
   filter: unknown,
 ): Promise<TransactionSummary> {

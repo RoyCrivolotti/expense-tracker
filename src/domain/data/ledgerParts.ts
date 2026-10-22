@@ -11,6 +11,7 @@
  */
 import type { LedgerReference, MonthCell } from '../ledger/types'
 import type { ExpenseDataset, Transaction } from '../types'
+import type { TransactionSummary } from './transactionQuery'
 
 /**
  * Everything in a ledger's reference except receipts. A row's receipts are listed on demand
@@ -89,4 +90,15 @@ export interface MonthRowsPart extends MonthRange, MonthRowsRead {
 export interface CubePart extends MonthRange {
   revision: string
   cells: MonthCell[]
+}
+
+/** A keyset page of the rows a filter matches, and the cursor to hand back for the page after it. */
+export interface TransactionPagePart {
+  items: Transaction[]
+  nextCursor: string | null
+}
+
+/** What `/transactions/summary` answers: `count` stops at a cap, `netSpendCents` is exact. */
+export interface TransactionSummaryPart extends TransactionSummary {
+  revision: string
 }

@@ -25,6 +25,7 @@ import type {
   DeleteCategoryOptions,
   DeleteCategoryResult,
   ExpenseDataSource,
+  LedgerPartsSource,
   NewAccount,
   NewCategory,
   NewFlag,
@@ -51,14 +52,22 @@ const BASE = '/api/expenses'
  * the code that reads them.
  */
 const parts = () => import('./apiLedgerParts').then((m) => m.apiLedgerParts)
+const PART_READS = [
+  'readReferencePart',
+  'readMonthsPart',
+  'readCubePart',
+  'readReceiptsPart',
+  'readTransactionPage',
+  'readTransactionSummary',
+] as const
+const lazyParts = Object.fromEntries(
+  PART_READS.map((name) => [name, (...args: unknown[]) => parts().then((p) => (p[name] as (...a: unknown[]) => unknown)(...args))]),
+) as unknown as LedgerPartsSource
 
 export const apiDataSource: ExpenseDataSource = {
   canWrite: true,
   load: () => req<ExpenseDataset>(BASE),
-  readReferencePart: () => parts().then((p) => p.readReferencePart()),
-  readMonthsPart: (range) => parts().then((p) => p.readMonthsPart(range)),
-  readCubePart: (range) => parts().then((p) => p.readCubePart(range)),
-  readReceiptsPart: (transactionId) => parts().then((p) => p.readReceiptsPart(transactionId)),
+  ...lazyParts,
   createTransaction: (input: NewTransaction) =>
     req<Transaction>(`${BASE}/transactions`, {
       method: 'POST',
