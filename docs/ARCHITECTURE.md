@@ -176,6 +176,22 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   sums shows nothing for it, never a cell. A model built from `dataset` alone (`applyPatch` in `useExpenseData.ts`) has
   no `sums` or `history`, so it is right only for a model that holds every row. `ledgerModelSweep.test.ts` holds the
   readings the Overview, the Spending view and the monthly tables make to the same readings over every row.
+- **A ledger held open changes by patching writes in, and what a write moved is read again.** `LedgerSession`
+  (`src/data/ledgerSession.ts`) holds the reference, the pinned rows, the rows of the months being looked at and the
+  sums of every month. A write is patched into the rows held at once, and `reconcileHeld` names the months whose sums
+  it moved (a row in a month that is not held, a row that stops being pinned) for the session to read again, because
+  the browser cannot tell what a write did to months it does not hold. Reads are guarded per resource: a write to the
+  rows drops a read of the rows that started before it and leaves a read of the reference alone, so an old value is
+  never shown again, and a refresh that a later refresh has overtaken is dropped, failure included, whichever answers
+  first. A write also makes the held revision unknown until a part is read again, so the next read of another month
+  reads everything rather than mixing two states. Months held beyond the window around the month shown are given up
+  oldest first, and a ledger held in full gives up nothing.
+- **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
+  mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
+  dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
+  adding or changing a plan, and settling rows or deleting the payment that settled them. A new server-side cascade
+  needs a case there and a test. A read in the background that fails is kept in `SessionState.error` until a refresh
+  works, because what is shown may then be out of date.
 
 ## Size and complexity
 
