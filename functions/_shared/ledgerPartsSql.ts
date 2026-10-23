@@ -89,9 +89,9 @@ export function accountsSql(owner: string): Sql {
 }
 
 /**
- * The statements marked paid for the months of the range. Only a paid statement changes a status, so the
- * rest are not read. Listing the owner's accounts first lets SQLite seek the months inside each account's
- * statements and not walk all of them, since the key is `(owner, account_id, year_month)`.
+ * The statements marked paid for the months of the range; only a paid statement changes a status. `paid` is not in
+ * the key `(owner, account_id, year_month)`, so the unpaid statements of the range are visited too. Listing the
+ * owner's accounts first lets SQLite seek the months inside each account's statements and not walk all of them.
  */
 export function paidStatementsSql(owner: string, range: MonthRange): Sql {
   return {

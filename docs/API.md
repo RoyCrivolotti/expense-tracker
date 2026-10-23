@@ -74,10 +74,12 @@ Every real row whose budget month is in a range, newest first. Code:
 - Tag part: `months` plus the range. It runs no backfill, so in a new budget month a due instalment is missing here
   until the reference has been read.
 - Cost: about one row visited per row returned, plus two for each label it carries and one for each receipt. A row's
-  account and statement are not read per row, as they are under Conventions. The accounts (the table has no index on
-  the owner, so all owners' accounts are read, a handful) and the statements marked paid in the range come in the same
-  batch, and the Worker works each status out from them. The read stops after 5,001 rows, so a range that is too big
-  costs the bound and not the range.
+  account and statement are not read per row, as they are under Conventions. Two small reads come in the same batch and
+  the Worker works each status out from them: the accounts, and the paid statements of those accounts in the range
+  (`paid` is not part of the key, so every statement in the range is visited and the unpaid ones are dropped). The
+  accounts table has no index on the owner, so it is scanned in full, and twice, because the statements read lists the
+  owner's accounts first; each scan covers all owners' accounts, a handful. The read stops after 5,001 rows, so a range
+  that is too big costs the bound and not the range.
 
 ## GET /cube
 
