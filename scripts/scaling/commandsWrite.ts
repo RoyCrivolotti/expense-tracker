@@ -28,7 +28,7 @@ export async function seed(args: Args, deps: Deps): Promise<number> {
     const offline = Object.fromEntries(ID_TABLES.map((t) => [t, ID_HEADROOM])) as IdBases
     const steps = seedSteps(dataset, offline)
     deps.print(`dry run: ${steps.length} statements insert ${budget.transactions} transactions as ${SYNTHETIC_OWNER}`)
-    deps.print(`expected rows written: ${budget.insertWrites + budget.referenceWrites} (delete later: about the same)`)
+    deps.print(`expected rows written: ${budget.insertWrites + budget.referenceWrites}; removing them again later: ${budget.deleteWrites}`)
     return budget.fitsTotalCap && budget.fitsDailyCap ? 0 : 1
   }
   if (!budget.fitsTotalCap || !budget.fitsDailyCap) throw new Error('This seed does not fit the caps; see the plan command')
