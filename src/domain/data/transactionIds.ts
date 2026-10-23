@@ -12,9 +12,11 @@ export function parseDeleteTransactionIds(raw: unknown): number[] {
   const ids = [
     ...new Set(
       raw.map((value) => {
-        const id = Number(value)
-        if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid transaction id')
-        return id
+        // A number as sent: `true`, `"1e1"` and `" 7 "` would all become ids if they were coerced.
+        if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+          throw new ValidationError('Invalid transaction id')
+        }
+        return value
       }),
     ),
   ]

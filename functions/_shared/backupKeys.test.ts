@@ -22,9 +22,13 @@ describe('backup keys', () => {
 
 describe('backupUnitOf', () => {
   it('is the file for a single-file snapshot, and the folder for every object in a chunked one', () => {
-    expect(backupUnitOf('a@b.com/2026-10-15.json')).toEqual({ unit: 'a@b.com/2026-10-15.json', dateKey: '2026-10-15' })
+    expect(backupUnitOf('a@b.com/2026-10-15.json')).toEqual({
+      unit: 'a@b.com/2026-10-15.json',
+      owner: 'a@b.com',
+      dateKey: '2026-10-15',
+    })
     for (const key of [manifestKey('a@b.com', '2026-10-15'), stateKey('a@b.com', '2026-10-15'), partKey('a@b.com', '2026-10-15', 3)]) {
-      expect(backupUnitOf(key)).toEqual({ unit: 'a@b.com/2026-10-15/', dateKey: '2026-10-15' })
+      expect(backupUnitOf(key)).toEqual({ unit: 'a@b.com/2026-10-15/', owner: 'a@b.com', dateKey: '2026-10-15' })
     }
   })
 

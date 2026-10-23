@@ -119,3 +119,68 @@ describe('a chunked backup in the bucket', () => {
     expect(deleteMany).toHaveBeenCalledOnce()
   })
 })
+
+describe('the newest complete backup of an owner who still has data', () => {
+  const policy = { retentionDays: 7, maxBucketBytes: 100, maxSnapshotBytes: 9999, bucketAlertThresholdFraction: 0.8 }
+  const roomy = { ...policy, maxBucketBytes: 10_000 }
+  const current = new Set(['a@b.com', 'b@c.com'])
+  const folder = (owner: string, day: string, withManifest = true): [string, number][] => [
+    [`${owner}/${day}/part-000001.ndjson`, 200],
+    ...(withManifest ? [[`${owner}/${day}/manifest.json`, 50] as [string, number]] : []),
+  ]
+
+  it('is kept when it is older than the retention window, because it is the only one there is', () => {
+    const all = objs([['a@b.com/2026-05-01.json', 300]])
+
+    expect(keysOlderThan(all, 7, '2026-06-18', current)).toEqual([])
+    expect(keysOlderThan(all, 7, '2026-06-18')).toEqual(['a@b.com/2026-05-01.json'])
+  })
+
+  it('is kept when the bucket is over its cap, and the older ones go instead', () => {
+    const all = objs([
+      ['a@b.com/2026-06-16.json', 300],
+      ['a@b.com/2026-06-17.json', 300],
+    ])
+
+    expect(keysOverSizeBudget(all, 100, current)).toEqual(['a@b.com/2026-06-16.json'])
+  })
+
+  it('is one per owner, not one overall', () => {
+    const all = objs([
+      ['a@b.com/2026-05-01.json', 300],
+      ['b@c.com/2026-05-02.json', 300],
+    ])
+
+    expect(keysOlderThan(all, 7, '2026-06-18', current)).toEqual([])
+    expect(keysOverSizeBudget(all, 100, current)).toEqual([])
+  })
+
+  it('is the older complete one while the newest folder has no manifest yet', () => {
+    const all = objs([...folder('a@b.com', '2026-05-01'), ...folder('a@b.com', '2026-06-18', false)])
+
+    expect(buildPrunePlan(all, roomy, '2026-06-18', current)).toEqual([])
+    expect(buildPrunePlan(all, roomy, '2026-06-18')).toEqual(['a@b.com/2026-05-01/part-000001.ndjson', 'a@b.com/2026-05-01/manifest.json'])
+  })
+
+  it('does not hold on to the backups of someone who no longer has data', () => {
+    const all = objs([['gone@x.com/2026-05-01.json', 300]])
+
+    expect(buildPrunePlan(all, policy, '2026-06-18', current)).toEqual(['gone@x.com/2026-05-01.json'])
+  })
+
+  it('leaves the plan alone when every owner has a recent backup', () => {
+    const all = objs([
+      ['a@b.com/2026-05-01.json', 300],
+      ['a@b.com/2026-06-17.json', 300],
+      ['a@b.com/2026-06-18.json', 300],
+    ])
+
+    expect(buildPrunePlan(all, roomy, '2026-06-18', current)).toEqual(buildPrunePlan(all, roomy, '2026-06-18'))
+  })
+
+  it('may leave the bucket over its cap rather than drop the last backup of anyone', () => {
+    const all = objs([['a@b.com/2026-06-18.json', 300]])
+
+    expect(buildPrunePlan(all, policy, '2026-06-18', current)).toEqual([])
+  })
+})

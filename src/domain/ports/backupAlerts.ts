@@ -19,6 +19,13 @@ export interface InconsistentBackupDetails {
   final: boolean
 }
 
+export interface FailedBackupDetails {
+  owner: string
+  dateKey: string
+  /** The error's message, for the log and the email. */
+  reason: string
+}
+
 export interface BucketLimitDetails {
   usedBytes: number
   limitBytes: number
@@ -32,4 +39,6 @@ export interface BackupAlerts {
   onIncompleteBackup(details: IncompleteBackupDetails): Promise<void>
   /** The ledger was written to while a chunked backup was reading it, so the pass was thrown away. */
   onInconsistentBackup(details: InconsistentBackupDetails): Promise<void>
+  /** Backing up one owner threw, so there is no backup of them today. The other owners were still backed up. */
+  onBackupFailed(details: FailedBackupDetails): Promise<void>
 }

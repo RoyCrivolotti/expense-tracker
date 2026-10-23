@@ -32,9 +32,13 @@ export async function readFormData(request: Request): Promise<FormData> {
 }
 
 export async function readJson<T>(request: Request): Promise<T> {
+  let body: T | null
   try {
-    return await request.json<T>()
+    body = await request.json<T | null>()
   } catch {
     throw new HttpError(400, 'Invalid JSON body')
   }
+  // `null` parses, and every route reads a field off the body next.
+  if (body === null) throw new HttpError(400, 'Invalid JSON body')
+  return body
 }

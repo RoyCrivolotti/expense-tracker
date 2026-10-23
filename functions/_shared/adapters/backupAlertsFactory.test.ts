@@ -9,6 +9,7 @@ describe('createEmailBackupAlerts', () => {
       onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
       onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
       onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
+      onBackupFailed: vi.fn().mockResolvedValue(undefined),
     }
     const alerts = createEmailBackupAlerts(inner, send)
     await alerts.onLargeSnapshot({ owner: 'a@b.com', bytes: 100, limit: 50 })
@@ -37,6 +38,21 @@ describe('createEmailBackupAlerts', () => {
       expect.stringContaining('did not finish (a@b.com, 2026-10-15)'),
       expect.stringContaining('Day: 2026-10-15'),
     )
+  })
+
+  it('says a backup failed, naming the owner, the day and the reason', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const send = vi.fn().mockResolvedValue(undefined)
+    const alerts = createEmailBackupAlerts(consoleBackupAlerts, send)
+
+    await alerts.onBackupFailed({ owner: 'a@b.com', dateKey: '2026-10-15', reason: 'D1 hiccup' })
+
+    expect(warn).toHaveBeenCalledWith('backup: a@b.com has no backup for 2026-10-15: D1 hiccup')
+    expect(send).toHaveBeenCalledWith(
+      expect.stringContaining('No backup today: it failed (a@b.com, 2026-10-15)'),
+      expect.stringContaining('Reason: D1 hiccup'),
+    )
+    warn.mockRestore()
   })
 
   it('logs it when only the console is configured', async () => {

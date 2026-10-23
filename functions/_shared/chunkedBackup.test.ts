@@ -46,12 +46,13 @@ const policy: BackupPolicy = {
   bucketAlertThresholdFraction: 0.8,
 }
 
-function alertsSpy(): BackupAlerts & { onLargeSnapshot: ReturnType<typeof vi.fn>; onBucketNearLimit: ReturnType<typeof vi.fn>; onIncompleteBackup: ReturnType<typeof vi.fn>; onInconsistentBackup: ReturnType<typeof vi.fn> } {
+function alertsSpy(): BackupAlerts & { onLargeSnapshot: ReturnType<typeof vi.fn>; onBucketNearLimit: ReturnType<typeof vi.fn>; onIncompleteBackup: ReturnType<typeof vi.fn>; onInconsistentBackup: ReturnType<typeof vi.fn>; onBackupFailed: ReturnType<typeof vi.fn> } {
   return {
     onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
     onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
     onIncompleteBackup: vi.fn().mockResolvedValue(undefined),
     onInconsistentBackup: vi.fn().mockResolvedValue(undefined),
+    onBackupFailed: vi.fn().mockResolvedValue(undefined),
   }
 }
 
