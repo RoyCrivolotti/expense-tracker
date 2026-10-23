@@ -16,9 +16,11 @@
 --
 -- A trigger takes the old row's contribution out and puts the new one in, with upserts that cannot fail. A
 -- cell whose count reaches 0 is deleted, so the table is always the GROUP BY of `transactions` and no
--- reader has to remember to skip empty cells. A cell missing when a row leaves it becomes a cell with a
--- negative count and not a silent no-op, so a reader can refuse it. An UPDATE that changes none of the
--- columns that make up a cell writes nothing; one that changes only an amount in the same cell writes one row.
+-- reader has to remember to skip empty cells. A cell missing when a row leaves it, or moves out of it, becomes a
+-- cell with a negative count and not a silent no-op, so a reader can refuse it. The trigger for an edit of the
+-- amount alone is a plain UPDATE: with its cell missing it does nothing, and only a comparison with the GROUP BY
+-- finds that. An UPDATE that changes none of the columns that make up a cell writes nothing; one that changes
+-- only an amount in the same cell writes one row.
 --
 -- Each table is filled by one INSERT OR REPLACE statement that runs after the triggers exist, so no write
 -- falls between the two: a row written before the statement is counted by it, and one written after is
@@ -32,7 +34,8 @@
 -- writes 2. A delete writes 2, or 4 when it empties its cell and its month. An edit that moves a row to another
 -- cell writes 2 (3 when the old cell empties), one that moves it to another month 4 (6 when it was alone in
 -- both), an edit of the amount alone 1, and an edit of any other column 0. The backfill writes one row per cell
--- and per month, between a quarter and three fifths of the rows. D1 bills these as rows written, and counts them in
+-- and per month, between a quarter and three fifths of the rows (an estimate from one 60-row run on D1, which wrote
+-- 21). D1 bills these as rows written, and counts them in
 -- `meta.changes` too, so a count sent to a client must be read and not taken from it (docs/decisions/ledger-rollup.md).
 --
 -- A migration that rebuilds `transactions` drops the triggers with it and has to create them again.

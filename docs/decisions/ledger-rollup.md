@@ -24,7 +24,8 @@ Nothing reads them yet.
   `transactions` and a drift check can compare them whole. The other way, leaving dead cells for the reader to skip, saves
   one written row when a cell empties and lets dead cells accumulate for every combination ever used. A reader that
   forgot to skip them would count them toward `MAX_CUBE_CELLS` and refuse a small cube. A cell that goes below 0 means a
-  missing cell, and a reader should refuse it.
+  missing cell, and a reader should refuse it. An edit of an amount alone is a plain `UPDATE` and does nothing on a
+  missing cell, which only a comparison with the `GROUP BY` shows.
 - **The tables are filled in the same file, by one statement each after the triggers exist.** The statement also covers
   the keys the table already holds, because a row deleted after the triggers and before the statement leaves a negative
   cell that a plain `GROUP BY` would not visit. A `DELETE` of the empty ones follows.
@@ -73,8 +74,11 @@ Nothing reads them yet.
   triggers on every database once 0039 is applied, and fails when one is missing.
 - The pinned rule is now written in five places (see [ARCHITECTURE.md](../ARCHITECTURE.md)), and changing it needs a
   migration that drops and creates the triggers and fills the cells again.
-- The backfill writes one row per cell and month, which is between a quarter and three fifths of the rows. A ledger
-  whose cells would not fit in a day's budget needs the backfill split by month.
+- The backfill writes one row per cell and month. A quarter to three fifths of the rows is an estimate that rests on
+  one run on D1 over 60 rows, which wrote 21. A ledger whose cells would not fit in a day's budget needs it split by
+  month.
+- Restoring N rows from a backup writes about 2N rows more, and reassigning a category that has n rows to another
+  writes about 2n more, since each row moves from one cell to another.
 
 **Not chosen.**
 - **Maintaining the rollup in the repository code.** A statement that forgets to maintain it, a script or SQL by hand

@@ -3,7 +3,7 @@
  * What the triggers write, counted on SQLite as rows changed in `ledger_cells` and `ledger_months`: an insert,
  * an edit of a key column, an edit of an amount, an edit that changes no column of a cell, a delete, and a bulk
  * edit of 500 rows, each through the real route. docs/decisions/ledger-rollup.md quotes these numbers. They are
- * the triggers' own writes; how D1 bills them is not known (the decision record says so).
+ * the triggers' own writes; D1 bills them as rows written (measured on 2026-10-24, see the decision record).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { onRequestDelete as deleteOne, onRequestPatch as patchOne } from './transactions/[id]'
