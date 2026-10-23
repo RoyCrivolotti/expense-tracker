@@ -32,8 +32,6 @@ async function check(args: Args, deps: Deps): Promise<number> {
   } catch (error) {
     deps.print(`table statistics: sqlite_stat1 cannot be read (${error instanceof Error ? error.message : String(error)})`)
   }
-  const top = Number((await one('SELECT COALESCE(MAX(id), 0) AS top FROM transactions'))[0]?.top ?? 0)
-  deps.print(`highest transaction id: ${top} (a snapshot reads about that many rows per table scan, twice over a run)`)
   deps.print(`synthetic owner transactions: ${String((await one('SELECT count(*) AS n FROM transactions WHERE owner = ?', [SYNTHETIC_OWNER]))[0]?.n)}`)
   await probeBatch(transport)
   deps.print('batch through the API: answers statement by statement')

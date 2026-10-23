@@ -161,7 +161,7 @@ describe('a whole exercise through the commands', () => {
 
     expect(await run(['check', ...base], h)).toBe(0)
     expect(text(h)).toContain('batch through the API')
-    expect(text(h)).toContain('highest transaction id')
+    expect(text(h)).not.toContain('highest transaction id')
     expect(text(h)).toContain('account today: 400 rows written')
 
     expect(await run(['snapshot', ...base], h)).toBe(0)
