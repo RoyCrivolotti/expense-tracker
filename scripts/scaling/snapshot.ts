@@ -27,7 +27,7 @@ interface Source {
 }
 
 function sources(): Source[] {
-  const owned = OWNER_TABLES.map(({ table, column }) => ({
+  const owned = OWNER_TABLES.filter((t) => !t.derived).map(({ table, column }) => ({
     table,
     from: `${table} r WHERE r.${column} <> ?1`,
   }))

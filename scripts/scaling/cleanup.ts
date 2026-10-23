@@ -11,11 +11,16 @@ export interface OwnerTable {
   table: string
   /** The column that names the owner. */
   column: 'owner' | 'email'
+  /** Kept by triggers from another table and without a rowid, so a snapshot of the other owners' rows leaves it out. */
+  derived?: true
 }
 
 /** Children before parents, so a foreign key never stops a delete. */
 export const OWNER_TABLES: readonly OwnerTable[] = [
   { table: 'transactions', column: 'owner' },
+  // Kept by triggers on transactions, so deleting the transactions empties them; listed so the proof reads them too.
+  { table: 'ledger_cells', column: 'owner', derived: true },
+  { table: 'ledger_months', column: 'owner', derived: true },
   { table: 'account_statements', column: 'owner' },
   { table: 'cash_actuals', column: 'owner' },
   { table: 'transaction_attachments', column: 'owner' },
