@@ -136,20 +136,49 @@ describe('the schema check, reading a database through a stand-in for wrangler',
     expect(result.err[0]).toBe(`MISSING index idx_items_kind  (added by migrations/${BASE})`)
   })
 
-  it('fails on a trigger or an index that no migration makes, as it does on an extra column', async () => {
+  it('only warns about an index that no migration makes', async () => {
     const deployed = fixtureDatabase()
     deployed.exec('CREATE INDEX idx_by_hand ON items (cents)')
+
+    const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec, dir: FIXTURES })
+
+    expect(result.code).toBe(0)
+    expect(result.err).toEqual([])
+    expect(result.warn).toEqual([expect.stringMatching(/^WARNING index idx_by_hand {2}\(in the database, in no migration/)])
+    expect(result.out.at(-1)).toBe('No drift, apart from the warnings.')
+  })
+
+  it('fails on a trigger that no migration makes, since it can change data', async () => {
+    const deployed = fixtureDatabase()
     deployed.exec('CREATE TRIGGER by_hand AFTER INSERT ON items BEGIN SELECT 1; END')
+
+    const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec, dir: FIXTURES })
+
+    expect(result.code).toBe(1)
+    expect(result.err[0]).toBe('EXTRA   trigger by_hand  (in the database, in no migration)')
+  })
+
+  it('fails on a column that no migration makes', async () => {
+    const deployed = fixtureDatabase()
     deployed.exec('ALTER TABLE items ADD COLUMN stray TEXT')
 
     const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec, dir: FIXTURES })
 
     expect(result.code).toBe(1)
-    expect(result.err.slice(0, 3)).toEqual([
-      'EXTRA   index idx_by_hand  (in the database, in no migration)',
-      'EXTRA   items.stray  (in the database, in no migration)',
-      'EXTRA   trigger by_hand  (in the database, in no migration)',
-    ])
+    expect(result.err[0]).toBe('EXTRA   items.stray  (in the database, in no migration)')
+  })
+
+  it('still lists a stray index as a warning when something else fails', async () => {
+    const deployed = fixtureDatabase()
+    deployed.exec('CREATE INDEX idx_by_hand ON items (cents)')
+    deployed.exec('DROP TRIGGER items_after_delete')
+
+    const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec, dir: FIXTURES })
+
+    expect(result.code).toBe(1)
+    expect(result.err[0]).toMatch(/^MISSING trigger items_after_delete/)
+    expect(result.err.join('\n')).not.toMatch(/idx_by_hand/)
+    expect(result.warn).toHaveLength(1)
   })
 
   it('says so when the database cannot be read', async () => {

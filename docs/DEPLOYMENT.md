@@ -119,9 +119,9 @@ reads the real one's columns, indexes and triggers over wrangler, and lists what
 it, and anything no migration makes. It only reads, exits 1 on a difference and 2 when the database could not be read,
 and compares names only. A missing trigger is the one to watch: nothing fails, the table it keeps up to date goes stale.
 
-**A dev database that is ahead of `main`** (a column, index or trigger `main` does not make) fails the schema job on an
-`EXTRA` line and stops every deploy until that migration is merged. To try a change in a preview, apply its migration to
-dev by hand, but only when its merge is near, and remove what it added if the merge does not come.
+**A dev database that is ahead of `main`** (a column or trigger `main` does not make) fails the schema job on an `EXTRA`
+line and stops every deploy until that migration is merged; an extra index only warns. To try a change in a preview,
+apply its migration to dev by hand, but only when its merge is near, and remove it again if the merge does not come.
 
 ### If a migration goes wrong
 

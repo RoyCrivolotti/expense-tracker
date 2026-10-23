@@ -18,10 +18,13 @@
  * trigger matters most, since nothing fails when a trigger is not there: the table it keeps up to
  * date just goes stale. It does not compare types, defaults, or what an index or trigger does, and
  * `sqlite_master` is read as it stands, so a trigger that exists with the wrong body passes.
- * Something in the database that no migration makes fails the check the same way a missing one
- * does, columns, indexes and triggers alike: the dev database is kept level with `main`.
+ * A column or trigger in the database that no migration makes fails the check, as a missing one
+ * does: either can change data, and the dev database is kept level with `main`. An index that no
+ * migration makes only warns. It costs a written row per insert and changes no data, and a dev
+ * database kept ahead of `main` while a migration is tried must not stop a production ship.
  *
- * Exit 0 when the schemas match, 1 on a difference, 2 when the database could not be read.
+ * Exit 0 when the schemas match (extra indexes aside), 1 on a difference, 2 when the database
+ * could not be read.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -194,7 +197,7 @@ function counted(items) {
  * rather than printing, so a test can read what a person would see.
  * @param {string} database
  * @param {{ exec?: typeof execFileSync; dir?: string }} [options]
- * @returns {Promise<{ code: 0 | 1 | 2; out: string[]; err: string[] }>}
+ * @returns {Promise<{ code: 0 | 1 | 2; out: string[]; err: string[]; warn: string[] }>}
  */
 export async function checkSchema(database, { exec = execFileSync, dir = MIGRATIONS } = {}) {
   const { DatabaseSync } = await import('node:sqlite')
@@ -213,12 +216,18 @@ export async function checkSchema(database, { exec = execFileSync, dir = MIGRATI
         `Could not read ${database}${wranglerSaid(error)}`,
         'Is the name right, and is wrangler signed in (CLOUDFLARE_API_TOKEN, or `wrangler login`)?',
       ],
+      warn: [],
     }
   }
 
   const { missing, extra } = diffNames(expected, actual)
+  const strayIndexes = extra.filter((item) => item.startsWith('index '))
+  const extraFatal = extra.filter((item) => !item.startsWith('index '))
+  const warn = strayIndexes.map((item) => `WARNING ${item}  (in the database, in no migration; it costs a written row per insert and changes no data)`)
   const out = [`${database}: ${counted(actual)}; the ${migrationFiles(dir).length} migrations produce ${counted(expected)}`]
-  if (missing.length === 0 && extra.length === 0) return { code: 0, out: [...out, 'No drift.'], err: [] }
+  if (missing.length === 0 && extraFatal.length === 0) {
+    return { code: 0, out: [...out, warn.length > 0 ? 'No drift, apart from the warnings.' : 'No drift.'], err: [], warn }
+  }
 
   const files = migrationFiles(dir).map((name) => ({ name, sql: readFileSync(join(dir, name), 'utf8') }))
   const err = [
@@ -226,12 +235,12 @@ export async function checkSchema(database, { exec = execFileSync, dir = MIGRATI
       const from = migrationAdding(item, files)
       return `MISSING ${item}${from ? `  (added by migrations/${from})` : ''}`
     }),
-    ...extra.map((item) => `EXTRA   ${item}  (in the database, in no migration)`),
+    ...extraFatal.map((item) => `EXTRA   ${item}  (in the database, in no migration)`),
     '\nThe _migrations record can say a file was applied when it was not. Apply what is missing ' +
       'deliberately (see "Migration tracking" in docs/DEPLOYMENT.md), and never re-run a whole file ' +
       'on a populated database.',
   ]
-  return { code: 1, out, err }
+  return { code: 1, out, err, warn }
 }
 
 async function main() {
@@ -240,8 +249,9 @@ async function main() {
     console.error('usage: npm run check:schema -- <database-name>   (for example the dev or the production D1 name)')
     process.exit(2)
   }
-  const { code, out, err } = await checkSchema(database)
+  const { code, out, err, warn } = await checkSchema(database)
   for (const line of out) console.log(line)
+  for (const line of warn) console.warn(line)
   for (const line of err) console.error(line)
   process.exit(code)
 }
