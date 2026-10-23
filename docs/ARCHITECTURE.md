@@ -173,6 +173,10 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   holds the SQL to the engine's own filter. The cap is raised only after the rows written per edit are measured on a
   deployed D1. A delete never takes a filter ([decision](./decisions/no-filter-based-delete.md)).
 
+- **A count sent to a client is read, not taken from `meta.changes`.** On D1 it includes the rows the rollup triggers
+  write, about three for each row of `transactions`. Read it with a `COUNT(*)` in the same batch ahead of the write, or
+  `RETURNING`. `metaChangesUses.test.ts` lists the uses that remain and why they are safe, and fails for a new one.
+
 ### In the browser
 
 - **The Transactions list draws only the rows near the screen once it passes 300 rows** (`WINDOW_FROM_ROWS`). Padding

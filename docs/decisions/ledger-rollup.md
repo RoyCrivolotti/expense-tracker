@@ -35,32 +35,37 @@ Nothing reads them yet.
   the oracle to fail for each.
 
 **Consequences.**
-- Every write to `transactions` writes more rows against the 100,000 a day. Counted on SQLite, the triggers add:
+- **Every write to `transactions` writes more rows against the 100,000 a day, and D1 bills them.** Measured on
+  2026-10-24 on a throwaway D1 database (since deleted), rows written without and with the triggers:
 
-  | Write | Rows written without the triggers | Added by them |
-  | --- | --- | --- |
-  | Insert an expense | 8 (the row and seven indexes), 9 through the API | 2 |
-  | Change a row's category | 2 | 2, or 3 when the old cell empties |
-  | Change a row's month | 3 | 4, or 6 when the row was alone in its cell and month |
-  | Change the amount alone | 1 | 1 |
-  | Re-send the edit form unchanged | 7 | 0 |
-  | Delete a row | 1 | 2, or 4 when it was the last of its cell and month |
-  | Bulk edit of 500 rows, category | 1,000 | 1,001 |
-  | Bulk create of 500 rows | 4,500 | 1,000 |
-  | Bulk delete of 500 rows | 500 | 1,002 |
+  | Write | Without | With | Added |
+  | --- | --- | --- | --- |
+  | Insert one expense | 9 | 11 | 2 |
+  | Change a row's category to a new cell | 2 | 4 | 2 |
+  | Change the amount alone | 1 | 2 | 1 |
+  | Change the description alone | 1 | 1 | 0 |
+  | Re-send columns unchanged | 5 | 5 | 0 |
+  | Change the month of the only row in its cell, the month keeps others | 3 | 8 | 5 |
+  | Delete the last row of its cell, the month keeps others | 1 | 4 | 3 |
+  | Insert 20 rows in one statement | 161 | 201 | 40 |
+  | Change the category of 20 rows | 40 | 80 | 40 |
+  | Delete 20 rows | 20 | 61 | 41 |
 
-  The numbers in the last column are held by `ledgerRollupWrites.integration.test.ts`. The first column is the rows and
-  index entries the statements touch, which [SCALING.md](../SCALING.md) measured on D1 for an insert, a category change
-  and a delete.
-- **Not verified: whether D1 bills a trigger's writes as rows written, whether it accepts `CREATE TRIGGER` in a file given
-  to `wrangler d1 execute --file`, and whether `meta.changes` counts them.** The table assumes it bills them. Measure all
-  three on a throwaway database before this migration reaches `main`, because the deploy applies it to the dev database
-  and, once approved, production.
-- `meta.changes` reaches a client in two places that write a trigger column: the `deleted` of `DELETE
-  /transactions/bulk` and the `unflagged` of `DELETE /flags/:id`. SQLite's own count leaves out trigger writes, and a test
-  pins that locally (`countsTheApiSends`), but if D1 counted them both answers would be too large. Every other use only
-  tests for 0 to answer 404, which a trigger cannot change since it writes nothing when no row did, reads a table without
-  triggers (labels), or sets `description_norm` alone, which no trigger watches.
+  Counted on SQLite the same way, which agrees where both exist and adds the cases the probe did not run
+  (`ledgerRollupWrites.integration.test.ts` holds them): a category change adds 3 when it empties the old cell, a
+  month change 4 when the row's cell and month keep others and 6 when it was alone in both, a delete 4 when it empties
+  its cell and month, and 500 rows add 1,001 for a category change, 1,000 for a bulk create and 1,002 for a bulk delete.
+  The backfill of 60 rows wrote 21 (its cells and months).
+- **`wrangler d1 execute --file` accepts the file**: two tables and five triggers were created, the backfill matched a
+  `GROUP BY` exactly, and after inserts, edits and deletes the cells and months still did.
+- **D1's `meta.changes` counts the rows triggers write; SQLite's `changes()` does not.** Measured: one insert reports 3,
+  20 inserted in one statement 60, a category change of 20 rows 60, a delete of 20 rows 61, one delete 4, an amount
+  alone 2. `node:sqlite` reports the SQLite count and so hid this, which is why the test stand-in
+  (`src/testing/sqliteD1.ts`) now reports the change in `total_changes()` across a statement, as D1 does. A count sent to
+  a client is therefore read, not taken from `meta.changes`: `deleted` of `DELETE /transactions/bulk` and
+  `unflagged` of `DELETE /flags/:id` come from a `COUNT(*)` in the same batch, ahead of the write. Every other use
+  of `meta.changes` only tests for 0 to answer 404 (a statement that changes no row fires no trigger), or is on a table
+  no trigger writes through, and `metaChangesUses.test.ts` lists each of them with the reason and fails for a new one.
 - **Nothing may replace a row of `transactions`.** `INSERT OR REPLACE` and `REPLACE INTO` delete a conflicting row without
   firing the delete trigger. Nothing in the repository does it, and `ledgerRollup.integration.test.ts` fails if something
   does. `INSERT ... ON CONFLICT DO NOTHING`, which the instalment backfill uses, fires no trigger for a row it skips.

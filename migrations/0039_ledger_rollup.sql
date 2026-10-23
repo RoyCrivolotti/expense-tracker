@@ -32,8 +32,8 @@
 -- writes 2. A delete writes 2, or 4 when it empties its cell and its month. An edit that moves a row to another
 -- cell writes 2 (3 when the old cell empties), one that moves it to another month 4 (6 when it was alone in
 -- both), an edit of the amount alone 1, and an edit of any other column 0. The backfill writes one row per cell
--- and per month, between a quarter and three fifths of the rows. How D1 bills trigger writes, and whether it
--- counts them in `meta.changes`, has not been measured.
+-- and per month, between a quarter and three fifths of the rows. D1 bills these as rows written, and counts them in
+-- `meta.changes` too, so a count sent to a client must be read and not taken from it (docs/decisions/ledger-rollup.md).
 --
 -- A migration that rebuilds `transactions` drops the triggers with it and has to create them again.
 -- `npm run check:schema` expects both tables and all five triggers on every database from here on.

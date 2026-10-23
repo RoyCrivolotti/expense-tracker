@@ -210,8 +210,8 @@ rows per insert. It is a migration for a later change, since the deploy applies 
 ### Rollup tables
 
 `ledger_cells` and `ledger_months` (0039) are kept by triggers, so an insert or a delete writes two more rows, an edit that
-moves a row to another cell two more, and an edit of an amount alone one more. No route reads them yet; the table of
-costs and what is not yet known about D1's billing of them are in [the decision](./decisions/ledger-rollup.md).
+moves a row to another cell two more, and an edit of an amount alone one more. No route reads them yet. D1 bills the
+rows they write; the measured costs are in [the decision](./decisions/ledger-rollup.md).
 
 ## Where else to look
 
