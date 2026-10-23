@@ -2,7 +2,9 @@
  * A D1Database stand-in backed by node:sqlite, so the real SQL in `functions/_shared` can run against the
  * real migrations without Cloudflare. It enforces D1's cap on bound parameters per statement (node:sqlite
  * itself allows 32k) but not its billing, so anything about cost still has to be measured on a deployed
- * database. Import only from node-environment tests.
+ * database. `meta.changes` is the change in `total_changes()` across the statement, which is what D1 reports: it
+ * counts the rows a trigger writes, where SQLite's own `changes()` does not. A count taken from it is therefore
+ * wrong for any statement on a table with triggers, and a test here shows it. Import only from node-environment tests.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -86,7 +88,7 @@ interface Prepared {
   first: (column?: string) => Promise<unknown>
   all: () => Promise<{ results: Row[]; success: boolean; meta: { rows_read: number; changes: number } }>
   raw: () => Promise<unknown[][]>
-  run: () => Promise<{ results: never[]; success: boolean; meta: { changes: number } }>
+  run: () => Promise<{ results: Row[]; success: boolean; meta: { changes: number } }>
 }
 
 function prepared(
@@ -95,6 +97,7 @@ function prepared(
   stats: SqliteD1Stats,
   params: SQLInputValue[],
   maxBound: number,
+  changed: () => number,
 ): Prepared {
   const stmt = db.prepare(sql)
   const checked = <T>(fn: () => T): Promise<T> =>
@@ -106,7 +109,7 @@ function prepared(
     })
   return {
     sql,
-    bind: (...values) => prepared(db, sql, stats, values, maxBound),
+    bind: (...values) => prepared(db, sql, stats, values, maxBound, changed),
     first: (column) =>
       checked(() => {
         const row = timed(stats, () => stmt.get(...params)) as Row | undefined
@@ -115,9 +118,10 @@ function prepared(
       }),
     all: () =>
       checked(() => {
+        const before = changed()
         const results = timed(stats, () => stmt.all(...params)) as Row[]
         stats.rowsReturned += results.length
-        return { results, success: true, meta: { rows_read: results.length, changes: 0 } }
+        return { results, success: true, meta: { rows_read: results.length, changes: changed() - before } }
       }),
     raw: () =>
       checked(() => {
@@ -128,11 +132,16 @@ function prepared(
       }),
     run: () =>
       checked(() => {
-        const info = timed(stats, () => stmt.run(...params))
-        return { results: [], success: true, meta: { changes: Number(info.changes) } }
+        const before = changed()
+        // A statement with RETURNING sends its rows back from `run` as well, as D1 does.
+        const results = RETURNING.test(sql) ? (timed(stats, () => stmt.all(...params)) as Row[]) : (timed(stats, () => stmt.run(...params)), [])
+        stats.rowsReturned += results.length
+        return { results, success: true, meta: { changes: changed() - before } }
       }),
   }
 }
+
+const RETURNING = /\bRETURNING\b/i
 
 function isRead(sql: string): boolean {
   return /^\s*(select|with|pragma)\b/i.test(sql)
@@ -163,8 +172,10 @@ export function sqliteD1(
   { maxBoundParameters = D1_MAX_BOUND_PARAMETERS }: SqliteD1Options = {},
 ): D1Database {
   let turn: Promise<unknown> = Promise.resolve()
+  const total = db.prepare('SELECT total_changes() AS n')
+  const changed = (): number => Number((total.get() as { n: number | bigint }).n)
   const shim = {
-    prepare: (sql: string) => prepared(db, sql, stats, [], maxBoundParameters),
+    prepare: (sql: string) => prepared(db, sql, stats, [], maxBoundParameters, changed),
     batch: (statements: Prepared[]) => {
       const run = turn.then(() => runBatch(db, statements))
       turn = run.catch(() => undefined)

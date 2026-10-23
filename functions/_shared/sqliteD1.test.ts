@@ -112,3 +112,24 @@ describe('loadDataset over a seeded synthetic ledger', () => {
     expect(stats.rowsReturned).toBeGreaterThanOrEqual(given.transactions.length)
   })
 })
+
+describe('sqliteD1 changes', () => {
+  it('reports the rows triggers write in meta.changes, as D1 does, and returns the rows of a RETURNING statement', async () => {
+    const sqlite = migratedDatabase()
+    sqlite.exec("INSERT INTO accounts (id, owner, name, kind, settlement) VALUES (1, 'o', 'a', 'debit', 'immediate')")
+    sqlite.exec("INSERT INTO categories (id, owner, name) VALUES (1, 'o', 'c')")
+    const db = sqliteD1(sqlite)
+    const insert = db.prepare(
+      "INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents) VALUES ('o', '2026-09-01', '2026-09', 'x', 1, 1, 'expense', ?)",
+    )
+    // The row, its cell and its month: sqlite3_changes() would say 1.
+    expect((await insert.bind(500).run()).meta.changes).toBe(3)
+    expect((await db.prepare('UPDATE transactions SET amount_cents = 900 WHERE owner = ?').bind('o').run()).meta.changes).toBe(2)
+    expect((await db.prepare("UPDATE transactions SET notes = 'n' WHERE owner = ?").bind('o').run()).meta.changes).toBe(1)
+    const deleted = await db.prepare('DELETE FROM transactions WHERE owner = ? RETURNING id').bind('o').run()
+    expect(deleted.results).toEqual([{ id: 1 }])
+    // The row, then its cell and its month subtracted and, both being empty, deleted.
+    expect(deleted.meta.changes).toBe(5)
+    expect((await db.prepare('DELETE FROM transactions WHERE owner = ?').bind('o').run()).meta.changes).toBe(0)
+  })
+})

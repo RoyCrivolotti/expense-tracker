@@ -199,14 +199,13 @@ have stopped `--file`. It can stop half-applied, so compare the result with `npm
 | `0035_owner_revision` | Creates `owner_revision`. SQL by hand that writes the dataset's tables must also delete the owner's row (below). |
 | `0036_transaction_query_indexes`, `0037_pinned_rows_index` | Each index is built by reading every row once and adds a written row per insert against the 100,000 a day, so two new indexes make a 5,000-row import write 10,000 more (0037 only for investments and rows tied to a plan, flag or settlement). |
 | `0038_description_norm` | See below. |
+| `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the daily budget ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
 
 Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 
 **Changing data by hand.** SQL by hand, a data migration or a seed script that writes the dataset's tables has to delete
 that owner's revision, or a browser that cached the old data is told nothing changed: `DELETE FROM owner_revision WHERE
 owner = '<email>'`. A Time Travel restore needs nothing, because the table goes back with the data it describes.
-
-
 
 #### 0038: the stored normalized description
 

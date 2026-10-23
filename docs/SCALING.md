@@ -207,6 +207,13 @@ statement the repository issues, and `idx_txn_owner` is the first column of `idx
 every statement is planned over the same tables (`transactionIndexUsage.test.ts`). Dropping them would save two written
 rows per insert. It is a migration for a later change, since the deploy applies every file in `migrations/` on merge.
 
+### Rollup tables
+
+`ledger_cells` and `ledger_months` (0039) are kept by triggers, so an insert writes two more rows, a delete two more (three
+when it empties its cell, four when its month empties too), an edit that moves a row to another cell two more (three when
+the old cell empties), and an edit of an amount alone one more. No route reads them yet. D1 bills the rows they write;
+the measured costs are in [the decision](./decisions/ledger-rollup.md).
+
 ## Where else to look
 
 - [API.md](./API.md) for every route's parameters, bounds, caching and cost in rows.

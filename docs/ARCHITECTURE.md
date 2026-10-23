@@ -116,10 +116,15 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   that the planner cannot pick `idx_txn_category`, which has no owner and would read every owner's rows.
 - **The ledger parts are specified by the ledger model.** `src/domain/ledger/partsOfDataset.ts` computes them from a
   whole dataset with `partitionPinned` and `buildCells`, and `dbLedgerParts.parity.test.ts` holds `ledgerPartsSql.ts` to
-  that. The pinned rule is written four times: `isPinned`, `PINNED_SQL`, `UNPINNED_SQL` and the predicate of
-  `idx_txn_pinned` (migration 0037), which SQLite reads only when a statement has the same terms. Changing it means
-  changing all four and adding a migration, because a deployed index cannot be edited. Ranges are capped by constants in
+  that. The pinned rule is written five times: `isPinned`, `PINNED_SQL`, `UNPINNED_SQL`, the predicate of
+  `idx_txn_pinned` (migration 0037), which SQLite reads only when a statement has the same terms, and the `pinned`
+  expression of the rollup triggers (0039). Changing it means changing all five and adding a migration, because a
+  deployed index cannot be edited. Ranges are capped by constants in
   `src/domain/data/ledgerParts.ts` and refused beyond them, never cut.
+- **`ledger_cells` and `ledger_months` are written by triggers on `transactions`, from the row's own columns, and nothing
+  else writes them.** Nothing may `REPLACE` a row of `transactions`, which deletes without firing the trigger, and a
+  migration that rebuilds the table must create the triggers again. `ledgerRollup.integration.test.ts` holds the tables
+  to a `GROUP BY` after every write path ([decision](./decisions/ledger-rollup.md)).
 - **The recurring series are specified by the engine.** `seriesFromTransactions` in
   `src/domain/engine/recurringSeries.ts` reduces what `groupTransactions` builds to what the detectors read,
   `seriesSql.ts` is the only place a series becomes SQL, and `dbSeries.parity.test.ts` and
@@ -167,6 +172,10 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   The filter is validated by `validateTxnFilter`, the validator of the paged reads, and `dbBulkEdit.parity.test.ts`
   holds the SQL to the engine's own filter. The cap is raised only after the rows written per edit are measured on a
   deployed D1. A delete never takes a filter ([decision](./decisions/no-filter-based-delete.md)).
+
+- **A count sent to a client is read, not taken from `meta.changes`.** On D1 it includes the rows the rollup triggers
+  write, about three for each row of `transactions`. Read it with a `COUNT(*)` in the same batch ahead of the write, or
+  `RETURNING`. `metaChangesUses.test.ts` lists the uses that remain and why they are safe, and fails for a new one.
 
 ### In the browser
 
