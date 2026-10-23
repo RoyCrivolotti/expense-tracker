@@ -649,16 +649,7 @@ describe('useLedgerData, the list read in pages', () => {
       expect(result.current.backgroundError).toBe('list down')
       source.readTransactionPage = read
       await afterRefresh(result)
-      const { rows, ...flags } = pager.getState()
-      const detail = JSON.stringify({
-        outcome: result.current.refreshOutcome,
-        refreshing: result.current.refreshing,
-        status: result.current.status,
-        backgroundError: result.current.backgroundError,
-        pager: { ...flags, summary: undefined, rows: rows.length },
-        calls: source.calls.slice(-16),
-      })
-      expect(result.current.refreshOutcome, detail).toBe('ok')
+      expect(result.current.refreshOutcome).toBe('ok')
       expect(result.current.backgroundError).toBeNull()
       expect(pager.getState().refreshFailed).toBe(false)
     })
@@ -680,16 +671,7 @@ describe('useLedgerData, the list read in pages', () => {
       detach()
       source.readTransactionPage = read
       await afterRefresh(result)
-      const { rows, ...flags } = pager.getState()
-      const detail = JSON.stringify({
-        outcome: result.current.refreshOutcome,
-        refreshing: result.current.refreshing,
-        status: result.current.status,
-        backgroundError: result.current.backgroundError,
-        pager: { ...flags, summary: undefined, rows: rows.length },
-        calls: source.calls.slice(-16),
-      })
-      expect(result.current.refreshOutcome, detail).toBe('ok')
+      expect(result.current.refreshOutcome).toBe('ok')
       expect(result.current.backgroundError).toBeNull()
     })
 
