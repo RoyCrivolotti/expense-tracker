@@ -52,7 +52,7 @@ export async function updateFlag(
   id: number,
   patch: Partial<NewFlag>,
 ): Promise<Flag> {
-  const keys = (Object.keys(patch) as (keyof NewFlag)[]).filter((k) => k in FLAG_COLUMNS)
+  const keys = (Object.keys(patch) as (keyof NewFlag)[]).filter((k) => Object.hasOwn(FLAG_COLUMNS, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   if (patch.autoLabelId != null) await assertOwnedLabel(env, owner, patch.autoLabelId)
   const sets = keys.map((k) => `${FLAG_COLUMNS[k]} = ?`).join(', ')

@@ -3,6 +3,7 @@ import type { Env } from './env'
 import { toTransaction, type QueryRow } from './dbTransactionQuery'
 import { checkinsOf } from './dbReference'
 import { CHECKIN_ENTRIES_SQL, exportSql } from './exportSql'
+import { idList } from './sqlIdList'
 import {
   toAccount,
   toAttachment,
@@ -59,7 +60,7 @@ async function readRows(env: Env, owner: string, request: ExportChunkRequest): P
 async function withEntries(env: Env, owner: string, checkins: WealthCheckinRow[]): Promise<object[]> {
   if (checkins.length === 0) return []
   const result = await env.DB.prepare(CHECKIN_ENTRIES_SQL)
-    .bind(owner, JSON.stringify(checkins.map((c) => c.id)))
+    .bind(owner, idList(checkins.map((c) => c.id)))
     .all<WealthCheckinEntryRow & { checkin_id: number }>()
   return checkinsOf(checkins, result.results ?? [])
 }

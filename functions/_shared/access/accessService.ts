@@ -196,7 +196,12 @@ export async function revokeAccessByEmail(
     throw new HttpError(400, 'Cannot revoke the owner')
   }
   const revoked = await deps.repo.revokeAccess(email)
-  if (!revoked) throw new HttpError(404, 'Active user not found')
+  if (!revoked) {
+    // A revoke whose purge failed leaves the user revoked and their data in place, and nothing else would ever purge
+    // it. Asking again finishes the job; every step is safe to repeat. An email that never had access is still a 404.
+    const user = await deps.repo.getAllowedUser(email)
+    if (user?.status !== 'revoked') throw new HttpError(404, 'Active user not found')
+  }
   await deps.repo.revokeAllGroups(email)
   await purgeOwnerData(deps.env, email)
   return { email, dataPurged: true }
@@ -225,10 +230,10 @@ export async function updateUserGroupGrants(
       await deps.repo.grantGroup(email, rawId, approverEmail)
       continue
     }
-    const hadGrant = await deps.repo.revokeGroup(email, rawId)
-    if (rawId === 'expenses' && hadGrant) {
-      await purgeOwnerData(deps.env, email)
-    }
+    await deps.repo.revokeGroup(email, rawId)
+    // Not only when a grant was removed: a purge that failed leaves no grant to remove on the repeat, and nothing
+    // else would ever purge the data. The purge is safe to repeat.
+    if (rawId === 'expenses') await purgeOwnerData(deps.env, email)
   }
 
   return { email, groups: await resolveGroupGrants(deps, email) }

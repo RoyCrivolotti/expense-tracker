@@ -14,7 +14,12 @@ export interface ChunkedBackupSettings {
 }
 
 export const DEFAULT_STEP_OPERATIONS = 44
-export const DEFAULT_STEP_ROWS = 1_500
+/**
+ * A day's backup can hold as many rows as the runs in its window times this. A ledger of 50,000 transactions is
+ * about 50,300 rows and takes 18 runs at this size, against the 24 that a trigger every ten minutes from 04:00 to
+ * 07:50 gives (docs/BACKUPS.md). At 1,500 the same ledger needs 35, so it was never finished before midnight.
+ */
+export const DEFAULT_STEP_ROWS = 3_000
 /** Enough to start a run, read a chunk and finish or save; below it an invocation could make no progress. */
 export const MIN_STEP_OPERATIONS = 12
 /**
