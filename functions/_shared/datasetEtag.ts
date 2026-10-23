@@ -13,12 +13,12 @@ export function datasetEtag(token: string, budgetMonth: string): string {
 
 /**
  * Bump this whenever the JSON shape of a ledger part (GET /api/expenses/reference, /transactions/months,
- * /cube, /series or /usage) changes, for the same reason as {@link DATASET_FORMAT}. `ledgerPartsEtag.test.ts` fails when
+ * /cube, /series or /usage) or of the receipt list (GET /api/expenses/attachments) changes, for the same reason as {@link DATASET_FORMAT}. `ledgerPartsEtag.test.ts` fails when
  * a shape moves.
  */
 export const PARTS_FORMAT = 1
 
-export type PartName = 'reference' | 'months' | 'cube' | 'series' | 'usage'
+export type PartName = 'reference' | 'months' | 'cube' | 'series' | 'usage' | 'attachments'
 
 /**
  * The tag of one ledger part. It carries the part and the range asked for (`scope`), because a client
