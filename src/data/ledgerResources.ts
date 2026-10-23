@@ -28,6 +28,18 @@ export function stillCurrent(started: Epochs, now: Epochs): Record<Resource, boo
 }
 
 /**
+ * A month held as rows with no sums, which the first read of a session leaves, is in no read of rows that does not
+ * hold it, and the sums that are kept do not have it either, so it keeps its rows: dropping them would take it out of
+ * the totals.
+ */
+function withRowsOfUnsummedMonths(held: HeldLedger, rows: HeldLedger['rows']): HeldLedger['rows'] {
+  const summed = new Set((held.cells ?? []).map((cell) => cell.budgetMonth))
+  const kept = new Map(rows)
+  for (const [month, list] of held.rows) if (!kept.has(month) && !summed.has(month)) kept.set(month, list)
+  return kept
+}
+
+/**
  * Puts what a full read brought into what is held, resource by resource. A resource written to since the
  * read started keeps its value. The revision is the read's only when every resource took it: otherwise
  * what is held is part this read and part later local writes, and no revision describes that.
@@ -46,6 +58,7 @@ export function mergeRead(held: HeldLedger, read: HeldLedger, current: Record<Re
   }
   if (current.rows) next = { ...next, pinned: read.pinned, rows: read.rows }
   if (current.cube) next = { ...next, cells: read.cells }
+  else if (current.rows) next = { ...next, rows: withRowsOfUnsummedMonths(held, next.rows) }
   // A list read before is kept while the counts say the transaction still has that many receipts; one that no
   // longer fits was changed elsewhere, or belongs to a row that is no longer held, and is read again on request.
   const receipts = [...next.receipts].filter(([id, list]) => (next.attachmentCounts[id] ?? 0) === list.length)

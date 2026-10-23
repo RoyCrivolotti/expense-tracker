@@ -1,49 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { apiDataSource } from '../data/apiDataSource'
 import { withLedgerWrites } from '../data/apiLedgerWrites'
-import { type ExpenseDataSource, type LedgerPartsSource, hasLedgerParts } from '../data/dataSource'
+import { type Chosen, type LedgerSource, chooseLedger } from '../data/chooseLedger'
 import { reportShadow, shadowDifferences } from '../data/ledgerShadow'
-import { loadLedgerSnapshot } from '../data/ledgerSnapshot'
 import type { HeldLedger } from '../data/ledgerHold'
 import type { LedgerMode } from '../config/ledgerMode'
-import { FULL_HYDRATION_ROW_LIMIT } from '../domain/ledger'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import type { ExpensesAppProps, ExpensesAppView } from './ExpensesApp'
 import { useBackgroundErrorToast } from './hooks/useBackgroundErrorToast'
 import { useLedgerData } from './useLedgerData'
 
-type LedgerSource = ExpenseDataSource & LedgerPartsSource
-
-/** `fallback` is the whole-dataset app; anything else is the ledger, with the source that serves its parts. */
-type Choice = 'checking' | 'fallback' | { ledger: LedgerSource }
-
-const isOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
-
-/**
- * Whether to read this ledger in parts. Not when the source cannot serve parts (an older server answers
- * with `PartsUnavailableError` on its first read), and not when the ledger is too large to hold in full:
- * the screens of a ledger that holds only a window list only the rows it holds, and "All" would then show
- * part of the ledger as if it were all. The reference read is the one the session makes next, and the
- * browser answers that from its cache, so asking first costs one conditional request. Offline, or when that
- * read fails, a snapshot of this owner's is enough to go on, if it holds every row.
- *
- * The limit is checked here for the start of a session only. A ledger that grows past it later is caught by the
- * session itself (`refuseWindow`), and the app hands back from there.
- */
-async function choose(source: ExpenseDataSource, owner: string | undefined): Promise<Choice> {
-  if (!hasLedgerParts(source)) return 'fallback'
-  const saved = async (): Promise<Choice> => {
-    const snapshot = owner ? await loadLedgerSnapshot(owner) : null
-    return snapshot && snapshot.held.cells === null ? { ledger: source } : 'fallback'
-  }
-  if (!isOnline()) return saved()
-  try {
-    const reference = await source.readReferencePart()
-    return reference.rowCount <= FULL_HYDRATION_ROW_LIMIT ? { ledger: source } : 'fallback'
-  } catch {
-    return saved()
-  }
-}
+/** What the app is showing: `checking` until the choice is made, and then what `chooseLedger` made of it. */
+type Choice = 'checking' | Chosen
 
 function LedgerApp({
   mode,
@@ -92,7 +60,7 @@ export default function LedgerExpensesApp({
   const { source, accountEmail } = props
   useEffect(() => {
     let alive = true
-    void choose(source, accountEmail).then((next) => alive && setChoice(next))
+    void chooseLedger(source, accountEmail).then((next) => alive && setChoice(next))
     return () => {
       alive = false
     }

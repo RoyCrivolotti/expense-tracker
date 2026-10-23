@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react'
-import type { ExpenseDataset, ExpenseSettings } from '../types'
-import type { WriteReach } from '../data/ledgerSession'
+import type { ExpenseSettings } from '../types'
+import { wasRefused } from '../data/apiClient'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
+import { type ApplyPatch, bulkWriteOf, unchanged } from './bulkWrite'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
   patchAfterAccount,
@@ -40,36 +41,24 @@ import {
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
-type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
-
-const unchanged = (dataset: ExpenseDataset): ExpenseDataset => dataset
-
-/** Build the write-actions object, or `undefined` for read-only sources. */
+/**
+ * Build the write-actions object, or `undefined` for read-only sources. `readAgain` reads the whole of what the screens
+ * show again, for a write that may have been saved though it did not answer, which nothing else shows (a model that holds
+ * every row is only told what each answered write did).
+ */
 export function useExpenseActions(
   source: ExpenseDataSource,
   applyPatch: ApplyPatch,
   openModal: OpenModal,
   readOnly = false,
+  readAgain?: () => void,
 ): ExpenseActions | undefined {
   // Which settings write each setting was last taken from. A write's answer is the whole settings
   // row as it stood then, so an older write answering late must not undo a newer one's.
   const settingsOrder = useRef({ issued: 0, applied: new Map<keyof ExpenseSettings, number>() })
   return useMemo(() => {
     if (!source.canWrite || readOnly) return undefined
-    /**
-     * A write of many rows, which may have gone through in part (a request after the first can fail), so a
-     * failure reads again what the ledger holds, as the list does. Its answer is shown by `apply`.
-     */
-    const bulkWrite = async <R, T>(write: () => Promise<R>, apply: (result: R) => void, count: (result: R) => T): Promise<T> => {
-      try {
-        const result = await write()
-        apply(result)
-        return count(result)
-      } catch (error) {
-        applyPatch(unchanged, { patch: {} })
-        throw error
-      }
-    }
+    const bulkWrite = bulkWriteOf(applyPatch)
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
       onDuplicate: (txn) =>
@@ -81,7 +70,10 @@ export function useExpenseActions(
         return txn
       },
       createTransactions: async (inputs: NewTransaction[]) => {
-        const txns = await source.createTransactions!(inputs)
+        const txns = await source.createTransactions!(inputs).catch((error: unknown) => {
+          if (!wasRefused(error)) readAgain?.()
+          throw error
+        })
         applyPatch((d) => patchAfterBulkCreate(d, txns))
       },
       updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
@@ -261,5 +253,5 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterWealthCheckinDelete(d, id))
       },
     }
-  }, [source, applyPatch, openModal, readOnly])
+  }, [source, applyPatch, openModal, readOnly, readAgain])
 }

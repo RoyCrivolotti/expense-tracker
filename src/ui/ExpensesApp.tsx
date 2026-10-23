@@ -398,7 +398,7 @@ function ExpensesAppReady({
   // after it starts would flip this mid-run. Re-entry via "Run setup" in Settings always
   // sets this false; the initial auto-open (tenant had nothing yet) starts it true.
   const [onboardingFirstRun, setOnboardingFirstRun] = useState(() => needsOnboarding(model.dataset))
-  const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
+  const actions = useExpenseActions(source, applyPatch, setModal, readOnly, reload)
 
   const activeMonth = shownMonth(month, selectionMonth, model.months)
   useViewMonth(viewMonth, activeMonth)

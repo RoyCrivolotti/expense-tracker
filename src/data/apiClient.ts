@@ -14,6 +14,11 @@ export function isAccessDenied(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 403)
 }
 
+/** The server answered and refused the request, so nothing it asked for was saved. Any other failure may have been. */
+export function wasRefused(error: unknown): boolean {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500
+}
+
 export async function toApiError(res: Response): Promise<ApiError> {
   let message = `Request failed (${res.status})`
   try {

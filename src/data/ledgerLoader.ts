@@ -9,7 +9,7 @@ import {
   hydratedMonthsFor,
   ledgerFromParts,
 } from '../domain/ledger'
-import { planCubeRanges, planRowRanges, splitRange } from '../domain/ledger/partsPlan'
+import { planCubeRanges, planCubeRangesOutside, planRowRanges, splitRange } from '../domain/ledger/partsPlan'
 
 export interface LoadedLedger {
   ledger: Ledger
@@ -32,6 +32,12 @@ export interface LoadLedgerOptions {
   hydrate?: (reference: ReferencePart) => string[]
   /** How many times the ledger may move under the reads before the load gives up. */
   maxAttempts?: number
+  /**
+   * Leaves the sums of the months read as rows out of the read. For the first read of a session, which holds nothing
+   * yet that a write or another read could take those months out of: later, every month's sums are read, so that a
+   * month held as rows can be given up whatever happened to it (`HeldLedger.cells`).
+   */
+  omitHeldSums?: boolean
 }
 
 const DEFAULT_MAX_ATTEMPTS = 3
@@ -60,22 +66,33 @@ async function readCubeRange(source: LedgerPartsSource, range: MonthRange): Prom
   }
 }
 
+/** The months with data that a rows request covers, whether or not they were asked for: it returns every month in its range. */
+function monthsReadAsRows(months: readonly string[], ranges: readonly MonthRange[]): Set<string> {
+  return new Set(months.filter((month) => ranges.some((range) => month >= range.from && month <= range.to)))
+}
+
 async function readPlanned(
   source: LedgerPartsSource,
   reference: ReferencePart,
   hydrated: string[],
   held: Held,
+  omitHeldSums: boolean,
 ): Promise<Read> {
-  const everyMonth = hydrated.length === reference.months.length
   const current = (part: { revision: string }): boolean => part.revision === reference.revision
-  const rows = planRowRanges(hydrated, reference.rowsPerMonth).map(async (range) => {
+  const rowRanges = planRowRanges(hydrated, reference.rowsPerMonth)
+  const rows = rowRanges.map(async (range) => {
     const kept = held.rows.get(keyOf(range))
     if (kept && current(kept)) return kept
     const fresh = await source.readMonthsPart(range)
     held.rows.set(keyOf(range), fresh)
     return fresh
   })
-  const cube = (everyMonth ? [] : planCubeRanges(reference.months)).map(async (range) => {
+  const everyMonth = hydrated.length === reference.months.length
+  const outside = omitHeldSums ? planCubeRangesOutside(reference.months, monthsReadAsRows(reference.months, rowRanges)) : []
+  // A ledger asked for as a window keeps the sums that say it is one, even when the rows request that bridged its
+  // windows happened to cover every month: it is small enough for that, so the sums cost nothing.
+  const cubeRanges = everyMonth ? [] : outside.length > 0 ? outside : planCubeRanges(reference.months)
+  const cube = cubeRanges.map(async (range) => {
     const kept = held.cube.get(keyOf(range))
     if (kept?.every(current)) return kept
     const fresh = await readCubeRange(source, range)
@@ -105,7 +122,7 @@ export async function readLedgerParts(source: LedgerPartsSource, options: LoadLe
     const hydrated = options.hydrate
       ? options.hydrate(reference)
       : hydratedMonthsFor(reference.months, reference.rowCount, viewed, policy)
-    const read = await readPlanned(source, reference, hydrated, held)
+    const read = await readPlanned(source, reference, hydrated, held, options.omitHeldSums ?? false)
     if ([...read.rows, ...read.cube].every((part) => part.revision === reference.revision)) return { reference, ...read }
     if (attempt >= maxAttempts) throw new LedgerChangedError(`The ledger changed ${attempt} times while it was being read`)
     reference = await source.readReferencePart()

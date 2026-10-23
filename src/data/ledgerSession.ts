@@ -196,7 +196,7 @@ export class LedgerSession {
 
   /** Reads the ledger for the first time, opening on `viewed` or the newest month. */
   async open(viewed?: string): Promise<void> {
-    const parts = await readLedgerParts(this.source, this.readOptions(viewed ?? (this.state.viewed || undefined)))
+    const parts = await readLedgerParts(this.source, { ...this.readOptions(viewed ?? (this.state.viewed || undefined)), omitHeldSums: true })
     const held = holdParts(parts)
     if (this.refuses(held)) return this.set({ outsized: true })
     this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null, offline: false })

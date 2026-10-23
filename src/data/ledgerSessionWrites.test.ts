@@ -63,8 +63,10 @@ describe('LedgerSession, a write to rows that are not held', () => {
 
     expect(changed).toBe(true)
     expect(referenceReads(source)).toBe(1)
+    // What a session that has refreshed holds: the sums of every month, since its first read left some out.
     const fresh = new LedgerSession(memorySource(source.dataset), { policy: WINDOWED })
     await fresh.open()
+    await fresh.refresh()
     expect(session.getState().held!.cells).toEqual(fresh.getState().held!.cells)
   })
 

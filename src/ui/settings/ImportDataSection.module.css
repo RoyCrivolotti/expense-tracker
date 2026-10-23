@@ -31,6 +31,12 @@
   font-size: 0.8rem;
   color: var(--exp-danger, #c0392b);
 }
+.stopped {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--exp-danger, #c0392b);
+}
 .previewWrap {
   overflow-x: auto;
 }

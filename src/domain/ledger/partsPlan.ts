@@ -51,6 +51,27 @@ export function planCubeRanges(months: Iterable<string>): MonthRange[] {
   return ranges
 }
 
+/**
+ * The cube requests for the months in `months` that are not in `covered`, which are the months a rows request reads: the
+ * sums of a month held as rows are never used, since its rows are the truth. A request is a calendar range, so a covered
+ * month between two others splits what is asked for into two requests, and a run of months without one is a single
+ * request, or more at the longest range the route serves.
+ */
+export function planCubeRangesOutside(months: Iterable<string>, covered: ReadonlySet<string>): MonthRange[] {
+  const ranges: MonthRange[] = []
+  let run: string[] = []
+  const flush = (): void => {
+    ranges.push(...planCubeRanges(run))
+    run = []
+  }
+  for (const month of sortedMonths(months)) {
+    if (covered.has(month)) flush()
+    else run.push(month)
+  }
+  flush()
+  return ranges
+}
+
 /** Halves a range, or returns null when it is a single month and cannot be split. */
 export function splitRange(range: MonthRange): [MonthRange, MonthRange] | null {
   const span = calendarSpan(range.from, range.to)

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MAX_CUBE_MONTHS, MAX_ROWS_MONTHS, MAX_ROWS_PER_REQUEST } from '../data/ledgerParts'
 import { PartTooLargeError } from '../data/ledgerPartsErrors'
 import { monthsBetweenBudget, shiftBudgetMonth } from '../engine/dates'
-import { planCubeRanges, planRowRanges, splitRange } from './partsPlan'
+import { planCubeRanges, planCubeRangesOutside, planRowRanges, splitRange } from './partsPlan'
 
 const months = (from: string, count: number): string[] =>
   Array.from({ length: count }, (_, i) => shiftBudgetMonth(from, i))
@@ -77,6 +77,42 @@ describe('planCubeRanges', () => {
     expect(ranges.map((range) => range.from)).toEqual(
       [0, 1, 2].map((i) => shiftBudgetMonth('2015-01', i * MAX_CUBE_MONTHS)),
     )
+  })
+})
+
+describe('planCubeRangesOutside', () => {
+  const months = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
+  const covering = (...list: string[]) => new Set(list)
+
+  it('is planCubeRanges when no month is covered', () => {
+    expect(planCubeRangesOutside(months, covering())).toEqual(planCubeRanges(months))
+  })
+
+  it('asks for nothing when every month is covered, or none has data', () => {
+    expect(planCubeRangesOutside(months, covering(...months))).toEqual([])
+    expect(planCubeRangesOutside([], covering())).toEqual([])
+  })
+
+  it('stops short of the months at either end that rows cover', () => {
+    expect(planCubeRangesOutside(months, covering('2026-05', '2026-06'))).toEqual([{ from: '2026-01', to: '2026-04' }])
+    expect(planCubeRangesOutside(months, covering('2026-01', '2026-02'))).toEqual([{ from: '2026-03', to: '2026-06' }])
+  })
+
+  it('asks twice when a covered month is between the others, since a request is a calendar range', () => {
+    expect(planCubeRangesOutside(months, covering('2026-03', '2026-04'))).toEqual([
+      { from: '2026-01', to: '2026-02' },
+      { from: '2026-05', to: '2026-06' },
+    ])
+    expect(planCubeRangesOutside(months, covering('2026-03'))).toEqual([
+      { from: '2026-01', to: '2026-02' },
+      { from: '2026-04', to: '2026-06' },
+    ])
+  })
+
+  it('takes a month with no data between two others into the request, and breaks a long run in chunks', () => {
+    expect(planCubeRangesOutside(['2026-01', '2026-04'], covering())).toEqual([{ from: '2026-01', to: '2026-04' }])
+    const last = shiftBudgetMonth('2015-01', MAX_CUBE_MONTHS + 2)
+    expect(planCubeRangesOutside(['2015-01', last, '2030-01'], covering('2030-01'))).toHaveLength(2)
   })
 })
 

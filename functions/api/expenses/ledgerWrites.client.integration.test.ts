@@ -247,9 +247,10 @@ describe('a ledger held as a window, after a write to months it holds only as su
     return session
   }
 
-  /** The sums a browser would open on now. */
+  /** The sums of every month as the server has them now: the first read leaves out those of the months it holds as rows. */
   async function truth() {
     const fresh = await opened()
+    await fresh.refresh()
     return cellsOf(fresh)
   }
 
@@ -320,7 +321,9 @@ describe('a ledger held as a window, after a write to months it holds only as su
     await vi.waitFor(() => expect(sent.some((request) => request.path.endsWith('/cube'))).toBe(true), wait)
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(sent.map((request) => request.path.replace('/api/expenses', ''))).toEqual(['/cube'])
-    await vi.waitFor(async () => expect(cellsOf(session)).toEqual(await truth()), wait)
+    // The session read the sums of that month and no other, so it is the months it holds no rows for that are compared.
+    const beyondRows = (cells: ReturnType<typeof cellsOf>) => cells!.filter((cell) => !session.getState().held!.rows.has(cell.budgetMonth))
+    await vi.waitFor(async () => expect(beyondRows(cellsOf(session))).toEqual(beyondRows(await truth())), wait)
   })
 
   it.each(writes)('keeps the old sums of those months after %s when nothing says the write went past the rows it holds', async (_name, write) => {

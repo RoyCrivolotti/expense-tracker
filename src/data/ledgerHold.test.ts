@@ -37,16 +37,24 @@ const expected = (months: Iterable<string>) => listsOf(buildLedger(dataset, mont
 
 async function windowAround(viewed: string) {
   const source = memorySource(dataset)
-  const parts = await readLedgerParts(source, { viewed, policy: WINDOWED })
+  const parts = await readLedgerParts(source, { viewed, policy: WINDOWED, omitHeldSums: true })
   return { source, held: holdParts(parts) }
 }
 
+/** The held ledger with the sums of every month it holds as rows read as well, as they are once a write has touched them. */
+async function withSumsOfHeldMonths(source: ReturnType<typeof memorySource>, held: ReturnType<typeof holdParts>) {
+  const parts = await Promise.all([...held.rows.keys()].map((month) => source.readCubePart({ from: month, to: month })))
+  return holdCells(held, parts)
+}
+
 describe('holdParts', () => {
-  it('holds the rows of the window and the sums of every month', async () => {
+  it('holds the rows of the window and the sums of the months outside it, and none of the sums of the window', async () => {
     const { held } = await windowAround(months[30]!)
     expect(held.rows.size).toBe(HYDRATED_DATA_MONTHS)
     expect(held.cells).not.toBeNull()
-    expect(held.cells!.map((c) => c.budgetMonth).sort()).toContain(months[0])
+    const summed = new Set(held.cells!.map((c) => c.budgetMonth))
+    expect(summed.has(months[0]!)).toBe(true)
+    for (const month of held.rows.keys()) expect(summed.has(month), month).toBe(false)
     expect(held.revision).toBe('r0')
     expect(listsOf(ledgerOfHeld(held))).toEqual(expected(held.rows.keys()))
   })
@@ -113,7 +121,8 @@ describe('holding more months', () => {
 
 describe('giving months up again', () => {
   it('drops the least recently used month that is not kept, and no more than needed', async () => {
-    const { held } = await windowAround(months.at(-1)!)
+    const around = await windowAround(months.at(-1)!)
+    const held = await withSumsOfHeldMonths(around.source, around.held)
     const keep = [...held.rows.keys()].slice(-3)
     const next = evictMonths(held, keep, 8)
     expect(next.rows.size).toBe(8)
@@ -123,12 +132,33 @@ describe('giving months up again', () => {
   })
 
   it('treats a month just used as the last to go', async () => {
-    const { held } = await windowAround(months.at(-1)!)
+    const around = await windowAround(months.at(-1)!)
+    const held = await withSumsOfHeldMonths(around.source, around.held)
     const first = [...held.rows.keys()][0]!
     const used = touchMonths(held, [first])
     expect([...used.rows.keys()].at(-1)).toBe(first)
     const next = evictMonths(used, [], held.rows.size - 1)
     expect(next.rows.has(first)).toBe(true)
+  })
+
+  it('never gives up a month that has no sums, since it would be out of the totals', async () => {
+    const { held } = await windowAround(months.at(-1)!)
+    const next = evictMonths(held, [], 2)
+    expect(next.rows.size).toBe(held.rows.size)
+    expect(listsOf(ledgerOfHeld(next))).toEqual(expected(held.rows.keys()))
+  })
+
+  it('gives up the months that have sums and keeps those that have none', async () => {
+    const around = await windowAround(months.at(-1)!)
+    const [summed, bare] = [...around.held.rows.keys()].reduce<[string[], string[]]>(
+      (split, month, i) => (split[i % 2 === 0 ? 0 : 1].push(month), split),
+      [[], []],
+    )
+    const parts = await Promise.all(summed.map((month) => around.source.readCubePart({ from: month, to: month })))
+    const held = holdCells(around.held, parts)
+    const next = evictMonths(held, [], 1)
+    expect([...next.rows.keys()].sort()).toEqual([...bare].sort())
+    expect(listsOf(ledgerOfHeld(next))).toEqual(expected(next.rows.keys()))
   })
 
   it('keeps a month it was told to keep even past the cap', async () => {

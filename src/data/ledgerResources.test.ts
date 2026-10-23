@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { sortedMonths } from '../domain/engine/dates'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { memorySource } from '../testing/ledgerSource'
 import { holdParts, holdReceipts } from './ledgerHold'
@@ -59,6 +60,26 @@ describe('mergeRead', () => {
     const merged = mergeRead(a, b, { reference: true, rows: true, cube: false })
     expect(merged.cells).toBe(a.cells)
     expect(merged.revision).toBeNull()
+  })
+
+  it('keeps the rows of a month that has no sums when the sums are kept and the rows are replaced', async () => {
+    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+    const source = memorySource(dataset)
+    // A first read on an old month leaves the sums of its window out; a later read is on the newest month.
+    const first = holdParts(await readLedgerParts(source, { policy, viewed: months[20]!, omitHeldSums: true }))
+    const later = holdParts(await readLedgerParts(source, { policy, viewed: months.at(-1)! }))
+    const merged = mergeRead(first, later, { reference: true, rows: true, cube: false })
+    const summed = new Set(merged.cells!.map((cell) => cell.budgetMonth))
+    for (const month of merged.months) expect(merged.rows.has(month) || summed.has(month), month).toBe(true)
+    for (const month of first.rows.keys()) if (!summed.has(month)) expect(merged.rows.get(month)).toBe(first.rows.get(month))
+  })
+
+  it('replaces the rows when the sums are replaced too, since every month then has its sums', async () => {
+    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+    const source = memorySource(dataset)
+    const first = holdParts(await readLedgerParts(source, { policy, viewed: months[20]!, omitHeldSums: true }))
+    const later = holdParts(await readLedgerParts(source, { policy, viewed: months.at(-1)! }))
+    expect(mergeRead(first, later, { reference: true, rows: true, cube: true }).rows).toBe(later.rows)
   })
 
   it('keeps a receipt list the new counts still agree with, and drops one they do not', async () => {
