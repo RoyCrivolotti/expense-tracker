@@ -61,7 +61,7 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/goalControlFields.tsx': 211,
   'src/ui/tabs/goals/goalControlSections.tsx': 423,
   'src/ui/tabs/useTransactionsTabState.ts': 253,
-  'src/ui/useExpenseActions.ts': 249,
+  'src/ui/useExpenseActions.ts': 243,
 }
 
 const FUNCTION_LINE_CAPS = {
@@ -174,7 +174,7 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/useStarredLevers.ts': 98,
   'src/ui/tabs/useTransactionSelection.ts': 133,
   'src/ui/tabs/useTransactionsTabState.ts': 164,
-  'src/ui/useExpenseActions.ts': 206,
+  'src/ui/useExpenseActions.ts': 201,
   'src/ui/useExpenseData.ts': 94,
   'src/ui/useLedgerData.ts': 114,
 }
