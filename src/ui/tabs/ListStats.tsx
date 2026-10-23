@@ -7,7 +7,8 @@ function itemCountLabel(count: number, capped: boolean): string {
 }
 
 interface ListStatsProps {
-  count: number
+  /** Null while it is not known. */
+  count: number | null
   capped?: boolean | undefined
   /** Null while it is not known. */
   totalCents: number | null
@@ -19,7 +20,7 @@ interface ListStatsProps {
 export function ListStats({ count, capped = false, totalCents, stale }: ListStatsProps) {
   return (
     <span className={styles.resultStats} {...(stale ? { 'data-stale': '' } : {})}>
-      <span>{itemCountLabel(count, capped)}</span>
+      <span>{count === null ? '—' : itemCountLabel(count, capped)}</span>
       <span>
         <span className={styles.resultLabel}>Net spend </span>
         <span className={styles.resultAmount}>

@@ -9,6 +9,7 @@ import { ConfirmSheet } from '../components/ConfirmSheet'
 import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { ListStats } from './ListStats'
+import { matchAnnouncement } from './matchAnnouncement'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
@@ -77,9 +78,7 @@ export function TransactionsTab({
   const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const past = usePastReports(model.dataset.transactions)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
-  const announcement = useDebouncedAnnouncement(
-    `${state.count}${state.capped ? '+' : ''} transactions match`,
-  )
+  const announcement = useDebouncedAnnouncement(matchAnnouncement(state))
   const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)

@@ -116,8 +116,12 @@
 }
 
 .usageNoteButton {
+  /* A touch target of at least 44px high, though it reads as a link in a line of text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-left: 0.4rem;
-  padding: 0;
+  padding: 0 0.25rem;
   border: 0;
   background: none;
   color: var(--color-accent);

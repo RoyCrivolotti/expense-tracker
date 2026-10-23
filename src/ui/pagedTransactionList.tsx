@@ -13,17 +13,24 @@ import type { ExpenseModel } from './useExpenseData'
 
 type Figures = Pick<ListView, 'count' | 'capped' | 'totalCents' | 'totalsStale'>
 
+/** How many rows match: null with nothing read and no figures, a lower bound when only part of the list was read. */
+function countOf({ rows, summary }: PagerState, own: boolean, payments: number): number | null {
+  if (!own && !summary && rows.length === 0) return null
+  return own || !summary ? rows.length + payments : summary.count + (summary.capped ? 0 : payments)
+}
+
 /**
  * What the header says. A list that has been read to its end adds up exactly, whatever the summary says. Before
  * that the summary's figures stand, and a count that stopped is a bound. Figures read for the filter before this
  * one stay, marked, until the new ones come; with none at all the count is what has been read so far, as a bound,
- * and there is no net spend to give.
+ * and there is no net spend to give. With no row and no figures there is no count either, and the header says so.
  */
-function figuresOf({ rows, complete, stale, summary, summaryStale }: PagerState, payments: number): Figures {
+function figuresOf(state: PagerState, payments: number): Figures {
+  const { rows, complete, stale, summary, summaryStale } = state
   const own = complete && !stale
   const held = rows as ListView['results']
   return {
-    count: own || !summary ? rows.length + payments : summary.count + (summary.capped ? 0 : payments),
+    count: countOf(state, own, payments),
     capped: !own && (summary ? summary.capped : true),
     totalCents: own ? netSpendCents(held) : summary ? summary.netSpendCents : null,
     totalsStale: !own && (stale || (summary !== null && summaryStale)),

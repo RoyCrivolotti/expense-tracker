@@ -43,8 +43,8 @@ const counted: Usage = {
 }
 
 /** What the model says of the counts: `usage` null is none read yet, and `note` is why they cannot be taken as they are. */
-function windowOf({ usage = counted, note = null, refresh = vi.fn() }: { usage?: Usage | null; note?: UsageView['note']; refresh?: () => void } = {}): ExpenseModel {
-  const dataset = makeDataset({ categories: [DINING, GROCERIES], accounts: [CHECKING, CARD], flags: [work], labels: [trip] })
+function windowOf({ usage = counted, note = null, refresh = vi.fn(), empty = false }: { usage?: Usage | null; note?: UsageView['note']; refresh?: () => void; empty?: boolean } = {}): ExpenseModel {
+  const dataset = makeDataset({ categories: [DINING, GROCERIES], accounts: [CHECKING, CARD], flags: empty ? [] : [work], labels: empty ? [] : [trip] })
   const view: UsageView = {
     count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
     note,
@@ -193,5 +193,32 @@ describe('the flag and label managers over a window', () => {
     expect(sheet.getByText(generic)).toBeInTheDocument()
     expect(sheet.getByText(NOTE_WORDS.stale)).toBeInTheDocument()
     expect(sheet.queryByText(number)).toBeNull()
+  })
+})
+
+describe('the notice about the counts, when there is nothing to count or to touch', () => {
+  it.each([
+    ['flags', FlagsModal],
+    ['labels', LabelsModal],
+  ] as const)('is not shown over an empty list of %s, which has no counts to wait for', (_name, Modal) => {
+    inSettings(<Modal model={windowOf({ usage: null, note: 'reading', empty: true })} actions={actions} onClose={vi.fn()} />)
+    expect(screen.queryByText('Reading the counts…')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it.each([
+    ['flags', FlagsModal],
+    ['labels', LabelsModal],
+  ] as const)('is still shown over a list of %s that has some', (_name, Modal) => {
+    inSettings(<Modal model={windowOf({ usage: null, note: 'reading' })} actions={actions} onClose={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Reading the counts…')
+  })
+
+  it.each([
+    ['failed', 'Try again'],
+    ['stale', 'Read again'],
+  ] as const)('has a "%s" link to %s at least 44px high, though it reads as a link in a line of text', (note, label) => {
+    inSettings(<LabelsModal model={windowOf({ note })} actions={actions} onClose={vi.fn()} />)
+    expect(getComputedStyle(screen.getByRole('button', { name: label })).minHeight).toBe('44px')
   })
 })

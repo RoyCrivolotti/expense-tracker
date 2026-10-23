@@ -16,8 +16,8 @@ export interface ListView {
   listRows: TransactionListRow[]
   /** Net spend of the rows the filter matches, or null while it is not known: the first figures are on their way. */
   totalCents: number | null
-  /** How many rows match; a lower bound when `capped`. */
-  count: number
+  /** How many rows match; a lower bound when `capped`. Null while nothing is known: the first rows are on their way, or failed. */
+  count: number | null
   capped?: boolean | undefined
   /** The first rows are on their way. */
   loading?: boolean | undefined
