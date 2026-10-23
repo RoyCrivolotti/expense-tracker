@@ -52,10 +52,13 @@ jobs:
           plan "$PROD_D1_NAME" prod
           plan "$DEV_D1_NAME" dev
 
+  # The three jobs below change a database or production, so they run for `main` only. A push is always `main`; a
+  # manual run (workflow_dispatch) can be started on any branch, and must not ship that branch's code.
+  #
   # Dev goes first, so a migration that does not apply is found where it costs nothing.
   migrate-dev:
     needs: schema
-    if: needs.schema.outputs.dev_pending == 'true'
+    if: github.ref == 'refs/heads/main' && needs.schema.outputs.dev_pending == 'true'
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -72,6 +75,7 @@ jobs:
     needs: [ci, schema, migrate-dev]
     if: >-
       ${{ !cancelled()
+      && github.ref == 'refs/heads/main'
       && needs.ci.result == 'success'
       && needs.schema.result == 'success'
       && needs.schema.outputs.prod_pending == 'true'
@@ -97,6 +101,7 @@ jobs:
     needs: [ci, schema, migrate-dev, migrate-prod]
     if: >-
       ${{ !cancelled()
+      && github.ref == 'refs/heads/main'
       && needs.ci.result == 'success'
       && needs.schema.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.migrate-dev.result)
