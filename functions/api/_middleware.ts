@@ -6,6 +6,7 @@ import type { Env, ExpensesData } from '../_shared/env'
 import { createD1AccessRepository } from '../_shared/adapters/d1AccessRepository'
 import { createD1ExpenseRepository } from '../_shared/adapters/d1ExpenseRepository'
 import { error } from '../_shared/http'
+import { withDefaultResponseHeaders } from '../_shared/defaultResponseHeaders'
 import { assertWriteIsSameSiteJson } from '../_shared/requestHygiene'
 import { toHttpError } from '../_shared/mapAppError'
 import { bumpRevision, bumpRevisionReadingPrevious } from '../_shared/dbRevision'
@@ -49,7 +50,7 @@ async function aroundWrite(
 }
 
 /** Request checks, auth gate and uniform error handling for every /api/* route. */
-export const onRequest: PagesFunction<Env, string, ExpensesData> = async (context) => {
+const handle: PagesFunction<Env, string, ExpensesData> = async (context) => {
   try {
     const pathname = new URL(context.request.url).pathname
     assertWriteIsSameSiteJson(context.request, pathname)
@@ -79,3 +80,6 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
     return error(mapped.status, mapped.message, mapped.headers)
   }
 }
+
+export const onRequest: PagesFunction<Env, string, ExpensesData> = async (context) =>
+  withDefaultResponseHeaders(await handle(context))
