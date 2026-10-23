@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Compare a D1 database's real columns with what `migrations/` produces, and say what is
+ * Compare a D1 database's real schema with what `migrations/` produces, and say what is
  * missing, with the migration that adds it.
  *
  *   npm run check:schema -- <database-name>
@@ -12,10 +12,16 @@
  * record has been wrong twice: production said 0013 was applied and had no
  * goal_scenarios.life_events (scenario saves failed), and said 0026 was applied and had no
  * settings.investment_category_id. A record of what was run cannot show what a failed or partial
- * run left behind, so this reads the schema itself. Columns only: it does not compare types,
- * defaults or indexes, which have not been the way it has gone wrong.
+ * run left behind, so this reads the schema itself.
  *
- * Exit 0 when the columns match, 1 on a difference, 2 when the database could not be read.
+ * What it compares: the name of every column, index and trigger, in both directions. A missing
+ * trigger matters most, since nothing fails when a trigger is not there: the table it keeps up to
+ * date just goes stale. It does not compare types, defaults, or what an index or trigger does, and
+ * `sqlite_master` is read as it stands, so a trigger that exists with the wrong body passes.
+ * Something in the database that no migration makes fails the check the same way a missing one
+ * does, columns, indexes and triggers alike: the dev database is kept level with `main`.
+ *
+ * Exit 0 when the schemas match, 1 on a difference, 2 when the database could not be read.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -27,13 +33,23 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = join(ROOT, 'migrations')
 
 /**
- * Every table and column, as `table.column`. The same query for the database under test and for
- * the one built from the migrations, so the two lists mean the same thing. SQLite's own tables
- * are left out, and so is D1's `_cf_KV`, which `pragma_table_info` refuses to read.
+ * Every column as `table.column`, and every index and trigger by name, as rows of `kind` and `name`.
+ * The same query for the database under test and for the one built from the migrations, so the two
+ * lists mean the same thing. SQLite's own tables and indexes are left out, and so is D1's `_cf_KV`,
+ * which `pragma_table_info` refuses to read.
  */
-export const COLUMNS_QUERY =
-  "SELECT m.name AS t, p.name AS c FROM sqlite_master m, pragma_table_info(m.name) p " +
-  "WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' AND m.name <> '_cf_KV'"
+export const SCHEMA_QUERY =
+  "SELECT 'column' AS kind, m.name || '.' || p.name AS name FROM sqlite_master m, pragma_table_info(m.name) p " +
+  "WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' AND m.name <> '_cf_KV' " +
+  "UNION ALL SELECT type AS kind, name FROM sqlite_master " +
+  "WHERE type IN ('index', 'trigger') AND substr(name, 1, 7) <> 'sqlite_' AND tbl_name <> '_cf_KV'"
+
+/**
+ * One member of a schema: `table.column`, `index name` or `trigger name`.
+ * @param {{ kind: string; name: string }} row
+ * @returns {string}
+ */
+const itemOf = (row) => (row.kind === 'column' ? row.name : `${row.kind} ${row.name}`)
 
 /**
  * The migration files, in order.
@@ -47,13 +63,13 @@ export function migrationFiles(dir = MIGRATIONS) {
 }
 
 /**
- * The columns the migrations produce, from a database they have been applied to.
+ * The columns, indexes and triggers a database has.
  * @param {{ prepare: (sql: string) => { all: () => unknown[] } }} db
  * @returns {Set<string>}
  */
-export function columnsOf(db) {
-  const rows = /** @type {{ t: string; c: string }[]} */ (db.prepare(COLUMNS_QUERY).all())
-  return new Set(rows.map((row) => `${row.t}.${row.c}`))
+export function schemaOf(db) {
+  const rows = /** @type {{ kind: string; name: string }[]} */ (db.prepare(SCHEMA_QUERY).all())
+  return new Set(rows.map(itemOf))
 }
 
 /**
@@ -68,56 +84,77 @@ export function applyMigrations(db, dir = MIGRATIONS) {
 }
 
 /**
- * The difference between the columns a database should have and the ones it has.
+ * The difference between the schema a database should have and the one it has.
  * @param {Iterable<string>} expected
  * @param {Iterable<string>} actual
  * @returns {{ missing: string[]; extra: string[] }}
  */
-export function diffColumns(expected, actual) {
+export function diffNames(expected, actual) {
   const want = new Set(expected)
   const have = new Set(actual)
   return {
-    missing: [...want].filter((column) => !have.has(column)).sort(),
-    extra: [...have].filter((column) => !want.has(column)).sort(),
+    missing: [...want].filter((name) => !have.has(name)).sort(),
+    extra: [...have].filter((name) => !want.has(name)).sort(),
   }
 }
 
+/** @param {string} text */
+const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /**
- * Which migration adds a column, so a missing one comes with the file that would fix it. A new
- * table's columns are in its CREATE TABLE and a later one's in an ALTER TABLE ... ADD COLUMN, so
- * both are looked for, in the order the files run (the first to name the column is the one
- * that introduces it).
- * @param {string} column  `table.column`
- * @param {{ name: string; sql: string }[]} files
- * @returns {string | null}
+ * The test for a statement that introduces `item`. A new table's columns are in its CREATE TABLE and a
+ * later one's in an ALTER TABLE ... ADD COLUMN, so both are looked for.
+ * @param {string} item
+ * @returns {((statement: string) => boolean) | null}
  */
-export function migrationAdding(column, files) {
-  const [table, name] = column.split('.')
+function introducing(item) {
+  const object = /^(index|trigger) (\S+)$/.exec(item)
+  if (object) {
+    const creates = new RegExp(
+      `^CREATE\\s+(TEMP(ORARY)?\\s+)?(UNIQUE\\s+)?${object[1]}\\s+(IF\\s+NOT\\s+EXISTS\\s+)?["\`\\[]?${escaped(object[2] ?? '')}\\b`,
+      'i',
+    )
+    return (statement) => creates.test(statement)
+  }
+  const [table, name] = item.split('.')
   if (!table || !name) return null
   const added = new RegExp(`^ALTER\\s+TABLE\\s+${table}\\s+ADD\\s+COLUMN\\s+${name}\\b`, 'i')
   const created = new RegExp(`^CREATE\\s+TABLE\\s+(IF\\s+NOT\\s+EXISTS\\s+)?${table}\\b`, 'i')
   const named = new RegExp(`\\b${name}\\b`, 'i')
-  // Statement by statement, so a name that turns up later in the file, outside the table's own
-  // definition, is not taken for its column.
-  const introduces = (statement) => added.test(statement) || (created.test(statement) && named.test(statement))
+  return (statement) => added.test(statement) || (created.test(statement) && named.test(statement))
+}
+
+/**
+ * Which migration adds a column, index or trigger, so a missing one comes with the file that would
+ * fix it. The files are looked through in the order they run (the first to name it is the one that
+ * introduces it), statement by statement, so a name that turns up later in the file, outside the
+ * statement that makes it, is not taken for it.
+ * @param {string} item  `table.column`, `index name` or `trigger name`
+ * @param {{ name: string; sql: string }[]} files
+ * @returns {string | null}
+ */
+export function migrationAdding(item, files) {
+  const introduces = introducing(item)
+  if (!introduces) return null
   return files.find((file) => splitStatements(file.sql).some(({ sql }) => introduces(sql)))?.name ?? null
 }
 
 /**
- * The columns of a remote D1 database.
+ * The schema of a remote D1 database, as `exec` (`execFileSync`, or a stand-in in tests) is asked for it.
  * @param {string} database
+ * @param {typeof execFileSync} exec
  * @returns {Set<string>}
  */
-function remoteColumns(database) {
-  const out = execFileSync(
+function remoteSchema(database, exec) {
+  const out = exec(
     'npx',
-    ['wrangler', 'd1', 'execute', database, '--remote', '--json', '--command', COLUMNS_QUERY],
+    ['wrangler', 'd1', 'execute', database, '--remote', '--json', '--command', SCHEMA_QUERY],
     { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   )
   // wrangler can print a banner before the JSON.
   const parsed = JSON.parse(out.slice(out.indexOf('[')))
   const rows = Array.isArray(parsed) ? (parsed[0]?.results ?? []) : []
-  return new Set(rows.map((row) => `${row.t}.${row.c}`))
+  return new Set(rows.map(itemOf))
 }
 
 /**
@@ -146,46 +183,67 @@ export function wranglerSaid(error) {
   return lines.length > 0 ? `: ${lines.join(' ')}` : ''
 }
 
+/** @param {Set<string>} items */
+function counted(items) {
+  const count = (/** @type {RegExp} */ pattern) => [...items].filter((item) => pattern.test(item)).length
+  return `${count(/^[^ ]+\.[^ ]+$/)} columns, ${count(/^index /)} indexes, ${count(/^trigger /)} triggers`
+}
+
+/**
+ * Compare a database's schema with the migrations in `dir`. Returns what to print and the exit code
+ * rather than printing, so a test can read what a person would see.
+ * @param {string} database
+ * @param {{ exec?: typeof execFileSync; dir?: string }} [options]
+ * @returns {Promise<{ code: 0 | 1 | 2; out: string[]; err: string[] }>}
+ */
+export async function checkSchema(database, { exec = execFileSync, dir = MIGRATIONS } = {}) {
+  const { DatabaseSync } = await import('node:sqlite')
+  const fresh = new DatabaseSync(':memory:')
+  applyMigrations(fresh, dir)
+  const expected = schemaOf(fresh)
+
+  let actual
+  try {
+    actual = remoteSchema(database, exec)
+  } catch (error) {
+    return {
+      code: 2,
+      out: [],
+      err: [
+        `Could not read ${database}${wranglerSaid(error)}`,
+        'Is the name right, and is wrangler signed in (CLOUDFLARE_API_TOKEN, or `wrangler login`)?',
+      ],
+    }
+  }
+
+  const { missing, extra } = diffNames(expected, actual)
+  const out = [`${database}: ${counted(actual)}; the ${migrationFiles(dir).length} migrations produce ${counted(expected)}`]
+  if (missing.length === 0 && extra.length === 0) return { code: 0, out: [...out, 'No drift.'], err: [] }
+
+  const files = migrationFiles(dir).map((name) => ({ name, sql: readFileSync(join(dir, name), 'utf8') }))
+  const err = [
+    ...missing.map((item) => {
+      const from = migrationAdding(item, files)
+      return `MISSING ${item}${from ? `  (added by migrations/${from})` : ''}`
+    }),
+    ...extra.map((item) => `EXTRA   ${item}  (in the database, in no migration)`),
+    '\nThe _migrations record can say a file was applied when it was not. Apply what is missing ' +
+      'deliberately (see "Migration tracking" in docs/DEPLOYMENT.md), and never re-run a whole file ' +
+      'on a populated database.',
+  ]
+  return { code: 1, out, err }
+}
+
 async function main() {
   const database = process.argv[2]
   if (!database) {
     console.error('usage: npm run check:schema -- <database-name>   (for example the dev or the production D1 name)')
     process.exit(2)
   }
-
-  const { DatabaseSync } = await import('node:sqlite')
-  const fresh = new DatabaseSync(':memory:')
-  applyMigrations(fresh)
-  const expected = columnsOf(fresh)
-
-  let actual
-  try {
-    actual = remoteColumns(database)
-  } catch (error) {
-    console.error(`Could not read ${database}${wranglerSaid(error)}`)
-    console.error('Is the name right, and is wrangler signed in (CLOUDFLARE_API_TOKEN, or `wrangler login`)?')
-    process.exit(2)
-  }
-
-  const { missing, extra } = diffColumns(expected, actual)
-  console.log(`${database}: ${actual.size} columns; the ${migrationFiles().length} migrations produce ${expected.size}`)
-  if (missing.length === 0 && extra.length === 0) {
-    console.log('No drift.')
-    return
-  }
-
-  const files = migrationFiles().map((name) => ({ name, sql: readFileSync(join(MIGRATIONS, name), 'utf8') }))
-  for (const column of missing) {
-    const from = migrationAdding(column, files)
-    console.error(`MISSING ${column}${from ? `  (added by migrations/${from})` : ''}`)
-  }
-  for (const column of extra) console.error(`EXTRA   ${column}  (in the database, in no migration)`)
-  console.error(
-    '\nThe _migrations record can say a file was applied when it was not. Apply what is missing ' +
-      'deliberately (see "Migration tracking" in docs/DEPLOYMENT.md), and never re-run a whole file ' +
-      'on a populated database.',
-  )
-  process.exit(1)
+  const { code, out, err } = await checkSchema(database)
+  for (const line of out) console.log(line)
+  for (const line of err) console.error(line)
+  process.exit(code)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main()
