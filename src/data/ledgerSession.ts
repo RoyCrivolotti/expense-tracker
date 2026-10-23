@@ -19,16 +19,17 @@ import {
   wantedMonths,
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
-import { cascadeOf } from './ledgerCascade'
+import { type Cascade, cascadeOf } from './ledgerCascade'
 import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
 import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
+import { reason } from './reason'
 
 export interface SessionState {
   held: HeldLedger | null
   /** The month the screens are showing. */
   viewed: string
-  /** True while rows of other months are being read for the month shown. */
+  /** True while rows of other months are being read for the month shown, by any view: views overlap. */
   hydrating: boolean
   /** Why the last read in the background failed, or null. */
   error: string | null
@@ -95,6 +96,16 @@ function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boole
   return ids.every((id) => rows.has(id))
 }
 
+/**
+ * Whether a write changed rows, those held and those it did not show: a cascade does (the server moved, unlinked or
+ * inserted rows) and so does marking a card statement paid or unpaid (it decides whether the rows it covers are posted),
+ * so a list read from the server is read again.
+ */
+function showsRowsChanged(done: Reconciled, cascade: Cascade | null, before: ExpenseDataset, after: ExpenseDataset): boolean {
+  const statements = JSON.stringify(before.accountStatements) !== JSON.stringify(after.accountStatements)
+  return done.changed.rows || cascade !== null || statements
+}
+
 /** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
 export function rangesOfMonths(months: readonly string[]): MonthRange[] {
   const ranges: MonthRange[] = []
@@ -115,8 +126,6 @@ function resourcesTouched(done: Reconciled): Resource[] {
   ]
 }
 
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
-
 /**
  * A ledger held open: the months the screens want are read when the month shown changes, a write is
  * patched into what is held at once, and a read that a write overtook is dropped for the resource it
@@ -134,6 +143,10 @@ export class LedgerSession {
     seriesFailed: false,
   }
   private epochs: Epochs = NO_EPOCHS
+  /** Views that are reading months right now. */
+  private hydratingViews = 0
+  /** The read of the ledger that the last write of a plan started. */
+  private planRead: Promise<void> | null = null
   private readonly stale = new Set<string>()
   private flushing = false
   private readonly readingReceipts = new Set<number>()
@@ -260,6 +273,7 @@ export class LedgerSession {
     const missing = missingMonths(held, wanted)
     if (this.state.offline) return
     if (missing.length === 0) return this.set({ held: this.tidy(touchMonths(held, wanted)) })
+    this.hydratingViews += 1
     this.set({ hydrating: true })
     try {
       // After a write the revision the parts were read under is not known, so what is read now could not be
@@ -269,7 +283,9 @@ export class LedgerSession {
     } catch (error) {
       this.set({ error: reason(error) })
     } finally {
-      this.set({ hydrating: false })
+      // Views overlap: the first read to answer must not say the month on screen has been read while another still is.
+      this.hydratingViews -= 1
+      this.set({ hydrating: this.hydratingViews > 0 })
     }
   }
 
@@ -308,21 +324,36 @@ export class LedgerSession {
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
-    const changed = done.changed.rows || done.changed.reference || done.changed.receipts
-    if (changed) this.hold(done, before, after)
+    const changed = Object.values(done.changed).some(Boolean)
+    const cascade = changed ? cascadeOf(before, after) : null
+    if (changed) this.hold(done, before, after, cascade)
     if (beyond) this.readBeyond(reach)
     if (changed || beyond) this.onWrite?.({ before, after, beyond, reach })
-    return beyond || done.changed.rows
+    return beyond || showsRowsChanged(done, cascade, before, after)
   }
 
-  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset): void {
+  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset, cascade: Cascade | null): void {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
-    if (touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
+    // A cascade turns rows into, or out of, series that the patch does not show.
+    if (cascade !== null || touchesSeries(before.transactions, after.transactions)) this.seriesWrites += 1
     this.set({ held: done.held })
     if (done.partialReceipts.length > 0) void this.readReceipts(done.partialReceipts, true)
-    if (cascadeOf(before, after)) this.refreshLedger().catch((error: unknown) => this.set({ error: reason(error) }))
-    else if (done.stale.length > 0) void this.flushCube()
+    if (cascade === null) {
+      if (done.stale.length > 0) void this.flushCube()
+      return
+    }
+    const read = this.refreshLedger()
+    read.catch((error: unknown) => this.set({ error: reason(error) }))
+    if (cascade === 'plan') this.planRead = read
+  }
+
+  /**
+   * Resolves at once, or when the read of the ledger a write of a plan started has finished. That read is what makes
+   * the server insert the instalments that are due, so a list read before it does not have them.
+   */
+  afterPlanWrite(): Promise<void> {
+    return (this.planRead ?? Promise.resolve()).catch(() => undefined)
   }
 
   /**

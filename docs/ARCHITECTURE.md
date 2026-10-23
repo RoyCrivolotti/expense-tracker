@@ -140,8 +140,9 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   invocation spends a budget of calls and rows and keeps back what it needs to finish. State is saved only after the
   rows it counts are in a part, and the manifest is written last, so a kill at any point leaves a run the next
   invocation continues. A pass is redone if the owner's revision moved. A new `EXPORT_TABLES` entry needs a row in
-  `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows a restore cannot write. Nothing in
-  the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
+  `MAPPERS` in `restoreSql.ts` (the types require it), or a backup would hold rows a restore cannot write. One owner's
+  failure never stops the others, and pruning never drops the newest complete backup of an owner who still has data.
+  Nothing in the code writes a backup back into a database ([BACKUPS.md](./BACKUPS.md)).
 
 ### Bulk writes
 
@@ -173,6 +174,14 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
 - **The whole-dataset app is the default, and nothing ledger mode adds runs without it.** Code only the mode needs sits in
   chunks only the mode loads, which `scripts/check-bundle-budget.mjs` counts apart from the default path
   ([the switch](./LEDGER-MODE.md#the-switch-and-the-hand-back)).
+- **What the browser keeps about a ledger is one person's, because a browser can be used by more than one.** The
+  offline copies (`latest` in `offlineCache.ts`, `ledger:<owner>` in `ledgerSnapshot.ts`) name their owner and are shown
+  to no one else, nor after the server answers 401 or 403. The settings that name what a ledger holds (the series
+  stopped, the suggestions dismissed, the setup skipped) are kept under `OWNER_KEYS` plus the account email
+  (`hooks/accountOwner.ts`). What is the device's alone carries no description, amount or name from a ledger: the theme, which days are folded,
+  the milestone toggle and the ledger switch. The service worker keeps no copy of an API URL (`scripts/pwaNavigation.ts`).
+  A receipt already in the browser's cache is shown to whoever asks for its URL on that browser: `max-age` one year,
+  accepted, and said in `attachments/[id].ts`.
 
 ## Size and complexity
 

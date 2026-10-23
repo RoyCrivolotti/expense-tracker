@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type HeldLedger, holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
+import { ApiError } from '../data/apiClient'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
@@ -10,10 +11,15 @@ import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexed
 import { comparable, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { makeTransaction } from '../testing/factories'
+import type { ExpenseDataset } from '../domain/types'
 import {
   patchAfterCategoryDelete,
+  patchAfterFlag,
   patchAfterFlagDelete,
   patchAfterInstallmentPlanCreate,
+  patchAfterInstallmentPlanDelete,
+  patchAfterLabelDelete,
+  patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
 } from './datasetPatches'
@@ -333,6 +339,30 @@ describe('useLedgerData, snapshots', () => {
     expect(fallback.result.current.fromCache).toBe(true)
   })
 
+  it.each([401, 403])('shows the failure and not the snapshot when the server answers %i, and removes the snapshot', async (status) => {
+    await withSnapshot()
+    const refused = memorySource(small)
+    refused.readReferencePart = () => Promise.reject(new ApiError('Refused', status))
+
+    const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.error).toBe('Refused')
+    await waitFor(() => expect(keys()).toEqual([]))
+  })
+
+  it('does not show the snapshot after a refusal even when the store will not let it be removed', async () => {
+    await withSnapshot()
+    const refused = memorySource(small)
+    refused.readReferencePart = () => Promise.reject(new ApiError('Refused', 403))
+    fake.failNext('delete')
+
+    const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(keys()).toContain(`ledger:${OWNER}`)
+  })
+
   it('leaves the snapshot when a refresh reads, and keeps the new ledger as the snapshot', async () => {
     await withSnapshot()
     setOnline(false)
@@ -514,6 +544,58 @@ describe('useLedgerData, the list read in pages', () => {
     act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 4242 } })))
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(pageReads(source)).toBe(before + 1)
+  })
+
+  it.each([
+    ['a plan deleted, whose instalments the server unlinks', (d: ExpenseDataset) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id)],
+    ['a flag given an auto-label, which the server puts on its rows', (d: ExpenseDataset) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })],
+    ['a label deleted, which the server takes off its rows', (d: ExpenseDataset) => patchAfterLabelDelete(d, d.labels[0]!.id)],
+    ['a card statement marked unpaid', (d: ExpenseDataset) => patchAfterStatementPaid(d, { accountId: 3, yearMonth: months[2]!, paid: false })],
+  ])('reads the list again after %s, which the patch alone does not show', async (_name, write) => {
+    const { source, result } = await started()
+    const before = pageReads(source)
+
+    act(() => result.current.applyPatch(write))
+
+    await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+  })
+
+  describe('while the ledger is being read again after a cascade', () => {
+    /** Holds the read of the reference, which is where the server inserts a plan's instalments, until `release`. */
+    async function gatedReference() {
+      const started_ = await started()
+      const read = started_.source.readReferencePart.bind(started_.source)
+      let release = () => {}
+      const gate = new Promise<void>((resolve) => (release = resolve))
+      started_.source.readReferencePart = async () => {
+        await gate
+        return read()
+      }
+      return { ...started_, release }
+    }
+    const plan = (d: ExpenseDataset) => patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Sofa' })
+
+    it('reads the list after the ledger when a plan was written, so that its instalments are in it', async () => {
+      const { source, result, release } = await gatedReference()
+      const before = pageReads(source)
+
+      act(() => result.current.applyPatch(plan))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      expect(pageReads(source)).toBe(before)
+
+      release()
+      await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+    })
+
+    it('reads the list at once for a cascade that inserts nothing, since the ledger tells it nothing it lacks', async () => {
+      const { source, result, release } = await gatedReference()
+      const before = pageReads(source)
+
+      act(() => result.current.applyPatch((d) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })))
+
+      await waitFor(() => expect(pageReads(source)).toBe(before + 1))
+      release()
+    })
   })
 
   it('reads nothing for a write made while no screen shows the list, and reads the list when one does', async () => {

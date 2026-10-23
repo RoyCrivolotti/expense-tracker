@@ -17,6 +17,7 @@ import {
 import { descriptionNorm, descriptionNormSets } from './descriptionNorm'
 import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
 import { guardSql, isGuardFailure } from './batchGuard'
+import { getTransactionsByIds } from './dbTransactionQuery'
 import { HttpError } from './http'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import {
@@ -409,7 +410,7 @@ export async function updateTransaction(
   id: number,
   patch: TxnPatch,
 ): Promise<Transaction> {
-  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => Object.hasOwn(COLUMN, k))
   const link = await planLinkColumns(env, owner, id, patch)
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   await assertPatchOwnership(env, owner, patch)
@@ -452,7 +453,7 @@ export async function updateTransaction(
  * key), so it is done explicitly — and it must be atomic: a transaction deleted
  * without its attachment rows leaves metadata whose byte_size keeps counting
  * against the owner's storage quota, reachable from no UI, forever. Deleting the
- * R2 bytes is the caller's job afterwards (see removeReceiptsForTransactions);
+ * R2 bytes is the caller's job afterwards (see deleteWithReceipts);
  * an R2 delete cannot join a D1 batch.
  */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
@@ -563,7 +564,7 @@ export async function planBulkUpdate(
   patch: BulkTransactionPatch,
 ): Promise<D1PreparedStatement[]> {
   await assertPatchOwnership(env, owner, patch)
-  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => Object.hasOwn(COLUMN, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const list = idList(ids)
   // Rejected before any row is touched. The UPDATE's guard clause silently *excludes* a
@@ -601,14 +602,9 @@ export async function bulkUpdateTransactions(
 ): Promise<Transaction[]> {
   if (ids.length === 0) return []
   await runBulkBatch(env, await planBulkUpdate(env, owner, ids, patch))
-  const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
-    .bind(owner, idList(ids))
-    .all<TxnRow>()
-  const transactions: Transaction[] = []
-  for (const row of results) {
-    transactions.push(await deriveOne(env, owner, toStoredTxn(row)))
-  }
-  return transactions
+  // One read for all the rows, with status and labels derived in SQL, so an edit costs the same statements for 1 id
+  // as for 500.
+  return getTransactionsByIds(env, owner, ids)
 }
 
 export async function setStatementPaid(

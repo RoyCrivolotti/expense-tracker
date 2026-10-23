@@ -13,10 +13,10 @@ import type { Transaction } from '../domain/types'
 const BULK = '/api/expenses/transactions/bulk'
 
 /**
- * An edit by id writes every row and reads each one back: three statements a row in one request. The route takes
- * 500 ids, but nothing that large has been run on D1, so a request names at most this many until it has. An edit of
- * every row a filter matches is one request that costs the same statements however many rows there are
- * (docs/API.md, "Bulk transaction routes"), so it is preferred wherever it applies.
+ * An edit by id writes its rows in one batch and reads them back in one query, so it is a handful of statements
+ * whatever the number of ids. The route takes 500 ids, but nothing that large has been run on D1, so a request names at
+ * most this many until it has. An edit of every row a filter matches is one request that costs the same statements
+ * however many rows there are (docs/API.md, "Bulk transaction routes"), so it is preferred wherever it applies.
  */
 const MAX_EDIT_IDS = 100
 

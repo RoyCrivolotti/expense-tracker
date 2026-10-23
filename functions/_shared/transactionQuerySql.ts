@@ -43,9 +43,14 @@ export const STATUS_JOINS = `LEFT JOIN accounts a ON a.id = t.account_id AND a.o
     LEFT JOIN account_statements s
       ON s.owner = t.owner AND s.account_id = t.account_id AND s.year_month = t.budget_month`
 
-/** Ids of the labels a row carries, one that no longer exists dropped as the dataset drops it. */
+/**
+ * Ids of the labels a row carries, one that no longer exists dropped as the dataset drops it. `CROSS JOIN` is what
+ * keeps the row's links as the outer loop and each label a lookup by primary key. With a plain `JOIN` SQLite may
+ * start from the owner's labels instead and look for the row's links under each, which visits every label of the
+ * owner for every row returned.
+ */
 export const LABEL_IDS_SQL = `(SELECT json_group_array(tl.label_id)
-      FROM transaction_labels tl JOIN labels l ON l.id = tl.label_id AND l.owner = t.owner
+      FROM transaction_labels tl CROSS JOIN labels l ON l.id = tl.label_id AND l.owner = t.owner
       WHERE tl.transaction_id = t.id)`
 
 export const COLUMNS = `t.id, t.date, t.budget_month, t.description, t.account_id, t.category_id, t.type,
@@ -159,6 +164,11 @@ export function pageSql(owner: string, f: TxnFilter, limit: number, after?: Tran
 
 export function oneSql(owner: string, id: number): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id = ?`, params: [owner, id] }
+}
+
+/** The owner's rows among `ids`, in id order. The ids are bound as one JSON array, since D1 allows 100 bound values. */
+export function rowsByIdsSql(owner: string, ids: readonly number[]): Sql {
+  return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id ${IN_ID_LIST} ORDER BY t.id`, params: [owner, idList(ids)] }
 }
 
 /** Stops reading at one past the cap, so a broad filter costs the cap and not the table. */

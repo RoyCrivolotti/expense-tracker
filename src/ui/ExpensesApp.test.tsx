@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { makeScenario, makeWealthAccount } from '../testing/factories'
+import { installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { ExpensesApp } from './ExpensesApp'
 import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
@@ -105,6 +106,78 @@ describe('ExpensesApp onboarding wiring', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
     fireEvent.click(await screen.findByRole('tab', { name: 'Account' }))
     await screen.findByText('test@example.com')
+  })
+})
+
+describe('ExpensesApp settings kept for a person', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('opens the setup for someone who has not skipped it, though another person on the browser did', async () => {
+    localStorage.setItem('exp-onboarding-skipped:alice@example.com', '1')
+    const alice = render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    await screen.findAllByRole('button', { name: 'Settings' })
+    expect(screen.queryByText('Welcome to Expenses')).toBeNull()
+    alice.unmount()
+
+    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="bob@example.com" />)
+    expect(await screen.findByText('Welcome to Expenses')).toBeInTheDocument()
+  })
+
+  it('remembers a skipped setup for the person who skipped it', async () => {
+    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+
+    fireEvent.click(await screen.findByText('Skip for now'))
+
+    await waitFor(() => expect(localStorage.getItem('exp-onboarding-skipped:alice@example.com')).toBe('1'))
+    expect(localStorage.getItem('exp-onboarding-skipped')).toBeNull()
+  })
+
+  it('lists in Settings the series the signed-in person stopped, and not another person’s', async () => {
+    const stopped = (label: string) => JSON.stringify({ [`${label}|1|1|expense`]: { after: '2026-06-05', label } })
+    localStorage.setItem('expense:stopped-recurring:alice@example.com', stopped('Alices gym'))
+    localStorage.setItem('expense:stopped-recurring:bob@example.com', stopped('Bobs rent'))
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+    })
+
+    render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Settings' }))[0]!)
+
+    expect(await screen.findByText('Alices gym')).toBeInTheDocument()
+    expect(screen.queryByText('Bobs rent')).toBeNull()
+  })
+
+  it('drops what an earlier build kept under keys that named no one, once it knows who is signed in', async () => {
+    for (const key of ['expense:stopped-recurring', 'expense:dismissed-recurring', 'exp-onboarding-skipped']) localStorage.setItem(key, '1')
+    localStorage.setItem('exp-theme', 'dark')
+
+    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+
+    await waitFor(() => expect(localStorage.getItem('expense:stopped-recurring')).toBeNull())
+    expect(localStorage.getItem('expense:dismissed-recurring')).toBeNull()
+    expect(localStorage.getItem('exp-onboarding-skipped')).toBeNull()
+    expect(localStorage.getItem('exp-theme')).toBe('dark')
+  })
+})
+
+describe('ExpensesApp saved copy', () => {
+  it('keeps the dataset as the copy of the account it is signed in as, and shows it to no one else', async () => {
+    const idb = installFakeIndexedDb()
+    try {
+      const dataset = datasetWith({ settings: { ...defaultExpenseSettings(), openingCashCents: 4_242_000 } })
+      const alice = render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+      await waitFor(() => expect(idb.stores.get('snapshots')?.get('latest')).toMatchObject({ owner: 'alice@example.com' }))
+      alice.unmount()
+
+      const failing: ExpenseDataSource = { canWrite: false, load: vi.fn().mockRejectedValue(new Error('503')) }
+      render(<ExpensesApp source={failing} hubGrants={allGroupsGranted()} accountEmail="bob@example.com" />)
+
+      expect(await screen.findByText(/Couldn.t load expense data/)).toBeInTheDocument()
+      expect(idb.stores.get('snapshots')?.has('latest')).toBe(false)
+    } finally {
+      idb.uninstall()
+    }
   })
 })
 

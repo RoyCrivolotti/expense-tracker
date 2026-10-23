@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PARTS_FORMAT, ifNoneMatchMatches, partEtag } from './datasetEtag'
+import { onRequestGet as getAttachments } from '../api/expenses/attachments/index'
 import { onRequestGet as getCube } from '../api/expenses/cube'
 import { onRequestGet as getReference } from '../api/expenses/reference'
 import { onRequestGet as getMonths } from '../api/expenses/transactions/months'
@@ -51,7 +52,7 @@ describe('the shape of the ledger parts', () => {
 
   // A browser that cached an old shape under a tag that still matches would keep using it after a
   // deploy. Changing a shape means moving PARTS_FORMAT, which changes every part's tag, and then this.
-  it('matches the one PARTS_FORMAT was last moved for', async () => {
+  it('matches the one PARTS_FORMAT was last moved for (the reference, months, cube and receipt list)', async () => {
     const sqlite = migratedDatabase()
     const world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
     await seedLedger(world)
@@ -60,6 +61,7 @@ describe('the shape of the ledger parts', () => {
       [getReference, '/reference'],
       [getMonths, '/transactions/months?from=2026-01&to=2026-12'],
       [getCube, '/cube?from=2026-01&to=2026-12'],
+      [getAttachments, '/attachments'],
     ] as const) {
       const response = await world.call(handler, { email: OWNER, path })
       paths.push(...[...shapeOf(await response.json(), `$${path.split('?')[0]}`)].sort())
@@ -70,6 +72,6 @@ describe('the shape of the ledger parts', () => {
     expect(
       { format: PARTS_FORMAT, fingerprint },
       'The JSON shape of a ledger part changed. Raise PARTS_FORMAT in datasetEtag.ts, then put the new fingerprint here.',
-    ).toEqual({ format: 1, fingerprint: '5b2caefa4e72dabc' })
+    ).toEqual({ format: 1, fingerprint: '0e31e201bb99d720' })
   })
 })

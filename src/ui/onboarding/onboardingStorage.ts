@@ -1,25 +1,28 @@
-const STORAGE_KEY = 'exp-onboarding-skipped'
+import { OWNER_KEYS, ownerKey } from '../hooks/accountOwner'
 
-export function isOnboardingSkipped(): boolean {
+// Kept for the person who skipped it: someone else on the same browser has their own first run.
+const keyFor = (owner: string | undefined): string => ownerKey(OWNER_KEYS.onboardingSkipped, owner)
+
+export function isOnboardingSkipped(owner?: string): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
+    return localStorage.getItem(keyFor(owner)) === '1'
   } catch {
     return false
   }
 }
 
-export function skipOnboarding(): void {
+export function skipOnboarding(owner?: string): void {
   try {
-    localStorage.setItem(STORAGE_KEY, '1')
+    localStorage.setItem(keyFor(owner), '1')
   } catch {
     /* ignore private browsing */
   }
 }
 
 /** Un-skip onboarding, e.g. when the user explicitly re-opens the setup wizard. */
-export function clearOnboardingSkip(): void {
+export function clearOnboardingSkip(owner?: string): void {
   try {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(keyFor(owner))
   } catch {
     /* ignore private browsing */
   }

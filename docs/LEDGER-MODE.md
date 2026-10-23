@@ -72,7 +72,10 @@ has to decide what a window may show.
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
   adding or changing a plan, and settling rows or deleting the payment that settled them. A new server-side cascade
-  needs a case there and a test. A read in the background that fails (after a cascade, of a month or of a receipt list)
+  needs a case there and a test. `patch()` answers true for a cascade, and for a card statement marked paid or
+  unpaid, as it does for a change to a row, so the list read in pages is read again (`applyWrite`): the server moved
+  rows the patch cannot show. A plan's instalments are inserted by the server when the ledger is read, so for a plan the
+  list is read after that read has finished (`afterPlanWrite`). A read in the background that fails (after a cascade, of a month or of a receipt list)
   is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
   `useLedgerData` returns it as `backgroundError` for the app to tell the user.
 - **A write to rows the browser may not hold is followed by a read of what it moved, not by a patch.** The patch
@@ -92,8 +95,9 @@ has to decide what a window may show.
   [`GET /series`](./API.md#get-series) into `SessionState.series` when they are missing or stale. The server reads every
   row for them whenever the revision has moved, about ten rows per transaction, so they go stale only after a write that
   could change one (`touchesSeries`: a row that counts was added, removed or edited in what a series is made of, which a
-  flag, a label or a note is not), after a refresh that found another revision, or when the rows and the series were read
-  at different revisions. They are read when the next screen mounts, never on a timer, and not while a screen that uses
+  flag, a label or a note is not), after a write the server cascaded (a plan deleted turns its instalments into rows of a
+  series), after a refresh that found another revision, or when the rows and the series were read at different
+  revisions. They are read when the next screen mounts, never on a timer, and not while a screen that uses
   them is already showing, except on a refresh (the user's, or the one a write that moves more than its patch shows
   starts), which reads them once. `useLedgerData` folds the rows written since they were read into them (`foldNewerRows`), so
   logging the charge the Upcoming card offers clears it at once, and the Overview and Spending keep the split as of the
@@ -110,9 +114,9 @@ has to decide what a window may show.
   this snapshot. A record from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the
   whole-dataset snapshot), another ledger format or another owner is discarded when it is found. Saving and loading
   never throw. Offline, or when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a
-  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it and is not kept per
-  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset app
-  offline, that app can still show it.
+  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it. Its one record,
+  `latest`, names its owner and is replaced by whoever loads next, so a load that fails or an offline start shows it
+  only to the person it is for. Neither snapshot is shown when the server has answered 401 or 403, which removes it.
 
 ## Lists in pages
 
@@ -148,9 +152,10 @@ has to decide what a window may show.
   requests. A write from another tab in between that swaps one matching row for another leaves the count as it was, so
   the edit can reach a row the user was not shown; the server has no single request for both. Rows chosen one by one
   are edited through the filter too when they are exactly the rows it matches: that costs the same statements however
-  many rows there are ([API.md](./API.md#bulk-transaction-routes) has the count), an edit by id three for each, so by id
-  a request names at most 100 until a larger one has been measured on D1. A list that does not hold every row cannot
-  tell a chosen row it no longer shows from one deleted elsewhere, so it counts it as not shown.
+  many rows there are ([API.md](./API.md#bulk-transaction-routes) has the count). An edit by id is a handful of
+  statements however many ids it names, but nothing larger than 100 has been run on D1, so by id a request names at most
+  100 until one has. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted
+  elsewhere, so it counts it as not shown.
 
 ## What a window cannot work out from its rows
 

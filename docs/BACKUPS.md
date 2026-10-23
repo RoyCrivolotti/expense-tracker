@@ -17,22 +17,37 @@ invocation, or has to restore. The schedule, bucket and retention policy are in
 
 It runs only when `BACKUP_MODE` is exactly `chunked`; unset, or any other value, keeps the single-file snapshot. An
 invocation makes at most `BACKUP_STEP_MAX_OPERATIONS` D1 and bucket calls (default 44, allowed 12 to 46, under the Free
-plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 1,500), then saves where it got to. The
+plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 3,000), then saves where it got to. The
 next invocation carries on, so the worker needs a trigger that fires several times. In the same commit, in
 `workers/backup-cron/wrangler.toml`:
 
 ```toml
 [triggers]
-crons = ["*/10 4-6 * * *"]
+crons = ["*/10 4-7 * * *"]
 
 [vars]
 BACKUP_MODE = "chunked"
 ```
 
-Once every owner has a manifest for the day, the later runs only list the bucket. The defaults are cautious guesses
-about what a Free-plan invocation allows; raise them only after watching a run in the worker's logs. Do not add the
-frequent trigger without the mode (it would rewrite the single-file snapshot every ten minutes), and do not set the mode
-without it (a ledger that does not finish in one invocation would never finish).
+Once every owner has a manifest for the day, the later runs only list the bucket. Do not add the frequent trigger
+without the mode (it would rewrite the single-file snapshot every ten minutes), and do not set the mode without it (a
+ledger that does not finish in one invocation would never finish).
+
+**Capacity.** A day's backup can hold as many rows as the runs in the window times the rows of a run, all owners
+together. The trigger above fires 24 times, from 04:00 to 07:50 UTC, so the default holds 72,000 rows. Every
+transaction, receipt row and check-in is a row: a ledger of 50,000 transactions is about 50,300 rows and takes 18 runs
+(three hours). The six spare runs cover runs that fail or are missed. They do not cover a write: a write to the ledger
+while it is being backed up throws the pass away and starts it again from the first table, so it costs every run
+already spent, not one. For this ledger a write after run N finishes the backup on run N + 19, which fits in the 24 only
+up to N = 5, so a write before 04:50 UTC is survived. A write after run 6 leaves no backup of that day (the previous
+day's stands), and one after run 10 would finish on run 29. A ledger that large needs a longer window (`4-9` gives 36
+runs) or a cheaper restart, which is not built.
+
+A run's calls stop at `BACKUP_STEP_MAX_OPERATIONS` whatever the rows, but its CPU time grows with them, and that is what
+limits the rows. The default was sized from the JavaScript time on the test stand-in, not from a Worker: about 7 ms at
+most for a run of 3,000 rows on a cold start, against the Free plan's 10 ms, so a slower Worker could cut one off. After
+turning the mode on watch the first runs' CPU time in the worker's logs and lower `BACKUP_STEP_MAX_ROWS` if one is cut
+off. The next run carries on from the last save either way.
 
 If the ledger is written to during a pass, the pass is thrown away and started again, and the owner is alerted. After
 three passes there is no backup of that owner for the day and an alert says so; the previous day's stands. A run left
@@ -44,6 +59,17 @@ unfinished from an earlier day is reported once. To go back, remove `BACKUP_MODE
 stays green and the worker keeps its old code and settings. After changing either, check the deployed version under
 Workers & Pages, `expense-backup-cron`, Deployments, or run `npm run deploy:backup-cron` with a token that has the
 scope.
+
+## When a backup fails
+
+An owner whose backup throws does not stop the others. Everyone else is backed up, old backups are pruned and the bucket
+is measured, then the failed owners are alerted by name and the invocation fails, so the cron run shows as failed. In
+chunked mode that clean-up waits until no owner is still waiting for a later run, and a failure that persists is alerted
+on every run of the window (up to 24 a day, and one email each), because each run tries the owner again. The bucket
+alert is raised on the size before pruning, since after it the bucket is under its cap by definition. Pruning
+always keeps the newest complete backup of each owner who still has data, however old and even when the bucket is over
+its cap, so a ledger that fails for weeks is not left with none. The backups of someone revoked and purged are not
+kept and age out with the rest.
 
 ## Restoring
 

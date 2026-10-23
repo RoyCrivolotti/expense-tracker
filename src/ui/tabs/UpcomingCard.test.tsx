@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecurringSuggestion } from '../../engine'
+import { AccountOwnerContext } from '../hooks/accountOwner'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext, type ToastApi } from '../hooks/useToast'
 import type { TransactionSeed } from '../actions'
@@ -48,7 +49,9 @@ function renderCard(
     today = '2026-09-24',
     onAdd = () => {},
     showToast = () => {},
+    owner,
   }: {
+    owner?: string
     month?: string
     today?: string
     onAdd?: (seed?: TransactionSeed) => void
@@ -56,11 +59,13 @@ function renderCard(
   } = {},
 ) {
   return render(
-    <MoneyFormatProvider currencyCode="EUR" numberLocale="en-US">
-      <ToastContext.Provider value={{ showToast }}>
-        <UpcomingCard suggestions={suggestions} month={month} today={today} lookup={lookup} onAdd={onAdd} />
-      </ToastContext.Provider>
-    </MoneyFormatProvider>,
+    <AccountOwnerContext value={owner}>
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="en-US">
+        <ToastContext.Provider value={{ showToast }}>
+          <UpcomingCard suggestions={suggestions} month={month} today={today} lookup={lookup} onAdd={onAdd} />
+        </ToastContext.Provider>
+      </MoneyFormatProvider>
+    </AccountOwnerContext>,
   )
 }
 
@@ -370,6 +375,48 @@ describe('UpcomingCard', () => {
       renderCard([makeSuggestion({ description: 'Gym' }), makeSuggestion({ description: 'Rent' })])
       expect(screen.getByRole('button', { name: 'Stop suggesting Gym' })).toBeDefined()
       expect(screen.getByRole('button', { name: 'Stop suggesting Rent' })).toBeDefined()
+    })
+  })
+
+  describe('on a browser that more than one person uses', () => {
+    const ALICE = 'alice@example.com'
+    const BOB = 'bob@example.com'
+
+    it('keeps a dismissal for the person who made it, and shows the suggestion to the next one', () => {
+      const first = renderCard([makeSuggestion()], { owner: ALICE })
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Netflix' }))
+      expect(JSON.parse(localStorage.getItem(`${DISMISSED_KEY}:${ALICE}`)!)).toHaveLength(1)
+      expect(localStorage.getItem(DISMISSED_KEY)).toBeNull()
+      first.unmount()
+
+      renderCard([makeSuggestion()], { owner: BOB })
+      expect(screen.getByText('Netflix')).toBeDefined()
+    })
+
+    it('hands a person their own dismissals back', () => {
+      localStorage.setItem(`${DISMISSED_KEY}:${ALICE}`, JSON.stringify(['Netflix|1|1|expense|2026-09']))
+      renderCard([makeSuggestion()], { owner: ALICE })
+      expect(screen.queryByText('Netflix')).toBeNull()
+    })
+
+    it('keeps a stopped series for the person who stopped it', () => {
+      const first = renderCard([makeSuggestion()], { owner: ALICE })
+      fireEvent.click(screen.getByRole('button', { name: 'Stop suggesting Netflix' }))
+      expect(JSON.parse(localStorage.getItem(`${STOPPED_KEY}:${ALICE}`)!)).toEqual({
+        'netflix|1|1|expense': { after: '2026-08-24', label: 'Netflix' },
+      })
+      expect(localStorage.getItem(STOPPED_KEY)).toBeNull()
+      first.unmount()
+
+      renderCard([makeSuggestion()], { owner: BOB })
+      expect(screen.getByText('Netflix')).toBeDefined()
+    })
+
+    it('does not read what an earlier build kept under the keys that named no one', () => {
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify(['Netflix|1|1|expense|2026-09']))
+      localStorage.setItem(STOPPED_KEY, JSON.stringify({ 'netflix|1|1|expense': { after: '2026-08-24', label: 'Netflix' } }))
+      renderCard([makeSuggestion()], { owner: BOB })
+      expect(screen.getByText('Netflix')).toBeDefined()
     })
   })
 })

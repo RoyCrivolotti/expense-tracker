@@ -42,6 +42,29 @@ export async function servePart<T extends object>(options: ServePart<T>): Promis
   return withHeaders(json({ revision: revision.token, ...body }), etag)
 }
 
+export interface ServeList<T> {
+  db: D1Database
+  owner: string
+  request: Request
+  part: PartName
+  scope?: string
+  read: () => Promise<T[]>
+}
+
+/**
+ * A list served under the same tag and the same 304 as a part, with the body left a bare array: it has no room for a
+ * `revision` field, and a client of the list does not compare revisions across parts. The tag is read before the data,
+ * so it can only be older than the data, never newer.
+ */
+export async function serveList<T>(options: ServeList<T>): Promise<Response> {
+  const { db, owner, request, part, scope } = options
+  const etag = partEtag(part, await readOwnerRevision(db, owner), scope)
+  if (ifNoneMatchMatches(request.headers.get('if-none-match'), etag)) {
+    return withHeaders(new Response(null, { status: 304 }), etag)
+  }
+  return withHeaders(json(await options.read()), etag)
+}
+
 function withHeaders(response: Response, etag: string): Response {
   response.headers.set('ETag', etag)
   response.headers.set('Cache-Control', 'private, no-cache')

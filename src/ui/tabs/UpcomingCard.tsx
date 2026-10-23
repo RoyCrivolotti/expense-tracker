@@ -11,6 +11,7 @@ import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
 import { dueLabel, daysUntilDue } from './dueLabel'
+import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 import { useStoppedSuggestions } from './stoppedSuggestions'
 import styles from './UpcomingCard.module.css'
 
@@ -25,23 +26,21 @@ interface Props {
   onAdd: (seed: TransactionSeed) => void
 }
 
-const DISMISS_KEY = 'expense:dismissed-recurring'
-
 /** Up to this many rows are all shown. Past it the card keeps `ROWS_KEPT` in view and folds the rest. */
 const ROWS_SHOWN_IN_FULL = 4
 const ROWS_KEPT = 3
 
-function loadDismissed(): Set<string> {
+function loadDismissed(key: string): Set<string> {
   try {
-    const raw = localStorage.getItem(DISMISS_KEY)
+    const raw = localStorage.getItem(key)
     return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
   } catch {
     return new Set()
   }
 }
 
-function persistDismissed(set: Set<string>): void {
-  localStorage.setItem(DISMISS_KEY, JSON.stringify([...set]))
+function persistDismissed(key: string, set: Set<string>): void {
+  localStorage.setItem(key, JSON.stringify([...set]))
 }
 
 function dismissKey(s: RecurringSuggestion): string {
@@ -144,7 +143,9 @@ function SuggestionRow({
 }
 
 export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props) {
-  const [dismissed, setDismissed] = useState(loadDismissed)
+  // Kept for the signed-in person: the keys name what their ledger holds, and the device may be used by someone else.
+  const storageKey = ownerKey(OWNER_KEYS.dismissed, useAccountOwner())
+  const [dismissed, setDismissed] = useState(() => loadDismissed(storageKey))
   const [expanded, setExpanded] = useState(false)
   const foldedRowsId = useId()
   const { showToast } = useToast()
@@ -160,10 +161,10 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
       const next = new Set(prev)
       if (hidden) next.add(dismissKey(s))
       else next.delete(dismissKey(s))
-      persistDismissed(next)
+      persistDismissed(storageKey, next)
       return next
     })
-  }, [])
+  }, [storageKey])
 
   // The row the focus was on is gone; the one that takes its place, or the one before it when it
   // was the last, gets the focus.

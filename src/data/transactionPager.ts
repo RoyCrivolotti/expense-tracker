@@ -4,6 +4,7 @@ import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
 import { MAX_PAGE_LIMIT } from '../domain/data/transactionQuery'
 import { transactionQueryString } from './transactionQueryString'
+import { reason } from './reason'
 
 export type PagerSource = Pick<LedgerPartsSource, 'readTransactionPage' | 'readTransactionSummary'>
 
@@ -60,8 +61,6 @@ const START: PagerState = {
   summaryStale: false,
 }
 const PAGE_SIZE = 100
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 /** A copy of the filter the caller cannot change under a cursor that was cut from it. */
 function frozen(filter: TxnFilter): TxnFilter {

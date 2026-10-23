@@ -162,7 +162,8 @@ export function serveHeaders(
     'x-content-type-options': 'nosniff',
     'content-security-policy': "default-src 'none'; sandbox; base-uri 'none'; form-action 'none'",
     'cross-origin-resource-policy': 'same-origin',
-    // Keys are content-addressed, so a given URL's bytes never change.
+    // Keys are content-addressed, so a given URL's bytes never change. A browser that keeps them answers for the URL
+    // without asking the server, which is the cost on a shared browser (see the attachment route).
     'cache-control': 'private, max-age=31536000, immutable',
     etag,
   }

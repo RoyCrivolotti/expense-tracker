@@ -116,13 +116,14 @@ checks, about five statements a request, so they are in none of the counts.
 | `GET /transactions/:id` | 1 | 1 | 5 | 0 |
 | `POST /transactions`, one row | 8 | 8 | 10 | 11 |
 | `POST /transactions/bulk`, 20 rows | 124 | 124 | 164 | 182 |
-| `PATCH /transactions/bulk`, 50 ids | 155 | 155 | 628 | 102 |
+| `PATCH /transactions/bulk`, 50 ids (measured before the rows were read back in one query) | 155 | 155 | 628 | 102 |
 | `DELETE /transactions/bulk`, 20 rows | 3 | 6 | 264 | 22 |
 | `DELETE /transactions/:id` | 3 | 6 | 6 | 3 |
 
 A delete wrote about one row per row removed, so D1 did not appear to bill the index entries it removed. That is one run
 on a small ledger. The statement counts of the bulk routes are the formulas in
-[API.md](./API.md#bulk-transaction-routes).
+[API.md](./API.md#bulk-transaction-routes); the `PATCH` row above no longer matches them, since an edit by id now takes
+the same statements however many ids it names.
 
 Not measured: the CPU of the app's own routes on workerd (the REST API reports none, and the probe above ran a loop),
 and any ledger larger than the seed. [MEASURING.md](./MEASURING.md) says how to repeat the run with a larger seed and

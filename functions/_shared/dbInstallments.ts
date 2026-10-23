@@ -62,7 +62,7 @@ export async function updateInstallmentPlan(
   id: number,
   patch: Partial<NewInstallmentPlan>,
 ): Promise<InstallmentPlan> {
-  const keys = (Object.keys(patch) as (keyof NewInstallmentPlan)[]).filter((k) => k in PLAN_COLUMNS)
+  const keys = (Object.keys(patch) as (keyof NewInstallmentPlan)[]).filter((k) => Object.hasOwn(PLAN_COLUMNS, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)

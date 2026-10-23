@@ -31,9 +31,9 @@ const FOLDER_OBJECT = /^(.+)\/(\d{4}-\d{2}-\d{2})\/[^/]+$/
  * The backup an object belongs to: a day's snapshot is one file, a chunked backup is a folder of them, and
  * either is kept or dropped as a whole. Null for anything else in the bucket.
  */
-export function backupUnitOf(key: string): { unit: string; dateKey: string } | null {
+export function backupUnitOf(key: string): { unit: string; owner: string; dateKey: string } | null {
   const folder = FOLDER_OBJECT.exec(key)
-  if (folder) return { unit: `${folder[1]}/${folder[2]}/`, dateKey: folder[2] as string }
+  if (folder) return { unit: `${folder[1]}/${folder[2]}/`, owner: folder[1] as string, dateKey: folder[2] as string }
   const dateKey = dateKeyFromObjectKey(key)
-  return dateKey === null ? null : { unit: key, dateKey }
+  return dateKey === null ? null : { unit: key, owner: key.slice(0, Math.max(key.lastIndexOf('/'), 0)), dateKey }
 }

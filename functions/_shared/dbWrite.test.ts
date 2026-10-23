@@ -78,7 +78,11 @@ function envForBulkUpdate(opts: {
       prepare: (sql: string) => ({
         bind: () => {
           prepared?.push(sql)
-          // deriveOne's labelIds lookup, on every write path; no test here cares
+          // The rows an edit by ids answers with: one read, status and label ids derived in SQL.
+          if (sql.includes('AS label_ids')) {
+            return { all: vi.fn().mockResolvedValue({ results: [{ ...txnRow, status: 'posted', label_ids: '[]' }] }) }
+          }
+          // deriveOne's labelIds lookup, on the single-row write paths; no test here cares
           // about labels, so an empty result is always the right answer.
           if (sql.includes('transaction_labels')) {
             return { all: vi.fn().mockResolvedValue({ results: [] }) }
