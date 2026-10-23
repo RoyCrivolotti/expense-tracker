@@ -5,18 +5,31 @@ import type {
   MonthRowsRead,
 } from '../domain/data/ledgerParts'
 import type { MonthCell } from '../domain/ledger/types'
-import type { Transaction, TxnStatus, TxnType } from '../domain/types'
+import { deriveStatus } from '../domain/engine/status'
+import type { AccountStatement, StoredTransaction, Transaction, TxnStatus, TxnType } from '../domain/types'
 import type { Env } from './env'
 import { loadReferenceTables } from './dbReference'
-import { cubeSql, monthCountsSql, monthRowsSql, paymentsSql, pinnedSql } from './ledgerPartsSql'
-import { toStoredTxn, type TxnRow } from './rows'
+import {
+  accountsSql,
+  cubeSql,
+  monthCountsSql,
+  monthRowsSql,
+  paidStatementsSql,
+  paymentsSql,
+  pinnedSql,
+} from './ledgerPartsSql'
+import { toAccount, toStatement, toStoredTxn, type AccountRow, type StatementRow, type TxnRow } from './rows'
 import type { Sql } from './transactionQuerySql'
 
-interface PartRow extends TxnRow {
-  status: TxnStatus
+/** A row as the part reads select it, before its status. */
+interface LeanRow extends TxnRow {
   /** JSON array of label ids. */
   label_ids: string
   receipts: number
+}
+
+interface PartRow extends LeanRow {
+  status: TxnStatus
 }
 
 interface CellRow {
@@ -43,19 +56,50 @@ function labelIdsOf(json: string): number[] {
   return json === '[]' ? [] : (JSON.parse(json) as number[]).sort((a, b) => a - b)
 }
 
+/**
+ * `date DESC, id DESC`, the order the API returns rows in. An id is unique, so no two rows tie. Dates are
+ * `YYYY-MM-DD`, which JavaScript and SQLite's binary collation compare alike.
+ */
+const byNewest = (a: { date: string; id: number }, b: { date: string; id: number }): number =>
+  a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1
+
 /** The indexed pinned rows, which are in order, with the few payments that are pinned by a link. */
 function newestFirst(indexed: PartRow[], payments: PartRow[]): PartRow[] {
   if (payments.length === 0) return indexed
-  return [...indexed, ...payments].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
+  return [...indexed, ...payments].sort(byNewest)
 }
 
-function transactionsOf(rows: PartRow[]): { transactions: Transaction[]; attachmentCounts: AttachmentCounts } {
+function transactionsOf<R extends LeanRow>(
+  rows: R[],
+  statusOf: (stored: StoredTransaction, row: R) => TxnStatus,
+): { transactions: Transaction[]; attachmentCounts: AttachmentCounts } {
   const attachmentCounts: AttachmentCounts = {}
   const transactions = rows.map((row) => {
     if (row.receipts > 0) attachmentCounts[row.id] = row.receipts
-    return { ...toStoredTxn(row), status: row.status, labelIds: labelIdsOf(row.label_ids) }
+    const stored = toStoredTxn(row)
+    return { ...stored, status: statusOf(stored, row), labelIds: labelIdsOf(row.label_ids) }
   })
   return { transactions, attachmentCounts }
+}
+
+/**
+ * `deriveTransactions` for one row at a time, from the owner's accounts and the paid statements of a range. A
+ * row whose account is not there is posted, cancelled or not. Statements are grouped by account, so a row looks
+ * through its own account's few and not all of them.
+ */
+function statusReader(accountRows: AccountRow[], paidRows: StatementRow[]): (stored: StoredTransaction) => TxnStatus {
+  const accounts = new Map(accountRows.map((row) => [row.id, toAccount(row)]))
+  const paid = new Map<number, AccountStatement[]>()
+  for (const row of paidRows) {
+    const statement = toStatement(row)
+    const own = paid.get(statement.accountId)
+    if (own) own.push(statement)
+    else paid.set(statement.accountId, [statement])
+  }
+  return (stored) => {
+    const account = accounts.get(stored.accountId)
+    return account ? deriveStatus(stored, account, paid.get(stored.accountId) ?? []) : 'posted'
+  }
 }
 
 /**
@@ -76,7 +120,7 @@ export async function readLedgerReference(env: Env, owner: string): Promise<Ledg
     rowsPerMonth[budget_month] = n
     rowCount += n
   }
-  const { transactions, attachmentCounts } = transactionsOf(newestFirst(indexed, payments))
+  const { transactions, attachmentCounts } = transactionsOf(newestFirst(indexed, payments), (_, row) => row.status)
   return {
     reference,
     pinned: transactions,
@@ -87,15 +131,25 @@ export async function readLedgerReference(env: Env, owner: string): Promise<Ledg
   }
 }
 
-/** Every row of the range, or null when it holds more than `maxRows`. */
+/**
+ * Every row of the range, or null when it holds more than `maxRows`. The rows, the accounts and the paid
+ * statements go in one batch, so the status of a row is worked out from the same moment it was read at.
+ */
 export async function readMonthRows(
   env: Env,
   owner: string,
   range: MonthRange,
   maxRows: number,
 ): Promise<MonthRowsRead | null> {
-  const rows = await rowsOf<PartRow>(monthRowsSql(owner, range, maxRows), env)
-  return rows.length > maxRows ? null : transactionsOf(rows)
+  const [rows, accounts, paid] = await env.DB.batch([
+    statement(monthRowsSql(owner, range, maxRows), env),
+    statement(accountsSql(owner), env),
+    statement(paidStatementsSql(owner, range), env),
+  ])
+  const picked = (rows?.results ?? []) as LeanRow[]
+  if (picked.length > maxRows) return null
+  const statusOf = statusReader((accounts?.results ?? []) as AccountRow[], (paid?.results ?? []) as StatementRow[])
+  return transactionsOf(picked.sort(byNewest), statusOf)
 }
 
 /** The cube of the range's unpinned rows, or null when it has more than `maxCells` cells. */

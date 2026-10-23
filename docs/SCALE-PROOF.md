@@ -113,6 +113,12 @@ with the number of users and not with a ledger.
 | `series` | `idx_txn_owner_desc_norm` over the owner, then five sorters for the windows, the group and the order | Every row, about 7 visits each |
 | `reference` | covering `idx_txn_owner_month_date` for the count per month, `idx_txn_pinned` for the pinned rows | Every row, once |
 
+Note, 2026-10-23: the `months` row above and its figures in the table before are as measured for this proof. PR #482
+then changed the read: it takes the rows straight off the month index, with no join to the account and statement per row
+and no sorter in SQL, and the Worker orders the rows and works out each status. The same 13-month window visited 670,
+3,332 and 13,207 rows at 1,000, 25,000 and 100,000 rows, against 3,236, 16,903 and 67,387 here, which is 3 to 5 times
+fewer (the lower end if D1 does not bill the sorter and the extra pass the old plan made).
+
 So five requests read the whole ledger whatever the window: the classic read, the reference, the series, the usage
 counts and the net spend over all dates. The list, the months and the sums are bounded by their range.
 

@@ -349,7 +349,7 @@ describe('GET /transactions/months', () => {
     const { response } = await get(getMonths, path('2026-04', '2026-04'))
 
     expect(response.status).toBe(400)
-    const statement = world.log.find((sql) => /WITH picked AS/.test(sql))!
+    const statement = world.log.find((sql) => /ORDER BY t\.budget_month DESC/.test(sql))!
     expect(statement).toContain('LIMIT ?')
   })
 
