@@ -72,7 +72,8 @@ interface Parked {
  * Paging by position has a consequence the pager does not hide. A row edited after its page was read can be
  * sent again by a later page, at its new place, and the later copy replaces the one already held. A row that
  * moves to a place behind the cursor, or arrives there, is not in the pages already read, and one deleted from
- * them stays. **A screen calls `refresh()` after a write.** That reads the list again from its first page down
+ * them stays. **A screen calls `refresh()` after a write**, and may put what the write did to rows into the rows held first
+ * (`patchRows`), which the read replaces. That reads the list again from its first page down
  * to the depth it had, in as few requests as the server allows, and swaps it in when every row is there, so the
  * reader keeps their place and the rows are what the filter matches at that moment and nothing else. A write made
  * after that read is not seen until the next `refresh()`. While no screen is attached (`attach`) a refresh is
