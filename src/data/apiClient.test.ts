@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, req, reqMultipart } from './apiClient'
+import { ApiError, req, reqMultipart, wasRefused } from './apiClient'
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -77,5 +77,21 @@ describe('reqMultipart', () => {
     )
 
     await expect(reqMultipart('/upload', new FormData())).rejects.toBeInstanceOf(ApiError)
+  })
+})
+
+describe('wasRefused', () => {
+  it.each([400, 401, 409, 422, 499])('is true for a %i, which the server answered and did not save', (status) => {
+    expect(wasRefused(new ApiError('no', status))).toBe(true)
+  })
+
+  it.each([500, 502, 503, 504])('is false for a %i, which may have been saved before it failed', (status) => {
+    expect(wasRefused(new ApiError('down', status))).toBe(false)
+  })
+
+  it('is false for a request that never got an answer, and for anything that is not an ApiError', () => {
+    expect(wasRefused(new TypeError('Failed to fetch'))).toBe(false)
+    expect(wasRefused({ status: 400 })).toBe(false)
+    expect(wasRefused('no')).toBe(false)
   })
 })
