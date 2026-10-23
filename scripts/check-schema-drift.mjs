@@ -5,7 +5,7 @@
  *
  *   npm run check:schema -- <database-name>
  *
- * Read-only: it only runs a SELECT over the table list. It needs wrangler to be signed in
+ * Read-only: it only runs one SELECT over the schema tables. It needs wrangler to be signed in
  * (CLOUDFLARE_API_TOKEN, or `wrangler login`).
  *
  * Why this exists. Migrations here are applied by hand and recorded in `_migrations`, and the
