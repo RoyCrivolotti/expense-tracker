@@ -620,15 +620,20 @@ describe('useLedgerData, the list read in pages', () => {
   })
 
   describe('when the list cannot be read again', () => {
+    const realSetTimeout = globalThis.setTimeout
+    const pause = (ms: number) => new Promise<void>((resolve) => realSetTimeout(resolve, ms))
     const afterRefresh = async (result: { current: ReturnType<typeof useLedgerData> }) => {
       vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
       act(() => result.current.reload())
-      // The refresh ends when its reads have answered and the least time it shows has passed, so the clock is moved on
-      // until it has, however many turns of the event loop that takes, and not by one amount fixed in advance.
-      for (let moved = 0; moved < 5_000 && result.current.refreshOutcome === null; moved += 100) {
+      // The refresh ends when its reads have answered and the least time it shows has passed. The fake clock moves the
+      // second, but a page of the list signs its cursor with WebCrypto, which finishes in real time (a few turns of the
+      // event loop on a free machine, longer on a busy one), so the clock is moved on until the refresh has ended, with a
+      // real pause between the steps.
+      for (let tries = 0; tries < 1_000 && result.current.refreshOutcome === null; tries += 1) {
         await act(async () => {
           await vi.advanceTimersByTimeAsync(100)
         })
+        await pause(5)
       }
       vi.useRealTimers()
     }
