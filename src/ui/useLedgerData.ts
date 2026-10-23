@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { applyWrite } from '../data/applyWrite'
 import type { LedgerPartsSource } from '../data/dataSource'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
-import { LedgerSession, type SessionOptions, type SessionState } from '../data/ledgerSession'
-import { LedgerUsage, touchesUsage } from '../data/ledgerUsage'
+import type { LedgerSession, SessionOptions, SessionState } from '../data/ledgerSession'
 import { isAccessDenied } from '../data/apiClient'
 import { forgetLedgerSnapshot, loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { TransactionPager } from '../data/transactionPager'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
 import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
 import { ledgerUsageHook } from './ledgerUsage'
+import { sessionWithCounts, useListFailure } from './ledgerWrites'
 import { pagedListOf } from './pagedTransactionList'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
@@ -101,14 +100,9 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   useEffect(() => {
     settled.current = options?.onSettled
   })
-  // The counts of what names each record are read apart from the session, which tells them of the writes that could change them.
-  const [session, usage] = useMemo(() => {
-    const counts = new LedgerUsage(source)
-    const held = new LedgerSession(source, { ...options, onWrite: (write) => counts.noteWrite(touchesUsage(write)) })
-    return [held, counts] as const
-  }, [source]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
-  const state = useSyncExternalStore(session.subscribe, session.getState)
   const pager = useMemo(() => new TransactionPager(source, { settleMs: LIST_SETTLE_MS }), [source])
+  const [session, usage] = useMemo(() => sessionWithCounts(source, pager, options), [source, pager]) // eslint-disable-line react-hooks/exhaustive-deps -- options are read once
+  const state = useSyncExternalStore(session.subscribe, session.getState)
   const pagedList = useMemo(() => pagedListOf(pager), [pager])
   useEffect(() => () => pager.dispose(), [pager])
   const [phase, setPhase] = useState<Phase>('loading')
@@ -117,6 +111,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const [attempt, setAttempt] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome>(null)
+  const { failure: listFailure, noteRead, applyPatch } = useListFailure(session, pager)
   const alive = useRef(true)
 
   useEffect(() => {
@@ -190,20 +185,17 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       setRefreshOutcome(outcome)
     }
     session.refresh().then(
-      () => {
+      async () => {
         keep(session, owner, settled.current)
-        pager.refresh({ summary: true })
-        return finish('ok')
+        await pager.refresh({ summary: true })
+        const worked = !pager.getState().refreshFailed
+        noteRead(worked)
+        return finish(worked ? 'ok' : 'fail')
       },
       () => finish('fail'),
     )
-  }, [session, pager, phase, owner])
+  }, [session, pager, phase, owner, noteRead])
 
-  // A list read from the server does not see a write until it is read again.
-  const applyPatch = useCallback<ExpenseData['applyPatch']>(
-    (patch, reach) => applyWrite(session, pager, patch, reach),
-    [session, pager],
-  )
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 
   return {
@@ -214,7 +206,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
-    backgroundError: phase === 'ready' && model !== undefined && !state.outsized ? state.error : null,
+    backgroundError: phase === 'ready' && model !== undefined && !state.outsized ? (state.error ?? listFailure) : null,
     outsized: state.outsized,
   }
 }
