@@ -17,8 +17,8 @@ import { PINNED_SQL, paymentsSql, pinnedSql } from './ledgerPartsSql'
 const RANGE = { from: '2026-01', to: '2026-03' }
 const BIG = 1_000_000
 
-/** A scan of the table or of a lookup table; the `picked` list a statement builds first is not one. */
-const SCAN = /^SCAN (?!picked\b|p\b)/
+/** A scan of the table or of a lookup table. */
+const SCAN = /^SCAN /
 /** Walks every row the owner has, by whichever of the owner indexes. */
 const OWNER_WIDE = /USING (COVERING )?INDEX idx_txn_owner(_date|_month_date)? \(owner=\?\)/
 const MONTH_RANGE = /USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month>\? AND budget_month<\?\)/
@@ -78,7 +78,7 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
     expect(plan.join('\n')).toMatch(/SEARCH transactions USING COVERING INDEX idx_txn_owner_month_date \(owner=\?\)/)
   })
 
-  it('reads a range of months by the month index, with at most one sort', async () => {
+  it('reads a range of months by the month index alone: no sort, and no join to the account or statement', async () => {
     const [statement] = await ran(() => repo.readMonthRows(OWNER, RANGE, BIG))
     const plan = planOf(kit.sqlite, statement!)
     const text = plan.join('\n')
@@ -86,7 +86,18 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
     expect(text, text).toMatch(MONTH_RANGE)
     expect(text, `reads every row of the owner:\n${text}`).not.toMatch(OWNER_WIDE)
     expect(text).toMatch(/idx_attachments_txn \(owner=\? AND transaction_id=\?\)/)
-    expect(plan.filter((line) => /USE TEMP B-TREE FOR ORDER BY/.test(line))).toHaveLength(1)
+    expect(text, `sorts:\n${text}`).not.toMatch(/USE TEMP B-TREE/)
+    expect(text, `joins:\n${text}`).not.toMatch(/accounts|account_statements/)
+  })
+
+  it('reads the paid statements of a range inside each account, and scans nothing but the few accounts', async () => {
+    const [, accounts, paid] = await ran(() => repo.readMonthRows(OWNER, RANGE, BIG))
+    for (const statement of [accounts!, paid!]) {
+      const plan = planOf(kit.sqlite, statement)
+      expect(plan.filter((line) => SCAN.test(line) && line !== 'SCAN accounts'), plan.join('\n')).toEqual([])
+    }
+    const text = planOf(kit.sqlite, paid!).join('\n')
+    expect(text, text).toMatch(/SEARCH account_statements USING INDEX \S+ \(owner=\? AND account_id=\? AND year_month>\? AND year_month<\?\)/)
   })
 
   it('reads the cube of a range by the month index, and looks settled rows up by key', async () => {
@@ -115,7 +126,9 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
   it('stops reading a range that is too big after the bound, whatever the range holds', async () => {
     const [statement] = await ran(() => repo.readMonthRows(OWNER, { from: '2020-01', to: '2030-12' }, 10))
     const plan = planOf(kit.sqlite, statement!).join('\n')
-    expect(plan).toMatch(/CO-ROUTINE picked|MATERIALIZE picked|LIST SUBQUERY|SCAN picked/)
+    expect(plan).toMatch(MONTH_RANGE)
+    expect(plan, 'a sort sees every row before it can stop').not.toMatch(/USE TEMP B-TREE FOR ORDER BY/)
+    expect(statement!.sql).toMatch(/LIMIT \?$/)
     expect(statement!.params.at(-1)).toBe(11)
   })
 })

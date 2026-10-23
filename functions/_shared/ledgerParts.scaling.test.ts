@@ -77,13 +77,13 @@ async function measureReference(rows: number): Promise<Record<string, number>> {
   }
 }
 
-type Row = TxnRow & { status: string; label_ids: string; receipts: number }
+type Row = TxnRow & { label_ids: string; receipts: number }
 
-/** The mapping as `readMonthRows` does it: `toStoredTxn`, then a spread for the status and the labels. */
+/** The mapping as `readMonthRows` does it: `toStoredTxn`, then a spread for the status and the labels. The status is a stand-in; the read derives it per row. */
 function viaObjects(rows: Row[]): Transaction[] {
   return rows.map((r) => ({
     ...toStoredTxn(r),
-    status: r.status as Transaction['status'],
+    status: 'posted' as const,
     labelIds: r.label_ids === '[]' ? [] : (JSON.parse(r.label_ids) as number[]).sort((a, b) => a - b),
   }))
 }
@@ -94,7 +94,7 @@ function direct(rows: Row[]): Transaction[] {
     const t: Transaction = {
       id: r.id, date: r.date, budgetMonth: r.budget_month, description: r.description, accountId: r.account_id,
       categoryId: r.category_id, type: r.type, amountCents: r.amount_cents, cancelled: r.cancelled === 1,
-      status: r.status as Transaction['status'],
+      status: 'posted',
       labelIds: r.label_ids === '[]' ? [] : (JSON.parse(r.label_ids) as number[]).sort((a, b) => a - b),
     }
     if (r.notes) t.notes = r.notes
@@ -115,8 +115,8 @@ function fromTuples(rows: unknown[][]): Transaction[] {
     const t: Transaction = {
       id: r[0] as number, date: r[1] as string, budgetMonth: r[2] as string, description: r[3] as string,
       accountId: r[4] as number, categoryId: r[5] as number, type: r[6] as Transaction['type'],
-      amountCents: r[7] as number, cancelled: r[8] === 1, status: r[17] as Transaction['status'],
-      labelIds: r[18] === '[]' ? [] : (JSON.parse(r[18] as string) as number[]).sort((a, b) => a - b),
+      amountCents: r[7] as number, cancelled: r[8] === 1, status: 'posted',
+      labelIds: r[17] === '[]' ? [] : (JSON.parse(r[17] as string) as number[]).sort((a, b) => a - b),
     }
     if (r[9]) t.notes = r[9] as string
     if (r[10]) t.createdAt = r[10] as string

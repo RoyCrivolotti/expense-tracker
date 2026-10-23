@@ -65,19 +65,40 @@ export function paymentsSql(owner: string): Sql {
 }
 
 /**
- * Rows in the range, newest first. The inner query stops reading after `maxRows + 1` index entries, so
- * a range that is too big costs that many rows read and not the range; a caller that gets more than
- * `maxRows` back knows the range is too big.
+ * Rows in the range, in the order `idx_txn_owner_month_date` holds them read backwards: the newest budget month
+ * first and, inside a month, the newest row first. Nothing is sorted or joined in here, so the statement visits
+ * about one row per row returned, and `LIMIT` stops it after `maxRows + 1` index entries: a caller that gets more
+ * than `maxRows` back knows the range is too big, and that costs the bound and not the range. The caller puts the
+ * months in the order the API returns rows and derives each status from {@link accountsSql} and
+ * {@link paidStatementsSql}, which is why this statement selects no `status`.
  */
 export function monthRowsSql(owner: string, range: MonthRange, maxRows: number): Sql {
   return {
-    sql: `WITH picked AS (
-        SELECT id FROM transactions
-        WHERE owner = ? AND budget_month >= ? AND budget_month <= ?
-        LIMIT ?)
-      SELECT ${ROW_COLUMNS} FROM picked p JOIN transactions t ON t.id = p.id ${STATUS_JOINS}
-      ORDER BY t.date DESC, t.id DESC`,
+    sql: `SELECT ${COLUMNS}, ${LABEL_IDS_SQL} AS label_ids, ${RECEIPTS_SQL} AS receipts
+      FROM transactions t
+      WHERE t.owner = ? AND t.budget_month >= ? AND t.budget_month <= ?
+      ORDER BY t.budget_month DESC, t.date DESC, t.id DESC
+      LIMIT ?`,
     params: [owner, range.from, range.to, maxRows + 1],
+  }
+}
+
+/** The owner's accounts, which say whether a row's status looks at a statement at all. A handful of rows. */
+export function accountsSql(owner: string): Sql {
+  return { sql: 'SELECT * FROM accounts WHERE owner = ?', params: [owner] }
+}
+
+/**
+ * The statements marked paid for the months of the range. Only a paid statement changes a status, so the
+ * rest are not read. Listing the owner's accounts first lets SQLite seek the months inside each account's
+ * statements and not walk all of them, since the key is `(owner, account_id, year_month)`.
+ */
+export function paidStatementsSql(owner: string, range: MonthRange): Sql {
+  return {
+    sql: `SELECT * FROM account_statements
+      WHERE owner = ? AND paid = 1 AND year_month >= ? AND year_month <= ?
+        AND account_id IN (SELECT id FROM accounts WHERE owner = ?)`,
+    params: [owner, range.from, range.to, owner],
   }
 }
 
