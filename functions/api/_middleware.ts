@@ -1,4 +1,4 @@
-import { resolveAuthenticatedEmail } from '../_shared/access/resolveAuthenticated'
+import { resolveVerifiedEmail } from '../_shared/access/accessIdentity'
 import { requireAllowedEmail, requireExpensesGroupGrant } from '../_shared/access/accessAuthorizer'
 import { touchLastSeenIfNeeded } from '../_shared/access/accessService'
 import { createAccessDeps } from '../_shared/access/createAccessDeps'
@@ -54,7 +54,7 @@ const handle: PagesFunction<Env, string, ExpensesData> = async (context) => {
   try {
     const pathname = new URL(context.request.url).pathname
     assertWriteIsSameSiteJson(context.request, pathname)
-    const email = resolveAuthenticatedEmail(context.request)
+    const email = await resolveVerifiedEmail(context.request, context.env)
     const accessRepo = createD1AccessRepository(context.env)
     context.data.authenticatedEmail = email
     context.data.accessRepo = accessRepo

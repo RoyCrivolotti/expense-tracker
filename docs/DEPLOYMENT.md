@@ -45,7 +45,7 @@ CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 **Sign out:** Settings links to `/cdn-cgi/access/logout`, which clears the Access session cookie only.
 `?redirect_url=<encoded-url>` sets where it lands.
 
-
+**Signed identity (optional):** two variables make every request prove who it is ([ACCESS.md](./ACCESS.md)).
 
 ## App access control (D1 and the in-app admin)
 
