@@ -73,7 +73,10 @@ Every real row whose budget month is in a range, newest first. Code:
 - Errors: 400 for a missing, malformed, reversed or too wide range, or a range over a bound.
 - Tag part: `months` plus the range. It runs no backfill, so in a new budget month a due instalment is missing here
   until the reference has been read.
-- Cost: at most 5,001 index entries plus the rows returned (visited as under Conventions), so a range that is too big
+- Cost: about one row visited per row returned, plus two for each label it carries and one for each receipt. A row's
+  account and statement are not read per row, as they are under Conventions. The accounts (the table has no index on
+  the owner, so all owners' accounts are read, a handful) and the statements marked paid in the range come in the same
+  batch, and the Worker works each status out from them. The read stops after 5,001 rows, so a range that is too big
   costs the bound and not the range.
 
 ## GET /cube
