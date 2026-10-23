@@ -121,11 +121,31 @@ describe('a write the app sends', () => {
     expect(response.status).toBe(201)
   })
 
-  it('is let through as a request for access, which has no body', async () => {
-    const response = await post(requestAccess, { 'sec-fetch-site': 'same-origin' })
+  it('is let through as a request for access, which has no body: as workerd delivers it, a zero-length body', async () => {
+    // A bare `POST /api/access/request` arrives with a body object of zero length and Content-Length: 0, and it is the
+    // one write that runs before the allow-list, so a person who is not yet approved depends on it.
+    const response = await post(requestAccess, { 'sec-fetch-site': 'same-origin', 'content-length': '0' }, new Uint8Array(0))
 
     expect(response.status).not.toBe(403)
     expect(response.status).not.toBe(415)
+  })
+
+  it('is let through as a delete whose empty body says so', async () => {
+    const response = await world.call(deleteOne, {
+      method: 'DELETE',
+      path: `/transactions/${ids.spareTransaction}`,
+      params: { id: String(ids.spareTransaction) },
+      rawBody: new Uint8Array(0),
+      headers: { 'content-length': '0' },
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('is refused when a zero-length body does not say so, and has no type', async () => {
+    const response = await post(requestAccess, { 'sec-fetch-site': 'same-origin' }, new Uint8Array(0))
+
+    expect(response.status).toBe(415)
   })
 })
 

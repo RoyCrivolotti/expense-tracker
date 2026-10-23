@@ -4,10 +4,15 @@ import { assertWriteIsSameSiteJson } from './requestHygiene'
 
 const PATH = '/api/expenses/transactions'
 
-function request(method: string, init: { type?: string; body?: BodyInit | null; site?: string } = {}): Request {
+function request(
+  method: string,
+  init: { type?: string; body?: BodyInit | null; site?: string; length?: string; encoding?: string } = {},
+): Request {
   const headers = new Headers()
   if (init.type) headers.set('content-type', init.type)
   if (init.site) headers.set('sec-fetch-site', init.site)
+  if (init.length !== undefined) headers.set('content-length', init.length)
+  if (init.encoding) headers.set('transfer-encoding', init.encoding)
   return new Request(`https://expenses.test${PATH}`, { method, headers, ...(init.body != null ? { body: init.body } : {}) })
 }
 
@@ -56,6 +61,23 @@ describe('a write that carries a body', () => {
 describe('a write with no body', () => {
   it.each(['POST', 'DELETE', 'PUT', 'PATCH'])('needs no content type: %s', (method) => {
     expect(refusal(request(method))).toBeNull()
+  })
+
+  // workerd, which runs the API, hands a POST without a body over with a body object of zero length and
+  // `Content-Length: 0`, which is not what Node builds for a request with no body, so the shape is made here.
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('needs none as workerd delivers it, an empty body that says so: %s', (method) => {
+    expect(refusal(request(method, { body: new Uint8Array(0), length: '0' }))).toBeNull()
+    expect(refusal(request(method, { body: new Uint8Array(0), length: ' 0 ' }))).toBeNull()
+  })
+
+  it('is still refused when the empty body does not say it is empty, or says it is not', () => {
+    expect(refusal(request('POST', { body: new Uint8Array(0) }))?.status).toBe(415)
+    expect(refusal(request('POST', { body: new Uint8Array(0), length: '1' }))?.status).toBe(415)
+    expect(refusal(request('POST', { body: new Uint8Array(0), length: '0', encoding: 'chunked' }))?.status).toBe(415)
+  })
+
+  it('is still refused as cross-site, empty or not', () => {
+    expect(refusal(request('POST', { body: new Uint8Array(0), length: '0', site: 'cross-site' }))?.status).toBe(403)
   })
 })
 
