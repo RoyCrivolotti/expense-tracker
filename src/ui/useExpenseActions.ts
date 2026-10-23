@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import type { ExpenseSettings } from '../types'
+import { wasRefused } from '../data/apiClient'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { type ApplyPatch, bulkWriteOf, unchanged } from './bulkWrite'
@@ -40,12 +41,17 @@ import {
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
-/** Build the write-actions object, or `undefined` for read-only sources. */
+/**
+ * Build the write-actions object, or `undefined` for read-only sources. `readAgain` reads the whole of what the screens
+ * show again, for a write that may have been saved though it did not answer, which nothing else shows (a model that holds
+ * every row is only told what each answered write did).
+ */
 export function useExpenseActions(
   source: ExpenseDataSource,
   applyPatch: ApplyPatch,
   openModal: OpenModal,
   readOnly = false,
+  readAgain?: () => void,
 ): ExpenseActions | undefined {
   // Which settings write each setting was last taken from. A write's answer is the whole settings
   // row as it stood then, so an older write answering late must not undo a newer one's.
@@ -64,7 +70,10 @@ export function useExpenseActions(
         return txn
       },
       createTransactions: async (inputs: NewTransaction[]) => {
-        const txns = await source.createTransactions!(inputs)
+        const txns = await source.createTransactions!(inputs).catch((error: unknown) => {
+          if (!wasRefused(error)) readAgain?.()
+          throw error
+        })
         applyPatch((d) => patchAfterBulkCreate(d, txns))
       },
       updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
@@ -244,5 +253,5 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterWealthCheckinDelete(d, id))
       },
     }
-  }, [source, applyPatch, openModal, readOnly])
+  }, [source, applyPatch, openModal, readOnly, readAgain])
 }

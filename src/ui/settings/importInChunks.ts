@@ -1,4 +1,4 @@
-import { ApiError } from '../../data/apiClient'
+import { wasRefused } from '../../data/apiClient'
 
 /**
  * Rows a request of an import carries. A create runs six statements a row and four more a request, so a thousand rows in
@@ -30,7 +30,7 @@ const count = (n: number): string => n.toLocaleString('en-US')
  */
 function stoppedAt(error: unknown, imported: number, total: number, sent: number): ImportStopped {
   const reason = error instanceof Error ? error.message : String(error)
-  const refused = error instanceof ApiError && error.status >= 400 && error.status < 500
+  const refused = wasRefused(error)
   const left = total - imported
   const named = reason.replace(/\bRow (\d+)\b/g, (_, row: string) => `Row ${Number(row) + imported}`)
   const message = refused
