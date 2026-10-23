@@ -115,13 +115,13 @@ column.
 
 **Check what a database has before trusting the record.** `_migrations` can be wrong when a file was applied by hand and
 never recorded, or recorded without having run. `npm run check:schema -- <db>` builds a database from `migrations/`,
-reads the real one's columns over wrangler, and lists what is missing with the migration that adds it, and anything no
-migration makes. It only reads, exits 1 on a difference and 2 when the database could not be read, and compares column
-names only.
+reads the real one's columns, indexes and triggers over wrangler, and lists what is missing with the migration that adds
+it, and anything no migration makes. It only reads, exits 1 on a difference and 2 when the database could not be read,
+and compares names only. A missing trigger is the one to watch: nothing fails, the table it keeps up to date goes stale.
 
-**A dev database that is ahead of `main`** (a column `main` does not make) fails the schema job on `EXTRA
-<table>.<column>` and stops every deploy until that migration is merged. To try a change in a preview, apply its
-migration to dev by hand, but only when its merge is near, and remove the column again if the merge does not come.
+**A dev database that is ahead of `main`** (a column, index or trigger `main` does not make) fails the schema job on an
+`EXTRA` line and stops every deploy until that migration is merged. To try a change in a preview, apply its migration to
+dev by hand, but only when its merge is near, and remove what it added if the merge does not come.
 
 ### If a migration goes wrong
 
@@ -146,7 +146,9 @@ migration first. The restore command by hand is `npx wrangler d1 time-travel res
   later release.
 - **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs `-- lint-allow: unscoped <why every row is
   meant>`.
-- **`IF NOT EXISTS`** on every `CREATE TABLE` and `CREATE INDEX`.
+- **`IF NOT EXISTS`** on every `CREATE TABLE`, `CREATE INDEX` and `CREATE TRIGGER`.
+- **A trigger is one statement,** from `CREATE TRIGGER` to its closing `END;`. The lint, the schema check and the test
+  database cut files that way (`scripts/sql-statements.mjs`); quote a column called `begin`, `case` or `end` inside one.
 - `npm run verify` also checks that this page mentions the latest migration (`scripts/check-migration-docs.mjs`), so add
   a row to the table below.
 
@@ -180,10 +182,10 @@ onward to a populated database would hand it `0003`'s four `DROP TABLE`s.
 **If `--file` fails with `fetch failed`, use `--command` for a pending file.** `wrangler d1 execute --file` can fail
 with a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, straight after "Uploading complete",
 while `--command` queries against the same database succeed. Node 24 is the suspect, so try Node 22 first. Running the
-statements one at a time through `--command` reaches the same end state: strip the comments, split on `;`, run them in
-order, then record the file. Only do this for a pending file, since on an applied one it skips past the error that would
-have stopped `--file`.  Statement by statement can stop half-applied, unlike `--file`, so compare the result with `npm
-run check:schema`.
+statements one at a time through `--command` reaches the same end state: strip the comments, run the statements in
+order, then record the file. A trigger is one statement: send `CREATE TRIGGER` to its closing `END` as one command, not
+cut at the `;` inside it. Only do this for a pending file, since on an applied one it skips past the error that would
+have stopped `--file`. It can stop half-applied, so compare the result with `npm run check:schema`.
 
 ### Migrations that need more than the deploy
 
@@ -209,11 +211,10 @@ owner = '<email>'`. A Time Travel restore needs nothing, because the table goes 
 #### 0038: the stored normalized description
 
 - **Order.** Apply it before the code that writes the column, as the deploy does.
-- **Afterwards.** Run `npm run check:schema -- <database>`, then check the index, which that command does not: `SELECT
-  name FROM sqlite_master WHERE name = 'idx_txn_owner_desc_norm'`. Existing rows are NULL and the server fills them, up
-  to 2,000 per request (500 a pass, four passes), the first time a route that needs the column is read. Until none wait,
-  that route answers 503 with `Retry-After`, and each retry gets further. No response carries the column and the dataset
-  revision does not move.
+- **Afterwards.** Run `npm run check:schema -- <database>`, which covers the column and its index. Existing rows are NULL
+  and the server fills them, up to 2,000 per request (500 a pass, four passes), the first time a route that needs the
+  column is read. Until none wait, that route answers 503 with `Retry-After`, and each retry gets further. No response
+  carries the column and the dataset revision does not move.
 - **Cost.** Building the index writes one row per existing transaction and the fill writes two, so a ledger of about
   33,000 transactions uses a day's write budget for both, and the fill resumes the next day if it runs out. An UPDATE
   that names `description` or `date` rewrites the index entry whether or not the value changed, and the edit form always
