@@ -14,6 +14,10 @@ export interface Env {
   ALLOW_BOOTSTRAP?: string
   /** App owner — may approve access requests in the admin panel. */
   OWNER_EMAIL?: string
+  /** `<team>.cloudflareaccess.com`. With ACCESS_AUD, makes every request prove its identity with Access's signed token. */
+  ACCESS_TEAM_DOMAIN?: string
+  /** The Access application's AUD tag; see ACCESS_TEAM_DOMAIN. */
+  ACCESS_AUD?: string
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
