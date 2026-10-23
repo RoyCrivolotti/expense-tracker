@@ -61,6 +61,10 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   hostname names in the workflows, `workers/backup-cron/wrangler.toml`, the `.env.*` files, `config/staging-access.json`
   and some scripts), and a fork has to replace them ([DEPLOYMENT.md](./DEPLOYMENT.md)). New code reads such values from
   config or the environment.
+- **The person is the one the signed token names, when Access is configured.** `resolveVerifiedEmail`
+  (`functions/_shared/access/accessIdentity.ts`) takes the email header only if `Cf-Access-Jwt-Assertion` verifies with
+  WebCrypto and names the same address; with `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` unset it is the header alone
+  ([ACCESS.md](./ACCESS.md)).
 
 ### Dataset revision
 

@@ -14,6 +14,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [GOALS-MODEL.md](./GOALS-MODEL.md) | Contributor | The Goals projection engine and its assumptions |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Operator | Hosting, access control, migrations, backups, receipts |
 | [BACKUPS.md](./BACKUPS.md) | Operator | The resumable backup, and restoring from either form |
+| [ACCESS.md](./ACCESS.md) | Operator | Checking the signed Cloudflare Access token on every request |
 | [OPS.md](./OPS.md) | Operator | Staging setup, the scripts, the demo account |
 | [MEASURING.md](./MEASURING.md) | Operator | Measuring rows billed per route on a deployed D1, safely |
 | [SCALING.md](./SCALING.md) | Engineer deciding | How data reaches the browser, the platform limits, the design for large ledgers |
