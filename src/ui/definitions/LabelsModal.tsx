@@ -86,7 +86,7 @@ export function LabelsModal({
               </div>
             ))
           )}
-          {usage.notice}
+          {labels.length === 0 ? null : usage.notice}
           <button
             type="button"
             className={defStyles.addBtn}

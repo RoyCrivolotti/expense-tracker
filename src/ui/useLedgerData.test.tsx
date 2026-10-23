@@ -619,6 +619,117 @@ describe('useLedgerData, the list read in pages', () => {
     await waitFor(() => expect(source.calls.filter((c) => c === 'summary')).toHaveLength(summaries + 1))
   })
 
+  describe('when the list cannot be read again', () => {
+    const afterRefresh = async (result: { current: ReturnType<typeof useLedgerData> }) => {
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
+      act(() => result.current.reload())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(900)
+      })
+      vi.useRealTimers()
+    }
+
+    it('reports a refresh whose read of the ledger worked and whose read of the list failed as failed, and not as updated', async () => {
+      const { source, result } = await started()
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await afterRefresh(result)
+      expect(result.current.refreshOutcome).toBe('fail')
+      expect(result.current.backgroundError).toBe('list down')
+    })
+
+    it('reports a refresh whose list read worked as updated, and takes an earlier failure away', async () => {
+      const { source, result, pager } = await started()
+      const read = source.readTransactionPage.bind(source)
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await afterRefresh(result)
+      expect(result.current.backgroundError).toBe('list down')
+      source.readTransactionPage = read
+      await afterRefresh(result)
+      expect(result.current.refreshOutcome).toBe('ok')
+      expect(result.current.backgroundError).toBeNull()
+      expect(pager.getState().refreshFailed).toBe(false)
+    })
+
+    it('tells the screens after a write whose list read failed, which a write alone would have said nothing about', async () => {
+      const { source, result } = await started()
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      const target = result.current.model!.dataset.transactions[0]!
+      act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' })))
+      await waitFor(() => expect(result.current.backgroundError).toBe('list down'))
+    })
+
+    it('does not call a refresh failed for a list no screen shows, because an earlier read of it failed', async () => {
+      const { source, result, pager, detach } = await started()
+      const read = source.readTransactionPage.bind(source)
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await pager.refresh()
+      expect(pager.getState().refreshFailed).toBe(true)
+      detach()
+      source.readTransactionPage = read
+      await afterRefresh(result)
+      expect(result.current.refreshOutcome).toBe('ok')
+      expect(result.current.backgroundError).toBeNull()
+    })
+
+    it('says nothing after a write made while no screen shows the list, though an earlier read of it failed', async () => {
+      const { source, result, pager, detach } = await started()
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await pager.refresh()
+      detach()
+      const target = result.current.model!.dataset.transactions[0]!
+      act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' })))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      expect(result.current.backgroundError).toBeNull()
+    })
+
+    it('says nothing after a write that needed no read of the list, and keeps what an earlier failure said', async () => {
+      const { source, result } = await started()
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      const target = result.current.model!.dataset.transactions[0]!
+      act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' })))
+      await waitFor(() => expect(result.current.backgroundError).toBe('list down'))
+      act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 4242 } })))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(result.current.backgroundError).toBe('list down')
+    })
+  })
+
+  it('shows what a write did to the rows of the list at once, and what the server says once it has been read again', async () => {
+    const { source, pager, result } = await started()
+    const row = pager.getState().rows[0]!
+    const gate: { release: () => void } = { release: () => undefined }
+    const read = source.readTransactionPage.bind(source)
+    source.readTransactionPage = async (filter, request) => {
+      await new Promise<void>((resolve) => (gate.release = resolve))
+      return read(filter, request)
+    }
+    act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...row, description: 'Renamed by the patch' })))
+    // The read of the list has not answered, and the row on screen already says what the patch says.
+    await waitFor(() => expect(pager.getState().refreshing).toBe(true))
+    expect(pager.getState().rows.find((r) => r.id === row.id)!.description).toBe('Renamed by the patch')
+    source.dataset = { ...small, transactions: small.transactions.map((t) => (t.id === row.id ? { ...t, description: 'Renamed by the server' } : t)) }
+    gate.release()
+    await waitFor(() => expect(pager.getState().refreshing).toBe(false))
+    expect(pager.getState().rows.find((r) => r.id === row.id)!.description).toBe('Renamed by the server')
+  })
+
+  it('shows a deleted row gone at once, and a row that was not deleted back when the server still has it', async () => {
+    const { source, pager, result } = await started()
+    const row = pager.getState().rows[0]!
+    const read = source.readTransactionPage.bind(source)
+    const gate: { release: () => void } = { release: () => undefined }
+    source.readTransactionPage = async (filter, request) => {
+      await new Promise<void>((resolve) => (gate.release = resolve))
+      return read(filter, request)
+    }
+    act(() => result.current.applyPatch((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== row.id) }), { ids: [row.id] }))
+    await waitFor(() => expect(pager.getState().refreshing).toBe(true))
+    expect(pager.getState().rows.some((r) => r.id === row.id)).toBe(false)
+    gate.release()
+    await waitFor(() => expect(pager.getState().refreshing).toBe(false))
+    expect(pager.getState().rows.some((r) => r.id === row.id)).toBe(true)
+  })
+
   it('cancels what the pager has in flight when it is unmounted', async () => {
     const source = memorySource(small)
     const { result, unmount } = renderHook(() => useLedgerData(source))

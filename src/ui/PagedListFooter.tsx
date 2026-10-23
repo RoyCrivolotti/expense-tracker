@@ -38,9 +38,11 @@ export function PagedListFooter({ pager }: { pager: TransactionPager }) {
   return (
     <div ref={end} tabIndex={-1} className={styles.footer}>
       {error !== null && rows.length > 0 ? (
-        <button type="button" className={styles.retry} onClick={retry}>
-          {refreshFailed ? "Couldn't update the list. Try again" : "Couldn't load more. Try again"}
-        </button>
+        <span role="alert">
+          <button type="button" className={styles.retry} onClick={retry}>
+            {refreshFailed ? "Couldn't update the list. Try again" : "Couldn't load more. Try again"}
+          </button>
+        </span>
       ) : loading && rows.length > 0 ? (
         <span>Loading…</span>
       ) : null}
@@ -51,8 +53,10 @@ export function PagedListFooter({ pager }: { pager: TransactionPager }) {
 /** Drawn in place of the list when the first rows could not be read. */
 export function ListFailed({ onRetry }: { onRetry: () => void }) {
   return (
-    <EmptyState actionLabel="Try again" onAction={onRetry}>
-      Couldn&apos;t load transactions.
-    </EmptyState>
+    <div role="alert">
+      <EmptyState actionLabel="Try again" onAction={onRetry}>
+        Couldn&apos;t load transactions.
+      </EmptyState>
+    </div>
   )
 }

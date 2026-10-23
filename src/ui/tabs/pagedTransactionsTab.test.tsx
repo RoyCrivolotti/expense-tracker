@@ -129,6 +129,35 @@ describe('the Transactions tab over a list read in pages: the header', () => {
   })
 })
 
+describe('the Transactions tab over a list read in pages: before anything is known', () => {
+  const announced = () => document.querySelector('p[role="status"]')!.textContent
+
+  it('has no count and no net spend in the header, and says nothing to a screen reader, until the first rows or figures come', async () => {
+    const source = memorySource(ledger)
+    const held = gate(source)
+    held.open.pages = false
+    held.open.summaries = false
+    renderTab(source)
+    expect(await screen.findByText('Loading…')).toBeInTheDocument()
+    expect(stats().getAllByText('—')).toHaveLength(2)
+    expect(stats().queryByText(/items?$/)).toBeNull()
+    expect(announced()).toBe('')
+    await held.release()
+    expect(await stats().findByText(/^\d+\+? items?$/)).toBeInTheDocument()
+    await waitFor(() => expect(announced()).toMatch(/transactions match$/), { timeout: 3000 })
+  })
+
+  it('says nothing to a screen reader when the first page could not be read, and the failure is an alert with a way to try again', async () => {
+    const source = memorySource(ledger)
+    source.readTransactionPage = () => Promise.reject(new Error('offline'))
+    renderTab(source)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't load transactions.")
+    expect(within(alert).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(announced()).toBe('')
+  })
+})
+
 describe('the Transactions tab over a list read in pages: a filter that changes', () => {
   it('keeps the old rows and figures on screen, dimmed and marked busy, until the new ones come', async () => {
     const source = memorySource(ledger)
@@ -214,7 +243,7 @@ describe('the Transactions tab over a list read in pages: a write', () => {
     source.dataset = renamed(target.id)
     const gated = gate(source)
     gated.open.pages = false
-    act(() => pager.refresh({ summary: true }))
+    act(() => { void pager.refresh({ summary: true }) })
     expect(pager.getState().refreshing).toBe(true)
     expect(pager.getState().rows).toBe(held)
     expect(screen.queryByText('Loading…')).toBeNull()
@@ -230,8 +259,10 @@ describe('the Transactions tab over a list read in pages: a write', () => {
     await waitFor(() => expect(pager.getState().rows).toHaveLength(10))
     const read = source.readTransactionPage.bind(source)
     source.readTransactionPage = () => Promise.reject(new Error('offline'))
-    act(() => pager.refresh())
+    act(() => { void pager.refresh() })
     const retry = await screen.findByRole('button', { name: "Couldn't update the list. Try again" })
+    expect(retry.closest('[role="alert"]')).not.toBeNull()
+    expect(getComputedStyle(retry).minHeight).toBe('44px')
     retry.focus()
     source.readTransactionPage = read
     fireEvent.click(retry)

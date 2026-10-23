@@ -82,7 +82,9 @@ has to decide what a window may show.
   rows the patch cannot show. A plan's instalments are inserted by the server when the ledger is read, so for a plan the
   list is read after that read has finished (`afterPlanWrite`). A read in the background that fails (after a cascade, of a month or of a receipt list)
   is kept in `SessionState.error` until a refresh works, because what is shown may then be out of date;
-  `useLedgerData` returns it as `backgroundError` for the app to tell the user.
+  `useLedgerData` returns it as `backgroundError` for the app to tell the user. So is a read of the list that failed
+  after a write or a refresh, until a read of it works, and a refresh whose read of the list failed finishes as failed
+  and not as updated.
 - **A write to rows the browser may not hold is followed by a read of what it moved, not by a patch.** The patch
   functions only map the rows the session holds, so an edit or delete of a row on a page of the list, or of the rows a
   filter matches, whose month is held only as a sum would change nothing here: not the month's sums, not the series, not
@@ -134,11 +136,16 @@ has to decide what a window may show.
   after the transactions of their day, so `pagedListRows` leaves one out until a row of an older day, or the end of the
   list, shows that no more of its day is coming. A screen calls `refresh()` after a write: paging by position cannot
   show a row that moved to a place behind the cursor or drop one deleted from the pages already read. `refresh()` reads
-  the list again down to the depth it had and swaps it in when every row is there, so the reader keeps their place.
-  While no screen is attached (`attach()`) a refresh is only noted, and made when one attaches. Only a change of the
+  the list again down to the depth it had and swaps it in when every row is there, so the reader keeps their place, and
+  settles when that read has ended: `refreshFailed` says it failed, and then the list on screen is the list before the
+  write. Before that read answers, a write that is known is put into the rows held, by id (`patchRows`, from what the
+  patch did to the rows): gone rows go, changed rows are replaced or leave a list their edit took them out of, and a new
+  row comes in if the filter matches it and it is before the end of what was read. The read replaces all of it. While no
+  screen is attached (`attach()`) a refresh is only noted, and made when one attaches. Only a change of the
   search text waits for the settle time, any other change of filter is read at once, and a read that a newer filter
   outlived is cancelled. The count and net spend come from `GET /transactions/summary`, apart from the rows, when the
-  filter changes or a refresh asks, and `summaryStale` says when they may no longer fit the rows.
+  filter changes or a refresh asks, and `summaryStale` says when they may no longer fit the rows. With no row and no
+  figures there is no count (`ListView.count` is null) and the header and the announcement say nothing.
 - **In ledger mode the Transactions tab asks the model for its list, and the list is read in pages.** The model
   carries a `pagedList` (a `TransactionPager` and the hook that gives the tab its rows), and a model without one is
   listed from the rows it holds as always, so nothing changes with the mode off. The tab hands its filter to the

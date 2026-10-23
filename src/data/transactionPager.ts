@@ -3,6 +3,8 @@ import type { TransactionSummaryPart } from '../domain/data/ledgerParts'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
 import { MAX_PAGE_LIMIT } from '../domain/data/transactionQuery'
+import { frozen, START } from './pagerParts'
+import { patchedRows, type RowChanges } from './pagerPatch'
 import { transactionQueryString } from './transactionQueryString'
 import { reason } from './reason'
 
@@ -49,27 +51,7 @@ export interface PagerOptions {
   settleMs?: number
 }
 
-const START: PagerState = {
-  rows: [],
-  complete: false,
-  loading: false,
-  refreshing: false,
-  stale: false,
-  error: null,
-  refreshFailed: false,
-  summary: null,
-  summaryStale: false,
-}
 const PAGE_SIZE = 100
-
-/** A copy of the filter the caller cannot change under a cursor that was cut from it. */
-function frozen(filter: TxnFilter): TxnFilter {
-  return Object.freeze({
-    ...filter,
-    ...(filter.labelIds ? { labelIds: Object.freeze([...filter.labelIds]) as number[] } : {}),
-    ...(filter.queryAmount ? { queryAmount: Object.freeze({ ...filter.queryAmount }) } : {}),
-  })
-}
 
 /** What the list was doing when a burst of typing began, to put back if the burst ends where it started. */
 interface Parked {
@@ -90,7 +72,8 @@ interface Parked {
  * Paging by position has a consequence the pager does not hide. A row edited after its page was read can be
  * sent again by a later page, at its new place, and the later copy replaces the one already held. A row that
  * moves to a place behind the cursor, or arrives there, is not in the pages already read, and one deleted from
- * them stays. **A screen calls `refresh()` after a write.** That reads the list again from its first page down
+ * them stays. **A screen calls `refresh()` after a write**, and may put what the write did to rows into the rows held first
+ * (`patchRows`), which the read replaces. That reads the list again from its first page down
  * to the depth it had, in as few requests as the server allows, and swaps it in when every row is there, so the
  * reader keeps their place and the rows are what the filter matches at that moment and nothing else. A write made
  * after that read is not seen until the next `refresh()`. While no screen is attached (`attach`) a refresh is
@@ -147,7 +130,7 @@ export class TransactionPager {
     this.attached += 1
     if (this.dirty && this.filter && !this.waiting) {
       this.dirty = false
-      this.reload(0, true)
+      void this.reload(0, true)
     }
     return () => {
       this.attached -= 1
@@ -180,20 +163,34 @@ export class TransactionPager {
 
   /**
    * Reads the list again from its first page to the depth it has, with the rows already read on screen until all
-   * of them are in. Call it after a write. The summary is read again only if `summary` is true.
+   * of them are in. Call it after a write. The summary is read again only if `summary` is true. Settles when that
+   * read has ended, with whether it worked, or at once with null when none was made: no screen shows the list, there
+   * is no filter, or the list is of another filter now. That is not a failure, whatever an earlier read left in
+   * `refreshFailed`.
    */
-  refresh({ summary = false }: { summary?: boolean } = {}): void {
+  async refresh({ summary = false }: { summary?: boolean } = {}): Promise<boolean | null> {
     if (this.waiting) {
       const returning = this.waiting.key === this.key
       this.settle()
-      if (!returning) return
+      if (!returning) return null
     }
-    if (!this.filter) return
+    if (!this.filter) return null
     if (this.attached === 0) {
       this.dirty = true
-      return
+      return null
     }
-    this.reload(this.state.rows.length, summary)
+    return this.reload(this.state.rows.length, summary).then(() => !this.state.refreshFailed)
+  }
+
+  /**
+   * Puts what a write did to rows into the rows held, by id, so that the list shows it before the read that follows.
+   * The read is what is true and replaces this (`patchedRows`). Nothing is done while the list is being typed at or is
+   * of another filter, and the figures are marked, since the count and the net spend are the ones before the write.
+   */
+  patchRows(changes: RowChanges): void {
+    const { rows, complete, stale } = this.state
+    const next = this.filter && !this.waiting && !stale ? patchedRows(rows, this.filter, complete, changes) : rows
+    if (next !== rows) this.set({ rows: next, summaryStale: this.state.summary !== null })
   }
 
   /**
@@ -262,7 +259,7 @@ export class TransactionPager {
     const parked = this.parked
     this.parked = null
     if (parked?.idle) this.set({ stale: false, error: parked.error, refreshFailed: parked.refreshFailed })
-    else this.reload(this.state.rows.length, true)
+    else void this.reload(this.state.rows.length, true)
   }
 
   /** Cancels the reads of the list so far: their answers no longer matter. */
@@ -292,12 +289,13 @@ export class TransactionPager {
   }
 
   /** The same list read again, `depth` rows of it (a first page for none). */
-  private reload(depth: number, summary: boolean): void {
+  private reload(depth: number, summary: boolean): Promise<void> {
     const figures = summary || this.summaryPending || this.state.summary === null
     this.supersede()
-    void this.read(depth, 'refresh')
+    const done = this.read(depth, 'refresh')
     if (figures) void this.readSummary()
     else this.set({ summaryStale: true })
+    return done
   }
 
   /**
