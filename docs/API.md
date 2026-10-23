@@ -255,10 +255,13 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   A body of JSON `null` is a 400 on every route that reads one.
 
 **Cost in D1 statements**, counted on a real D1 through the real middleware, with its access checks stubbed (about five
-more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20), an edit by id is 3n + 5 (155 for 50; each
-updated row is read back and its status derived with three queries), and a delete is 6 for 1 row and for 20. The SQLite
-stand-in counts one more for each of these (6n + 5, 3n + 6 and 7). Only the stand-in has counted the edit by filter and
-the labels route, at 7 and 6 however many rows. Cloudflare documents a limit of 50 queries per invocation on the Free
-plan, which was not enforced when probed ([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean
-for a large request if it is, and how to check again, is in
+more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20) and a delete is 6 for 1 row and for 20. The
+SQLite stand-in counts one more for each of these (6n + 5 and 7). Only the stand-in has counted the edit by id, the edit
+by filter and the labels route. An edit by id is flat in the number of rows, since they are read back in one query with
+status and labels derived in SQL: 6 on the stand-in for a category patch, and 5 for a description or date, 7 for a flag
+and 9 for a settle, about 5 on D1 by taking the read-back's 3n off the count made before it was batched, not counted
+there again. The edit by filter and the labels route are 7 and 6 however many rows. Cloudflare documents a limit of 50
+queries per invocation on the Free plan, which was not enforced when probed
+([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean for a large request if it is, and how to
+check again, is in
 [MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).

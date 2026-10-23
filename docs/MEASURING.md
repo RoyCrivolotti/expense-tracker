@@ -52,10 +52,9 @@ in the D1 dashboard: a large excess means something else wrote.
 The statements each bulk route issues are counted in [API.md](./API.md#bulk-transaction-routes), and Cloudflare
 documents a limit of 50 queries per invocation on the Free plan. On the one Free-plan account where it was probed the
 limit was not enforced ([SCALING.md](./SCALING.md#observed-on-a-free-account)). If it is enforced, a create of more than
-6 rows or an edit by id of more than 13 would exceed it whichever way a batch counts, because the rows are inserted, or
-read back, one at a time. Those thresholds rest on the access checks, an estimate of about five statements. A request
-at the 500-id cap, which is 1,505 statements as an edit by id, was not run: the probe issued 60 queries, so the cap has
-not been seen to fail or to succeed.
+6 rows would exceed it whichever way a batch counts, because the rows are inserted one at a time; an edit by id or a
+delete is a constant number of statements. That threshold rests on the access checks, an estimate of about five
+statements. The probe issued 60 queries, so the limit has not been seen to fail or to succeed above 50.
 
 To check again, or on another account, a throwaway draft PR adds a route that runs 60 `SELECT 1` in one `batch()`
 (`?mode=batch`) or as 60 separate calls (`?mode=separate`). Batch passes while separate fails at the 51st: a batch counts
