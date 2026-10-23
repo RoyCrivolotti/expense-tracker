@@ -51,6 +51,7 @@ export interface PagerOptions {
   settleMs?: number
 }
 
+const trace = (...parts: unknown[]): void => { ((globalThis as { __trace?: string[] }).__trace)?.push(parts.join(' ')) }
 const PAGE_SIZE = 100
 
 /** What the list was doing when a burst of typing began, to put back if the burst ends where it started. */
@@ -169,6 +170,7 @@ export class TransactionPager {
    * `refreshFailed`.
    */
   async refresh({ summary = false }: { summary?: boolean } = {}): Promise<boolean | null> {
+    trace('refresh', this.waiting !== null, this.filter !== null, this.attached)
     if (this.waiting) {
       const returning = this.waiting.key === this.key
       this.settle()
@@ -264,6 +266,7 @@ export class TransactionPager {
 
   /** Cancels the reads of the list so far: their answers no longer matter. */
   private supersede(): void {
+    trace('supersede', this.generation + 1, (new Error().stack ?? '').split('\n')[2]?.trim().slice(0, 90))
     this.generation += 1
     this.abort.abort()
     this.abort = new AbortController()
@@ -305,6 +308,7 @@ export class TransactionPager {
   private async read(depth: number, mode: 'filter' | 'refresh'): Promise<void> {
     const { generation, filter } = this
     const { signal } = this.abort
+    trace('read start', generation, mode, depth)
     if (!filter) return
     const refreshing = mode === 'refresh'
     this.set({ loading: !refreshing, refreshing, error: null, refreshFailed: false, ...(refreshing ? { stale: false } : {}) })
@@ -318,12 +322,13 @@ export class TransactionPager {
           signal,
           ...(cursor !== undefined ? { cursor } : {}),
         })
-        if (generation !== this.generation) return
+        if (generation !== this.generation) return trace('read superseded after page', generation, this.generation)
         const fresh = new Set(page.items.map((row) => row.id))
         rows = [...rows.filter((row) => !fresh.has(row.id)), ...page.items]
         cursor = page.nextCursor ?? undefined
       } while (cursor !== undefined && rows.length < depth)
     } catch (error) {
+      trace('read caught', generation, this.generation, String(error))
       if (generation !== this.generation) return
       // The rows of another filter are no answer to this one; the rows of this one are only out of date.
       this.set({
@@ -335,6 +340,7 @@ export class TransactionPager {
       return
     }
     this.cursor = cursor
+    trace('read done', generation, rows.length)
     this.set({ rows, complete: cursor === undefined, loading: false, refreshing: false, stale: false })
   }
 

@@ -643,6 +643,8 @@ describe('useLedgerData, the list read in pages', () => {
 
     it.each(Array.from({ length: 40 }, (_, i) => i))('reports a refresh whose list read worked as updated, and takes an earlier failure away (diagnostic run %i)', async () => {
       const { source, result, pager } = await started()
+      const trail: string[] = []
+      ;(globalThis as { __trace?: string[] }).__trace = trail
       const read = source.readTransactionPage.bind(source)
       source.readTransactionPage = () => Promise.reject(new Error('list down'))
       await afterRefresh(result)
@@ -657,6 +659,7 @@ describe('useLedgerData, the list read in pages', () => {
         backgroundError: result.current.backgroundError,
         pager: { ...flags, summary: undefined, rows: rows.length },
         calls: source.calls.slice(-16),
+        trail,
       })
       expect(result.current.refreshOutcome, detail).toBe('ok')
       expect(result.current.backgroundError).toBeNull()

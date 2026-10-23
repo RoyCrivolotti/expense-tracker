@@ -174,10 +174,13 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       setAttempt((n) => n + 1)
       return
     }
+    const trace = (m: string): void => { ((globalThis as { __trace?: string[] }).__trace)?.push(m) }
+    trace('reload')
     const startedAt = Date.now()
     setRefreshing(true)
     setRefreshOutcome(null)
     const finish = async (outcome: RefreshOutcome) => {
+      trace(`finish ${outcome} alive=${alive.current}`)
       const wait = MIN_REFRESH_MS - (Date.now() - startedAt)
       if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
       if (!alive.current) return
@@ -186,8 +189,10 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     }
     session.refresh().then(
       async () => {
+        trace('session.refresh resolved')
         keep(session, owner, settled.current)
         const worked = await pager.refresh({ summary: true })
+        trace(`pager.refresh settled ${String(worked)}`)
         noteRead(worked)
         return finish(worked === false ? 'fail' : 'ok')
       },
