@@ -1,0 +1,6 @@
+# Headers Cloudflare Pages adds to the static files. The API sets its own (functions/api/_middleware.ts).
+# Deliberately no Content-Security-Policy: the app and its service worker have not been soaked under one.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: same-origin
