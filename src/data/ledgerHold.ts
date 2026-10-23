@@ -33,8 +33,9 @@ export interface HeldLedger {
   rowCount: number
   attachmentCounts: AttachmentCounts
   /**
-   * The sums of the unpinned rows of every month, held or not (a held month's are kept so that it can be
-   * given up again). Null when every month is held as rows, as for a ledger under the size policy.
+   * The sums of the unpinned rows of the months that were not read as rows, and of those a write has touched since
+   * (a held month's are kept so that it can be given up again; the months the first read took as rows have none
+   * until then). Null when every month is held as rows, as for a ledger under the size policy.
    */
   cells: MonthCell[] | null
   /** The months held as real rows, with their rows, least recently used first. */
@@ -142,16 +143,18 @@ export function touchMonths(held: HeldLedger, months: readonly string[]): HeldLe
 }
 
 /**
- * Gives up the least recently used months until at most `cap` are held, never one in `keep`. A ledger held in
- * full gives up nothing: it has no sums to fall back on.
+ * Gives up the least recently used months until at most `cap` are held, never one in `keep` and never one with no
+ * sums, since giving it up would take it out of the totals (a month the first read took as rows has none until a
+ * write touches it). A ledger held in full gives up nothing: it has no sums to fall back on.
  */
 export function evictMonths(held: HeldLedger, keep: Iterable<string>, cap: number): HeldLedger {
   if (held.cells === null || held.rows.size <= cap) return held
   const protectedMonths = new Set(keep)
+  const summed = new Set(held.cells.map((cell) => cell.budgetMonth))
   const rows = new Map(held.rows)
   for (const month of held.rows.keys()) {
     if (rows.size <= cap) break
-    if (!protectedMonths.has(month)) rows.delete(month)
+    if (!protectedMonths.has(month) && summed.has(month)) rows.delete(month)
   }
   return { ...held, rows }
 }

@@ -115,11 +115,38 @@ describe('loadLedger, requests', () => {
     expect(source.calls[1]).toMatch(/^months:/)
   })
 
-  it('asks for the sums of every month and the rows of the window when it is windowed', async () => {
+  it('asks for the sums of the months outside the window and the rows of the window when it is windowed', async () => {
     const source = memorySource(dataset)
     await loadLedger(source, { policy: WINDOWED })
     expect(source.calls.filter((call) => call.startsWith('cube:'))).toHaveLength(1)
     expect(source.calls.filter((call) => call.startsWith('months:'))).toHaveLength(1)
+  })
+
+  /** The calendar ranges of the calls that start with `prefix`. */
+  const rangesOf = (source: { calls: string[] }, prefix: string) =>
+    source.calls.filter((call) => call.startsWith(prefix)).map((call) => {
+      const [from = '', to = ''] = call.slice(prefix.length).split('..')
+      return { from, to }
+    })
+
+  it('asks for the sums of every month, those it reads as rows too, unless it is told this is the first read', async () => {
+    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+    const source = memorySource(dataset)
+    await loadLedger(source, { policy: WINDOWED })
+    const asSums = rangesOf(source, 'cube:')
+    expect(asSums).toEqual([{ from: months[0], to: months.at(-1) }])
+  })
+
+  it.each([0, 20, 40, 55])('asks for the sums of exactly the months no rows request reads on a first read, with month %i shown', async (index) => {
+    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+    const source = memorySource(dataset)
+    await loadLedger(source, { policy: WINDOWED, viewed: months[index]!, omitHeldSums: true })
+    const asRows = rangesOf(source, 'months:')
+    const asSums = rangesOf(source, 'cube:')
+    const within = (month: string, list: { from: string; to: string }[]) => list.some((r) => month >= r.from && month <= r.to)
+    for (const month of months) {
+      expect(within(month, asRows) !== within(month, asSums), `${month} is read once, as rows or as sums`).toBe(true)
+    }
   })
 })
 

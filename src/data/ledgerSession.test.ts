@@ -141,6 +141,27 @@ describe('LedgerSession, opening and looking at months', () => {
     expect(listsOf(ledgerOfHeld(held!))).toEqual(listsOf(buildLedger(dataset, held!.rows.keys())))
   })
 
+  it('does not give up the months the first read took as rows, which have no sums, though the cap is passed', async () => {
+    const session = new LedgerSession(memorySource(dataset), { policy: WINDOWED, maxHeldMonths: 20 })
+    await session.open(months[30]!)
+    for (const month of [months[5]!, months[45]!, months[12]!, months[22]!]) await session.view(month)
+    const { held } = session.getState()
+    expect(held!.rows.has(months[30]!)).toBe(true)
+    expect(listsOf(ledgerOfHeld(held!))).toEqual(listsOf(buildLedger(dataset, held!.rows.keys())))
+  })
+
+  it('leaves the sums of the months it reads as rows out of its first read, and reads every month’s on a refresh', async () => {
+    const source = memorySource(dataset)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open()
+    const sums = () => new Set(session.getState().held!.cells!.map((cell) => cell.budgetMonth))
+    const heldAsRows = [...session.getState().held!.rows.keys()]
+    expect(heldAsRows.length).toBeGreaterThan(0)
+    for (const month of heldAsRows) expect(sums().has(month), month).toBe(false)
+    await session.refresh()
+    for (const month of session.getState().held!.months) expect(sums().has(month), month).toBe(true)
+  })
+
   it('reads the ledger again when a month it reads comes back under another revision', async () => {
     const source = memorySource(dataset)
     const session = new LedgerSession(source, { policy: WINDOWED })
