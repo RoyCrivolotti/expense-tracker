@@ -77,6 +77,23 @@ describe('ImportDataSection, a file of more rows than a request takes', () => {
     await screen.findAllByText('Imported 250 transactions')
   })
 
+  it('does not let another file be chosen while the import goes on, since its rows and its stop would replace the first file’s', async () => {
+    let release: () => void = () => undefined
+    let calls = 0
+    const { container } = renderSection(() => {
+      calls += 1
+      return calls === 2 ? new Promise<void>((resolve) => (release = resolve)) : Promise.resolve()
+    })
+    await chooseFile(container, csvOf(250))
+    expect(screen.getByRole('button', { name: 'Choose CSV file' })).toBeEnabled()
+    confirm()
+    await screen.findByRole('button', { name: 'Importing… 100 of 250' })
+    expect(screen.getByRole('button', { name: 'Choose CSV file' })).toBeDisabled()
+    release()
+    await screen.findAllByText('Imported 250 transactions')
+    expect(screen.getByRole('button', { name: 'Choose CSV file' })).toBeEnabled()
+  })
+
   it('says how many were imported when a later request is refused, keeps the rest, and sends only the rest when confirmed again', async () => {
     let refuse = true
     let calls = 0

@@ -84,7 +84,7 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
         path: export from Settings first, edit, then re-import.
       </p>
       <div className={importStyles.actions}>
-        <button type="button" className={styles.addBtn} onClick={() => inputRef.current?.click()}>
+        <button type="button" className={styles.addBtn} disabled={busy} onClick={() => inputRef.current?.click()}>
           Choose CSV file
         </button>
         <button type="button" className={styles.addBtn} onClick={downloadTemplateCsv}>
