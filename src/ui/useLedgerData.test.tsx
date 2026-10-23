@@ -623,9 +623,13 @@ describe('useLedgerData, the list read in pages', () => {
     const afterRefresh = async (result: { current: ReturnType<typeof useLedgerData> }) => {
       vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
       act(() => result.current.reload())
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(900)
-      })
+      // The refresh ends when its reads have answered and the least time it shows has passed, so the clock is moved on
+      // until it has, however many turns of the event loop that takes, and not by one amount fixed in advance.
+      for (let moved = 0; moved < 5_000 && result.current.refreshOutcome === null; moved += 100) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100)
+        })
+      }
       vi.useRealTimers()
     }
 
