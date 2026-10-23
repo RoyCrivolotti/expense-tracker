@@ -7,10 +7,10 @@ import {
   EXPORT_CSV_TYPES,
 } from '../../domain/data/exportCsvFormat'
 import { parseExportCsv, type ParseExportResult } from '../../domain/data/parseExportCsv'
-import { useToast } from '../hooks/useToast'
 import { Money } from '../components/Money'
 import styles from '../definitions/definitions.module.css'
 import importStyles from './ImportDataSection.module.css'
+import { useImportRows } from './useImportRows'
 
 interface ImportDataSectionProps {
   model: ExpenseModel
@@ -59,36 +59,18 @@ function downloadTemplateCsv(): void {
 }
 
 export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
-  const { showToast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [result, setResult] = useState<ParseExportResult | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<string | null>(null)
+  const { busy, progress, done, stopped, confirm, clear } = useImportRows(actions, result, setResult)
 
   const onFile = useCallback(
     async (file: File) => {
-      setDone(null)
+      clear()
       const text = await file.text()
       setResult(parseExportCsv(text, model.dataset))
     },
-    [model.dataset],
+    [clear, model.dataset],
   )
-
-  const onConfirm = useCallback(async () => {
-    if (!result || result.rows.length === 0) return
-    const count = result.rows.length
-    setBusy(true)
-    try {
-      await actions.createTransactions(result.rows.map((r) => r.input))
-      setDone(`Imported ${count} transactions`)
-      setResult(null)
-      showToast(`Imported ${count} transactions`, 'success')
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Import failed', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }, [actions, result, showToast])
 
   const types = EXPORT_CSV_TYPES.join(', ')
 
@@ -140,11 +122,16 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
             type="button"
             className={styles.addBtn}
             disabled={busy || result.rows.length === 0}
-            onClick={() => void onConfirm()}
+            onClick={() => void confirm()}
           >
-            {busy ? 'Importing…' : 'Confirm import'}
+            {busy ? `Importing… ${progress} of ${result.rows.length}` : 'Confirm import'}
           </button>
         </>
+      )}
+      {stopped && (
+        <p className={importStyles.stopped} role="alert">
+          {stopped}
+        </p>
       )}
       {done && <p className={importStyles.done}>{done}</p>}
     </div>
