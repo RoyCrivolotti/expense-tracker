@@ -22,6 +22,14 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 | **Engine** | Derived transaction status (never stored), cash recon gap, deferred card settlement |
 | **Offline** | IndexedDB snapshot, read-only banner, global refresh |
 
+## Engineering notes
+
+- **Layers.** The calculations are pure TypeScript in `src/domain` with no I/O. The Cloudflare adapters (`functions/`) and the React UI (`src/ui`) sit around them; the rules are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- **The engines are the oracle.** `src/domain/engine` is the reference for every number the app shows, and anything else that computes one (the SQL, a ledger held in parts) is tested against it.
+- **Differential tests.** The SQL and the engines are compared on the same data, and so is a ledger held in parts against the whole dataset (`ledgerDifferential.test.ts`, `ledgerSweep.test.ts`), with every allowed difference listed in `src/testing/intendedDifferences.ts`.
+- **Reading a ledger in parts is behind a switch** that is off by default (`?ledger=on` turns it on for one browser). [docs/LEDGER-MODE.md](docs/LEDGER-MODE.md) describes it, and [docs/SCALING.md](docs/SCALING.md) the limits it is designed around.
+- **Docs.** [docs/README.md](docs/README.md) lists every doc and who it is for.
+
 ## Screenshots
 
 Fixture data (`fixtures/demo-expenses.csv`). A **full gallery** (Goals deep dives, transaction filter states, access admin, light mode) lives in [docs/SCREENSHOT-GALLERY.md](./docs/SCREENSHOT-GALLERY.md).
@@ -60,10 +68,12 @@ Regenerate: `npm run capture:screenshots` (Playwright + Chromium). Writes to `do
 
 ## Local dev
 
+Needs Node 22.13 or later (`.nvmrc` pins 22.23.2, and CI runs Node 22).
+
 ```bash
 git clone https://github.com/RoyCrivolotti/expense-tracker.git
 cd expense-tracker
-npm install
+npm ci
 npm run dev
 ```
 

@@ -5,6 +5,14 @@ pages and the writes, with the rules each one keeps. What each route answers is 
 is what it is in [SCALING.md](./SCALING.md) and [the decision record](./decisions/ledger-model.md). The rules that hold
 for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+**Status.** The app holds a ledger only in full: up to `FULL_HYDRATION_ROW_LIMIT` (5,000) rows, and a larger ledger
+hands back to the whole-dataset app. Behind the switch it is loaded in parts and its Transactions list is read in pages.
+The windowed behaviour described below (a window of months with per-month sums, the series, older descriptions, the
+server's usage counts, reading back writes to rows that are not held) is built and tested but cannot occur, because
+`LedgerExpensesApp` passes `refuseWindow: true`. Lifting the limit changes four places together (the constant,
+`choose()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
+has to decide what a window may show.
+
 ## The switch and the hand-back
 
 - **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
@@ -143,10 +151,11 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   labels go first, as adding them never changes which rows match, and the revision is read again between the two
   requests. A write from another tab in between that swaps one matching row for another leaves the count as it was, so
   the edit can reach a row the user was not shown; the server has no single request for both. Rows chosen one by one
-  are edited through the filter too when they are exactly the rows it matches: that costs about a statement for every
-  twenty rows. An edit by id is a handful of statements however many ids it names, but nothing larger than 100 has been
-  run on D1, so by id a request names at most 100 until one has. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted elsewhere,
-  so it counts it as not shown.
+  are edited through the filter too when they are exactly the rows it matches: that costs the same statements however
+  many rows there are ([API.md](./API.md#bulk-transaction-routes) has the count). An edit by id is a handful of
+  statements however many ids it names, but nothing larger than 100 has been run on D1, so by id a request names at most
+  100 until one has. A list that does not hold every row cannot tell a chosen row it no longer shows from one deleted
+  elsewhere, so it counts it as not shown.
 
 ## What a window cannot work out from its rows
 

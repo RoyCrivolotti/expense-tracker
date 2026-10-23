@@ -167,8 +167,8 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   from the data, not the DOM. The browser's Find cannot see rows that are not drawn, and the search box can. The
   geometry is in `src/ui/hooks/windowLayout.ts`.
 - **A screen adds amounts from `sumsOf(model)` and lists or searches rows from `model.dataset`.** Only a model that holds
-  every row has the same array for both, and ledger mode can hold a window, so reading the wrong one is a bug only there
-  ([two row lists](./LEDGER-MODE.md#reading-in-parts)).
+  every row has the same array for both. Ledger mode refuses a window today, so reading the wrong one is a bug that
+  shows once a window is allowed ([two row lists](./LEDGER-MODE.md#reading-in-parts)).
 - **A write to rows the browser may not hold is read back, not patched.** The patch functions map only the rows the
   session holds, so `LedgerSession.patch` takes what the write reached
   ([the session](./LEDGER-MODE.md#the-session)).
