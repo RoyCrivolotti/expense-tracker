@@ -8,8 +8,8 @@ import { sortedMonths } from '../engine/dates'
 export const HYDRATED_DATA_MONTHS = 13
 
 /**
- * A ledger of at most this many rows hydrates every month. Worker CPU is the first limit a larger
- * ledger meets (docs/SCALING.md), so below this the extra code path buys nothing and the ledger behaves
+ * A ledger of at most this many rows hydrates every month. Worker CPU is the first documented limit a larger
+ * ledger would meet (docs/SCALING.md), so below this the extra code path buys nothing and the ledger behaves
  * exactly as the whole dataset does.
  */
 export const FULL_HYDRATION_ROW_LIMIT = 5_000

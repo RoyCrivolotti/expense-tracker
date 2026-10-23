@@ -459,6 +459,34 @@ describe('an invocation killed part way', () => {
     }
   }, SLOW)
 
+  it('and so is one that fills a part inside a single invocation, so the save after the part is held to its order', async () => {
+    // The test above reads 4 rows an invocation, so it never reaches the save that `drain` makes once SAVE_ROWS have been
+    // read. If that save came before the part that holds those rows, a kill between the two calls would leave a state
+    // that counts up to SAVE_ROWS rows no part holds. The backup would still finish and write its manifest, so the day
+    // would count as done, and only the restore would refuse it ("the manifest records N rows and the parts hold 0").
+    const source = await sourceOf('fills a part', syntheticLedger({ months: 12, perMonth: 100, seed: 51 }))
+    expect(source.dataset.transactions.length).toBeGreaterThan(2 * SAVE_ROWS)
+    const reference = memoryBackupStore()
+    await untilComplete(depsOf(source, reference))
+    const calls = reference.total()
+
+    for (let point = 0; point < calls; point += 1) {
+      const store = memoryBackupStore()
+      const deps = depsOf(source, store)
+      store.killAfter(point)
+      for (let i = 0; i < 400; i += 1) {
+        const outcome = await runChunkedBackups(deps, clockOf(DAY)).catch((error: Error) => error)
+        if (outcome instanceof Error) {
+          store.killAfter(null)
+          continue
+        }
+        if (outcome.complete) break
+      }
+      store.killAfter(null)
+      expect(settled(await restoredFrom(store, source.owner)), `killed after ${point} calls`).toEqual(settled(source.dataset))
+    }
+  }, SLOW)
+
   it('and a state that cannot be read starts the run again over its own parts', async () => {
     const store = memoryBackupStore()
     const deps = depsOf(written, store, { chunked: { enabled: true, maxOperations: 14, maxRows: 30 } })

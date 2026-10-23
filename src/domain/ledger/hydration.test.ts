@@ -13,6 +13,16 @@ const run = (first: number, count: number) =>
     return `${2024 + Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
   })
 
+describe('FULL_HYDRATION_ROW_LIMIT', () => {
+  // Every other test uses the constant by name, so changing it would pass them all. This one makes a change deliberate.
+  // Lifting it touches four places together: the constant, `choose()` in `LedgerExpensesApp.tsx`, the
+  // `refuseWindow: true` literal there, and the offline check that the saved snapshot's `cells` is null. See
+  // docs/LEDGER-MODE.md, "The switch and the hand-back".
+  it('is 5,000 rows, the size the app hands back above', () => {
+    expect(FULL_HYDRATION_ROW_LIMIT).toBe(5_000)
+  })
+})
+
 describe('chooseHydratedMonths', () => {
   const months = run(0, 30)
 
