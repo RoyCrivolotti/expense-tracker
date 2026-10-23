@@ -88,11 +88,10 @@ async function readPlanned(
     return fresh
   })
   const everyMonth = hydrated.length === reference.months.length
-  const cubeRanges = omitHeldSums
-    ? planCubeRangesOutside(reference.months, monthsReadAsRows(reference.months, rowRanges))
-    : everyMonth
-      ? []
-      : planCubeRanges(reference.months)
+  const outside = omitHeldSums ? planCubeRangesOutside(reference.months, monthsReadAsRows(reference.months, rowRanges)) : []
+  // A ledger asked for as a window keeps the sums that say it is one, even when the rows request that bridged its
+  // windows happened to cover every month: it is small enough for that, so the sums cost nothing.
+  const cubeRanges = everyMonth ? [] : outside.length > 0 ? outside : planCubeRanges(reference.months)
   const cube = cubeRanges.map(async (range) => {
     const kept = held.cube.get(keyOf(range))
     if (kept?.every(current)) return kept

@@ -162,6 +162,16 @@ describe('LedgerSession, opening and looking at months', () => {
     for (const month of session.getState().held!.months) expect(sums().has(month), month).toBe(true)
   })
 
+  it('still holds the sums that mark a window when one rows request covers every month of a small ledger', async () => {
+    // Fifteen months asked for as a window and its newest year come as one request for all of them, which leaves no month for sums.
+    const small = syntheticLedger({ months: 15, perMonth: 3, seed: 2 })
+    const source = memorySource(small)
+    const session = new LedgerSession(source, { policy: WINDOWED })
+    await session.open(sortedMonths(small.transactions.map((t) => t.budgetMonth))[0])
+    expect(calls(source, 'months:')).toHaveLength(1)
+    expect(session.getState().held!.cells).not.toBeNull()
+  })
+
   it('reads the ledger again when a month it reads comes back under another revision', async () => {
     const source = memorySource(dataset)
     const session = new LedgerSession(source, { policy: WINDOWED })
