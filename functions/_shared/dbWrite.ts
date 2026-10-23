@@ -17,6 +17,7 @@ import {
 import { descriptionNorm, descriptionNormSets } from './descriptionNorm'
 import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
 import { guardSql, isGuardFailure } from './batchGuard'
+import { getTransactionsByIds } from './dbTransactionQuery'
 import { HttpError } from './http'
 import { IN_ID_LIST, idList } from './sqlIdList'
 import {
@@ -601,14 +602,9 @@ export async function bulkUpdateTransactions(
 ): Promise<Transaction[]> {
   if (ids.length === 0) return []
   await runBulkBatch(env, await planBulkUpdate(env, owner, ids, patch))
-  const { results } = await env.DB.prepare(`SELECT * FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`)
-    .bind(owner, idList(ids))
-    .all<TxnRow>()
-  const transactions: Transaction[] = []
-  for (const row of results) {
-    transactions.push(await deriveOne(env, owner, toStoredTxn(row)))
-  }
-  return transactions
+  // One read for all the rows, with status and labels derived in SQL, so an edit costs the same statements for 1 id
+  // as for 500.
+  return getTransactionsByIds(env, owner, ids)
 }
 
 export async function setStatementPaid(

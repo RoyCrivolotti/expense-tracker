@@ -9,6 +9,7 @@ import { useExpenseData } from './useExpenseData'
 vi.mock('../data/offlineCache', () => ({
   loadOfflineSnapshot: vi.fn().mockResolvedValue(null),
   saveOfflineSnapshot: vi.fn().mockResolvedValue(undefined),
+  forgetOfflineSnapshot: vi.fn().mockResolvedValue(undefined),
 }))
 
 const mockedLoadSnapshot = vi.mocked(loadOfflineSnapshot)
@@ -162,12 +163,27 @@ describe('useExpenseData — offline and error paths', () => {
     const load = vi.fn()
     const source: ExpenseDataSource = { canWrite: false, load }
 
-    const { result } = renderHook(() => useExpenseData(source))
+    const { result } = renderHook(() => useExpenseData(source, 'owner@example.com'))
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.fromCache).toBe(true)
     expect(result.current.snapshotAt).toBe('2026-01-01T00:00:00Z')
+    expect(mockedLoadSnapshot).toHaveBeenCalledWith('owner@example.com')
     expect(load).not.toHaveBeenCalled()
+  })
+
+  it('keeps the dataset it loaded as the signed-in owner’s copy, and as nobody’s when it is not told who that is', async () => {
+    const load = vi.fn().mockResolvedValue(emptyDataset)
+    const source: ExpenseDataSource = { canWrite: false, load }
+
+    const named = renderHook(() => useExpenseData(source, 'owner@example.com'))
+    await waitFor(() => expect(named.result.current.status).toBe('ready'))
+    expect(mockedSaveSnapshot).toHaveBeenCalledWith('owner@example.com', emptyDataset)
+
+    mockedSaveSnapshot.mockClear()
+    const anonymous = renderHook(() => useExpenseData(source))
+    await waitFor(() => expect(anonymous.result.current.status).toBe('ready'))
+    expect(mockedSaveSnapshot).not.toHaveBeenCalled()
   })
 
   it('errors when offline with no snapshot', async () => {
@@ -184,7 +200,7 @@ describe('useExpenseData — offline and error paths', () => {
     mockedLoadSnapshot.mockResolvedValue({ dataset: emptyDataset, savedAt: '2026-02-02T00:00:00Z' })
     const source: ExpenseDataSource = { canWrite: false, load: vi.fn().mockRejectedValue(new Error('boom')) }
 
-    const { result } = renderHook(() => useExpenseData(source))
+    const { result } = renderHook(() => useExpenseData(source, 'owner@example.com'))
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.fromCache).toBe(true)

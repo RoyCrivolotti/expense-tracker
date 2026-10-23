@@ -1,5 +1,6 @@
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseDataset } from '../../types'
+import { useAccountOwner } from '../hooks/accountOwner'
 import { EXIT_MS } from '../hooks/motion'
 import { OnboardingWizard } from '../onboarding/OnboardingWizard'
 import { skipOnboarding } from '../onboarding/onboardingStorage'
@@ -30,6 +31,7 @@ export function ExpensesOnboarding({
   onAdd,
   onClose,
 }: Props) {
+  const owner = useAccountOwner()
   return (
     <Presence show={open} exitMs={EXIT_MS.sheet}>
       <OnboardingWizard
@@ -41,7 +43,7 @@ export function ExpensesOnboarding({
           if (firstRun) onAdd()
         }}
         onSkip={() => {
-          skipOnboarding()
+          skipOnboarding(owner)
           onClose()
         }}
       />

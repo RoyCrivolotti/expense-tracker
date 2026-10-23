@@ -19,13 +19,14 @@ fit together is in [SCALING.md](./SCALING.md).
   label is looked up by key, so a read of n transactions visits about 3n to 5n rows, whatever number of labels the owner
   has (3n when few rows carry a label, 5n when four in ten carry one to three). D1 bills the rows visited, not the rows
   returned. A cost below that says "rows returned" means this, plus any rows a filter rules out on the way.
-- **Conditional reads.** The dataset, reference, months, cube, series and usage routes send a weak `ETag` and
-  `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before anything
-  else runs. The tag is built from the owner's revision token, which every write request replaces
+- **Conditional reads.** The dataset, reference, months, cube, series, usage and receipt list routes send a weak
+  `ETag` and `Cache-Control: private, no-cache`. A matching `If-None-Match` gets a 304 after two rows are read, before
+  anything else runs. The tag is built from the owner's revision token, which every write request replaces
   ([decision](./decisions/revision-token-and-etag.md)).
 - **Tags.** `W/"<token>-<budget month>-<DATASET_FORMAT>"` for the dataset, and `W/"<token>-<budget
-  month>-<part><PARTS_FORMAT>[-<from>..<to>]"` for a part, so a tag held for one range never matches another. A change
-  to a response's JSON shape moves the format number in [`datasetEtag.ts`](../functions/_shared/datasetEtag.ts).
+  month>-<part><PARTS_FORMAT>[-<from>..<to>]"` for a part (one transaction's receipt list ends `-txn<id>`), so a tag held
+  for one range never matches another. A change to a response's JSON shape moves the format number in
+  [`datasetEtag.ts`](../functions/_shared/datasetEtag.ts).
 - **`revision`.** A part's body starts with the token it was read under. Two responses with different `revision`s were
   read from different states of the ledger, so fetch again.
 
@@ -90,8 +91,10 @@ The receipts of one transaction, oldest first, or of every transaction the calle
   id, which is what the dataset route carries and what a screen that needs them all asks for (the storage meter). A
   non-positive or non-integer id is a 400. A transaction that is not the caller's has no receipts as far as the caller
   can tell.
-- Not conditional. Cost: the receipt rows asked for. Without a `transactionId` that is every receipt the owner has,
-  which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
+- Conditional like the ledger parts: a weak `ETag` from the owner's revision token (scoped to the transaction when
+  `transactionId` is given), `Cache-Control: private, no-cache`, and a 304 after two rows are read when `If-None-Match`
+  is current. The body stays a bare array. Cost of a 200: the receipt rows asked for. Without a `transactionId` that is
+  every receipt the owner has, which the owner's storage quota bounds (2 GB by default, roughly 10,000 receipts).
 
 ## GET /transactions/list
 
@@ -252,10 +255,13 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   A body of JSON `null` is a 400 on every route that reads one.
 
 **Cost in D1 statements**, counted on a real D1 through the real middleware, with its access checks stubbed (about five
-more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20), an edit by id is 3n + 5 (155 for 50; each
-updated row is read back and its status derived with three queries), and a delete is 6 for 1 row and for 20. The SQLite
-stand-in counts one more for each of these (6n + 5, 3n + 6 and 7). Only the stand-in has counted the edit by filter and
-the labels route, at 7 and 6 however many rows. Cloudflare documents a limit of 50 queries per invocation on the Free
-plan, which was not enforced when probed ([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean
-for a large request if it is, and how to check again, is in
+more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20) and a delete is 6 for 1 row and for 20. The
+SQLite stand-in counts one more for each of these (6n + 5 and 7). Only the stand-in has counted the edit by id, the edit
+by filter and the labels route. An edit by id is flat in the number of rows, since they are read back in one query with
+status and labels derived in SQL: 6 on the stand-in for a category patch, and 5 for a description or date, 7 for a flag
+and 9 for a settle, about 5 on D1 by taking the read-back's 3n off the count made before it was batched, not counted
+there again. The edit by filter and the labels route are 7 and 6 however many rows. Cloudflare documents a limit of 50
+queries per invocation on the Free plan, which was not enforced when probed
+([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean for a large request if it is, and how to
+check again, is in
 [MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).

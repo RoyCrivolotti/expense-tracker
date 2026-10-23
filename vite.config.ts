@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { docsCaptureMocks } from './vite.docsCapture'
+import { NAVIGATION_DENYLIST, isShellNavigation } from './scripts/pwaNavigation'
 
 function resolveBuildId(): string {
   const sha = process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA
@@ -28,11 +29,14 @@ export default defineConfig({
         // on launch so Cloudflare Access can set cookies in the PWA context (iOS
         // does not share Safari's session with the installed app).
         globPatterns: ['**/*.{js,css,svg,png,ico,webmanifest,woff2}'],
+        // `/index.html` is not in the precache above, so the route this adds throws when the worker is
+        // evaluated and the `app-shell` route after it is never registered. Both keep the API and Access
+        // prefixes out of what they answer, for the day they are registered.
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//],
+        navigateFallbackDenylist: NAVIGATION_DENYLIST,
         runtimeCaching: [
           {
-            urlPattern: ({ request }: { request: Request }) => request.mode === 'navigate',
+            urlPattern: isShellNavigation,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'app-shell',

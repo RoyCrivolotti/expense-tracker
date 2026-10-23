@@ -18,7 +18,8 @@ import { error, HttpError, json } from '../../../_shared/http'
  * It does not stop a browser from answering for the server: the bytes are cached
  * for a year under the id URL (see `serveHeaders`), so on a browser shared with
  * another account a receipt already opened in it is served from there, without
- * this check.
+ * this check. Attachment ids are one sequence for every owner, so anyone can try
+ * every id.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseNumericId(context.params, 'id')

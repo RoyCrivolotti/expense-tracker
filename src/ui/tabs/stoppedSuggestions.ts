@@ -1,7 +1,6 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import type { StoppedSeries } from '../../engine'
-
-const STORAGE_KEY = 'expense:stopped-recurring'
+import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 
 /** A series the owner told the Upcoming card to stop suggesting. */
 export interface StoppedEntry {
@@ -17,10 +16,10 @@ const NONE: StoppedEntries = {}
 
 /**
  * Held back when the browser refuses the write (a private window, a full store), so the series
- * stays stopped for as long as the page is open, if not after it.
+ * stays stopped for as long as the page is open, if not after it. One list for each key, which is one person's.
  */
-let unsaved: string | null = null
-let cache: { raw: string | null; entries: StoppedEntries } = { raw: null, entries: NONE }
+const unsaved = new Map<string, string>()
+const caches = new Map<string, { raw: string | null; entries: StoppedEntries }>()
 const listeners = new Set<() => void>()
 
 function isEntry(value: unknown): value is StoppedEntry {
@@ -44,38 +43,42 @@ function parse(raw: string | null): StoppedEntries {
   }
 }
 
-function readRaw(): string | null {
-  if (unsaved !== null) return unsaved
+function readRaw(key: string): string | null {
+  const held = unsaved.get(key)
+  if (held !== undefined) return held
   try {
-    return localStorage.getItem(STORAGE_KEY)
+    return localStorage.getItem(key)
   } catch {
     return null
   }
 }
 
-/** The stopped series, the same object for as long as nothing has changed. */
-function snapshot(): StoppedEntries {
-  const raw = readRaw()
-  if (raw !== cache.raw) cache = { raw, entries: parse(raw) }
-  return cache.entries
+/** The stopped series under `key`, the same object for as long as nothing has changed. */
+function snapshot(key: string): StoppedEntries {
+  const raw = readRaw(key)
+  const kept = caches.get(key)
+  if (kept && kept.raw === raw) return kept.entries
+  const entries = parse(raw)
+  caches.set(key, { raw, entries })
+  return entries
 }
 
-function commit(entries: StoppedEntries): void {
+function commit(key: string, entries: StoppedEntries): void {
   const raw = JSON.stringify(entries)
   try {
-    localStorage.setItem(STORAGE_KEY, raw)
-    unsaved = null
+    localStorage.setItem(key, raw)
+    unsaved.delete(key)
   } catch {
-    unsaved = raw
+    unsaved.set(key, raw)
   }
   listeners.forEach((listener) => listener())
 }
 
-function subscribe(listener: () => void): () => void {
+function subscribe(key: string, listener: () => void): () => void {
   listeners.add(listener)
   // Another tab changing the list reaches this one as a storage event.
   const onStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY || event.key === null) listener()
+    if (event.key === key || event.key === null) listener()
   }
   window.addEventListener('storage', onStorage)
   return () => {
@@ -84,29 +87,37 @@ function subscribe(listener: () => void): () => void {
   }
 }
 
-function stop(seriesKey: string, entry: StoppedEntry): void {
-  commit({ ...snapshot(), [seriesKey]: entry })
+function stop(key: string, seriesKey: string, entry: StoppedEntry): void {
+  commit(key, { ...snapshot(key), [seriesKey]: entry })
 }
 
-function restore(seriesKey: string): void {
-  commit(Object.fromEntries(Object.entries(snapshot()).filter(([key]) => key !== seriesKey)))
+function restore(key: string, seriesKey: string): void {
+  commit(key, Object.fromEntries(Object.entries(snapshot(key)).filter(([stopped]) => stopped !== seriesKey)))
 }
 
 /** Forgets what was held back after a refused write, so a test starts from the browser's own storage. */
 export function resetStoppedSuggestionsForTests(): void {
-  unsaved = null
+  unsaved.clear()
+  caches.clear()
 }
 
 /**
- * The series stopped on this device, with `stop` and `restore`. A stopped series is kept here and
- * not on the server: it is a preference about what to be reminded of, and each device keeps its
- * own, as the dismissals do.
+ * The series the signed-in person stopped on this device, with `stop` and `restore`. A stopped series is kept
+ * here and not on the server: it is a preference about what to be reminded of, and each device keeps its own, as
+ * the dismissals do. It is kept for the person, since the labels name what their ledger holds and the device may
+ * be used by someone else.
  */
 export function useStoppedSuggestions(): {
   stopped: StoppedEntries & StoppedSeries
-  stop: typeof stop
-  restore: typeof restore
+  stop: (seriesKey: string, entry: StoppedEntry) => void
+  restore: (seriesKey: string) => void
 } {
-  const stopped = useSyncExternalStore(subscribe, snapshot, () => NONE)
-  return { stopped, stop, restore }
+  const key = ownerKey(OWNER_KEYS.stopped, useAccountOwner())
+  const subscribeTo = useCallback((listener: () => void) => subscribe(key, listener), [key])
+  const current = useCallback(() => snapshot(key), [key])
+  const stopped = useSyncExternalStore(subscribeTo, current, () => NONE)
+  return useMemo(
+    () => ({ stopped, stop: (seriesKey, entry) => stop(key, seriesKey, entry), restore: (seriesKey) => restore(key, seriesKey) }),
+    [key, stopped],
+  )
 }

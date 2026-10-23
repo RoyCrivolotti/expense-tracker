@@ -1,6 +1,7 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
 import { createR2ReceiptStore } from '../../../_shared/adapters/r2ReceiptStore'
 import { singleParams } from '../../../_shared/ledgerPartParams'
+import { serveList } from '../../../_shared/ledgerPartResponse'
 import { mapAppError } from '../../../_shared/mapAppError'
 import { receiptLimits } from '../../../_shared/receiptPolicy'
 import { storeReceipt } from '../../../_shared/receiptService'
@@ -45,10 +46,19 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
   const { repo, owner } = context.data
   try {
     const { transactionId } = singleParams(new URL(context.request.url), ['transactionId'])
-    if (transactionId === undefined) return json(await repo.listAttachments(owner))
+    const serve = (scope: string, id?: number) =>
+      serveList({
+        db: context.env.DB,
+        owner,
+        request: context.request,
+        part: 'attachments',
+        scope,
+        read: () => repo.listAttachments(owner, id),
+      })
+    if (transactionId === undefined) return await serve('')
     const id = Number(transactionId)
     if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Invalid transactionId')
-    return json(await repo.listAttachments(owner, id))
+    return await serve(`txn${id}`, id)
   } catch (error) {
     mapAppError(error)
   }

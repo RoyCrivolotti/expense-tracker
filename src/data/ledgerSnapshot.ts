@@ -150,3 +150,13 @@ export async function loadLedgerSnapshot(owner: string): Promise<LedgerSnapshot 
     return null
   }
 }
+
+/** Removes `owner`'s snapshot, for a server that has said they may not read it. Never throws: it is a clean-up. */
+export async function forgetLedgerSnapshot(owner: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return
+  try {
+    await withStore('readwrite', (store) => done(store.delete(keyFor(owner))))
+  } catch {
+    /* a store that cannot be written cannot be cleared either */
+  }
+}

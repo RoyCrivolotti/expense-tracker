@@ -3,7 +3,12 @@ import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { sortedMonths } from '../domain/engine/dates'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { ExpenseDataset, Transaction } from '../domain/types'
-import { patchAfterCategory, patchAfterTransactionCreate, patchAfterTransactionUpdate } from '../ui/datasetPatches'
+import {
+  patchAfterCategory,
+  patchAfterInstallmentPlanDelete,
+  patchAfterTransactionCreate,
+  patchAfterTransactionUpdate,
+} from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeTransaction } from '../testing/factories'
 import { memorySource, type TestSource } from '../testing/ledgerSource'
@@ -90,6 +95,29 @@ describe('LedgerSession, the recurring series', () => {
     session.watchSeries()
     await flush()
     expect(seriesCalls(source)).toBe(1)
+  })
+
+  it('reads them again at the next mount after a write the server cascaded, though a later write hides what it moved', async () => {
+    const { session, source } = await open()
+    const stop = session.watchSeries()
+    await flush()
+    stop()
+    expect(seriesCalls(source)).toBe(1)
+
+    // The server turns the instalments of a deleted plan into rows of their own, which the patch does not show.
+    source.move('r1')
+    session.patch((d) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id))
+    await flush()
+    await flush()
+    // A write after it leaves the revision of the rows unknown, which must not read as current.
+    session.patch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 7 } }))
+    await flush()
+    expect(session.getState().held!.revision).toBeNull()
+
+    session.watchSeries()
+    await flush()
+
+    expect(seriesCalls(source)).toBe(2)
   })
 
   it('holds the series as they were read when a write lands while they are being read, and reads them again at the next mount', async () => {
