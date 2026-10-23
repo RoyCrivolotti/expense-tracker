@@ -641,7 +641,7 @@ describe('useLedgerData, the list read in pages', () => {
       expect(result.current.backgroundError).toBe('list down')
     })
 
-    it.each(Array.from({ length: 40 }, (_, i) => i))('reports a refresh whose list read worked as updated, and takes an earlier failure away (diagnostic run %i)', async () => {
+    it('reports a refresh whose list read worked as updated, and takes an earlier failure away', async () => {
       const { source, result, pager } = await started()
       const read = source.readTransactionPage.bind(source)
       source.readTransactionPage = () => Promise.reject(new Error('list down'))
