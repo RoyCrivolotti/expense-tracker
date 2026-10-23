@@ -1,9 +1,9 @@
 // @vitest-environment node
 /**
  * The ids of a row's labels are read by a subquery that every transaction read carries (the list, one row, the
- * months, the pinned rows and the export). Left to choose, SQLite may start it from the owner's labels and look for
- * the row's links under each, so a page of 100 rows visits every label of the owner 100 times and the cost grows with
- * the number of labels as well as with the rows. The links of the row are read first, and each label is checked by
+ * months, the pinned rows, the export and the rows an edit by ids answers with). Left to choose, SQLite may start it
+ * from the owner's labels and look for the row's links under each, so a page of 100 rows visits every label of the
+ * owner 100 times and the cost grows with the number of labels as well as with the rows. The links of the row are read first, and each label is checked by
  * primary key, whatever the number of labels is.
  *
  * Without table statistics (no `sqlite_stat1`) the plain `JOIN` does start from the labels, and the first group below
@@ -74,6 +74,13 @@ describe.each([{ stats: false }, { stats: true }])('label ids in the transaction
     ['the months', (r) => r.readMonthRows(OWNER, { from: '2026-01', to: '2026-06' }, 5_000)],
     ['the pinned rows and the payments', (r) => r.readLedgerReference(OWNER)],
     ['the export', (r) => r.readExportChunk(OWNER, { table: 'transactions', limit: 500 })],
+    [
+      'the rows an edit by ids answers with',
+      (r) => {
+        const ids = (kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id LIMIT 100').all(OWNER) as Array<{ id: number }>).map((row) => row.id)
+        return r.bulkUpdateTransactions(OWNER, ids, { description: 'Edited' })
+      },
+    ],
   ]
 
   it.each(READS)('%s reads the links of a row first and checks each label by key', async (_name, read) => {
