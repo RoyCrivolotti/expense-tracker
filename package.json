@@ -20,7 +20,7 @@
     "coverage:diff": "node scripts/check-diff-coverage.mjs",
     "check:pr-screenshots": "node scripts/check-pr-screenshots.mjs",
     "update:pr-staging-url": "node scripts/update-pr-staging-url.mjs",
-    "verify": "node scripts/ensure-function-symlinks.mjs && node scripts/check-migration-docs.mjs && node scripts/check-docs-size.mjs && node scripts/check-pii.mjs && npm run lint && npm run typecheck && npm run test:coverage && npm run build && node scripts/check-bundle-budget.mjs",
+    "verify": "node scripts/ensure-function-symlinks.mjs && node scripts/check-migration-docs.mjs && node scripts/check-docs-size.mjs && node scripts/check-pii.mjs && npm run lint && npm run typecheck && npm run test:coverage && npm run build && node scripts/check-bundle-budget.mjs && node scripts/check-service-worker.mjs",
     "build:staging": "npm run generate-icons && vite build --mode staging",
     "deploy": "bash scripts/deploy.sh",
     "deploy:dev": "bash scripts/deploy-dev.sh",
@@ -50,7 +50,8 @@
     "verify:goals-nav": "node scripts/verify-goals-nav.mjs",
     "verify:goals-desktop": "node scripts/verify-goals-desktop.mjs",
     "verify:section-tabs": "node scripts/verify-section-tabs.mjs",
-    "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs"
+    "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs",
+    "verify:offline-start": "node scripts/verify-offline-start.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",
@@ -88,6 +89,7 @@
     "vite": "^8.0.12",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.9",
+    "workbox-build": "^7.4.1",
     "wrangler": "^4.131.1"
   }
 }

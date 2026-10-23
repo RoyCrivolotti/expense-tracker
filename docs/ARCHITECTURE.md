@@ -61,6 +61,12 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   hostname names in the workflows, `workers/backup-cron/wrangler.toml`, the `.env.*` files, `config/staging-access.json`
   and some scripts), and a fork has to replace them ([DEPLOYMENT.md](./DEPLOYMENT.md)). New code reads such values from
   config or the environment.
+- **A write is checked before it is trusted, and no answer is kept by a shared cache.** Authentication is the
+  Access cookie, which a page on another site can make a browser send, so `assertWriteIsSameSiteJson` refuses a write
+  that is cross-site or whose body is not JSON, and `withDefaultResponseHeaders` marks every answer that does not choose
+  otherwise `private, no-store` (both in `functions/api/_middleware.ts`; [API.md](./API.md)). `public/_headers` gives
+  the static files `nosniff`, no framing and a same-origin referrer policy. There is no Content-Security-Policy: it
+  has not been soaked with the service worker.
 - **The person is the one the signed token names, when Access is configured.** `resolveVerifiedEmail`
   (`functions/_shared/access/accessIdentity.ts`) takes the email header only if `Cf-Access-Jwt-Assertion` verifies with
   WebCrypto and names the same address; with `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` unset it is the header alone
@@ -179,12 +185,18 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
 - **The whole-dataset app is the default, and nothing ledger mode adds runs without it.** Code only the mode needs sits in
   chunks only the mode loads, which `scripts/check-bundle-budget.mjs` counts apart from the default path
   ([the switch](./LEDGER-MODE.md#the-switch-and-the-hand-back)).
+- **The installed app opens with no network, and a launch with one still reaches Cloudflare Access.** The service worker
+  precaches the shell (`index.html`) with the assets it names, answers a navigation from the network, and answers it with
+  the shell only when the network fails ([`pwaWorkbox.ts`](../scripts/pwaWorkbox.ts)). A shell that answered first would
+  skip the sign-in Access asks for, and the home-screen app on iOS has a cookie jar of its own. The worker never answers
+  an API URL, an Access URL or a request of the app for its data, and keeps no response outside its precache
+  ([the choice](./decisions/service-worker-shell.md)).
 - **What the browser keeps about a ledger is one person's, because a browser can be used by more than one.** The
   offline copies (`latest` in `offlineCache.ts`, `ledger:<owner>` in `ledgerSnapshot.ts`) name their owner and are shown
   to no one else, nor after the server answers 401 or 403. The settings that name what a ledger holds (the series
   stopped, the suggestions dismissed, the setup skipped) are kept under `OWNER_KEYS` plus the account email
   (`hooks/accountOwner.ts`). What is the device's alone carries no description, amount or name from a ledger: the theme, which days are folded,
-  the milestone toggle and the ledger switch. The service worker keeps no copy of an API URL (`scripts/pwaNavigation.ts`).
+  the milestone toggle and the ledger switch.
   A receipt already in the browser's cache is shown to whoever asks for its URL on that browser: `max-age` one year,
   accepted, and said in `attachments/[id].ts`.
 
