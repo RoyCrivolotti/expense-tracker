@@ -116,10 +116,15 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   that the planner cannot pick `idx_txn_category`, which has no owner and would read every owner's rows.
 - **The ledger parts are specified by the ledger model.** `src/domain/ledger/partsOfDataset.ts` computes them from a
   whole dataset with `partitionPinned` and `buildCells`, and `dbLedgerParts.parity.test.ts` holds `ledgerPartsSql.ts` to
-  that. The pinned rule is written four times: `isPinned`, `PINNED_SQL`, `UNPINNED_SQL` and the predicate of
-  `idx_txn_pinned` (migration 0037), which SQLite reads only when a statement has the same terms. Changing it means
-  changing all four and adding a migration, because a deployed index cannot be edited. Ranges are capped by constants in
+  that. The pinned rule is written five times: `isPinned`, `PINNED_SQL`, `UNPINNED_SQL`, the predicate of
+  `idx_txn_pinned` (migration 0037), which SQLite reads only when a statement has the same terms, and the `pinned`
+  expression of the rollup triggers (0039). Changing it means changing all five and adding a migration, because a
+  deployed index cannot be edited. Ranges are capped by constants in
   `src/domain/data/ledgerParts.ts` and refused beyond them, never cut.
+- **`ledger_cells` and `ledger_months` are written by triggers on `transactions`, from the row's own columns, and nothing
+  else writes them.** Nothing may `REPLACE` a row of `transactions`, which deletes without firing the trigger, and a
+  migration that rebuilds the table must create the triggers again. `ledgerRollup.integration.test.ts` holds the tables
+  to a `GROUP BY` after every write path ([decision](./decisions/ledger-rollup.md)).
 - **The recurring series are specified by the engine.** `seriesFromTransactions` in
   `src/domain/engine/recurringSeries.ts` reduces what `groupTransactions` builds to what the detectors read,
   `seriesSql.ts` is the only place a series becomes SQL, and `dbSeries.parity.test.ts` and
