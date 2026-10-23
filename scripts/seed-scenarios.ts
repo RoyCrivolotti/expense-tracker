@@ -3,7 +3,7 @@
  *
  *   EXPENSE_OWNER=you@example.com \
  *   FINANCIAL_REVIEW_DIR=/path/to/workbook-export \
- *     npx tsx scripts/seed-scenarios.ts /tmp/seed-scenarios.sql
+ *     npm run seed:scenarios -- /tmp/seed-scenarios.sql
  *   npx wrangler d1 execute roy-expenses --remote --file=/tmp/seed-scenarios.sql
  */
 import { writeFileSync } from 'node:fs'

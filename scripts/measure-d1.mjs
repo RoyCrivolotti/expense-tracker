@@ -2,9 +2,9 @@
 /**
  * Measure what the API costs on a deployed D1 database, without touching production or anyone else's rows.
  *
- *   npx tsx scripts/measure-d1.mjs plan                      the budget, offline, no token
- *   npx tsx scripts/measure-d1.mjs seed                      dry run: what a seed would send
- *   npx tsx scripts/measure-d1.mjs check --database <dev>    read-only
+ *   npm run measure:d1 -- plan                               the budget, offline, no token
+ *   npm run measure:d1 -- seed                               dry run: what a seed would send
+ *   npm run measure:d1 -- check --database <dev>             read-only
  *
  * Anything that writes needs --write and --confirm <database>, and only the development database named in
  * config/dev.json is ever accepted. The Cloudflare token is read from CLOUDFLARE_API_TOKEN (with

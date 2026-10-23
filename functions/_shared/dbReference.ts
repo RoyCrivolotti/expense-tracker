@@ -50,6 +50,31 @@ export function checkinsOf(
   )
 }
 
+/** The wealth tables of an owner, read together. Every check-in's entries come in one query, grouped by `checkinsOf`. */
+async function wealthRows(db: D1Database, owner: string) {
+  const [accounts, checkins, entries] = await Promise.all([
+    rows<WealthAccountRow>(
+      db,
+      'SELECT * FROM wealth_accounts WHERE owner = ? ORDER BY sort_order, id',
+      owner,
+    ),
+    rows<WealthCheckinRow>(
+      db,
+      'SELECT * FROM wealth_checkins WHERE owner = ? ORDER BY checkin_date DESC, id DESC',
+      owner,
+    ),
+    db.prepare(
+      `SELECT e.* FROM wealth_checkin_entries e
+       JOIN wealth_checkins c ON c.id = e.checkin_id
+       WHERE c.owner = ?`,
+    )
+      .bind(owner)
+      .all<WealthCheckinEntryRow & { checkin_id: number }>()
+      .then((r) => r.results ?? []),
+  ])
+  return { accounts, checkins, entries }
+}
+
 /** The owner's non-transaction tables, read concurrently, in the shape a dataset carries them. */
 export async function loadReferenceTables(env: Env, owner: string): Promise<ReferenceTables> {
   const [
@@ -62,9 +87,7 @@ export async function loadReferenceTables(env: Env, owner: string): Promise<Refe
     settingsRow,
     scenarioRows,
     planRows,
-    wealthAccountRows,
-    wealthCheckinRows,
-    wealthCheckinEntryRows,
+    wealth,
   ] = await Promise.all([
     rows<CategoryRow>(
       env.DB,
@@ -87,25 +110,7 @@ export async function loadReferenceTables(env: Env, owner: string): Promise<Refe
       'SELECT * FROM installment_plans WHERE owner = ? ORDER BY id',
       owner,
     ),
-    rows<WealthAccountRow>(
-      env.DB,
-      'SELECT * FROM wealth_accounts WHERE owner = ? ORDER BY sort_order, id',
-      owner,
-    ),
-    rows<WealthCheckinRow>(
-      env.DB,
-      'SELECT * FROM wealth_checkins WHERE owner = ? ORDER BY checkin_date DESC, id DESC',
-      owner,
-    ),
-    // Load all entries for this owner in one query; keyed by checkin_id in checkinsOf.
-    env.DB.prepare(
-      `SELECT e.* FROM wealth_checkin_entries e
-       JOIN wealth_checkins c ON c.id = e.checkin_id
-       WHERE c.owner = ?`,
-    )
-      .bind(owner)
-      .all<WealthCheckinEntryRow & { checkin_id: number }>()
-      .then((r) => r.results ?? []),
+    wealthRows(env.DB, owner),
   ])
 
   return {
@@ -118,7 +123,7 @@ export async function loadReferenceTables(env: Env, owner: string): Promise<Refe
     installmentPlans: planRows.map(toInstallmentPlan),
     settings: settingsRow ? toSettings(settingsRow) : defaultExpenseSettings(),
     goalScenarios: scenarioRows.map(toGoalScenario),
-    wealthAccounts: wealthAccountRows.map(toWealthAccount),
-    wealthCheckins: checkinsOf(wealthCheckinRows, wealthCheckinEntryRows),
+    wealthAccounts: wealth.accounts.map(toWealthAccount),
+    wealthCheckins: checkinsOf(wealth.checkins, wealth.entries),
   }
 }

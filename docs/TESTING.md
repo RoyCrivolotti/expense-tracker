@@ -90,11 +90,11 @@ Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR
    untested file counts as 0%, it doesn't just vanish from the denominator. The
    vitest harness under `src/test/` is excluded, being the thing that runs the
    tests rather than anything that ships).
-   These are set about two points under the measured figure, so they catch a real
-   drop without tripping on run-to-run wobble. **Re-measure and raise them when
-   coverage rises**, or they stop catching anything. This check only catches the
-   *overall* number regressing; it fails `npm run verify` locally too, since
-   `verify` runs `test:coverage`.
+   These are loose on purpose: statements, branches, functions and lines are 95.6, 90.8,
+   94.9 and 97.0 percent (2026-10-23) against floors of 88, 83, 87 and 90, so they catch
+   the loss of a large share of the tests and not a slow slide. Raise them if the global
+   number should be held more tightly. This check only catches the *overall* number
+   regressing; it fails `npm run verify` locally too, since `verify` runs `test:coverage`.
 2. **Diff coverage** — `scripts/check-diff-coverage.mjs` parses `coverage/lcov.info`
    plus `git diff --unified=0 <base>...HEAD` to compute what % of *this PR's
    added/changed* `.ts`/`.tsx` lines are covered, and fails below 90%

@@ -3,7 +3,7 @@
  * the remote D1 headlessly (no browser / Access round-trip):
  *
  *   FINANCIAL_REVIEW_DIR=/path/to/workbook-export \
- *     npx tsx scripts/gen-seed-sql.ts /tmp/seed.sql
+ *     node_modules/.bin/tsx scripts/gen-seed-sql.ts /tmp/seed.sql
  *   npx wrangler d1 execute roy-expenses --remote --file=/tmp/seed.sql
  *
  * All rows belong to OWNER (row-level multi-tenancy); the DELETEs only clear

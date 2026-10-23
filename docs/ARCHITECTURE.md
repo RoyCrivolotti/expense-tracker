@@ -18,8 +18,9 @@ are both adapters around it.
 | **Driving side, API** | `functions/api/` | Application, ports | Cloudflare Pages Functions HTTP handlers ([API.md](./API.md)) |
 | **Driving side, UI** | `src/ui/` | Application, engine, data | React components; no direct D1 or HTTP, always through `src/data/` |
 
-`src/engine/`, `src/types.ts` and similar top-level re-export barrels exist only so older imports keep working. The real
-implementation is always in `src/domain/`, so import from there in new code. Functions reach `src/domain` and `config/`
+`src/engine/` and `src/types.ts` are re-export barrels over `src/domain/`, and most of what the UI and data layers import
+comes through them. Both paths reach the same code. The implementation is always in `src/domain/`, so that is where new
+logic goes. Functions reach `src/domain` and `config/`
 through the symlinks `functions/domain` and `functions/config`, because Cloudflare's Pages Functions bundler ignores
 Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-symlinks.mjs`), while the Vite app uses the
 `@domain/*` and `@config/*` aliases.
@@ -185,8 +186,13 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
 
 ## Size and complexity
 
-ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12` and `max-depth: 3` (see
-`eslint.config.js`). They are a proxy for "this file or function is doing one thing", so split before disabling.
+ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12` and `max-depth: 3` on the TypeScript
+under `src/`, `functions/` and `workers/` (see `eslint.config.js`). Tests, config files and `.mjs` scripts are exempt.
+The limits are a proxy for "this file or function is doing one thing", so split before disabling.
+
+The files that were already over a size limit when it was switched back on are listed in `eslint.config.js`, each
+capped at the size it had, so a listed file cannot grow. Do not add to the lists: a new file or function that is too
+long gets split. Lower an entry when its file shrinks, and take the file off the list when it fits.
 
 ## Testing
 

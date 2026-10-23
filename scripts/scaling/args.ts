@@ -23,7 +23,7 @@ export interface Args {
 }
 
 export const USAGE = [
-  'Usage: npx tsx scripts/measure-d1.mjs <command> [flags]',
+  'Usage: npm run measure:d1 -- <command> [flags]',
   '  plan [--transactions N]                         print the budget; touches nothing, needs no token',
   '  check --database D                              read-only: target, schema, indexes, statistics, account use',
   "  snapshot --database D                           read-only: fingerprint every row that is not the synthetic owner's",

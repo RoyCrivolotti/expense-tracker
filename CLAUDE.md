@@ -16,7 +16,8 @@ No Supabase, Prisma, Drizzle, Stripe or AWS.
 
 ## Requirements
 
-Node ≥ 22.12.0. `.nvmrc` pins 22.23.2; CI runs Node 22.
+Node ≥ 22.13.0, the release where `node:sqlite`, which the tests use, lost its flag. `.nvmrc` pins 22.23.2; CI runs
+Node 22.
 
 ```bash
 nvm use && npm ci
@@ -65,7 +66,7 @@ local dev and the `CLOUDFLARE_API_TOKEN` GitHub secret, and a read-only token fo
 monitoring. `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` belong in your shell
 profile. Rolling the write token means updating the GitHub secret too, or CI deploys fail.
 
-**GitHub Actions secrets**: `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`, `ALLOWED_EMAILS`.
+**GitHub Actions secrets**: `CLOUDFLARE_API_TOKEN` and `OWNER_EMAIL`.
 
 Deployment-specific values (database ids, project names, account id) live in the
 gitignored `.claude/deploy-context.md`.

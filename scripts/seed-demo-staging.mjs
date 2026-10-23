@@ -55,7 +55,7 @@ function ensureAccess() {
 
 function generateSql() {
   mkdirSync(join(ROOT, '.tmp'), { recursive: true })
-  execSync(`npx tsx scripts/gen-demo-seed-sql.ts ${SQL_PATH}`, {
+  execSync(`node_modules/.bin/tsx scripts/gen-demo-seed-sql.ts ${SQL_PATH}`, {
     cwd: ROOT,
     stdio: 'inherit',
     env: { ...process.env, EXPENSE_OWNER: DEMO_EMAIL },

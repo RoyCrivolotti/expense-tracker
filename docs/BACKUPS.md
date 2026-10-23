@@ -15,11 +15,11 @@ invocation, or has to restore. The schedule, bucket and retention policy are in
 
 ## Turning on the resumable form
 
-It runs only when `BACKUP_MODE` is exactly `chunked`; unset, or any other value, keeps the single-file snapshot. An
-invocation makes at most `BACKUP_STEP_MAX_OPERATIONS` D1 and bucket calls (default 44, allowed 12 to 46, under the Free
-plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 3,000), then saves where it got to. The
-next invocation carries on, so the worker needs a trigger that fires several times. In the same commit, in
-`workers/backup-cron/wrangler.toml`:
+It runs only when `BACKUP_MODE` is `chunked` (case and surrounding spaces are ignored); unset, or any other value, keeps
+the single-file snapshot. An invocation makes at most `BACKUP_STEP_MAX_OPERATIONS` D1 and bucket calls (default 44,
+allowed 12 to 46, under the Free plan's 50 subrequests) and reads at most `BACKUP_STEP_MAX_ROWS` rows (default 3,000),
+then saves where it got to. The next invocation carries on, so the worker needs a trigger that fires several times. In
+the same commit, in `workers/backup-cron/wrangler.toml`:
 
 ```toml
 [triggers]
