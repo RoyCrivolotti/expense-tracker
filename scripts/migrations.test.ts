@@ -15,6 +15,7 @@ import {
   selectPendingMigrations,
   stemOf,
 } from './migrate.mjs'
+import { splitStatements } from './sql-statements.mjs'
 
 const MIGRATIONS = join(import.meta.dirname, '..', 'migrations')
 
@@ -24,15 +25,9 @@ function migrationFiles(): string[] {
     .sort()
 }
 
-/** Split into statements the way the documented `--command` fallback does. */
+/** The statements of one migration, as the `--command` fallback runs them. */
 function statementsOf(file: string): string[] {
-  return readFileSync(join(MIGRATIONS, file), 'utf8')
-    .split('\n')
-    .filter((l) => !l.trim().startsWith('--'))
-    .join('\n')
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  return splitStatements(readFileSync(join(MIGRATIONS, file), 'utf8')).map((statement) => statement.sql)
 }
 
 function applyAll(db: DatabaseSync): void {

@@ -10,7 +10,6 @@ import {
   diffColumns,
   migrationAdding,
   migrationFiles,
-  statementsOf,
   wranglerSaid,
 } from './check-schema-drift.mjs'
 
@@ -118,14 +117,5 @@ describe('wranglerSaid', () => {
     expect(wranglerSaid({ stdout: '', stderr: '' })).toBe('')
     expect(wranglerSaid(null)).toBe('')
     expect(wranglerSaid('a string')).toBe('')
-  })
-})
-
-describe('statementsOf', () => {
-  it('drops comments and splits on semicolons', () => {
-    expect(statementsOf('-- a note\nCREATE TABLE t (a INTEGER);\n-- another\nALTER TABLE t ADD COLUMN b TEXT;\n')).toEqual([
-      'CREATE TABLE t (a INTEGER)',
-      'ALTER TABLE t ADD COLUMN b TEXT',
-    ])
   })
 })

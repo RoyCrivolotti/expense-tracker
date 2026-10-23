@@ -21,6 +21,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { splitStatements } from './sql-statements.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = join(ROOT, 'migrations')
@@ -33,22 +34,6 @@ const MIGRATIONS = join(ROOT, 'migrations')
 export const COLUMNS_QUERY =
   "SELECT m.name AS t, p.name AS c FROM sqlite_master m, pragma_table_info(m.name) p " +
   "WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' AND m.name <> '_cf_KV'"
-
-/**
- * A migration's statements, comments removed, one at a time, the way the documented `--command`
- * fallback runs them.
- * @param {string} sql
- * @returns {string[]}
- */
-export function statementsOf(sql) {
-  return sql
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('--'))
-    .join('\n')
-    .split(';')
-    .map((statement) => statement.trim())
-    .filter(Boolean)
-}
 
 /**
  * The migration files, in order.
@@ -78,7 +63,7 @@ export function columnsOf(db) {
  */
 export function applyMigrations(db, dir = MIGRATIONS) {
   for (const file of migrationFiles(dir)) {
-    for (const statement of statementsOf(readFileSync(join(dir, file), 'utf8'))) db.exec(statement)
+    for (const { sql } of splitStatements(readFileSync(join(dir, file), 'utf8'))) db.exec(sql)
   }
 }
 
@@ -115,7 +100,7 @@ export function migrationAdding(column, files) {
   // Statement by statement, so a name that turns up later in the file, outside the table's own
   // definition, is not taken for its column.
   const introduces = (statement) => added.test(statement) || (created.test(statement) && named.test(statement))
-  return files.find((file) => statementsOf(file.sql).some(introduces))?.name ?? null
+  return files.find((file) => splitStatements(file.sql).some(({ sql }) => introduces(sql)))?.name ?? null
 }
 
 /**

@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import type { D1Database } from '@cloudflare/workers-types'
+import { splitStatements } from '../../scripts/sql-statements.mjs'
 
 export interface SqliteD1Stats {
   statements: number
@@ -30,26 +31,23 @@ export interface SqliteD1Options {
 
 const MIGRATIONS = join(import.meta.dirname, '..', '..', 'migrations')
 
-/** Statements of one migration, split the way the documented `--command` fallback splits them. */
-function statementsOf(file: string): string[] {
-  return readFileSync(join(MIGRATIONS, file), 'utf8')
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('--'))
-    .join('\n')
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
 export function migrationFiles(): string[] {
   return readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith('.sql'))
     .sort()
 }
 
-/** Applies one migration file the way the documented `--command` fallback does, statement by statement. */
+/**
+ * Runs migration SQL one statement at a time, the way the documented `--command` fallback does, cut by the
+ * splitter the lint and the schema check use, so a trigger is applied whole.
+ */
+export function applyMigrationSql(db: DatabaseSync, sql: string): void {
+  for (const statement of splitStatements(sql)) db.exec(statement.sql)
+}
+
+/** Applies one migration file from `migrations/`. */
 export function applyMigration(db: DatabaseSync, file: string): void {
-  for (const statement of statementsOf(file)) db.exec(statement)
+  applyMigrationSql(db, readFileSync(join(MIGRATIONS, file), 'utf8'))
 }
 
 /** All the migrations, or those up to and including the file whose name starts with `through` (`'0037'`). */

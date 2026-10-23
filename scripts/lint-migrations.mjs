@@ -9,10 +9,10 @@
  *   -- lint-allow: destructive the old column has had no reader since the last release
  *   -- lint-allow: unscoped the table is empty in every environment
  *
- * Statements are split on `;` and comments are dropped, the way the documented `--command`
- * fallback and the schema check read a file. That is enough for what migrations here contain,
- * but a `;` inside a string or a trigger body would be split wrongly.
+ * Statements are split by `sql-statements.mjs`, the same splitter the schema check and the test
+ * database use, so a trigger is one statement here as it is when it is applied.
  */
+import { splitStatements } from './sql-statements.mjs'
 
 /** Migrations up to this number are already applied everywhere and were judged when written. */
 export const GRANDFATHERED_THROUGH = 31
@@ -22,28 +22,12 @@ export const GRANDFATHERED_THROUGH = 31
  */
 
 /**
- * The statements of a file, each with the comment lines directly above it.
+ * The statements of a file, each with the comment lines directly above it, on one line each.
  * @param {string} text
  * @returns {Statement[]}
  */
 export function statementsOf(text) {
-  return text
-    .split(';')
-    .map((chunk) => {
-      const notes = []
-      const code = []
-      for (const line of chunk.split('\n')) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('--')) {
-          if (code.length === 0) notes.push(trimmed.replace(/^--\s?/, ''))
-          continue
-        }
-        const bare = trimmed.replace(/--.*$/, '').trim()
-        if (bare) code.push(bare)
-      }
-      return { notes, sql: code.join(' ').replace(/\s+/g, ' ') }
-    })
-    .filter((statement) => statement.sql)
+  return splitStatements(text).map(({ sql, notes }) => ({ notes, sql: sql.replace(/\s+/g, ' ') }))
 }
 
 /** @param {Statement} statement @param {string} kind */

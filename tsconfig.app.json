@@ -18,6 +18,9 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    // src/testing/sqliteD1.ts cuts migrations with scripts/sql-statements.mjs, the splitter the scripts
+    // use; its types come from the JSDoc there. Nothing under src imports any other .mjs.
+    "allowJs": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
