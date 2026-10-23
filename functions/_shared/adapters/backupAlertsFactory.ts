@@ -1,6 +1,7 @@
 import type {
   BackupAlerts,
   BucketLimitDetails,
+  FailedBackupDetails,
   IncompleteBackupDetails,
   InconsistentBackupDetails,
   LargeSnapshotDetails,
@@ -24,6 +25,10 @@ export const consoleBackupAlerts: BackupAlerts = {
   },
   onIncompleteBackup({ owner, dateKey }: IncompleteBackupDetails) {
     console.warn(`backup: ${owner} backup for ${dateKey} was started and never finished`)
+    return Promise.resolve()
+  },
+  onBackupFailed({ owner, dateKey, reason }: FailedBackupDetails) {
+    console.warn(`backup: ${owner} has no backup for ${dateKey}: ${reason}`)
     return Promise.resolve()
   },
 }
@@ -50,6 +55,16 @@ function formatIncomplete({ owner, dateKey }: IncompleteBackupDetails): string {
     `Owner: ${owner}`,
     `Day: ${dateKey}`,
     'The last complete backup is the one before it. Check that the worker has the frequent cron trigger that chunked mode needs (docs/BACKUPS.md).',
+  ].join('\n')
+}
+
+function formatFailed({ owner, dateKey, reason }: FailedBackupDetails): string {
+  return [
+    'Expense tracker backup alert: a backup failed',
+    `Owner: ${owner}`,
+    `Day: ${dateKey}`,
+    `Reason: ${reason}`,
+    'The other owners were backed up. The last complete backup of this owner is the one before it.',
   ].join('\n')
 }
 
@@ -89,6 +104,10 @@ export function createEmailBackupAlerts(
         `[expense-tracker] No backup today: the ledger kept changing (${details.owner}, ${details.dateKey})`,
         formatInconsistent(details),
       )
+    },
+    async onBackupFailed(details) {
+      await inner.onBackupFailed(details)
+      await sendEmail(`[expense-tracker] No backup today: it failed (${details.owner}, ${details.dateKey})`, formatFailed(details))
     },
     async onIncompleteBackup(details) {
       await inner.onIncompleteBackup(details)

@@ -1,7 +1,7 @@
 import type { BulkTransactionPatch, NewTransaction } from '../data/dataSource'
 import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
-import type { ExpenseSettings, TxnType } from '../types'
+import type { TxnType } from '../types'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../data/amountSign'
 import { parseIsoDate } from '../engine/dates'
 import { MAX_DESCRIPTION_LENGTH } from './entityValidation'
@@ -19,6 +19,12 @@ const BULK_PATCH_KEYS = new Set<string>([
 ])
 
 const VALID_TXN_TYPES = new Set<string>(['expense', 'income', 'investment', 'refund'])
+
+/** The longest note a transaction may carry. The form has no limit of its own; this keeps a row to a sensible size. */
+export const MAX_NOTES_LENGTH = 2_000
+
+/** Most rows one `POST /transactions/bulk` may create (a CSV import larger than this is split into files). */
+export const MAX_BULK_CREATE = 1_000
 
 function requirePositiveInt(value: unknown, label: string): number {
   if (!Number.isInteger(value) || (value as number) <= 0) throw new ValidationError(`Invalid ${label}`)
@@ -52,6 +58,15 @@ function requireBoundedDescription(value: unknown): string {
   const text = requireString(value, 'description')
   if (text.trim().length > MAX_DESCRIPTION_LENGTH) {
     throw new ValidationError(`description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
+  }
+  return text
+}
+
+/** Text of at most {@link MAX_NOTES_LENGTH} characters. Blank is allowed: it is how a note is cleared. */
+function requireBoundedNotes(value: unknown): string {
+  const text = requireString(value, 'notes')
+  if (text.length > MAX_NOTES_LENGTH) {
+    throw new ValidationError(`notes must be ${MAX_NOTES_LENGTH} characters or fewer`)
   }
   return text
 }
@@ -123,6 +138,7 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
   requireDate(input.date)
   requireBudgetMonth(input.budgetMonth)
   requireBoundedDescription(input.description)
+  if (input.notes != null) requireBoundedNotes(input.notes)
   // The UI forms already enforce this for instant feedback, but this is the real
   // source of truth: any other caller (a future import path, a retry, a script)
   // must be stopped here too, not just trusted.
@@ -133,6 +149,9 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
 
 export function validateBulkTransactions(raw: unknown): NewTransaction[] {
   if (!Array.isArray(raw)) throw new ValidationError('transactions array is required')
+  if (raw.length > MAX_BULK_CREATE) {
+    throw new ValidationError(`Too many transactions (max ${MAX_BULK_CREATE})`)
+  }
   return raw.map((item, i) => {
     // A batch is refused whole, so the row has to be named or a long import is a hunt.
     if (item === null || typeof item !== 'object') throw new ValidationError(`Row ${i + 1}: transaction must be an object`)
@@ -236,7 +255,7 @@ const PATCH_FIELD_VALIDATORS: Record<
     p.cancelled = v
   },
   // Absent leaves the note alone; null and '' both clear it.
-  notes: (v, p) => { p.notes = v == null ? null : requireString(v, 'notes') },
+  notes: (v, p) => { p.notes = v == null ? null : requireBoundedNotes(v) },
   flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
   planId: (v, p) => { p.planId = v === null ? null : requirePositiveInt(v, 'planId') },
   installmentIndex: (v, p) => {
@@ -273,12 +292,4 @@ export async function patchTransaction(
 
 export async function removeTransaction(repo: ExpenseRepository, owner: string, id: number) {
   return repo.deleteTransaction(owner, id)
-}
-
-export async function saveSettings(
-  repo: ExpenseRepository,
-  owner: string,
-  patch: Partial<ExpenseSettings>,
-) {
-  return repo.updateSettings(owner, patch)
 }
