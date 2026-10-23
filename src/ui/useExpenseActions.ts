@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react'
-import type { ExpenseDataset, ExpenseSettings } from '../types'
-import type { WriteReach } from '../data/ledgerSession'
+import type { ExpenseSettings } from '../types'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
+import { type ApplyPatch, bulkWriteOf, unchanged } from './bulkWrite'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
   patchAfterAccount,
@@ -40,10 +40,6 @@ import {
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
-type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
-
-const unchanged = (dataset: ExpenseDataset): ExpenseDataset => dataset
-
 /** Build the write-actions object, or `undefined` for read-only sources. */
 export function useExpenseActions(
   source: ExpenseDataSource,
@@ -56,20 +52,7 @@ export function useExpenseActions(
   const settingsOrder = useRef({ issued: 0, applied: new Map<keyof ExpenseSettings, number>() })
   return useMemo(() => {
     if (!source.canWrite || readOnly) return undefined
-    /**
-     * A write of many rows, which may have gone through in part (a request after the first can fail), so a
-     * failure reads again what the ledger holds, as the list does. Its answer is shown by `apply`.
-     */
-    const bulkWrite = async <R, T>(write: () => Promise<R>, apply: (result: R) => void, count: (result: R) => T): Promise<T> => {
-      try {
-        const result = await write()
-        apply(result)
-        return count(result)
-      } catch (error) {
-        applyPatch(unchanged, { patch: {} })
-        throw error
-      }
-    }
+    const bulkWrite = bulkWriteOf(applyPatch)
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
       onDuplicate: (txn) =>
