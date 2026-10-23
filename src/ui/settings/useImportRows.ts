@@ -46,8 +46,11 @@ export function useImportRows(
         setResult({ ...result, rows: rows.slice(error.imported) })
         setEarlier(earlier + error.imported)
         setStopped(error.message)
+        // What happened and what to do is on the page, where it stays; the toast only says that it stopped.
+        showToast(`Import stopped: ${error.imported} of ${rows.length} imported`, 'error')
+      } else {
+        showToast(error instanceof Error ? error.message : 'Import failed', 'error')
       }
-      showToast(error instanceof Error ? error.message : 'Import failed', 'error')
     } finally {
       setBusy(false)
     }

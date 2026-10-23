@@ -89,6 +89,7 @@ describe('ImportDataSection, a file of more rows than a request takes', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Imported 100 of 250 transactions. The next 100 were refused and not saved: Row 130: Unknown category.')
     expect(alert).toHaveTextContent('The 150 left are still here')
+    expect(screen.getByText('Import stopped: 100 of 250 imported')).toBeInTheDocument()
     expect(screen.getByText('150 rows ready')).toBeInTheDocument()
     expect(sizes(createTransactions)).toEqual([100, 100])
 

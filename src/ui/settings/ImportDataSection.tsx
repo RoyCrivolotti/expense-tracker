@@ -108,6 +108,11 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
             {result.rows.length} rows ready
             {result.errors.length > 0 ? ` · ${result.errors.length} skipped` : ''}
           </p>
+          {stopped && (
+            <p className={importStyles.stopped} role="alert">
+              {stopped}
+            </p>
+          )}
           {result.errors.length > 0 && (
             <ul className={importStyles.errors}>
               {result.errors.slice(0, 4).map((err) => (
@@ -128,11 +133,7 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
           </button>
         </>
       )}
-      {stopped && (
-        <p className={importStyles.stopped} role="alert">
-          {stopped}
-        </p>
-      )}
+
       {done && <p className={importStyles.done}>{done}</p>}
     </div>
   )
