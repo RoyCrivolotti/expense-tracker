@@ -117,7 +117,7 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/onboarding/OnboardingMoneyStep.tsx': 66,
   'src/ui/onboarding/OnboardingWizard.tsx': 152,
   'src/ui/settings/CashReserveSetting.tsx': 73,
-  'src/ui/settings/ImportDataSection.tsx': 88,
+  'src/ui/settings/ImportDataSection.tsx': 76,
   'src/ui/settings/MilestonesSetting.tsx': 114,
   'src/ui/settings/PreferencesSetting.tsx': 66,
   'src/ui/tabs/BatchBar.tsx': 70,
