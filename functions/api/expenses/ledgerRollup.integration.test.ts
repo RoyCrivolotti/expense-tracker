@@ -13,7 +13,7 @@ import { applyMigrationSql, migratedDatabase, newStats, sqliteD1 } from '../../.
 import { assertRollup } from '../../_shared/testing/rollupKit'
 import { newKit } from '../../_shared/testing/rollupWorld'
 import { OWNER } from '../../_shared/testing/expenseWorld'
-import { emptySmallestMonth, pinningScenarios } from '../../_shared/testing/rollupScenarios'
+import { emptySmallestMonth, make, pinningScenarios } from '../../_shared/testing/rollupScenarios'
 import { shapeScenarios } from '../../_shared/testing/rollupScenariosShape'
 import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 
@@ -21,7 +21,10 @@ afterEach(() => vi.useRealTimers())
 
 const MIGRATION = readFileSync(join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'), 'utf8')
 const STATEMENTS: Array<{ sql: string }> = splitStatements(MIGRATION)
-const BACKFILLS = STATEMENTS.filter((s) => /^(INSERT OR REPLACE|DELETE FROM ledger_\w+ WHERE n )/.test(s.sql))
+/** The statements after the last trigger fill the tables; they are told apart by where they are, not by what they say. */
+const FIRST_BACKFILL = STATEMENTS.findLastIndex((s) => /^CREATE TRIGGER/i.test(s.sql)) + 1
+const SETUP = STATEMENTS.slice(0, FIRST_BACKFILL)
+const BACKFILLS = STATEMENTS.slice(FIRST_BACKFILL)
 
 async function kitFor(seed: number, through?: string) {
   const sqlite = migratedDatabase(through)
@@ -56,13 +59,24 @@ describe('the migration', () => {
     const { sqlite, k } = await kitFor(32, '0038')
     await seedRows(k, 20)
     await walk(k, 60, false)
-    for (const statement of STATEMENTS.filter((s) => !BACKFILLS.includes(s))) sqlite.exec(statement.sql)
+    for (const statement of SETUP) sqlite.exec(statement.sql)
     await walk(k, 60, false)
     await emptySmallestMonth(k, OWNER)
     for (const statement of BACKFILLS) sqlite.exec(statement.sql)
     await assertRollup(k, 'the backfill after writes')
     await walk(k, 40)
   }, 120_000)
+
+  it('adds a row written before the backfill to the cell the backfill finds, not over it', async () => {
+    const { sqlite, k } = await kitFor(34, '0038')
+    for (const cents of [100, 200, 300]) await make(k, OWNER, { amountCents: cents })
+    for (const statement of SETUP) sqlite.exec(statement.sql)
+    await make(k, OWNER, { amountCents: 50 })
+    for (const statement of BACKFILLS) sqlite.exec(statement.sql)
+    await assertRollup(k, 'the backfill after one write')
+    const cell = sqlite.prepare('SELECT sum_cents, n FROM ledger_cells WHERE owner = ?').all(OWNER)
+    expect(cell).toEqual([{ sum_cents: 650, n: 4 }])
+  })
 
   it('can be applied twice', async () => {
     const { sqlite, k } = await kitFor(33)
