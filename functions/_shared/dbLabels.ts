@@ -47,7 +47,7 @@ export async function updateLabel(
   id: number,
   patch: Partial<NewLabel>,
 ): Promise<Label> {
-  const keys = (Object.keys(patch) as (keyof NewLabel)[]).filter((k) => k in LABEL_COLUMNS)
+  const keys = (Object.keys(patch) as (keyof NewLabel)[]).filter((k) => Object.hasOwn(LABEL_COLUMNS, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const sets = keys.map((k) => `${LABEL_COLUMNS[k]} = ?`).join(', ')
   const values = keys.map((k) => coerce(k, patch[k]))

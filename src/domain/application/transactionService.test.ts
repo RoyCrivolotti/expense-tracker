@@ -3,6 +3,8 @@ import {
   bulkCreateTransactions,
   bulkDeleteTransactions,
   bulkUpdateTransactions,
+  MAX_BULK_CREATE,
+  MAX_NOTES_LENGTH,
   patchTransaction,
   validateBulkTransactions,
   validateBulkUpdatePatch,
@@ -24,6 +26,29 @@ const validTxn = {
 }
 
 describe('transactionService validation', () => {
+  it('holds a new note to a length, and allows none', () => {
+    const longest = 'n'.repeat(MAX_NOTES_LENGTH)
+    expect(validateNewTransaction({ ...validTxn, notes: longest }).notes).toBe(longest)
+    expect(() => validateNewTransaction({ ...validTxn, notes: `${longest}n` })).toThrow(
+      `notes must be ${MAX_NOTES_LENGTH} characters or fewer`,
+    )
+    expect(validateNewTransaction({ ...validTxn, notes: '' }).notes).toBe('')
+    expect(validateNewTransaction(validTxn).notes).toBeUndefined()
+  })
+
+  it('takes a bulk create up to a cap and refuses more before looking at a row', () => {
+    const rows = (n: number) => Array.from({ length: n }, () => validTxn)
+    expect(validateBulkTransactions(rows(MAX_BULK_CREATE))).toHaveLength(MAX_BULK_CREATE)
+    expect(() => validateBulkTransactions(rows(MAX_BULK_CREATE + 1))).toThrow(`Too many transactions (max ${MAX_BULK_CREATE})`)
+    expect(() => validateBulkTransactions([...rows(MAX_BULK_CREATE), null])).toThrow('Too many transactions')
+  })
+
+  it('names the row whose note is too long', () => {
+    expect(() => validateBulkTransactions([validTxn, { ...validTxn, notes: 'n'.repeat(MAX_NOTES_LENGTH + 1) }])).toThrow(
+      'Row 2: notes must be',
+    )
+  })
+
   it('requires core fields on a single transaction', () => {
     expect(() => validateNewTransaction({ ...validTxn, date: '' })).toThrow(
       'date, budgetMonth, accountId and categoryId are required',
@@ -284,6 +309,15 @@ describe('validateTransactionPatch', () => {
     expect(() => validateTransactionPatch({ description: `${longest}x` })).toThrow('140 characters or fewer')
     expect(() => validateTransactionPatch({ description: 'x'.repeat(1_500_000) })).toThrow('140 characters or fewer')
     expect(validateTransactionPatch({ description: '   ' })).toEqual({ description: '   ' })
+  })
+
+  it('holds a patched note to the length a new one has, and still lets an edit clear it', () => {
+    const longest = 'n'.repeat(MAX_NOTES_LENGTH)
+    expect(validateTransactionPatch({ notes: longest })).toEqual({ notes: longest })
+    expect(() => validateTransactionPatch({ notes: `${longest}n` })).toThrow(`${MAX_NOTES_LENGTH} characters or fewer`)
+    expect(validateTransactionPatch({ notes: '' })).toEqual({ notes: '' })
+    expect(validateTransactionPatch({ notes: null })).toEqual({ notes: null })
+    expect(() => validateTransactionPatch({ notes: 5 })).toThrow('notes must be text')
   })
 
   it('accepts planId and installmentIndex together', () => {

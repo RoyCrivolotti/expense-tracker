@@ -12,8 +12,13 @@ import { error, HttpError, json } from '../../../_shared/http'
  *
  * The client never names an R2 key: it asks for an attachment id, and the key is
  * resolved from the row, scoped by owner. That is the single most important
- * property here — no request can reach an object the caller does not own,
- * whatever it puts in the URL.
+ * property here — no request can make the server read an object the caller
+ * does not own, whatever it puts in the URL.
+ *
+ * It does not stop a browser from answering for the server: the bytes are cached
+ * for a year under the id URL (see `serveHeaders`), so on a browser shared with
+ * another account a receipt already opened in it is served from there, without
+ * this check.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseNumericId(context.params, 'id')

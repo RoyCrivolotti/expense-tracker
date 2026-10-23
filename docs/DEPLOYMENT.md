@@ -263,11 +263,11 @@ existed, but the bytes are not copied: base64 in the JSON snapshot would add abo
 alert. The real risk is an accidental bucket delete, which R2 object versioning addresses, so enable it on the bucket if
 the receipts matter.
 
-**Revoking a user** deletes their receipt bytes from R2 and then their rows from D1, via `purgeOwnerData`, in that
-order, because the `transaction_attachments` rows are the only record of which objects are theirs. The R2 half is
-best-effort: if it fails the revoke still completes and logs `revoke: <n> receipt object(s) for <email> were not deleted
-(<reason>)`. Sweep the `{owner-email}/` prefix manually with `npx wrangler r2 object delete` only if you see that
-warning, or to catch objects no row ever named (an upload whose row insert failed).
+**Revoking a user** deletes their receipt bytes from R2 and then their rows from D1 (`purgeOwnerData`), in that order,
+because the `transaction_attachments` rows are the only record of which objects are theirs. The R2 half is best-effort:
+if it fails the revoke completes and logs `revoke: <n> receipt object(s) for <email> were not deleted (<reason>)`, and
+then, or to catch objects no row ever named, sweep the `{owner-email}/` prefix with `npx wrangler r2 object delete`. If
+the D1 half fails the user is already revoked (or has lost the `expenses` group), so send the same request again.
 
 ## Scheduled backups (R2)
 

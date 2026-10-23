@@ -6,6 +6,7 @@ import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { createR2BackupStore } from './adapters/r2BackupStore'
 import { ownerBackupKey } from './backupKeys'
 import type { BackupPolicy } from './backupPolicy'
+import { reportFailedBackups, type OwnerFailure } from './backupFailures'
 import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import { resolveBackupPolicy } from './backupPolicy'
 import { runChunkedBackups } from './chunkedBackup'
@@ -17,6 +18,7 @@ export interface BackupRunResult {
   owners: number
   dateKey: string
   pruned: number
+  /** Bytes in the bucket once the day's backups were written, before anything old was pruned. */
   usedBytes: number
 }
 
@@ -53,12 +55,22 @@ async function backupOwner(
 export async function runAllBackups(deps: BackupDeps): Promise<BackupRunResult> {
   const dateKey = new Date().toISOString().slice(0, 10)
   const owners = await deps.repo.listOwners()
+  const failures: OwnerFailure[] = []
   for (const owner of owners) {
-    await backupOwner(deps, owner, dateKey)
+    try {
+      await backupOwner(deps, owner, dateKey)
+    } catch (error) {
+      failures.push({ owner, error })
+    }
   }
-  const pruned = await pruneBackups(deps, dateKey)
-  const usedBytes = await maybeAlertBucketUsage(deps)
-  return { owners: owners.length, dateKey, pruned, usedBytes }
+  try {
+    // The bucket is measured before pruning: afterwards it is under its cap by construction, and never alerts.
+    const usedBytes = await maybeAlertBucketUsage(deps)
+    const pruned = await pruneBackups(deps, dateKey, owners)
+    return { owners: owners.length, dateKey, pruned, usedBytes }
+  } finally {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+  }
 }
 
 /**

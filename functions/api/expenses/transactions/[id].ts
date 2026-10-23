@@ -6,7 +6,7 @@ import {
 } from '../../../domain/application/transactionService'
 import { mapAppError } from '../../../_shared/mapAppError'
 import { receiptStore } from '../../../_shared/receiptStoreFactory'
-import { removeReceiptsForTransactions } from '../../../_shared/receiptService'
+import { deleteWithReceipts } from '../../../_shared/receiptService'
 import { HttpError, json, readJson } from '../../../_shared/http'
 import { parseNumericId } from '../../../_shared/params'
 
@@ -34,10 +34,7 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const { repo, owner } = context.data
   const id = parseNumericId(context.params, 'id')
   try {
-    // Bytes first, while the rows naming their keys still exist; the rows
-    // themselves cascade inside the delete's own batch.
-    await removeReceiptsForTransactions(repo, receiptStore(context.env), owner, [id])
-    await removeTransaction(repo, owner, id)
+    await deleteWithReceipts(repo, receiptStore(context.env), owner, [id], () => removeTransaction(repo, owner, id))
     return json({ ok: true })
   } catch (error) {
     mapAppError(error)
