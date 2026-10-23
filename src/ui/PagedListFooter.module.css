@@ -13,6 +13,8 @@
 .retry {
   font: inherit;
   font-weight: 600;
+  /* A touch target of at least 44px, which the padding alone is not. */
+  min-height: 44px;
   padding: 0.5rem 1rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
