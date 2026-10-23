@@ -38,8 +38,8 @@ describe('startingFrom', () => {
 
   it('does not change the source it wraps', async () => {
     const source = memorySource(dataset)
-    const own = source.readReferencePart
     startingFrom(source, await source.readReferencePart())
-    expect(source.readReferencePart).toBe(own)
+    source.move('r1')
+    expect((await source.readReferencePart()).revision).toBe('r1')
   })
 })

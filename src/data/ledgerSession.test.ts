@@ -143,7 +143,7 @@ describe('LedgerSession, opening and looking at months', () => {
 
   it('does not give up the months the first read took as rows, which have no sums, though the cap is passed', async () => {
     const session = new LedgerSession(memorySource(dataset), { policy: WINDOWED, maxHeldMonths: 20 })
-    await session.open(months[30]!)
+    await session.open(months[30])
     for (const month of [months[5]!, months[45]!, months[12]!, months[22]!]) await session.view(month)
     const { held } = session.getState()
     expect(held!.rows.has(months[30]!)).toBe(true)
