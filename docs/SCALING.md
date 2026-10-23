@@ -93,41 +93,65 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 ### On a deployed D1
 
 `scripts/measure-d1.mjs` ran the route handlers against a development D1 database through Cloudflare's REST API, which
-reports the rows each statement read and wrote ([MEASURING.md](./MEASURING.md)). The ledger was synthetic: 303
-transactions and 11 statements under a reserved example owner, removed afterwards. A call is one round trip, with a
-`batch()` counted once, and the statements count each member of a batch. The harness stubs the middleware's access
-checks, about five statements a request, so they are in none of the counts.
+reports the rows each statement read and wrote ([MEASURING.md](./MEASURING.md)). The ledger was synthetic: one reserved
+example owner with 303 transactions on one day and 910 on another, removed afterwards. Rows read are the rows a
+statement visited, which is what D1 bills. Statements count each member of a `batch()`. The harness stubs the
+middleware's access checks, about five statements a request, so they are in none of the counts. The statements column is
+for the current handlers; the bulk routes that grow with the rows have their formulas in
+[API.md](./API.md#bulk-transaction-routes).
 
-| Route | Calls | Statements | Rows read | Rows written |
-| --- | --- | --- | --- | --- |
-| `GET /api/expenses` | 19 | 19 | 774 | 0 |
-| `GET /api/expenses`, unchanged (304) | 1 | 1 | 1 | 0 |
-| `GET /reference` | 20 | 20 | 546 | 0 |
-| `GET /transactions/months`, 3 months | 2 | 2 | 863 | 0 |
-| `GET /cube`, 12 months | 2 | 2 | 890 | 0 |
-| `GET /series` | 3 | 3 | 3,027 | 0 |
-| `GET /descriptions/suggest`, one letter | 2 | 2 | 139 | 0 |
-| `GET /usage` | 6 | 6 | 756 | 0 |
-| `GET /transactions/list`, first page | 1 | 1 | 277 | 0 |
-| `GET /transactions/list`, second page | 1 | 1 | 283 | 0 |
-| `GET /transactions/list`, one month | 1 | 1 | 208 | 0 |
-| `GET /transactions/summary` | 1 | 2 | 608 | 0 |
-| `GET /transactions/summary`, one month | 1 | 2 | 78 | 0 |
-| `GET /transactions/:id` | 1 | 1 | 5 | 0 |
-| `POST /transactions`, one row | 8 | 8 | 10 | 11 |
-| `POST /transactions/bulk`, 20 rows | 124 | 124 | 164 | 182 |
-| `PATCH /transactions/bulk`, 50 ids (measured before the rows were read back in one query) | 155 | 155 | 628 | 102 |
-| `DELETE /transactions/bulk`, 20 rows | 3 | 6 | 264 | 22 |
-| `DELETE /transactions/:id` | 3 | 6 | 6 | 3 |
+| Route | Statements | Rows read at 303 | Rows read at 910 | Per 1,000 more | Rows written |
+| --- | --- | --- | --- | --- | --- |
+| `GET /api/expenses` | 19 | 774 | 2,189 | about 2,330 | 0 |
+| `GET /api/expenses`, unchanged (304) | 1 | 1 | 1 | none | 0 |
+| `GET /reference` | 20 | 546 | 1,224 | | 0 |
+| `GET /transactions/months`, 3 months | 2 | 863 | 549 | | 0 |
+| `GET /cube`, 12 months | 2 | 890 | 1,415 | | 0 |
+| `GET /series` | 3 | 3,027 | 8,848 | about 9,590 | 0 |
+| `GET /descriptions/suggest`, one letter | 2 | 139 | 159 | | 0 |
+| `GET /usage` | 6 | 756 | 2,122 | about 2,250 | 0 |
+| `GET /transactions/list`, first page | 1 | 277 | 137 | | 0 |
+| `GET /transactions/list`, second page | 1 | 283 | 133 | | 0 |
+| `GET /transactions/list`, one month | 1 | 208 | 109 | | 0 |
+| `GET /transactions/summary` | 3 | 608 | 1,823 | | 0 |
+| `GET /transactions/summary`, one month | 3 | 78 | 83 | | 0 |
+| `GET /transactions/:id` | 1 | 5 | 3 | none | 0 |
+| `POST /transactions`, one row | 9 | 10 | 12 | | 11 |
+| `POST /transactions/bulk`, 20 rows | 125 | 164 | 185 | | 182 |
+| `PATCH /transactions/bulk`, 50 ids (category) | 6 | 628 | 639 | | 102 |
+| `DELETE /transactions/bulk`, 20 rows | 7 | 264 | 265 | | 22 |
+| `DELETE /transactions/:id` | 7 | 6 | 7 | | 3 |
 
-A delete wrote about one row per row removed, so D1 did not appear to bill the index entries it removed. That is one run
-on a small ledger. The statement counts of the bulk routes are the formulas in
-[API.md](./API.md#bulk-transaction-routes); the `PATCH` row above no longer matches them, since an edit by id now takes
-the same statements however many ids it names.
+Only the dataset, the series and the usage ran the same SQL on both days, so only they have a slope. The SQL of the list
+pages, the summary, the months and the reference changed in between (the label join, a summary read as a batch), and the
+edit by ids now reads its rows back in one query, so their 303 figures are not comparable with the 910 ones. A list page
+is bounded by its page. The cube and the 3-month window stop growing once the ledger spans more months than the window,
+which the 303 ledger did not (8 months against 23). A 304 and one row by id do not grow.
 
-Not measured: the CPU of the app's own routes on workerd (the REST API reports none, and the probe above ran a loop),
-and any ledger larger than the seed. [MEASURING.md](./MEASURING.md) says how to repeat the run with a larger seed and
-compare.
+D1's own time at 910 transactions was 15 to 17 ms for the dataset, 9 to 10 for the series, 32 for the 20-row create over
+its 125 statements and under 8 for every other route. It is the database's clock, not Worker CPU.
+
+An ordinary expense wrote 8 rows when inserted with an explicit id and 9 through the API: the row, seven indexes and,
+for an insert without an id, the sequence row of its `AUTOINCREMENT` key. That last part fits the counts and was
+inferred, not observed. A label link writes 4. Every write request adds 2 for the revision bump, so a single create is
+11. Changing a row's category writes 2 for it. A delete wrote 1 per row removed on both days (cleaning up the 910
+transactions, 74 label links, 76 reference rows and the revision row wrote 1,061), so D1 did not appear to bill the
+index entries it removed.
+
+The large reads:
+
+- **The series** is one statement that reads 8,847 of the 8,848 rows: a `row_number()` and a `lag()` over two orderings
+  of every counted transaction, about 9.7 rows per transaction.
+- **The dataset** reads 911 rows in the scan of the transactions and 1,132 in the labels join, which finds 74 links
+  because it walks the owner's transactions.
+- **The usage** counts are one `GROUP BY` scan over the transactions (2,101 of its 2,122 rows).
+- **The summary** reads 911 rows for its count, which stops growing at 1,001, and another 911 for its net sum, which
+  does not.
+
+Not measured: Worker CPU (the REST API reports none, and the probe above ran a loop), latency from a Worker, how
+Cloudflare counts a `batch()` toward the 50 queries (the probe saw no limit to count against), any ledger above 910
+transactions, and the access-check statements, which the harness stubs. [MEASURING.md](./MEASURING.md) says how to
+repeat the run with a larger seed.
 
 ## The design
 
