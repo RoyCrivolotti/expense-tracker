@@ -5,13 +5,25 @@ import { adversarialLedger } from '../../src/testing/adversarialLedger'
 import { randomLedger } from '../../src/testing/randomLedger'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
 import { OWNER, awkwardLedger, queryDb } from '../../src/testing/transactionQueryKit'
-import { PINNED_SQL, UNPINNED_SQL, cubeSql, monthCountsSql, monthRowsSql, paymentsSql, pinnedSql } from './ledgerPartsSql'
+import {
+  PINNED_SQL,
+  UNPINNED_SQL,
+  accountsSql,
+  cubeSql,
+  monthCountsSql,
+  monthRowsSql,
+  paidStatementsSql,
+  paymentsSql,
+  pinnedSql,
+} from './ledgerPartsSql'
 
 const RANGE = { from: '2026-01', to: '2026-03' }
 const ALL = [
   pinnedSql(OWNER),
   paymentsSql(OWNER),
   monthRowsSql(OWNER, RANGE, 5_000),
+  accountsSql(OWNER),
+  paidStatementsSql(OWNER, RANGE),
   cubeSql(OWNER, RANGE, 6_000),
   monthCountsSql(OWNER),
 ]
@@ -30,7 +42,7 @@ describe('the statements', () => {
     expect(Math.max(...ALL.map((s) => s.params.length))).toBeLessThanOrEqual(6)
   })
 
-  it('scope every read of transactions to the owner', () => {
+  it('scope every read to the owner', () => {
     for (const { sql } of ALL) expect(sql, sql).toMatch(/owner = \?/)
   })
 })
