@@ -11,10 +11,11 @@ which reports `rows_read` and `rows_written` for every statement. It cannot meas
   and match what Cloudflare reports for that id. Anything that writes needs `--write` and `--confirm <database>`.
 - **One synthetic owner.** Writes are made as `scaling-check@example.com` (reserved by RFC 2606, accepted by
   `scripts/check-pii.mjs`). Every write must bind it, DDL is refused, and ids start above what each table holds.
-- **Small, because the budget is shared.** Cloudflare states the Free plan's daily D1 limits for the account and never per
-  database, so they are treated as one budget with production: writing to dev spends it. A run stops at 25,000 rows
-  written (15,000 on one day) and 500,000 read in total, and refuses to start if the account has already written 40,000 or
-  read 1.5M rows that day. An ordinary insert is 8 written rows (the row and 7 indexes). `plan` prints the arithmetic.
+- **Small, because the budget is shared.** Cloudflare states the Free plan's daily D1 limits for the account and never
+  per database, so they are treated as one budget with production: writing to dev spends it. A run stops at 25,000 rows
+  written (15,000 on one day) and 500,000 read in total, and refuses to start if the account has already written 40,000
+  or read 1.5M rows that day. A seeded insert is 8 written rows (the row and 7 indexes;
+  [SCALING.md](./SCALING.md#on-a-deployed-d1) has the other write costs). `plan` prints the arithmetic.
 - **Removable by owner.** Cleanup deletes by that owner only, one table at a time.
 
 ## What to provide
@@ -36,7 +37,9 @@ use today; otherwise pass `--account-written-today N` from the D1 dashboard. `pl
    per route; the `.tmp/scaling/routes-*.json` it saves also has each route's statements, one entry per distinct SQL
    template, with how often it ran and the rows read and written, so a total can be traced to the query behind it.
 6. `cleanup --database D --write --confirm D --transactions 300`, then `verify --database D --snapshot <file>`.
-7. Repeat with a larger seed on another day, then `compare <run-a> <run-b>` for the growth per 1,000 transactions.
+7. Repeat with a larger seed on another day, then `compare <run-a> <run-b>` for the growth per 1,000 transactions. It
+   assumes the same handlers on both days and extrapolates in a straight line, so read it only for routes whose SQL did
+   not change and that are not windowed; the cube, the months and the list pages are not linear.
 
 `.tmp/scaling/stop` ends a run before its next statement. Totals are kept in `.tmp/scaling/spend.json`.
 
@@ -60,8 +63,3 @@ To check again, or on another account, a throwaway draft PR adds a route that ru
 (`?mode=batch`) or as 60 separate calls (`?mode=separate`). Batch passes while separate fails at the 51st: a batch counts
 as one. Both fail: it counts per statement. Both pass: the limit is not enforced. It writes no rows but needs a deploy.
 To check CPU the same way, loop in the route and read the CPU time from the platform's analytics.
-
-## Not measured
-
-Worker CPU of the app's own routes, anything above the seeded size, D1 latency from a Worker, and the access-check
-statements, which the harness stubs.
