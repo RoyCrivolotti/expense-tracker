@@ -28,7 +28,6 @@
     "setup:staging-domains": "node scripts/setup-staging-domains.mjs",
     "setup:access-apps": "node scripts/setup-access-apps.mjs",
     "setup:access-migrate": "node scripts/setup-access-migrate.mjs",
-    "setup:access-preview": "node scripts/setup-access-preview.mjs",
     "migrate": "node scripts/migrate.mjs",
     "migrate:dev": "node scripts/migrate.mjs \"${DEV_D1_NAME:-roy-expenses-dev}\" --apply",
     "check:schema": "node scripts/check-schema-drift.mjs",

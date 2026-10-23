@@ -79,6 +79,16 @@ describe('LedgerExpensesApp', () => {
     expect(source.calls.filter((c) => c.startsWith('months:') || c.startsWith('cube:'))).toEqual([])
   })
 
+  it('stays on the ledger for a ledger of exactly the limit, which is held in full', async () => {
+    const source = servingSource()
+    const read = source.readReferencePart.bind(source)
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT })
+    renderApp(source)
+    await screen.findByText('Recent activity')
+    expect(screen.queryByText('the whole dataset app')).toBeNull()
+    expect(source.load).not.toHaveBeenCalled()
+  })
+
   it('hands back to the whole dataset for a source that cannot serve parts', async () => {
     renderApp({ canWrite: false, load: vi.fn().mockResolvedValue(dataset) })
     await screen.findByText('the whole dataset app')

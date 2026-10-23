@@ -131,25 +131,29 @@ export async function removeReceipt(
 }
 
 /**
- * Delete the R2 bytes belonging to transactions that are about to be removed.
+ * Run a delete of transactions, then remove the receipt bytes of the rows it took.
  *
- * Call this *before* the transactions go, while the rows naming the keys still
- * exist. Byte deletion is best-effort and deliberately never fails the caller:
- * an orphaned object costs a few hundred KB until the next sweep, whereas
- * failing the delete would leave the user unable to remove a transaction
- * because of a storage hiccup.
+ * The keys are read first, while the rows naming them exist, but nothing leaves the bucket until the delete has
+ * succeeded. In the other order a delete that is then refused or fails leaves rows whose files are gone, and
+ * receipts are in no backup. Removing the bytes is best effort and never fails the caller: an object left behind
+ * costs a few hundred KB, a row left without its bytes costs the receipt. Reading the keys is not best effort; if
+ * it fails nothing has been deleted and the request can be repeated.
  */
-export async function removeReceiptsForTransactions(
+export async function deleteWithReceipts<T>(
   repo: ExpenseRepository,
   store: ReceiptStore | null,
   owner: string,
   transactionIds: number[],
-): Promise<void> {
-  if (!store || transactionIds.length === 0) return
-  try {
-    const keys = await repo.attachmentKeysForTransactions(owner, transactionIds)
-    await store.deleteMany(keys)
-  } catch {
-    /* best-effort: the D1 rows still cascade, so nothing is left dangling */
+  deleteRows: () => Promise<T>,
+): Promise<T> {
+  const keys = store && transactionIds.length > 0 ? await repo.attachmentKeysForTransactions(owner, transactionIds) : []
+  const result = await deleteRows()
+  if (store && keys.length > 0) {
+    try {
+      await store.deleteMany(keys)
+    } catch {
+      /* best effort: see above */
+    }
   }
+  return result
 }

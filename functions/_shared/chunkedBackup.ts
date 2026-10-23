@@ -18,6 +18,7 @@ import {
   type BackupState,
   type PartLine,
 } from './backupFormat'
+import { reportFailedBackups, type OwnerFailure } from './backupFailures'
 import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
 import type { BackupPolicy } from './backupPolicy'
 import type { ChunkedBackupSettings } from './chunkedBackupSettings'
@@ -288,8 +289,16 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
   let finished = 0
   let failed = 0
   let waiting = false
+  const failures: OwnerFailure[] = []
   for (const owner of owners) {
-    const outcome = await backupOwnerChunked(deps, owner, dateKey, budget, keys, now)
+    let outcome: OwnerOutcome
+    try {
+      outcome = await backupOwnerChunked(deps, owner, dateKey, budget, keys, now)
+    } catch (error) {
+      // The next owner is still backed up; the failure is reported, and thrown, once the loop is over.
+      failures.push({ owner, error })
+      continue
+    }
     if (outcome === 'continues') {
       waiting = true
       break
@@ -298,9 +307,20 @@ export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () 
     if (outcome === 'complete') finished += 1
   }
   const open = { owners: owners.length, dateKey, complete: false, failed, pruned: 0, usedBytes: 0 }
-  if (waiting || failed > 0) return open
-  if (finished === 0) return { ...open, complete: true }
-  const pruned = await pruneBackups(deps, dateKey, true)
-  const usedBytes = await maybeAlertBucketUsage(deps)
-  return { ...open, complete: true, pruned, usedBytes }
+  if (waiting) {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+    return open
+  }
+  // No owner is waiting for a later run, so the day's clean-up runs even when an owner failed: a failure that repeats
+  // every day must not stop old backups being pruned or the bucket measured, and each owner keeps their newest
+  // complete backup either way.
+  const stuck = failures.length > 0 || failed > 0
+  if (finished === 0 && !stuck) return { ...open, complete: true }
+  try {
+    const usedBytes = await maybeAlertBucketUsage(deps)
+    const pruned = await pruneBackups(deps, dateKey, owners, true)
+    return { ...open, complete: !stuck, pruned, usedBytes }
+  } finally {
+    await reportFailedBackups(deps.alerts, dateKey, owners.length, failures)
+  }
 }

@@ -14,10 +14,16 @@ function totalBytes(objects: { size: number }[]): number {
   return objects.reduce((sum, obj) => sum + obj.size, 0)
 }
 
-export async function pruneBackups(deps: Housekeeping, dateKey: string, batch = false): Promise<number> {
+/** `owners` are those who still have data; each keeps their newest complete backup however old or large. */
+export async function pruneBackups(
+  deps: Housekeeping,
+  dateKey: string,
+  owners: readonly string[],
+  batch = false,
+): Promise<number> {
   if (!deps.store) return 0
   const objects = await deps.store.list()
-  const keys = buildPrunePlan(objects, deps.policy, dateKey)
+  const keys = buildPrunePlan(objects, deps.policy, dateKey, new Set(owners))
   return applyPrunePlan(deps.store, keys, batch)
 }
 

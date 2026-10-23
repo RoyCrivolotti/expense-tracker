@@ -5,6 +5,7 @@
  */
 import { statementPosition, type ExportTable } from '../domain/data/exportTables'
 import { COLUMNS, LABEL_IDS_SQL, STATUS_JOINS, STATUS_SQL, type Sql, type SqlParam } from './transactionQuerySql'
+import { IN_ID_LIST } from './sqlIdList'
 
 interface Keyed {
   table: string
@@ -65,4 +66,4 @@ export function exportSql(table: ExportTable, owner: string, after: string | und
 /** The entries of the check-ins in a chunk, in one read, for the owner's check-ins only. */
 export const CHECKIN_ENTRIES_SQL = `SELECT e.* FROM wealth_checkin_entries e
   JOIN wealth_checkins c ON c.id = e.checkin_id
-  WHERE c.owner = ? AND e.checkin_id IN (SELECT value FROM json_each(?)) ORDER BY e.checkin_id, e.id`
+  WHERE c.owner = ? AND e.checkin_id ${IN_ID_LIST} ORDER BY e.checkin_id, e.id`
