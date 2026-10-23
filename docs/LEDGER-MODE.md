@@ -106,9 +106,9 @@ for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
   this snapshot. A record from another build (`SNAPSHOT_VERSION` moves with every required dataset field, as for the
   whole-dataset snapshot), another ledger format or another owner is discarded when it is found. Saving and loading
   never throw. Offline, or when a read fails, the session holds the snapshot: it reads nothing, refuses writes, and a
-  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it and is not kept per
-  owner (its one record, `latest`, is whoever loaded last), so when the ledger path hands back to the whole-dataset app
-  offline, that app can still show it.
+  refresh that reads ends it. The whole-dataset snapshot in `offlineCache.ts` shares no key with it. Its one record,
+  `latest`, names its owner and is replaced by whoever loads next, so a load that fails or an offline start shows it
+  only to the person it is for. Neither snapshot is shown when the server has answered 401 or 403, which removes it.
 
 ## Lists in pages
 

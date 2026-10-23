@@ -1,5 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
+import { AccountOwnerContext } from '../hooks/accountOwner'
 import { resetStoppedSuggestionsForTests, useStoppedSuggestions } from './stoppedSuggestions'
 
 const KEY = 'expense:stopped-recurring'
@@ -112,5 +114,45 @@ describe('useStoppedSuggestions', () => {
       const { result } = renderHook(() => useStoppedSuggestions())
       expect(result.current.stopped).toEqual({})
     })
+  })
+})
+
+describe('useStoppedSuggestions for a signed-in person', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetStoppedSuggestionsForTests()
+  })
+
+  const as = (owner: string) => ({ wrapper: ({ children }: { children: ReactNode }) => <AccountOwnerContext value={owner}>{children}</AccountOwnerContext> })
+
+  it('keeps the list under the person’s own key, and the next person on the browser starts with nothing', () => {
+    const alice = renderHook(() => useStoppedSuggestions(), as('alice@example.com'))
+    act(() => alice.result.current.stop('gym|1|1|expense', GYM))
+    expect(JSON.parse(localStorage.getItem(`${KEY}:alice@example.com`)!)).toEqual({ 'gym|1|1|expense': GYM })
+    expect(localStorage.getItem(KEY)).toBeNull()
+    alice.unmount()
+
+    const bob = renderHook(() => useStoppedSuggestions(), as('bob@example.com'))
+    expect(bob.result.current.stopped).toEqual({})
+    const again = renderHook(() => useStoppedSuggestions(), as('alice@example.com'))
+    expect(again.result.current.stopped).toEqual({ 'gym|1|1|expense': GYM })
+  })
+
+  it('does not show what an earlier build kept under the key that named no one', () => {
+    localStorage.setItem(KEY, JSON.stringify({ 'gym|1|1|expense': GYM }))
+    const bob = renderHook(() => useStoppedSuggestions(), as('bob@example.com'))
+    expect(bob.result.current.stopped).toEqual({})
+  })
+
+  it('keeps a list the browser refused to save for the person it is for, and not for anyone else', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('full')
+    })
+    const alice = renderHook(() => useStoppedSuggestions(), as('alice@example.com'))
+    act(() => alice.result.current.stop('gym|1|1|expense', GYM))
+    expect(alice.result.current.stopped).toEqual({ 'gym|1|1|expense': GYM })
+
+    const bob = renderHook(() => useStoppedSuggestions(), as('bob@example.com'))
+    expect(bob.result.current.stopped).toEqual({})
   })
 })

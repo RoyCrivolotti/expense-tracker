@@ -354,7 +354,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // entry chunk grew by 556 (166,705 to 167,261). The merge of older descriptions, the store that reads and keeps the
 // counts, and the words of the notes sit in the chunks only the ledger mode loads, which went from 13,834 to 15,483
 // bytes of their 16,000.
-const TOTAL_MAX_GZIP = 287_211
+//
+// Raised from 287,211 to 287,490 bytes for keeping what a browser saves for one person: the saved copy of the dataset
+// names its owner and is dropped for anyone else, the settings that name what a ledger holds (the series stopped, the
+// suggestions dismissed, the setup skipped) are kept under the account email, and the worker no longer keeps an API
+// URL. The default path went from 287,154 to 287,433 bytes, 57 under the new limit. The entry chunk grew by 292
+// (167,261 to 167,553). The ledger-only chunks went from 15,483 to 15,537 bytes of their 16,000, for the refusal that
+// removes a ledger snapshot.
+const TOTAL_MAX_GZIP = 287_490
 const LEDGER_MAX_GZIP = 16_000
 const GOALS_MAX_GZIP = 85_100
 
