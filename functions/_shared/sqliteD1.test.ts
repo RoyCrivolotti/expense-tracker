@@ -37,6 +37,18 @@ describe('sqliteD1', () => {
     expect(results[1].results).toEqual([{ id: 2 }])
   })
 
+  it('runs batches that overlap one after the other, as D1 does', async () => {
+    const db = sqliteD1(migratedDatabase())
+    const count = () => db.prepare('SELECT COUNT(*) AS n FROM categories')
+    const insert = (id: number) => db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
+    const [first, second] = await Promise.all([db.batch([insert(1), count()]), db.batch([insert(2), count()])])
+    expect(first[1].results).toEqual([{ n: 1 }])
+    expect(second[1].results).toEqual([{ n: 2 }])
+    // A batch that fails rolls back and does not hold up the one behind it.
+    await expect(Promise.all([db.batch([insert(2)]), db.batch([insert(3)])])).rejects.toThrow()
+    expect((await db.batch([count()]))[0].results).toEqual([{ n: 3 }])
+  })
+
   describe('bound-parameter limit', () => {
     const marks = (n: number) => Array.from({ length: n }, () => '?').join(', ')
     const values = (n: number) => Array.from({ length: n }, (_, i) => i)

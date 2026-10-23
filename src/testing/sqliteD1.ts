@@ -140,25 +140,37 @@ function isRead(sql: string): boolean {
   return /^\s*(select|with|pragma)\b/i.test(sql)
 }
 
-/** `batch` is one transaction, as on D1: any failure rolls the whole batch back. */
+/** One batch as one transaction: any failure rolls the whole batch back. */
+async function runBatch(db: DatabaseSync, statements: Prepared[]) {
+  db.exec('BEGIN')
+  try {
+    const out = []
+    for (const s of statements) out.push(isRead(s.sql) ? await s.all() : await s.run())
+    db.exec('COMMIT')
+    return out
+  } catch (err) {
+    db.exec('ROLLBACK')
+    throw err
+  }
+}
+
+/**
+ * `batch` is one transaction, as on D1, and batches run one after another, as on D1. Every statement is awaited
+ * between the BEGIN and the COMMIT here, so two requests that batch at once would otherwise open a transaction
+ * inside the other's.
+ */
 export function sqliteD1(
   db: DatabaseSync,
   stats: SqliteD1Stats = newStats(),
   { maxBoundParameters = D1_MAX_BOUND_PARAMETERS }: SqliteD1Options = {},
 ): D1Database {
+  let turn: Promise<unknown> = Promise.resolve()
   const shim = {
     prepare: (sql: string) => prepared(db, sql, stats, [], maxBoundParameters),
-    batch: async (statements: Prepared[]) => {
-      db.exec('BEGIN')
-      try {
-        const out = []
-        for (const s of statements) out.push(isRead(s.sql) ? await s.all() : await s.run())
-        db.exec('COMMIT')
-        return out
-      } catch (err) {
-        db.exec('ROLLBACK')
-        throw err
-      }
+    batch: (statements: Prepared[]) => {
+      const run = turn.then(() => runBatch(db, statements))
+      turn = run.catch(() => undefined)
+      return run
     },
   }
   return shim as unknown as D1Database
