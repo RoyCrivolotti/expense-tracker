@@ -18,6 +18,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [OPS.md](./OPS.md) | Operator | Staging setup, the scripts, the demo account |
 | [MEASURING.md](./MEASURING.md) | Operator | Measuring rows billed per route on a deployed D1, safely |
 | [SCALING.md](./SCALING.md) | Engineer deciding | How data reaches the browser, the platform limits, the design for large ledgers |
+| [SCALE-PROOF.md](./SCALE-PROOF.md) | Engineer deciding | What opening the app and a large ledger cost, whole dataset against ledger mode, from 1,000 to 100,000 rows on one laptop |
 | [ENGINE-HISTORY.md](./ENGINE-HISTORY.md) | Engineer deciding | How much history each engine and screen reads |
 | [decisions/](./decisions/) | Engineer deciding | Short records of design choices, with what was not chosen |
 
