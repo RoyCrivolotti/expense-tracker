@@ -1,0 +1,96 @@
+name: Verify the offline start in a browser
+
+# `npm run verify` runs the service worker's code (`check-service-worker.mjs`), but only a browser installs a worker,
+# updates one and answers a navigation with it. This builds the app and checks, in Chromium and WebKit, that it opens
+# with no network after one visit, that the update from the worker deployed before the shell was precached lands and
+# cannot strand anyone, and that a launch still reaches Cloudflare Access when the session has ended
+# (`scripts/verify-offline-start.mjs`). A worker that fails while it loads does not fail the build or the app, only
+# the next launch with no network, so nothing else would notice.
+#
+# Its own workflow, like the Goals one: it needs browsers, and the checks that tell a reviewer whether the code builds
+# should not wait for it. Make it required in the branch protection rules once it has proved itself.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/pwaNavigation.ts'
+      - 'scripts/pwaWorkbox.ts'
+      - 'scripts/serviceWorkerGuard.mjs'
+      - 'scripts/offlineStart/**'
+      - 'scripts/verify-offline-start.mjs'
+      - 'vite.config.*'
+      - 'index.html'
+      - 'public/**'
+      - 'package-lock.json'
+      - 'src/main.tsx'
+      - 'src/ui/access/**'
+      - 'src/ui/hooks/PwaUpdatePrompt.tsx'
+      - '.github/workflows/verify-offline-start.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/pwaNavigation.ts'
+      - 'scripts/pwaWorkbox.ts'
+      - 'scripts/serviceWorkerGuard.mjs'
+      - 'scripts/offlineStart/**'
+      - 'scripts/verify-offline-start.mjs'
+      - 'vite.config.*'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: expense-tracker-offline-start-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-start:
+    name: offline-start (${{ matrix.engine }})
+    # WebKit is only Safari's engine on macOS, which is where the installed app on a phone gets its worker from.
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { engine: chromium, os: ubuntu-latest }
+          - { engine: webkit, os: macos-latest }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-node-deps
+
+      - name: Cache the browser
+        id: browsers
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.os == 'macOS' && '~/Library/Caches/ms-playwright' || '~/.cache/ms-playwright' }}
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install the browser
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} ${{ matrix.engine }}
+
+      - name: Install what the browser needs from the system
+        if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: npx playwright install-deps ${{ matrix.engine }}
+
+      - run: npm run build
+
+      - name: Open the built app with no network in ${{ matrix.engine }}
+        env:
+          ENGINES: ${{ matrix.engine }}
+        run: node scripts/verify-offline-start.mjs
+
+  # The one job to require once this workflow is trusted: a matrix job that failed, was cancelled or never started is
+  # not `success`, and without `always()` this job would be skipped, which reads as passing to anything that requires it.
+  offline-start-gate:
+    name: offline-start gate
+    needs: offline-start
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every engine must have passed
+        run: |
+          echo "result: ${{ needs.offline-start.result }}"
+          [ "${{ needs.offline-start.result }}" = success ]

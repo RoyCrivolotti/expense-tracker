@@ -31,6 +31,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: node scripts/check-bundle-budget.mjs
+      - run: node scripts/check-service-worker.mjs
 
   test:
     name: test (${{ matrix.shard }}/4)
