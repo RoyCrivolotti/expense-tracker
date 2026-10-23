@@ -181,6 +181,18 @@ describe('the schema check, reading a database through a stand-in for wrangler',
     expect(result.warn).toHaveLength(1)
   })
 
+  it('leaves out D1\'s own _cf_KV table, and any index or trigger on it', async () => {
+    const deployed = fixtureDatabase()
+    deployed.exec('CREATE TABLE _cf_KV (key TEXT, value BLOB, PRIMARY KEY (key)) WITHOUT ROWID')
+    deployed.exec('CREATE INDEX idx_cf_kv_value ON _cf_KV (value)')
+    deployed.exec('CREATE TRIGGER cf_kv_touch AFTER INSERT ON _cf_KV BEGIN SELECT 1; END')
+
+    const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec, dir: FIXTURES })
+
+    expect(result).toMatchObject({ code: 0, err: [], warn: [] })
+    expect(result.out.at(-1)).toBe('No drift.')
+  })
+
   it('says so when the database cannot be read', async () => {
     const exec = (() => {
       throw Object.assign(new Error('Command failed'), { stdout: JSON.stringify({ error: { text: 'no such database' } }) })
