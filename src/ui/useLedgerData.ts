@@ -187,10 +187,9 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     session.refresh().then(
       async () => {
         keep(session, owner, settled.current)
-        await pager.refresh({ summary: true })
-        const worked = !pager.getState().refreshFailed
+        const worked = await pager.refresh({ summary: true })
         noteRead(worked)
-        return finish(worked ? 'ok' : 'fail')
+        return finish(worked === false ? 'fail' : 'ok')
       },
       () => finish('fail'),
     )

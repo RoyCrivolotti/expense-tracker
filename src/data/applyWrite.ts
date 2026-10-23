@@ -8,8 +8,8 @@ import type { TransactionPager } from './transactionPager'
  * answers (`patch`). A plan's instalments are inserted by the server when the ledger is read, so the list is read
  * after that read has finished, and not beside it.
  *
- * Resolves with whether that read worked: null when the write needed none, true when it worked, false when it failed
- * and the list on screen is still the list before the write.
+ * Resolves with whether that read worked: null when the write needed none or no screen shows the list to read, true
+ * when it worked, false when it failed and the list on screen is still the list before the write.
  */
 export async function applyWrite(
   session: LedgerSession,
@@ -19,6 +19,5 @@ export async function applyWrite(
 ): Promise<boolean | null> {
   if (!session.patch(patch, reach)) return null
   await session.afterPlanWrite()
-  await pager.refresh({ summary: true })
-  return !pager.getState().refreshFailed
+  return pager.refresh({ summary: true })
 }

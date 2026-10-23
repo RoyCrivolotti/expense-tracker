@@ -728,13 +728,30 @@ describe('TransactionPager, what refresh reports', () => {
   it('settles at once, with nothing read, when no screen is showing the list or there is no filter', async () => {
     const source = memorySource(ledger)
     const pager = new TransactionPager(source)
-    await pager.refresh()
+    await expect(pager.refresh()).resolves.toBeNull()
     pager.setFilter({})
     await settled(pager)
     source.calls.length = 0
-    await pager.refresh({ summary: true })
+    await expect(pager.refresh({ summary: true })).resolves.toBeNull()
     expect(source.calls).toEqual([])
     expect(pager.getState().refreshing).toBe(false)
+  })
+
+  it('says whether the read worked, and null for no read, even when an earlier read of the list failed', async () => {
+    const source = memorySource(ledger)
+    const pager = new TransactionPager(source, { limit: 20 })
+    const detach = pager.attach()
+    pager.setFilter({})
+    await settled(pager)
+    const read = source.readTransactionPage.bind(source)
+    await expect(pager.refresh()).resolves.toBe(true)
+    source.readTransactionPage = () => Promise.reject(new Error('offline'))
+    await expect(pager.refresh()).resolves.toBe(false)
+    expect(pager.getState().refreshFailed).toBe(true)
+    source.readTransactionPage = read
+    detach()
+    await expect(pager.refresh()).resolves.toBeNull()
+    expect(pager.getState().refreshFailed).toBe(true)
   })
 
   it('settles when a newer refresh has taken over its read, and the newer one is the one that decides what is shown', async () => {

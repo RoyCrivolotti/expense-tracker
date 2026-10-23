@@ -164,20 +164,22 @@ export class TransactionPager {
   /**
    * Reads the list again from its first page to the depth it has, with the rows already read on screen until all
    * of them are in. Call it after a write. The summary is read again only if `summary` is true. Settles when that
-   * read has ended, one that failed included (`refreshFailed` says so), or at once when there was nothing to read.
+   * read has ended, with whether it worked, or at once with null when none was made: no screen shows the list, there
+   * is no filter, or the list is of another filter now. That is not a failure, whatever an earlier read left in
+   * `refreshFailed`.
    */
-  async refresh({ summary = false }: { summary?: boolean } = {}): Promise<void> {
+  async refresh({ summary = false }: { summary?: boolean } = {}): Promise<boolean | null> {
     if (this.waiting) {
       const returning = this.waiting.key === this.key
       this.settle()
-      if (!returning) return
+      if (!returning) return null
     }
-    if (!this.filter) return
+    if (!this.filter) return null
     if (this.attached === 0) {
       this.dirty = true
-      return
+      return null
     }
-    await this.reload(this.state.rows.length, summary)
+    return this.reload(this.state.rows.length, summary).then(() => !this.state.refreshFailed)
   }
 
   /**

@@ -658,6 +658,30 @@ describe('useLedgerData, the list read in pages', () => {
       await waitFor(() => expect(result.current.backgroundError).toBe('list down'))
     })
 
+    it('does not call a refresh failed for a list no screen shows, because an earlier read of it failed', async () => {
+      const { source, result, pager, detach } = await started()
+      const read = source.readTransactionPage.bind(source)
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await pager.refresh()
+      expect(pager.getState().refreshFailed).toBe(true)
+      detach()
+      source.readTransactionPage = read
+      await afterRefresh(result)
+      expect(result.current.refreshOutcome).toBe('ok')
+      expect(result.current.backgroundError).toBeNull()
+    })
+
+    it('says nothing after a write made while no screen shows the list, though an earlier read of it failed', async () => {
+      const { source, result, pager, detach } = await started()
+      source.readTransactionPage = () => Promise.reject(new Error('list down'))
+      await pager.refresh()
+      detach()
+      const target = result.current.model!.dataset.transactions[0]!
+      act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' })))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      expect(result.current.backgroundError).toBeNull()
+    })
+
     it('says nothing after a write that needed no read of the list, and keeps what an earlier failure said', async () => {
       const { source, result } = await started()
       source.readTransactionPage = () => Promise.reject(new Error('list down'))
