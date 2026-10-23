@@ -259,7 +259,11 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   A body of JSON `null` is a 400 on every route that reads one. The Settings import sends at most 100 rows a request
   (about 600 statements; 1,000 would be 6,000), one after the other. A request that fails after others went through
   leaves those saved, and the import says how many and whether the failed request may have been saved too: a refusal
-  (a 4xx) saved nothing, anything else may have.
+  (a 4xx) saved nothing, anything else may have, and the app then reads again what it shows, so those rows are listed.
+  With Transactions open the list is also read again after every request, back to the depth it was scrolled to. On the
+  SQLite stand-in a thousand rows returned 330 rows with the list closed, about 1,400 with it open at the top, and 14,000
+  to 52,000 with it scrolled to the end of a ledger of 1,400 to 5,200 rows (statements barely move), so import with the
+  list closed.
 
 **Cost in D1 statements**, counted on a real D1 through the real middleware, with its access checks stubbed (about five
 more for the owner, an estimate): a create is 6n + 4 for n rows (124 for 20) and a delete is 6 for 1 row and for 20. The
