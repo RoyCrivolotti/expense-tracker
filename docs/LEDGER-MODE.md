@@ -10,7 +10,7 @@ hands back to the whole-dataset app. Behind the switch it is loaded in parts and
 The windowed behaviour described below (a window of months with per-month sums, the series, older descriptions, the
 server's usage counts, reading back writes to rows that are not held) is built and tested but cannot occur, because
 `LedgerExpensesApp` passes `refuseWindow: true`. Lifting the limit changes four places together (the constant,
-`choose()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
+`chooseLedger()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
 has to decide what a window may show.
 
 ## The switch and the hand-back
@@ -33,7 +33,11 @@ has to decide what a window may show.
 - **The ledger is read in parts, and the parts count only together.** `loadLedger` (`src/data/ledgerLoader.ts`) reads
   the reference first and the rows and sums after it. A part with another revision was read after a write, so the
   reference is read again and only parts that still carry its revision are kept. After three attempts the load throws
-  `LedgerChangedError`, so a ledger that is written to constantly never yields a mix of two states. The browser's HTTP
+  `LedgerChangedError`, so a ledger that is written to constantly never yields a mix of two states. The reference is read
+  once to open: `chooseLedger` reads it to decide between the ledger and the whole-dataset app, and the source it returns
+  answers the session's first read of the reference with that one (`priorReference.ts`), so a cold open does not ask the
+  server twice. The first read also leaves out the sums of the months it reads as rows, which nothing uses; every later
+  read asks for every month's, so that a month held as rows can be given up whatever happened to it. The browser's HTTP
   cache does the revalidation: a request that names `If-None-Match` itself skips that cache, so the client sends none,
   and a 304 that reaches it anyway is read again past the cache. A server without the routes, or a body of another
   shape, is a `PartsUnavailableError`, and the caller loads the whole dataset. Requests stay inside the route bounds
@@ -60,14 +64,15 @@ has to decide what a window may show.
 
 - **A ledger held open changes by patching writes in, and what a write moved is read again.** `LedgerSession`
   (`src/data/ledgerSession.ts`) holds the reference, the pinned rows, the rows of the months being looked at and the
-  sums of every month. A write is patched into the rows held at once, and `reconcileHeld` names the months whose sums
+  sums of the months that are not rows (and of those a write has touched). A write is patched into the rows held at once, and `reconcileHeld` names the months whose sums
   it moved (a row in a month that is not held, a row that stops being pinned) for the session to read again, because
   the browser cannot tell what a write did to months it does not hold. Reads are guarded per resource: a write to the
   rows drops a read of the rows that started before it and leaves a read of the reference alone, so an old value is
   never shown again, and a refresh that a later refresh has overtaken is dropped, failure included, whichever answers
   first. A write also makes the held revision unknown until a part is read again, so the next read of another month
   reads everything rather than mixing two states. Months held beyond the window around the month shown are given up
-  oldest first, and a ledger held in full gives up nothing.
+  oldest first, except one that has no sums (the first read leaves out those of the months it reads as rows), since
+  giving it up would take it out of the totals, and a ledger held in full gives up nothing.
 - **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,
