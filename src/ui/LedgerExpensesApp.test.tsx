@@ -66,7 +66,7 @@ describe('LedgerExpensesApp', () => {
     renderApp(source)
     await screen.findByText('Recent activity')
     expect(screen.queryByText('the whole dataset app')).toBeNull()
-    expect(source.calls.filter((c) => c === 'reference').length).toBeGreaterThan(0)
+    expect(source.calls.filter((c) => c === 'reference')).toHaveLength(1)
     expect(source.load).not.toHaveBeenCalled()
   })
 
@@ -221,8 +221,16 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
     const source = servingSource(long)
     const read = source.readReferencePart.bind(source)
     let reads = 0
-    // The check at the start sees a ledger that fits; the read that opens the session sees one that does not.
-    source.readReferencePart = async () => ({ ...(await read()), ...(++reads > 1 ? { rowCount: FULL_HYDRATION_ROW_LIMIT + 1 } : {}) })
+    // The check at the start sees a ledger that fits, and a write follows it. The session opens from that reference, finds
+    // the parts it reads under a later revision, and reads the reference again, which now has more rows than a window holds.
+    source.readReferencePart = async () => {
+      const reference = await read()
+      if (++reads === 1) {
+        source.move('r1')
+        return reference
+      }
+      return { ...reference, rowCount: FULL_HYDRATION_ROW_LIMIT + 1 }
+    }
     const { seen, view } = watched()
     renderWatched(source, view)
     await screen.findByText('the whole dataset app')
