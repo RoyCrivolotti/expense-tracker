@@ -56,10 +56,39 @@ describe('with the Access settings off', () => {
     expect(certs.calls()).toBe(0)
   })
 
-  it('with one setting only', async () => {
-    world.env.ACCESS_AUD = AUD
+  it('with both blank', async () => {
+    world.env.ACCESS_TEAM_DOMAIN = ' '
+    world.env.ACCESS_AUD = ''
 
     expect((await one({})).status).toBe(200)
+  })
+})
+
+describe('with the Access settings set and unusable', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  const forged = { 'cf-access-jwt-assertion': 'x' }
+
+  it.each([
+    ['only the tag', { ACCESS_AUD: AUD }],
+    ['only the team domain', { ACCESS_TEAM_DOMAIN: TEAM }],
+    ['the team name alone', { ACCESS_TEAM_DOMAIN: 'acme', ACCESS_AUD: AUD }],
+    ['a path', { ACCESS_TEAM_DOMAIN: `${TEAM}/x`, ACCESS_AUD: AUD }],
+    ['a port', { ACCESS_TEAM_DOMAIN: `${TEAM}:8443`, ACCESS_AUD: AUD }],
+    ['http://', { ACCESS_TEAM_DOMAIN: `http://${TEAM}`, ACCESS_AUD: AUD }],
+  ])('every route is a 503 and a forged header gets nothing: %s', async (_name, env) => {
+    Object.assign(world.env, env)
+
+    const read = await one(forged)
+    const write = await world.call(deleteOne, { method: 'DELETE', path: `/transactions/${ids.spareTransaction}`, params: { id: String(ids.spareTransaction) }, headers: forged })
+
+    expect(read.status).toBe(503)
+    expect(await read.json()).toEqual({ error: 'Sign-in checking is not set up correctly' })
+    expect(write.status).toBe(503)
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
+    expect(certs.calls()).toBe(0)
   })
 })
 

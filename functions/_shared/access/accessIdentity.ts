@@ -6,47 +6,56 @@ import { resolveAuthenticatedEmail } from './resolveAuthenticated'
 
 const JWT_HEADER = 'Cf-Access-Jwt-Assertion'
 
-let warnedOfPartialConfig = false
+type AccessEnv = Pick<Env, 'ACCESS_TEAM_DOMAIN' | 'ACCESS_AUD'>
+
+export type AccessCheck =
+  | { state: 'off' }
+  | { state: 'on'; config: AccessJwtConfig }
+  /** One of the settings is set and the pair cannot be used; `problem` says which and why, without the values. */
+  | { state: 'misconfigured'; problem: string }
 
 /**
- * The team and application to check tokens against, or null when checking is off. It is on only when both
- * `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` are set; with neither, requests are identified by the header alone, as before.
- * With one of them set, checking stays off and the log says so once, rather than taking the app down over half a setting.
+ * Whether the signed token is checked, and against what. It is off only when neither `ACCESS_TEAM_DOMAIN` nor
+ * `ACCESS_AUD` is set, which keeps the app as it was. If either is set the check is meant to be on, so a pair that
+ * cannot be used (one missing, a team that is not a hostname) is not read as off: that would leave the unsigned header
+ * believed because of a typo.
  */
-export function accessJwtConfig(env: Pick<Env, 'ACCESS_TEAM_DOMAIN' | 'ACCESS_AUD'>): AccessJwtConfig | null {
+export function accessCheck(env: AccessEnv): AccessCheck {
   const rawTeam = env.ACCESS_TEAM_DOMAIN?.trim() ?? ''
   const audience = env.ACCESS_AUD?.trim() ?? ''
-  if (rawTeam === '' && audience === '') return null
+  if (rawTeam === '' && audience === '') return { state: 'off' }
+  if (rawTeam === '') return { state: 'misconfigured', problem: 'ACCESS_AUD is set but ACCESS_TEAM_DOMAIN is not' }
+  if (audience === '') return { state: 'misconfigured', problem: 'ACCESS_TEAM_DOMAIN is set but ACCESS_AUD is not' }
   const teamDomain = normalizeTeamDomain(rawTeam)
-  if (teamDomain === null || audience === '') {
-    if (!warnedOfPartialConfig) {
-      warnedOfPartialConfig = true
-      console.warn('access: ACCESS_TEAM_DOMAIN and ACCESS_AUD must both be set (and the domain a hostname); not checking tokens')
+  if (teamDomain === null) {
+    return {
+      state: 'misconfigured',
+      problem: 'ACCESS_TEAM_DOMAIN must be a hostname such as acme.cloudflareaccess.com, with no path, port or http://',
     }
-    return null
   }
-  return { teamDomain, audience }
+  return { state: 'on', config: { teamDomain, audience } }
 }
 
 /**
  * The lowercased email of the person making the request. The unsigned `Cf-Access-Authenticated-User-Email` header
  * names them; when the Access settings are configured, the signed token must also verify and carry the same address,
- * or the request is a 401.
+ * or the request is a 401. Settings that are set but unusable refuse every request with a 503, naming the problem in
+ * the log, rather than falling back to the header.
  */
-export async function resolveVerifiedEmail(
-  request: Request,
-  env: Pick<Env, 'ACCESS_TEAM_DOMAIN' | 'ACCESS_AUD'>,
-  keyFor: KeyForId = accessKeys,
-): Promise<string> {
+export async function resolveVerifiedEmail(request: Request, env: AccessEnv, keyFor: KeyForId = accessKeys): Promise<string> {
+  const check = accessCheck(env)
+  if (check.state === 'misconfigured') {
+    console.error(`access: ${check.problem}; refusing every request until it is fixed`)
+    throw new HttpError(503, 'Sign-in checking is not set up correctly')
+  }
   const email = resolveAuthenticatedEmail(request)
-  const config = accessJwtConfig(env)
-  if (!config) return email
+  if (check.state === 'off') return email
   const token = request.headers.get(JWT_HEADER)
   if (!token?.trim()) {
     console.warn('access: refused a request with no signed identity')
     throw new HttpError(401, 'Not authenticated')
   }
-  const signed = await verifyAccessJwt(token.trim(), config, keyFor)
+  const signed = await verifyAccessJwt(token.trim(), check.config, keyFor)
   if (signed !== email) {
     console.warn('access: refused a request whose header and signed identity name different people')
     throw new HttpError(401, 'Not authenticated')

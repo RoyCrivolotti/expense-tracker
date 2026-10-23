@@ -23,7 +23,13 @@ function refuse(reason: string): never {
 function decodeBase64Url(part: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9_-]*$/.test(part)) refuse('token is not base64url')
   const padded = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=')
-  const binary = atob(padded)
+  let binary: string
+  try {
+    binary = atob(padded)
+  } catch {
+    // A length of 1 more than a multiple of 4 is no base64 at all, and atob throws rather than decoding it.
+    return refuse('token is not base64url')
+  }
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
   return bytes

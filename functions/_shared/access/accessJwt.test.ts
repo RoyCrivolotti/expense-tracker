@@ -111,6 +111,16 @@ describe('a token that is refused with a 401', () => {
     },
   )
 
+  it('has a part whose length cannot be base64 at all, where atob would throw: one more than a multiple of 4', async () => {
+    const token = await idp.sign(claims())
+    const [header, payload] = token.split('.') as [string, string, string]
+
+    expect(await refused(`${header}.${payload}.A`)).toBe(401)
+    expect(await refused(`${header}.${payload}.AAAAA`)).toBe(401)
+    expect(await refused(`${base64Url('{"alg":"RS256","kid":"key-1"}').slice(0, 5)}.${payload}.AAAA`)).toBe(401)
+    expect(await refused(`${header}.${base64Url('{}').slice(0, 5)}.AAAA`)).toBe(401)
+  })
+
   it('is a valid token with something after it', async () => {
     expect(await refused(`${await idp.sign(claims())}.extra`)).toBe(401)
   })
