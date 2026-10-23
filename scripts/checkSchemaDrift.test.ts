@@ -6,11 +6,10 @@ import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vitest'
 import {
   applyMigrations,
-  columnsOf,
-  diffColumns,
+  diffNames,
   migrationAdding,
   migrationFiles,
-  statementsOf,
+  schemaOf,
   wranglerSaid,
 } from './check-schema-drift.mjs'
 
@@ -23,9 +22,9 @@ function migrated(): DatabaseSync {
   return db
 }
 
-describe('the columns the migrations produce', () => {
+describe('the schema the migrations produce', () => {
   it('include a column added by an ALTER TABLE, and one from a CREATE TABLE', () => {
-    const columns = columnsOf(migrated())
+    const columns = schemaOf(migrated())
 
     expect(columns.has('settings.investment_category_id')).toBe(true)
     expect(columns.has('settings.goal_levers')).toBe(true)
@@ -37,35 +36,50 @@ describe('the columns the migrations produce', () => {
   })
 
   it('leave out SQLite\'s own tables', () => {
-    expect([...columnsOf(migrated())].some((column) => column.startsWith('sqlite_'))).toBe(false)
+    expect([...schemaOf(migrated())].some((column) => column.startsWith('sqlite_'))).toBe(false)
+  })
+
+  it('include the indexes the migrations create, and none SQLite makes for itself', () => {
+    const schema = [...schemaOf(migrated())]
+
+    expect(schema).toContain('index idx_txn_pinned')
+    expect(schema).toContain('index idx_txn_owner_desc_norm')
+    expect(schema.filter((item) => item.startsWith('index sqlite_'))).toEqual([])
+  })
+
+  it('include the triggers a database has, written as "trigger name"', () => {
+    const db = migrated()
+    db.exec('CREATE TRIGGER t_example AFTER INSERT ON transactions BEGIN SELECT 1; END')
+
+    expect(schemaOf(db)).toContain('trigger t_example')
   })
 })
 
-describe('diffColumns', () => {
+describe('diffNames', () => {
   it('finds a column the database lacks, which is how production drifted', () => {
-    const expected = columnsOf(migrated())
+    const expected = schemaOf(migrated())
     const actual = [...expected].filter((column) => column !== 'settings.investment_category_id')
 
-    expect(diffColumns(expected, actual)).toEqual({ missing: ['settings.investment_category_id'], extra: [] })
+    expect(diffNames(expected, actual)).toEqual({ missing: ['settings.investment_category_id'], extra: [] })
   })
 
   it('finds a column that is in the database and in no migration', () => {
-    const expected = columnsOf(migrated())
+    const expected = schemaOf(migrated())
 
-    expect(diffColumns(expected, [...expected, 'settings.left_over'])).toEqual({
+    expect(diffNames(expected, [...expected, 'settings.left_over'])).toEqual({
       missing: [],
       extra: ['settings.left_over'],
     })
   })
 
   it('finds nothing when they match, whatever the order', () => {
-    const expected = [...columnsOf(migrated())]
+    const expected = [...schemaOf(migrated())]
 
-    expect(diffColumns(expected, [...expected].reverse())).toEqual({ missing: [], extra: [] })
+    expect(diffNames(expected, [...expected].reverse())).toEqual({ missing: [], extra: [] })
   })
 
   it('reports each side sorted, so a run reads the same every time', () => {
-    expect(diffColumns(['b.z', 'a.y'], ['c.x', 'a.w'])).toEqual({ missing: ['a.y', 'b.z'], extra: ['a.w', 'c.x'] })
+    expect(diffNames(['b.z', 'a.y'], ['c.x', 'a.w'])).toEqual({ missing: ['a.y', 'b.z'], extra: ['a.w', 'c.x'] })
   })
 })
 
@@ -77,6 +91,26 @@ describe('migrationAdding', () => {
     expect(migrationAdding('goal_scenarios.home_carry_rate', files())).toBe('0032_home_carry_rate.sql')
     expect(migrationAdding('goal_scenarios.retirement_years', files())).toBe('0033_retirement_years.sql')
     expect(migrationAdding('settings.market_volatility', files())).toBe('0034_market_volatility.sql')
+  })
+
+  it('names the file that created an index', () => {
+    expect(migrationAdding('index idx_txn_pinned', files())).toBe('0037_pinned_rows_index.sql')
+    expect(migrationAdding('index idx_txn_owner_desc_norm', files())).toBe('0038_description_norm.sql')
+  })
+
+  it('names the file that created a trigger, however the name is quoted', () => {
+    const sql = 'CREATE UNIQUE INDEX IF NOT EXISTS "idx_a" ON t (a);\nCREATE TRIGGER IF NOT EXISTS `trg_b` AFTER INSERT ON t BEGIN SELECT 1; END;'
+    const file = [{ name: '0040_x.sql', sql }]
+
+    expect(migrationAdding('index idx_a', file)).toBe('0040_x.sql')
+    expect(migrationAdding('trigger trg_b', file)).toBe('0040_x.sql')
+    expect(migrationAdding('trigger idx_a', file)).toBeNull()
+  })
+
+  it('does not take an index whose name only starts the same for it', () => {
+    const file = [{ name: '0040_x.sql', sql: 'CREATE INDEX IF NOT EXISTS idx_ab ON t (a);' }]
+
+    expect(migrationAdding('index idx_a', file)).toBeNull()
   })
 
   it('names the file that created the table for a column that came with it', () => {
@@ -118,14 +152,5 @@ describe('wranglerSaid', () => {
     expect(wranglerSaid({ stdout: '', stderr: '' })).toBe('')
     expect(wranglerSaid(null)).toBe('')
     expect(wranglerSaid('a string')).toBe('')
-  })
-})
-
-describe('statementsOf', () => {
-  it('drops comments and splits on semicolons', () => {
-    expect(statementsOf('-- a note\nCREATE TABLE t (a INTEGER);\n-- another\nALTER TABLE t ADD COLUMN b TEXT;\n')).toEqual([
-      'CREATE TABLE t (a INTEGER)',
-      'ALTER TABLE t ADD COLUMN b TEXT',
-    ])
   })
 })

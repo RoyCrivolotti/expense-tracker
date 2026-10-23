@@ -23,9 +23,10 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   # Runs beside `ci`, so it adds no time. Reads both databases, read-only, and says what the deploy
-  # has to do. A database with nothing pending must also have the columns its migrations make; one
-  # with something pending is checked the same way after the migration is applied. A record that
-  # cannot be trusted, or a database that cannot be read, stops the deploy here.
+  # has to do. A database with nothing pending must also have the columns, indexes and triggers its
+  # migrations make (an extra index only warns); one with something pending is checked the same way
+  # after the migration is applied. A record that cannot be trusted, or a database that cannot be
+  # read, stops the deploy here.
   schema:
     runs-on: ubuntu-latest
     env:
