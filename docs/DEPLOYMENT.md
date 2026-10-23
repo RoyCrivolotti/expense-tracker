@@ -76,8 +76,8 @@ together. `migrate-dev` waits only for `schema`, so a pending dev migration appl
 waits for `ci`, `schema` and `migrate-dev`, runs only when production has something pending, and then waits for your
 approval (see Migrations). The `ship` job runs when `ci` and `schema` succeeded and no migration job failed. It syncs
 the access env, deploys the production and staging Pages projects, and then runs `npm run deploy:backup-cron`, so the
-backup cron worker is redeployed on every merge to `main`. A pull request runs verify and deploys a staging preview only
-(`.github/workflows/deploy-dev.yml`, see [OPS.md](./OPS.md)).
+backup cron worker is redeployed on every merge to `main`. The migration and `ship` jobs run for `main` only. A pull
+request runs verify and deploys a staging preview only (`.github/workflows/deploy-dev.yml`, see [OPS.md](./OPS.md)).
 
 Secrets: `CLOUDFLARE_API_TOKEN` and `OWNER_EMAIL`. Token permissions (Cloudflare dashboard → My Profile → API Tokens):
 

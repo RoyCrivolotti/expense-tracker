@@ -12,6 +12,10 @@ fit together is in [SCALING.md](./SCALING.md).
 - **Errors.** The body is `{ "error": "<message>" }`. A request the caller can fix is a 400. That includes an unknown,
   repeated or unreadable query parameter: a misspelt filter that was ignored would answer with every row. Anything
   unexpected is a 500 with a fixed message, and the cause goes to the log.
+- **Writes.** A request with a body must send `Content-Type: application/json`, or it is a 415; the receipt upload, which
+  is multipart, is the one exception. A write the browser marks `Sec-Fetch-Site: cross-site` is a 403. Both are refused
+  before the person is identified, and before anything is read or written. A response that sets no `Cache-Control` gets
+  `private, no-store`, and every response gets `X-Content-Type-Options: nosniff`.
 - **Bounds are refused, never cut.** A request over a bound is a 400 that names the bound, because a client that
   silently received part of a month would add up the wrong total. The bounds are conservative, not derived from a
   deployed Worker: raise one only after measuring CPU on a deployed Worker.
