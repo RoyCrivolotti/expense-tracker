@@ -1,10 +1,10 @@
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { NAVIGATION_DENYLIST, isShellNavigation } from './pwaNavigation'
+import { isShellNavigation } from './pwaNavigation'
 
 const navigate = (pathname: string) => isShellNavigation({ request: { mode: 'navigate' }, url: { pathname } })
 
-describe('the navigations the service worker keeps a copy of', () => {
+describe('the navigations the service worker answers', () => {
   it('are the app’s own pages', () => {
     for (const path of ['/', '/index.html', '/goals', '/settings/data']) expect(navigate(path), path).toBe(true)
   })
@@ -20,10 +20,8 @@ describe('the navigations the service worker keeps a copy of', () => {
     expect(isShellNavigation({ request: { mode: 'no-cors' }, url: { pathname: '/assets/index.js' } })).toBe(false)
   })
 
-  it('leave out the same paths as the fallback to the shell does', () => {
-    for (const path of ['/', '/api/x', '/apiary', '/cdn-cgi/x', '/cdn-cgix', '/goals/api/x']) {
-      expect(navigate(path), path).toBe(!NAVIGATION_DENYLIST.some((pattern) => pattern.test(path)))
-    }
+  it('leave out only the paths under /api/ and /cdn-cgi/', () => {
+    for (const path of ['/apiary', '/cdn-cgix', '/goals/api/x', '/api']) expect(navigate(path), path).toBe(true)
   })
 
   it('is written out whole in the worker, which copies the function as text', () => {

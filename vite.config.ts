@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { docsCaptureMocks } from './vite.docsCapture'
-import { NAVIGATION_DENYLIST, isShellNavigation } from './scripts/pwaNavigation'
+import { workboxOptions } from './scripts/pwaWorkbox'
 
 function resolveBuildId(): string {
   const sha = process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA
@@ -24,28 +24,7 @@ export default defineConfig({
       // Use the hand-written manifest in public/ rather than generating one.
       manifest: false,
       injectRegister: 'auto',
-      workbox: {
-        // Shell assets only — not index.html. Auth-gated app must hit the network
-        // on launch so Cloudflare Access can set cookies in the PWA context (iOS
-        // does not share Safari's session with the installed app).
-        globPatterns: ['**/*.{js,css,svg,png,ico,webmanifest,woff2}'],
-        // `/index.html` is not in the precache above, so the route this adds throws when the worker is
-        // evaluated and the `app-shell` route after it is never registered. Both keep the API and Access
-        // prefixes out of what they answer, for the day they are registered.
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: NAVIGATION_DENYLIST,
-        runtimeCaching: [
-          {
-            urlPattern: isShellNavigation,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'app-shell',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 },
-            },
-          },
-        ],
-      },
+      workbox: workboxOptions,
       devOptions: { enabled: false },
     }),
   ],
