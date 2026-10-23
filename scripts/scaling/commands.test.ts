@@ -2,8 +2,10 @@
 import { describe, expect, it } from 'vitest'
 import type { MeasureOptions, RouteResult } from '../../functions/_shared/measure/records'
 import { parseArgs } from './args'
+import { datasetDeleteWrites, datasetInsertWrites, referenceInsertWrites } from './budget'
 import { execute } from './commands'
 import { SYNTHETIC_OWNER } from './guard'
+import { ledgerOfAbout } from './ledgerSize'
 import { SPEND_FILE, type Deps } from './session'
 import { sqliteTransport } from './sqliteTransport'
 import { databaseWithAnotherOwner, seededDatabase } from './testKit'
@@ -78,6 +80,8 @@ describe('the dry runs', () => {
     expect(await run(['cleanup'], h)).toBe(0)
     expect(text(h)).toContain('dry run')
     expect(text(h)).toContain(SYNTHETIC_OWNER)
+    const dataset = ledgerOfAbout(300, '2026-10')
+    expect(text(h)).toContain(`expected rows written: ${datasetInsertWrites(dataset) + referenceInsertWrites(dataset)}; removing them again later: ${datasetDeleteWrites(dataset)}`)
     expect(h.opened).toHaveLength(0)
     expect(h.files.size).toBe(0)
   })
