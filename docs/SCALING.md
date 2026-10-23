@@ -85,8 +85,10 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
    size is not known to fail, and the design still keeps the CPU of one request small.
 2. **The network is not the constraint.** The response is 1.5 MB gzipped at 100,000 rows. Parse and clone are tens of
    milliseconds on a desktop, but a phone is several times slower and pays for the clone on every mutation.
-3. **D1 rows read.** Every load reads every row, so the daily 5 million covers about 440 loads at 10,000 transactions,
-   90 at 50,000 and 18 at 250,000. A 304 skips the load, so the figure counts opens that follow a change.
+3. **D1 rows read.** Every load reads every row. D1 billed about 2.3 rows read per transaction for it (2,189 at 910
+   transactions, against about 1.1 in the stand-in's column above), so the daily 5 million covers about 200 loads at
+   10,000 transactions, 40 at 50,000 and 9 at 250,000, if the slope holds. A 304 skips the load, so the figure counts
+   opens that follow a change.
 4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
 5. **A load issues 19 D1 queries** on a deployed D1 (the table below), inside the limit of 50.
 
