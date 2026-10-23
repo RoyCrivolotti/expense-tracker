@@ -83,11 +83,14 @@ export async function deleteFlag(
   id: number,
 ): Promise<{ unflagged: number }> {
   await assertOwnedFlag(env, owner, id)
-  const [cleared] = await env.DB.batch([
+  // Counted first, in the same batch: on D1 the UPDATE's `meta.changes` includes the rows the rollup triggers
+  // write when a row leaves the pinned cells (docs/decisions/ledger-rollup.md).
+  const [counted] = await env.DB.batch([
+    env.DB.prepare('SELECT COUNT(*) AS n FROM transactions WHERE flag_id = ? AND owner = ?').bind(id, owner),
     env.DB
       .prepare('UPDATE transactions SET flag_id = NULL WHERE flag_id = ? AND owner = ?')
       .bind(id, owner),
     env.DB.prepare('DELETE FROM flags WHERE id = ? AND owner = ?').bind(id, owner),
   ])
-  return { unflagged: cleared?.meta?.changes ?? 0 }
+  return { unflagged: (counted?.results?.[0] as { n: number } | undefined)?.n ?? 0 }
 }

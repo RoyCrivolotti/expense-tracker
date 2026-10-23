@@ -121,9 +121,15 @@ const countsTheApiSends: Scenario = {
     expect(dropped.body, 'rows that left the pinned cells').toEqual({ unflagged: 2 })
     await assertRollup(k, 'flag deleted')
     const ids = [...flagged, await make(k, OWNER, { type: 'investment' })]
-    const deleted = await call(k, OWNER, deleteBulk, '/transactions/bulk', { method: 'DELETE', body: { ids } })
-    expect(deleted.body).toEqual({ deleted: 3, requested: 3 })
+    const theirs = await make(k, OTHER)
+    const deleted = await call(k, OWNER, deleteBulk, '/transactions/bulk', { method: 'DELETE', body: { ids: [...ids, theirs, 999_999] } })
+    expect(deleted.body, 'only the owner’s rows that exist').toEqual({ deleted: 3, requested: 5 })
     await assertRollup(k, 'bulk deleted')
+    const writes = countRollupWrites(k.sqlite)
+    const before = writes()
+    const missing = await call(k, OWNER, deleteOne, '/transactions/999999', { method: 'DELETE', params: { id: '999999' } })
+    expect(missing.status, 'no row changed, so the one use of meta.changes answers 404').toBe(404)
+    expect(writes() - before, 'and no trigger fired').toBe(0)
   },
 }
 

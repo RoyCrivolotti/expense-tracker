@@ -530,10 +530,12 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
   if (ids.length === 0) return 0
   const list = idList(ids)
   // Same cascade as the single delete, same reasons.
-  const [, , , deleted] = await env.DB.batch([
-    env.DB
-      .prepare(`DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id ${IN_ID_LIST}`)
-      .bind(owner, list),
+  //
+  // The count is read first, in the same batch, and not taken from the delete's `meta.changes`: on D1 that
+  // number includes the rows the rollup triggers write (docs/decisions/ledger-rollup.md), about three per row.
+  const [counted] = await env.DB.batch([
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`).bind(owner, list),
+    env.DB.prepare(`DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id ${IN_ID_LIST}`).bind(owner, list),
     // Scoped through a subquery, same reason as the single delete: transaction_labels
     // has no owner column, so a bare `transaction_id IN (...)` would let a caller
     // wipe another owner's label links for an id that is not theirs.
@@ -549,7 +551,7 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
       .bind(owner, list),
     env.DB.prepare(`DELETE FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`).bind(owner, list),
   ])
-  return deleted?.meta?.changes ?? 0
+  return (counted?.results?.[0] as { n: number } | undefined)?.n ?? 0
 }
 
 /**

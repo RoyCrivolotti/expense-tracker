@@ -258,11 +258,13 @@ describe('deleting a transaction takes its attachments with it', () => {
 
   it('cascades for a bulk delete too', async () => {
     const { env, batch } = stubEnv({
+      // The delete's own `meta.changes` is six here, as D1 reports it with the rollup triggers writing; the answer is the count read first.
       batch: () => [
+        { results: [{ n: 2 }] },
         { meta: { changes: 2 } },
         { meta: { changes: 2 } },
         { meta: { changes: 2 } },
-        { meta: { changes: 2 } },
+        { meta: { changes: 6 } },
       ],
     })
 

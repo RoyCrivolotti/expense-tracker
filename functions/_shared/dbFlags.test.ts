@@ -165,7 +165,8 @@ describe('deleteFlag', () => {
     // would be left pointing at a flag row that no longer exists.
     const { env, batch } = stubEnv({
       first: () => OK,
-      batch: () => [{ meta: { changes: 3 } }, { meta: { changes: 1 } }],
+      // The UPDATE reports twelve changes, as D1 does with the rollup triggers writing; three rows were flagged.
+      batch: () => [{ results: [{ n: 3 }] }, { meta: { changes: 12 } }, { meta: { changes: 1 } }],
     })
 
     const result = await deleteFlag(env, OWNER, 7)
@@ -173,6 +174,7 @@ describe('deleteFlag', () => {
     expect(batch).toHaveBeenCalledTimes(1)
     const statements = batch.mock.calls[0]?.[0] as StatementStub[]
     expect(statements.map((s) => s.sql)).toEqual([
+      'SELECT COUNT(*) AS n FROM transactions WHERE flag_id = ? AND owner = ?',
       'UPDATE transactions SET flag_id = NULL WHERE flag_id = ? AND owner = ?',
       'DELETE FROM flags WHERE id = ? AND owner = ?',
     ])
