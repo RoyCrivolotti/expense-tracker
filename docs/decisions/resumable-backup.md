@@ -5,7 +5,8 @@ For an engineer changing how backups are taken. The runbook is in [BACKUPS.md](.
 
 **Context.** The single-file snapshot loads and serialises a whole ledger in one invocation, which the Free plan's CPU
 and subrequest limits would stop allowing as the ledger grows, if enforced as documented ([SCALING.md](../SCALING.md)).
-A backup then spans several invocations, and D1 has no read transaction across them, so a restore can mix two moments
+Workers Paid, where the maintainer's deployment runs, raises both (30 s of CPU and 10,000 subrequests), but the design
+stays inside the Free plan's limits so a fork on it works. A backup then spans several invocations, and D1 has no read transaction across them, so a restore can mix two moments
 and fail on a reference (a transaction whose category was deleted in between).
 
 **Decision.** The backup walks the export a bounded number of calls and rows at a time, writes parts, and saves its place.

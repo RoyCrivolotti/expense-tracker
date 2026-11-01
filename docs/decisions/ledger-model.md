@@ -6,7 +6,9 @@ For an engineer deciding how the data layer should grow. The design is summarise
 number the app shows. The browser holds every transaction and runs them over all of it. On the Cloudflare Free plan the
 first limit a full load would reach is the documented 10 ms of Worker CPU per request, spent building the one dataset
 response. One account was seen not to enforce it, and the design does not rely on that
-([SCALING.md](../SCALING.md#observed-on-a-free-account)). Some screens read years of history and some only the month on
+([SCALING.md](../SCALING.md#observed-on-a-free-account)). The design stays inside the Free plan's limits so a fork on
+it works; the maintainer's deployment runs on Workers Paid, which defaults to 30 s of CPU per request
+([Workers limits](https://developers.cloudflare.com/workers/platform/limits/)). Some screens read years of history and some only the month on
 screen ([ENGINE-HISTORY.md](../ENGINE-HISTORY.md)).
 
 **Decision.** A ledger is the reference tables (held in full), the pinned rows (real at any age), real rows for the 13
