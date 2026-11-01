@@ -6,6 +6,12 @@ one laptop and made no call to Cloudflare, so it costs nothing to repeat. How th
 [LEDGER-MODE.md](./LEDGER-MODE.md), and the platform limits and the deployed-D1 figures are in
 [SCALING.md](./SCALING.md).
 
+Note, 2026-11-01: the shares of the Free plan's daily quota below (5, 7 and 28 percent of 5 million rows read) are about
+the Free plan. The maintainer's deployment runs on Workers Paid, which has no daily D1 limit and includes 25 billion rows
+read a month, then bills $0.001 per million ([D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)). There
+a cold open at 100,000 rows in window mode (1.4M rows read by the estimate) costs $0.0014 even after the allowance is
+used up, a fraction of a cent, and classic (230k rows) costs a sixth of that.
+
 ## What the figures are
 
 Each table says which kind a column is. **Measured** was counted or timed directly. A **proxy** stands in for
@@ -14,7 +20,7 @@ something only the real platform can report. An **estimate** is a proxy scaled b
 | Figure | Kind | Stands in for |
 | --- | --- | --- |
 | Requests, statements, bytes, DOM nodes, heap, long tasks, times in the browser | Measured | |
-| Rows visited | Proxy | D1's rows read, which is what the Free plan bills |
+| Rows visited | Proxy | D1's rows read, which count against the Free plan's daily limit and are billed on Paid |
 | Node time of a handler, less time inside SQLite ("JS ms") | Proxy | Worker CPU, which workerd meters differently |
 | Rows read on D1 | Estimate | Rows visited times the ratio below |
 
@@ -95,9 +101,9 @@ month in one request.
 | `summary`, all dates | 12k, 0.2 ms | 27k, 0.1 ms | 52k, 0.2 ms | 102k, 0.4 ms |
 
 Rows visited and JS ms are proxies and the payload is measured. How far JS ms is from Worker CPU is not known.
-Against the documented 10 ms, the classic read passes it between 5,000 rows (5.8 ms) and 10,000 (12.9 ms), and
-no windowed request passes it except the series at 100,000 (10.0 ms). The probe in SCALING.md saw no enforcement of the
-limit on one account.
+Against the Free plan's documented 10 ms, the classic read passes it between 5,000 rows (5.8 ms) and 10,000 (12.9 ms),
+and no windowed request passes it except the series at 100,000 (10.0 ms). The probe in SCALING.md saw no enforcement of
+the limit on one account, and Workers Paid defaults to 30 s.
 
 The query plans were the same at every size, and none of them reads `transactions` without an index. The only full
 table scans are `categories` and `accounts`, which have no index on the owner and read every owner's rows, so they grow
@@ -189,14 +195,14 @@ also warming the server (740 ms to the Dashboard).
   (1.3 s). On the phone profile it is fine to 5,000 (133 ms), just over at 10,000 (235 ms), clearly over at 25,000
   (550 ms) and at 100,000 blocks for 2 s. Time to usable is not the first thing to go: it stays under a second to 25,000
   on both profiles, the Overview passes a second at 50,000 on the phone profile, and everything does at 100,000. The
-  server side meets the documented 10 ms of Worker CPU between 5,000 and 10,000 rows, if it is enforced.
+  server side meets the Free plan's documented 10 ms of Worker CPU between 5,000 and 10,000 rows, if it is enforced.
 - **Does window mode fix it.** In the browser, yes. At 100,000 rows the longest block is 162 ms on the laptop profile
   and 240 ms on the phone profile, and the heap is 9.5 MB against 23 MB. It does not make opening faster below about
   50,000 rows: the reference, then the months and the sums, wait on each other, so the Dashboard takes 110 to 330 ms
   longer than classic up to 25,000 rows. The crossover is between 25,000 and 50,000. On the server it makes the worst
   case worse: about 6 times the rows read on a cold open at every size from 10,000, mostly the series, which scans
   the whole ledger, and the sums, which grow with the number of older months and rows. Each request is short (about
-  10 ms of JS at most), so it fits the Worker limit that classic does not.
+  10 ms of JS at most), so it fits the Free plan's Worker limit that classic does not.
 - **Ledger mode against classic at 1,000 and 5,000 rows.** About 3 times the rows visited and 3 to 8 requests for 1,
   with nothing gained: the heap, the longest block and the screen are the same, and the Dashboard takes about twice as
   long on localhost, more on a network with latency. Up to the limit it is overhead that buys no headroom.
