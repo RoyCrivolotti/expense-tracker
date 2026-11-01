@@ -4,8 +4,10 @@ For an engineer deciding how the ledger's totals are read. Route facts: [API.md]
 [SCALING.md](../SCALING.md).
 
 **Context.** The cube and the per-month row counts are read by scanning `transactions`, so a cold open reads a few rows
-per transaction however little the screen shows, and the Free plan allows 5 million rows read a day. Both answers are
-sums over groups of rows, which a small table could hold if it stayed exact.
+per transaction however little the screen shows, and the Free plan allows 5 million rows read a day. Workers Paid, where
+the maintainer's deployment runs, has no daily limit and includes 25 billion rows read a month
+([D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)); the design stays inside the Free plan's so a fork
+on it works. Both answers are sums over groups of rows, which a small table could hold if it stayed exact.
 
 **Decision.** Migration 0039 adds two tables, `ledger_cells` and `ledger_months`, and five triggers on `transactions`
 that keep them exact. A cell is one group of the cube: owner, `pinned`, budget month, account, category, type,
@@ -36,8 +38,10 @@ Nothing reads them yet.
   the oracle to fail for each.
 
 **Consequences.**
-- **Every write to `transactions` writes more rows against the 100,000 a day, and D1 bills them.** Measured on
-  2026-10-24 on a throwaway D1 database (since deleted), rows written without and with the triggers:
+- **Every write to `transactions` writes more rows.** They count against the Free plan's 100,000 a day. On Workers Paid
+  they count against the 50 million a month included, and past that D1 bills $1.00 per million
+  ([D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)). Measured on 2026-10-24 on a throwaway D1
+  database (since deleted), rows written without and with the triggers:
 
   | Write | Without | With | Added |
   | --- | --- | --- | --- |
@@ -75,7 +79,7 @@ Nothing reads them yet.
 - The pinned rule is now written in five places (see [ARCHITECTURE.md](../ARCHITECTURE.md)), and changing it needs a
   migration that drops and creates the triggers and fills the cells again.
 - The backfill writes one row per cell and month. A quarter to three fifths of the rows is an estimate that rests on
-  one run on D1 over 60 rows, which wrote 21. A ledger whose cells would not fit in a day's budget needs it split by
+  one run on D1 over 60 rows, which wrote 21. A ledger whose cells would not fit in a day's Free-plan budget needs it split by
   month.
 - Restoring N rows from a backup writes about 2N rows more, and reassigning a category that has n rows to another
   writes about 2n more, since each row moves from one cell to another.

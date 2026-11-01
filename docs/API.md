@@ -251,7 +251,7 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   the filter refusals above. It answers `{ matched, added }`: the owner's rows reached (an id that is another owner's,
   or missing, is not counted) and the label links that were new. A label that is not the owner's is a 400. A request
   names at most 20 labels and adds at most 5,000 links (rows times labels), because each new link writes a row in the
-  table and in three indexes against the daily written-row budget.
+  table and in three indexes against the written-row allowance (100,000 a day on the Free plan).
 - **`DELETE /transactions/bulk`** with `{ ids }` answers `{ deleted, requested }`. The ids are checked before anything is
   read or removed. The rows, their receipt rows and label links then go in one batch, and `settled_by` is cleared on any
   row a deleted payment had settled. The receipt files are removed after that, best effort, so a refused or failed
@@ -276,5 +276,6 @@ category change (the rows are read back in one query with status and labels deri
 delete is 7 for 1 row and for 20. Only the stand-in has counted the edit by filter and the labels route, at 7 and 6
 however many rows, and the other patches of an edit by ids: 5 for a description or a date, 7 for a flag and 9 for a
 settle. Cloudflare documents a limit of 50 queries per invocation on the Free plan, which was not enforced when probed
-([SCALING.md](./SCALING.md#observed-on-a-free-account)). What the counts mean for a large request if it is, and how to
-check again, is in [MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
+([SCALING.md](./SCALING.md#observed-on-a-free-account)). The maintainer's deployment runs on Workers Paid, which allows
+1,000 ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). What the counts mean for a large request if
+the Free limit is enforced, and how to check again, is in [MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
