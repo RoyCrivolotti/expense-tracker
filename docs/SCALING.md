@@ -23,23 +23,32 @@ attempts the load fails. Two states of the ledger are never mixed.
 
 ## Constraints
 
-The app is built to run on the Cloudflare **Free** plan. These are the documented limits that shape the design.
-Cloudflare changes limits, so re-check the Workers and D1 limits and pricing pages before relying on a figure.
+The design stays inside the Cloudflare **Free** plan's limits, so a fork on the Free plan works. The maintainer's
+deployment runs on Workers Paid, where the daily D1 limits do not apply. These are the documented limits that shape the
+design, read on 2026-11-01. Cloudflare changes limits, so re-check the pages named in the last column before relying on
+a figure.
 
-| Limit | Free plan |
-| --- | --- |
-| Worker CPU per request (Pages Functions bill as Workers) | 10 ms |
-| D1 queries per Worker invocation | 50 |
-| Bound parameters per D1 statement | 100 |
-| D1 database size | 500 MB |
-| Rows read per day | 5 million. Rows scanned count, not rows returned, so a `COUNT(*)` is a scan |
-| Rows written per day | 100,000. Every index adds one written row per insert |
+| Limit | Free plan | Workers Paid | Cloudflare page |
+| --- | --- | --- | --- |
+| Worker CPU per request (Pages Functions bill as Workers) | 10 ms | 30 s by default, up to 5 min. 30 million CPU ms a month included, then $0.02 per million | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) |
+| Requests | 100,000 a day | No daily limit. 10 million a month included, then $0.30 per million | Workers limits, Workers pricing |
+| Subrequests per invocation (D1, R2 and `fetch` calls) | 50 | 10,000 | Workers limits |
+| D1 queries per Worker invocation | 50 | 1,000. A `batch()` counts as one | [D1 limits](https://developers.cloudflare.com/d1/platform/limits/) |
+| Bound parameters per D1 statement | 100 | 100 | D1 limits |
+| D1 database size | 500 MB | 10 GB | D1 limits |
+| D1 Time Travel history | 7 days | 30 days | D1 limits |
+| Rows read | 5 million a day. Rows scanned count, not rows returned, so a `COUNT(*)` is a scan | 25 billion a month included, then $0.001 per million | [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) |
+| Rows written | 100,000 a day. Every index adds one written row per insert | 50 million a month included, then $1.00 per million | D1 pricing |
+
+Above a limit the plans differ. On Free, D1 refuses queries once a daily limit is reached. On Paid there is no hard cap:
+use above the included allowance is billed at the rates above. D1 counts the same rows either way, so a figure below in
+rows read or written holds on both plans.
 
 D1 is stricter than the SQLite the tests run on, in ways a test on SQLite cannot show. It refuses more than 100 bound
 parameters, which is why id lists are bound as one JSON string read with `json_each`
 ([`sqlIdList.ts`](../functions/_shared/sqlIdList.ts)), and it refuses a compound `SELECT` of more than five terms. The
-test stand-in enforces the first rule and not the second. Cloudflare's documentation does not say whether each statement
-of a `batch()` counts toward the 50.
+test stand-in enforces the first rule and not the second. Cloudflare's D1 limits page says a `batch()` counts as one
+query toward the per-invocation limit.
 
 ### Observed on a Free account
 
@@ -49,7 +58,9 @@ route on a deployed preview of this app (never merged) ran 60 `SELECT 1` as sepa
 same 60 in one `batch()`. All succeeded, with no failure at the 51st. It also ran about 10 million and about 100 million
 loop iterations in a request. Both completed, and the larger used about 275 ms of CPU by the platform's own analytics.
 This is one account on one day: an observation that may change, not a guarantee. The recipe to repeat it is in
-[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
+[MEASURING.md](./MEASURING.md#the-50-queries-per-invocation). That account has since moved to Workers Paid (confirmed
+on 2026-11-01), where the limits are 1,000 queries and 30 s of CPU, so the same probe there would no longer test the Free
+plan's limits.
 
 Two constraints come from the product. Output must not change: the pure functions in `src/domain/engine/` are the
 reference for every number. Offline is read-only (a snapshot, no offline writes, no sync).
@@ -79,16 +90,18 @@ below. Other `*.scaling.test.ts` files measure one route each in the same way.
 
 "clone" is what every local mutation pays today.
 
-1. **Worker CPU against the documented 10 ms.** Mapping rows and deriving status costs 1.1 to 1.5 ms per 1,000 rows and
-   stringifying another 0.2, so a full load passes 10 ms between roughly 6,500 and 9,000 rows if the limit is enforced.
-   This is an estimate from Node, and workerd's meter differs. The probe above saw no enforcement, so a load of that
-   size is not known to fail, and the design still keeps the CPU of one request small.
+1. **Worker CPU against the Free plan's documented 10 ms.** Mapping rows and deriving status costs 1.1 to 1.5 ms per
+   1,000 rows and stringifying another 0.2, so a full load passes 10 ms between roughly 6,500 and 9,000 rows if the
+   limit is enforced. This is an estimate from Node, and workerd's meter differs. The probe above saw no enforcement, so
+   a load of that size is not known to fail, and the design still keeps the CPU of one request small. Workers Paid
+   defaults to 30 s.
 2. **The network is not the constraint.** The response is 1.5 MB gzipped at 100,000 rows. Parse and clone are tens of
    milliseconds on a desktop, but a phone is several times slower and pays for the clone on every mutation.
 3. **D1 rows read.** Every load reads every row. D1 billed about 2.3 rows read per transaction for it (2,189 at 910
-   transactions, against about 1.1 in the stand-in's column above), so the daily 5 million covers about 200 loads at
-   10,000 transactions, 40 at 50,000 and 9 at 250,000, if the slope holds. A 304 skips the load, so the figure counts
-   opens that follow a change.
+   transactions, against about 1.1 in the stand-in's column above), so the Free plan's daily 5 million covers about 200
+   loads at 10,000 transactions, 40 at 50,000 and 9 at 250,000, if the slope holds. A 304 skips the load, so the figure
+   counts opens that follow a change. On Workers Paid a load at 250,000 transactions reads about 575,000 rows, which
+   costs $0.0006 at the rate above once the monthly allowance is used up.
 4. **The single-file backup would meet the same limit**, since it runs the same load for every owner in one invocation.
 5. **A load issues 19 D1 queries** on a deployed D1 (the table below), inside the limit of 50.
 
@@ -211,8 +224,9 @@ rows per insert. It is a migration for a later change, since the deploy applies 
 
 `ledger_cells` and `ledger_months` (0039) are kept by triggers, so an insert writes two more rows, a delete two more (three
 when it empties its cell, four when its month empties too), an edit that moves a row to another cell two more (three when
-the old cell empties), and an edit of an amount alone one more. No route reads them yet. D1 bills the rows they write;
-the measured costs are in [the decision](./decisions/ledger-rollup.md).
+the old cell empties), and an edit of an amount alone one more. No route reads them yet. D1 counts the rows they write
+toward the plan's limit, and bills them on Workers Paid above the included allowance; the measured costs are in
+[the decision](./decisions/ledger-rollup.md).
 
 ## Where else to look
 
