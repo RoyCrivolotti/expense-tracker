@@ -175,19 +175,19 @@ Measured on 2026-11-01 on a throwaway D1 database with synthetic placeholder row
 runs of D1's own `meta.duration`, the time the database spent on the statements. It leaves out the Worker, the network
 and the access checks, so it is neither request latency nor Worker CPU.
 
-| Read | 10,000 rows | 25,000 rows | 25,000 rows, from the rollup |
-| --- | --- | --- | --- |
-| Row counts per month | 1.4 ms | 3.2 ms | 0.3 ms |
-| Cube of the older months | 31 ms | 78 ms (61k rows read) | 24 ms (7.4k rows read) |
-| Series | 71 ms | 175 ms (242k rows read) | |
-| 13-month window | 22 ms | 51 ms | |
-| Net spend over all dates | not measured | 5.3 ms | |
-| Every transaction row | 91 ms | 189 ms | |
+| Read | 10,000 rows | 10,000 rows, from the rollup | 25,000 rows | 25,000 rows, from the rollup |
+| --- | --- | --- | --- | --- |
+| Row counts per month | 1.4 ms | 0.3 ms | 3.2 ms | 0.3 ms |
+| Cube of the older months | 31 ms | 14 ms (4.6k rows read) | 78 ms (61k rows read) | 24 ms (7.4k rows read) |
+| Series | 71 ms | | 175 ms (242k rows read) | |
+| 13-month window | 22 ms | | 51 ms | |
+| Net spend over all dates | 1.7 ms | | 5.3 ms | |
+| Every transaction row | 91 ms | | 189 ms | |
 
 "From the rollup" is the same answer read from `ledger_cells` and `ledger_months` ([below](#rollup-tables)), which no
 route does yet. The synthetic ledger has more cells per row than a typical real one, so the rollup saves more on real
-data. From 10,000 to 25,000 rows every read that has both figures grew by 2.1 to 2.5 times, against 2.5 times the
-rows.
+data. From 10,000 to 25,000 rows the reads from the rows grew by 2.1 to 3.1 times, against 2.5 times the rows, and the
+reads from the rollup by 1.0 to 1.7 times.
 
 ## The design
 
