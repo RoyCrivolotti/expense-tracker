@@ -163,10 +163,31 @@ The large reads:
 - **The summary** reads 911 rows for its count, which stops growing at 1,001, and another 911 for its net sum, which
   does not.
 
-Not measured: Worker CPU (the REST API reports none, and the probe above ran a loop), latency from a Worker, how
-Cloudflare counts a `batch()` toward the 50 queries (the probe saw no limit to count against), any ledger above 910
-transactions, and the access-check statements, which the harness stubs. [MEASURING.md](./MEASURING.md) says how to
-repeat the run with a larger seed.
+Not measured: Worker CPU (the REST API reports none, and the probe above ran a loop), latency from a Worker, whether
+Cloudflare counts a `batch()` as one query toward the 50, as its D1 limits page says (the probe saw no limit to count
+against), the rows read and written of most routes above 910 transactions (the next section has D1's time for a few),
+and the access-check statements, which the harness stubs. [MEASURING.md](./MEASURING.md) says how to repeat the run with
+a larger seed.
+
+### D1's own time at 10,000 and 25,000 rows
+
+Measured on 2026-11-01 on a throwaway D1 database with synthetic placeholder rows. Each figure is the median of three
+runs of D1's own `meta.duration`, the time the database spent on the statements. It leaves out the Worker, the network
+and the access checks, so it is neither request latency nor Worker CPU.
+
+| Read | 10,000 rows | 25,000 rows | 25,000 rows, from the rollup |
+| --- | --- | --- | --- |
+| Row counts per month | 1.4 ms | 3.2 ms | 0.3 ms |
+| Cube of the older months | 31 ms | 78 ms (61k rows read) | 24 ms (7.4k rows read) |
+| Series | 71 ms | 175 ms (242k rows read) | |
+| 13-month window | 22 ms | 51 ms | |
+| Net spend over all dates | not measured | 5.3 ms | |
+| Every transaction row | 91 ms | 189 ms | |
+
+"From the rollup" is the same answer read from `ledger_cells` and `ledger_months` ([below](#rollup-tables)), which no
+route does yet. The synthetic ledger has more cells per row than a typical real one, so the rollup saves more on real
+data. From 10,000 to 25,000 rows every read that has both figures grew by 2.1 to 2.5 times, against 2.5 times the
+rows.
 
 ## The design
 
