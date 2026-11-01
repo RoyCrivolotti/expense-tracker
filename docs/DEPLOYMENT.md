@@ -132,9 +132,9 @@ apply its migration to dev by hand, but only when its merge is near, and remove 
 | The migration damaged or lost data | Run the **Restore database** workflow (Actions, Run workflow) with the database, the bookmark from the deploy run's summary, and the database name again to confirm. It waits for your approval. | **Every write since the bookmark is lost, user data included.** The workflow records the database's state just before, so running it again with that bookmark undoes the restore. |
 
 The bookmark is on the summary page of the deploy run that applied the migration, under "Restore point", and in the log.
-Cloudflare keeps 30 days of history on the paid plan and 7 on the free one.  After a restore, `npm run migrate --
-<database>` lists the migrations it went back past as pending and the next deploy applies them again, so fix the
-migration first. The restore command by hand is `npx wrangler d1 time-travel restore <database> --bookmark=<bookmark>`.
+Cloudflare keeps 30 days of history on Workers Paid, where the maintainer's deployment runs, and 7 on the Free plan
+([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). After a restore, `npm run migrate -- <database>`
+lists the migrations it went back past as pending and the next deploy applies them again, so fix the migration first. The restore command by hand is `npx wrangler d1 time-travel restore <database> --bookmark=<bookmark>`.
 
 ### Writing a migration
 
@@ -197,9 +197,9 @@ have stopped `--file`. It can stop half-applied, so compare the result with `npm
 | `0020_migrations_table` | Seed any database migrated before it (above). |
 | `0023_drop_goal_inputs` | Drops a table and a column; the data is gone. |
 | `0035_owner_revision` | Creates `owner_revision`. SQL by hand that writes the dataset's tables must also delete the owner's row (below). |
-| `0036_transaction_query_indexes`, `0037_pinned_rows_index` | Each index is built by reading every row once and adds a written row per insert against the 100,000 a day, so two new indexes make a 5,000-row import write 10,000 more (0037 only for investments and rows tied to a plan, flag or settlement). |
+| `0036_transaction_query_indexes`, `0037_pinned_rows_index` | Each index is built by reading every row once and adds a written row per insert against the Free plan's 100,000 a day, so two new indexes make a 5,000-row import write 10,000 more (0037 only for investments and rows tied to a plan, flag or settlement). |
 | `0038_description_norm` | See below. |
-| `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the daily budget ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
+| `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the written-row allowance ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
 
 Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 

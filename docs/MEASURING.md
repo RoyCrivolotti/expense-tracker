@@ -14,7 +14,10 @@ which reports `rows_read` and `rows_written` for every statement. It cannot meas
 - **Small, because the budget is shared.** Cloudflare states the Free plan's daily D1 limits for the account and never
   per database, so they are treated as one budget with production: writing to dev spends it. A run stops at 25,000 rows
   written (15,000 on one day) and 500,000 read in total, and refuses to start if the account has already written 40,000
-  or read 1.5M rows that day. A seeded insert is 8 written rows (the row and 7 indexes;
+  or read 1.5M rows that day. The maintainer's deployment runs on Workers Paid, where no daily D1 limit applies and use
+  above the monthly allowance is billed ([D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)), so
+  there the caps are a precaution. They stay as they are, since a fork on the Free plan needs them. A seeded insert is 8
+  written rows (the row and 7 indexes;
   [SCALING.md](./SCALING.md#on-a-deployed-d1) has the other write costs). `plan` prints the arithmetic.
 - **Removable by owner.** Cleanup deletes by that owner only, one table at a time.
 
@@ -53,8 +56,9 @@ in the D1 dashboard: a large excess means something else wrote.
 ## The 50 queries per invocation
 
 The statements each bulk route issues are counted in [API.md](./API.md#bulk-transaction-routes), and Cloudflare
-documents a limit of 50 queries per invocation on the Free plan. On the one Free-plan account where it was probed the
-limit was not enforced ([SCALING.md](./SCALING.md#observed-on-a-free-account)). If it is enforced, a create of more than
+documents a limit of 50 queries per invocation on the Free plan and 1,000 on Workers Paid
+([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). On the one Free-plan account where it was probed
+the limit was not enforced ([SCALING.md](./SCALING.md#observed-on-a-free-account)). If it is enforced, a create of more than
 6 rows would exceed it whichever way a batch counts, because the rows are inserted one at a time; an edit by id or a
 delete is a constant number of statements. That threshold rests on the access checks, an estimate of about five
 statements. The probe issued 60 queries, so the limit has not been seen to fail or to succeed above 50.
