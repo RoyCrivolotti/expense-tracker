@@ -1,8 +1,9 @@
 # API reference
 
-For anyone calling or changing the expense API. Paths are under `/api/expenses`. This page covers the read routes and
-the transaction bulk routes, where bounds and costs matter. The other write routes (accounts, categories, flags, labels,
-settings and the rest) sit next to their data in [`functions/api/expenses/`](../functions/api/expenses/). How the routes
+For anyone calling or changing the expense API. Paths are under `/api/expenses`. This page covers the read routes, the
+transaction bulk routes, where bounds and costs matter, and what a wealth account delete answers. The other write
+routes (accounts, categories, flags, labels, settings and the rest) sit next to their data in
+[`functions/api/expenses/`](../functions/api/expenses/). How the routes
 fit together is in [SCALING.md](./SCALING.md).
 
 ## Conventions
@@ -283,3 +284,11 @@ settle. Cloudflare documents a limit of 50 queries per invocation on the Free pl
 ([SCALING.md](./SCALING.md#observed-on-a-free-account)). The maintainer's deployment runs on Workers Paid, which allows
 1,000 ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). What the counts mean for a large request if
 the Free limit is enforced, and how to check again, is in [MEASURING.md](./MEASURING.md#the-50-queries-per-invocation).
+
+## DELETE /wealth-accounts/:id
+
+Answers `{ ok: true, archived }`. An account that check-ins refer to is archived, so their balances stay (`archived:
+true`), and any other account's row is removed (`archived: false`). The browser patches its copy of the dataset from
+`archived`, so it neither keeps a row the server removed nor drops one the server kept. `ok` is for a bundle cached from
+before `archived` existed, and a client that gets no `archived` assumes the account was archived. Code:
+[`[id].ts`](../functions/api/expenses/wealth-accounts/%5Bid%5D.ts).

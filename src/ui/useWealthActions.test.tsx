@@ -58,8 +58,8 @@ describe('useExpenseActions — wealth accounts', () => {
     expect(updateWealthAccount).toHaveBeenCalledWith(1, { sortOrder: 5 })
   })
 
-  it('deleteWealthAccount calls source and patches dataset', async () => {
-    const deleteWealthAccount = vi.fn().mockResolvedValue(undefined)
+  it('deleteWealthAccount archives the account when the server archived it', async () => {
+    const deleteWealthAccount = vi.fn().mockResolvedValue({ archived: true })
     const source: ExpenseDataSource = {
       canWrite: true,
       load: vi.fn(),
@@ -77,6 +77,26 @@ describe('useExpenseActions — wealth accounts', () => {
 
     expect(deleteWealthAccount).toHaveBeenCalledWith(1)
     expect(dataset.wealthAccounts[0]!.archived).toBe(true)
+  })
+
+  it('deleteWealthAccount drops the account when the server removed it', async () => {
+    const deleteWealthAccount = vi.fn().mockResolvedValue({ archived: false })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      deleteWealthAccount,
+    }
+    let dataset: ExpenseDataset = makeDataset({ wealthAccounts: [makeAccount(1), makeAccount(2)] })
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
+
+    await act(async () => {
+      await result.current!.deleteWealthAccount(1)
+    })
+
+    expect(dataset.wealthAccounts.map((a) => a.id)).toEqual([2])
   })
 })
 

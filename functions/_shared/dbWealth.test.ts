@@ -187,7 +187,7 @@ describe('deleteWealthAccount', () => {
       firstMap: { 'COUNT(*)': { n: 0 } },
       runMap: { 'DELETE FROM wealth_accounts': 1 },
     })
-    await expect(deleteWealthAccount(env, OWNER, 1)).resolves.toBeUndefined()
+    await expect(deleteWealthAccount(env, OWNER, 1)).resolves.toEqual({ archived: false })
   })
 
   it('soft-deletes (archives) when entries reference the account', async () => {
@@ -197,7 +197,7 @@ describe('deleteWealthAccount', () => {
         'UPDATE wealth_accounts SET archived': { id: 1 },
       },
     })
-    await expect(deleteWealthAccount(env, OWNER, 1)).resolves.toBeUndefined()
+    await expect(deleteWealthAccount(env, OWNER, 1)).resolves.toEqual({ archived: true })
   })
 
   it('throws 404 when soft-delete finds no row', async () => {

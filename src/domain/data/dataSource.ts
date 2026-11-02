@@ -116,6 +116,10 @@ export interface DeleteAccountResult {
   reassignedToId: number | null
   createdAccount?: Account
 }
+export interface DeleteWealthAccountResult {
+  /** True when the account has check-in history and was archived; false when its row was removed. */
+  archived: boolean
+}
 /** Activation is its own call (`activateScenario`), so the flag is not part of a write. */
 export type NewGoalScenario = Omit<GoalScenario, 'id' | 'isActive'>
 /** What the PATCH route accepts: field edits, or `{ isActive: true }` on its own. */
@@ -236,7 +240,7 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   deleteInstallmentPlan?(id: number): Promise<void>
   createWealthAccount?(input: NewWealthAccount): Promise<WealthAccount>
   updateWealthAccount?(id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
-  deleteWealthAccount?(id: number): Promise<void>
+  deleteWealthAccount?(id: number): Promise<DeleteWealthAccountResult>
   createWealthCheckin?(input: NewWealthCheckin): Promise<WealthCheckin>
   updateWealthCheckin?(id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
   deleteWealthCheckin?(id: number): Promise<void>

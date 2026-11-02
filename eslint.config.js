@@ -13,7 +13,7 @@ const FILE_LINE_CAPS = {
   'functions/_shared/access/accessService.ts': 235,
   'functions/_shared/chunkedBackup.ts': 259,
   'functions/_shared/dbConfig.ts': 550,
-  'functions/_shared/dbWealth.ts': 234,
+  'functions/_shared/dbWealth.ts': 233,
   'functions/_shared/dbWrite.ts': 481,
   'functions/_shared/rows.ts': 345,
   'src/data/apiDataSource.ts': 264,

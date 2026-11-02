@@ -67,7 +67,7 @@ describe('inMemoryExpenseRepository — wealth accounts', () => {
       sortOrder: 0,
       archived: false,
     })
-    await repo.deleteWealthAccount(OWNER, account.id)
+    await expect(repo.deleteWealthAccount(OWNER, account.id)).resolves.toEqual({ archived: false })
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.wealthAccounts).toHaveLength(0)
   })
@@ -84,7 +84,7 @@ describe('inMemoryExpenseRepository — wealth accounts', () => {
       checkinDate: '2024-06-01',
       entries: [{ accountId: account.id, valueCents: 10_000_000 }],
     })
-    await repo.deleteWealthAccount(OWNER, account.id)
+    await expect(repo.deleteWealthAccount(OWNER, account.id)).resolves.toEqual({ archived: true })
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.wealthAccounts[0]!.archived).toBe(true)
   })

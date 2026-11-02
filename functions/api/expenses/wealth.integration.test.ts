@@ -98,8 +98,41 @@ describe('wealth accounts API', () => {
     })
 
     expect(response.status).toBe(200)
+    // `ok` stays for a bundle from before the answer said whether the account was archived.
+    expect(await readJson(response)).toEqual({ ok: true, archived: false })
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.wealthAccounts).toHaveLength(0)
+  })
+
+  it('archives an account that check-ins refer to and says so', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const created = await repo.createWealthAccount(OWNER, {
+      name: 'Broker',
+      kind: 'investment',
+      sortOrder: 0,
+      archived: false,
+    })
+    await repo.createWealthCheckin(OWNER, {
+      checkinDate: '2024-06-01',
+      entries: [{ accountId: created.id, valueCents: 10_000_000 }],
+    })
+
+    const response = await invokeExpenseApiRoute({
+      handler: deleteWealthAccountHandler,
+      repo,
+      env: expenseEnv(store),
+      url: `https://expenses.test/api/expenses/wealth-accounts/${created.id}`,
+      method: 'DELETE',
+      params: { id: String(created.id) },
+      email: OWNER,
+    })
+
+    expect(response.status).toBe(200)
+    expect(await readJson(response)).toEqual({ ok: true, archived: true })
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.wealthAccounts).toEqual([{ ...created, archived: true }])
   })
 
   it('returns 403 without expenses group', async () => {

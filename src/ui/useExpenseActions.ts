@@ -234,10 +234,9 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterWealthAccountUpdate(d, account))
       },
       deleteWealthAccount: async (id) => {
-        await source.deleteWealthAccount!(id)
-        // The server may soft-delete (archive) if the account has check-in history.
-        // Re-fetch is cheapest; optimistic assumes archived=true (conservative).
-        applyPatch((d) => patchAfterWealthAccountDelete(d, id, true))
+        // The server archives an account that check-ins refer to and removes any other.
+        const { archived } = await source.deleteWealthAccount!(id)
+        applyPatch((d) => patchAfterWealthAccountDelete(d, id, archived))
       },
       createWealthCheckin: async (input) => {
         const checkin = await source.createWealthCheckin!(input)

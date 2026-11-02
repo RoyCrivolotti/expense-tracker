@@ -1,5 +1,5 @@
 import type { ExpenseRepository } from '../ports/expenseRepository'
-import type { NewWealthAccount, NewWealthCheckin } from '../data/dataSource'
+import type { DeleteWealthAccountResult, NewWealthAccount, NewWealthCheckin } from '../data/dataSource'
 import type { WealthAccount, WealthCheckin } from '../types'
 import { ValidationError } from './validationError'
 
@@ -27,8 +27,8 @@ export async function removeWealthAccount(
   repo: ExpenseRepository,
   owner: string,
   id: number,
-): Promise<void> {
-  await repo.deleteWealthAccount(owner, id)
+): Promise<DeleteWealthAccountResult> {
+  return repo.deleteWealthAccount(owner, id)
 }
 
 /** No account holds more than this, in cents (a hundred billion euros), either way: a debt is a balance below zero. */

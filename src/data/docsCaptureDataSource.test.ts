@@ -489,3 +489,20 @@ describe('docsCaptureDataSource ledger parts', () => {
     expect(refund?.amountCents).toBe(1499)
   })
 })
+
+describe('docsCaptureDataSource.deleteWealthAccount', () => {
+  it('archives a seeded account that check-ins refer to', async () => {
+    await expect(docsCaptureDataSource.deleteWealthAccount!(1)).resolves.toEqual({ archived: true })
+  })
+
+  it('removes an account no check-in mentions, as the API does', async () => {
+    const created = await docsCaptureDataSource.createWealthAccount!({
+      name: 'Spare',
+      kind: 'cash',
+      sortOrder: 2,
+      archived: false,
+    })
+
+    await expect(docsCaptureDataSource.deleteWealthAccount!(created.id)).resolves.toEqual({ archived: false })
+  })
+})

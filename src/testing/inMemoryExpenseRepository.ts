@@ -1170,12 +1170,12 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         const index = store.wealthAccounts.findIndex((a) => a.id === id)
         if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
         store.wealthAccounts[index] = { ...store.wealthAccounts[index]!, archived: true }
-        return Promise.resolve()
+        return Promise.resolve({ archived: true })
       }
       const index = store.wealthAccounts.findIndex((a) => a.id === id)
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
       store.wealthAccounts.splice(index, 1)
-      return Promise.resolve()
+      return Promise.resolve({ archived: false })
     },
 
     createWealthCheckin: (owner, input) => {
