@@ -5,6 +5,7 @@ function mockFetchOnce(body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
+    headers: new Headers(),
     json: () => Promise.resolve(body),
   })
   vi.stubGlobal('fetch', fetchMock)
