@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, req, reqMultipart, wasRefused } from './apiClient'
+import { onWriteReceipt } from './writeReceipts'
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -77,6 +78,72 @@ describe('reqMultipart', () => {
     )
 
     await expect(reqMultipart('/upload', new FormData())).rejects.toBeInstanceOf(ApiError)
+  })
+})
+
+describe('the receipt of a write', () => {
+  const told: unknown[] = []
+  const written = (headers: Record<string, string>) => response({}, { headers: { 'content-type': 'application/json', ...headers } })
+  let stop: () => void = () => {}
+
+  beforeEach(() => {
+    stop = onWriteReceipt((receipt) => told.push(receipt))
+  })
+
+  afterEach(() => {
+    stop()
+    told.length = 0
+  })
+
+  it('is passed on by req', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(written({ 'x-revision-before': 'aa', 'x-revision-after': 'bb' })))
+
+    await req('/x', { method: 'POST' })
+
+    expect(told).toEqual([{ before: 'aa', after: 'bb' }])
+  })
+
+  it('is passed on by reqMultipart', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(written({ 'x-revision-before': 'aa' })))
+
+    await reqMultipart('/x', new FormData())
+
+    expect(told).toEqual([{ before: 'aa', after: null }])
+  })
+
+  it('is not passed on when the body could not be read, since the caller never shows that write', async () => {
+    const unreadable = () => Promise.resolve(new Response('not json', { status: 200, headers: { 'x-revision-before': 'aa', 'x-revision-after': 'bb' } }))
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(unreadable))
+
+    await expect(req('/x', { method: 'POST' })).rejects.toThrow()
+    await expect(reqMultipart('/x', new FormData())).rejects.toThrow()
+
+    expect(told).toEqual([])
+  })
+
+  it('is not made up for a response without one', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(written({})))
+
+    await req('/x')
+
+    expect(told).toEqual([])
+  })
+
+  it('is not passed on for a request that failed', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'no' }, { status: 409, headers: { 'x-revision-before': 'aa' } })))
+
+    await expect(req('/x', { method: 'POST' })).rejects.toBeInstanceOf(ApiError)
+
+    expect(told).toEqual([])
+  })
+
+  it('is not passed on to whoever stopped listening', async () => {
+    stop()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(written({ 'x-revision-before': 'aa' })))
+
+    await req('/x', { method: 'POST' })
+
+    expect(told).toEqual([])
   })
 })
 

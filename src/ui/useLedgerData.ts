@@ -5,6 +5,7 @@ import type { LedgerSession, SessionOptions, SessionState } from '../data/ledger
 import { isAccessDenied } from '../data/apiClient'
 import { forgetLedgerSnapshot, loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { TransactionPager } from '../data/transactionPager'
+import { onWriteReceipt } from '../data/writeReceipts'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
 import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
 import { ledgerUsageHook } from './ledgerUsage'
@@ -105,6 +106,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const pagedList = useMemo(() => pagedListOf(pager), [pager])
   useEffect(() => () => pager.dispose(), [pager])
+  useEffect(() => onWriteReceipt(session.noteReceipt), [session])
   const [phase, setPhase] = useState<Phase>('loading')
   const [failure, setFailure] = useState<string | undefined>(undefined)
   const [snapshotAt, setSnapshotAt] = useState<string | undefined>(undefined)

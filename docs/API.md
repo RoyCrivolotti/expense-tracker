@@ -33,6 +33,10 @@ fit together is in [SCALING.md](./SCALING.md).
   [`datasetEtag.ts`](../functions/_shared/datasetEtag.ts).
 - **`revision`.** A part's body starts with the token it was read under. Two responses with different `revision`s were
   read from different states of the ledger, so fetch again.
+- **Write receipts.** A write that worked answers with `x-revision-before`, the token the ledger had when the request
+  began, and `x-revision-after`, the token it has now. `after` is left out when another write began or ended during the
+  request, and `before` when the owner had no token. A failed write sends neither. A client that holds the `before`
+  revision and applies the write itself may hold `after` from then on; anything else reads again.
 
 ## GET /api/expenses
 

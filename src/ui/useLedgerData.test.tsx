@@ -4,6 +4,7 @@ import { type HeldLedger, holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
 import { ApiError } from '../data/apiClient'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
+import { noteWriteResponse } from '../data/writeReceipts'
 import { sortedMonths } from '../domain/engine/dates'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
@@ -19,6 +20,7 @@ import {
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
   patchAfterLabelDelete,
+  patchAfterSettings,
   patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
@@ -79,6 +81,31 @@ describe('useLedgerData', () => {
     source.calls.length = 0
     act(() => result.current.applyPatch((d) => patchAfterFlagDelete(d, flagId)))
     await waitFor(() => expect(source.calls.filter((c) => c === 'reference')).toHaveLength(1))
+  })
+
+  describe('after a write to the reference tables, when the next month is shown', () => {
+    async function savedWith(receipt: Record<string, string>) {
+      const source = memorySource(big)
+      const hook = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
+      await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+      source.move('r2')
+      act(() => {
+        if (Object.keys(receipt).length > 0) noteWriteResponse(new Headers(receipt))
+        hook.result.current.applyPatch((d) => patchAfterSettings(d, { ...d.settings, openingCashCents: 100 }, ['openingCashCents']))
+      })
+      source.calls.length = 0
+      act(() => hook.result.current.viewMonth!(months[10]!))
+      await waitFor(() => expect(hook.result.current.hydrating).toBe(false))
+      return source.calls.filter((c) => c === 'reference')
+    }
+
+    it('reads just that month when the server vouched for the write', async () => {
+      expect(await savedWith({ 'x-revision-before': 'r0', 'x-revision-after': 'r2' })).toEqual([])
+    })
+
+    it('reads everything when it did not', async () => {
+      expect(await savedWith({})).toHaveLength(1)
+    })
   })
 
   it('reads the rows of the month shown when it changes, with hydrating on while it does', async () => {

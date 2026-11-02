@@ -11,6 +11,7 @@ import { HttpError } from '../../_shared/http'
 import { createD1ExpenseRepository } from '../../_shared/adapters/d1ExpenseRepository'
 import { purgeOwnerData } from '../../_shared/ownerDataPurge'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
+import { REVISION_AFTER_HEADER, REVISION_BEFORE_HEADER } from '../../domain/data/writeReceipt'
 import { OTHER, OWNER, createExpenseWorld, pinClock, type World } from '../../_shared/testing/expenseWorld'
 import { scenarioInput, seedLedger, uploadForm, type SeededIds } from '../../_shared/testing/seedLedger'
 import { onRequestGet } from './index'
@@ -145,8 +146,10 @@ async function getDataset(world: World, headers?: Record<string, string>) {
   return { response, etag: response.headers.get('etag'), text: await response.text() }
 }
 
+let sqlite: ReturnType<typeof migratedDatabase>
+
 function createWorld(): World {
-  const sqlite = migratedDatabase()
+  sqlite = migratedDatabase()
   return createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
 }
 
@@ -382,6 +385,117 @@ describe('the bumps around a write', () => {
       throw new HttpError(409, 'Already settled')
     })
     expect(response.status).toBe(409)
+  })
+})
+
+describe('the receipt a write sends', () => {
+  const answering = (status = 200): Handler => () => new Response('ok', { status })
+  const receipt = (response: Response) => ({
+    before: response.headers.get(REVISION_BEFORE_HEADER),
+    after: response.headers.get(REVISION_AFTER_HEADER),
+  })
+
+  it('names the token the ledger had and the one it has now', async () => {
+    const before = world.token()
+
+    const response = await world.call(answering(), { method: 'POST', path: '/anything' })
+
+    expect(receipt(response)).toEqual({ before, after: world.token() })
+    expect(before).not.toBe(world.token())
+  })
+
+  it('chains: what one write leaves is what the next one finds', async () => {
+    const first = receipt(await world.call(answering(), { method: 'POST', path: '/anything' }))
+    const second = receipt(await world.call(answering(), { method: 'PATCH', path: '/anything' }))
+
+    expect(second.before).toBe(first.after)
+    expect(second.after).toBe(world.token())
+  })
+
+  it('says nothing of a token the owner did not have, but names the one it made', async () => {
+    const response = await world.call(answering(), { method: 'POST', path: '/anything', email: OTHER })
+
+    expect(receipt(response)).toEqual({ before: null, after: world.token(OTHER) })
+  })
+
+  it('leaves out the new token when another write ran between the two bumps', async () => {
+    const before = world.token()
+    const other: Handler = () => new Response('other')
+
+    const response = await world.call(
+      async () => {
+        await world.call(other, { method: 'POST', path: '/elsewhere' })
+        return new Response('ok')
+      },
+      { method: 'POST', path: '/anything' },
+    )
+
+    expect(receipt(response)).toEqual({ before, after: null })
+  })
+
+  it('still names the new token when the first try of the second bump failed before it landed', async () => {
+    const before = world.token()
+    let bumps = 0
+    world.intercept((sql) => {
+      if (sql.includes('INSERT INTO owner_revision') && ++bumps === 2) throw new Error('D1 network lost')
+    })
+
+    const response = await world.call(answering(), { method: 'POST', path: '/anything' })
+
+    expect(bumps).toBe(3)
+    expect(receipt(response)).toEqual({ before, after: world.token() })
+  })
+
+  it('leaves out the new token when the first try of the second bump landed and its answer was lost', async () => {
+    const before = world.token()
+    let bumps = 0
+    world.intercept((sql) => {
+      if (!sql.includes('INSERT INTO owner_revision') || ++bumps !== 2) return
+      // What D1 did before the connection dropped: the token moved, and the Worker never heard.
+      sqlite.prepare("UPDATE owner_revision SET token = 'landed' WHERE owner = ?").run(OWNER)
+      throw new Error('D1 network lost')
+    })
+
+    const response = await world.call(answering(), { method: 'POST', path: '/anything' })
+
+    expect(bumps).toBe(3)
+    expect(receipt(response)).toEqual({ before, after: null })
+    expect(world.token()).not.toBe('landed')
+  })
+
+  it.each([400, 409, 500])('is not sent with a %i, since the write may have landed in part', async (status) => {
+    const response = await world.call(answering(status), { method: 'POST', path: '/anything' })
+
+    expect(receipt(response)).toEqual({ before: null, after: null })
+  })
+
+  it('is not sent with a thrown error', async () => {
+    const response = await world.call(
+      () => {
+        throw new HttpError(409, 'Already settled')
+      },
+      { method: 'POST', path: '/anything' },
+    )
+
+    expect(receipt(response)).toEqual({ before: null, after: null })
+  })
+
+  it('is not sent for a read', async () => {
+    const response = await world.call(answering(), { path: '/anything' })
+
+    expect(receipt(response)).toEqual({ before: null, after: null })
+  })
+
+  it('is sent by the real routes, and its token is the one the next read is tagged with', async () => {
+    const route = routesFor(MUTATING).find((r) => r.key === 'POST /transactions')!
+    const request = CASES['POST /transactions']!(ids)
+
+    const response = await world.call(route.handler, { method: 'POST', path: request.path, body: request.body })
+    const read = await getDataset(world)
+
+    expect(response.status).toBe(201)
+    expect(receipt(response).after).toBe(world.token())
+    expect(read.etag).toContain(receipt(response).after!)
   })
 })
 
