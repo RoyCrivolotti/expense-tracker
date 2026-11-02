@@ -58,6 +58,21 @@ deploy scripts use, streams the project's function logs. The lines this check wr
 problem (which setting is wrong, that a token was missing, expired or for another application). They never print the
 token or the value of a setting.
 
+## With no network
+
+The app asks for the person's access before anything else, and with no network nothing can answer. A device that holds a
+saved copy of someone's data then opens the app on it, for the person the copy names, read-only, with a line that says
+when it was saved and that nothing can be changed until there is a connection. Offline nothing can confirm who is
+holding the phone, so whoever can open the installed app on an unlocked device reads the last person's figures there.
+The device's own lock is what protects them, and turning this check on does not change that. A device with no copy says
+the person is offline and offers Try again only.
+
+A copy opens only for the person it names, and copies that name two people open for neither. It is dropped when the
+server refuses the person: a 401 or 403 from the access check or from loading the data, or an answer that they have no
+access. A 503 is the server failing and says nothing about the person, so it leaves the copy and shows the "Couldn't
+check access" screen. The copy is only a fallback for a server that does not answer: with the network back, refreshing
+reads the data again, and closing the app and opening it again runs the whole access check.
+
 ## Going back
 
 If everyone sees "Couldn't check access", or the app cannot load, delete both variables or correct them and deploy again

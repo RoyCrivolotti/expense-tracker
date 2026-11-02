@@ -13,12 +13,10 @@ import type { AttachmentCounts, ReferenceTables } from '../domain/data/ledgerPar
 import type { MonthCell } from '../domain/ledger'
 import type { Transaction, TransactionAttachment } from '../domain/types'
 import type { HeldLedger } from './ledgerHold'
-import { SNAPSHOT_VERSION, withStore } from './offlineCache'
+import { LEDGER_KEY_PREFIX, SNAPSHOT_VERSION, withStore } from './offlineCache'
 
 /** Moves whenever the shape of `StoredLedger` does. */
 export const LEDGER_SNAPSHOT_FORMAT = 1
-
-const KEY_PREFIX = 'ledger:'
 
 /** A `HeldLedger` as plain data: the maps are lists, which IndexedDB stores and structured clone copies. */
 interface StoredLedger {
@@ -50,7 +48,7 @@ export interface LedgerSnapshot {
   savedAt: string
 }
 
-const keyFor = (owner: string): string => `${KEY_PREFIX}${owner}`
+const keyFor = (owner: string): string => `${LEDGER_KEY_PREFIX}${owner}`
 
 const isList = (value: unknown): value is unknown[] => Array.isArray(value)
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -123,7 +121,7 @@ export async function saveLedgerSnapshot(owner: string, held: HeldLedger, viewed
     await withStore('readwrite', async (store) => {
       const keys = await done(store.getAllKeys())
       for (const key of keys) {
-        if (typeof key === 'string' && key.startsWith(KEY_PREFIX) && key !== record.key) await done(store.delete(key))
+        if (typeof key === 'string' && key.startsWith(LEDGER_KEY_PREFIX) && key !== record.key) await done(store.delete(key))
       }
       await done(store.put(record))
     })

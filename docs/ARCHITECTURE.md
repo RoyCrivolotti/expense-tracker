@@ -203,7 +203,10 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   ([the choice](./decisions/service-worker-shell.md)).
 - **What the browser keeps about a ledger is one person's, because a browser can be used by more than one.** The
   offline copies (`latest` in `offlineCache.ts`, `ledger:<owner>` in `ledgerSnapshot.ts`) name their owner and are shown
-  to no one else, nor after the server answers 401 or 403. The settings that name what a ledger holds (the series
+  to no one else, nor after the server answers 401 or 403. With no network the access check cannot answer, and the app
+  opens on the copy for the person it names, read-only, without knowing who is holding the phone: offline nothing can
+  confirm it, so the device's own lock is the only one. Copies that name two people open for neither
+  ([Access](./ACCESS.md#with-no-network)). The settings that name what a ledger holds (the series
   stopped, the suggestions dismissed, the setup skipped) are kept under `OWNER_KEYS` plus the account email
   (`hooks/accountOwner.ts`). What is the device's alone carries no description, amount or name from a ledger: the theme, which days are folded,
   the milestone toggle and the ledger switch.

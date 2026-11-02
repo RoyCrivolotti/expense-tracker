@@ -3,6 +3,8 @@ import type { ExpenseDataset } from '../types'
 const DB_NAME = 'expense-tracker-offline'
 const STORE = 'snapshots'
 const SNAPSHOT_KEY = 'latest'
+/** What a ledger's copy is keyed by, followed by its owner (`ledgerSnapshot.ts`). */
+export const LEDGER_KEY_PREFIX = 'ledger:'
 
 /**
  * Bump whenever `ExpenseDataset` gains a required field. A snapshot written by
@@ -48,7 +50,7 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-function readSnapshot(store: IDBObjectStore): Promise<SnapshotRecord | undefined> {
+export function readSnapshot(store: IDBObjectStore): Promise<SnapshotRecord | undefined> {
   return new Promise((resolve, reject) => {
     const req = store.get(SNAPSHOT_KEY)
     req.onsuccess = () => resolve(req.result as SnapshotRecord | undefined)
