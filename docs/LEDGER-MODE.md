@@ -75,10 +75,13 @@ has to decide what a window may show.
   revision across patches whose receipts follow on from it, one after another. The next month is then read alone, and
   the token it comes back under must be the one the trail knows, or everything is read. A write the server answered with
   more than the patch shows, or that reached rows nobody here holds, is followed by a read of everything as before.
-  The held ledger's own `revision` is left as the reads give it (null after a write), which the series and the counts
-  read as "not compared". Months held beyond the window around the month shown are given up
-  oldest first, except one that has no sums (the first read leaves out those of the months it reads as rows), since
-  giving it up would take it out of the totals, and a ledger held in full gives up nothing.
+  The held ledger's own `revision` is left as the reads give it (null after a write). The series and the counts are
+  compared through the trail instead (`RevisionTrail.fits`): read at the revision the ledger is at, or one its own
+  writes took it through, they go with it, so a write that cannot change them costs no read. At any other revision
+  someone else wrote: the series are read against the rows again, and the counts say they may be out of date. Months
+  held beyond the window around the month shown are given up oldest first, except one that has no sums (the first read
+  leaves out those of the months it reads as rows), since giving it up would take it out of the totals, and a ledger
+  held in full gives up nothing.
 - **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
   mirror of its effects.** `cascadeOf` (`src/data/ledgerCascade.ts`) recognises these from what the patch did to the
   dataset: deleting a category, account, flag, label or plan, giving a flag an auto-label or a row a flag that has one,

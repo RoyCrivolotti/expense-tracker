@@ -10,14 +10,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDataSource } from '../../../src/data/apiDataSource'
 import { LedgerSession } from '../../../src/data/ledgerSession'
 import { onWriteReceipt } from '../../../src/data/writeReceipts'
+import { seriesFromTransactions } from '../../../src/domain/engine/recurringSeries'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../../../src/domain/ledger'
+import type { ExpenseDataset } from '../../../src/domain/types'
 import { patchAfterSettings, patchAfterTransactionCreate } from '../../../src/ui/datasetPatches'
 import { seedDataset } from '../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { syntheticLedger } from '../../../src/testing/syntheticLedger'
 import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
 import { onRequestGet as getCube } from './cube'
+import { onRequestGet as getDataset } from './index'
 import { onRequestGet as getReference } from './reference'
+import { onRequestGet as getSeries } from './series'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPost as postTransaction } from './transactions/index'
 import { onRequestGet as getMonths } from './transactions/months'
@@ -53,6 +57,7 @@ function routeFetch() {
     ['/api/expenses/transactions/months', 'GET', getMonths],
     ['/api/expenses/reference', 'GET', getReference],
     ['/api/expenses/cube', 'GET', getCube],
+    ['/api/expenses/series', 'GET', getSeries],
   ]
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
@@ -233,5 +238,67 @@ describe('the next month read after a write made here', () => {
 
     expect(sent).toContain('/reference')
     expect(idsHeld(session, oldest)).toContain(elsewhere)
+  })
+})
+
+describe('the recurring series read after a write made here', () => {
+  const seriesReads = () => sent.filter((path) => path === '/series').length
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 100))
+
+  /** A screen that shows the series mounts and goes, once they have been read. */
+  async function mountAndLeave(session: LedgerSession): Promise<void> {
+    const stop = session.watchSeries()
+    await vi.waitFor(() => expect(session.getState().series).not.toBeNull())
+    stop()
+  }
+
+  /** What is held, the series included, is what the database holds. */
+  async function expectDatabase(session: LedgerSession): Promise<void> {
+    const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
+    expect(session.getState().series).toEqual(seriesFromTransactions(dataset.transactions))
+    for (const month of monthsInDb()) if (session.getState().held!.rows.has(month)) expect(idsHeld(session, month)).toEqual(idsInDb(month))
+  }
+
+  it('are not read again after a write that cannot change one', async () => {
+    const session = await opened()
+    await mountAndLeave(session)
+
+    await saveSettings(session)
+    session.watchSeries()
+    await settle()
+
+    await expectDatabase(session)
+    expect(seriesReads()).toBe(1)
+  })
+
+  it('are not read again after a row that is no part of one moved the sums of a held month', async () => {
+    const session = await opened()
+    const newest = monthsInDb().at(-1)!
+    await mountAndLeave(session)
+
+    const added = await source.createTransaction({ ...newRow(newest, 'Cancelled here'), cancelled: true })
+    session.patch((d) => patchAfterTransactionCreate(d, added))
+    await vi.waitFor(() => expect(session.getState().held!.revision).not.toBeNull())
+    session.watchSeries()
+    await settle()
+
+    await expectDatabase(session)
+    expect(seriesReads()).toBe(1)
+  })
+
+  it('are read together with the rows when another request wrote after the write and before they were read', async () => {
+    const session = await opened()
+    const newest = monthsInDb().at(-1)!
+
+    await saveSettings(session)
+    const elsewhere = await addElsewhere(newest)
+    sent.length = 0
+    session.watchSeries()
+    await vi.waitFor(() => expect(session.getState().series).not.toBeNull())
+    await settle()
+
+    expect(sent).toContain('/reference')
+    expect(idsHeld(session, newest)).toContain(elsewhere)
+    await expectDatabase(session)
   })
 })

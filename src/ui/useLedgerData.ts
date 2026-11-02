@@ -164,7 +164,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       receiptsPending: receiptsPending(held),
       ensureReceipts: session.loadReceipts,
       watchHistory: session.watchSeries,
-      useUsage: ledgerUsageHook(usage, held.revision),
+      useUsage: ledgerUsageHook(usage, session.fits),
       pagedList,
       ...(note ? { historyNote: note } : {}),
     }

@@ -122,6 +122,76 @@ describe('RevisionTrail', () => {
     expect(trail.known(held(null))).toBeNull()
   })
 
+  describe('fits', () => {
+    const wrote = (trail: RevisionTrail, before: string, after: string | null, base: string | null = null) => {
+      trail.note({ before, after })
+      trail.vouch(trail.take(held(base)), null)
+    }
+
+    it('says yes to any revision while the held ledger’s own is not known, which is not compared', () => {
+      expect(new RevisionTrail().fits(held(null), 'r5')).toBe(true)
+      expect(new RevisionTrail().fits(null, 'r5')).toBe(true)
+    })
+
+    it('is the revision the held ledger carries, and no other, when no write was shown', () => {
+      const trail = new RevisionTrail()
+
+      expect(trail.fits(held('r0'), 'r0')).toBe(true)
+      expect(trail.fits(held('r0'), 'r1')).toBe(false)
+    })
+
+    it('goes with the revision it was read at and the ones the writes made here took it through, not with another', () => {
+      const trail = new RevisionTrail()
+      wrote(trail, 'r0', 'r2', 'r0')
+      wrote(trail, 'r2', 'r4')
+
+      expect(['r0', 'r2', 'r4'].map((at) => trail.fits(held(null), at))).toEqual([true, true, true])
+      expect(['r1', 'r3', 'r5', 'rX'].map((at) => trail.fits(held(null), at))).toEqual([false, false, false, false])
+    })
+
+    it('goes with every token of the writes one patch shows', () => {
+      const trail = new RevisionTrail()
+      trail.note({ before: 'r0', after: 'r2' })
+      trail.note({ before: 'r2', after: 'r4' })
+      trail.vouch(trail.take(held('r0')), null)
+
+      expect(['r0', 'r2', 'r4'].map((at) => trail.fits(held(null), at))).toEqual([true, true, true])
+    })
+
+    it('goes on after the held ledger took the revision the writes left, as when the sums of a month were read', () => {
+      const trail = new RevisionTrail()
+      wrote(trail, 'r0', 'r2', 'r0')
+
+      expect(trail.fits(held('r2'), 'r0')).toBe(true)
+      expect(trail.fits(held('r2'), 'r1')).toBe(false)
+    })
+
+    it('is given up by a read of everything, after which the ledger is at the revision that read found', () => {
+      const trail = new RevisionTrail()
+      wrote(trail, 'r0', 'r2', 'r0')
+
+      trail.forget()
+
+      expect(trail.fits(held('r5'), 'r0')).toBe(false)
+      expect(trail.fits(held('r5'), 'r5')).toBe(true)
+    })
+
+    it.each([
+      ['has no receipt', null],
+      ['has no new token', { before: 'r2', after: null }],
+      ['starts elsewhere', { before: 'rX', after: 'r6' }],
+    ])('is given up by a patch whose write %s, since nothing says what else ran in between', (_name, receipt) => {
+      const trail = new RevisionTrail()
+      wrote(trail, 'r0', 'r2', 'r0')
+      if (receipt) trail.note(receipt)
+
+      trail.take(held('r2'))
+
+      expect(trail.fits(held('r2'), 'r0')).toBe(false)
+      expect(trail.fits(held('r2'), 'r2')).toBe(true)
+    })
+  })
+
   describe('adoptable', () => {
     it('is the revision read when nothing here says otherwise', () => {
       expect(new RevisionTrail().adoptable(held(null), 'r5')).toBe('r5')

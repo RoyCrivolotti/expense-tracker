@@ -1,12 +1,14 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { noteWriteResponse } from '../data/writeReceipts'
+import { REVISION_AFTER_HEADER, REVISION_BEFORE_HEADER } from '../domain/data/writeReceipt'
 import { usageFromDataset } from '../domain/engine/recordUsage'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import type { ExpenseDataset } from '../domain/types'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
-import { patchAfterBulkUpdate } from './datasetPatches'
+import { patchAfterBulkUpdate, patchAfterLabel } from './datasetPatches'
 import { type UsageKind, type UsageView, useRecordUsage } from './definitions/recordUsage'
 import { usageCount } from './ledgerUsage'
 import { type ExpenseData } from './useExpenseData'
@@ -156,6 +158,64 @@ describe('the counts of a window', () => {
     await waitFor(() => expect(sink.usage!.note).toBe('stale'))
     await new Promise((resolve) => setTimeout(resolve, 30))
     expect(source.calls.filter((call) => call === 'usage')).toHaveLength(2)
+  })
+
+  describe('after a write made here that the server vouched for', () => {
+    /** The server answers a write: it moves the revision twice, says so in the receipt, and the screens patch it in. */
+    const answered = (source: TestSource, receipt: { before: string; after: string }, elsewhere?: string) => {
+      source.move(elsewhere ?? receipt.after)
+      noteWriteResponse(new Headers({ [REVISION_BEFORE_HEADER]: receipt.before, [REVISION_AFTER_HEADER]: receipt.after }))
+    }
+    const usageReads = (source: TestSource) => source.calls.filter((call) => call === 'usage').length
+    const unpinned = (sink: Sink) =>
+      sink.data!.model!.dataset.transactions.find((t) => !t.planId && !t.settledBy && !t.reportCount && !t.flagId && t.type !== 'investment')!
+
+    it('are not read again for an amount that was edited, which moves the sums of a month and no count', async () => {
+      const source = memorySource(big)
+      const sink = open(source, WINDOWED)
+      await loaded(sink)
+      const edited = { ...unpinned(sink), amountCents: unpinned(sink).amountCents + 100 }
+      source.dataset = { ...big, transactions: big.transactions.map((t) => (t.id === edited.id ? edited : t)) }
+      source.calls.length = 0
+
+      answered(source, { before: 'r0', after: 'r2' })
+      act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [edited]), { ids: [edited.id], patch: { amountCents: edited.amountCents } }))
+      await waitFor(() => expect(source.calls.some((call) => call.startsWith('cube:'))).toBe(true))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+
+      expect(counts(sink, big)).toEqual(truth(source.dataset))
+      expect(sink.usage!.note).toBeNull()
+      expect(usageReads(source)).toBe(0)
+    })
+
+    it('are not read again for a name that was changed, which moves no sum', async () => {
+      const source = memorySource(big)
+      const sink = open(source, WINDOWED)
+      await loaded(sink)
+      source.calls.length = 0
+
+      answered(source, { before: 'r0', after: 'r2' })
+      act(() => sink.data!.applyPatch((d) => patchAfterLabel(d, { ...d.labels[0]!, name: 'Renamed' })))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+
+      expect(counts(sink, big)).toEqual(truth(big))
+      expect(sink.usage!.note).toBeNull()
+      expect(usageReads(source)).toBe(0)
+    })
+
+    it('say they may be out of date when another request wrote after the write and before they were read', async () => {
+      const source = memorySource(big)
+      const sink = open(source, WINDOWED)
+      await loaded(sink)
+      const moved = { ...unpinned(sink), categoryId: big.categories.find((c) => c.id !== unpinned(sink).categoryId)!.id }
+      source.dataset = { ...big, transactions: big.transactions.map((t) => (t.id === moved.id ? moved : t)) }
+
+      answered(source, { before: 'r0', after: 'r2' }, 'r3')
+      act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [moved]), { ids: [moved.id], patch: { categoryId: moved.categoryId } }))
+
+      await waitFor(() => expect(sink.usage!.note).toBe('stale'))
+      expect(counts(sink, big)).toEqual(truth(source.dataset))
+    })
   })
 
   it('are read again when the rows are read at another revision than the counts, once', async () => {

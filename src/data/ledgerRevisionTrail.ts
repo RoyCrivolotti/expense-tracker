@@ -19,8 +19,8 @@ interface Chain {
  * again. The server says what it did: each write answers with the token it found and the one it left (`WriteReceipt`),
  * and the second is sent only when no other write ran in between. A patch whose writes follow on from the revision
  * the ledger is at, receipt by receipt, leaves it at the last token, and a month read under that token belongs with
- * what is held. The held ledger's own `revision` is left as it is: what compares parts with it (the series, the
- * counts) reads null as "not compared", and should go on doing so.
+ * what is held. The held ledger's own `revision` is left as it is. What compares the series and the counts with the
+ * rows asks `fits` instead, which knows the revision the writes made here left it at and the ones they took it through.
  *
  * Nothing here is trusted beyond the next read: the token a part carries is the server's now, and a write by anyone
  * else, a write that failed part way or one that was not shown has moved it away from the one known here.
@@ -29,6 +29,8 @@ export class RevisionTrail {
   private pending: WriteReceipt[] = []
   private lost = false
   private chain: Chain | null = null
+  /** The writes made here, shown by a patch, since the ledger was last read. */
+  private passed: WriteReceipt[] = []
   /** A write made here was answered with a receipt that does not follow on, so another write ran beside it. */
   private interfered = false
 
@@ -57,7 +59,19 @@ export class RevisionTrail {
     this.chain = null
     const at = lost ? null : followed(from, receipts)
     if (receipts.length > 0 && at === null) this.interfered = true
+    this.passed = at === null ? [] : this.passed.concat(receipts)
     return at
+  }
+
+  /**
+   * Whether something read at `revision` (the series, the counts) goes with `held`: it was read at the revision `held` is
+   * at, or at one the writes made here took it through. Those writes cannot have changed what was read unless the
+   * caller noted that they did (`seriesWrites`, `noteWrite`), which is why a read under an earlier token still counts.
+   * True when `held`'s revision is not known, which is not compared.
+   */
+  fits(held: HeldLedger | null, revision: string): boolean {
+    const known = this.known(held)
+    return known === null || known === revision || this.passed.some((r) => r.before === revision)
   }
 
   /** The patch for what `take` returned has been applied, leaving the held ledger's own revision as `base`. */
@@ -71,6 +85,7 @@ export class RevisionTrail {
    */
   forget(): void {
     this.chain = null
+    this.passed = []
     this.interfered = false
   }
 

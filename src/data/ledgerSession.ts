@@ -389,9 +389,11 @@ export class LedgerSession {
   /** The series held were read after the last write that touched them, under the revision the rows were read under. */
   private seriesCurrent(): boolean {
     const read = this.seriesRead
-    const revision = this.state.held?.revision ?? null
-    return read !== null && read.writes === this.seriesWrites && (revision === null || revision === read.revision)
+    return read !== null && read.writes === this.seriesWrites && this.fits(read.revision)
   }
+
+  /** Whether what was read at `revision` (the series, the counts) goes with the rows held, whichever writes were made here since. */
+  fits = (revision: string): boolean => this.trail.fits(this.state.held, revision)
 
   /** Says why the series are not what they should be, and holds off reading them again for a while. */
   private seriesFailedWith(message: string): void {
@@ -412,7 +414,7 @@ export class LedgerSession {
         const cleared = this.state.error !== null && this.state.error === this.seriesMessage
         this.set({ series: part.series, seriesFailed: false, ...(cleared ? { error: null } : {}) })
         // The rows were read under another revision, so the ledger moved since: bring them level with the series.
-        if ((this.state.held?.revision ?? part.revision) === part.revision) break
+        if (this.fits(part.revision)) break
         if (tries >= REFRESH_ATTEMPTS) return this.seriesFailedWith(SERIES_UNMATCHED)
         await this.refreshLedger()
       }

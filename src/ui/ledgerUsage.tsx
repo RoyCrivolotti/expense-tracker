@@ -18,19 +18,18 @@ export function usageCount(usage: Usage, kind: UsageKind, id: number): number {
   return a ? a.transactions + a.plans + a.statements : 0
 }
 
-function useCounts(store: LedgerUsage, heldRevision: string | null, model: ExpenseModel): UsageView {
+function useCounts(store: LedgerUsage, fits: (revision: string) => boolean, model: ExpenseModel): UsageView {
   const state = useSyncExternalStore(store.subscribe, store.getState)
   const windowed = model.sums !== undefined
+  const behind = state.usage !== null && !fits(state.usage.revision)
   useEffect(() => (windowed ? store.watch() : undefined), [store, windowed])
   useEffect(() => {
-    const { usage } = store.getState()
-    if (windowed && usage !== null && heldRevision !== null && usage.revision !== heldRevision) store.refresh()
-  }, [store, windowed, heldRevision])
+    if (behind) store.refresh()
+  }, [store, behind])
   const { dataset } = model
   return useMemo<UsageView>(() => {
     if (!windowed) return { count: (kind, id) => heldCount(dataset, kind, id), note: null, notice: null, words: null }
     const { usage, loading, stale, error } = state
-    const behind = usage !== null && heldRevision !== null && usage.revision !== heldRevision
     const note = error !== null ? 'failed' : loading || usage === null ? 'reading' : stale || behind ? 'stale' : null
     return {
       count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
@@ -38,16 +37,16 @@ function useCounts(store: LedgerUsage, heldRevision: string | null, model: Expen
       notice: note === null ? null : <UsageNote note={note} refresh={store.refresh} />,
       words: note === null ? null : NOTE_WORDS[note],
     }
-  }, [store, windowed, dataset, state, heldRevision])
+  }, [store, windowed, dataset, state, behind])
 }
 
 /**
  * The counts for a model of a ledger read in parts. While it holds every row they are the model's own and certain. For
  * a window they are the server's: read when a screen that shows them is on, again after a write that could change them
  * and when the rows were read at another revision than the counts, and flagged while they are being read, may be out of
- * date or could not be read. `heldRevision` is the revision the rows were read under, null after a write of this
- * browser's, which says nothing of other tabs.
+ * date or could not be read. `fits` says whether counts read at a revision go with the rows held: the revision they
+ * were read under, or one this browser's own writes took them through, and anything while the revision is not known.
  */
-export function ledgerUsageHook(store: LedgerUsage, heldRevision: string | null): (model: ExpenseModel) => UsageView {
-  return (model) => useCounts(store, heldRevision, model)
+export function ledgerUsageHook(store: LedgerUsage, fits: (revision: string) => boolean): (model: ExpenseModel) => UsageView {
+  return (model) => useCounts(store, fits, model)
 }
