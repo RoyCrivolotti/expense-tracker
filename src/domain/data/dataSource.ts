@@ -240,7 +240,7 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   deleteInstallmentPlan?(id: number): Promise<void>
   createWealthAccount?(input: NewWealthAccount): Promise<WealthAccount>
   updateWealthAccount?(id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
-  deleteWealthAccount?(id: number): Promise<void>
+  deleteWealthAccount?(id: number): Promise<DeleteWealthAccountResult>
   createWealthCheckin?(input: NewWealthCheckin): Promise<WealthCheckin>
   updateWealthCheckin?(id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
   deleteWealthCheckin?(id: number): Promise<void>

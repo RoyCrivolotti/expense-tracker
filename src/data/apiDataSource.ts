@@ -259,9 +259,10 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
-  deleteWealthAccount: async (id: number) => {
-    await req(`${BASE}/wealth-accounts/${id}`, { method: 'DELETE' })
-  },
+  // An answer from before the route said which keeps the assumption this client always made: archived.
+  deleteWealthAccount: (id: number) =>
+    req<{ archived?: boolean }>(`${BASE}/wealth-accounts/${id}`, { method: 'DELETE' })
+      .then(({ archived }) => ({ archived: archived ?? true })),
   createWealthCheckin: (input: NewWealthCheckin) =>
     req<WealthCheckin>(`${BASE}/wealth-checkins`, {
       method: 'POST',

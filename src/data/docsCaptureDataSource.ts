@@ -616,8 +616,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     }
     return Promise.resolve(account)
   },
-  deleteWealthAccount() {
-    return Promise.resolve()
+  // Like the API, an account the seeded check-ins refer to is archived and any other is removed.
+  deleteWealthAccount(id: number) {
+    return Promise.resolve({ archived: docsCaptureWealthCheckins().some((c) => c.entries.some((e) => e.accountId === id)) })
   },
   createWealthCheckin(input: NewWealthCheckin) {
     nextId += 1
