@@ -20,8 +20,8 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const id = parseNumericId(context.params, 'id')
   const { repo, owner } = context.data
   try {
-    await removeWealthAccount(repo, owner, id)
-    return json({ ok: true })
+    const { archived } = await removeWealthAccount(repo, owner, id)
+    return json({ ok: true, archived })
   } catch (error) {
     mapAppError(error)
   }

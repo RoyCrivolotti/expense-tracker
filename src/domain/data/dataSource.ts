@@ -116,6 +116,10 @@ export interface DeleteAccountResult {
   reassignedToId: number | null
   createdAccount?: Account
 }
+export interface DeleteWealthAccountResult {
+  /** True when the account has check-in history and was archived; false when its row was removed. */
+  archived: boolean
+}
 /** Activation is its own call (`activateScenario`), so the flag is not part of a write. */
 export type NewGoalScenario = Omit<GoalScenario, 'id' | 'isActive'>
 /** What the PATCH route accepts: field edits, or `{ isActive: true }` on its own. */

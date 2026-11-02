@@ -1,5 +1,5 @@
 import type { WealthAccount, WealthCheckin } from '../domain/types'
-import type { NewWealthAccount, NewWealthCheckin } from '../domain/data/dataSource'
+import type { DeleteWealthAccountResult, NewWealthAccount, NewWealthCheckin } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
 import { addDaysIso } from '../domain/engine/dates'
@@ -77,7 +77,7 @@ export async function deleteWealthAccount(
   env: Env,
   owner: string,
   id: number,
-): Promise<void> {
+): Promise<DeleteWealthAccountResult> {
   // Check if the account has entries — archive instead of hard-deleting to preserve history.
   const usage = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM wealth_checkin_entries e
@@ -95,15 +95,14 @@ export async function deleteWealthAccount(
       .bind(id, owner)
       .first<{ id: number }>()
     if (!result) throw new HttpError(404, 'Wealth account not found')
-    return
+    return { archived: true }
   }
 
-  const result = await env.DB.prepare(
-    'DELETE FROM wealth_accounts WHERE id = ? AND owner = ?',
-  )
+  const result = await env.DB.prepare('DELETE FROM wealth_accounts WHERE id = ? AND owner = ?')
     .bind(id, owner)
     .run()
   if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Wealth account not found')
+  return { archived: false }
 }
 
 // ─── Wealth Checkins ──────────────────────────────────────────────────────────

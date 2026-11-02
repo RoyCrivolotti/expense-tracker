@@ -21,6 +21,7 @@ import type {
   DeleteAccountResult,
   DeleteCategoryOptions,
   DeleteCategoryResult,
+  DeleteWealthAccountResult,
   NewAccount,
   NewCategory,
   NewAttachment,
@@ -224,7 +225,7 @@ export interface ExpenseRepository {
   deleteInstallmentPlan(owner: string, id: number): Promise<void>
   createWealthAccount(owner: string, input: NewWealthAccount): Promise<WealthAccount>
   updateWealthAccount(owner: string, id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
-  deleteWealthAccount(owner: string, id: number): Promise<void>
+  deleteWealthAccount(owner: string, id: number): Promise<DeleteWealthAccountResult>
   createWealthCheckin(owner: string, input: NewWealthCheckin): Promise<WealthCheckin>
   updateWealthCheckin(owner: string, id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
   deleteWealthCheckin(owner: string, id: number): Promise<void>
