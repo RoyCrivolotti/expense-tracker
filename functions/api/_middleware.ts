@@ -10,6 +10,7 @@ import { withDefaultResponseHeaders } from '../_shared/defaultResponseHeaders'
 import { assertWriteIsSameSiteJson } from '../_shared/requestHygiene'
 import { toHttpError } from '../_shared/mapAppError'
 import { bumpRevision, bumpRevisionReadingPrevious } from '../_shared/dbRevision'
+import { withWriteReceipt } from '../_shared/writeReceipt'
 
 function isAccessApiPath(pathname: string): boolean {
   return pathname.startsWith('/api/access')
@@ -28,6 +29,11 @@ const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
  * still moved for everyone who cached earlier. After: a reader who arrives mid-write caches the old
  * data under the first token, and only the second bump makes that copy miss. That one is retried
  * once, because a write with no bump after it leaves such a copy valid until the owner's next write.
+ *
+ * A write that worked answers with the token it found and the one it left (`withWriteReceipt`), so that
+ * the browser that made it can keep its revision. The second is sent only if the second bump replaced
+ * the token the first one left: otherwise another write began or ended in between, and the ledger at
+ * the new token is not just the old one plus this write.
  */
 async function aroundWrite(
   db: D1Database,
@@ -35,7 +41,8 @@ async function aroundWrite(
   data: ExpensesData,
   run: () => Promise<Response>,
 ): Promise<Response> {
-  data.revisionBeforeWrite = await bumpRevisionReadingPrevious(db, owner)
+  const first = await bumpRevisionReadingPrevious(db, owner)
+  data.revisionBeforeWrite = first.previous
   let response: Response
   try {
     response = await run()
@@ -45,8 +52,9 @@ async function aroundWrite(
     })
     throw e
   }
-  await bumpRevision(db, owner).catch(() => bumpRevision(db, owner))
-  return response
+  const last = await bumpRevisionReadingPrevious(db, owner).catch(() => bumpRevisionReadingPrevious(db, owner))
+  const consecutive = first.token !== null && last.previous === first.token
+  return withWriteReceipt(response, { before: first.previous, after: consecutive ? last.token : null })
 }
 
 /** Request checks, auth gate and uniform error handling for every /api/* route. */

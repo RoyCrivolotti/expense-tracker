@@ -34,7 +34,8 @@ function bumpStatement(db: D1Database, owner: string): D1PreparedStatement {
   return db
     .prepare(
       `INSERT INTO owner_revision (owner, token) VALUES (?, ${NEW_TOKEN})
-       ON CONFLICT(owner) DO UPDATE SET token = excluded.token`,
+       ON CONFLICT(owner) DO UPDATE SET token = excluded.token
+       RETURNING token`,
     )
     .bind(owner)
 }
@@ -45,17 +46,29 @@ export async function bumpRevision(db: D1Database, owner: string): Promise<void>
 }
 
 /**
- * {@link bumpRevision}, returning the token it replaced (null when the owner had none). The read and the
- * replacement are one batch, so nothing can move the token between them: the value returned is what the
- * ledger was at the moment this request began, which is what a write that names the revision it was
- * based on (`expectedRevision`) has to be compared with.
+ * The token a bump replaced (null when the owner had none) and the one it left. The second is null only if the
+ * database answered the batch without the row it was asked to return; the write goes on and no receipt names a token.
  */
-export async function bumpRevisionReadingPrevious(db: D1Database, owner: string): Promise<string | null> {
-  const [previous] = await db.batch([
+export interface Bump {
+  previous: string | null
+  token: string | null
+}
+
+/**
+ * {@link bumpRevision}, returning the token it replaced and the one it left. The read and the replacement are
+ * one batch, so nothing can move the token between them: `previous` is what the ledger was at the moment this
+ * bump ran, which is what a write that names the revision it was based on (`expectedRevision`) has to be
+ * compared with, and what a request compares its second bump with to learn whether anyone else wrote between.
+ */
+export async function bumpRevisionReadingPrevious(db: D1Database, owner: string): Promise<Bump> {
+  const [previous, bumped] = await db.batch([
     db.prepare('SELECT token FROM owner_revision WHERE owner = ?').bind(owner),
     bumpStatement(db, owner),
   ])
-  return (previous?.results?.[0] as { token: string } | undefined)?.token ?? null
+  return {
+    previous: (previous?.results?.[0] as { token: string } | undefined)?.token ?? null,
+    token: (bumped?.results?.[0] as { token: string } | undefined)?.token ?? null,
+  }
 }
 
 /** The owner's token, creating one if the owner has none yet. Never replaces an existing one. */

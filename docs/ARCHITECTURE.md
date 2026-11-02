@@ -81,7 +81,8 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
     is retried once. The first one reads the token it replaces in the same batch and hands it to the handler as
     `context.data.revisionBeforeWrite`. A route that takes the revision its user was looking at (`expectedRevision`)
     compares it with that, through `assertRevisionUnchanged`, and never with the table, which by then holds the new
-    token.
+    token. A write that worked answers with that token and the one the second replacement left (`withWriteReceipt`),
+    the second only when the token it replaced was the one the first left.
   - `backfillInstallments`, when it inserted rows. It writes during a GET (the dataset, reference and usage routes), and
     the backup reaches it through `loadDataset`.
   - `purgeOwnerData`, which deletes the row, and anything else that writes those tables outside the API (a seed script,

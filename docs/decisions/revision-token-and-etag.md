@@ -13,8 +13,15 @@ changes the JSON shape never meets a browser holding the old shape under a match
 data, so a concurrent write leaves it older than the data and never newer.
 
 **Consequences.**
-- A match costs two rows read and runs no dataset query or backfill. A write request costs two more rows written and one read.
+- A match costs two rows read and runs no dataset query or backfill. A write request costs two more rows written and two read.
 - The token is per owner, so any write invalidates every part and range.
+- A write that worked answers with the token it found (`x-revision-before`) and the one it left (`x-revision-after`), so
+  the browser that made it can keep knowing its revision (`RevisionTrail`). The second bump reads the token it replaces in
+  the same batch, and `after` is sent only if that is the token the first bump left. Otherwise another write began or
+  ended in between, the ledger at the new token holds a write the browser does not, and the browser reads again.
+  Nothing is trusted past the next read: a part carries the token the server has now. A write still in flight around
+  this one is not counted, and ends with a second bump that moves the token again, which is how the browser finds out;
+  a Worker cut off before that bump leaves the same stale copy for every reader, as it always did.
 - A new write route needs nothing. Anything that writes the dataset's tables outside the API must delete the owner's
   row, and `datasetRevision.integration.test.ts` fails for a write route with no test case.
 
@@ -23,3 +30,5 @@ data, so a concurrent write leaves it older than the data and never newer.
 - The newest `updated_at`: a delete changes no remaining row's timestamp, and not every table keeps one.
 - A strong ETag: a re-encoded copy of the same body would stop matching.
 - Bumping from each handler: a route that forgot would serve stale data until the owner's next write.
+- Always sending the new token: with another write between the two bumps, a browser holding the old token would take the
+  new one for its own write and nothing else, and keep a ledger that lacks the other write.
