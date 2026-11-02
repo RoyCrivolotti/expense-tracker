@@ -25,6 +25,8 @@ import { type Reconciled, datasetOfHeld, reconcileHeld, resourcesTouched } from 
 import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
 import { reason } from './reason'
+import { RevisionTrail } from './ledgerRevisionTrail'
+import type { WriteReceipt } from '../domain/data/writeReceipt'
 
 export interface SessionState {
   held: HeldLedger | null
@@ -126,6 +128,8 @@ export class LedgerSession {
     seriesFailed: false,
   }
   private epochs: Epochs = NO_EPOCHS
+  /** Which revision the held ledger is at, across the writes this browser makes (`RevisionTrail`). */
+  private readonly trail = new RevisionTrail()
   /** Views that are reading months right now. */
   private hydratingViews = 0
   /** The read of the ledger that the last write of a plan started. */
@@ -166,6 +170,9 @@ export class LedgerSession {
   }
 
   getState = (): SessionState => this.state
+
+  /** The server answered a write made here. Its patch follows, and takes the receipt with it. */
+  noteReceipt = (receipt: WriteReceipt): void => this.trail.note(receipt)
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
@@ -218,6 +225,7 @@ export class LedgerSession {
   }
 
   private refreshLedger(): Promise<void> {
+    this.trail.forget()
     const mine = ++this.refreshes
     this.latest = this.readAgain(mine)
     return this.latest
@@ -259,9 +267,9 @@ export class LedgerSession {
     this.hydratingViews += 1
     this.set({ hydrating: true })
     try {
-      // After a write the revision the parts were read under is not known, so what is read now could not be
-      // told from a later state of the ledger: read it all again, which also settles the revision.
-      if (held.revision === null) await this.refreshLedger()
+      // After a write the server did not vouch for, the revision the parts were read under is not known, so what is
+      // read now could not be told from a later state of the ledger: read it all again, which also settles it.
+      if (this.trail.known(held) === null) await this.refreshLedger()
       else await this.hydrate(missing)
     } catch (error) {
       this.set({ error: reason(error) })
@@ -280,7 +288,7 @@ export class LedgerSession {
     const parts = await Promise.all(ranges.map((range) => this.source.readMonthsPart(range)))
     const now = this.state.held
     if (!now) return
-    if (parts.some((part) => part.revision !== now.revision)) return this.refreshLedger()
+    if (parts.some((part) => part.revision !== this.trail.known(now))) return this.refreshLedger()
     // A write meanwhile may have changed rows of these months, so what was read is read again.
     if (started.rows !== this.epochs.rows) return this.hydrate(missingMonths(now, missing))
     this.set({ held: this.tidy(holdRows(now, parts)) })
@@ -301,12 +309,14 @@ export class LedgerSession {
    */
   patch(patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach): boolean {
     const held = this.state.held
+    const vouched = this.trail.take(held)
     if (!held || this.state.offline) return false
     // Asked before the patch: a row it removes is held until then.
     const beyond = reach !== undefined && !holdsEvery(held, reach.ids)
     const before = datasetOfHeld(held)
     const after = patch(before)
     const done = reconcileHeld(held, before, after, this.state.viewed)
+    this.trail.vouch(vouched, done.held.revision)
     const changed = Object.values(done.changed).some(Boolean)
     const cascade = changed ? cascadeOf(before, after) : null
     if (changed) this.hold(done, before, after, cascade)
@@ -476,9 +486,11 @@ export class LedgerSession {
         if (this.epochs.cube !== started) continue
         for (const month of months) this.stale.delete(month)
         const revision = parts[0]?.revision ?? held.revision
-        this.set({ held: { ...holdCells(held, parts), revision: held.revision ?? revision } })
+        this.set({ held: { ...holdCells(held, parts), revision: held.revision ?? this.trail.adoptable(held, revision) } })
       }
     } catch (error) {
+      // The sums of the months written to are still the old ones, and only a read of everything puts them right.
+      this.trail.forget()
       this.set({ error: reason(error) })
     } finally {
       this.flushing = false

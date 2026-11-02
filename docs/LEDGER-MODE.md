@@ -70,7 +70,13 @@ has to decide what a window may show.
   rows drops a read of the rows that started before it and leaves a read of the reference alone, so an old value is
   never shown again, and a refresh that a later refresh has overtaken is dropped, failure included, whichever answers
   first. A write also makes the held revision unknown until a part is read again, so the next read of another month
-  reads everything rather than mixing two states. Months held beyond the window around the month shown are given up
+  reads everything rather than mixing two states, unless the server vouched for the write: each answers with the token it
+  found and the one it left ([API.md](./API.md)), and `RevisionTrail` (`src/data/ledgerRevisionTrail.ts`) carries the
+  revision across patches whose receipts follow on from it, one after another. The next month is then read alone, and
+  the token it comes back under must be the one the trail knows, or everything is read. A write the server answered with
+  more than the patch shows, or that reached rows nobody here holds, is followed by a read of everything as before.
+  The held ledger's own `revision` is left as the reads give it (null after a write), which the series and the counts
+  read as "not compared". Months held beyond the window around the month shown are given up
   oldest first, except one that has no sums (the first read leaves out those of the months it reads as rows), since
   giving it up would take it out of the totals, and a ledger held in full gives up nothing.
 - **A write the server answers with more than the patch shows is followed by a read of the whole ledger, not by a hand
