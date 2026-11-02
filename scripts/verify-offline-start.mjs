@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Playwright check that the installed app opens without a network, and that the update from the service worker it
- * shipped with before cannot strand anyone. Chromium and WebKit, against the production build in `dist` (run
+ * Playwright check that the installed app opens without a network and shows the copy of the data it kept, and that the
+ * update from the service worker it shipped with before cannot strand anyone. Chromium and WebKit, against the production build in `dist` (run
  * `npm run build` first), served the way Cloudflare Pages serves it (`offlineStart/site.mjs`).
  *
  * The unit tests and `check-service-worker.mjs` run the worker's code; only a browser installs one, updates one and
@@ -15,6 +15,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, webkit } from 'playwright'
+import { NEWEST_DESCRIPTION, OWNER, demoDataset } from './offlineStart/dataset.mjs'
+import { serveLedgerParts } from './offlineStart/ledgerApi.mjs'
 import { buildPreviousSite } from './offlineStart/previousWorker.mjs'
 import { startLogin, startSite } from './offlineStart/site.mjs'
 
@@ -124,6 +126,72 @@ async function firstVisitThenNoNetwork(browser, engine) {
 
     await comeBack(site, context, engine)
     await launchNetworkFirst(where, page, site, '/')
+  } finally {
+    await context.close()
+    await site.close()
+  }
+}
+
+/** The keys of the copies the app has kept in the browser's database. */
+const savedKeys = (page) =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const open = indexedDB.open('expense-tracker-offline', 1)
+        open.onerror = () => resolve([])
+        open.onsuccess = () => {
+          const db = open.result
+          if (!db.objectStoreNames.contains('snapshots')) return resolve([])
+          const keys = db.transaction('snapshots').objectStore('snapshots').getAllKeys()
+          keys.onsuccess = () => resolve(keys.result)
+          keys.onerror = () => resolve([])
+        }
+      }),
+  )
+
+/** The API the app reads, answered as a signed-in person with a small ledger. */
+function serveApi(site) {
+  const dataset = demoDataset()
+  site.state.api.set('/api/access/status', { status: 'allowed', email: OWNER })
+  site.state.api.set('/api/expenses', dataset)
+  serveLedgerParts(site, dataset)
+}
+
+/**
+ * The app is opened with a network, as the person does, so that it keeps a copy of their data, and then the network is
+ * gone. The launch opens the app on the copy, for the person it names, and says that it is saved data that cannot be
+ * changed. The access check cannot answer, which is what used to end the launch on the connection screen.
+ */
+async function savedCopyWithNoNetwork(browser, engine, ledger) {
+  const where = `${engine}, ${ledger ? 'the ledger read in parts, ' : ''}a saved copy then no network`
+  const site = await startSite({ root: DIST })
+  serveApi(site)
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  const shown = (text) => page.getByText(text).first().waitFor({ timeout: 10_000 }).then(() => true, () => false)
+  try {
+    // The ledger switch is kept in the browser, so the launch with no network is not given it again.
+    await page.goto(`${site.origin}/${ledger ? '?ledger=on' : ''}`)
+    await controlled(page)
+    check(where, 'online, the app shows the data', await shown(NEWEST_DESCRIPTION), await page.locator('body').innerText())
+    check(where, 'online, there is no saved-data notice', (await page.getByText('Viewing saved data').count()) === 0)
+    const kept = ledger ? `ledger:${OWNER}` : 'latest'
+    check(where, `online, the app keeps its copy (${kept})`, await until(async () => (await savedKeys(page)).includes(kept), 5_000), (await savedKeys(page)).join(', '))
+    const asked = site.state.requests.map((request) => request.path)
+    check(where, `online, it read the data ${ledger ? 'in parts' : 'whole'}`, asked.includes(ledger ? '/api/expenses/reference' : '/api/expenses') && asked.includes('/api/expenses/reference') === ledger, asked.filter((path) => path.startsWith('/api/')).join(', '))
+
+    await goOffline(site, context, engine)
+    const result = await visit(page, site.origin, '/')
+    check(where, 'offline, the launch is answered by the worker', result.ok && result.fromWorker === true, JSON.stringify(result))
+    check(where, 'offline, the saved copy shows', await shown(NEWEST_DESCRIPTION), await page.locator('body').innerText())
+    // WebKit is not set offline (see `goOffline`), so there the banner words the same fact for a server that does not answer.
+    check(where, 'and says it is saved data, with editing off until there is a connection', await shown(/Editing is disabled until/), await page.locator('body').innerText())
+    check(where, 'and it is not the connection screen', (await page.getByText('Can\u2019t reach the server').count()) === 0)
+    check(where, 'and nothing can be added', (await page.getByRole('button', { name: 'Add transaction' }).count()) === 0)
+
+    await comeBack(site, context, engine)
+    await page.reload()
+    check(where, 'back online, the data is live again and editable', (await shown(NEWEST_DESCRIPTION)) && (await page.getByRole('button', { name: 'Add transaction' }).count()) > 0)
   } finally {
     await context.close()
     await site.close()
@@ -250,6 +318,8 @@ try {
     const browser = await LAUNCH[engine].launch()
     try {
       await firstVisitThenNoNetwork(browser, engine)
+      await savedCopyWithNoNetwork(browser, engine, false)
+      await savedCopyWithNoNetwork(browser, engine, true)
       await updateFromDeployed(browser, engine, tmp)
       await updateThatCannotInstall(browser, engine, tmp)
       await behindAccess(browser, engine)
