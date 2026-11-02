@@ -128,7 +128,7 @@ const countsTheApiSends: Scenario = {
     const writes = countRollupWrites(k.sqlite)
     const before = writes()
     const missing = await call(k, OWNER, deleteOne, '/transactions/999999', { method: 'DELETE', params: { id: '999999' } })
-    expect(missing.status, 'no row changed, so the one use of meta.changes answers 404').toBe(404)
+    expect([missing.status, missing.body], 'a row that is not there is answered ok').toEqual([200, { ok: true }])
     expect(writes() - before, 'and no trigger fired').toBe(0)
   },
 }

@@ -117,6 +117,7 @@ export interface ExpenseRepository {
     id: number,
     patch: Partial<NewTransaction>,
   ): Promise<Transaction>
+  /** Resolves for a row that is missing or not the owner's too, so that a repeated delete ends as the first did. */
   deleteTransaction(owner: string, id: number): Promise<void>
   deleteTransactions(owner: string, ids: number[]): Promise<number>
   bulkUpdateTransactions(

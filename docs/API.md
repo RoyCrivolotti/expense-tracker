@@ -261,8 +261,9 @@ single-row `POST /transactions` and `PATCH` and `DELETE /transactions/:id` sit b
   read or removed. The rows, their receipt rows and label links then go in one batch, and `settled_by` is cleared on any
   row a deleted payment had settled. The receipt files are removed after that, best effort, so a refused or failed
   delete never costs a file (receipts are in no backup), and a file the bucket then fails to delete is left behind and
-  costs only space. `DELETE /transactions/:id` does the same. There is no filter form
-  ([decision](./decisions/no-filter-based-delete.md)).
+  costs only space. `DELETE /transactions/:id` does the same. It answers `{ ok: true }` for a row that is already gone or
+  is not the caller's (the two look alike), because the browser repeats a delete whose answer it never saw. There is no
+  filter form ([decision](./decisions/no-filter-based-delete.md)).
 - `ids` holds at most 500 positive whole numbers, sent as JSON numbers (a string or `true` is a 400, never coerced;
   duplicates are dropped), bound as one JSON string because D1 allows 100 bound values per statement.
 - `POST /transactions/bulk` takes at most 1,000 rows, and a note is at most 2,000 characters wherever one is written.

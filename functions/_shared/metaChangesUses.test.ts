@@ -30,7 +30,6 @@ const LISTED: Record<string, { uses: number; why: string }> = {
   '/functions/_shared/dbInstallments.ts': { uses: 1, why: 'the plan delete, tested for 0 to answer 404' },
   '/functions/_shared/dbLabels.ts': { uses: 1, why: 'label links deleted: transaction_labels has no trigger' },
   '/functions/_shared/dbWealth.ts': { uses: 2, why: 'wealth rows, tested for 0 to answer 404' },
-  '/functions/_shared/dbWrite.ts': { uses: 1, why: 'deleteTransaction tests for 0 to answer 404; no row means no trigger fires' },
   '/functions/_shared/descriptionNormBackfill.ts': { uses: 1, why: 'sets description_norm only, which no trigger watches' },
   '/scripts/scaling/cleanup.ts': { uses: 1, why: 'a chunk delete tested for 0 to end the loop' },
   '/scripts/scaling/transport.ts': { uses: 2, why: 'passes the reply through' },

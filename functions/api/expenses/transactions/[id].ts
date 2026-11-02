@@ -30,6 +30,7 @@ export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (c
   }
 }
 
+/** Answers ok for a row that is already gone (or not the caller's) as well: a delete whose answer was lost gets repeated. */
 export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const { repo, owner } = context.data
   const id = parseNumericId(context.params, 'id')

@@ -243,7 +243,7 @@ describe('deleting a transaction takes its attachments with it', () => {
     for (const statement of statements) expect(statement.args).toContain(OWNER)
   })
 
-  it('still 404s when the transaction was not this owner’s', async () => {
+  it('answers for a transaction that is gone or was not this owner’s, which the batch cannot tell apart', async () => {
     const { env } = stubEnv({
       batch: () => [
         { meta: { changes: 0 } },
@@ -253,7 +253,7 @@ describe('deleting a transaction takes its attachments with it', () => {
       ],
     })
 
-    await expect(deleteTransaction(env, OWNER, 7)).rejects.toMatchObject({ status: 404 })
+    await expect(deleteTransaction(env, OWNER, 7)).resolves.toBeUndefined()
   })
 
   it('cascades for a bulk delete too', async () => {

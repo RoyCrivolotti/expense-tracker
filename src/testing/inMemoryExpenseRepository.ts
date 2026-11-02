@@ -677,7 +677,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     deleteTransaction: (owner, id) => {
       const store = storeFor(owner)
       const index = store.transactions.findIndex((row) => row.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Transaction not found')
+      if (index < 0) return Promise.resolve()
       store.transactions.splice(index, 1)
       store.transactionLabels = store.transactionLabels.filter((tl) => tl.transactionId !== id)
       // Mirrors the D1 cascade; without it the double would let a transaction
