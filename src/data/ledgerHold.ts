@@ -120,6 +120,15 @@ export function missingMonths(held: HeldLedger, wanted: readonly string[]): stri
   return wanted.filter((month) => !held.rows.has(month))
 }
 
+/** Whether every row among `ids` is held as a row, so that a patch showed all of a write that named them. */
+export function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boolean {
+  if (ids === undefined) return false
+  if (held.cells === null) return true
+  const rows = new Set(held.pinned.map((row) => row.id))
+  for (const list of held.rows.values()) for (const row of list) rows.add(row.id)
+  return ids.every((id) => rows.has(id))
+}
+
 /** Holds the rows of every month with data inside the ranges of `parts`. */
 export function holdRows(held: HeldLedger, parts: readonly MonthRowsPart[]): HeldLedger {
   const rows = new Map(held.rows)

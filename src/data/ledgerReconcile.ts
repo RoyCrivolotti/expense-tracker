@@ -10,6 +10,7 @@ import { sortedMonths } from '../domain/engine/dates'
 import { assembleRows, isPinned, ledgerDataset, settlementPaymentIds } from '../domain/ledger'
 import type { ExpenseDataset, Transaction, TransactionAttachment } from '../domain/types'
 import { type HeldLedger, ledgerOfHeld, wantedMonths } from './ledgerHold'
+import type { Resource } from './ledgerResources'
 
 export interface Reconciled {
   held: HeldLedger
@@ -177,4 +178,13 @@ export function reconcileHeld(held: HeldLedger, before: ExpenseDataset, after: E
   const stale = held.cells === null ? [] : sortedMonths([...delta.stale].filter((month) => months.includes(month) || held.months.includes(month)))
   const changed = { reference, rows: delta.changed, receipts: receiptsChanged }
   return { held: next, changed, stale, partialReceipts: receipts.partial }
+}
+
+/** The resources a patch wrote to, whose reads that started before it are now out of date. */
+export function resourcesTouched(done: Reconciled): Resource[] {
+  return [
+    ...(done.changed.reference ? (['reference'] as const) : []),
+    ...(done.changed.rows ? (['rows'] as const) : []),
+    ...(done.stale.length > 0 ? (['cube'] as const) : []),
+  ]
 }

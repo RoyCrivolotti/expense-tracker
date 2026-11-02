@@ -11,6 +11,7 @@ import {
   holdCells,
   holdParts,
   holdReceiptLists,
+  holdsEvery,
   holdRows,
   missingMonths,
   monthsToHold,
@@ -20,9 +21,9 @@ import {
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
 import { type Cascade, cascadeOf } from './ledgerCascade'
-import { type Reconciled, datasetOfHeld, reconcileHeld } from './ledgerReconcile'
+import { type Reconciled, datasetOfHeld, reconcileHeld, resourcesTouched } from './ledgerReconcile'
 import { reshapesSeries, touchesSeries } from './touchesSeries'
-import { type Epochs, NO_EPOCHS, type Resource, bump, mergeRead, stillCurrent } from './ledgerResources'
+import { type Epochs, NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
 import { reason } from './reason'
 
 export interface SessionState {
@@ -87,15 +88,6 @@ export interface WriteReach {
   patch?: object
 }
 
-/** Whether every row the write named is held as a row, so that the patch showed all of it. */
-function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boolean {
-  if (ids === undefined) return false
-  if (held.cells === null) return true
-  const rows = new Set(held.pinned.map((row) => row.id))
-  for (const list of held.rows.values()) for (const row of list) rows.add(row.id)
-  return ids.every((id) => rows.has(id))
-}
-
 /**
  * Whether a write changed rows, those held and those it did not show: a cascade does (the server moved, unlinked or
  * inserted rows) and so does marking a card statement paid or unpaid (it decides whether the rows it covers are posted),
@@ -115,15 +107,6 @@ export function rangesOfMonths(months: readonly string[]): MonthRange[] {
     else if (!last || last.to !== month) ranges.push({ from: month, to: month })
   }
   return ranges
-}
-
-/** The resources a patch wrote to, whose reads that started before it are now out of date. */
-function resourcesTouched(done: Reconciled): Resource[] {
-  return [
-    ...(done.changed.reference ? (['reference'] as const) : []),
-    ...(done.changed.rows ? (['rows'] as const) : []),
-    ...(done.stale.length > 0 ? (['cube'] as const) : []),
-  ]
 }
 
 /**
