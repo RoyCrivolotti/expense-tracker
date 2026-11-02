@@ -54,6 +54,11 @@ export async function findAttachmentSource(
   }
 }
 
+/**
+ * The key is made from the bytes, so the same photo added to the same transaction again has the key of the one
+ * already stored (receiptKeys.ts). That is the idempotence the key scheme promises: the answer is the row that is
+ * there, and no second row or copy is made. The no-op update is what makes RETURNING give that row back.
+ */
 export async function createAttachment(
   env: Env,
   owner: string,
@@ -62,7 +67,9 @@ export async function createAttachment(
   const row = await env.DB.prepare(
     `INSERT INTO transaction_attachments
        (owner, transaction_id, object_key, thumb_key, content_type, byte_size, width, height, original_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (object_key) DO UPDATE SET object_key = excluded.object_key WHERE owner = excluded.owner
+     RETURNING *`,
   )
     .bind(
       owner,
