@@ -23,10 +23,11 @@ const TYPES = {
 
 /**
  * `root` can be changed while the server runs, which is a deploy. `failing` maps a path to a status it answers with,
- * `down` makes every connection fail, and `requests` lists what the server was asked for.
+ * `down` makes every connection fail, and `requests` lists what the server was asked for. `api` maps an API path to the
+ * JSON it answers with, or to a function of the URL that returns it (or a promise of it); any other API path is a 404.
  */
 export async function startSite({ root, access = null, port = 0 }) {
-  const state = { root, failing: new Map(), requests: [], down: false }
+  const state = { root, failing: new Map(), requests: [], down: false, api: new Map() }
   const sockets = new Set()
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://site')
@@ -48,7 +49,11 @@ export async function startSite({ root, access = null, port = 0 }) {
       res.writeHead(308, { location: '/' })
       return res.end()
     }
-    if (url.pathname.startsWith('/api/')) return send(404, JSON.stringify({ error: 'There is no API behind this server' }), 'application/json')
+    if (url.pathname.startsWith('/api/')) {
+      const answer = state.api.get(url.pathname)
+      if (answer === undefined) return send(404, JSON.stringify({ error: 'There is no API behind this server' }), 'application/json')
+      return Promise.resolve(typeof answer === 'function' ? answer(url) : answer).then((body) => send(200, JSON.stringify(body), 'application/json'))
+    }
     let file = normalize(join(state.root, url.pathname === '/' ? 'index.html' : url.pathname))
     if (!file.startsWith(state.root) || !existsSync(file) || statSync(file).isDirectory()) file = join(state.root, 'index.html')
     return send(200, readFileSync(file), TYPES[extname(file)] ?? 'application/octet-stream')

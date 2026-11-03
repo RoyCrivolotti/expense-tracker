@@ -2,10 +2,10 @@ name: Verify the offline start in a browser
 
 # `npm run verify` runs the service worker's code (`check-service-worker.mjs`), but only a browser installs a worker,
 # updates one and answers a navigation with it. This builds the app and checks, in Chromium and WebKit, that it opens
-# with no network after one visit, that the update from the worker deployed before the shell was precached lands and
-# cannot strand anyone, and that a launch still reaches Cloudflare Access when the session has ended
-# (`scripts/verify-offline-start.mjs`). A worker that fails while it loads does not fail the build or the app, only
-# the next launch with no network, so nothing else would notice.
+# with no network after one visit and shows the copy of the data it kept, that the update from the worker deployed before
+# the shell was precached lands and cannot strand anyone, and that a launch still reaches Cloudflare Access when the
+# session has ended (`scripts/verify-offline-start.mjs`). A worker that fails while it loads does not fail the build or
+# the app, only the next launch with no network, so nothing else would notice.
 #
 # Its own workflow, like the Goals one: it needs browsers, and the checks that tell a reviewer whether the code builds
 # should not wait for it. Make it required in the branch protection rules once it has proved itself.
@@ -25,6 +25,8 @@ on:
       - 'package-lock.json'
       - 'src/main.tsx'
       - 'src/ui/access/**'
+      - 'src/data/offlineCache.ts'
+      - 'src/data/savedCopy.ts'
       - 'src/ui/hooks/PwaUpdatePrompt.tsx'
       - '.github/workflows/verify-offline-start.yml'
   push:

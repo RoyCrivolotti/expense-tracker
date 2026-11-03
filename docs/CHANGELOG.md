@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Opening the app with no connection shows your last data)
+
+- **The installed app opens on the data it last loaded when there is no connection.** It used to stop at "Can't reach the server", even though it keeps a copy of your data. It now opens on that copy, with a note saying when it was saved and that nothing can be changed until you are back online, and the same happens when the connection is there but the server does not answer. With no connection nothing can check who is holding the phone, so anyone who can open the app on your unlocked phone can read that copy. A refusal from the server removes it, and so does signing out. An app with no saved data yet says "You're offline" and offers Try again, with no Sign in button, since signing in needs the connection too.
+
 ## October 2026 (A long Transactions list draws only what is on screen)
 
 - **The Transactions list stays quick with every transaction in it.** With the All dates scope and 25,000 transactions it drew every row, 434,000 page elements and about four seconds before anything showed, and a phone struggled to scroll it. Past 300 rows it now draws the days and rows near the screen, under a thousand elements and about 70 milliseconds. Scrolling, the day headers that stick, folding a day, select mode (Select all and a day's checkbox take in rows that are not drawn), swiping a row and holding one to select it work as before. One difference: the browser's Find in page only sees the rows that are drawn, so use the search box on a long list.

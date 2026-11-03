@@ -15,8 +15,9 @@ the precached `index.html`. `/` is the URL the installed app launches at. An API
 requests for its data are left to the browser, and the worker keeps no response outside its precache.
 
 **Consequences.**
-- A launch with no network opens the app. What it shows is the app's connection screen: the access check comes first, and
-  the saved copy of the data is read only after it passes.
+- A launch with no network opens the app. The access check cannot answer, so the app opens on the saved copy of the data
+  for the person it names, read-only, or says the person is offline when there is no copy
+  ([Access](../ACCESS.md#with-no-network)).
 - The shell and its assets are installed or kept together. An update whose files cannot all be fetched leaves the worker
   that is installed in place.
 - A navigation to `/index.html` itself, which Pages redirects to `/`, is answered from the precache.
