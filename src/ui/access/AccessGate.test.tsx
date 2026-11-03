@@ -251,7 +251,8 @@ describe('when the server answers', () => {
     expect(await screen.findByRole('heading', { name: 'Couldn’t check access' })).toBeInTheDocument()
     expect(screen.queryByText('Recent activity')).not.toBeInTheDocument()
     // A 401 or a 403 is a refusal, so what the device kept is dropped; a 503 is the server failing, which says nothing about the person.
-    await waitFor(() => expect(savedKeys()).toEqual(code === 503 ? ['latest'] : []))
+    await afterCleanUp()
+    expect(savedKeys()).toEqual(code === 503 ? ['latest'] : [])
   })
 
   it('tells an answer from a lost connection by what happened and not by its words', async () => {
@@ -263,6 +264,7 @@ describe('when the server answers', () => {
 
     expect(await screen.findByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
     expect(screen.queryByText('Recent activity')).not.toBeInTheDocument()
+    await afterCleanUp()
     expect(savedKeys()).toEqual(['latest'])
   })
 
