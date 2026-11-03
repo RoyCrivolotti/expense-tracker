@@ -185,6 +185,23 @@ describe('useLedgerData', () => {
 describe('useLedgerData, the recurring series', () => {
   const labels = (history: { groups: Array<{ label: string }> }) => history.groups.map((g) => g.label).sort()
 
+  it('gives a windowed model a read of every transaction and how many there are, and a model held in full none', async () => {
+    const windowed = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(windowed, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const { exportAll, dataset } = result.current.model!
+    expect(dataset.transactions.length).toBeLessThan(big.transactions.length)
+    expect(exportAll?.count).toBe(big.transactions.length)
+    const rows = await exportAll!.read()
+    const newestFirst = [...big.transactions].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
+    expect(rows.map((t) => t.id)).toEqual(newestFirst.map((t) => t.id))
+
+    const full = memorySource(small)
+    const whole = renderHook(() => useLedgerData(full))
+    await waitFor(() => expect(whole.result.current.status).toBe('ready'))
+    expect(whole.result.current.model!.exportAll).toBeUndefined()
+  })
+
   it('gives a windowed model the series of the whole history once a screen has asked for them', async () => {
     const source = memorySource(big)
     const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
