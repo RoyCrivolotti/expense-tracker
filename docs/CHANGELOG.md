@@ -4,7 +4,7 @@ For users: high-signal UX and reliability changes on `main`. Internal refactors 
 
 ## November 2026 (Opening the app with no connection shows your last data)
 
-- **The installed app opens on the data it last loaded when there is no connection.** It used to stop at "Can't reach the server", even though it keeps a copy of your data. It now opens on that copy, with a note saying when it was saved and that nothing can be changed until you are back online, and the same happens when the connection is there but the server does not answer. With no connection nothing can check who is holding the phone, so anyone who can open the app on your unlocked phone can read that copy. A refusal from the server removes it. An app with no saved data yet says "You're offline" and offers Try again, with no Sign in button, since signing in needs the connection too.
+- **The installed app opens on the data it last loaded when there is no connection.** It used to stop at "Can't reach the server", even though it keeps a copy of your data. It now opens on that copy, with a note saying when it was saved and that nothing can be changed until you are back online, and the same happens when the connection is there but the server does not answer. With no connection nothing can check who is holding the phone, so anyone who can open the app on your unlocked phone can read that copy. A refusal from the server removes it, and so does signing out. An app with no saved data yet says "You're offline" and offers Try again, with no Sign in button, since signing in needs the connection too.
 
 ## October 2026 (A long Transactions list draws only what is on screen)
 

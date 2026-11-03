@@ -67,11 +67,15 @@ holding the phone, so whoever can open the installed app on an unlocked device r
 The device's own lock is what protects them, and turning this check on does not change that. A device with no copy says
 the person is offline and offers Try again only.
 
-A copy opens only for the person it names, and copies that name two people open for neither. It is dropped when the
-server refuses the person: a 401 or 403 from the access check or from loading the data, or an answer that they have no
-access. A 503 is the server failing and says nothing about the person, so it leaves the copy and shows the "Couldn't
-check access" screen. The copy is only a fallback for a server that does not answer: with the network back, refreshing
-reads the data again, and closing the app and opening it again runs the whole access check.
+A copy opens only for the person it names, and copies that name two people open for neither. The access check removes
+every copy on the device, the ledger's too, when it refuses the person: a 401 or 403, an answer that they are not
+allowed, or one that lets them in without the Expenses group (the owner always has it). Signing out removes them all as
+well. Loading the data is narrower. A 401 or 403 there removes only the copy of the app that was loading (the dataset
+copy, or the signed-in person's ledger copy when the ledger opens), and leaves any other. A 503 is the server failing
+and says nothing about the person, so it leaves the copy and shows the "Couldn't check access" screen. If the device's
+store has not answered after three seconds, the lookup gives up and the screen says the person is offline. The copy is
+only a fallback for a server that does not answer: with the network back, refreshing reads the data again, and closing
+the app and opening it again runs the whole access check.
 
 ## Going back
 
