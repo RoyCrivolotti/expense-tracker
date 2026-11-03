@@ -17,13 +17,11 @@ function LedgerApp({
   mode,
   ledger,
   view: View,
-  onOutsized,
   ...props
 }: ExpensesAppProps & {
   mode: Exclude<LedgerMode, 'off'>
   ledger: LedgerSource
   view: typeof ExpensesAppView
-  onOutsized: () => void
 }) {
   // Shadow mode reads the whole dataset after the ledger settles and holds the two to each other.
   const settled = useCallback(
@@ -32,15 +30,10 @@ function LedgerApp({
     },
     [ledger, mode],
   )
-  const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled, refuseWindow: true })
+  const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled })
   // The lists of a ledger read in pages are longer than a request may name, so its writes to the API are the ones that split them.
   const source = useMemo(() => (props.source === apiDataSource ? withLedgerWrites(props.source) : props.source), [props.source])
   useBackgroundErrorToast(data.backgroundError, data.reload)
-  // A read that found more rows than the list shows in full was kept out, so what is on screen is never part of
-  // the ledger under the name of all of it: the whole dataset app takes over.
-  useEffect(() => {
-    if (data.outsized) onOutsized()
-  }, [data.outsized, onOutsized])
   return <View {...props} source={source} data={data} />
 }
 
@@ -56,7 +49,6 @@ export default function LedgerExpensesApp({
   ...props
 }: ExpensesAppProps & { mode: Exclude<LedgerMode, 'off'>; fallback: ReactElement; view: typeof ExpensesAppView }) {
   const [choice, setChoice] = useState<Choice>('checking')
-  const handBack = useCallback(() => setChoice('fallback'), [])
   const { source, accountEmail } = props
   useEffect(() => {
     let alive = true
@@ -67,5 +59,5 @@ export default function LedgerExpensesApp({
   }, [source, accountEmail])
   if (choice === 'checking') return <AppLoadingSkeleton label="Loading expenses" />
   if (choice === 'fallback') return fallback
-  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} view={view} onOutsized={handBack} />
+  return <LedgerApp {...props} mode={mode} ledger={choice.ledger} view={view} />
 }

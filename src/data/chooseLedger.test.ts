@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { FULL_HYDRATION_ROW_LIMIT } from '../domain/ledger'
+import { HOLD_IN_FULL_ROWS } from '../domain/ledger'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
@@ -41,11 +41,11 @@ describe('chooseLedger', () => {
     expect(source.calls.filter((call) => call === 'reference')).toHaveLength(1)
   })
 
-  it('hands a ledger over the limit to the whole-dataset app, after one read of the reference', async () => {
+  it('goes on with the ledger however many rows it has, after one read of the reference', async () => {
     const source = serving()
     const read = source.readReferencePart.bind(source)
-    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT + 1 })
-    expect(await chooseLedger(source, OWNER)).toBe('fallback')
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: HOLD_IN_FULL_ROWS + 1 })
+    expect(await chooseLedger(source, OWNER)).not.toBe('fallback')
     expect(source.calls.filter((call) => call === 'reference')).toHaveLength(1)
   })
 
@@ -57,16 +57,16 @@ describe('chooseLedger', () => {
     expect(chosen).not.toBe('fallback')
   })
 
-  it('hands back when the reference cannot be read and nothing is saved, or what is saved is a window', async () => {
+  it('hands back when the reference cannot be read and nothing is saved, and goes on with a saved window', async () => {
     const source = serving()
     source.readReferencePart = () => Promise.reject(new Error('down'))
     expect(await chooseLedger(source, OWNER)).toBe('fallback')
     const windowed = holdParts(await readLedgerParts(memorySource(dataset), { policy: { fullBelowRows: 0, dataMonths: 2 } }))
     await saveLedgerSnapshot(OWNER, windowed, '2026-08')
-    expect(await chooseLedger(source, OWNER)).toBe('fallback')
+    expect(await chooseLedger(source, OWNER)).not.toBe('fallback')
   })
 
-  it('reads nothing offline, and goes on only with a snapshot of this owner’s that holds every row', async () => {
+  it('reads nothing offline, and goes on only with a snapshot of this owner’s', async () => {
     setOnline(false)
     const source = serving()
     expect(await chooseLedger(source, OWNER)).toBe('fallback')

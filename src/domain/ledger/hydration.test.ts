@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_HYDRATION_POLICY,
-  FULL_HYDRATION_ROW_LIMIT,
+  HOLD_IN_FULL_ROWS,
   HYDRATED_DATA_MONTHS,
   chooseHydratedMonths,
   hydratedMonthsFor,
@@ -13,13 +13,11 @@ const run = (first: number, count: number) =>
     return `${2024 + Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
   })
 
-describe('FULL_HYDRATION_ROW_LIMIT', () => {
+describe('HOLD_IN_FULL_ROWS', () => {
   // Every other test uses the constant by name, so changing it would pass them all. This one makes a change deliberate.
-  // Lifting it touches four places together: the constant, `choose()` in `LedgerExpensesApp.tsx`, the
-  // `refuseWindow: true` literal there, and the offline check that the saved snapshot's `cells` is null. See
-  // docs/LEDGER-MODE.md, "The switch and the hand-back".
-  it('is 5,000 rows, the size the app hands back above', () => {
-    expect(FULL_HYDRATION_ROW_LIMIT).toBe(5_000)
+  // It is the size a ledger is held in full up to, and nothing hands the app back above it: a larger ledger is a window.
+  it('is 10,000 rows', () => {
+    expect(HOLD_IN_FULL_ROWS).toBe(10_000)
   })
 })
 
@@ -64,18 +62,18 @@ describe('chooseHydratedMonths', () => {
 describe('hydratedMonthsFor', () => {
   const months = run(0, 40)
 
-  it('hydrates every month while the ledger is at or under the row limit', () => {
-    expect(hydratedMonthsFor(months, FULL_HYDRATION_ROW_LIMIT, '2025-01')).toEqual(months)
+  it('hydrates every month while the ledger is at or under the full size', () => {
+    expect(hydratedMonthsFor(months, HOLD_IN_FULL_ROWS, '2025-01')).toEqual(months)
     expect(hydratedMonthsFor(months, 0, '2025-01')).toEqual(months)
   })
 
   it('hydrates the window ending at the viewed month once it is over', () => {
-    const chosen = hydratedMonthsFor(months, FULL_HYDRATION_ROW_LIMIT + 1, '2026-03')
+    const chosen = hydratedMonthsFor(months, HOLD_IN_FULL_ROWS + 1, '2026-03')
     expect(chosen).toEqual(run(14, 13))
   })
 
   it('takes the policy as an argument', () => {
     expect(hydratedMonthsFor(months, 10, '2026-03', { fullBelowRows: 5, dataMonths: 2 })).toEqual(run(25, 2))
-    expect(DEFAULT_HYDRATION_POLICY).toEqual({ fullBelowRows: FULL_HYDRATION_ROW_LIMIT, dataMonths: 13 })
+    expect(DEFAULT_HYDRATION_POLICY).toEqual({ fullBelowRows: HOLD_IN_FULL_ROWS, dataMonths: 13 })
   })
 })
