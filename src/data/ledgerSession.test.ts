@@ -791,56 +791,40 @@ describe('LedgerSession, two refreshes at once', () => {
   })
 })
 
-describe('LedgerSession, refusing a ledger held as a window', () => {
+describe('LedgerSession, a ledger that outgrows being held in full', () => {
   const rows = dataset.transactions.length
   /** Full while the ledger has no more rows than it has now. */
   const FULL_UP_TO_NOW: HydrationPolicy = { fullBelowRows: rows, dataMonths: HYDRATED_DATA_MONTHS }
 
-  it('holds a ledger that fits, as it does without the option', async () => {
-    const session = new LedgerSession(memorySource(dataset), { policy: FULL_UP_TO_NOW, refuseWindow: true })
-    await session.open()
-    expect(session.getState().held!.cells).toBeNull()
-    expect(session.getState().outsized).toBe(false)
+  it('holds a ledger that fits in full, and a larger one as a window, from the first read', async () => {
+    const full = new LedgerSession(memorySource(dataset), { policy: FULL_UP_TO_NOW })
+    await full.open()
+    expect(full.getState().held!.cells).toBeNull()
+    const windowed = new LedgerSession(memorySource(dataset), { policy: WINDOWED })
+    await windowed.open()
+    expect(windowed.getState().held!.cells).not.toBeNull()
   })
 
-  it('holds nothing and says so when the first read finds a ledger over the limit', async () => {
-    const session = new LedgerSession(memorySource(dataset), { policy: WINDOWED, refuseWindow: true })
-    await session.open()
-    expect(session.getState().held).toBeNull()
-    expect(session.getState().outsized).toBe(true)
-  })
-
-  it('keeps what it held, and says so, when a refresh finds the ledger grown past the limit', async () => {
-    const source = memorySource(dataset)
-    const session = new LedgerSession(source, { policy: FULL_UP_TO_NOW, refuseWindow: true })
-    await session.open()
-    const before = session.getState().held
-    source.move('r1')
-    source.dataset = { ...dataset, transactions: [...dataset.transactions, row(900_100, newest)] }
-    await session.refresh()
-    expect(session.getState().outsized).toBe(true)
-    expect(session.getState().held).toBe(before)
-  })
-
-  it('takes a window in when the option is off, which is what the option is for', async () => {
+  it('takes a window in when a refresh finds the ledger grown past the full size', async () => {
     const source = memorySource(dataset)
     const session = new LedgerSession(source, { policy: FULL_UP_TO_NOW })
     await session.open()
     source.move('r1')
     source.dataset = { ...dataset, transactions: [...dataset.transactions, row(900_100, newest)] }
     await session.refresh()
-    expect(session.getState().outsized).toBe(false)
     expect(session.getState().held!.cells).not.toBeNull()
+    expect(session.getState().held!.rowCount).toBe(rows + 1)
   })
 
-  it('refuses a snapshot that holds only a window, and takes one that holds every row', async () => {
+  it('holds a snapshot of a window as it holds one of every row', async () => {
     const windowed = holdParts(await readLedgerParts(memorySource(dataset), { policy: WINDOWED }))
     const full = holdParts(await readLedgerParts(memorySource(dataset), { policy: FULL_UP_TO_NOW }))
-    const session = new LedgerSession(memorySource(dataset), { policy: FULL_UP_TO_NOW, refuseWindow: true })
-    expect(session.restore(windowed, newest)).toBe(false)
-    expect(session.getState().held).toBeNull()
-    expect(session.restore(full, newest)).toBe(true)
-    expect(session.getState().offline).toBe(true)
+    for (const snapshot of [windowed, full]) {
+      const session = new LedgerSession(memorySource(dataset), { policy: FULL_UP_TO_NOW })
+      session.restore(snapshot, newest)
+      expect(session.getState().held).toBe(snapshot)
+      expect(session.getState().offline).toBe(true)
+    }
   })
 })
 

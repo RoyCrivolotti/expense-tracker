@@ -3,7 +3,7 @@ export { isPinned, partitionPinned, settlementPaymentIds } from './pinned'
 export { buildCells, cellRows, isCellRow } from './cells'
 export {
   DEFAULT_HYDRATION_POLICY,
-  FULL_HYDRATION_ROW_LIMIT,
+  HOLD_IN_FULL_ROWS,
   HYDRATED_DATA_MONTHS,
   chooseHydratedMonths,
   hydratedMonthsFor,

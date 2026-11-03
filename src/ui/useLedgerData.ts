@@ -75,14 +75,13 @@ interface Shown {
   phase: Phase
   model: ExpenseModel | undefined
   offline: boolean
-  outsized: boolean
   snapshotAt: string | undefined
   failure: string | undefined
 }
 
 /** What the screens are given of the model: nothing while it loads, after a failure, or when a read was kept out. */
-function shown({ phase, model, offline, outsized, snapshotAt, failure }: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
-  if (phase === 'ready' && model !== undefined && !outsized) {
+function shown({ phase, model, offline, snapshotAt, failure }: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
+  if (phase === 'ready' && model !== undefined) {
     return { status: 'ready', model, fromCache: offline, ...(offline && snapshotAt ? { snapshotAt } : {}) }
   }
   if (phase === 'error') return { status: 'error', ...(failure !== undefined ? { error: failure } : {}) }
@@ -124,7 +123,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     const restore = async (): Promise<boolean> => {
       const snapshot = owner ? await loadLedgerSnapshot(owner) : null
       if (!snapshot || !alive.current) return false
-      if (!session.restore(snapshot.held, snapshot.viewed)) return false
+      session.restore(snapshot.held, snapshot.viewed)
       setSnapshotAt(snapshot.savedAt)
       return true
     }
@@ -206,14 +205,13 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 
   return {
-    ...shown({ phase, model, offline: state.offline, outsized: state.outsized, snapshotAt, failure }),
+    ...shown({ phase, model, offline: state.offline, snapshotAt, failure }),
     refreshing,
     refreshOutcome,
     reload,
     applyPatch,
     viewMonth,
     hydrating: state.hydrating,
-    backgroundError: phase === 'ready' && model !== undefined && !state.outsized ? (state.error ?? listFailure) : null,
-    outsized: state.outsized,
+    backgroundError: phase === 'ready' && model !== undefined ? (state.error ?? listFailure) : null,
   }
 }
