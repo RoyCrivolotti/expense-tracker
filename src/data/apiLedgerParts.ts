@@ -10,6 +10,7 @@ import {
   isSeriesPart,
   isSuggestResult,
   isExportedTransaction,
+  isRecentTransactions,
   isTransactionPage,
   isTransactionSummary,
   isUsagePart,
@@ -145,6 +146,7 @@ export const apiLedgerParts: LedgerPartsSource = {
   readSeriesPart: () => readSeries(),
   readUsagePart: () => readPart(`${BASE}/usage`, isUsagePart),
   readTransactionExport: ({ after, signal } = {}) => readExport(after, signal),
+  readRecentTransactions: ({ limit = 8, signal } = {}) => readFresh(`${BASE}/transactions/recent?limit=${limit}`, isRecentTransactions, signal),
   readDescriptionSuggest: (request, options) => readSuggest(request, options?.signal),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),

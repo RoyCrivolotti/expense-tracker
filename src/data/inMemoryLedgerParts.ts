@@ -6,16 +6,42 @@ import {
   MAX_CUBE_CELLS,
   MAX_ROWS_PER_REQUEST,
   type MonthRange,
+  type TransactionExportPart,
 } from '../domain/data/ledgerParts'
 import { EXPORT_CHUNK_ROWS } from '../domain/data/exportTables'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
-import { pageOf, summaryOf } from '../domain/data/transactionQueryOf'
+import { pageOf, recentOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import type { TransactionPageRequest } from '../domain/data/transactionQuery'
 import { usageFromDataset } from '../domain/engine/recordUsage'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset } from '../domain/types'
+
+/** The next chunk of the export, as the route cuts it: the rows after `after` in id order, and where the one after starts. */
+function exportChunkOf(dataset: ExpenseDataset, revision: string, after: string | undefined): TransactionExportPart {
+  const rest = dataset.transactions.filter((t) => t.id > Number(after ?? 0)).sort((a, b) => a.id - b.id)
+  const rows = rest.slice(0, EXPORT_CHUNK_ROWS.transactions)
+  return { revision, rows, next: rest.length > rows.length ? String(rows[rows.length - 1]!.id) : null }
+}
+
+/** The reads that are about every row and not a window of them: the rows saved last, and the export. */
+function readsOfEveryRow(
+  current: () => HeldDataset | Promise<HeldDataset>,
+): Pick<LedgerPartsSource, 'readRecentTransactions' | 'readTransactionExport'> {
+  return {
+    async readRecentTransactions({ limit = 8, signal } = {}) {
+      const { dataset } = await current()
+      signal?.throwIfAborted()
+      return { items: recentOf(dataset.transactions, limit) }
+    },
+    async readTransactionExport({ after, signal } = {}) {
+      const { dataset, revision } = await current()
+      signal?.throwIfAborted()
+      return exportChunkOf(dataset, revision, after)
+    },
+  }
+}
 
 /** A dataset held in memory and the revision it is at: it changes whenever the dataset does. */
 export interface HeldDataset {
@@ -61,14 +87,7 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
       const { dataset, revision } = await current()
       return { revision, ...usageFromDataset(dataset) }
     },
-    async readTransactionExport({ after, signal } = {}) {
-      const { dataset, revision } = await current()
-      signal?.throwIfAborted()
-      const from = after === undefined ? 0 : Number(after)
-      const rest = dataset.transactions.filter((t) => t.id > from).sort((a, b) => a.id - b.id)
-      const rows = rest.slice(0, EXPORT_CHUNK_ROWS.transactions)
-      return { revision, rows, next: rest.length > rows.length ? String(rows[rows.length - 1]!.id) : null }
-    },
+    ...readsOfEveryRow(current),
     async readDescriptionSuggest(request, { signal } = {}) {
       const { dataset } = await current()
       signal?.throwIfAborted()

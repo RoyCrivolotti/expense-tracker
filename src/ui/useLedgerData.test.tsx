@@ -200,6 +200,18 @@ describe('useLedgerData, the recurring series', () => {
     const whole = renderHook(() => useLedgerData(full))
     await waitFor(() => expect(whole.result.current.status).toBe('ready'))
     expect(whole.result.current.model!.exportAll).toBeUndefined()
+    expect(whole.result.current.model!.recent).toBeUndefined()
+  })
+
+  it('gives a windowed model the server’s recent activity: the newest rows by date, and the rows saved last', async () => {
+    const windowed = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(windowed, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const { recent } = result.current.model!
+    const byDate = [...big.transactions].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
+    expect((await recent!.latest()).map((t) => t.id)).toEqual(byDate.slice(0, 8).map((t) => t.id))
+    expect((await recent!.added()).map((t) => t.id)).toEqual([...big.transactions].sort((a, b) => b.id - a.id).slice(0, 8).map((t) => t.id))
+    expect(windowed.calls.slice(-2)).toEqual(['page', 'recent'])
   })
 
   it('gives a windowed model the series of the whole history once a screen has asked for them', async () => {

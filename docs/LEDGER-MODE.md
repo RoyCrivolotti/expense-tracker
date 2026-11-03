@@ -208,3 +208,8 @@ has to decide what a window may show.
   (`exportAllTransactions`), starts again when two chunks were read under another revision, up to three times, and
   puts the rows newest first so the file is the one a ledger held in full gives. The section says how many rows it is
   reading, and a read that fails writes nothing.
+- **A window's Recent activity is the server's, since the newest rows may be in a month the window does not hold.** A
+  model that holds a window carries `recent`: "Latest" is the first page of the list route with a limit of eight, and
+  "Recently added" is [`GET /transactions/recent`](./API.md#get-transactionslist), the eight highest ids. The Dashboard
+  lists the rows it holds until the answer comes, and when it cannot be read (offline), and reads again when the rows
+  held change. Ids only grow and the database sets `created_at` on insert, so the highest ids are the rows saved last.

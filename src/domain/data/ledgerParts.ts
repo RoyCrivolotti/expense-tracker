@@ -121,6 +121,11 @@ export interface TransactionExportPart {
   next: string | null
 }
 
+/** The rows added last, highest id first, as `GET /transactions/recent` answers. */
+export interface RecentTransactionsPart {
+  items: Transaction[]
+}
+
 /** What `/transactions/summary` answers: `count` stops at a cap, `netSpendCents` is exact. */
 export interface TransactionSummaryPart extends TransactionSummary {
   revision: string

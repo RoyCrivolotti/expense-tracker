@@ -27,6 +27,7 @@ import type {
   MonthRowsPart,
   ReferencePart,
   SeriesPart,
+  RecentTransactionsPart,
   TransactionExportPart,
   TransactionPagePart,
   TransactionSummaryPart,
@@ -181,6 +182,11 @@ export interface LedgerPartsSource {
    * read under, so the caller starts again when it moves. `signal` cancels the read.
    */
   readTransactionExport(request?: { after?: string; signal?: AbortSignal }): Promise<TransactionExportPart>
+  /**
+   * The rows added last, whatever their date, highest id first: what "Recently added" lists of a ledger of which the
+   * client holds only a window, where the newest rows may be in a month it does not hold. `limit` defaults to 8.
+   */
+  readRecentTransactions(request?: { limit?: number; signal?: AbortSignal }): Promise<RecentTransactionsPart>
   /**
    * The descriptions that start with what was typed among the rows booked before a budget month (every row when
    * none is given), for a client that holds the rows from that month on: `mergeDescriptionMatches` joins the two.

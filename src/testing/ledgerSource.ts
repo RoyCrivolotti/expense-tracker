@@ -10,7 +10,7 @@ import type { ExpenseDataset, Transaction } from '../domain/types'
 export interface TestSource extends LedgerPartsSource {
   /** What is served. A test replaces it to add a row under a read. */
   dataset: ExpenseDataset
-  /** Every call made, in order: `reference`, `months:<from>..<to>`, `cube:<from>..<to>`, `series`, `usage`, `export`, `suggest:<prefix>|<before>` or `receipts:<id>`. */
+  /** Every call made, in order: `reference`, `months:<from>..<to>`, `cube:<from>..<to>`, `series`, `usage`, `export`, `recent`, `suggest:<prefix>|<before>` or `receipts:<id>`. */
   calls: string[]
   /** The revision parts are served under. */
   revision: string
@@ -26,6 +26,10 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
   const note = (call: string): void => {
     source.calls.push(call)
     source.before?.(call)
+  }
+  const through = <T,>(call: string, read: () => Promise<T>): Promise<T> => {
+    note(call)
+    return read()
   }
   const source: TestSource = {
     dataset,
@@ -63,10 +67,8 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note('usage')
       return served.readUsagePart()
     },
-    readTransactionExport(request) {
-      note('export')
-      return served.readTransactionExport(request)
-    },
+    readRecentTransactions: (request) => through('recent', () => served.readRecentTransactions(request)),
+    readTransactionExport: (request) => through('export', () => served.readTransactionExport(request)),
     readDescriptionSuggest(request, options) {
       note(`suggest:${request.prefix}|${request.before ?? ''}`)
       return served.readDescriptionSuggest(request, options)

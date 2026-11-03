@@ -6,6 +6,7 @@
 import type {
   CubePart,
   MonthRowsPart,
+  RecentTransactionsPart,
   ReferencePart,
   SeriesPart,
   TransactionPagePart,
@@ -164,4 +165,8 @@ export function isExportedTransaction(row: unknown): row is Transaction {
     typeof row.status === 'string' &&
     typeof row.cancelled === 'boolean'
   )
+}
+
+export function isRecentTransactions(body: unknown): body is RecentTransactionsPart {
+  return isObject(body) && Array.isArray(body.items) && body.items.every(isExportedTransaction)
 }

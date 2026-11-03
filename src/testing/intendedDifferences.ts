@@ -7,8 +7,10 @@
 
 /** Differences no choice of arguments removes: these read rows the lists do not hold. */
 export const GLOBAL_DIFFERENCES: Record<string, string> = {
-  latestEight: 'The eight newest rows by date: global and relative to today, not to the viewed month.',
-  recentlyAdded: 'The eight newest rows by creation time: global and relative to today, not to the viewed month.',
+  latestEight:
+    'The eight newest rows by date: global and relative to today, not to the viewed month. A window\'s Dashboard does not list the rows it holds: it reads the list route with a limit of eight (`model.recent`).',
+  recentlyAdded:
+    'The eight newest rows by creation time: global and relative to today, not to the viewed month. A window\'s Dashboard does not list the rows it holds: it reads the eight highest ids (`GET /transactions/recent`).',
   listAll:
     'The Transactions list over every date reads any month by its rows. It is served by an endpoint, not by these lists.',
 }

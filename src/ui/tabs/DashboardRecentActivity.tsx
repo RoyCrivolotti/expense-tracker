@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import type { Transaction } from '../../types'
 import { latestTransactions, recentlyAdded } from '../../engine'
 import { Card, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
@@ -24,17 +25,36 @@ interface Props {
   actions?: ExpenseActions | undefined
 }
 
-export function DashboardRecentActivity({ model, actions }: Props) {
-  const { dataset, lookup } = model
-  const [mode, setMode] = useState<ActivityMode>('latest')
+/**
+ * What the server says the activity is, when the model holds only a window of the ledger: the newest rows may be in a
+ * month it does not hold. Read again when the rows held change (a write, a refresh, another month), and null until the
+ * first answer and when it fails (offline), when the rows held are all there is to list.
+ */
+function useServedActivity(recent: ExpenseModel['recent'], mode: ActivityMode, held: unknown): Transaction[] | null {
+  const [served, setServed] = useState<{ mode: ActivityMode; rows: Transaction[] } | null>(null)
+  useEffect(() => {
+    if (!recent) return
+    let alive = true
+    recent[mode === 'latest' ? 'latest' : 'added']().then(
+      (rows) => alive && setServed({ mode, rows }),
+      () => alive && setServed(null),
+    )
+    return () => {
+      alive = false
+    }
+  }, [recent, mode, held])
+  return recent && served?.mode === mode ? served.rows : null
+}
 
-  const activity = useMemo(() => {
-    const list =
-      mode === 'latest'
-        ? latestTransactions(dataset.transactions)
-        : recentlyAdded(dataset.transactions)
-    return list
-  }, [dataset, mode])
+export function DashboardRecentActivity({ model, actions }: Props) {
+  const { dataset, lookup, recent } = model
+  const [mode, setMode] = useState<ActivityMode>('latest')
+  const served = useServedActivity(recent, mode, dataset)
+
+  const activity = useMemo(
+    () => served ?? (mode === 'latest' ? latestTransactions(dataset.transactions) : recentlyAdded(dataset.transactions)),
+    [dataset, mode, served],
+  )
 
   return (
     <>

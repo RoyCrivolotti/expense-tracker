@@ -135,6 +135,14 @@ describe('inMemoryLedgerParts', () => {
     await expect(served.readTransactionExport({ signal: stopped.signal })).rejects.toThrow()
   })
 
+  it('serves the rows with the highest ids first, as many as asked for', async () => {
+    expect((await source.readRecentTransactions()).items.map((t) => t.id)).toEqual([4, 3, 2, 1])
+    expect((await source.readRecentTransactions({ limit: 2 })).items.map((t) => t.id)).toEqual([4, 3])
+    const stopped = new AbortController()
+    stopped.abort()
+    await expect(source.readRecentTransactions({ signal: stopped.signal })).rejects.toThrow()
+  })
+
   it('serves the series of every row, as the route does, under the revision it is at', async () => {
     const monthly = Array.from({ length: 5 }, (_, i) =>
       makeTransaction({ id: 10 + i, description: 'Gym', date: `2026-0${i + 1}-05`, budgetMonth: `2026-0${i + 1}`, amountCents: 2500 }),
