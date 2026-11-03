@@ -202,3 +202,9 @@ has to decide what a window may show.
   without a word, so its delete waits for counts that can be taken (`settledCount`: none while they are being read, may
   be out of date or could not be read) and its sheet says what is not known. `UsageView.note` says why counts cannot be
   taken as they are (being read, read before a write, or not readable) and `UsageNote` shows it.
+- **A window's file of every transaction is read from the server, and the month shown is written from the rows held.**
+  A model that holds a window carries `exportAll`, the number of rows and a read of them all; one that holds every
+  row has none and writes its dataset. The read walks [`GET /export`](./API.md#get-export) a chunk at a time
+  (`exportAllTransactions`), starts again when two chunks were read under another revision, up to three times, and
+  puts the rows newest first so the file is the one a ledger held in full gives. The section says how many rows it is
+  reading, and a read that fails writes nothing.
