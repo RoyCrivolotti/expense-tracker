@@ -455,9 +455,12 @@ export async function updateTransaction(
  * against the owner's storage quota, reachable from no UI, forever. Deleting the
  * R2 bytes is the caller's job afterwards (see deleteWithReceipts);
  * an R2 delete cannot join a D1 batch.
+ *
+ * A row that is missing or not the owner's is not an error: the two cannot be told apart, and a delete whose answer was
+ * lost is repeated by the browser, so the repeat has to end the way the first one did.
  */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
-  const [, , , deleted] = await env.DB.batch([
+  await env.DB.batch([
     env.DB
       .prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?')
       .bind(id, owner),
@@ -480,7 +483,6 @@ export async function deleteTransaction(env: Env, owner: string, id: number): Pr
       .bind(id, owner),
     env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?').bind(id, owner),
   ])
-  if ((deleted?.meta?.changes ?? 0) === 0) throw new HttpError(404, 'Transaction not found')
 }
 
 /** Insert many transactions; each row is validated and status-derived like insertTransaction. */
