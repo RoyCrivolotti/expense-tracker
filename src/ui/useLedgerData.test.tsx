@@ -6,6 +6,7 @@ import { ApiError } from '../data/apiClient'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { noteWriteResponse } from '../data/writeReceipts'
 import { sortedMonths } from '../domain/engine/dates'
+import { newestChargesOfSeries, seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
@@ -219,12 +220,14 @@ describe('useLedgerData, the recurring series', () => {
     const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.model!.history).toBeUndefined()
+    expect(result.current.model!.newestCharges).toBeUndefined()
     expect(source.calls).not.toContain('series')
     act(() => void result.current.model!.watchHistory!())
     await waitFor(() => expect(result.current.model!.history).toBeDefined())
     const whole = fixedHistoryOf(big.transactions)
     expect(labels(result.current.model!.history!)).toEqual(labels(whole))
     expect(whole.groups.length).toBeGreaterThan(0)
+    expect(result.current.model!.newestCharges).toEqual(newestChargesOfSeries(seriesFromTransactions(big.transactions)))
   })
 
   it('says the figures use the loaded months only until the series arrive, and nothing once they have', async () => {

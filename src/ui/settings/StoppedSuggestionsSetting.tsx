@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { Transaction } from '../../types'
 import { stillStopped } from '../../engine'
 import { Card, SectionTitle } from '../components/primitives'
@@ -11,10 +12,24 @@ import styles from './StoppedSuggestionsSetting.module.css'
  * take it back. A stopped series is otherwise out of sight, so there has to be somewhere to see
  * what is not being watched. A series that has come back, because a charge for it was logged after
  * it was stopped, is not listed. Nothing is shown while nothing is stopped.
+ *
+ * A model that holds only a window of the ledger may not hold the charge that brought a series back, so it gives the
+ * date of every series' newest charge (`known`) and a way to ask for them (`watch`), which is done only while
+ * something is stopped, since nothing else here needs them.
  */
-export function StoppedSuggestionsSetting({ transactions }: { transactions: Transaction[] }) {
+export function StoppedSuggestionsSetting({
+  transactions,
+  known,
+  watch,
+}: {
+  transactions: Transaction[]
+  known?: ReadonlyMap<string, string> | undefined
+  watch?: (() => () => void) | undefined
+}) {
   const { stopped, restore } = useStoppedSuggestions()
-  const entries = Object.entries(stillStopped(transactions, stopped)).sort(([, a], [, b]) => a.label.localeCompare(b.label))
+  const anyStopped = Object.keys(stopped).length > 0
+  useEffect(() => (anyStopped ? watch?.() : undefined), [anyStopped, watch])
+  const entries = Object.entries(stillStopped(transactions, stopped, known)).sort(([, a], [, b]) => a.label.localeCompare(b.label))
   if (entries.length === 0) return null
 
   return (

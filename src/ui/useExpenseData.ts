@@ -78,6 +78,11 @@ export interface ExpenseModel {
    * since the newest rows by date or by when they were saved may be in a month the model does not hold.
    */
   recent?: RecentActivity
+  /**
+   * Set when the model holds a window and has the server's series: the date of each series' newest charge by series key,
+   * which the rows the window does not hold may be the newest of (`stillStopped` takes it as `known`).
+   */
+  newestCharges?: ReadonlyMap<string, string>
 }
 
 interface LoadState {

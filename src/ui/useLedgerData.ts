@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { LedgerPartsSource } from '../data/dataSource'
 import { exportAllTransactions } from '../data/exportAllTransactions'
 import { recentActivityOf } from '../data/recentActivity'
+import { newestChargesOfSeries } from '../domain/engine/recurringSeries'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import type { LedgerSession, SessionOptions, SessionState } from '../data/ledgerSession'
 import { isAccessDenied } from '../data/apiClient'
@@ -169,6 +170,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       useUsage: ledgerUsageHook(usage, held.revision),
       pagedList,
       ...(windowed ? { exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) }, recent: recentActivityOf(source) } : {}),
+      ...(windowed && series ? { newestCharges: newestChargesOfSeries(series) } : {}),
       ...(note ? { historyNote: note } : {}),
     }
   }, [held, series, windowed, note, session, usage, pagedList, source])

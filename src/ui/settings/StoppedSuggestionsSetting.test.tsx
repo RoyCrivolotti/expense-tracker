@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetStoppedSuggestionsForTests } from '../tabs/stoppedSuggestions'
 import { makeTransaction } from '../../testing/factories'
 import { StoppedSuggestionsSetting } from './StoppedSuggestionsSetting'
@@ -99,5 +99,33 @@ describe('StoppedSuggestionsSetting', () => {
       rerender(<StoppedSuggestionsSetting transactions={[gym('2026-06-05', 2)]} />)
       expect(screen.getByText('Gym')).toBeInTheDocument()
     })
+  })
+})
+
+describe('StoppedSuggestionsSetting, over a window of the ledger', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetStoppedSuggestionsForTests()
+  })
+
+  it('does not list a series whose newer charge is among the rows the window does not hold', () => {
+    stoppedOnThisDevice({ 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' }, 'rent|1|2|expense': { after: '2026-06-01', label: 'Rent' } })
+    render(<StoppedSuggestionsSetting transactions={[]} known={new Map([['gym|1|1|expense', '2026-07-05'], ['rent|1|2|expense', '2026-06-01']])} />)
+    expect(screen.queryByText('Gym')).not.toBeInTheDocument()
+    expect(screen.getByText('Rent')).toBeInTheDocument()
+  })
+
+  it('asks for the series while something is stopped, and lets go of them when the section goes', () => {
+    const unwatch = vi.fn()
+    const watch = vi.fn(() => unwatch)
+    const idle = render(<StoppedSuggestionsSetting transactions={[]} watch={watch} />)
+    expect(watch).not.toHaveBeenCalled()
+    idle.unmount()
+    stoppedOnThisDevice({ 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' } })
+    resetStoppedSuggestionsForTests()
+    const view = render(<StoppedSuggestionsSetting transactions={[]} watch={watch} />)
+    expect(watch).toHaveBeenCalledOnce()
+    view.unmount()
+    expect(unwatch).toHaveBeenCalledOnce()
   })
 })

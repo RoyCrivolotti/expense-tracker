@@ -213,3 +213,7 @@ has to decide what a window may show.
   "Recently added" is [`GET /transactions/recent`](./API.md#get-transactionslist), the eight highest ids. The Dashboard
   lists the rows it holds until the answer comes, and when it cannot be read (offline), and reads again when the rows
   held change. Ids only grow and the database sets `created_at` on insert, so the highest ids are the rows saved last.
+- **A window's list of stopped suggestions asks the series for the newest charge of each.** A stopped series comes back
+  when a later charge is logged, and for a window that charge may be in a month it does not hold. `model.newestCharges`
+  (`newestChargesOfSeries`) is handed to `stillStopped` as `known`, and the Settings section reads the series while
+  something is stopped.

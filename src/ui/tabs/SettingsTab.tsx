@@ -163,7 +163,7 @@ function PreferencesView({
         />
       )}
 
-      {actions && <StoppedSuggestionsSetting transactions={model.dataset.transactions} />}
+      {actions && <StoppedSuggestionsSetting transactions={model.dataset.transactions} known={model.newestCharges} watch={model.watchHistory} />}
     </>
   )
 }
