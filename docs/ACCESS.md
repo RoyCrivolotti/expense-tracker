@@ -65,7 +65,8 @@ saved copy of someone's data then opens the app on it, for the person the copy n
 when it was saved and that nothing can be changed until there is a connection. Offline nothing can confirm who is
 holding the phone, so whoever can open the installed app on an unlocked device reads the last person's figures there.
 The device's own lock is what protects them, and turning this check on does not change that. A device with no copy says
-the person is offline and offers Try again only.
+the person is offline and offers Try again only. A ledger copy of a large ledger holds the rows of the months last
+read and the totals of the rest, and the app says which months it has rows for.
 
 A copy opens only for the person it names, and copies that name two people open for neither. The access check removes
 every copy on the device, the ledger's too, when it refuses the person: a 401 or 403, an answer that they are not

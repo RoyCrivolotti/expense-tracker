@@ -39,10 +39,10 @@ the estimates as an order of magnitude. The finding is the growth with size and 
 - **Server.** The real route handlers through the real middleware, over a SQLite file. Rows visited are SQLite's own
   scan statistics (`sqlite3_stmt_scanstatus`), summed over every node of the plan, sorters included. The client side of
   the open is the app's own `chooseLedger`, `LedgerSession` and `TransactionPager`, replayed against those handlers.
-- **Browser.** A production build of the app, with the two guards that keep window mode out (`refuseWindow` in
-  `LedgerExpensesApp` and the row limit in `chooseLedger`) rewritten as the build reads them. Nothing in `src/` changes
-  and the default build is untouched. Classic is the same build with `?ledger=off`; ledger mode is `?ledger=on`, which
-  is the shipped behaviour up to 5,000 rows and window mode above it.
+- **Browser.** A production build of the app, with the two guards that kept window mode out at the time (`refuseWindow` in
+  `LedgerExpensesApp` and the row limit in `chooseLedger`, both since removed) rewritten as the build read them.
+  Classic is the same build with `?ledger=off`; ledger mode is `?ledger=on`, held in full up to the full size and window
+  mode above it.
 - **Chromium** (Playwright) with a fresh profile per run, against a local server that gzips as the edge does. "Laptop" is
   a 1280 px window with the CPU throttled 4 times and "phone" a 390 px touch window throttled 6 times, a rough stand-in
   for a mid-range phone. Medians of 3 runs (2 at 100,000). There is no network latency, so a request that waits for

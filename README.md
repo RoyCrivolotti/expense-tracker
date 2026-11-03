@@ -27,7 +27,7 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 - **Layers.** The calculations are pure TypeScript in `src/domain` with no I/O. The Cloudflare adapters (`functions/`) and the React UI (`src/ui`) sit around them; the rules are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **The engines are the oracle.** `src/domain/engine` is the reference for every number the app shows, and anything else that computes one (the SQL, a ledger held in parts) is tested against it.
 - **Differential tests.** The SQL and the engines are compared on the same data, and so is a ledger held in parts against the whole dataset (`ledgerDifferential.test.ts`, `ledgerSweep.test.ts`), with every allowed difference listed in `src/testing/intendedDifferences.ts`.
-- **Reading a ledger in parts is behind a switch** that is off by default (`?ledger=on` turns it on for one browser). [docs/LEDGER-MODE.md](docs/LEDGER-MODE.md) describes it, and [docs/SCALING.md](docs/SCALING.md) the limits it is designed around. They are the Cloudflare Free plan's, so a fork on the Free plan works; the maintainer's deployment runs on Workers Paid.
+- **Reading a ledger in parts is on by default**, with a switch to the old whole-dataset load (`?ledger=off` turns it off for one browser). [docs/LEDGER-MODE.md](docs/LEDGER-MODE.md) describes it, and [docs/SCALING.md](docs/SCALING.md) the limits it is designed around. They are the Cloudflare Free plan's, so a fork on the Free plan works; the maintainer's deployment runs on Workers Paid.
 - **Docs.** [docs/README.md](docs/README.md) lists every doc and who it is for.
 
 ## Screenshots

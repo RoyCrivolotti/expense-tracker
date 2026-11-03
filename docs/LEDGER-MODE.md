@@ -5,28 +5,25 @@ pages and the writes, with the rules each one keeps. What each route answers is 
 is what it is in [SCALING.md](./SCALING.md) and [the decision record](./decisions/ledger-model.md). The rules that hold
 for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-**Status.** The app holds a ledger only in full: up to `FULL_HYDRATION_ROW_LIMIT` (5,000) rows, and a larger ledger
-hands back to the whole-dataset app. Behind the switch it is loaded in parts and its Transactions list is read in pages.
-The windowed behaviour described below (a window of months with per-month sums, the series, older descriptions, the
-server's usage counts, reading back writes to rows that are not held) is built and tested but cannot occur, because
-`LedgerExpensesApp` passes `refuseWindow: true`. Lifting the limit changes four places together (the constant,
-`chooseLedger()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
-has to decide what a window may show.
+**Status.** Ledger mode is how the app reads a ledger unless a browser turns it off. A ledger of up to
+`HOLD_IN_FULL_ROWS` (10,000) rows is held in full and the screens behave as they do over the whole dataset; a larger one
+is held as a window of months with per-month sums for the rest, and nothing hands the app back for its size. What a
+window cannot work out from its rows is read from the server (the last section). At a ledger of a few thousand rows
+ledger mode reads more rows from the database than the whole-dataset load and opens no faster; it pays off above about
+8,000 to 10,000 rows ([SCALE-PROOF.md](./SCALE-PROOF.md)).
 
-## The switch and the hand-back
+## The switch and the fallback
 
-- **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
-  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `off` renders the whole-dataset app and
-  nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop
-  (importing it back makes the bundler split shared code into files every browser loads at startup). The service
-  worker precaches the chunk for every browser, so it is downloaded and not run. The chunk hands back to the
-  whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts, and for an offline
-  browser whose snapshot is missing, another owner's, or holds only a window. The limit holds for the life of the
-  session (`refuseWindow`): a read or a snapshot that would hold only a window is kept out and the app hands back,
-  which starts it over, so a screen that lists every row never lists part of the ledger and the switch only ever holds
-  a ledger in full. `shadow` is honoured in development and staging builds only; there `ledgerShadow.ts` compares the
-  held ledger with the whole dataset and reports, and shows nothing. A read in the background that fails raises a
-  toast that offers to read again.
+- **Reading the ledger in parts is on unless a browser turns it off, and a browser that turned it off runs the old load
+  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `?ledger=off` in the address is kept
+  in local storage as `off` (nothing kept means `on`, so it is stored and not removed) and `?ledger=on` turns it back
+  on. `off` renders the whole-dataset app and nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy
+  chunk that is handed the app's view as a prop (importing it back makes the bundler split shared code into files every
+  browser loads at startup). The service worker precaches the chunk for every browser. The chunk falls back to the
+  whole-dataset app for a source without parts and for an offline browser with no snapshot of this owner's, a window
+  included. `shadow` is honoured in development and staging builds only, and counts as `on` anywhere else; there
+  `ledgerShadow.ts` compares the held ledger with the whole dataset and reports, and shows nothing. A read in the
+  background that fails raises a toast that offers to read again.
 
 ## Reading in parts
 
