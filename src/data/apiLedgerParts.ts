@@ -1,6 +1,6 @@
 import type { LedgerPartsSource } from './dataSource'
 import { ApiError, toApiError } from './apiClient'
-import type { MonthRange, SeriesPart } from '../domain/data/ledgerParts'
+import type { MonthRange, SeriesPart, TransactionExportPart } from '../domain/data/ledgerParts'
 import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../domain/data/descriptionSuggest'
 import {
   isCubePart,
@@ -9,6 +9,7 @@ import {
   isReferencePart,
   isSeriesPart,
   isSuggestResult,
+  isExportedTransaction,
   isTransactionPage,
   isTransactionSummary,
   isUsagePart,
@@ -86,6 +87,27 @@ async function readFresh<T>(
 
 const query = (range: MonthRange): string => `from=${range.from}&to=${range.to}`
 
+const exportUrl = (after: string | undefined): string =>
+  `${BASE}/export?${new URLSearchParams({ table: 'transactions', ...(after !== undefined ? { after } : {}) })}`
+
+const ndjson = (text: string): unknown[] => text.split('\n').filter((line) => line !== '').map((line) => JSON.parse(line) as unknown)
+
+/**
+ * One chunk of the export route: one transaction a line, the position to continue from in `X-Export-Next` (absent
+ * at the end) and the revision it was read under in `X-Export-Revision`. A body that is not NDJSON, a row that does
+ * not look like a transaction or a missing revision is a server that does not serve the export.
+ */
+async function readExport(after: string | undefined, signal: AbortSignal | undefined): Promise<TransactionExportPart> {
+  const url = exportUrl(after)
+  const res = await fetchPart(url, { cache: 'no-store', ...(signal ? { signal } : {}) })
+  if (!res.ok) throw res.status === 404 || res.status === 405 ? unavailable(url, `HTTP ${res.status}`) : await toApiError(res)
+  const revision = res.headers.get('x-export-revision')
+  if (revision === null || !res.headers.get('content-type')?.startsWith('application/x-ndjson')) throw unavailable(url, 'not NDJSON')
+  const rows = ndjson(await res.text())
+  if (!rows.every(isExportedTransaction)) throw unavailable(url, 'unexpected shape')
+  return { revision, rows, next: res.headers.get('x-export-next') }
+}
+
 /**
  * The series are worked out from every row, and for a while after the migration that stores the normalized
  * descriptions some rows still wait for theirs: the route answers 503 with a one second retry, and each try gets
@@ -122,6 +144,7 @@ export const apiLedgerParts: LedgerPartsSource = {
   readCubePart: (range) => readPart(`${BASE}/cube?${query(range)}`, isCubePart),
   readSeriesPart: () => readSeries(),
   readUsagePart: () => readPart(`${BASE}/usage`, isUsagePart),
+  readTransactionExport: ({ after, signal } = {}) => readExport(after, signal),
   readDescriptionSuggest: (request, options) => readSuggest(request, options?.signal),
   readReceiptsPart: (transactionId) =>
     readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),

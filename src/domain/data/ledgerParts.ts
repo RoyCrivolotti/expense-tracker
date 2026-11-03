@@ -111,6 +111,16 @@ export interface TransactionPagePart {
   nextCursor: string | null
 }
 
+/**
+ * One chunk of every transaction the owner has, as `GET /export?table=transactions` answers, in id order. `next` is
+ * what to ask from for the chunk after it and is null at the end; `revision` is the token the chunk was read under.
+ */
+export interface TransactionExportPart {
+  revision: string
+  rows: Transaction[]
+  next: string | null
+}
+
 /** What `/transactions/summary` answers: `count` stops at a cap, `netSpendCents` is exact. */
 export interface TransactionSummaryPart extends TransactionSummary {
   revision: string

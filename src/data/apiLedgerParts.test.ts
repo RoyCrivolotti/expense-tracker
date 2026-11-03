@@ -29,6 +29,52 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+function ndjson(rows: unknown[], headers: Record<string, string> = {}): Response {
+  const body = rows.map((row) => `${JSON.stringify(row)}\n`).join('')
+  return new Response(body, {
+    status: 200,
+    headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'x-export-revision': 'rev', ...headers },
+  })
+}
+
+describe('apiLedgerParts, the export of every transaction', () => {
+  const stored = makeTransaction({ id: 7, description: 'Rent' })
+
+  it('reads a chunk of transactions with the revision and the position to continue from', async () => {
+    const fetchMock = serve(ndjson([stored], { 'x-export-next': '7' }), ndjson([]))
+    await expect(apiLedgerParts.readTransactionExport()).resolves.toEqual({ revision: 'rev', rows: [stored], next: '7' })
+    await expect(apiLedgerParts.readTransactionExport({ after: '7' })).resolves.toEqual({ revision: 'rev', rows: [], next: null })
+    expect(fetchMock.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      '/api/expenses/export?table=transactions',
+      '/api/expenses/export?table=transactions&after=7',
+    ])
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store', credentials: 'same-origin' })
+  })
+
+  it('hands the signal to the request', async () => {
+    const fetchMock = serve(ndjson([]))
+    const signal = new AbortController().signal
+    await apiLedgerParts.readTransactionExport({ signal })
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).signal).toBe(signal)
+  })
+
+  it('takes a server without the route, an index page, a body that is not transactions or no revision for one that does not serve it', async () => {
+    serve(new Response('', { status: 404 }))
+    await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
+    serve(new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html', 'x-export-revision': 'rev' } }))
+    await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
+    serve(ndjson([{ id: 1 }]))
+    await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
+    serve(new Response('', { status: 200, headers: { 'content-type': 'application/x-ndjson' } }))
+    await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+
+  it('passes any other refusal on as the error it is', async () => {
+    serve(json({ error: 'Not allowed' }, { status: 403 }))
+    await expect(apiLedgerParts.readTransactionExport()).rejects.toMatchObject({ status: 403 })
+  })
+})
+
 describe('apiLedgerParts', () => {
   it('reads the reference from /reference', async () => {
     const fetchMock = serve(json(reference))

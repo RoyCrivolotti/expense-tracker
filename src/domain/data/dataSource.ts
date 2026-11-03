@@ -27,6 +27,7 @@ import type {
   MonthRowsPart,
   ReferencePart,
   SeriesPart,
+  TransactionExportPart,
   TransactionPagePart,
   TransactionSummaryPart,
   UsagePart,
@@ -174,6 +175,12 @@ export interface LedgerPartsSource {
    * current.
    */
   readUsagePart(): Promise<UsagePart>
+  /**
+   * One chunk of every transaction the owner has, for a file that must hold all of them and not the ones this client
+   * holds: `after` is the `next` of the chunk before. A walk is not a snapshot; `revision` says what each chunk was
+   * read under, so the caller starts again when it moves. `signal` cancels the read.
+   */
+  readTransactionExport(request?: { after?: string; signal?: AbortSignal }): Promise<TransactionExportPart>
   /**
    * The descriptions that start with what was typed among the rows booked before a budget month (every row when
    * none is given), for a client that holds the rows from that month on: `mergeDescriptionMatches` joins the two.

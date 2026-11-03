@@ -7,6 +7,7 @@ import {
   MAX_ROWS_PER_REQUEST,
   type MonthRange,
 } from '../domain/data/ledgerParts'
+import { EXPORT_CHUNK_ROWS } from '../domain/data/exportTables'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
 import { pageOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
@@ -59,6 +60,14 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
     async readUsagePart() {
       const { dataset, revision } = await current()
       return { revision, ...usageFromDataset(dataset) }
+    },
+    async readTransactionExport({ after, signal } = {}) {
+      const { dataset, revision } = await current()
+      signal?.throwIfAborted()
+      const from = after === undefined ? 0 : Number(after)
+      const rest = dataset.transactions.filter((t) => t.id > from).sort((a, b) => a.id - b.id)
+      const rows = rest.slice(0, EXPORT_CHUNK_ROWS.transactions)
+      return { revision, rows, next: rest.length > rows.length ? String(rows[rows.length - 1]!.id) : null }
     },
     async readDescriptionSuggest(request, { signal } = {}) {
       const { dataset } = await current()
