@@ -106,7 +106,7 @@ has to decide what a window may show.
   needs every row it is made of, which a window does not hold. A screen that reads `history` (the Overview, Spending,
   the Upcoming card) calls `useHistoryWatch(model)`, and `LedgerSession.watchSeries` reads
   [`GET /series`](./API.md#get-series) into `SessionState.series` when they are missing or stale. The server reads every
-  row for them whenever the revision has moved, about ten rows per transaction, so they go stale only after a write that
+  row for them whenever the revision has moved, a row read per transaction, so they go stale only after a write that
   could change one (`touchesSeries`: a row that counts was added, removed or edited in what a series is made of, which a
   flag, a label or a note is not), after a write the server cascaded (a plan deleted turns its instalments into rows of a
   series), after a refresh that found another revision, or when the rows and the series were read at different

@@ -128,9 +128,11 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   to a `GROUP BY` after every write path ([decision](./decisions/ledger-rollup.md)).
 - **The recurring series are specified by the engine.** `seriesFromTransactions` in
   `src/domain/engine/recurringSeries.ts` reduces what `groupTransactions` builds to what the detectors read,
-  `seriesSql.ts` is the only place a series becomes SQL, and `dbSeries.parity.test.ts` and
-  `seriesConsumers.parity.test.ts` hold the SQL and every consumer to it. A change to what a detector reads of a series
-  means changing `RecurringSeries`, the SQL and `PARTS_FORMAT` together.
+  `seriesSql.ts` and `seriesFold.ts` are the only places the server reads and groups a series, and
+  `dbSeries.parity.test.ts`, `dbSeries.differential.test.ts` and `seriesConsumers.parity.test.ts` hold them and every
+  consumer to it. A change to what a detector reads of a series means changing `RecurringSeries`, the SQL, the fold
+  and `PARTS_FORMAT` together. The read stays a walk of one index with no sorter (`seriesPlans.test.ts`), because every
+  write makes a client read it again.
 - **`transactions.description_norm` is the app's normalized description, and every statement that writes a description
   writes it.** SQL that grouped or searched on `lower(trim(description))` would disagree with `normalizeDesc` for "CAFÉ"
   or a tab, so anything that groups or searches by description in SQL uses the column. NULL means "not computed yet": a
