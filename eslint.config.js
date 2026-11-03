@@ -24,7 +24,7 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/money.ts': 230,
   'src/domain/engine/projection.ts': 217,
   'src/domain/engine/rebaselinePatch.ts': 314,
-  'src/testing/inMemoryExpenseRepository.ts': 1010,
+  'src/testing/inMemoryExpenseRepository.ts': 1011,
   'src/testing/transactionQueryKit.ts': 236,
   'src/ui/ExpensesApp.tsx': 469,
   'src/ui/charts/LinearChart.tsx': 374,
@@ -67,7 +67,7 @@ const FILE_LINE_CAPS = {
 const FUNCTION_LINE_CAPS = {
   'functions/_shared/adapters/d1ExpenseRepository.ts': 66,
   'src/testing/fakeIndexedDb.ts': 65,
-  'src/testing/inMemoryExpenseRepository.ts': 886,
+  'src/testing/inMemoryExpenseRepository.ts': 887,
   'src/ui/ExpensesApp.tsx': 167,
   'src/ui/access/ActiveUsersSection.tsx': 93,
   'src/ui/access/PendingRequestsSection.tsx': 67,

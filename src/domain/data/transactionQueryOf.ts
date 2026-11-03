@@ -42,3 +42,8 @@ export function summaryOf(all: Transaction[], filter: TxnFilter): TransactionSum
     netSpendCents: netSpendCents(matching),
   }
 }
+
+/** The `limit` rows with the highest ids, highest first: the rows saved last. */
+export function recentOf(transactions: readonly Transaction[], limit: number): Transaction[] {
+  return [...transactions].sort((a, b) => b.id - a.id).slice(0, limit)
+}
