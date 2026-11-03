@@ -3,7 +3,8 @@
  * and writes it in transactions: `get`, `put`, `delete` and `getAllKeys`, with values copied the way the real
  * one copies them. Requests answer on a later tick and a transaction completes once its requests have, so code
  * that depends on the order of events behaves as it does in a browser. `failNext` makes the next call to a
- * method fail, for the paths that must survive a full disk or a blocked store.
+ * method fail, for the paths that must survive a full disk or a blocked store, and `hangOpen` makes opening the
+ * database never answer, for the ones that must survive a store that is stuck.
  */
 type Entries = Map<IDBValidKey, unknown>
 
@@ -11,49 +12,57 @@ export interface FakeIndexedDb {
   /** The stores of the database, by name, as plain maps, for a test to look at or seed. */
   stores: Map<string, Entries>
   failNext(method: 'get' | 'put' | 'delete' | 'getAllKeys', error?: Error): void
+  /** From now on `indexedDB.open` returns a request that neither succeeds nor fails. */
+  hangOpen(): void
   uninstall(): void
 }
 
+/** What the requests of one fake database share: its stores and the calls told to fail. */
+interface Shared {
+  stores: Map<string, Entries>
+  failures: Map<string, Error>
+}
+
+function request<T>(shared: Shared, method: string, pending: { n: number }, run: () => T): IDBRequest<T> {
+  const req = { result: undefined as T, error: null as Error | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) }
+  pending.n += 1
+  setTimeout(() => {
+    const failure = shared.failures.get(method)
+    shared.failures.delete(method)
+    try {
+      if (failure) throw failure
+      req.result = run()
+      req.onsuccess?.()
+    } catch (error) {
+      req.error = error as Error
+      req.onerror?.()
+    }
+    pending.n -= 1
+  }, 0)
+  return req as unknown as IDBRequest<T>
+}
+
+function storeApi(shared: Shared, name: string, pending: { n: number }): IDBObjectStore {
+  const entries = shared.stores.get(name)!
+  return {
+    get: (key: IDBValidKey) => request(shared, 'get', pending, () => structuredClone(entries.get(key))),
+    put: (value: { key: IDBValidKey }) => request(shared, 'put', pending, () => (entries.set(value.key, structuredClone(value)), value.key)),
+    delete: (key: IDBValidKey) => request(shared, 'delete', pending, () => void entries.delete(key)),
+    getAllKeys: () => request(shared, 'getAllKeys', pending, () => [...entries.keys()]),
+  } as unknown as IDBObjectStore
+}
+
 export function installFakeIndexedDb(): FakeIndexedDb {
-  const stores = new Map<string, Entries>()
-  const failures = new Map<string, Error>()
+  const shared: Shared = { stores: new Map(), failures: new Map() }
+  let hanging = false
   const original = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB')
 
-  function request<T>(method: string, pending: { n: number }, run: () => T): IDBRequest<T> {
-    const req = { result: undefined as T, error: null as Error | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) }
-    pending.n += 1
-    setTimeout(() => {
-      const failure = failures.get(method)
-      failures.delete(method)
-      try {
-        if (failure) throw failure
-        req.result = run()
-        req.onsuccess?.()
-      } catch (error) {
-        req.error = error as Error
-        req.onerror?.()
-      }
-      pending.n -= 1
-    }, 0)
-    return req as unknown as IDBRequest<T>
-  }
-
-  function storeApi(name: string, pending: { n: number }): IDBObjectStore {
-    const entries = stores.get(name)!
-    return {
-      get: (key: IDBValidKey) => request('get', pending, () => structuredClone(entries.get(key))),
-      put: (value: { key: IDBValidKey }) => request('put', pending, () => (entries.set(value.key, structuredClone(value)), value.key)),
-      delete: (key: IDBValidKey) => request('delete', pending, () => void entries.delete(key)),
-      getAllKeys: () => request('getAllKeys', pending, () => [...entries.keys()]),
-    } as unknown as IDBObjectStore
-  }
-
   const db = {
-    createObjectStore: (name: string) => void stores.set(name, new Map()),
+    createObjectStore: (name: string) => void shared.stores.set(name, new Map()),
     close: () => undefined,
     transaction(name: string) {
       const pending = { n: 0 }
-      const tx = { oncomplete: null as null | (() => void), onerror: null as null | (() => void), error: null as Error | null, objectStore: () => storeApi(name, pending) }
+      const tx = { oncomplete: null as null | (() => void), onerror: null as null | (() => void), error: null as Error | null, objectStore: () => storeApi(shared, name, pending) }
       const settle = () => {
         if (pending.n > 0) return void setTimeout(settle, 0)
         tx.oncomplete?.()
@@ -66,8 +75,9 @@ export function installFakeIndexedDb(): FakeIndexedDb {
   const factory = {
     open() {
       const req = { result: db, error: null, onsuccess: null as null | (() => void), onupgradeneeded: null as null | (() => void), onerror: null }
+      if (hanging) return req
       setTimeout(() => {
-        if (stores.size === 0) req.onupgradeneeded?.()
+        if (shared.stores.size === 0) req.onupgradeneeded?.()
         req.onsuccess?.()
       }, 0)
       return req
@@ -76,8 +86,9 @@ export function installFakeIndexedDb(): FakeIndexedDb {
   Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: factory })
 
   return {
-    stores,
-    failNext: (method, error = new Error(`${method} failed`)) => void failures.set(method, error),
+    stores: shared.stores,
+    failNext: (method, error = new Error(`${method} failed`)) => void shared.failures.set(method, error),
+    hangOpen: () => void (hanging = true),
     uninstall: () => {
       if (original) Object.defineProperty(globalThis, 'indexedDB', original)
       else Reflect.deleteProperty(globalThis, 'indexedDB')
