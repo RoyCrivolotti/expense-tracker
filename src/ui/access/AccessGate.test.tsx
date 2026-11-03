@@ -19,7 +19,20 @@ const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
 const dataset = syntheticLedger({ months: 8, perMonth: 8, seed: 6 })
 
-type Answer = 'allowed' | 'rejected' | 401 | 403 | 503 | 'down' | 'worded like down'
+type Answer =
+  | 'allowed'
+  | 'rejected'
+  | 401
+  | 403
+  | 503
+  | 'down'
+  | 'worded like down'
+  | 'without Expenses'
+  | 'owner without Expenses'
+  | 'with Expenses'
+
+/** The groups of a person the server has let in, with or without the one this app is for. */
+const groups = (expenses: boolean) => ({ expenses, finance: true, legacy: false, oncall: false })
 
 let idb: FakeIndexedDb
 let statusFor: Answer
@@ -34,6 +47,9 @@ function answer(who: string, kind: Answer): Response | Promise<never> {
   if (kind === 'worded like down') return new Response(JSON.stringify({ error: 'Load failed' }), { status: 503 })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+  if (kind === 'without Expenses') return json({ status: 'allowed', email: who, groups: groups(false) })
+  if (kind === 'owner without Expenses') return json({ status: 'allowed', email: who, isOwner: true, groups: groups(false) })
+  if (kind === 'with Expenses') return json({ status: 'allowed', email: who, groups: groups(true) })
   if (typeof kind === 'number') return json({ error: kind === 503 ? 'Access is not set up' : 'Not allowed' }, kind)
   return json({ status: kind, email: who })
 }
@@ -71,6 +87,15 @@ const gate = (source: ExpenseDataSource) => (
 )
 
 const savedKeys = () => [...(idb.stores.get('snapshots')?.keys() ?? [])]
+
+/**
+ * Lets the gate's clean-up run to its end (a lazy import, then a few turns of the store). A copy that is still there
+ * afterwards is one the gate left alone, not one it has not got to yet.
+ */
+async function afterCleanUp() {
+  await vi.dynamicImportSettled()
+  await idb.settled()
+}
 
 /** The person opens the app with a connection, so that it keeps a copy for next time. */
 async function visitOnline(source: ExpenseDataSource, key: string) {
@@ -229,6 +254,30 @@ describe('when the server answers', () => {
     await screen.findByText(ALICE)
     await waitFor(() => expect(savedKeys()).toEqual([]))
     expect(screen.queryByText('Recent activity')).not.toBeInTheDocument()
+  })
+
+  it('drops every copy, the ledger’s too, for a person who is allowed but has no Expenses group', async () => {
+    window.localStorage.setItem(LEDGER_MODE_KEY, 'on')
+    await visitOnline(ledgerSource(), `ledger:${ALICE}`)
+    statusFor = 'without Expenses'
+
+    render(gate(ledgerSource()))
+
+    expect(await screen.findByRole('heading', { name: 'No expense tracker access' })).toBeInTheDocument()
+    await waitFor(() => expect(savedKeys()).toEqual([]))
+  })
+
+  // The source cannot load, so the app shows only what the device kept: the copy is still there if it opens on it,
+  // and nothing puts it back if it does not.
+  it.each(['owner without Expenses', 'with Expenses'] as const)('keeps the copy for %s', async (kind) => {
+    await visitOnline(datasetSource(), 'latest')
+    statusFor = kind
+
+    render(gate(datasetSource(true)))
+
+    expect(await screen.findByText('Recent activity')).toBeInTheDocument()
+    await afterCleanUp()
+    expect(savedKeys()).toEqual(['latest'])
   })
 
   it('opens the app as before when the person is allowed, and keeps the copy', async () => {

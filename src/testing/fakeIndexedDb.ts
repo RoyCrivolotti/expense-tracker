@@ -4,7 +4,8 @@
  * one copies them. Requests answer on a later tick and a transaction completes once its requests have, so code
  * that depends on the order of events behaves as it does in a browser. `failNext` makes the next call to a
  * method fail, for the paths that must survive a full disk or a blocked store, and `hangOpen` makes opening the
- * database never answer, for the ones that must survive a store that is stuck.
+ * database never answer, for the ones that must survive a store that is stuck. `settled` waits until nothing is in
+ * flight, for a test that must know a clean-up has run to its end before it says something did not happen.
  */
 type Entries = Map<IDBValidKey, unknown>
 
@@ -14,18 +15,22 @@ export interface FakeIndexedDb {
   failNext(method: 'get' | 'put' | 'delete' | 'getAllKeys', error?: Error): void
   /** From now on `indexedDB.open` returns a request that neither succeeds nor fails. */
   hangOpen(): void
+  /** Resolves once no request has been in flight for a few turns. Call it after anything lazy the code under test loads has loaded. */
+  settled(): Promise<void>
   uninstall(): void
 }
 
-/** What the requests of one fake database share: its stores and the calls told to fail. */
+/** What the requests of one fake database share: its stores, the calls told to fail, and how many are in flight. */
 interface Shared {
   stores: Map<string, Entries>
   failures: Map<string, Error>
+  inFlight: { n: number }
 }
 
 function request<T>(shared: Shared, method: string, pending: { n: number }, run: () => T): IDBRequest<T> {
   const req = { result: undefined as T, error: null as Error | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) }
   pending.n += 1
+  shared.inFlight.n += 1
   setTimeout(() => {
     const failure = shared.failures.get(method)
     shared.failures.delete(method)
@@ -38,6 +43,7 @@ function request<T>(shared: Shared, method: string, pending: { n: number }, run:
       req.onerror?.()
     }
     pending.n -= 1
+    shared.inFlight.n -= 1
   }, 0)
   return req as unknown as IDBRequest<T>
 }
@@ -53,7 +59,7 @@ function storeApi(shared: Shared, name: string, pending: { n: number }): IDBObje
 }
 
 export function installFakeIndexedDb(): FakeIndexedDb {
-  const shared: Shared = { stores: new Map(), failures: new Map() }
+  const shared: Shared = { stores: new Map(), failures: new Map(), inFlight: { n: 0 } }
   let hanging = false
   const original = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB')
 
@@ -89,6 +95,9 @@ export function installFakeIndexedDb(): FakeIndexedDb {
     stores: shared.stores,
     failNext: (method, error = new Error(`${method} failed`)) => void shared.failures.set(method, error),
     hangOpen: () => void (hanging = true),
+    settled: async () => {
+      for (let quiet = 0; quiet < 3; quiet = shared.inFlight.n === 0 ? quiet + 1 : 0) await new Promise((resolve) => setTimeout(resolve, 0))
+    },
     uninstall: () => {
       if (original) Object.defineProperty(globalThis, 'indexedDB', original)
       else Reflect.deleteProperty(globalThis, 'indexedDB')

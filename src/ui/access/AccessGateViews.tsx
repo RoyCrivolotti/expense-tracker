@@ -3,7 +3,7 @@ import type { AccessStatusResponse } from '../../data/accessApi'
 import { ExpensesApp } from '../ExpensesApp'
 import { NoExpenseAccessScreen } from './NoExpenseAccessScreen'
 import { RequestAccessScreen } from './RequestAccessScreen'
-import { canUseExpenseTracker } from '../../hubNavItems'
+import { lacksExpenseAccess } from '../../hubNavItems'
 import { allGroupsGranted } from '../../domain/accessGroups'
 
 export function AllowedAccessView({
@@ -13,10 +13,7 @@ export function AllowedAccessView({
   access: AccessStatusResponse
   source: ExpenseDataSource
 }) {
-  const groups = access.groups
-  if (groups && !access.isOwner && !canUseExpenseTracker(groups)) {
-    return <NoExpenseAccessScreen email={access.email} />
-  }
+  if (lacksExpenseAccess(access)) return <NoExpenseAccessScreen email={access.email} />
   const ownerAccess =
     access.isOwner && access.pendingCount !== undefined
       ? { pendingCount: access.pendingCount }

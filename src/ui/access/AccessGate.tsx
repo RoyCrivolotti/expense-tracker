@@ -3,6 +3,7 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import { fetchAccessStatus, type AccessStatusResponse } from '../../data/accessApi'
 import { ApiError, isAccessDenied } from '../../data/apiClient'
 import { OwnerAccessAdminScreen } from './OwnerAccessAdminScreen'
+import { lacksExpenseAccess } from '../../hubNavItems'
 import { AllowedAccessView, DeniedAccessView } from './AccessGateViews'
 import { AccessFailure } from './AccessFailure'
 import { AppLoadingSkeleton } from '../components/AppLoadingSkeleton'
@@ -11,7 +12,7 @@ function isAdminPath(): boolean {
   return window.location.pathname.startsWith('/access/admin')
 }
 
-/** The server said the person may not read what this device kept, so none of it stays for the next time the network is out. */
+/** The server said the person may not read what this device kept (not allowed, or not into Expenses), so none of it stays for the next time the network is out. */
 function dropSavedCopies(): void {
   void import('../../data/savedCopy').then((copy) => copy.forgetSavedCopies(), () => undefined)
 }
@@ -27,7 +28,7 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
     fetchAccessStatus()
       .then((status) => {
         if (!active) return
-        if (status.status !== 'allowed') dropSavedCopies()
+        if (status.status !== 'allowed' || lacksExpenseAccess(status)) dropSavedCopies()
         setAccess(status)
       })
       .catch((err: unknown) => {
