@@ -11,6 +11,9 @@ const ask = <T>(request: IDBRequest<T>): Promise<T> =>
     request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'))
   })
 
+/** A store that has not answered by now is not going to, and the person is waiting on a screen that has nothing else to say. */
+const LOOK_UP_MS = 3000
+
 interface Named {
   version?: number
   owner?: string
@@ -20,10 +23,22 @@ interface Named {
  * The person the saved copy is for, or null when there is none this build can open. `withLedger` says whether a
  * ledger's copies count, which they do only in a browser that reads the ledger in parts. Copies that name more than
  * one person (two people used this browser, one with each way of reading) name no one: nothing here can say which of
- * them is holding the phone.
+ * them is holding the phone. A store that does not answer within a few seconds counts as holding nothing.
  */
 export async function savedCopyOwner(withLedger: boolean): Promise<string | null> {
   if (typeof indexedDB === 'undefined') return null
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const giveUp = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), LOOK_UP_MS)
+  })
+  try {
+    return await Promise.race([lookUp(withLedger), giveUp])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function lookUp(withLedger: boolean): Promise<string | null> {
   try {
     const owners = await withStore('readonly', async (store) => {
       const found = new Set<string>()

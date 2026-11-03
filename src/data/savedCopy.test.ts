@@ -109,6 +109,35 @@ describe('whose copy this device keeps', () => {
     vi.stubGlobal('indexedDB', undefined)
     expect(await savedCopyOwner(false)).toBeNull()
   })
+
+  describe('when the store is slow', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('is no one’s after three seconds of a database that never opens', async () => {
+      fake.hangOpen()
+      vi.useFakeTimers()
+      let answer: string | null | undefined
+      void savedCopyOwner(true).then((owner) => (answer = owner))
+
+      await vi.advanceTimersByTimeAsync(2999)
+      expect(answer).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1)
+
+      expect(answer).toBeNull()
+    })
+
+    it('leaves no timer behind when the store answers', async () => {
+      await saveOfflineSnapshot(ALICE, dataset())
+      vi.useFakeTimers()
+      let answer: string | null | undefined
+      void savedCopyOwner(false).then((owner) => (answer = owner))
+
+      await vi.advanceTimersByTimeAsync(50)
+
+      expect(answer).toBe(ALICE)
+      expect(vi.getTimerCount()).toBe(0)
+    })
+  })
 })
 
 describe('forgetting the copies', () => {

@@ -4,7 +4,7 @@
  * once, as the person did, and then loses the network or the server, so the copy under test is the one the app
  * wrote itself, in the dataset app and in the ledger app.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LEDGER_MODE_KEY } from '../../config/ledgerMode'
 import type { ExpenseDataSource } from '../../data/dataSource'
@@ -190,6 +190,28 @@ describe('with the network out and a copy saved', () => {
 
     expect(await screen.findByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
     expect(screen.queryByText('Recent activity')).not.toBeInTheDocument()
+  })
+})
+
+describe('with the network out and a store that does not answer', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('says the person is offline after three seconds, with Try again, and not Checking access for ever', async () => {
+    await visitOnline(datasetSource(), 'latest')
+    idb.hangOpen()
+    statusFor = 'down'
+    setOnline(false)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    render(gate(datasetSource(true)))
+    await act(() => vi.dynamicImportSettled())
+    await act(() => vi.advanceTimersByTimeAsync(2999))
+    expect(screen.getByText('Checking access')).toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(1))
+
+    expect(screen.getByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
   })
 })
 
