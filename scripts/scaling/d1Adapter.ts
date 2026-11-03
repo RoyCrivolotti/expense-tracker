@@ -2,7 +2,7 @@
  * A `D1Database` that runs every statement through a Transport (REST in a real run, SQLite in tests), so the
  * repository's own route handlers can be driven unchanged. Each statement passes the write guard first,
  * is charged to the spend ledger when it answers, and is recorded with the rows D1 reported. Only the
- * methods the app calls exist: `prepare`, `bind`, `first`, `all`, `run` and `batch`.
+ * methods the app calls exist: `prepare`, `bind`, `first`, `all`, `raw`, `run` and `batch`.
  */
 import type { D1Database } from '@cloudflare/workers-types'
 import { newRecorder, type Recorder } from '../../functions/_shared/measure/records'
@@ -27,6 +27,7 @@ interface Bound extends Statement {
   bind(...values: unknown[]): Bound
   first(column?: string): Promise<unknown>
   all(): Promise<D1Reply>
+  raw(): Promise<unknown[][]>
   run(): Promise<D1Reply>
 }
 
@@ -67,6 +68,8 @@ export function measuredDb(options: AdapterOptions): MeasuredDb {
       return column === undefined ? row : (row[column] ?? null)
     },
     all: () => send({ sql, params }),
+    // The REST query answers with objects; their keys come in column order, so a statement must not name a column twice.
+    raw: async () => (await send({ sql, params })).results.map((row) => Object.values(row)),
     run: async () => ({ ...(await send({ sql, params })), results: [] }),
   })
 

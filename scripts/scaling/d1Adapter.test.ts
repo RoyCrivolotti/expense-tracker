@@ -32,6 +32,16 @@ describe('the measured database', () => {
     expect(recorder.records[0]).toMatchObject({ batch: false, write: false })
   })
 
+  it('answers raw with each row as its values in column order, and notes the statement', async () => {
+    const { db, recorder } = adapter(false)
+    const named = await db.prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id').bind('alex@example.com').all<{ name: string; id: number }>()
+    const raw = await db.prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id').bind('alex@example.com').raw()
+    expect(raw.length).toBeGreaterThan(0)
+    expect(raw).toEqual(named.results.map((row) => [row.name, row.id]))
+    expect(recorder.records).toHaveLength(2)
+    expect(await db.prepare('SELECT 1 WHERE 0').raw()).toEqual([])
+  })
+
   it('counts a batch as one call and each statement inside it as one statement', async () => {
     const { db, recorder } = adapter(true)
     const before = summarize(recorder)
