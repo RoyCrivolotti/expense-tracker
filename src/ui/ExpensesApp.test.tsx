@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { LEDGER_MODE_KEY } from '../config/ledgerMode'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
@@ -66,6 +67,9 @@ async function finishWizard() {
   await waitFor(() => expect(screen.queryByText('Apply these changes?')).toBeNull())
 }
 
+// These test the whole-dataset app, which a browser asks for with `?ledger=off`; ledger mode is the default.
+beforeEach(() => localStorage.setItem(LEDGER_MODE_KEY, 'off'))
+
 describe('ExpensesApp onboarding wiring', () => {
   it('a genuine first run (empty tenant) opens the wizard automatically, and finishing it opens "add a transaction"', async () => {
     const source = sourceThatSucceeds(datasetWith())
@@ -110,7 +114,10 @@ describe('ExpensesApp onboarding wiring', () => {
 })
 
 describe('ExpensesApp settings kept for a person', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(LEDGER_MODE_KEY, 'off')
+  })
 
   it('opens the setup for someone who has not skipped it, though another person on the browser did', async () => {
     localStorage.setItem('exp-onboarding-skipped:alice@example.com', '1')

@@ -151,7 +151,7 @@ describe('with the network out and a copy saved', () => {
   it('does not open a dataset browser on a copy only the ledger can read', async () => {
     window.localStorage.setItem(LEDGER_MODE_KEY, 'on')
     await visitOnline(ledgerSource(), `ledger:${ALICE}`)
-    window.localStorage.removeItem(LEDGER_MODE_KEY)
+    window.localStorage.setItem(LEDGER_MODE_KEY, 'off')
     statusFor = 'down'
     setOnline(false)
 
