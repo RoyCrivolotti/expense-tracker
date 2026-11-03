@@ -217,3 +217,8 @@ has to decide what a window may show.
   when a later charge is logged, and for a window that charge may be in a month it does not hold. `model.newestCharges`
   (`newestChargesOfSeries`) is handed to `stillStopped` as `known`, and the Settings section reads the series while
   something is stopped.
+- **Offline, a window says which months it has rows for.** `model.savedMonths` is the set of months saved on the device,
+  and only a window kept offline has it. The header month shows a filled dot on a saved month and a hollow one on the
+  rest, the Transactions list says "Not saved on this device. Connect to see its rows." in place of an empty month, and
+  a line under the list says how many months it is showing, since the totals of every month are known and the rows of
+  most are not.

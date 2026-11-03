@@ -14,6 +14,13 @@ interface MonthPickerProps {
    */
   locked?: boolean
   onLockedPress?: (() => void) | undefined
+  /** The months whose rows are saved on this device, when only some are: the month shown is marked as saved or not. */
+  saved?: ReadonlySet<string> | undefined
+}
+
+/** Offline, with only some months' rows saved here: a filled dot for a month that is, a hollow one for the rest. */
+function SavedMark({ saved }: { saved: boolean }) {
+  return <span role="img" className={saved ? styles.saved : styles.unsaved} aria-label={saved ? 'Saved on this device' : 'Not saved on this device'} />
 }
 
 export function MonthPicker({
@@ -23,6 +30,7 @@ export function MonthPicker({
   layout = 'compact',
   locked = false,
   onLockedPress,
+  saved,
 }: MonthPickerProps) {
   const index = months.indexOf(value)
   const latestMonth = months[months.length - 1]
@@ -50,6 +58,7 @@ export function MonthPicker({
         ‹
       </button>
       <span className={styles.label}>{fullMonthLabel(value)}</span>
+      {saved && <SavedMark saved={saved.has(value)} />}
       <button
         type="button"
         onClick={press(() => go(1))}

@@ -14,6 +14,8 @@ interface Props {
   online: boolean
   refreshing: boolean
   onRefresh: () => void
+  /** The months saved on this device, while offline with only some of them. */
+  savedMonths?: ReadonlySet<string> | undefined
 }
 
 export function AppHeaderActions({
@@ -26,6 +28,7 @@ export function AppHeaderActions({
   online,
   refreshing,
   onRefresh,
+  savedMonths,
 }: Props) {
   return (
     <div className={styles.headerActions}>
@@ -37,6 +40,7 @@ export function AppHeaderActions({
           onChange={onMonthChange}
           locked={pickerLocked}
           onLockedPress={onLockedPickerPress}
+          saved={savedMonths}
         />
       ) : null}
     </div>

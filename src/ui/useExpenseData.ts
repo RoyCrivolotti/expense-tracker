@@ -83,6 +83,11 @@ export interface ExpenseModel {
    * which the rows the window does not hold may be the newest of (`stillStopped` takes it as `known`).
    */
   newestCharges?: ReadonlyMap<string, string>
+  /**
+   * Set when the model holds a window and the browser is offline: the budget months whose rows are saved here. The rest
+   * have totals and no rows, so a screen that lists rows says so for them.
+   */
+  savedMonths?: ReadonlySet<string>
 }
 
 interface LoadState {

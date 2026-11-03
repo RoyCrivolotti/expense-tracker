@@ -50,9 +50,9 @@ function Harness({
   return <div data-testid="footer">{view.footer}</div>
 }
 
-function mount(source: TestSource, filter: TxnFilter = {}, options: { limit?: number; readOnly?: boolean } = {}) {
+function mount(source: TestSource, filter: TxnFilter = {}, options: { limit?: number; readOnly?: boolean; saved?: string[] } = {}) {
   const pager = new TransactionPager(source, { limit: options.limit ?? 25 })
-  const model = { ...buildExpenseModel(ledger), pagedList: pagedListOf(pager) }
+  const model = { ...buildExpenseModel(ledger), pagedList: pagedListOf(pager), ...(options.saved ? { savedMonths: new Set(options.saved) } : {}) }
   const views: ListView[] = []
   const tree = (f: TxnFilter) => (
     <ConnectivityContext.Provider value={{ online: !options.readOnly, readOnly: options.readOnly ?? false }}>
@@ -143,6 +143,32 @@ describe('the paged list the Transactions tab reads in ledger mode', () => {
     expect(ids(last())).toEqual(held.map((t) => t.id))
     expect(last().footer).toBeUndefined()
     expect(source.calls).toEqual([])
+  })
+})
+
+describe('the paged list offline, over a window that has only some months saved', () => {
+  const [saved, other] = [ledger.transactions[0]!.budgetMonth, '2001-01']
+
+  it('says a month that is not saved has no rows here, in place of an empty list, and how many months are saved', () => {
+    const { last } = mount(memorySource(ledger), { month: other }, { readOnly: true, saved: [saved, '2026-01'] })
+    expect(ids(last())).toEqual([])
+    expect(screen.getByTestId('footer')).toHaveTextContent('Showing the 2 months saved here.')
+    render(<>{last().failed}</>)
+    expect(screen.getByText('Not saved on this device. Connect to see its rows.')).toBeInTheDocument()
+  })
+
+  it('lists a saved month, with only the count of months saved under it, and says nothing for a range of dates', () => {
+    const month = mount(memorySource(ledger), { month: saved }, { readOnly: true, saved: [saved] })
+    expect(ids(month.last()).length).toBeGreaterThan(0)
+    expect(month.last().failed).toBeUndefined()
+    const dates = mount(memorySource(ledger), { month: other, dateFrom: '2001-01-01', dateTo: '2001-01-31' }, { readOnly: true, saved: [saved] })
+    expect(dates.last().failed).toBeUndefined()
+    expect(screen.getAllByTestId('footer').at(-1)).toHaveTextContent('Showing the 1 month saved here.')
+  })
+
+  it('has no such notes for a model that holds every row', () => {
+    const { last } = mount(memorySource(ledger), { month: saved }, { readOnly: true })
+    expect(last().footer).toBeUndefined()
   })
 })
 

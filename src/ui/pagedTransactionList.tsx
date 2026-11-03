@@ -7,6 +7,7 @@ import { useConnectivityState } from './hooks/useConnectivityState'
 import { sumsOf } from './modelSums'
 import { usePagedSelection } from './pagedSelection'
 import { ListFailed, PagedListFooter } from './PagedListFooter'
+import { offlineWindowNotes } from './tabs/offlineWindowNotes'
 import { listOfHeldRows } from './tabs/useTransactionsTabState'
 import type { ListView, PagedList } from './transactionListView'
 import type { ExpenseModel } from './useExpenseData'
@@ -57,7 +58,11 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
   // Read from the pager whenever it changes: the figures it was taken from are the ones in `state`.
   const matching = useMemo(() => pager.matching(), [pager, state]) // eslint-disable-line react-hooks/exhaustive-deps -- `state` is what changes it
   // Offline there are no pages to read, but a ledger held in full is still there to filter.
-  const held = useMemo(() => (readOnly ? listOfHeldRows(model, sums, filter) : null), [readOnly, model, sums, filter])
+  const held = useMemo(() => {
+    if (!readOnly) return null
+    const list = listOfHeldRows(model, sums, filter)
+    return model.savedMonths ? { ...list, ...offlineWindowNotes(model.savedMonths, filter) } : list
+  }, [readOnly, model, sums, filter])
   if (held) return held
   // A first page that failed has no rows to show, and saying so is not the same as saying nothing matches.
   const failed = error !== null && rows.length === 0 && !loading ? <ListFailed onRetry={() => pager.loadMore()} /> : undefined

@@ -340,6 +340,9 @@ describe('useLedgerData, snapshots', () => {
     expect(result.current.fromCache).toBe(true)
     expect(result.current.model!.historyNote).toMatch(/You're offline/)
     expect(offline.calls).toEqual([])
+    const heldMonths = new Set((await readLedgerParts(source, { policy: WINDOWED })).rows.flatMap((read) => sortedMonths(read.transactions.map((t) => t.budgetMonth))))
+    expect(result.current.model!.savedMonths).toEqual(heldMonths)
+    expect(heldMonths.size).toBeLessThan(months.length)
   })
 
   it('keeps the owner’s snapshot once a load works, and none without an owner', async () => {
