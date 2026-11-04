@@ -10,7 +10,8 @@ what was measured and how to repeat it, and the design for ledgers too large to 
 one document. The UI loads it once (`useExpenseData`), keeps all of it in memory and runs every engine in
 `src/domain/engine/` over the full `Transaction[]`. It clones the dataset on each local mutation
 ([`datasetPatches.ts`](../src/ui/datasetPatches.ts)) and keeps a snapshot in IndexedDB for offline reading
-([`offlineCache.ts`](../src/data/offlineCache.ts)). The daily backup calls `loadDataset` for every owner as well.
+([`offlineCache.ts`](../src/data/offlineCache.ts)). The daily backup calls `loadDataset` for every owner as well. That is the path of a browser that turned ledger mode off
+(`?ledger=off`); the default reads the ledger in parts ([LEDGER-MODE.md](./LEDGER-MODE.md)).
 
 A browser that already holds the current version gets a 304 after two rows are read, before any dataset query. The ETag
 is built from a per-owner revision that every write replaces ([decision](./decisions/revision-token-and-etag.md)).
@@ -205,7 +206,7 @@ A **ledger** is the part of the data a client holds when it does not hold every 
    the browser, from the account and its statements.
 5. **Server answers** for questions that depend on unbounded history.
 
-A ledger of 5,000 rows or fewer hydrates every month and has no sums, which is today's behavior, so there is one code
+A ledger of 10,000 rows or fewer hydrates every month and has no sums, which is the whole-dataset behavior, so there is one code
 path with two sizing policies. Which engines can be given less history without changing their output, and which cannot,
 is in [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 

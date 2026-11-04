@@ -28,3 +28,5 @@ or fewer hydrates every month, so a small ledger behaves as it always has.
   onto it.
 - A synced local replica of the database: offline mode is a read-only snapshot with no sync, and a replica would still
   download the history the ledger exists to avoid.
+
+Note, 2026-11-04: the full size became 10,000 rows (`HOLD_IN_FULL_ROWS`) and nothing hands a larger ledger back for its size any more: above it the ledger is a window, as described here. The one ledger the whole-dataset app still takes for its shape is one with a month of more rows than a request returns ([LEDGER-MODE.md](../LEDGER-MODE.md#the-switch-and-the-fallback)).
