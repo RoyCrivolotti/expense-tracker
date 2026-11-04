@@ -2,9 +2,9 @@
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
  * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a heavy
- * chart/vendor lib would blow these limits. Three are kept: the bundle a browser
- * that never turns the ledger mode on downloads, the code only the Goals tab loads (its own chunk,
- * the chunks split out of it and its lazy card), and the code only the ledger mode loads, all
+ * chart/vendor lib would blow these limits. Three are kept: the bundle without the chunks only the ledger mode
+ * loads (the whole-dataset app and everything both ways of reading the ledger run), the code only the Goals tab loads
+ * (its own chunk, the chunks split out of it and its lazy card), and the code only the ledger mode loads, all
  * found from the imports in the built files by `bundleGraph.mjs`.
  */
 import { readdirSync, readFileSync } from 'node:fs'
@@ -20,8 +20,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // what the growth bought. The point is to catch a vendor library or a whole feature arriving by accident (dropping
 // Recharts took the lazy Goals chunk from 108 KB to about 8 KB), not to count bytes.
 //
-// TOTAL: the JS a browser downloads when the ledger mode is off, which is everyone's default. LEDGER: the chunks only
-// the ledger mode loads. GOALS: the Goals tab's own chunk and the chunks split out of it, which overlap TOTAL.
+// TOTAL: the JS outside the chunks only the ledger mode loads, which is what a browser that turned the ledger mode off
+// runs. LEDGER: the chunks only the ledger mode loads, which every other browser downloads too, since it is the default.
+// GOALS: the Goals tab's own chunk and the chunks split out of it, which overlap TOTAL.
 const TOTAL_MAX_GZIP = 290_000
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
