@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (The app reads your data in parts)
+
+- **The app no longer loads everything at once.** Nothing looks different at the size of your ledger. A ledger over 10,000 transactions is held as the months you are looking at plus the totals of the rest, and the screens that would show only part of it read the rest from the server or say what is not on the phone: Recent activity, the file of every transaction, the saved months when offline and the stopped suggestions. `?ledger=off` at the end of the address on a computer goes back to loading everything.
+
 ## November 2026 (Opening the app with no connection shows your last data)
 
 - **The installed app opens on the data it last loaded when there is no connection.** It used to stop at "Can't reach the server", even though it keeps a copy of your data. It now opens on that copy, with a note saying when it was saved and that nothing can be changed until you are back online, and the same happens when the connection is there but the server does not answer. With no connection nothing can check who is holding the phone, so anyone who can open the app on your unlocked phone can read that copy. A refusal from the server removes it, and so does signing out. An app with no saved data yet says "You're offline" and offers Try again, with no Sign in button, since signing in needs the connection too.
