@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MAX_ROWS_PER_REQUEST } from '../domain/data/ledgerParts'
 import { HOLD_IN_FULL_ROWS } from '../domain/ledger'
+import { makeDataset, makeTransaction } from '../testing/factories'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { memorySource } from '../testing/ledgerSource'
 import { syntheticLedger } from '../testing/syntheticLedger'
@@ -47,6 +49,33 @@ describe('chooseLedger', () => {
     source.readReferencePart = async () => ({ ...(await read()), rowCount: HOLD_IN_FULL_ROWS + 1 })
     expect(await chooseLedger(source, OWNER)).not.toBe('fallback')
     expect(source.calls.filter((call) => call === 'reference')).toHaveLength(1)
+  })
+
+  describe('a month of more rows than one request returns', () => {
+    const month = (rows: number) =>
+      makeDataset({ transactions: Array.from({ length: rows }, (_, i) => makeTransaction({ id: i + 1, date: '2026-09-10', budgetMonth: '2026-09' })) })
+
+    it('is the whole-dataset app’s, which reads a ledger in one request, after one read of the reference', async () => {
+      const source = serving(month(MAX_ROWS_PER_REQUEST + 1))
+      expect(await chooseLedger(source, OWNER)).toBe('fallback')
+      expect(source.calls.filter((call) => call === 'reference')).toHaveLength(1)
+    })
+
+    it('is the whole-dataset app’s when only one of several months is that large', async () => {
+      const big = month(MAX_ROWS_PER_REQUEST + 1)
+      const small = makeTransaction({ id: 900_000, date: '2026-01-10', budgetMonth: '2026-01' })
+      expect(await chooseLedger(serving(makeDataset({ transactions: [...big.transactions, small] })), OWNER)).toBe('fallback')
+    })
+
+    it('is not for a month of exactly that many, nor for the same rows spread over months', async () => {
+      expect(await chooseLedger(serving(month(MAX_ROWS_PER_REQUEST)), OWNER)).not.toBe('fallback')
+      const spread = makeDataset({
+        transactions: Array.from({ length: MAX_ROWS_PER_REQUEST + 1 }, (_, i) =>
+          makeTransaction({ id: i + 1, date: `2026-${String((i % 6) + 1).padStart(2, '0')}-10`, budgetMonth: `2026-${String((i % 6) + 1).padStart(2, '0')}` }),
+        ),
+      })
+      expect(await chooseLedger(serving(spread), OWNER)).not.toBe('fallback')
+    })
   })
 
   it('goes on with the ledger when the reference cannot be read and this owner has saved one held in full', async () => {
