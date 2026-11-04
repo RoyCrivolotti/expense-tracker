@@ -171,7 +171,7 @@ async function savedCopyWithNoNetwork(browser, engine, ledger) {
   const shown = (text) => page.getByText(text).first().waitFor({ timeout: 10_000 }).then(() => true, () => false)
   try {
     // The ledger switch is kept in the browser, so the launch with no network is not given it again.
-    await page.goto(`${site.origin}/${ledger ? '?ledger=on' : ''}`)
+    await page.goto(`${site.origin}/?ledger=${ledger ? 'on' : 'off'}`)
     await controlled(page)
     check(where, 'online, the app shows the data', await shown(NEWEST_DESCRIPTION), await page.locator('body').innerText())
     check(where, 'online, there is no saved-data notice', (await page.getByText('Viewing saved data').count()) === 0)

@@ -1,13 +1,15 @@
 /**
- * Whether this browser reads the ledger in parts instead of as one dataset: a switch kept in the browser, so
- * it can be turned on for one device and off again without a deploy. It is off unless asked for.
+ * Whether this browser reads the ledger in parts instead of as one dataset: a switch kept in the browser, so it can
+ * be turned off for one device and on again without a deploy. It is on unless the browser was told otherwise.
  *
- * - `on`: the ledger is read in parts and the screens show it: a ledger of up to `HOLD_IN_FULL_ROWS` rows is held in
- *   full, and a larger one as a window of months with the sums of the rest.
+ * - `on`: the ledger is read in parts and the screens show it, held in full up to `HOLD_IN_FULL_ROWS` rows and as a
+ *   window of months with the sums of the rest above that.
  * - `shadow`: the same, and the whole dataset is read as well and compared with it, reporting any difference
- *   in the console. Only a development build or a staging build honours it; anywhere else it counts as off.
+ *   in the console. Only a development build or a staging build honours it; anywhere else it counts as `on`.
+ * - `off`: the whole dataset is loaded as one, the way every browser did before ledger mode.
  *
- * `?ledger=on`, `?ledger=shadow` or `?ledger=off` in the address sets it and it is kept; `off` removes it.
+ * `?ledger=on`, `?ledger=shadow` or `?ledger=off` in the address sets it and it is kept. `off` is kept as `off`: with
+ * nothing kept the mode is `on`, so removing the key would turn it back on.
  */
 export type LedgerMode = 'off' | 'on' | 'shadow'
 
@@ -18,7 +20,7 @@ export interface LedgerModeInput {
   checking: boolean
   /** The address's query string, `?ledger=on` and so on. */
   search: string
-  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null
+  storage: Pick<Storage, 'getItem' | 'setItem'> | null
 }
 
 const isMode = (value: string | null): value is Exclude<LedgerMode, never> =>
@@ -27,17 +29,13 @@ const isMode = (value: string | null): value is Exclude<LedgerMode, never> =>
 export function readLedgerMode({ checking, search, storage }: LedgerModeInput): LedgerMode {
   let wanted: string | null = new URLSearchParams(search).get('ledger')
   try {
-    if (isMode(wanted)) {
-      if (wanted === 'off') storage?.removeItem(LEDGER_MODE_KEY)
-      else storage?.setItem(LEDGER_MODE_KEY, wanted)
-    } else {
-      wanted = storage?.getItem(LEDGER_MODE_KEY) ?? null
-    }
+    if (isMode(wanted)) storage?.setItem(LEDGER_MODE_KEY, wanted)
+    else wanted = storage?.getItem(LEDGER_MODE_KEY) ?? null
   } catch {
     // A browser that refuses storage (a private window, blocked site data) keeps only what the address said.
   }
-  if (wanted === 'on') return 'on'
-  return wanted === 'shadow' && checking ? 'shadow' : 'off'
+  if (wanted === 'off') return 'off'
+  return wanted === 'shadow' && checking ? 'shadow' : 'on'
 }
 
 /** The mode for this page, read from the browser. */
