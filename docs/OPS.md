@@ -89,16 +89,19 @@ To use a different demo email: `DEMO_EMAIL=you@example.com npm run seed:demo-sta
 
 ## Reading the ledger in parts (browser switch)
 
-By default the app loads the whole ledger with one `GET /api/expenses`. A browser can instead read it in parts
-([API.md](./API.md)) and build every screen from them. The switch is kept in that browser, so it needs no deploy.
+By default the app reads the ledger in parts ([API.md](./API.md)) and builds every screen from them. A browser can turn
+that off and load the whole ledger with one `GET /api/expenses` instead. The switch is kept in that browser, so it needs
+no deploy.
 
-- `?ledger=on` in the address turns it on for this browser (kept in local storage as `expenses-ledger-mode`) and
-  `?ledger=off` turns it off.
+- `?ledger=off` in the address turns it off for this browser (kept in local storage as `expenses-ledger-mode`, as `off`)
+  and `?ledger=on` turns it on again. An installed phone app has no address bar, so this does not reach it.
 - `?ledger=shadow` does the same and also loads the whole dataset after the ledger settles and compares the two. It
-  counts as `off` anywhere but a development or `--mode staging` build. Differences go to the console as
+  counts as `on` anywhere but a development or `--mode staging` build. Differences go to the console as
   `[ledger shadow]` and to `window.__ledgerShadow` (`checks` and `differences`); an empty `differences` after a few
   edits means the parts agree with the dataset.
-- When it falls back to the old load, and what it holds, are in [LEDGER-MODE.md](./LEDGER-MODE.md#the-switch-and-the-hand-back).
+- The way back for everyone is to change the default in `src/config/ledgerMode.ts` and deploy: the default is never
+  stored, only what an address asked for, so reverting it moves every browser that was never asked.
+- When it falls back to the old load, and what it holds, are in [LEDGER-MODE.md](./LEDGER-MODE.md#the-switch-and-the-fallback).
   With it on, the Transactions list is read a page at a time from the list and summary routes, and its count says
   `1000+` once there are more matches than the summary counts.
 - `npm run verify:ledger-mode` compares the demo instance's screens under `?ledger=off` and `?ledger=on`
