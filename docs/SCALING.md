@@ -10,7 +10,8 @@ what was measured and how to repeat it, and the design for ledgers too large to 
 one document. The UI loads it once (`useExpenseData`), keeps all of it in memory and runs every engine in
 `src/domain/engine/` over the full `Transaction[]`. It clones the dataset on each local mutation
 ([`datasetPatches.ts`](../src/ui/datasetPatches.ts)) and keeps a snapshot in IndexedDB for offline reading
-([`offlineCache.ts`](../src/data/offlineCache.ts)). The daily backup calls `loadDataset` for every owner as well.
+([`offlineCache.ts`](../src/data/offlineCache.ts)). The daily backup calls `loadDataset` for every owner as well. That is the path of a browser that turned ledger mode off
+(`?ledger=off`); the default reads the ledger in parts ([LEDGER-MODE.md](./LEDGER-MODE.md)).
 
 A browser that already holds the current version gets a 304 after two rows are read, before any dataset query. The ETag
 is built from a per-owner revision that every write replaces ([decision](./decisions/revision-token-and-etag.md)).

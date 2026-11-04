@@ -194,9 +194,9 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
 - **A write to rows the browser may not hold is read back, not patched.** The patch functions map only the rows the
   session holds, so `LedgerSession.patch` takes what the write reached
   ([the session](./LEDGER-MODE.md#the-session)).
-- **The whole-dataset app is the default, and nothing ledger mode adds runs without it.** Code only the mode needs sits in
-  chunks only the mode loads, which `scripts/check-bundle-budget.mjs` counts apart from the default path
-  ([the switch](./LEDGER-MODE.md#the-switch-and-the-fallback)).
+- **Ledger mode is the default, and the whole-dataset app stays whole behind `?ledger=off`.** Code only ledger mode needs
+  sits in chunks only it loads, which `scripts/check-bundle-budget.mjs` counts apart from the path a browser that turned it
+  off downloads ([the switch](./LEDGER-MODE.md#the-switch-and-the-fallback)).
 - **The installed app opens with no network, and a launch with one still reaches Cloudflare Access.** The service worker
   precaches the shell (`index.html`) with the assets it names, answers a navigation from the network, and answers it with
   the shell only when the network fails ([`pwaWorkbox.ts`](../scripts/pwaWorkbox.ts)). A shell that answered first would
