@@ -3,7 +3,8 @@ import { monthsBetweenBudget } from './dates'
 import { normalizeDesc } from './normalizeDescription'
 import type { GroupKey, OccurrenceGroup } from './recurringTypes'
 
-const MIN_OCCURRENCES = 3
+/** Rows a series needs. The server's read of the series folds with the same number. */
+export const MIN_OCCURRENCES = 3
 
 export { normalizeDesc } from './normalizeDescription'
 

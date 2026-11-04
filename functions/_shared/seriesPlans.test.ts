@@ -1,8 +1,10 @@
 /**
  * What the series read costs in rows, and the one thing it must never do: read another owner's rows.
- * The statements are the ones the repository actually ran. The series statement is allowed to read every
- * row of the owner once (a series is defined by the whole history), so it is held to an owner-scoped
- * index search, never a scan of the table, with and without table statistics, among several owners.
+ * The statements are the ones the repository actually ran. The series statement reads every row of the
+ * owner once (a series is defined by the whole history), so its plan is held to a single owner-scoped
+ * index search that hands the rows over in the order the fold wants: no scan of the table, no sorter, no
+ * temporary table and no subquery, which is what makes each row cost one read, with and without table
+ * statistics, among several owners.
  */
 import { describe, expect, it } from 'vitest'
 import { D1_MAX_BOUND_PARAMETERS } from '../../src/testing/sqliteD1'
@@ -24,7 +26,7 @@ function setup() {
 }
 
 describe.each([false, true])('the series statement, with table statistics: %s', (analyze) => {
-  it('searches the owner’s rows through an index and never scans the table', async () => {
+  it('walks the owner’s rows through one index, in the order it is read, and nothing else', async () => {
     const kit = setup()
     if (analyze) kit.sqlite.exec('ANALYZE')
     kit.statements.length = 0
@@ -33,12 +35,8 @@ describe.each([false, true])('the series statement, with table statistics: %s', 
     const ran = kit.statements.filter((s) => s.sql === SERIES_SQL)
     expect(ran).toHaveLength(1)
     const plan = planOf(kit.sqlite, ran[0]!)
-    const reads = plan.filter((line) => /transactions/.test(line) && !/CTE|SUBQUERY|CO-ROUTINE/.test(line))
-    expect(reads.length, plan.join('\n')).toBeGreaterThan(0)
-    for (const line of reads) {
-      expect(line, plan.join('\n')).toMatch(/SEARCH transactions USING (COVERING )?INDEX \w+ \(owner=\?/)
-      expect(line).not.toMatch(/SCAN transactions/)
-    }
+    expect(plan, plan.join('\n')).toHaveLength(1)
+    expect(plan[0]).toMatch(/^SEARCH transactions USING INDEX idx_txn_owner_desc_norm \(owner=\? AND description_norm>\?\)$/)
   })
 
   it('stays inside D1’s bound-parameter limit and binds the owner and nothing else it could be asked for', async () => {
@@ -46,8 +44,7 @@ describe.each([false, true])('the series statement, with table statistics: %s', 
     kit.statements.length = 0
     await createD1ExpenseRepository({ DB: kit.d1 }).readSeries(OWNER)
     const ran = kit.statements.find((s) => s.sql === SERIES_SQL)!
-    expect(ran.params).toHaveLength(3)
-    expect(ran.params[0]).toBe(OWNER)
+    expect(ran.params).toEqual([OWNER])
     expect(ran.params.length).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS)
     expect(SERIES_SQL).not.toContain(OWNER)
   })

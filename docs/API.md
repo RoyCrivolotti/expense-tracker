@@ -164,9 +164,9 @@ Every recurring series of the owner over the whole history, newest first. Code:
 - Errors: 503 with `Retry-After: 1` while rows still wait for their `description_norm` (the first requests after
   migration 0038). Each retry gets further.
 - Tag part: `series`. No backfill, since a plan's payments are not part of a series.
-- Cost: every counted transaction is read on each tag miss, and every write is a miss. D1 billed about ten rows read per
-  transaction when measured, all in one statement ([SCALING.md](./SCALING.md#on-a-deployed-d1)). An unchanged ledger is
-  a 304 at two rows, so fetch it when a screen needs it, not after every write.
+- Cost: every counted transaction is read on each tag miss, and every write is a miss. The read is one statement that
+  walks the owner's rows in index order, so a transaction costs about one row read, and the Worker groups them. An
+  unchanged ledger is a 304 at two rows, so fetch it when a screen needs it, not after every write.
 
 ## GET /descriptions/suggest
 
