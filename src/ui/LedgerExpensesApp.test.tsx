@@ -6,7 +6,7 @@ import { holdParts } from '../data/ledgerHold'
 import { readLedgerParts } from '../data/ledgerLoader'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { allGroupsGranted } from '../domain/accessGroups'
-import { FULL_HYDRATION_ROW_LIMIT, HYDRATED_DATA_MONTHS } from '../domain/ledger'
+import { HOLD_IN_FULL_ROWS, HYDRATED_DATA_MONTHS } from '../domain/ledger'
 import type { ExpenseDataset } from '../domain/types'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import { type TestSource, memorySource } from '../testing/ledgerSource'
@@ -70,19 +70,20 @@ describe('LedgerExpensesApp', () => {
     expect(source.load).not.toHaveBeenCalled()
   })
 
-  it('hands back to the whole dataset for a ledger too large to hold in full, before reading any rows', async () => {
+  it('stays on the ledger for one too large to hold in full, which is held as a window', async () => {
     const source = servingSource()
     const read = source.readReferencePart.bind(source)
-    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT + 1 })
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: HOLD_IN_FULL_ROWS + 1 })
     renderApp(source)
-    await screen.findByText('the whole dataset app')
-    expect(source.calls.filter((c) => c.startsWith('months:') || c.startsWith('cube:'))).toEqual([])
+    await screen.findByText('Recent activity')
+    expect(screen.queryByText('the whole dataset app')).toBeNull()
+    expect(source.load).not.toHaveBeenCalled()
   })
 
-  it('stays on the ledger for a ledger of exactly the limit, which is held in full', async () => {
+  it('stays on the ledger for a ledger of exactly the full size, which is held in full', async () => {
     const source = servingSource()
     const read = source.readReferencePart.bind(source)
-    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT })
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: HOLD_IN_FULL_ROWS })
     renderApp(source)
     await screen.findByText('Recent activity')
     expect(screen.queryByText('the whole dataset app')).toBeNull()
@@ -202,39 +203,18 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
     )
   }
 
-  it('hands back, and never shows part of the ledger as all of it, when it grows past the limit between two refreshes', async () => {
+  it('goes on as a window, and says nothing of handing back, when it grows past the full size between two refreshes', async () => {
     const source = servingSource(long)
     const { seen, handle, view } = watched()
     renderWatched(source, view)
     await screen.findByText('Recent activity')
     const all = long.transactions.length
     expect(seen.at(-1)).toBe(all)
-    // The next read finds more rows than the app lists in full.
     const read = source.readReferencePart.bind(source)
-    source.readReferencePart = async () => ({ ...(await read()), rowCount: FULL_HYDRATION_ROW_LIMIT + 1 })
+    source.readReferencePart = async () => ({ ...(await read()), rowCount: HOLD_IN_FULL_ROWS + 1 })
     act(() => handle.data!.reload())
-    await screen.findByText('the whole dataset app')
-    expect(seen.filter((rows) => rows !== undefined && rows < all)).toEqual([])
-  })
-
-  it('hands back the same way when the ledger had grown before the first read was held', async () => {
-    const source = servingSource(long)
-    const read = source.readReferencePart.bind(source)
-    let reads = 0
-    // The check at the start sees a ledger that fits, and a write follows it. The session opens from that reference, finds
-    // the parts it reads under a later revision, and reads the reference again, which now has more rows than a window holds.
-    source.readReferencePart = async () => {
-      const reference = await read()
-      if (++reads === 1) {
-        source.move('r1')
-        return reference
-      }
-      return { ...reference, rowCount: FULL_HYDRATION_ROW_LIMIT + 1 }
-    }
-    const { seen, view } = watched()
-    renderWatched(source, view)
-    await screen.findByText('the whole dataset app')
-    expect(seen.filter((rows) => rows !== undefined)).toEqual([])
+    await waitFor(() => expect(handle.data!.model!.sums).toBeDefined())
+    expect(screen.queryByText('the whole dataset app')).toBeNull()
   })
 
   it('tells the user, with a way to read again, when a read in the background fails', async () => {
@@ -323,15 +303,18 @@ describe('LedgerExpensesApp, offline', () => {
     expect(source.calls).toEqual([])
   })
 
-  it('hands back when the only snapshot holds a window, which would show part of the ledger as all of it', async () => {
+  it('opens on the only snapshot when it holds a window, offline', async () => {
     const held = holdParts(
       await readLedgerParts(memorySource(long), { policy: { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS } }),
     )
     expect(held.cells).not.toBeNull()
     await saveLedgerSnapshot('alex@example.com', held, held.months.at(-1)!)
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false })
-    renderApp(servingSource(), 'on', 'alex@example.com')
-    await screen.findByText('the whole dataset app')
+    const source = servingSource()
+    renderApp(source, 'on', 'alex@example.com')
+    await screen.findByText('Recent activity')
+    expect(screen.queryByText('the whole dataset app')).toBeNull()
+    expect(source.load).not.toHaveBeenCalled()
   })
 
   it('hands back to the whole dataset, whose own snapshot may serve, when offline with no ledger snapshot or another owner’s', async () => {

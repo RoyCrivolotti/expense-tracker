@@ -205,7 +205,7 @@ A **ledger** is the part of the data a client holds when it does not hold every 
    the browser, from the account and its statements.
 5. **Server answers** for questions that depend on unbounded history.
 
-A ledger of 5,000 rows or fewer hydrates every month and has no sums, which is today's behavior, so there is one code
+A ledger of 10,000 rows or fewer hydrates every month and has no sums, which is the whole-dataset behavior, so there is one code
 path with two sizing policies. Which engines can be given less history without changing their output, and which cannot,
 is in [ENGINE-HISTORY.md](./ENGINE-HISTORY.md).
 

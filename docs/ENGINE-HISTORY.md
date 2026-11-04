@@ -99,7 +99,7 @@ changes no engine. The parts of a ledger are in [SCALING.md](./SCALING.md). Thes
 - **Hydrated months** are chosen by budget month. `chooseHydratedMonths` takes the 13 newest months with data up to and
   including the viewed month (`HYDRATED_DATA_MONTHS`), and every row booked to them is real. A calendar window of M-13 to M
   is one month more than the readers need when there is no gap and too short across one. `hydratedMonthsFor` is the size
-  policy: a ledger of at most `FULL_HYDRATION_ROW_LIMIT` (5,000) rows hydrates every month and has no cells.
+  policy: a ledger of at most `HOLD_IN_FULL_ROWS` (10,000) rows hydrates every month and has no cells.
 - **Cells** (`buildCells`) never contain a pinned row, or an investment would be counted twice. A cell is kept when its sum
   is zero or every row in it is cancelled, because a month exists as soon as it has a row and the Goals pace counts a month
   from its first counted row. A cell is a `MonthCell`, not a `Transaction`, so it cannot be put in `dataset.transactions`
@@ -217,5 +217,5 @@ are read by date and not mapped onto budget months.
 | `computeSpendingBaseline` | 12 months with data | `BASELINE_MONTHS = 12`, counted in months with data |
 | `computeOverviewKpis`, `computeMovers`, `computeSpendingPace`, `computeSpendingGroups`, `computeSpendingGroupDetail`, `computeAllocation` | The same-days cut and the per-row reads reach 12 months back, and further across a gap | `HYDRATED_DATA_MONTHS = 13` (`src/domain/ledger/hydration.ts`): the 13 newest months with data up to and including M. 12 is one short for the year-ago baseline |
 | `portfolioReturn`, `readReturn`, `splitGap` | Exact dates and signs from the first check-in; plan events matched within 45 days | None: keep every investment row. If a bound is ever wanted, the first check-in, or the plan start less `EVENT_MATCH_DAYS = 45` |
-| `latestTransactions`, `recentlyAdded` | Global, relative to T | `LIMIT = 8` in `transactions.ts`. No route serves them: `DashboardRecentActivity` derives both from the rows the model holds, so a windowed ledger would miss a row added with a date outside its window. A ledger is not windowed while the 5,000-row hand-back stands |
+| `latestTransactions`, `recentlyAdded` | Global, relative to T | `LIMIT = 8` in `transactions.ts`. A model that holds every row lists them from its rows; a window reads them from the server (`model.recent`: the list route with a limit of 8, and `GET /transactions/recent`) |
 | `computeYearlyOverview`, `computeCashReconciliation`, `balancesAtCost` | Running totals from the opening balances | None: the summed months from the first month are the bound |

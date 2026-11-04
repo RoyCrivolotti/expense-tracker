@@ -185,7 +185,8 @@ export interface ExpensesAppProps {
 /**
  * Reads the whole dataset, as it always has, unless this browser asked to read the ledger in parts
  * (`src/config/ledgerMode.ts`). That path is a separate chunk: nothing of it is loaded otherwise, and it hands
- * back to `DatasetApp` for a ledger too large to hold in full.
+ * back to `DatasetApp` for a source without parts, for a ledger with a month of more rows than one request returns,
+ * and when the reference cannot be read and nothing is saved.
  */
 export function ExpensesApp(props: ExpensesAppProps) {
   const [mode] = useState(currentLedgerMode)

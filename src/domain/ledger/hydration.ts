@@ -8,11 +8,12 @@ import { sortedMonths } from '../engine/dates'
 export const HYDRATED_DATA_MONTHS = 13
 
 /**
- * A ledger of at most this many rows hydrates every month. Worker CPU is the first documented limit a larger
- * ledger would meet (docs/SCALING.md), so below this the extra code path buys nothing and the ledger behaves
- * exactly as the whole dataset does.
+ * A ledger of at most this many rows is held in full: every month is real rows, and the screens behave exactly as
+ * they do over the whole dataset. Above it the ledger is held as a window with sums for the rest. The browser's main
+ * thread is what this protects: the longest block grows with the rows held, and a phone starts to lag in the
+ * thousands (docs/SCALE-PROOF.md).
  */
-export const FULL_HYDRATION_ROW_LIMIT = 5_000
+export const HOLD_IN_FULL_ROWS = 10_000
 
 export interface HydrationPolicy {
   /** At most this many rows hydrate every month. */
@@ -22,7 +23,7 @@ export interface HydrationPolicy {
 }
 
 export const DEFAULT_HYDRATION_POLICY: HydrationPolicy = {
-  fullBelowRows: FULL_HYDRATION_ROW_LIMIT,
+  fullBelowRows: HOLD_IN_FULL_ROWS,
   dataMonths: HYDRATED_DATA_MONTHS,
 }
 

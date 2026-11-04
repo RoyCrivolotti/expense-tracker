@@ -1,7 +1,7 @@
 # Scale proof
 
-For an engineer deciding whether to lift the 5,000-row limit of ledger mode: what opening the app costs with the
-whole dataset (classic) and with the ledger read in parts, from 1,000 to 100,000 transactions. Everything here ran on
+For an engineer deciding how ledger mode should hold a large ledger (its 5,000-row limit was measured here and has since
+been lifted): what opening the app costs with the whole dataset (classic) and with the ledger read in parts, from 1,000 to 100,000 transactions. Everything here ran on
 one laptop and made no call to Cloudflare, so it costs nothing to repeat. How the two modes work is in
 [LEDGER-MODE.md](./LEDGER-MODE.md), and the platform limits and the deployed-D1 figures are in
 [SCALING.md](./SCALING.md).
@@ -39,10 +39,10 @@ the estimates as an order of magnitude. The finding is the growth with size and 
 - **Server.** The real route handlers through the real middleware, over a SQLite file. Rows visited are SQLite's own
   scan statistics (`sqlite3_stmt_scanstatus`), summed over every node of the plan, sorters included. The client side of
   the open is the app's own `chooseLedger`, `LedgerSession` and `TransactionPager`, replayed against those handlers.
-- **Browser.** A production build of the app, with the two guards that keep window mode out (`refuseWindow` in
-  `LedgerExpensesApp` and the row limit in `chooseLedger`) rewritten as the build reads them. Nothing in `src/` changes
-  and the default build is untouched. Classic is the same build with `?ledger=off`; ledger mode is `?ledger=on`, which
-  is the shipped behaviour up to 5,000 rows and window mode above it.
+- **Browser.** A production build of the app, with the two guards that kept window mode out at the time (`refuseWindow` in
+  `LedgerExpensesApp` and the row limit in `chooseLedger`, both since removed) rewritten as the build read them.
+  Classic is the same build with `?ledger=off`; ledger mode is `?ledger=on`, held in full up to the full size and window
+  mode above it.
 - **Chromium** (Playwright) with a fresh profile per run, against a local server that gzips as the edge does. "Laptop" is
   a 1280 px window with the CPU throttled 4 times and "phone" a 390 px touch window throttled 6 times, a rough stand-in
   for a mid-range phone. Medians of 3 runs (2 at 100,000). There is no network latency, so a request that waits for
@@ -158,9 +158,9 @@ estimate. "Open again" is requests, statements and rows when nothing changed.
 Window mode makes the payload 2 to 5 times smaller (more as the ledger grows) and every request short, and reads 4.7
 times the rows at every size (about 6 times by the estimate). Two thirds of the rows are the series, a sixth the sums
 and a sixth the reference and the window. Against the Free plan's 5 million rows a day, one cold open at 100,000 rows
-would be about 28 percent of the day by the estimate, against about 5 percent for classic. A shipped ledger over 5,000
-rows is worse than classic by the reference it reads before it hands back: 1.5 times the rows (27k, then the whole
-dataset, at 25,000).
+would be about 28 percent of the day by the estimate, against about 5 percent for classic. The app as it was
+shipped when this was measured handed a ledger over 5,000 rows back to classic, which cost the reference it read first:
+1.5 times the rows (27k, then the whole dataset, at 25,000).
 
 ### Browser
 
@@ -211,13 +211,19 @@ also warming the server (740 ms to the Dashboard).
   10 ms of JS at most), so it fits the Free plan's Worker limit that classic does not.
 - **Ledger mode against classic at 1,000 and 5,000 rows.** About 3 times the rows visited and 3 to 8 requests for 1,
   with nothing gained: the heap, the longest block and the screen are the same, and the Dashboard takes about twice as
-  long on localhost, more on a network with latency. Up to the limit it is overhead that buys no headroom.
+  long on localhost, more on a network with latency. Up to the full size it is overhead that buys no headroom.
+- **Ledger mode against classic at 10,000 rows, held in full** (9,978 rows, median of 3 runs, 2026-11-04, Chromium, this
+  laptop). Dashboard 667 ms against 389 on the laptop profile and 866 against 509 on the phone profile; Transactions 191
+  against 149 and 345 against 276; the longest block 169 against 170 ms and 260 against 258 ms, which is past the 200 ms
+  line on the phone profile either way; heap 6 MB against 5; 9 requests against 2. Holding the ledger in full through
+  the parts gains nothing at that size. Sizes between 4,938 and 9,978 rows were not measured.
 
-## What it means for lifting the limit
+## What it means for the limit
 
-Lifting it would move the cost from the browser to the database. The browser stops stalling, but the rows read, which
+The limit was lifted after this was written, and the full size is now 10,000 rows (`HOLD_IN_FULL_ROWS`). Past it, window
+mode moves the cost from the browser to the database. The browser stops stalling, but the rows read, which
 D1 bills and the Free plan caps, grow about 6 times on every cold open: by the estimate 350k rows at 25,000 (7 percent
-of a day's 5 million), 700k at 50,000 and 1.4M at 100,000. Two thirds of that is the series and a sixth the sums, and
+of a day's 5 million), 700k at 50,000 and 1.4M at 100,000 (taken before the series read was changed, see the note under the plans). Two thirds of that was the series and a sixth the sums, and
 the reference reads every row once to count the months in both modes. Reading less in those three is what would let
 window mode win on the server as well. A local run cannot confirm the series, the sums and the reference on a deployed
 database at 10,000 rows or more, or Worker CPU.

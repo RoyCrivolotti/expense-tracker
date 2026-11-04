@@ -5,28 +5,34 @@ pages and the writes, with the rules each one keeps. What each route answers is 
 is what it is in [SCALING.md](./SCALING.md) and [the decision record](./decisions/ledger-model.md). The rules that hold
 for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-**Status.** The app holds a ledger only in full: up to `FULL_HYDRATION_ROW_LIMIT` (5,000) rows, and a larger ledger
-hands back to the whole-dataset app. Behind the switch it is loaded in parts and its Transactions list is read in pages.
-The windowed behaviour described below (a window of months with per-month sums, the series, older descriptions, the
-server's usage counts, reading back writes to rows that are not held) is built and tested but cannot occur, because
-`LedgerExpensesApp` passes `refuseWindow: true`. Lifting the limit changes four places together (the constant,
-`chooseLedger()`, that literal and the offline snapshot's `cells === null` check), and each screen that lists every row then
-has to decide what a window may show.
+**Status.** Ledger mode is a switch kept in the browser, off by default, and a browser without it runs the old load. A
+ledger of up to `HOLD_IN_FULL_ROWS` (10,000) rows is held in full and the screens behave as they do over the whole
+dataset; a larger one is held as a window of months with per-month sums for the rest, and nothing hands the app back for
+its size. The full size was 5,000 rows until the limit was lifted. What a window cannot work out from its rows is read
+from the server (the last section).
+Measured on one laptop ([SCALE-PROOF.md](./SCALE-PROOF.md)): at 1,000 and 5,000 rows ledger mode reads about three
+times the rows of the whole-dataset load and opens about twice as slowly, with nothing gained. At 10,000 rows a window
+has a shorter longest main-thread block (55 ms against 158 on the laptop profile, 87 against 235 on the phone profile)
+and the same heap, and uses less memory from 25,000 rows, but its Dashboard opens slower than the whole-dataset load
+until between 25,000 and 50,000 rows. A ledger of 9,978 rows held in full measured the same longest block as the
+whole-dataset load (170 ms on the laptop profile, 260 ms on the phone profile, past the 200 ms line) and a Dashboard 280
+to 360 ms slower. Sizes between 4,938 and 9,978 rows were not measured.
 
-## The switch and the hand-back
+## The switch and the fallback
 
 - **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
   unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `off` renders the whole-dataset app and
   nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop
   (importing it back makes the bundler split shared code into files every browser loads at startup). The service
-  worker precaches the chunk for every browser, so it is downloaded and not run. The chunk hands back to the
-  whole-dataset app for a ledger over `FULL_HYDRATION_ROW_LIMIT`, for a source without parts, and for an offline
-  browser whose snapshot is missing, another owner's, or holds only a window. The limit holds for the life of the
-  session (`refuseWindow`): a read or a snapshot that would hold only a window is kept out and the app hands back,
-  which starts it over, so a screen that lists every row never lists part of the ledger and the switch only ever holds
-  a ledger in full. `shadow` is honoured in development and staging builds only; there `ledgerShadow.ts` compares the
-  held ledger with the whole dataset and reports, and shows nothing. A read in the background that fails raises a
-  toast that offers to read again.
+  worker precaches the chunk for every browser, so it is downloaded and not run. `shadow` is honoured in development
+  and staging builds only; there `ledgerShadow.ts` compares the held ledger with the whole dataset and reports, and
+  shows nothing. A read in the background that fails raises a toast that offers to read again.
+- **Three cases give the ledger to the whole-dataset app, and a ledger's size is not one of them.** The source has no
+  parts (an older server). One month holds more rows than a request returns (`MAX_ROWS_PER_REQUEST`, 5,000): `planRowRanges`
+  cannot read it as rows and the whole-dataset read, which has no such bound, can, so this is the one ledger whose shape
+  the app hands back. It is decided from the reference once, at the start; a month that outgrows the bound in a session
+  that is open is reported, and the next start hands the ledger back. Or the reference cannot be read, or the browser is
+  offline, and this owner has no snapshot (another owner's does not count).
 
 ## Reading in parts
 

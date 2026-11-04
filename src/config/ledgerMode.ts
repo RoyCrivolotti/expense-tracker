@@ -2,8 +2,8 @@
  * Whether this browser reads the ledger in parts instead of as one dataset: a switch kept in the browser, so
  * it can be turned on for one device and off again without a deploy. It is off unless asked for.
  *
- * - `on`: the ledger is read in parts and the screens show it, for a ledger small enough that every month is
- *   held (`FULL_HYDRATION_ROW_LIMIT`); a larger one is loaded as before.
+ * - `on`: the ledger is read in parts and the screens show it: a ledger of up to `HOLD_IN_FULL_ROWS` rows is held in
+ *   full, and a larger one as a window of months with the sums of the rest.
  * - `shadow`: the same, and the whole dataset is read as well and compared with it, reporting any difference
  *   in the console. Only a development build or a staging build honours it; anywhere else it counts as off.
  *
