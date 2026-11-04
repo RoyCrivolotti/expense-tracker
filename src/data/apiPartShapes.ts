@@ -13,7 +13,7 @@ import type {
   UsagePart,
 } from '../domain/data/ledgerParts'
 import type { DescriptionSuggestResult } from '../domain/data/descriptionSuggest'
-import type { TransactionAttachment } from '../domain/types'
+import type { Transaction, TransactionAttachment } from '../domain/types'
 
 const REFERENCE_TABLES = [
   'categories',
@@ -146,5 +146,22 @@ export function isTransactionSummary(body: unknown): body is TransactionSummaryP
     typeof body.count === 'number' &&
     typeof body.capped === 'boolean' &&
     typeof body.netSpendCents === 'number'
+  )
+}
+
+/** The columns an exported transaction is read for, which is all the CSV writes of it. */
+export function isExportedTransaction(row: unknown): row is Transaction {
+  return (
+    isObject(row) &&
+    typeof row.id === 'number' &&
+    typeof row.date === 'string' &&
+    typeof row.budgetMonth === 'string' &&
+    typeof row.description === 'string' &&
+    typeof row.categoryId === 'number' &&
+    typeof row.accountId === 'number' &&
+    typeof row.type === 'string' &&
+    typeof row.amountCents === 'number' &&
+    typeof row.status === 'string' &&
+    typeof row.cancelled === 'boolean'
   )
 }

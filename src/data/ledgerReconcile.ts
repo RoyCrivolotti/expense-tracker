@@ -51,7 +51,8 @@ function sameTables(before: ExpenseDataset, after: ExpenseDataset): boolean {
   return (Object.keys(a) as (keyof typeof a)[]).every((key) => JSON.stringify(a[key]) === JSON.stringify(b[key]))
 }
 
-const byApiOrder = (a: Transaction, b: Transaction): number =>
+/** The order the API lists rows in: newest date first, the higher id first on a date. */
+export const byApiOrder = (a: Transaction, b: Transaction): number =>
   a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1
 
 interface Delta {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ValidationError } from '../domain/application/validationError'
+import { EXPORT_CHUNK_ROWS } from '../domain/data/exportTables'
 import { MAX_CUBE_CELLS, MAX_ROWS_PER_REQUEST } from '../domain/data/ledgerParts'
 import { PartTooLargeError } from '../domain/data/ledgerPartsErrors'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
@@ -116,6 +117,22 @@ describe('inMemoryLedgerParts', () => {
   it('accepts a dataset that arrives later', async () => {
     const later = inMemoryLedgerParts(() => Promise.resolve({ dataset, revision: 'v9' }))
     expect((await later.readReferencePart()).revision).toBe('v9')
+  })
+
+  it('serves every row in id order in chunks of the route\u2019s size, under the revision it is at', async () => {
+    const size = EXPORT_CHUNK_ROWS.transactions
+    const many = makeDataset({ transactions: Array.from({ length: size + 7 }, (_, i) => row(size + 7 - i, '2026-01')) })
+    const served = inMemoryLedgerParts(() => ({ dataset: many, revision: 'v9' }))
+    const first = await served.readTransactionExport()
+    expect(first).toMatchObject({ revision: 'v9', next: String(size) })
+    expect(first.rows).toHaveLength(size)
+    expect(first.rows[0]?.id).toBe(1)
+    const second = await served.readTransactionExport({ after: first.next! })
+    expect(second.rows.map((t) => t.id)).toEqual(Array.from({ length: 7 }, (_, i) => size + 1 + i))
+    expect(second.next).toBeNull()
+    const stopped = new AbortController()
+    stopped.abort()
+    await expect(served.readTransactionExport({ signal: stopped.signal })).rejects.toThrow()
   })
 
   it('serves the series of every row, as the route does, under the revision it is at', async () => {

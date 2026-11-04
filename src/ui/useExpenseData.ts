@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import type { OccurrenceGroup } from '../domain/engine'
-import type { ExpenseDataset } from '../types'
+import type { ExpenseDataset, Transaction } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { isAccessDenied } from '../data/apiClient'
 import { forgetOfflineSnapshot, loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
@@ -67,6 +67,11 @@ export interface ExpenseModel {
   ensureReceipts?: (ids: readonly number[]) => void
   /** Set when the Transactions list is read in pages from the server rather than filtered from `dataset`. */
   pagedList?: PagedList
+  /**
+   * Set when `dataset.transactions` is not every transaction: how many there are, and a read of every one of them from
+   * the server, for the file that exports them all. Absent while `dataset` holds them all, and then it is the file.
+   */
+  exportAll?: { count: number; read: () => Promise<Transaction[]> }
 }
 
 interface LoadState {
