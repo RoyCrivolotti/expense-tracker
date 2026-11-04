@@ -5,10 +5,11 @@ pages and the writes, with the rules each one keeps. What each route answers is 
 is what it is in [SCALING.md](./SCALING.md) and [the decision record](./decisions/ledger-model.md). The rules that hold
 for the whole app are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-**Status.** Ledger mode is how the app reads a ledger unless a browser turns it off. A ledger of up to `HOLD_IN_FULL_ROWS`
-(10,000) rows is held in full and the screens behave as they do over the whole dataset; a larger one is held as a window
-of months with per-month sums for the rest, and nothing hands the app back for its size. The full size was 5,000 rows
-until the limit was lifted. What a window cannot work out from its rows is read from the server (the last section).
+**Status.** Ledger mode is a switch kept in the browser, off by default, and a browser without it runs the old load. A
+ledger of up to `HOLD_IN_FULL_ROWS` (10,000) rows is held in full and the screens behave as they do over the whole
+dataset; a larger one is held as a window of months with per-month sums for the rest, and nothing hands the app back for
+its size. The full size was 5,000 rows until the limit was lifted. What a window cannot work out from its rows is read
+from the server (the last section).
 Measured on one laptop ([SCALE-PROOF.md](./SCALE-PROOF.md)): at 1,000 and 5,000 rows ledger mode reads about three
 times the rows of the whole-dataset load and opens about twice as slowly, with nothing gained. At 10,000 rows a window
 has a shorter longest main-thread block (55 ms against 158 on the laptop profile, 87 against 235 on the phone profile)
@@ -19,15 +20,13 @@ to 360 ms slower. Sizes between 4,938 and 9,978 rows were not measured.
 
 ## The switch and the fallback
 
-- **Reading the ledger in parts is on unless a browser turns it off, and a browser that turned it off runs the old load
-  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `?ledger=off` in the address is kept
-  in local storage as `off`, and `?ledger=on` turns it back on; with nothing kept the mode is `on`, so `off` is stored
-  and not removed. `off` renders the whole-dataset app and nothing else runs. `on` and `shadow` load
-  `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop (importing it back makes the bundler split
-  shared code into files every browser loads at startup). The service worker precaches the chunk for every browser.
-  `shadow` is honoured in development and staging builds only and counts as `on` anywhere else; there `ledgerShadow.ts`
-  compares the held ledger with the whole dataset and reports, and shows nothing. A read in the background that fails
-  raises a toast that offers to read again.
+- **Reading the ledger in parts is a switch in the browser, off by default, and a browser without it runs the old load
+  unchanged.** `ExpensesApp` reads the mode once (`src/config/ledgerMode.ts`). `off` renders the whole-dataset app and
+  nothing else runs. `on` and `shadow` load `LedgerExpensesApp`, a lazy chunk that is handed the app's view as a prop
+  (importing it back makes the bundler split shared code into files every browser loads at startup). The service
+  worker precaches the chunk for every browser, so it is downloaded and not run. `shadow` is honoured in development
+  and staging builds only; there `ledgerShadow.ts` compares the held ledger with the whole dataset and reports, and
+  shows nothing. A read in the background that fails raises a toast that offers to read again.
 - **Three cases give the ledger to the whole-dataset app, and a ledger's size is not one of them.** The source has no
   parts (an older server). One month holds more rows than a request returns (`MAX_ROWS_PER_REQUEST`, 5,000): `planRowRanges`
   cannot read it as rows and the whole-dataset read, which has no such bound, can, so this is the one ledger whose shape
