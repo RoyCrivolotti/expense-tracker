@@ -44,7 +44,7 @@ import { RepoHttpError } from './repoHttpError'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from '../domain/ledger/partsOfDataset'
 import { assertLinksWithinCap, idsMatching } from './inMemoryBulkEdit'
 import { exportChunkOf } from './inMemoryExport'
-import { oneOf, pageOf, summaryOf } from '../domain/data/transactionQueryOf'
+import { oneOf, pageOf, recentOf, summaryOf } from '../domain/data/transactionQueryOf'
 import { isFilterTarget } from '../domain/data/bulkEdit'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
@@ -619,6 +619,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     getTransaction: (owner, id) =>
       Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
+
+    recentTransactions: (owner, limit) => Promise.resolve(recentOf(derivedTransactions(storeFor(owner)), limit)),
 
     readSeries: (owner) => Promise.resolve(seriesFromTransactions(derivedTransactions(storeFor(owner)))),
 

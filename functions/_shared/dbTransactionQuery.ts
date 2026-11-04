@@ -9,7 +9,7 @@ import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction, TxnStatus } from '../domain/types'
 import type { Env } from './env'
 import { toStoredTxn, type TxnRow } from './rows'
-import { countSql, netSpendSql, oneSql, pageSql, rowsByIdsSql, type Sql } from './transactionQuerySql'
+import { countSql, netSpendSql, oneSql, pageSql, recentSql, rowsByIdsSql, type Sql } from './transactionQuerySql'
 
 export interface QueryRow extends TxnRow {
   status: TxnStatus
@@ -37,6 +37,12 @@ export async function queryTransactions(
   const { results } = await run(pageSql(owner, filter, page.limit, after), env).all<QueryRow>()
   const rows = results ?? []
   return { items: rows.slice(0, page.limit).map(toTransaction), hasMore: rows.length > page.limit }
+}
+
+/** The owner's `limit` most recently added rows, newest first. */
+export async function recentTransactions(env: Env, owner: string, limit: number): Promise<Transaction[]> {
+  const { results } = await run(recentSql(owner, limit), env).all<QueryRow>()
+  return (results ?? []).map(toTransaction)
 }
 
 export async function getTransaction(env: Env, owner: string, id: number): Promise<Transaction | null> {

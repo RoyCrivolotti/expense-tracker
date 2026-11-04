@@ -6,6 +6,7 @@ import { ApiError } from '../data/apiClient'
 import { saveLedgerSnapshot } from '../data/ledgerSnapshot'
 import { noteWriteResponse } from '../data/writeReceipts'
 import { sortedMonths } from '../domain/engine/dates'
+import { newestChargesOfSeries, seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { type FakeIndexedDb, installFakeIndexedDb } from '../testing/fakeIndexedDb'
@@ -200,6 +201,18 @@ describe('useLedgerData, the recurring series', () => {
     const whole = renderHook(() => useLedgerData(full))
     await waitFor(() => expect(whole.result.current.status).toBe('ready'))
     expect(whole.result.current.model!.exportAll).toBeUndefined()
+    expect(whole.result.current.model!.recent).toBeUndefined()
+  })
+
+  it('gives a windowed model the server’s recent activity: the newest rows by date, and the rows saved last', async () => {
+    const windowed = memorySource(big)
+    const { result } = renderHook(() => useLedgerData(windowed, { policy: WINDOWED }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    const { recent } = result.current.model!
+    const byDate = [...big.transactions].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
+    expect((await recent!.latest()).map((t) => t.id)).toEqual(byDate.slice(0, 8).map((t) => t.id))
+    expect((await recent!.added()).map((t) => t.id)).toEqual([...big.transactions].sort((a, b) => b.id - a.id).slice(0, 8).map((t) => t.id))
+    expect(windowed.calls.slice(-2)).toEqual(['page', 'recent'])
   })
 
   it('gives a windowed model the series of the whole history once a screen has asked for them', async () => {
@@ -207,12 +220,14 @@ describe('useLedgerData, the recurring series', () => {
     const { result } = renderHook(() => useLedgerData(source, { policy: WINDOWED }))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.model!.history).toBeUndefined()
+    expect(result.current.model!.newestCharges).toBeUndefined()
     expect(source.calls).not.toContain('series')
     act(() => void result.current.model!.watchHistory!())
     await waitFor(() => expect(result.current.model!.history).toBeDefined())
     const whole = fixedHistoryOf(big.transactions)
     expect(labels(result.current.model!.history!)).toEqual(labels(whole))
     expect(whole.groups.length).toBeGreaterThan(0)
+    expect(result.current.model!.newestCharges).toEqual(newestChargesOfSeries(seriesFromTransactions(big.transactions)))
   })
 
   it('says the figures use the loaded months only until the series arrive, and nothing once they have', async () => {
@@ -325,6 +340,9 @@ describe('useLedgerData, snapshots', () => {
     expect(result.current.fromCache).toBe(true)
     expect(result.current.model!.historyNote).toMatch(/You're offline/)
     expect(offline.calls).toEqual([])
+    const heldMonths = new Set((await readLedgerParts(source, { policy: WINDOWED })).rows.flatMap((read) => sortedMonths(read.transactions.map((t) => t.budgetMonth))))
+    expect(result.current.model!.savedMonths).toEqual(heldMonths)
+    expect(heldMonths.size).toBeLessThan(months.length)
   })
 
   it('keeps the owner’s snapshot once a load works, and none without an owner', async () => {

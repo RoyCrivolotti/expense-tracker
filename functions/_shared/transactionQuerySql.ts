@@ -162,6 +162,15 @@ export function pageSql(owner: string, f: TxnFilter, limit: number, after?: Tran
   }
 }
 
+/**
+ * The `limit` rows with the highest ids, highest first: the ones added last, since ids only grow and a row's
+ * `created_at` is set by the database when it is inserted. The owner index holds the ids in order, so this reads
+ * `limit` rows and sorts nothing.
+ */
+export function recentSql(owner: string, limit: number): Sql {
+  return { sql: `${ROW_SELECT} WHERE t.owner = ? ORDER BY t.id DESC LIMIT ?`, params: [owner, limit] }
+}
+
 export function oneSql(owner: string, id: number): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id = ?`, params: [owner, id] }
 }

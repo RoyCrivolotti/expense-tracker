@@ -327,3 +327,11 @@ describe('inMemoryExpenseRepository labels — tenancy boundary', () => {
     expect(() => repo.setTransactionLabels(OWNER, 10, [theirLabel.id])).toThrow('Invalid labelId')
   })
 })
+
+describe('inMemoryExpenseRepository recent transactions', () => {
+  it('lists the highest ids first, as many as asked for, and only the owner’s', async () => {
+    const repo = inMemoryExpenseRepository({ transactions: [makeTransaction({ id: 4 }), makeTransaction({ id: 9 }), makeTransaction({ id: 2 })] }, OWNER)
+    expect((await repo.recentTransactions(OWNER, 2)).map((t) => t.id)).toEqual([9, 4])
+    expect(await repo.recentTransactions('someone@example.com', 2)).toEqual([])
+  })
+})

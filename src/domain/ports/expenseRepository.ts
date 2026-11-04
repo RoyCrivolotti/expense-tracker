@@ -67,6 +67,8 @@ export interface ExpenseRepository {
   summarizeTransactions(owner: string, filter: TxnFilter): Promise<TransactionSummary>
   /** One row, or null if there is none with that id for this owner (a foreign id looks the same). */
   getTransaction(owner: string, id: number): Promise<Transaction | null>
+  /** The `limit` rows with the highest ids, highest first: those added last. Rows as the dataset carries them. */
+  recentTransactions(owner: string, limit: number): Promise<Transaction[]>
   /**
    * The parts of the ledger that are small however many transactions there are, and what the ledger
    * holds: reference tables, pinned rows (see `isPinned`), budget months and row counts. The

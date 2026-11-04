@@ -131,6 +131,9 @@ Keyset pages of the owner's transactions. Code: [`list.ts`](../functions/api/exp
   row whose account is missing counts as posted even when cancelled.
 - Not conditional, and never cached: `Cache-Control: private, no-store`. Cost: the rows returned (visited as under
   Conventions) plus any the filter rules out on the way; it stops at the limit.
+- `GET /transactions/recent?limit=` ([`recent.ts`](../functions/api/expenses/transactions/recent.ts)) answers `{ items }`:
+  the rows saved last, highest id first, whatever their date, `limit` of them (1 to 50, default 8). Ids only grow and the
+  database sets `created_at` on insert, so no creation time is read. Not cached. Cost: `limit` rows off the owner index.
 
 ## GET /transactions/summary
 

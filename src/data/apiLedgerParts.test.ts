@@ -75,6 +75,28 @@ describe('apiLedgerParts, the export of every transaction', () => {
   })
 })
 
+describe('apiLedgerParts, the rows added last', () => {
+  const stored = makeTransaction({ id: 9, description: 'Saved last' })
+
+  it('asks for eight by default and for the limit it is given, never from a cache', async () => {
+    const fetchMock = serve(json({ items: [stored] }), json({ items: [] }))
+    await expect(apiLedgerParts.readRecentTransactions()).resolves.toEqual({ items: [stored] })
+    await apiLedgerParts.readRecentTransactions({ limit: 3 })
+    expect(fetchMock.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      '/api/expenses/transactions/recent?limit=8',
+      '/api/expenses/transactions/recent?limit=3',
+    ])
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store' })
+  })
+
+  it('takes a server without the route, or a body that is not rows, as a server that does not serve it', async () => {
+    serve(new Response('', { status: 404 }))
+    await expect(apiLedgerParts.readRecentTransactions()).rejects.toBeInstanceOf(PartsUnavailableError)
+    serve(json({ items: [{ id: 1 }] }))
+    await expect(apiLedgerParts.readRecentTransactions()).rejects.toBeInstanceOf(PartsUnavailableError)
+  })
+})
+
 describe('apiLedgerParts', () => {
   it('reads the reference from /reference', async () => {
     const fetchMock = serve(json(reference))

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { LedgerPartsSource } from '../data/dataSource'
 import { exportAllTransactions } from '../data/exportAllTransactions'
+import { recentActivityOf } from '../data/recentActivity'
+import { newestChargesOfSeries } from '../domain/engine/recurringSeries'
 import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
 import type { LedgerSession, SessionOptions, SessionState } from '../data/ledgerSession'
 import { isAccessDenied } from '../data/apiClient'
@@ -140,7 +142,7 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
     }
   }, [session, owner, attempt])
 
-  const { held, series } = state
+  const { held, series, offline } = state
   // A ledger held in full has every row to work the series out from, as the screens do without a history.
   const windowed = held !== null && held.cells !== null
   const note = historyNoteOf(windowed && !series, state)
@@ -167,10 +169,12 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       watchHistory: session.watchSeries,
       useUsage: ledgerUsageHook(usage, held.revision),
       pagedList,
-      ...(windowed ? { exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) } } : {}),
+      ...(windowed ? { exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) }, recent: recentActivityOf(source) } : {}),
+      ...(windowed && series ? { newestCharges: newestChargesOfSeries(series) } : {}),
+      ...(windowed && offline ? { savedMonths: new Set(held.rows.keys()) } : {}),
       ...(note ? { historyNote: note } : {}),
     }
-  }, [held, series, windowed, note, session, usage, pagedList, source])
+  }, [held, series, windowed, offline, note, session, usage, pagedList, source])
 
   const reload = useCallback(() => {
     if (phase === 'error') {

@@ -104,7 +104,9 @@ export function filterTransactions(transactions: Transaction[], filter: TxnFilte
     .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
 }
 
-const LIMIT = 8
+/** How many rows the Dashboard's recent activity lists. */
+export const RECENT_ACTIVITY_LIMIT = 8
+const LIMIT = RECENT_ACTIVITY_LIMIT
 
 function byDateDesc(a: Transaction, b: Transaction): number {
   return b.date.localeCompare(a.date) || b.id - a.id

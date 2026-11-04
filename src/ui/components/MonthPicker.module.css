@@ -56,3 +56,19 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Offline, when only some months' rows are saved here: a filled dot for a saved month, a hollow one for the rest. */
+.saved,
+.unsaved {
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-accent);
+}
+.saved {
+  background: var(--color-accent);
+}
+.unsaved {
+  opacity: 0.6;
+}

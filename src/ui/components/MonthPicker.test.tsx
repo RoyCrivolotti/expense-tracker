@@ -17,6 +17,16 @@ describe('MonthPicker', () => {
     expect(onChange.mock.calls).toEqual([['2026-05'], ['2026-07'], ['2026-07']])
   })
 
+  it('marks the month shown as saved on this device or not when it is told which are, and says nothing otherwise', () => {
+    const saved = new Set(['2026-05'])
+    const { rerender } = render(<MonthPicker months={MONTHS} value="2026-05" onChange={vi.fn()} saved={saved} />)
+    expect(screen.getByRole('img', { name: 'Saved on this device' })).toBeInTheDocument()
+    rerender(<MonthPicker months={MONTHS} value="2026-06" onChange={vi.fn()} saved={saved} />)
+    expect(screen.getByRole('img', { name: 'Not saved on this device' })).toBeInTheDocument()
+    rerender(<MonthPicker months={MONTHS} value="2026-06" onChange={vi.fn()} />)
+    expect(screen.queryByRole('img')).toBeNull()
+  })
+
   it('stops at either end of the range', () => {
     render(<MonthPicker months={MONTHS} value="2026-05" onChange={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Previous month' })).toBeDisabled()

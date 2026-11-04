@@ -54,7 +54,7 @@ const BASE = '/api/expenses'
 const parts = () => import('./apiLedgerParts').then((m) => m.apiLedgerParts)
 const PART_READS = [
   'readReferencePart', 'readMonthsPart', 'readCubePart', 'readReceiptsPart', 'readTransactionPage',
-  'readTransactionSummary', 'readSeriesPart', 'readUsagePart', 'readTransactionExport', 'readDescriptionSuggest',
+  'readTransactionSummary', 'readSeriesPart', 'readUsagePart', 'readTransactionExport', 'readRecentTransactions', 'readDescriptionSuggest',
 ] as const
 const lazyParts = Object.fromEntries(
   PART_READS.map((name) => [name, (...args: unknown[]) => parts().then((p) => (p[name] as (...a: unknown[]) => unknown)(...args))]),

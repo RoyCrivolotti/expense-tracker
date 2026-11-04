@@ -450,8 +450,7 @@ function ExpensesAppReady({
             pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
             onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
             online={online}
-            refreshing={refreshing}
-            onRefresh={reload}
+            refreshing={refreshing} onRefresh={reload} savedMonths={model.savedMonths}
           />
         }
       >

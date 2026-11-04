@@ -134,6 +134,7 @@ const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
   'GET /transactions/months': () => ({ path: '/transactions/months?from=2026-01&to=2026-12' }),
   'GET /series': () => ({ path: '/series' }),
   'GET /transactions/list': () => ({ path: '/transactions/list' }),
+  'GET /transactions/recent': () => ({ path: '/transactions/recent' }),
   'GET /transactions/summary': () => ({ path: '/transactions/summary' }),
   'GET /transactions/:id': (ids) => ({
     path: `/transactions/${ids.spareTransaction}`,

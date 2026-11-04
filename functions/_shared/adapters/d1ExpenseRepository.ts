@@ -6,7 +6,7 @@ import { suggestDescriptions } from '../dbDescriptionSuggest'
 import { addLabelsToTransactions, bulkUpdateTransactionsByFilter } from '../dbBulkEdit'
 import { readExportChunk } from '../dbExport'
 import { readUsage } from '../dbUsage'
-import { getTransaction, queryTransactions, summarizeTransactions } from '../dbTransactionQuery'
+import { getTransaction, queryTransactions, recentTransactions, summarizeTransactions } from '../dbTransactionQuery'
 import { readLedgerReference, readMonthCells, readMonthRows } from '../dbLedgerParts'
 import {
   bulkInsertTransactions,
@@ -65,6 +65,7 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     queryTransactions: (owner, filter, page) => queryTransactions(env, owner, filter, page),
     summarizeTransactions: (owner, filter) => summarizeTransactions(env, owner, filter),
     getTransaction: (owner, id) => getTransaction(env, owner, id),
+    recentTransactions: (owner, limit) => recentTransactions(env, owner, limit),
     readLedgerReference: (owner) => readLedgerReference(env, owner),
     readMonthRows: (owner, range, maxRows) => readMonthRows(env, owner, range, maxRows),
     readMonthCells: (owner, range, maxCells) => readMonthCells(env, owner, range, maxCells),
@@ -76,8 +77,7 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
     deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
-    bulkUpdateTransactions: (owner, ids, patch) =>
-      bulkUpdateTransactions(env, owner, ids, patch),
+    bulkUpdateTransactions: (owner, ids, patch) => bulkUpdateTransactions(env, owner, ids, patch),
     bulkUpdateTransactionsByFilter: (owner, target, patch) =>
       bulkUpdateTransactionsByFilter(env, owner, target, patch),
     addLabelsToTransactions: (owner, target, labelIds) =>

@@ -6,6 +6,7 @@ import type { ExpenseDataSource } from '../data/dataSource'
 import { isAccessDenied } from '../data/apiClient'
 import { forgetOfflineSnapshot, loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
+import type { RecentActivity } from '../data/recentActivity'
 import type { WriteReach } from '../data/ledgerSession'
 import type { Lookup } from './format'
 import type { UsageView } from './definitions/recordUsage'
@@ -72,6 +73,21 @@ export interface ExpenseModel {
    * the server, for the file that exports them all. Absent while `dataset` holds them all, and then it is the file.
    */
   exportAll?: { count: number; read: () => Promise<Transaction[]> }
+  /**
+   * Set when `dataset.transactions` is not every transaction: reads of the Dashboard's recent activity from the server,
+   * since the newest rows by date or by when they were saved may be in a month the model does not hold.
+   */
+  recent?: RecentActivity
+  /**
+   * Set when the model holds a window and has the server's series: the date of each series' newest charge by series key,
+   * which the rows the window does not hold may be the newest of (`stillStopped` takes it as `known`).
+   */
+  newestCharges?: ReadonlyMap<string, string>
+  /**
+   * Set when the model holds a window and the browser is offline: the budget months whose rows are saved here. The rest
+   * have totals and no rows, so a screen that lists rows says so for them.
+   */
+  savedMonths?: ReadonlySet<string>
 }
 
 interface LoadState {
