@@ -46,6 +46,13 @@ describe('useExpenseData', () => {
     expect(result.current.model?.dataset).toEqual(emptyDataset)
   })
 
+  it('leaves out the paged list, which is how Settings tells the whole-dataset app from ledger mode', async () => {
+    const source: ExpenseDataSource = { canWrite: false, load: vi.fn().mockResolvedValue(emptyDataset) }
+    const { result } = renderHook(() => useExpenseData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.model?.pagedList).toBeUndefined()
+  })
+
   it('applyPatch rebuilds the model without reloading', async () => {
     const load = vi.fn().mockResolvedValue(emptyDataset)
     const source: ExpenseDataSource = { canWrite: false, load }

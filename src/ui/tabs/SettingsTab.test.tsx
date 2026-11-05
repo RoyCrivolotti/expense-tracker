@@ -48,6 +48,15 @@ describe('SettingsTab sections', () => {
     expect(screen.getByLabelText('Default account')).toBeInTheDocument()
   })
 
+  it('tells on the Account tab which build runs and how it reads the data', () => {
+    renderSettings()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Account' }))
+
+    expect(screen.getByText('About this app')).toBeInTheDocument()
+    expect(screen.getByText('Reads your data').nextElementSibling).toHaveTextContent('As one dataset (classic)')
+  })
+
   it('swaps the panel for the section that is tapped', () => {
     renderSettings()
 
