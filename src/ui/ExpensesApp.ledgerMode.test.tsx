@@ -43,7 +43,16 @@ const app = (source: ExpenseDataSource) => (
 )
 
 describe('ExpensesApp, which way it reads', () => {
-  it('reads the whole dataset, and no part, unless this browser asked otherwise', async () => {
+  it('reads the ledger in parts, and not the dataset, unless this browser turned it off', async () => {
+    const source = servingSource()
+    render(app(source))
+    await screen.findByText('Recent activity')
+    expect(source.load).not.toHaveBeenCalled()
+    expect(source.calls[0]).toBe('reference')
+  })
+
+  it('reads the whole dataset, and no part, when this browser turned it off', async () => {
+    window.localStorage.setItem(LEDGER_MODE_KEY, 'off')
     const source = servingSource()
     render(app(source))
     await screen.findByText('Recent activity')

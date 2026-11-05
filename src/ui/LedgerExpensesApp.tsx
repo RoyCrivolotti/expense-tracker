@@ -38,8 +38,9 @@ function LedgerApp({
 }
 
 /**
- * The app over a ledger read in parts (`src/config/ledgerMode.ts` turns this on). It lives in its own chunk,
- * so a browser that has not asked for it never loads it. It is handed the app's view rather than importing it:
+ * The app over a ledger read in parts, which is what a browser runs unless `src/config/ledgerMode.ts` was told to turn
+ * it off. It lives in its own chunk, so a browser that turned it off never runs it. It is handed the app's view
+ * rather than importing it:
  * a lazy chunk that imports its entry makes the bundler split shared code into more files loaded at startup.
  */
 export default function LedgerExpensesApp({

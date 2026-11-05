@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LEDGER_MODE_KEY } from '../config/ledgerMode'
 import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import { allGroupsGranted } from '../domain/accessGroups'
@@ -28,6 +28,9 @@ beforeAll(() => {
     })),
   })
 })
+
+// The whole-dataset app is what a browser that turned ledger mode off runs, and the ledger test below asks for the other.
+beforeEach(() => window.localStorage.setItem(LEDGER_MODE_KEY, 'off'))
 
 afterEach(() => {
   window.localStorage.removeItem(LEDGER_MODE_KEY)
