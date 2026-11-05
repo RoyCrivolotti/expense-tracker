@@ -18,8 +18,7 @@ import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { StoppedSuggestionsSetting } from '../settings/StoppedSuggestionsSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
-import { AccountSetting } from '../settings/AccountSetting'
-import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
+import { AccountView } from '../settings/AccountView'
 import styles from './tabs.module.css'
 
 type SettingsView = 'preferences' | 'setup' | 'account' | 'data'
@@ -203,21 +202,6 @@ function SetupView({
           </Card>
         </>
       )}
-    </>
-  )
-}
-
-function AccountView({
-  ownerAccess,
-  accountEmail,
-}: {
-  ownerAccess: { pendingCount: number } | undefined
-  accountEmail: string | undefined
-}) {
-  return (
-    <>
-      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
-      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
     </>
   )
 }

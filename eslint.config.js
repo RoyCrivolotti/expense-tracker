@@ -44,7 +44,7 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/ExpenseReportView.tsx': 288,
   'src/ui/tabs/InstallmentsCard.tsx': 220,
   'src/ui/tabs/RecordReimbursementSheet.tsx': 248,
-  'src/ui/tabs/SettingsTab.tsx': 274,
+  'src/ui/tabs/SettingsTab.tsx': 259,
   'src/ui/tabs/TransactionsTab.tsx': 281,
   'src/ui/tabs/TxnFilterRows.tsx': 423,
   'src/ui/tabs/UpcomingCard.tsx': 224,
