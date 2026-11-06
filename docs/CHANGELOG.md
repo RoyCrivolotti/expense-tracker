@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (New transactions skip a month you have settled)
+
+- **A new transaction no longer lands in a month you have finished.** If every card that spent in the current month has its statement marked paid and you have already logged something in the next month, the Budget month field now starts on the next month, even before your rollover day. Before, it followed the date alone, so an entry made after paying the cards early went into the paid month and showed as already settled. You can still pick any month by hand.
+
 ## November 2026 (The app reads your data in parts)
 
 - **The app no longer loads everything at once.** Nothing looks different at the size of your ledger. A ledger over 10,000 transactions is held as the months you are looking at plus the totals of the rest, and the screens that would show only part of it read the rest from the server or say what is not on the phone: Recent activity, the file of every transaction, the saved months when offline and the stopped suggestions. `?ledger=off` at the end of the address on a computer goes back to loading everything.
