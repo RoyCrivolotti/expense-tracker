@@ -78,7 +78,7 @@ jsdom lays nothing out, so the unit tests for the Goals phone navigation and the
 | `npm run verify:ledger-mode` | The screens read from the ledger in parts show what the whole dataset shows. In Chromium and WebKit, at 375x812 and 1280x800, it compares the text of the dashboard, Analytics (Overview, Spending and Cash, for the newest month and one four months older), Goals (its opening view and Progress), Transactions (this month, over every date, and searched) and the card statements in Settings between `?ledger=off` and `?ledger=on`, and requires `?ledger=shadow` to report no differences. Serves on `CAPTURE_PORT`. |
 | `npm run verify:offline-start` | Run `npm run build` first. The built app, served the way Cloudflare Pages serves it, opens with no network after one visit: the launch and a deep link, in Chromium and WebKit, and an API or Access URL opened in a tab is an error and not the shell. After a visit with a connection, a launch with none shows the copy of the data the app kept, read-only, for the dataset app and for the ledger read in parts, and a launch with the connection back shows live data again. The update from the service worker that was deployed before the shell was precached installs and replaces it, an update whose shell cannot be fetched leaves the installed worker in place, and behind a stand-in for Access a launch with no session reaches the sign-in page. `ENGINES=chromium` for one engine. |
 
-`verify:goals-desktop` is run the same way (`CAPTURE_PORT=5490 npm run verify:goals-desktop`, a few minutes, `ENGINES=chromium,webkit` for both engines) after changing `src/ui/tabs/goals/desktop/`, the scroll padding the levers bar sets, or the Goals page width in the app shell. CI runs it too (`.github/workflows/verify-goals-browser.yml`: Chromium on Linux and WebKit on macOS, since the Linux build of WebKit does not scroll or focus like Safari's; about ten minutes each, no retry) on a PR that touches `src/ui`, `src/domain` or `src/data`, and on main after a merge, since two PRs that pass it alone can break it together. It is a separate check from Verify and is not required by branch protection yet.
+`verify:goals-desktop` is run the same way (`CAPTURE_PORT=5490 npm run verify:goals-desktop`, a few minutes, `ENGINES=chromium,webkit` for both engines) after changing `src/ui/tabs/goals/desktop/`, the scroll padding the levers bar sets, or the Goals page width in the app shell. CI runs it too (`.github/workflows/verify-goals-browser.yml`: Chromium on Linux and WebKit on macOS, since the Linux build of WebKit does not scroll or focus like Safari's; about ten minutes each, no retry) on a PR that touches `src/ui`, `src/domain` or `src/data`, and on main after a merge, since two PRs that pass it alone can break it together. It is a separate check from Verify and GitHub does not require it before a merge (`main` has no branch protection).
 
 `verify:offline-start` runs in CI as its own check (`.github/workflows/verify-offline-start.yml`, Chromium on Linux and WebKit on macOS) on a PR that touches the worker's configuration or the build. `npm run verify` also runs `scripts/check-service-worker.mjs` on the built worker, in a VM and with no browser: it fails a worker that does not precache the shell, that raises an error while it loads, or that answers a navigation before the network does.
 
@@ -119,9 +119,9 @@ green.
 
 ## Workflow: all changes go through a PR
 
-`main` is branch-protected — direct pushes are blocked. Every change (code, docs, config) must go
-through a pull request with the `verify` check passing. See `AGENTS.md` in the repo root for the
-full PR workflow.
+`main` is not protected on GitHub, so a direct push is not blocked: the rule is a convention. Every
+change (code, docs, config) must go through a pull request with the `verify` check passing. See
+`AGENTS.md` in the repo root for the full PR workflow.
 
 ## Local parity tests
 
