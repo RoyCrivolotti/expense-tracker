@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { ExpenseSettings } from '../../types'
 import { formatCents, resolveMoneyFormat } from '../../engine'
+import { DayOfMonthInput } from '../components/DayOfMonthInput'
 import { Card, SectionTitle } from '../components/primitives'
 import { CURRENCIES, CURRENCY_DISPLAY_ONLY_HINT, NUMBER_STYLES } from './moneyOptions'
 import styles from '../tabs/tabs.module.css'
@@ -57,20 +59,7 @@ export function PreferencesSetting({ settings, onChange }: Props) {
         </div>
 
         <div className={`${styles.settingGroup} ${styles.settingGroupDivider}`}>
-          <label className={styles.defaultAccountField}>
-            <span className={styles.defaultAccountLabel}>Budget month starts on day</span>
-            <input
-              className={styles.defaultAccountSelect}
-              type="number"
-              min={1}
-              max={28}
-              value={settings.budgetRolloverDay}
-              onChange={(e) => {
-                const day = Number(e.target.value)
-                if (Number.isInteger(day) && day >= 1 && day <= 28) void onChange({ budgetRolloverDay: day })
-              }}
-            />
-          </label>
+          <RolloverDayField settings={settings} onChange={onChange} />
           <p className={styles.settingHint}>
             Day of the month new spending starts counting toward the next budget month. Set to 1
             for plain calendar months. Only affects transactions added from now on.
@@ -78,5 +67,29 @@ export function PreferencesSetting({ settings, onChange }: Props) {
         </div>
       </Card>
     </>
+  )
+}
+
+function RolloverDayField({ settings, onChange }: Props) {
+  // The day just picked, shown until the save comes back. Bound straight to
+  // `settings` the field kept the old day on screen for the whole round trip,
+  // which read as the tap not having registered.
+  const [pendingDay, setPendingDay] = useState<number | null>(null)
+  const rolloverDay = pendingDay ?? settings.budgetRolloverDay
+  const chooseRolloverDay = (day: number) => {
+    if (day === rolloverDay) return
+    setPendingDay(day)
+    // Cleared whether the save worked or not: on failure the field falls back to the saved day.
+    // A later pick keeps its own pending value when an earlier save finishes after it.
+    void Promise.resolve(onChange({ budgetRolloverDay: day })).finally(() =>
+      setPendingDay((current) => (current === day ? null : current)),
+    )
+  }
+
+  return (
+    <div className={styles.defaultAccountField}>
+      <span className={styles.defaultAccountLabel}>Budget month starts on day</span>
+      <DayOfMonthInput value={rolloverDay} ariaLabel="Budget month starts on day" onChange={chooseRolloverDay} />
+    </div>
   )
 }
