@@ -1,7 +1,7 @@
 import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
-import { defaultBudgetMonth } from '../../engine/dates'
+import { recommendedBudgetMonth } from '../../engine/status'
 import { formatMoneyInput, type MoneyFormat } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
@@ -38,6 +38,12 @@ export function todayIso(): string {
   return `${y}-${m}-${day}`
 }
 
+/** Budget month to offer a new transaction dated `date`: the date rule, unless that month is settled. */
+export function suggestBudgetMonth(model: ExpenseModel, date: string): string {
+  const { dataset } = model
+  return recommendedBudgetMonth(date, todayIso(), dataset.settings.budgetRolloverDay, dataset)
+}
+
 function defaultFields(model: ExpenseModel): FormFields {
   const { categories, accounts } = model.dataset
   const today = todayIso()
@@ -51,7 +57,7 @@ function defaultFields(model: ExpenseModel): FormFields {
     categoryId: categories.find((c) => c.active)?.id ?? categories[0]?.id ?? 0,
     accountId: resolveDefaultAccountId(accounts, model.dataset.settings),
     date: today,
-    budgetMonth: defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay),
+    budgetMonth: suggestBudgetMonth(model, today),
     notes: '',
     flagId: null,
     labelIds: [],

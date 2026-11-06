@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { defaultBudgetMonth } from '../../engine/dates'
 import { EU_MONEY_FORMAT } from '../../engine/money'
 import { buildBatchTransactions, type DateBatchDraft } from './batchTransactionIntent'
+
+/** The plain date rule for a given rollover day, which is what a model with nothing settled offers. */
+const monthsFor = (rolloverDay: number) => (date: string) => defaultBudgetMonth(date, rolloverDay)
 
 function row(overrides: Partial<DateBatchDraft['rows'][number]> = {}) {
   return {
@@ -23,7 +27,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ id: 'r1' }), row({ id: 'r2' })] })],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result).toEqual({ ok: false, errors: {} })
   })
@@ -39,7 +43,7 @@ describe('buildBatchTransactions', () => {
         }),
       ],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result).toEqual({
       ok: true,
@@ -65,7 +69,7 @@ describe('buildBatchTransactions', () => {
         batch({ id: 'b2', rows: [row({ id: 'r2', description: 'Hotel', amount: '412' })] }),
       ],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
       7,
     )
 
@@ -77,7 +81,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ description: 'Coffee', amount: '3' })] })],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
       null,
     )
 
@@ -97,7 +101,7 @@ describe('buildBatchTransactions', () => {
         ],
       },
     ]
-    const result = buildBatchTransactions(batches, EU_MONEY_FORMAT, 1, null, 9)
+    const result = buildBatchTransactions(batches, EU_MONEY_FORMAT, monthsFor(1), null, 9)
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.transactions.map((t) => t.categoryId)).toEqual([9, 3])
@@ -107,7 +111,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ description: 'Coffee', amount: '3' })] })],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
 
     expect(result.ok && 'flagId' in result.transactions[0]!).toBe(false)
@@ -117,7 +121,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ description: '  Mercadona  ', amount: '5' })] })],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result.ok).toBe(true)
     expect(result.ok && result.transactions[0]!.description).toBe('Mercadona')
@@ -127,7 +131,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ id: 'bad-row', description: 'Something', amount: '0' })] })],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result).toEqual({ ok: false, errors: { 'bad-row': 'Enter an amount greater than zero' } })
   })
@@ -139,7 +143,7 @@ describe('buildBatchTransactions', () => {
         batch({ id: 'b2', rows: [row({ id: 'bad', description: 'Broken', amount: '0' })] }),
       ],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result).toEqual({ ok: false, errors: { bad: 'Enter an amount greater than zero' } })
   })
@@ -177,7 +181,7 @@ describe('buildBatchTransactions', () => {
         }),
       ],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result.ok).toBe(true)
     expect(result.ok && result.transactions).toEqual([
@@ -215,7 +219,7 @@ describe('buildBatchTransactions', () => {
         }),
       ],
       EU_MONEY_FORMAT,
-      1,
+      monthsFor(1),
     )
     expect(result.ok).toBe(true)
     expect(result.ok && result.transactions.map((t) => t.accountId)).toEqual([1, 2])
@@ -225,7 +229,7 @@ describe('buildBatchTransactions', () => {
     const result = buildBatchTransactions(
       [batch({ date: '2026-03-28', rows: [row({ description: 'Late-month buy', amount: '9' })] })],
       EU_MONEY_FORMAT,
-      25,
+      monthsFor(25),
     )
     expect(result.ok).toBe(true)
     expect(result.ok && result.transactions[0]!.budgetMonth).toBe('2026-04')

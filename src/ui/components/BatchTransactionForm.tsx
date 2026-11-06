@@ -24,7 +24,7 @@ import { Money } from './Money'
 import { DateInput } from './DateInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { Field } from './TransactionFields'
-import { todayIso } from './transactionFormState'
+import { suggestBudgetMonth, todayIso } from './transactionFormState'
 import formStyles from './TransactionForm.module.css'
 import styles from './BatchTransactionForm.module.css'
 
@@ -177,7 +177,7 @@ export function BatchTransactionForm({
     const result = buildBatchTransactions(
       batches,
       format,
-      model.dataset.settings.budgetRolloverDay,
+      (date) => suggestBudgetMonth(model, date),
       flagId,
       investmentCategoryId,
     )
