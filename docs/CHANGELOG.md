@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (New transactions skip a month you have settled)
+
+- **A new transaction no longer lands in a month you have finished.** If every card that spent in the current month has its statement marked paid and you have already logged something in the next month, the Budget month field now starts on the next month, even before your rollover day. Before, it followed the date alone, so an entry made after paying the cards early went into the paid month and showed as already settled. You can still pick any month by hand.
+
 ## November 2026 (Pick the budget month's start day from a grid)
 
 - **"Budget month starts on day" in Settings is a picker, and the day you tap shows at once.** It was a number box that kept the old day on screen until the server had saved the new one, and saved on every keystroke, so a tap could take a while to show and typing 13 saved a 1 on the way. Tapping the field now opens days 1 to 28 as four weeks, the same shape as the date picker, with a "Calendar months" button that goes back to day 1. What the day does is unchanged: it only applies to transactions added from now on.

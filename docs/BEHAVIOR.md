@@ -51,6 +51,14 @@ transaction form defaults, the date field, statement-add seeds, and the tag on a
 another month than the one on screen (the suggestion's own budget month comes from the series' learned offset). The
 migration's final `UPDATE` sets a day-13 rollover for the placeholder owner (see `docs/DEPLOYMENT.md`, the `0011` note).
 
+A new transaction is offered `recommendedBudgetMonth` (in `status.ts`, next to the paid-statement check), not the date rule
+alone. When the date rule lands on the open month (the one today falls in), every card that spent in it has that month's
+statement paid, and the next month already holds a row, it offers the next month, whatever the rollover day. It never
+goes back a month, ignores cancelled rows and cards with no spending in the month, and leaves a back-dated entry in its
+own month. `defaultBudgetMonth` itself is unchanged because Upcoming, Analytics and Goals use it as "the open month".
+`suggestBudgetMonth(model, date)` in `transactionFormState.ts` is the call the form, its date field, the batch form and
+the "+" on a day use.
+
 The cash reconciliation table derives a never-stored `reconciled` flag per month (`actualCashCents !== null &&
 unpaidLiabilityCents === 0`) and shows a ✓ badge; it does not block editing.
 

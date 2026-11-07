@@ -2,12 +2,13 @@ import { useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
+import type { StatementPaymentRow } from '../../engine'
 import { TransactionList } from '../components/TransactionList'
 import { StaleList } from '../StaleList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
+import { suggestBudgetMonth } from '../components/transactionFormState'
 import { ListStats } from './ListStats'
 import { matchAnnouncement } from './matchAnnouncement'
 import { TxnFilters } from './TxnFilters'
@@ -77,7 +78,6 @@ export function TransactionsTab({
   const reimbursement = useReimbursement(actions)
   const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const past = usePastReports(model.dataset.transactions)
-  const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(matchAnnouncement(state))
   const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
@@ -197,7 +197,7 @@ export function TransactionsTab({
           {...(actions
             ? {
                 onAddForDate: (date) =>
-                  actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
+                  actions.onAdd({ date, budgetMonth: suggestBudgetMonth(model, date) }),
                 onDelete: actions.deleteTransaction,
                 onLongPressSelect: state.enterAndSelect,
                 onEditStatementPayment: setEditingStatement,

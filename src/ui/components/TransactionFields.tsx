@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
-import { defaultBudgetMonth } from '../../engine/dates'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -19,7 +18,7 @@ import { createLabelInPlace } from './quickLabel'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
-import type { FormFields, Setter } from './transactionFormState'
+import { suggestBudgetMonth, type FormFields, type Setter } from './transactionFormState'
 import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
 
@@ -269,7 +268,7 @@ export function Fields({
 
   const onDate = (v: string) => {
     set('date', v)
-    if (!editing) set('budgetMonth', defaultBudgetMonth(v, model.dataset.settings.budgetRolloverDay))
+    if (!editing) set('budgetMonth', suggestBudgetMonth(model, v))
   }
 
   const showNoteInput = noteExpanded || form.notes !== ''
