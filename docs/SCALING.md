@@ -131,6 +131,10 @@ for the current handlers; the bulk routes that grow with the rows have their for
 | `GET /transactions/list`, one month | 1 | 208 | 109 | | 0 |
 | `GET /transactions/summary` | 3 | 608 | 1,823 | | 0 |
 | `GET /transactions/summary`, one month | 3 | 78 | 83 | | 0 |
+| `GET /transactions/recent`, default 8 | 1 | | 21 | | 0 |
+| `GET /transactions/recent`, limit 50 | 1 | | 132 | | 0 |
+| `GET /export`, transactions, first 500 | 2 | | 1,343 | | 0 |
+| `GET /export`, transactions, next chunk (410 rows) | 2 | | 1,142 | | 0 |
 | `GET /transactions/:id` | 1 | 5 | 3 | none | 0 |
 | `POST /transactions`, one row | 9 | 10 | 12 | | 11 |
 | `POST /transactions/bulk`, 20 rows | 125 | 164 | 185 | | 182 |
@@ -146,6 +150,14 @@ which the 303 ledger did not (8 months against 23). A 304 and one row by id do n
 
 D1's own time at 910 transactions was 15 to 17 ms for the dataset, 9 to 10 for the series, 32 for the 20-row create over
 its 125 statements and under 8 for every other route. It is the database's clock, not Worker CPU.
+
+The recent and export routes were added to the run later and measured once, on the 910 ledger. Each read about 2.6 to
+2.8 rows for every row it returned, which is the account, statement and label reads of
+[Rows visited](./API.md#conventions) and not the one row per row that a local count suggested: 21 rows for the default 8,
+132 for 50, and 1,342 and 1,141 for the two export chunks (a second statement reads the revision token and rollover day
+in one row). D1's own time was under 1 ms for 8 recent rows, 5 for 50, 9 for a 500-row chunk and 5 for the 410 that
+followed. Both are bounded by `limit`, so they should not grow with the ledger, but that was seen locally at 600 and
+1,200 rows and not on D1 at a second size.
 
 An ordinary expense wrote 8 rows when inserted with an explicit id and 9 through the API: the row, seven indexes and,
 for an insert without an id, the sequence row of its `AUTOINCREMENT` key. That last part fits the counts and was
