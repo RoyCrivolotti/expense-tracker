@@ -55,6 +55,18 @@ describe('the route matrix, over a seeded database', () => {
     expect(pages.map((p) => p.status)).toEqual([200, 200, 200])
   })
 
+  it('reads about what the recent and export routes return, and the next export chunk starts after the first', async () => {
+    const { results } = await run(false)
+    const named = (name: string) => results.find((r) => r.name === name)
+    expect(named('GET transactions/recent')?.summary.rowsRead).toBe(8)
+    expect(named('GET transactions/recent, limit 50')?.summary.rowsRead).toBe(50)
+    const first = named('GET export, transactions, first 500')
+    const next = named('GET export, transactions, next 500')
+    expect(first?.summary.rowsRead).toBeLessThanOrEqual(503)
+    expect(next?.bytes).toBeGreaterThan(0)
+    expect(next?.bytes).toBeLessThan(first?.bytes ?? 0)
+  })
+
   it('runs the write routes on rows of its own, and every write binds the synthetic owner', async () => {
     const { results, recorder } = await run(true)
     expect(results.map((r) => r.name)).toEqual([...READ_CASES, ...WRITE_CASES].map((c) => c.name))
