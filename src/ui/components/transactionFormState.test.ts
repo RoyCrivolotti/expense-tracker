@@ -142,6 +142,23 @@ describe('initialFields', () => {
       const fields = initialFields(null, model, EU_MONEY_FORMAT)
       expect(fields.budgetMonth).toBe('2026-07')
     })
+
+    it('opens on the next month when July is settled and August already has rows', () => {
+      const model = minimalModel()
+      model.dataset.settings.budgetRolloverDay = 28
+      model.dataset.accounts = [
+        { id: 2, name: 'Card', kind: 'credit', settlement: 'deferred', active: true },
+      ]
+      model.dataset.transactions = [
+        makeTransaction({ id: 1, accountId: 2, budgetMonth: '2026-07', date: '2026-07-04' }),
+        makeTransaction({ id: 2, accountId: 2, budgetMonth: '2026-08', date: '2026-07-19' }),
+      ]
+      model.dataset.accountStatements = [{ accountId: 2, yearMonth: '2026-07', paid: true }]
+      expect(initialFields(null, model, EU_MONEY_FORMAT).budgetMonth).toBe('2026-08')
+
+      model.dataset.accountStatements = []
+      expect(initialFields(null, model, EU_MONEY_FORMAT).budgetMonth).toBe('2026-07')
+    })
   })
 })
 

@@ -6,7 +6,6 @@
  */
 import type { NewTransaction } from '../../data/dataSource'
 import type { TxnType } from '../../types'
-import { defaultBudgetMonth } from '../../engine/dates'
 import { parseMoneyToCents, type MoneyFormat } from '../../engine/money'
 
 export interface BatchRowDraft {
@@ -47,7 +46,8 @@ export function isRowEmpty(row: BatchRowDraft): boolean {
 export function buildBatchTransactions(
   batches: DateBatchDraft[],
   format: MoneyFormat,
-  budgetRolloverDay: number,
+  /** The budget month offered to a batch dated `date`. */
+  monthFor: (date: string) => string,
   flagId: number | null = null,
   /** The investments category; an investment row is filed under it whatever it picked. */
   investmentCategoryId: number | null = null,
@@ -56,7 +56,7 @@ export function buildBatchTransactions(
   const errors: Record<string, string> = {}
 
   for (const batch of batches) {
-    const budgetMonth = defaultBudgetMonth(batch.date, budgetRolloverDay)
+    const budgetMonth = monthFor(batch.date)
     for (const row of batch.rows) {
       if (isRowEmpty(row)) continue
       const cents = Math.abs(parseMoneyToCents(row.amount, format))

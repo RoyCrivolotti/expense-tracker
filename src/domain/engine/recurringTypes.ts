@@ -15,7 +15,10 @@ export interface RecurringSuggestion {
   amountCents: number
   /** The date the charge is expected on. */
   predictedDate: string
-  /** Where the charge belongs by this series' own booking habit; the month "+" files it under. */
+  /**
+   * Where the charge belongs by this series' own booking habit. Dismissals are keyed on it because it is stable
+   * per series; the month "+" files a charge under is the add form's rule for its date, not this.
+   */
   predictedBudgetMonth: string
   /** Days before `predictedDate` that the suggestion starts to show: a day's notice plus how early the series has recently landed. */
   leadDays: number

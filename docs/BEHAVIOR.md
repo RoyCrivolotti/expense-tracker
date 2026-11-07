@@ -48,8 +48,16 @@ comma-decimal locale is not rejected by a numeric field.
 `budget_rollover_day` (1–28) sets the day a new transaction starts counting toward the next budget month.
 `defaultBudgetMonth(isoDate, rolloverDay)` applies it; day 1 means plain calendar months. It threads through the
 transaction form defaults, the date field, statement-add seeds, and the tag on an Upcoming suggestion that files under
-another month than the one on screen (the suggestion's own budget month comes from the series' learned offset). The
+another month than the one on screen. The
 migration's final `UPDATE` sets a day-13 rollover for the placeholder owner (see `docs/DEPLOYMENT.md`, the `0011` note).
+
+A new transaction is offered `recommendedBudgetMonth` (in `status.ts`, next to the paid-statement check), not the date rule
+alone. When the date rule lands on the open month (the one today falls in), every card that spent in it has that month's
+statement paid, and the next month already holds a row, it offers the next month, whatever the rollover day. It never
+goes back a month, ignores cancelled rows and cards with no spending in the month, and leaves a back-dated entry in its
+own month. `defaultBudgetMonth` itself is unchanged because Upcoming, Analytics and Goals use it as "the open month".
+`suggestBudgetMonth(model, date)` in `transactionFormState.ts` is the call the form, its date field, the batch form and
+the "+" on a day use.
 
 The cash reconciliation table derives a never-stored `reconciled` flag per month (`actualCashCents !== null &&
 unpaidLiabilityCents === 0`) and shows a ✓ badge; it does not block editing.
@@ -139,9 +147,10 @@ usual date that no logged charge covers. A charge covers a date when it was logg
 on, or up to 14 days before the date (`LOGGED_EARLY_WITHIN_DAYS`), whichever budget month it was booked to. So a bill
 logged on the 3rd for the 10th, or a card's own "+" saved with an earlier date typed in, does not bring the card back,
 even though the add form works the budget month out again from the date. Half a month back or more, a row is nearer the
-previous usual date, or an adjustment, and does not hide the next reminder. The suggestion is filed under the series'
-own booking habit, the median offset of its newest three charges applied to the month of the date, so a pay date that
-rolls into the next budget month is filed there.
+previous usual date, or an adjustment, and does not hide the next reminder. Its "+" files the suggestion under the budget
+month the add form offers for that date (the rollover day, moving on a month once the open one is settled), not under
+the series' own booking habit, which can be a month that has since closed. A series the owner books against its date
+opens on the month the date gives, and the owner changes it by hand.
 
 **When it shows.** From `leadDays` before the usual date: one day, plus how early the newest five charges landed before
 the usual day (`WINDOW_HISTORY`), capped at four more. Earliness is measured around the nearest occurrence of the day,
@@ -161,11 +170,12 @@ offered for its next two charges before it goes, each for the window before its 
 "Due yesterday", "Due 2 days ago"), with the date after it, a late one in the warning colour and today's in bold
 (`dueLabel`). Up to four rows are shown in full. From five the card keeps the first three in view and folds the rest
 behind a "Show N more" button (N is at least 2, since one row is never worth a toggle), by the same fold the day groups
-in the list use, so the list below is not pushed off a phone screen. **Tag and "+".** A suggestion that files under
-another budget month than the one on screen carries a tag ("For Oct"), and its "+" adds it to that month on its own
-date. Editing the date in the form that opens works out the budget month again from the new date. The "x" hides the
-suggestion for its month and offers an Undo. Dismissals are kept in the browser's local storage, per device, under the
-description, account, category, type and budget month (a key saved without the category and type still applies).
+in the list use, so the list below is not pushed off a phone screen. **Tag and "+".** A suggestion whose "+" files
+it under another budget month than the one on screen carries a tag ("For Oct"), and "+" adds it to that month on its own
+date. Editing the date in the form that opens works out the budget month again from the new date. The "x" hides this
+charge of the series and offers an Undo. Dismissals are kept in the browser's local storage, per device, under the
+description, account, category, type and the budget month the series' booking habit gives (a key saved without the
+category and type still applies).
 
 **Stopping a series.** The no-entry button next to "x" stops suggesting a whole series, where "x" only hides one month's
 charge. It is kept on the device (`useStoppedSuggestions`, in local storage) as the series' identity (`seriesKey`:

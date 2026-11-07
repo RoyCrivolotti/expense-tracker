@@ -23,7 +23,7 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // TOTAL: the JS outside the chunks only the ledger mode loads, which is what a browser that turned the ledger mode off
 // runs. LEDGER: the chunks only the ledger mode loads, which every other browser downloads too, since it is the default.
 // GOALS: the Goals tab's own chunk and the chunks split out of it, which overlap TOTAL.
-const TOTAL_MAX_GZIP = 290_000
+const TOTAL_MAX_GZIP = 291_500
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
 

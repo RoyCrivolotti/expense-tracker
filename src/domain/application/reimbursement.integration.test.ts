@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
+import { defaultBudgetMonth } from '../engine/dates'
 import { groupTransactionsByFlag } from '../engine/flagGroups'
 import { buildReimbursementDraft, settleIdsFor } from '../engine/reimbursementDraft'
 import { EU_MONEY_FORMAT } from '../engine/money'
@@ -321,7 +322,7 @@ describe('a claim entered through bulk add', () => {
     const built = buildBatchTransactions(
       [{ id: 'a', date: '2026-05-02', rows: [row('r1', '100', 'Flight'), row('r2', '40', 'Hotel')] }],
       EU_MONEY_FORMAT,
-      1,
+      (date) => defaultBudgetMonth(date, 1),
       // The form-level flag: "flag this whole trip".
       4,
     )

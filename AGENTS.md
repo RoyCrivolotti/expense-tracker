@@ -2,9 +2,11 @@
 
 Rules for any AI agent (Cursor, Claude Code, Copilot, etc.) working in this repo.
 
-## Branch protection
+## Branch rules
 
-`main` is protected. Direct pushes are blocked, even for the repo owner.
+`main` is not protected on GitHub: there is no branch protection and no ruleset, so
+nothing technical stops a direct push or a merge with a red check. The rules here are
+a convention, and they still apply. Never push to `main`.
 
 All changes — code, docs, config — must go through a pull request with the
 `verify` check passing before merge.
