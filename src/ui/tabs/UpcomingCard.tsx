@@ -1,5 +1,4 @@
 import { useCallback, useId, useRef, useState } from 'react'
-import type { RecurringSuggestion } from '../../engine'
 import { shortMonthLabel } from '../../engine'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
@@ -13,11 +12,12 @@ import { useToast } from '../hooks/useToast'
 import { dueLabel, daysUntilDue } from './dueLabel'
 import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 import { useStoppedSuggestions } from './stoppedSuggestions'
+import type { UpcomingSuggestion } from './useUpcoming'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
   /** The charges due today; the engine has already dropped the ones that are too early or too late. */
-  suggestions: RecurringSuggestion[]
+  suggestions: UpcomingSuggestion[]
   /** The budget month on screen; a suggestion that files under another one is marked with its own. */
   month: string
   /** The date the rows are said against: "Due tomorrow", "Due 2 days ago". */
@@ -43,16 +43,16 @@ function persistDismissed(key: string, set: Set<string>): void {
   localStorage.setItem(key, JSON.stringify([...set]))
 }
 
-function dismissKey(s: RecurringSuggestion): string {
+function dismissKey(s: UpcomingSuggestion): string {
   return `${s.description}|${s.accountId}|${s.categoryId}|${s.type}|${s.predictedBudgetMonth}`
 }
 
 /** The key as it was before it carried the category and type, so a dismissal saved then still applies. */
-function legacyDismissKey(s: RecurringSuggestion): string {
+function legacyDismissKey(s: UpcomingSuggestion): string {
   return `${s.description}|${s.accountId}|${s.predictedBudgetMonth}`
 }
 
-function toSeed(s: RecurringSuggestion): TransactionSeed {
+function toSeed(s: UpcomingSuggestion): TransactionSeed {
   return {
     description: s.description,
     type: s.type,
@@ -60,7 +60,7 @@ function toSeed(s: RecurringSuggestion): TransactionSeed {
     categoryId: s.categoryId,
     amountCents: s.amountCents,
     date: s.predictedDate,
-    budgetMonth: s.predictedBudgetMonth,
+    budgetMonth: s.filedUnder,
   }
 }
 
@@ -74,8 +74,8 @@ function SuggestionRow({
   onDismiss,
   onStop,
 }: {
-  suggestion: RecurringSuggestion
-  /** The suggestion's budget month when it is not the current one. */
+  suggestion: UpcomingSuggestion
+  /** The budget month "+" files the charge under, when that is not the one on screen. */
   forMonth: string | null
   today: string
   /** The last row of a card with nothing under it, so it has no line below. */
@@ -156,7 +156,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
     (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)),
   )
 
-  const setHidden = useCallback((s: RecurringSuggestion, hidden: boolean) => {
+  const setHidden = useCallback((s: UpcomingSuggestion, hidden: boolean) => {
     setDismissed((prev) => {
       const next = new Set(prev)
       if (hidden) next.add(dismissKey(s))
@@ -178,7 +178,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
     })
   }
 
-  const handleDismiss = (s: RecurringSuggestion, index: number) => {
+  const handleDismiss = (s: UpcomingSuggestion, index: number) => {
     setHidden(s, true)
     showToast(`Dismissed ${s.description}`, 'info', {
       label: 'Undo',
@@ -188,7 +188,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
     focusRowAt(index)
   }
 
-  const handleStop = (s: RecurringSuggestion, index: number) => {
+  const handleStop = (s: UpcomingSuggestion, index: number) => {
     stop(s.seriesKey, { after: s.lastChargeDate, label: s.description })
     showToast(`Stopped suggesting ${s.description}`, 'info', {
       label: 'Undo',
@@ -205,11 +205,11 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const folds = visible.length > ROWS_SHOWN_IN_FULL
   const kept = folds ? visible.slice(0, ROWS_KEPT) : visible
   const folded = folds ? visible.slice(ROWS_KEPT) : []
-  const renderRow = (s: RecurringSuggestion, index: number, last: boolean) => (
+  const renderRow = (s: UpcomingSuggestion, index: number, last: boolean) => (
     <SuggestionRow
       key={dismissKey(s)}
       suggestion={s}
-      forMonth={s.predictedBudgetMonth === month ? null : s.predictedBudgetMonth}
+      forMonth={s.filedUnder === month ? null : s.filedUnder}
       today={today}
       last={last}
       lookup={lookup}

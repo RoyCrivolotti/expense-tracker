@@ -467,16 +467,64 @@ describe('TransactionsTab upcoming charges', () => {
     expect(screen.getByText('Upcoming')).toBeInTheDocument()
   })
 
-  it('marks a charge that files under another month than the one on screen', () => {
-    // 20 Oct books to November here, as for a month that starts on the 13th.
-    const months = ['2026-08', '2026-09', '2026-10']
-    const booked = gym.map((t) => ({
-      ...t,
-      budgetMonth: `2026-${String(Number(t.date.slice(5, 7)) + 1).padStart(2, '0')}`,
-    }))
-    render(<TransactionsTab model={{ ...modelFor(booked), months }} month="2026-10" actions={makeActions()} />)
+  /** A monthly charge on `day` from January for `count` months, booked `offset` budget months after its own. */
+  const monthlyOn = (description: string, day: number, count: number, offset = 0) =>
+    Array.from({ length: count }, (_, i) => {
+      const pad = (n: number) => String(n).padStart(2, '0')
+      return makeTransaction({
+        id: 100 + i,
+        description,
+        date: `2026-${pad(i + 1)}-${pad(day)}`,
+        budgetMonth: `2026-${pad(i + 1 + offset)}`,
+      })
+    })
+  const withRolloverDay = (
+    transactions: ReturnType<typeof makeTransaction>[],
+    budgetRolloverDay: number,
+    lastMonth: number,
+  ): ExpenseModel => ({
+    ...modelFor(transactions, { settings: { ...makeDataset().settings, budgetRolloverDay } }),
+    months: Array.from({ length: lastMonth }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`),
+  })
+
+  it('marks a charge that the add form files under another month than the one on screen', () => {
+    // 20 Oct books to November for a month that starts on the 13th, whatever the series' own habit is.
+    const actions = makeActions()
+    render(<TransactionsTab model={withRolloverDay(gym, 13, 10)} month="2026-10" actions={actions} />)
 
     expect(screen.getByText('For Nov')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Gym' }))
+    expect(actions.onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2026-10-20', budgetMonth: '2026-11' }),
+    )
+  })
+
+  it('files a charge from the closed month under the open one, where the add form would', () => {
+    // 5 Nov with a rollover day of 2 counts towards December, which is on screen; the series' own habit says November.
+    vi.setSystemTime(new Date('2026-11-06T12:00:00'))
+    const actions = makeActions()
+    const model = withRolloverDay(monthlyOn('Delivery', 5, 10), 2, 12)
+    render(<TransactionsTab model={model} month="2026-12" actions={actions} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Delivery' }))
+    expect(actions.onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2026-11-05', budgetMonth: '2026-12' }),
+    )
+    expect(screen.queryByText(/^For /)).not.toBeInTheDocument()
+  })
+
+  it('files a charge on the rollover day under the next month while the screen is on the closed one', () => {
+    // 2 Dec with a rollover day of 2 counts towards January, which has no rows yet, so December is on screen.
+    vi.setSystemTime(new Date('2026-12-02T12:00:00'))
+    const actions = makeActions()
+    const model = withRolloverDay(monthlyOn('Rent', 2, 11, 1), 2, 12)
+    render(<TransactionsTab model={model} month="2026-12" actions={actions} />)
+
+    expect(screen.getByText('For Jan')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Rent' }))
+    expect(actions.onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2026-12-02', budgetMonth: '2027-01' }),
+    )
   })
 
   it('is not there in read-only mode, where nothing could be added', () => {

@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Upcoming opens on the month the add form would pick)
+
+- **"+" on an Upcoming row opens on the month a new transaction would.** It filed the charge under the month the series had usually been booked to, so after you changed the day your budget month starts, or once you had moved on from a month, a row could open on a month you had already closed. It now follows the same rule as the add form: the start day for the charge's date, and the next month once the current one is settled. The "For Nov" tag on a row shows when that month is not the one you are looking at. The cost: a charge you always book against its date (a pay on the 28th that you file under the next month) opens on the month its date gives, and you change it by hand.
+
 ## November 2026 (New transactions skip a month you have settled)
 
 - **A new transaction no longer lands in a month you have finished.** If every card that spent in the current month has its statement marked paid and you have already logged something in the next month, the Budget month field now starts on the next month, even before your rollover day. Before, it followed the date alone, so an entry made after paying the cards early went into the paid month and showed as already settled. You can still pick any month by hand.
