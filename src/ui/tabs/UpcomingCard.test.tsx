@@ -1,6 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RecurringSuggestion } from '../../engine'
 import { AccountOwnerContext } from '../hooks/accountOwner'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext, type ToastApi } from '../hooks/useToast'
@@ -8,6 +7,7 @@ import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
 import { resetStoppedSuggestionsForTests } from './stoppedSuggestions'
 import { UpcomingCard } from './UpcomingCard'
+import type { UpcomingSuggestion } from './useUpcoming'
 
 const DISMISSED_KEY = 'expense:dismissed-recurring'
 const STOPPED_KEY = 'expense:stopped-recurring'
@@ -26,7 +26,7 @@ const lookup: Lookup = {
   settledBy: () => [],
 }
 
-function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): RecurringSuggestion {
+function makeSuggestion(overrides: Partial<UpcomingSuggestion> = {}): UpcomingSuggestion {
   return {
     seriesKey: 'netflix|1|1|expense',
     lastChargeDate: '2026-08-24',
@@ -37,13 +37,14 @@ function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): Recurring
     amountCents: 1500,
     predictedDate: '2026-09-24',
     predictedBudgetMonth: '2026-09',
+    filedUnder: '2026-09',
     leadDays: 1,
     ...overrides,
   }
 }
 
 function renderCard(
-  suggestions: RecurringSuggestion[],
+  suggestions: UpcomingSuggestion[],
   {
     month = '2026-09',
     today = '2026-09-24',
@@ -192,11 +193,12 @@ describe('UpcomingCard', () => {
   })
 
   describe('a charge that files under another budget month', () => {
-    it('is marked with its own month, and one for the month on screen is not', () => {
+    it('is marked with the month "+" files it under, and one for the month on screen is not', () => {
+      // Both series are habitually booked to October, the month on screen; only `filedUnder` tells them apart.
       renderCard(
         [
-          makeSuggestion({ description: 'Gym', predictedDate: '2026-09-20', predictedBudgetMonth: '2026-09' }),
-          makeSuggestion({ description: 'Rent', predictedDate: '2026-09-25', predictedBudgetMonth: '2026-10' }),
+          makeSuggestion({ description: 'Gym', predictedBudgetMonth: '2026-10', filedUnder: '2026-09' }),
+          makeSuggestion({ description: 'Rent', predictedBudgetMonth: '2026-10', filedUnder: '2026-10' }),
         ],
         { month: '2026-10' },
       )
@@ -209,8 +211,8 @@ describe('UpcomingCard', () => {
       // files under November is the one that needs saying.
       renderCard(
         [
-          makeSuggestion({ description: 'Insurance', predictedBudgetMonth: '2026-10' }),
-          makeSuggestion({ description: 'Streaming', predictedBudgetMonth: '2026-11' }),
+          makeSuggestion({ description: 'Insurance', filedUnder: '2026-10' }),
+          makeSuggestion({ description: 'Streaming', filedUnder: '2026-11' }),
         ],
         { month: '2026-10' },
       )
@@ -219,13 +221,13 @@ describe('UpcomingCard', () => {
     })
 
     it('names the month before the year turns', () => {
-      renderCard([makeSuggestion({ predictedBudgetMonth: '2026-12' })], { month: '2027-01' })
+      renderCard([makeSuggestion({ filedUnder: '2026-12' })], { month: '2027-01' })
       expect(screen.getByText('For Dec')).toBeDefined()
     })
   })
 
   describe('adding a suggestion', () => {
-    it('seeds the whole transaction, filed under the suggestion own budget month on its own date', () => {
+    it('seeds the whole transaction, filed under the month it carries, on its own date', () => {
       const onAdd = vi.fn()
       renderCard(
         [
@@ -237,6 +239,7 @@ describe('UpcomingCard', () => {
             amountCents: 320_000,
             predictedDate: '2026-09-25',
             predictedBudgetMonth: '2026-10',
+            filedUnder: '2026-11',
           }),
         ],
         { onAdd },
@@ -249,7 +252,7 @@ describe('UpcomingCard', () => {
         categoryId: 8,
         amountCents: 320_000,
         date: '2026-09-25',
-        budgetMonth: '2026-10',
+        budgetMonth: '2026-11',
       })
     })
   })
@@ -280,7 +283,7 @@ describe('UpcomingCard', () => {
       expect(screen.getByText('Netflix')).toBeDefined()
     })
 
-    it.each<[string, Partial<RecurringSuggestion>]>([
+    it.each<[string, Partial<UpcomingSuggestion>]>([
       ['description', { description: 'Disney' }],
       ['category', { categoryId: 3 }],
       ['account', { accountId: 2 }],

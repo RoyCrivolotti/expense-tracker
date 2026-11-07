@@ -17,8 +17,13 @@ const GYM = Array.from({ length: 9 }, (_, i) =>
   }),
 )
 
-function modelWith(transactions = GYM, months = ['2026-08', '2026-09']): ExpenseModel {
-  return { dataset: makeDataset({ transactions }), months } as ExpenseModel
+function modelWith(
+  transactions = GYM,
+  months = ['2026-08', '2026-09'],
+  budgetRolloverDay = 1,
+): ExpenseModel {
+  const dataset = makeDataset({ transactions })
+  return { dataset: { ...dataset, settings: { ...dataset.settings, budgetRolloverDay } }, months } as ExpenseModel
 }
 
 describe('useUpcoming', () => {
@@ -40,6 +45,15 @@ describe('useUpcoming', () => {
 
   it('lists the charge that is due today', () => {
     expect(dates(modelWith(), '2026-10')).toEqual(['2026-10-20'])
+  })
+
+  it('carries the month the add form would pick for each charge, not the series own habit', () => {
+    const filedUnder = (rolloverDay: number) =>
+      renderHook(() => useUpcoming(modelWith(GYM, ['2026-09', '2026-10'], rolloverDay), '2026-10')).result
+        .current.suggestions.map((s) => s.filedUnder)
+    // The habit is October, the month the 20th falls in; from a rollover day of 13 the 20th counts to November.
+    expect(filedUnder(1)).toEqual(['2026-10'])
+    expect(filedUnder(13)).toEqual(['2026-11'])
   })
 
   it('lists it above the month today falls in even when the newest month with data is behind', () => {
