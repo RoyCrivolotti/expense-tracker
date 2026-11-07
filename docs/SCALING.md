@@ -149,15 +149,23 @@ is bounded by its page. The cube and the 3-month window stop growing once the le
 which the 303 ledger did not (8 months against 23). A 304 and one row by id do not grow.
 
 D1's own time at 910 transactions was 15 to 17 ms for the dataset, 9 to 10 for the series, 32 for the 20-row create over
-its 125 statements and under 8 for every other route. It is the database's clock, not Worker CPU.
+its 125 statements and under 8 for every other route then in the matrix. It is the database's clock, not Worker CPU.
 
-The recent and export routes were added to the run later and measured once, on the 910 ledger. Each read about 2.6 to
-2.8 rows for every row it returned, which is the account, statement and label reads of
-[Rows visited](./API.md#conventions) and not the one row per row that a local count suggested: 21 rows for the default 8,
-132 for 50, and 1,342 and 1,141 for the two export chunks (a second statement reads the revision token and rollover day
-in one row). D1's own time was under 1 ms for 8 recent rows, 5 for 50, 9 for a 500-row chunk and 5 for the 410 that
-followed. Both are bounded by `limit`, so they should not grow with the ledger, but that was seen locally at 600 and
-1,200 rows and not on D1 at a second size.
+The recent and export routes were added to the run later. They were measured once, on the 910 ledger and with reads only;
+the write routes in the table were not measured again. Each read about 2.6 to 2.8 rows for every row it returned, where
+a local count had suggested one: the select alone read 21 rows for the default 8, 132 for 50, and 1,342 and 1,141 for the
+two export chunks. The table shows one more for each export chunk, a second statement that reads the revision token and
+the rollover day.
+
+The cause is inferred from the SQL, because D1 reports only the total for each statement: a transaction is read together
+with its account row, its statement row and its label links ([Rows visited](./API.md#conventions)). The measured figure
+is a little under the 3n that section gives as its floor. A likely reason, also a guess, is that the synthetic ledger
+has statement rows for only some account months, and a join that finds no row reads none.
+
+D1's own time was under 1 ms for 8 recent rows, 5 for 50, 9 for a 500-row chunk and 5 for the 410 that followed. Both
+routes are bounded by `limit`, so they should not grow with the ledger, but that was seen locally at 600 and 1,200
+rows and not on D1 at a second size. Seeding the 910 rows in that run wrote 9,638 rows against the 7,837 that 8 rows per
+insert gives, so the written rows of the write routes in the table are probably low for the current indexes.
 
 An ordinary expense wrote 8 rows when inserted with an explicit id and 9 through the API: the row, seven indexes and,
 for an insert without an id, the sequence row of its `AUTOINCREMENT` key. That last part fits the counts and was
