@@ -14,6 +14,8 @@ import { onRequestGet as getSuggest } from '../../api/expenses/descriptions/sugg
 import { onRequestGet as getUsage } from '../../api/expenses/usage'
 import { onRequestGet as getList } from '../../api/expenses/transactions/list'
 import { onRequestGet as getSummary } from '../../api/expenses/transactions/summary'
+import { onRequestGet as getRecent } from '../../api/expenses/transactions/recent'
+import { onRequestGet as getExport } from '../../api/expenses/export'
 import { onRequestGet as getOne, onRequestDelete as deleteOne } from '../../api/expenses/transactions/[id]'
 import { onRequestPost as postOne } from '../../api/expenses/transactions/index'
 import {
@@ -35,10 +37,11 @@ interface Row {
   categoryId: number
 }
 
-/** Carried from one case to the next: the tag, the first page's cursor, rows to edit and rows created. */
+/** Carried from one case to the next: the tag, the first page's cursor, the export position, rows to edit and rows created. */
 export interface State {
   etag: string | null
   cursor: string | null
+  exportNext: string | null
   rows: Row[]
   otherCategoryId: number | null
   created: number[]
@@ -98,6 +101,10 @@ export const READ_CASES: Case[] = [
   { name: 'GET transactions/list, one month', writes: false, request: (_s, m) => get(getList, `/transactions/list?month=${m}`) },
   { name: 'GET transactions/summary', writes: false, request: () => get(getSummary, '/transactions/summary') },
   { name: 'GET transactions/summary, one month', writes: false, request: (_s, m) => get(getSummary, `/transactions/summary?month=${m}`) },
+  { name: 'GET transactions/recent', writes: false, request: () => get(getRecent, '/transactions/recent') },
+  { name: 'GET transactions/recent, limit 50', writes: false, request: () => get(getRecent, '/transactions/recent?limit=50') },
+  { name: 'GET export, transactions, first 500', writes: false, request: () => get(getExport, '/export?table=transactions&limit=500'), after: (_b, r, s) => { s.exportNext = r.headers.get('x-export-next') } },
+  { name: 'GET export, transactions, next 500', writes: false, request: (s) => get(getExport, `/export?table=transactions&limit=500${s.exportNext ? `&after=${encodeURIComponent(s.exportNext)}` : ''}`) },
   { name: 'GET transactions/:id', writes: false, request: (s) => ({ ...get(getOne, ''), params: { id: String(s.rows[0]?.id ?? 0) } }) },
 ]
 
@@ -110,7 +117,7 @@ export const WRITE_CASES: Case[] = [
 ]
 
 export function newState(): State {
-  return { etag: null, cursor: null, rows: [], otherCategoryId: null, created: [] }
+  return { etag: null, cursor: null, exportNext: null, rows: [], otherCategoryId: null, created: [] }
 }
 
 async function runCase(options: MeasureOptions, state: State, item: Case): Promise<RouteResult> {
@@ -128,7 +135,9 @@ async function runCase(options: MeasureOptions, state: State, item: Case): Promi
     ...(request.headers ? { headers: request.headers } : {}),
   })
   const text = await response.text()
-  const body: unknown = text ? (JSON.parse(text) as unknown) : null
+  // The export answers in NDJSON, which is not one JSON document.
+  const isJson = response.headers.get('content-type')?.startsWith('application/json') ?? false
+  const body: unknown = text && isJson ? (JSON.parse(text) as unknown) : null
   item.after?.(body, response, state)
   const summary = summarize(recorder, mark)
   return {
