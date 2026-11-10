@@ -50,8 +50,8 @@ answers 503, which is the intended state.
    other, wrangler makes a Preview deployment, which reads the Preview variables), or a merge to `main`, which deploys
    both.
 3. Check it took:
-   - The deploy workflows do the first check themselves (see "The check after a deploy" below).
-   - Signing in on the real hostname still loads the data.
+   - The deploy workflow probes for missing settings itself (see "The check after a deploy" below).
+   - Signing in on the real hostname still loads the data. Only this catches a wrong value.
 4. Then do the same for the production project.
 
 A hostname Access does not protect carries no token, so every request there is a 401. That is the point on an address
@@ -63,10 +63,14 @@ Each Access application has its own tag, so a project that serves hostnames of t
 ## The check after a deploy
 
 `deploy.yml` ends with a probe of each project's bare `pages.dev` host after it deploys: one request with a made-up
-address in `Cf-Access-Authenticated-User-Email` and no token. It passes only on a 401. Anything else fails the job
-with a one-line message and no response body: a 503 means the settings are missing for that deployment, a 200 or 403
-means the token is not being checked. The address is on no allow-list, so even a failing probe cannot read data.
-The probe checks the project's production deployment only, not each preview.
+address in `Cf-Access-Authenticated-User-Email` and no token. It passes only on a 401, retrying a timeout or a transient
+error first. Anything else fails the job with a one-line message and no response body: a 503 means the settings are
+missing for that deployment, a 200 or 403 means the token is not being checked. The address is on no allow-list, so even
+a failing probe cannot read data. The probe checks the project's production deployment only, not each preview.
+
+The probe sends no token, so a wrong `ACCESS_AUD` or team domain still answers 401 and passes. It catches missing or
+unusable settings and a deployment that believes the header, not a wrong value. Signing in on the real staging site,
+and seeing the data load, is the check for that.
 
 ## Reading the log
 
