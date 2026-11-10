@@ -67,10 +67,10 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   otherwise `private, no-store` (both in `functions/api/_middleware.ts`; [API.md](./API.md)). `public/_headers` gives
   the static files `nosniff`, no framing and a same-origin referrer policy. There is no Content-Security-Policy: it
   has not been soaked with the service worker.
-- **The person is the one the signed token names, when Access is configured.** `resolveVerifiedEmail`
+- **The person is the one the signed token names.** `resolveVerifiedEmail`
   (`functions/_shared/access/accessIdentity.ts`) takes the email header only if `Cf-Access-Jwt-Assertion` verifies with
-  WebCrypto and names the same address; with `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` unset it is the header alone, and
-  with either set but unusable every request is a 503 ([ACCESS.md](./ACCESS.md)).
+  WebCrypto and names the same address. With `ACCESS_TEAM_DOMAIN` or `ACCESS_AUD` missing or unusable every request is
+  a 503; only a request to `localhost`, `127.0.0.1` or `[::1]` is identified by the header alone ([ACCESS.md](./ACCESS.md)).
 
 ### Dataset revision
 

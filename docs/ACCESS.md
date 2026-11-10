@@ -1,16 +1,20 @@
 # Checking the Access sign-in — expense-tracker
 
-For an operator who wants the app to check the signed token Cloudflare Access adds to every request, instead of
-believing the email header alone.
+For an operator of the app: it checks the signed token Cloudflare Access adds to every request, and answers a 503 on
+every route until it can.
 
 ## What is checked
 
 A request that passed the Access login carries the person's email twice: in `Cf-Access-Authenticated-User-Email`, which
-is plain text, and in `Cf-Access-Jwt-Assertion`, a token Access signs. Without the check the app believes the header,
-which is safe while every hostname that reaches the app is behind Access, since Access removes a header a client sent
-itself. With the check on, a request is a 401 unless its token is RS256, signed by a key the team publishes, issued by
-the team, for this application, not expired, and names the same address as the header. The answer never says which of
-these failed; the log does, without the token.
+is plain text, and in `Cf-Access-Jwt-Assertion`, a token Access signs. The header is not proof of anything: a request
+that reaches the app without passing Access can carry any value in it. Cloudflare's own advice is to validate the token
+for that reason, so the app believes the header only after the token is checked. A request is a 401 unless its token is
+RS256, signed by a key the team publishes, issued by the team, for this application, not expired, and names the same
+address as the header. The answer never says which of these failed; the log does, without the token.
+
+Access admits any Google account by design: the sign-in is authentication only, and a stranger who signs in is then
+asked to request access, which the owner approves by hand. The allow-list in D1 (`allowed_users`) is the authorisation,
+not Access.
 
 ## The settings
 
@@ -24,24 +28,29 @@ The team domain is read as a hostname with at least one dot, in any case, with a
 and surrounding spaces, so a real `<team>.cloudflareaccess.com` is never refused. The name alone, a path, a port or
 `http://` are not hostnames.
 
-With neither set nothing changes, and blank counts as not set. If either is set, the check is meant to be on, so a pair
-that cannot be used is never read as off: with only one of them, or a team domain that is not a hostname, every request
-is a 503 and the log names the setting that is wrong. The names must be spelled exactly: a misspelled name, or a pair
-saved in Preview instead of Production, reads as not set, so the check is off and nothing says so. The forged-header
-request in step 3 below is what catches that.
+Both are required. With either missing, blank, or a team domain that is not a hostname, every request is a 503 with a
+generic message, and the log names the setting that is wrong without printing a value. The names must be spelled
+exactly: a misspelled name, or a pair saved in Preview instead of Production, reads as not set, and the deployment then
+refuses everything instead of trusting the header.
+
+The one exception is a request to `localhost`, `127.0.0.1` or `[::1]`, where Access does not run: with the settings
+unset it is identified by the header alone, so `npm run dev:local` and the tests need no settings. A deployed request
+reaches the app only through a hostname Cloudflare routes to the project, so it never arrives with one of those hosts.
+
+Every environment that serves the app needs the pair: the Production and the Preview variable sets of each Pages
+project. A Preview deployment of a project whose Access application does not cover it has no token to offer, so it
+answers 503, which is the intended state.
 
 ## Turning it on
 
-1. Set both on the staging project first. Add them to the **Production** variable set (the project's Settings, then
-   Variables and Secrets), not Preview, which is for branch builds, whose hostnames Access usually does not cover.
+1. Set both on the staging project first, in the **Production** variable set (the project's Settings, then Variables
+   and Secrets) and, so that branch previews work, in the **Preview** set.
 2. Deploy again. A variable change applies from the next deployment and not to the one already live. Use the repo's own
    routes: `npm run deploy:dev` for staging and `npm run deploy` for production, each from the `main` branch (from any
    other, wrangler makes a Preview deployment, which reads the Preview variables), or a merge to `main`, which deploys
    both.
 3. Check it took:
-   - A request to the project's `*.pages.dev` address with a forged header,
-     `curl -H 'Cf-Access-Authenticated-User-Email: <an allowed address>' https://<project>.pages.dev/api/expenses`,
-     goes from the data (200) to a 401. That address is not behind Access, so the check is what closes it.
+   - The deploy workflows do the first check themselves (see "The check after a deploy" below).
    - Signing in on the real hostname still loads the data.
 4. Then do the same for the production project.
 
@@ -50,6 +59,14 @@ people should not reach, and the reason not to set the variables for an environm
 phone app must be installed from the custom domain: one installed from a `*.pages.dev` address stops loading data.
 Each Access application has its own tag, so a project that serves hostnames of two applications cannot use one.
 `npm run dev:local` has no Access; leave them unset there.
+
+## The check after a deploy
+
+`deploy.yml` ends with a probe of each project's bare `pages.dev` host after it deploys: one request with a made-up
+address in `Cf-Access-Authenticated-User-Email` and no token. It passes only on a 401. Anything else fails the job
+with a one-line message and no response body: a 503 means the settings are missing for that deployment, a 200 or 403
+means the token is not being checked. The address is on no allow-list, so even a failing probe cannot read data.
+The probe checks the project's production deployment only, not each preview.
 
 ## Reading the log
 
@@ -80,10 +97,13 @@ the app and opening it again runs the whole access check.
 
 ## Going back
 
-If everyone sees "Couldn't check access", or the app cannot load, delete both variables or correct them and deploy again
-the same way.
-Server data is untouched. A device refused with a 401 or 403 drops the offline copy it kept and loads it again once
-access works; a 503 leaves the copy where it is.
+There is no setting that turns the check off. If everyone sees "Couldn't check access", or the app cannot load, put
+back the last pair that worked, or correct the one that is wrong (a recreated Access application has a new tag), and
+deploy again the same way. Deleting the variables does not help: the app then answers 503 everywhere but on localhost.
+
+To restore service before the next deploy, use Pages' rollback to an earlier production deployment whose variables were
+right; a deployment keeps the variables it was built with. Server data is untouched either way. A device refused with a
+401 or 403 drops the offline copy it kept and loads it again once access works; a 503 leaves the copy where it is.
 
 ## Keys
 
