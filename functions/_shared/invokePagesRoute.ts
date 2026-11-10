@@ -3,6 +3,7 @@ import type { Env, ExpensesData } from './env'
 import { createD1AccessRepository } from './adapters/d1AccessRepository'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { onRequest as authMiddleware } from '../api/_middleware'
+import { onLocalHost } from './testing/localHost'
 
 type RouteHandler = PagesFunction<Env, string, ExpensesData>
 type HandlerContext = EventContext<Env, string, ExpensesData>
@@ -109,7 +110,7 @@ export async function invokePagesRoute(
     init.body = JSON.stringify(options.body)
   }
   const request = new Request(
-    options.url ?? 'https://expenses.test/api/expenses/transactions',
+    onLocalHost(options.url ?? 'https://expenses.test/api/expenses/transactions'),
     init,
   )
   const env = withAccessTableMocks(defaultTestEnv(options.env))

@@ -1,7 +1,8 @@
 // @vitest-environment node
 /**
  * The /api middleware with the Access settings on: every request must carry a signed token that verifies and names the
- * same person as the header, or it is a 401, whichever route it is for. With them off nothing changes.
+ * same person as the header, or it is a 401, whichever route it is for. With them off a request is a 503, except one to a
+ * local development host, which is identified by the header alone.
  */
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -50,7 +51,13 @@ const one = (headers: Record<string, string>, email = OWNER) =>
   world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, headers, email })
 
 describe('with the Access settings off', () => {
-  it('a request is identified by the header alone, whatever token it carries, and no key is fetched', async () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  const deployed = (headers: Record<string, string> = {}) => ({ host: 'as-given' as const, headers })
+
+  it('on a local development host a request is identified by the header alone, whatever token it carries, and no key is fetched', async () => {
     expect((await one({})).status).toBe(200)
     expect((await one({ 'cf-access-jwt-assertion': 'garbage' })).status).toBe(200)
     expect(certs.calls()).toBe(0)
@@ -61,6 +68,32 @@ describe('with the Access settings off', () => {
     world.env.ACCESS_AUD = ''
 
     expect((await one({})).status).toBe(200)
+    expect((await world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, ...deployed() })).status).toBe(503)
+  })
+
+  it.each(['', ' '])('anywhere else every route is a 503 and a forged header gets nothing, whether the settings are missing or %j', async (blank) => {
+    if (blank !== '') Object.assign(world.env, { ACCESS_TEAM_DOMAIN: blank, ACCESS_AUD: blank })
+    const forged = deployed({ 'cf-access-jwt-assertion': 'x' })
+    const target = { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) } }
+    const spare = { method: 'DELETE', path: `/transactions/${ids.spareTransaction}`, params: { id: String(ids.spareTransaction) } }
+
+    const read = await world.call(getOne, { ...target, ...forged })
+    const dataset = await world.call(getDataset, forged)
+    const status = await world.call(getStatus, forged)
+    const write = await world.call(deleteOne, { ...spare, ...forged })
+
+    expect([read.status, dataset.status, status.status, write.status]).toEqual([503, 503, 503, 503])
+    expect(await read.json()).toEqual({ error: 'Sign-in checking is not set up correctly' })
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
+    expect(certs.calls()).toBe(0)
+  })
+
+  it('and nothing is read for the owner before the refusal', async () => {
+    world.clearLog()
+
+    await world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, ...deployed() })
+
+    expect(world.log.filter((sql) => /FROM transactions|allowed_users|owner_revision/.test(sql))).toEqual([])
   })
 })
 

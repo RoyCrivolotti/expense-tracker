@@ -3,6 +3,7 @@ import type { Env, ExpensesData } from '../env'
 import { createD1AccessRepository } from '../adapters/d1AccessRepository'
 import { createD1ExpenseRepository } from '../adapters/d1ExpenseRepository'
 import { onRequest as authMiddleware } from '../../api/_middleware'
+import { requestUrl, type HostChoice } from './localHost'
 
 type RouteHandler = PagesFunction<Env, string, ExpensesData>
 type HandlerContext = EventContext<Env, string, ExpensesData>
@@ -16,6 +17,8 @@ export interface InvokeApiOptions {
   params?: Record<string, string>
   /** Omit header when false; defaults to owner@example.com. */
   email?: string | false
+  /** `as-given` keeps the URL's own host instead of moving the request to localhost. */
+  host?: HostChoice
 }
 
 function handlerContext(
@@ -58,7 +61,7 @@ export async function invokeApiRoute(options: InvokeApiOptions): Promise<Respons
     headers.set('content-type', 'application/json')
     init.body = JSON.stringify(options.body)
   }
-  const request = new Request(options.url, init)
+  const request = new Request(requestUrl(options.url, options.host), init)
   const env = defaultTestEnv(options.env)
   const data: ExpensesData = {
     owner: '',
