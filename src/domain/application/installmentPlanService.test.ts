@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createPlan, patchPlan, removePlan, validateDueDay, validatePlanInput } from './installmentPlanService'
+import { MAX_INSTALLMENT_COUNT, createPlan, patchPlan, removePlan, validateDueDay, validatePlanInput } from './installmentPlanService'
 import { ValidationError } from './validationError'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import type { NewInstallmentPlan } from '../data/dataSource'
@@ -33,6 +33,17 @@ describe('validatePlanInput', () => {
 
   it('rejects missing description', () => {
     expect(() => validatePlanInput({ ...validPlan, description: '  ' })).toThrow('Description')
+  })
+
+  it('accepts the largest count and rejects one more, on create and on edit', async () => {
+    expect(validatePlanInput({ ...validPlan, totalCount: MAX_INSTALLMENT_COUNT }).totalCount).toBe(MAX_INSTALLMENT_COUNT)
+    expect(() => validatePlanInput({ ...validPlan, totalCount: MAX_INSTALLMENT_COUNT + 1 })).toThrow(
+      `totalCount must be ${MAX_INSTALLMENT_COUNT} or fewer`,
+    )
+    expect(() => validatePlanInput({ ...validPlan, totalCount: 1e9 })).toThrow('or fewer')
+    const repo = repoWithDefs()
+    const plan = await createPlan(repo, 'owner@example.com', validPlan)
+    await expect(patchPlan(repo, 'owner@example.com', plan.id, { totalCount: MAX_INSTALLMENT_COUNT + 1 })).rejects.toThrow('or fewer')
   })
 
   it('rejects non-positive totalCount and amount', () => {
