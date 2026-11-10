@@ -23,7 +23,7 @@ async function probe(status: number | number[], body = 'SECRET-BODY'): Promise<P
   const seen: IncomingMessage[] = []
   server = createServer((req, res) => {
     seen.push(req)
-    res.writeHead(answers.length > 1 ? answers.shift()! : answers[0]!).end(body)
+    res.writeHead(answers.length > 1 ? answers.shift()! : answers[0]).end(body)
   })
   await new Promise<void>((ready) => server!.listen(0, '127.0.0.1', ready))
   const { port } = server.address() as AddressInfo
