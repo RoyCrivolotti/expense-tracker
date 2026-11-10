@@ -57,6 +57,15 @@ describe('a write that could have come from another site', () => {
     expect(response.status).toBe(415)
   })
 
+  it('is refused with a 403 when the browser says it is same-site, which a sibling subdomain is', async () => {
+    const before = count()
+
+    const response = await post(postTransaction, { 'content-type': 'application/json', 'sec-fetch-site': 'same-site' }, body())
+
+    expect(response.status).toBe(403)
+    expect(count()).toBe(before)
+  })
+
   it('is refused with a 403 when the browser says it is cross-site, even with the right type', async () => {
     const before = count()
     const token = world.token()
@@ -64,7 +73,7 @@ describe('a write that could have come from another site', () => {
     const response = await post(postTransaction, { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' }, body())
 
     expect(response.status).toBe(403)
-    expect(await response.json()).toEqual({ error: 'Cross-site requests are refused' })
+    expect(await response.json()).toEqual({ error: 'Requests from another origin are refused' })
     expect(count()).toBe(before)
     expect(world.token()).toBe(token)
   })

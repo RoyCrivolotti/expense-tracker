@@ -7,7 +7,7 @@ import { createD1AccessRepository } from '../_shared/adapters/d1AccessRepository
 import { createD1ExpenseRepository } from '../_shared/adapters/d1ExpenseRepository'
 import { error } from '../_shared/http'
 import { withDefaultResponseHeaders } from '../_shared/defaultResponseHeaders'
-import { assertWriteIsSameSiteJson } from '../_shared/requestHygiene'
+import { assertWriteIsSameOriginJson } from '../_shared/requestHygiene'
 import { toHttpError } from '../_shared/mapAppError'
 import { bumpRevision, bumpRevisionReadingPrevious } from '../_shared/dbRevision'
 import { withWriteReceipt } from '../_shared/writeReceipt'
@@ -76,7 +76,7 @@ async function aroundWrite(
 const handle: PagesFunction<Env, string, ExpensesData> = async (context) => {
   try {
     const pathname = new URL(context.request.url).pathname
-    assertWriteIsSameSiteJson(context.request, pathname)
+    assertWriteIsSameOriginJson(context.request, pathname)
     const email = await resolveVerifiedEmail(context.request, context.env)
     const accessRepo = createD1AccessRepository(context.env)
     context.data.authenticatedEmail = email
