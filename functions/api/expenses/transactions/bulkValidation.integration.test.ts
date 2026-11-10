@@ -150,3 +150,37 @@ describe('sizes', () => {
     expect(await response.json()).toEqual({ error: `Row 2: notes must be ${MAX_NOTES_LENGTH} characters or fewer` })
   })
 })
+
+describe('request body size', () => {
+  const row = (notes: string) => ({
+    date: '2026-10-03',
+    budgetMonth: '2026-10',
+    description: 'x',
+    accountId: ids.debit,
+    categoryId: ids.groceries,
+    type: 'expense',
+    amountCents: 100,
+    notes,
+  })
+
+  it('refuses a body over the default cap with a 413 and writes nothing', async () => {
+    const before = count()
+
+    const response = await send(postOne, 'POST', '/transactions', row('n'.repeat(300 * 1024)))
+
+    expect(response.status).toBe(413)
+    expect(count()).toBe(before)
+  })
+
+  it('lets a bulk create carry more than the default cap, up to the largest valid batch', async () => {
+    const before = count()
+    const notes = 'n'.repeat(MAX_NOTES_LENGTH)
+
+    const response = await send(postBulk, 'POST', '/transactions/bulk', {
+      transactions: Array.from({ length: MAX_BULK_CREATE }, () => row(notes)),
+    })
+
+    expect(response.status).toBe(201)
+    expect(count()).toBe(before + MAX_BULK_CREATE)
+  })
+})

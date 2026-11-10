@@ -158,16 +158,11 @@ function firstDayOfBudgetMonth(yearMonth: string): string {
 /** Budget month `delta` months away from `yearMonth` (negative shifts back). */
 export function shiftBudgetMonth(yearMonth: string, delta: number): string {
   const [y, m] = yearMonth.split('-').map(Number) as [number, number]
-  let month = m + delta
-  let year = y
-  while (month > 12) {
-    month -= 12
-    year += 1
-  }
-  while (month < 1) {
-    month += 12
-    year -= 1
-  }
+  // Straight arithmetic: a loop stepping one month at a time would run `delta` times, and `delta`
+  // comes from an installment plan's `totalCount`.
+  const index = y * 12 + (m - 1) + delta
+  const year = Math.floor(index / 12)
+  const month = index - year * 12 + 1
   return `${year}-${String(month).padStart(2, '0')}`
 }
 

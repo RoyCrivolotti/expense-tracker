@@ -13,7 +13,7 @@ import { mapAppError } from '../../../_shared/mapAppError'
 import { assertRevisionUnchanged } from '../../../_shared/revisionPrecondition'
 import { receiptStore } from '../../../_shared/receiptStoreFactory'
 import { deleteWithReceipts } from '../../../_shared/receiptService'
-import { json, readJson } from '../../../_shared/http'
+import { BULK_CREATE_BODY_BYTES, json, readJson } from '../../../_shared/http'
 import { parseDeleteTransactionIds } from '../../../domain/data/transactionIds'
 
 interface BulkDeleteBody {
@@ -25,7 +25,7 @@ interface BulkCreateBody {
 }
 
 export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (context) => {
-  const body = await readJson<BulkCreateBody>(context.request)
+  const body = await readJson<BulkCreateBody>(context.request, BULK_CREATE_BODY_BYTES)
   const { repo, owner } = context.data
   try {
     return json(await bulkCreateTransactions(repo, owner, body.transactions), 201)

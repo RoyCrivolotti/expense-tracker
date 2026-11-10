@@ -6,6 +6,7 @@ import {
   isDueSoon,
   lastDayOfBudgetMonth,
   priorBudgetMonth,
+  shiftBudgetMonth,
   shortDateLabel,
   shortMonthFullYearLabel,
   shortMonthYearLabel,
@@ -138,5 +139,21 @@ describe('shortDateLabel', () => {
 
   it('drops the leading zero from the day', () => {
     expect(shortDateLabel('2026-01-09')).toBe('9 Jan 2026')
+  })
+})
+
+describe('shiftBudgetMonth', () => {
+  it('moves across year boundaries in both directions', () => {
+    expect(shiftBudgetMonth('2026-11', 1)).toBe('2026-12')
+    expect(shiftBudgetMonth('2026-12', 1)).toBe('2027-01')
+    expect(shiftBudgetMonth('2026-01', -1)).toBe('2025-12')
+    expect(shiftBudgetMonth('2026-03', -14)).toBe('2025-01')
+    expect(shiftBudgetMonth('2026-05', 0)).toBe('2026-05')
+    expect(shiftBudgetMonth('2026-05', 24)).toBe('2028-05')
+  })
+
+  it('answers at once for a shift of millions of months', () => {
+    expect(shiftBudgetMonth('2026-01', 12_000_000)).toBe('1002026-01')
+    expect(shiftBudgetMonth('2026-01', -12_000_000)).toBe('-997974-01')
   })
 })

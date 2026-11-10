@@ -11,9 +11,19 @@ export function validateDueDay(dueDay: number | null | undefined): void {
   }
 }
 
+/**
+ * Ten years of monthly payments. Card and store financing runs to about 84 months and a car loan
+ * to about 96; every installment becomes a month the engine walks, so the bound also keeps one
+ * request from making a plan of millions.
+ */
+export const MAX_INSTALLMENT_COUNT = 120
+
 function validateTotalCount(totalCount: number): void {
   if (!Number.isInteger(totalCount) || totalCount < 1) {
     throw new ValidationError('totalCount must be a positive integer')
+  }
+  if (totalCount > MAX_INSTALLMENT_COUNT) {
+    throw new ValidationError(`totalCount must be ${MAX_INSTALLMENT_COUNT} or fewer`)
   }
 }
 
