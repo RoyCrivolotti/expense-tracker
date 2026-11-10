@@ -1,5 +1,5 @@
 import { resolveVerifiedEmail } from '../_shared/access/accessIdentity'
-import { requireAllowedEmail, requireExpensesGroupGrant } from '../_shared/access/accessAuthorizer'
+import { requireAllowedEmail, requireExpensesGroupGrant, requireOwnerEmail } from '../_shared/access/accessAuthorizer'
 import { touchLastSeenIfNeeded } from '../_shared/access/accessService'
 import { createAccessDeps } from '../_shared/access/createAccessDeps'
 import type { Env, ExpensesData } from '../_shared/env'
@@ -12,8 +12,23 @@ import { toHttpError } from '../_shared/mapAppError'
 import { bumpRevision, bumpRevisionReadingPrevious } from '../_shared/dbRevision'
 import { withWriteReceipt } from '../_shared/writeReceipt'
 
-function isAccessApiPath(pathname: string): boolean {
-  return pathname.startsWith('/api/access')
+/**
+ * The routes that answer to anyone Access has signed in, on the allow-list or not: a person asks for access, and asks
+ * whether they have it, before anyone has approved them. The list is exact, so a route added under /api/access is
+ * behind the allow-list until it is named here.
+ */
+const SIGNED_IN_ONLY_PATHS = new Set([
+  '/api/access/request',
+  '/api/access/status',
+  '/api/access/grants',
+  '/api/access/groups',
+])
+
+/** Everything under here is the owner's: the middleware refuses anyone else before the route runs. */
+const ADMIN_PREFIX = '/api/access/admin/'
+
+function withoutTrailingSlash(pathname: string): string {
+  return pathname.replace(/\/+$/, '')
 }
 
 const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
@@ -69,7 +84,14 @@ const handle: PagesFunction<Env, string, ExpensesData> = async (context) => {
     context.data.owner = ''
     context.data.repo = createD1ExpenseRepository(context.env)
 
-    if (isAccessApiPath(pathname)) {
+    const path = withoutTrailingSlash(pathname)
+    if (SIGNED_IN_ONLY_PATHS.has(path)) {
+      return await context.next()
+    }
+    if (path.startsWith(ADMIN_PREFIX)) {
+      // The owner may not be on the allow-list (a fresh database), so this is not the group check below. Each
+      // admin service function checks again; this one covers a route added without it.
+      requireOwnerEmail(context.env, email)
       return await context.next()
     }
 
