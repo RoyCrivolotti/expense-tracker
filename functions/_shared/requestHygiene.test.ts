@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { assertWriteIsSameSiteJson } from './requestHygiene'
+import { assertWriteIsSameOriginJson } from './requestHygiene'
 
 const PATH = '/api/expenses/transactions'
 
@@ -18,7 +18,7 @@ function request(
 
 const refusal = (r: Request, path = PATH): { status: number } | null => {
   try {
-    assertWriteIsSameSiteJson(r, path)
+    assertWriteIsSameOriginJson(r, path)
     return null
   } catch (error) {
     return error as { status: number }
@@ -82,13 +82,15 @@ describe('a write with no body', () => {
 })
 
 describe('Sec-Fetch-Site on a write', () => {
-  it('refuses cross-site with a 403, whatever the body says', () => {
+  it('refuses cross-site and same-site (a sibling subdomain) with a 403, whatever the body says', () => {
+    expect(refusal(request('POST', { type: 'application/json', body: '{}', site: 'same-site' }))?.status).toBe(403)
+    expect(refusal(request('DELETE', { site: 'same-site' }))?.status).toBe(403)
     expect(refusal(request('POST', { type: 'application/json', body: '{}', site: 'cross-site' }))?.status).toBe(403)
     expect(refusal(request('DELETE', { site: 'cross-site' }))?.status).toBe(403)
     expect(refusal(request('POST', { type: 'text/plain', body: '{}', site: 'cross-site' }))?.status).toBe(403)
   })
 
-  it.each(['same-origin', 'same-site', 'none'])('lets %s through', (site) => {
+  it.each(['same-origin', 'none'])('lets %s through', (site) => {
     expect(refusal(request('POST', { type: 'application/json', body: '{}', site }))).toBeNull()
   })
 

@@ -62,9 +62,9 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   and some scripts), and a fork has to replace them ([DEPLOYMENT.md](./DEPLOYMENT.md)). New code reads such values from
   config or the environment.
 - **A write is checked before it is trusted, and no answer is kept by a shared cache.** Authentication is the
-  Access cookie, which a page on another site can make a browser send, so `assertWriteIsSameSiteJson` refuses a write
-  that is cross-site or whose body is not JSON, and `withDefaultResponseHeaders` marks every answer that does not choose
-  otherwise `private, no-store` (both in `functions/api/_middleware.ts`; [API.md](./API.md)). `public/_headers` gives
+  Access cookie, which a page on another site can make a browser send, so `assertWriteIsSameOriginJson` refuses a write
+  from another origin (a sibling subdomain included) or whose body is not JSON, and `withDefaultResponseHeaders` marks
+  every answer that does not choose otherwise `private, no-store` (both in `functions/api/_middleware.ts`; [API.md](./API.md)). `public/_headers` gives
   the static files `nosniff`, no framing and a same-origin referrer policy. There is no Content-Security-Policy: it
   has not been soaked with the service worker.
 - **The person is the one the signed token names, when Access is configured.** `resolveVerifiedEmail`

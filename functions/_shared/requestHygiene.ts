@@ -19,18 +19,24 @@ function hasNoBody(request: Request): boolean {
   return request.headers.get('content-length') === '0' && !request.headers.has('transfer-encoding')
 }
 
+/** What a browser sends for a request the app made to itself, or that the person made by typing the address. */
+const OWN_SITE_VALUES = new Set(['same-origin', 'none'])
+
 /**
- * Refuses a write that a page on another site could have caused. Authentication is the Access cookie, which a browser
+ * Refuses a write that a page on another origin could have caused. Authentication is the Access cookie, which a browser
  * sends with a form or a `fetch` from any site unless the cookie's SameSite setting says otherwise, and that setting is
- * not something this repo controls or tests. So a browser's own `Sec-Fetch-Site: cross-site` is a 403, and a write that
- * carries a body must say it is JSON: the types a page can send to another site without a preflight (`text/plain`,
- * form-urlencoded, multipart) are refused with a 415, and so is a body with no type. A write with no body (a delete,
- * a request for access) needs no type. A client that is not a browser sends no `Sec-Fetch-Site` and is not affected by the first rule.
+ * not something this repo controls or tests. A page on a sibling subdomain is "same-site" to the browser and gets the
+ * cookie too, so only `same-origin` and `none` pass: a browser's own `Sec-Fetch-Site` of anything else is a 403. A
+ * write that carries a body must also say it is JSON: the types a page can send to another origin without a preflight
+ * (`text/plain`, form-urlencoded, multipart) are refused with a 415, and so is a body with no type. A write with no
+ * body (a delete, a request for access) needs no type. A client that is not a browser sends no `Sec-Fetch-Site` and is
+ * not affected by the first rule.
  */
-export function assertWriteIsSameSiteJson(request: Request, pathname: string): void {
+export function assertWriteIsSameOriginJson(request: Request, pathname: string): void {
   if (SAFE_METHODS.has(request.method)) return
-  if (request.headers.get('sec-fetch-site') === 'cross-site') {
-    throw new HttpError(403, 'Cross-site requests are refused')
+  const site = request.headers.get('sec-fetch-site')
+  if (site !== null && !OWN_SITE_VALUES.has(site)) {
+    throw new HttpError(403, 'Requests from another origin are refused')
   }
   if (hasNoBody(request) || pathname === MULTIPART_ROUTE) return
   if (!isJson(request.headers.get('content-type'))) {
