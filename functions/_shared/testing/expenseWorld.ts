@@ -8,6 +8,7 @@ import { vi } from 'vitest'
 import type { Env } from '../env'
 import { createD1ExpenseRepository } from '../adapters/d1ExpenseRepository'
 import { invokeExpenseApiRoute } from './invokeExpenseApiRoute'
+import type { HostChoice } from './localHost'
 
 // Not owner@example.com: migrations 0003 and 0011 leave a settings row (rollover day 13) under that
 // placeholder, and a test owner should start from nothing.
@@ -30,6 +31,8 @@ export interface CallOptions {
   rawBody?: BodyInit
   email?: string
   headers?: Record<string, string>
+  /** `as-given` sends the request to `expenses.test`, a host that is not local development. */
+  host?: HostChoice
 }
 
 export interface World {
@@ -111,6 +114,7 @@ export function createExpenseWorld(sqlite: SqliteHandle, d1: D1Database): World 
         ...(options.body !== undefined ? { body: options.body } : {}),
         ...(options.rawBody !== undefined ? { rawBody: options.rawBody } : {}),
         ...(options.headers ? { extraHeaders: options.headers } : {}),
+        ...(options.host ? { host: options.host } : {}),
       }),
     intercept: (fn) => {
       intercepting = fn

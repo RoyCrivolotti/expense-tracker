@@ -17,12 +17,14 @@ beforeEach(() => {
   keyFor = (_team, id) => Promise.resolve(id === 'key-1' ? idp.keyPair.publicKey : null)
 })
 
-function request(email: string | null, token: string | null): Request {
+function request(email: string | null, token: string | null, origin = 'https://expenses.test'): Request {
   const headers = new Headers()
   if (email !== null) headers.set('Cf-Access-Authenticated-User-Email', email)
   if (token !== null) headers.set('Cf-Access-Jwt-Assertion', token)
-  return new Request('https://expenses.test/api/expenses', { headers })
+  return new Request(`${origin}/api/expenses`, { headers })
 }
+
+const LOCAL = ['http://localhost:8788', 'http://localhost', 'http://127.0.0.1:8788', 'http://[::1]:8788']
 
 const outcome = (r: Request, env = ON) => resolveVerifiedEmail(r, env, keyFor).then((email) => email, (e: { status: number }) => e.status)
 
@@ -67,20 +69,67 @@ describe('accessCheck', () => {
   })
 })
 
-describe('the person making a request, with the settings off', () => {
-  it('is the person the header names, as it always was', async () => {
-    expect(await outcome(request('Roy@Example.com', null), {})).toBe('roy@example.com')
+describe('the person making a request, with the settings off, on a local development host', () => {
+  it.each(LOCAL)('is the person the header names, as it always was: %s', async (origin) => {
+    expect(await outcome(request('Roy@Example.com', null, origin), {})).toBe('roy@example.com')
   })
 
   it('does not look at a token, good or bad', async () => {
-    expect(await outcome(request('roy@example.com', 'garbage'), {})).toBe('roy@example.com')
-    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('someone@example.net'))), {})).toBe('roy@example.com')
+    const [origin] = LOCAL
+    expect(await outcome(request('roy@example.com', 'garbage', origin), {})).toBe('roy@example.com')
+    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('someone@example.net')), origin), {})).toBe('roy@example.com')
   })
 
   it('is a 401 with no header', async () => {
-    expect(await outcome(request(null, null), {})).toBe(401)
+    expect(await outcome(request(null, null, LOCAL[0]), {})).toBe(401)
   })
 
+  it('also with both settings blank', async () => {
+    expect(await outcome(request('roy@example.com', null, LOCAL[0]), { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: '' })).toBe('roy@example.com')
+  })
+})
+
+describe('the person making a request, with the settings off, anywhere else', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  const HOSTS = [
+    'https://expenses.test',
+    'https://project.pages.dev',
+    'https://localhost.example.com',
+    'https://127.0.0.1.example.com',
+    'http://127.0.0.2',
+    'http://[::2]',
+    'http://localhost.',
+  ]
+  const OFF = [{}, { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: '' }]
+
+  it.each(HOSTS)('is a 503 for a request that names a person and carries no token: %s', async (origin) => {
+    for (const env of OFF) expect(await outcome(request('roy@example.com', null, origin), env)).toBe(503)
+  })
+
+  it('is a 503 whatever the request carries, with or without a header', async () => {
+    expect(await outcome(request('roy@example.com', 'garbage'), {})).toBe(503)
+    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com'))), {})).toBe(503)
+    expect(await outcome(request(null, null), {})).toBe(503)
+  })
+
+  it('says why in the log and repeats nothing of the request', async () => {
+    await outcome(request('forged@example.com', null), {})
+
+    const logged = vi.mocked(console.error).mock.calls.flat().join(' ')
+    expect(logged).toContain('ACCESS_TEAM_DOMAIN and ACCESS_AUD are not set')
+    expect(logged).not.toContain('forged@example.com')
+  })
+
+  it('does not ask the team for its keys', async () => {
+    const asked = vi.fn(keyFor)
+
+    await resolveVerifiedEmail(request('roy@example.com', null), {}, asked).catch(() => undefined)
+
+    expect(asked).not.toHaveBeenCalled()
+  })
 })
 
 describe('the person making a request, with the settings on', () => {
