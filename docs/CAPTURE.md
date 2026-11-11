@@ -66,8 +66,13 @@ Two things are stored under a secret. The replay hash is an HMAC under `CAPTURE_
 be matched against a guessed body such as a one-time code. With the secret unset the Worker answers 503 to everything.
 Errors answer a fixed 500 and log a fixed line, never text built from a push.
 
-Not yet here: pairing a balance alert with its event, the approval hold, the unknown list, the Santander kinds, and the
-screens. Until then only Iberia's purchase push creates anything.
+Not yet here: pairing a balance alert with the push it follows, holding a card approval until its purchase push
+arrives, a list of pushes that could not be read, the Santander kinds, and the screens. Until then only Iberia's
+purchase push creates anything.
+
+There is no per-address rate limit. A caller with no key who sends a well-formed header costs one hash and one D1 read
+per request and cannot write anything. A `workers.dev` address has no zone, so no rate rule can sit in front of it. If
+abuse is seen, a Workers Rate Limiting binding is the fix.
 
 ### Deploying it (not done by any script here)
 
@@ -77,6 +82,9 @@ Everything below changes Cloudflare and needs the account owner's say-so, stagin
    (they are not committed).
 2. Bind the staging D1 database as `DB`.
 3. `wrangler secret put CAPTURE_REPLAY_SECRET` with 32 random bytes of hex, one per environment.
-4. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
+4. Set `OWNER_EMAIL` to the same value the app uses, as a secret or variable and never committed. The owner reaches
+   the app without an Expenses grant only through it, so without it the owner's own key is refused. Anyone else
+   needs a grant either way.
+5. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
    `/api/expenses` 401.
-5. Repeat for production, after migration 0040 is on that database.
+6. Repeat for production, after migration 0040 is on that database.

@@ -2,11 +2,14 @@
 # the app can ever accept a capture key and this one serves no app. Nothing here is deployed by the repo's scripts.
 #
 # Before deploying, someone with the Cloudflare account sets `account_id` and `database_id` (not committed: this
-# repo is public) and runs `wrangler secret put CAPTURE_REPLAY_SECRET` for the environment. See docs/CAPTURE.md.
+# repo is public), runs `wrangler secret put CAPTURE_REPLAY_SECRET` and sets `OWNER_EMAIL` as a secret or variable for
+# the environment (without it the owner's own key is refused). See docs/CAPTURE.md.
 name = "expense-capture"
 main = "src/index.ts"
 compatibility_date = "2024-11-12"
 workers_dev = true
+# Each version would otherwise get a public address of its own that runs the same code.
+preview_urls = false
 
 [[d1_databases]]
 binding = "DB"
