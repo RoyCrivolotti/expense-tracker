@@ -200,6 +200,7 @@ have stopped `--file`. It can stop half-applied, so compare the result with `npm
 | `0036_transaction_query_indexes`, `0037_pinned_rows_index` | Each index is built by reading every row once and adds a written row per insert against the Free plan's 100,000 a day, so two new indexes make a 5,000-row import write 10,000 more (0037 only for investments and rows tied to a plan, flag or settlement). |
 | `0038_description_norm` | See below. |
 | `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the written-row allowance ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
+| `0040_capture` | Five tables for bank-push capture: keys (hashed), card map, recognised events, per-day counters of what was dropped, and recommendations. Nothing reads or writes them yet, so applying it changes no response. `npm run check:schema` expects them on every database. |
 
 Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 

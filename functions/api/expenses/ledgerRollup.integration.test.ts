@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { splitStatements } from '../../../scripts/sql-statements.mjs'
-import { applyMigrationSql, migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
+import { applyMigration, applyMigrationSql, migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { assertRollup } from '../../_shared/testing/rollupKit'
 import { newKit } from '../../_shared/testing/rollupWorld'
 import { OWNER } from '../../_shared/testing/expenseWorld'
@@ -28,6 +28,8 @@ const BACKFILLS = STATEMENTS.slice(FIRST_BACKFILL)
 
 async function kitFor(seed: number, through?: string) {
   const sqlite = migratedDatabase(through)
+  // The walks purge an owner, which deletes from the capture tables; 0039 does not depend on them.
+  if (through !== undefined) applyMigration(sqlite, '0040_capture.sql')
   return { sqlite, k: await newKit(sqlite, sqliteD1(sqlite, newStats()), seed) }
 }
 
