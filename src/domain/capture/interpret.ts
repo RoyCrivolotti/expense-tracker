@@ -1,6 +1,7 @@
 import { findAmount } from './amount'
 import { matchRule } from './classify'
 import { parsePushDate, withinClockSkew } from './date'
+import type { PushInstant } from './date'
 import { kindSign, suggestType } from './suggest'
 import { cleanText, findLastFour } from './text'
 import type { CaptureSource, KindRule, PushKind, RawPush, SuggestedType } from './types'
@@ -36,6 +37,10 @@ export function interpretPush(push: RawPush, receivedMs: number, rules?: readonl
   if (!withinClockSkew(date.instantMs, receivedMs)) {
     return { outcome: 'unknown', reason: 'clock-skew', source: push.source }
   }
+  return recommend(push, rule, date)
+}
+
+function recommend(push: RawPush, rule: KindRule, date: PushInstant): Interpretation {
   const amount = findAmount(push.body, rule.mark, rule.bareAmount ?? false)
   return {
     outcome: 'recommend',
