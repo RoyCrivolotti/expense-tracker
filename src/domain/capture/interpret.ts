@@ -21,6 +21,8 @@ export type Interpretation =
       lastFour: string | null
       instantMs: number
       localDate: string
+      /** The phone's offset from UTC, in minutes, as the Date wrote it. */
+      offsetMinutes: number
       /** The cleaned body, for the edit form. Absent for kinds whose body names a person. */
       rawText?: string
     }
@@ -52,6 +54,7 @@ function recommend(push: RawPush, rule: KindRule, date: PushInstant): Interpreta
     lastFour: findLastFour(push.body),
     instantMs: date.instantMs,
     localDate: date.localDate,
+    offsetMinutes: date.offsetMinutes,
     ...(rule.keepsText ? { rawText: cleanText(push.body) } : {}),
   }
 }

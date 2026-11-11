@@ -3,6 +3,8 @@ export interface PushInstant {
   instantMs: number
   /** The calendar day on the phone, read off the string so a changed offset cannot move it. */
   localDate: string
+  /** The phone's offset from UTC at that moment, in minutes. */
+  offsetMinutes: number
 }
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
@@ -29,7 +31,7 @@ export function parsePushDate(date: string): PushInstant | null {
   if (year < 100 || offset === null || hour > 23 || minute > 59 || second > 59) return null
   const wall = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
   if (wall.getUTCMonth() !== month - 1 || wall.getUTCDate() !== day) return null
-  return { instantMs: wall.getTime() - offset * 60_000, localDate: `${m[1]}-${m[2]}-${m[3]}` }
+  return { instantMs: wall.getTime() - offset * 60_000, localDate: `${m[1]}-${m[2]}-${m[3]}`, offsetMinutes: offset }
 }
 
 /** Whether a push dated at `instantMs` is believable when the server receives it at `receivedMs`. */
