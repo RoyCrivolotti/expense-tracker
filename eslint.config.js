@@ -219,6 +219,8 @@ export default defineConfig([
   },
   {
     files: ['workers/**/*.ts'],
+    // Tests are outside the worker's tsconfig, as functions' tests are outside the first block above.
+    ignores: ['workers/**/*.test.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       globals: globals.worker,

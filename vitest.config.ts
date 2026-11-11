@@ -9,6 +9,7 @@ const NODE_TESTS = [
   'src/data/**/*.test.{ts,tsx}',
   'src/testing/**/*.test.{ts,tsx}',
   'functions/**/*.test.ts',
+  'workers/**/*.test.ts',
   'scripts/**/*.test.ts',
 ]
 
