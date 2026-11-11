@@ -1,7 +1,7 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key, which is built; the endpoint that accepts it and the screens that show recommendations are added as they land.
+key and the endpoint that accepts it, both built; the screens that show recommendations are added as they land.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -36,3 +36,47 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 
 These writes leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
+
+## The capture endpoint
+
+`POST /capture` on its own Worker ([`workers/capture`](../workers/capture/src/index.ts)), not a route of the app. It
+has a `workers.dev` address, one D1 binding and no receipts bucket, so no `/api` route can accept a capture key and
+the app's Access settings are not part of its risk. It never reads the Access headers: the owner is the key's.
+
+Refusals come in this order, and the first five touch no database: wrong path 404, method 405, a key that is not
+`Authorization: Bearer xpk_<16 hex>_<64 hex>` 401, a declared size over 16 KB 413, a content type other than JSON 415.
+Then one read by key id. Every key problem (unknown id, wrong secret, revoked, owner off the allow-list or without the
+Expenses group) is the same 401, byte for byte, and an unknown id still compares against a dummy hash. A body is read
+through a counted stream and stops at 16 KB. A body that is not `{ source, title, body, date }` is a fixed 400.
+
+What happens to a push:
+
+| Push | Result |
+| --- | --- |
+| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. Answers `{"ok":true}` |
+| Same push again | Stored once. The same 200 |
+| Any other kind, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
+| Over a cap | 429 with `Retry-After`, and nothing stored |
+
+Caps, all checked inside the insert that stores the count or the row, so parallel requests cannot pass them together:
+20 pushes an hour and 100 a day per key, 200 pushes a day per person (recognised or not), 2,000 a day across everyone,
+and 2,000 open recommendations per person. They are starting guesses.
+
+Two things are stored under a secret. The replay hash is an HMAC under `CAPTURE_REPLAY_SECRET`, so a stored hash cannot
+be matched against a guessed body such as a one-time code. With the secret unset the Worker answers 503 to everything.
+Errors answer a fixed 500 and log a fixed line, never text built from a push.
+
+Not yet here: pairing a balance alert with its event, the approval hold, the unknown list, the Santander kinds, and the
+screens. Until then only Iberia's purchase push creates anything.
+
+### Deploying it (not done by any script here)
+
+Everything below changes Cloudflare and needs the account owner's say-so, staging first.
+
+1. Create the Worker `expense-capture` from `workers/capture` with `account_id` and `database_id` filled in locally
+   (they are not committed).
+2. Bind the staging D1 database as `DB`.
+3. `wrangler secret put CAPTURE_REPLAY_SECRET` with 32 random bytes of hex, one per environment.
+4. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
+   `/api/expenses` 401.
+5. Repeat for production, after migration 0040 is on that database.
