@@ -93,7 +93,10 @@ describe('POST /api/capture-keys', () => {
     ['not text', 7],
     ['over 40 characters', 'x'.repeat(41)],
     ['holding a control character', 'a\u0000b'],
-    ['holding a bidi override', 'a‮b'],
+    ['holding a bidi override', 'a\u202eb'],
+    ['holding a zero-width space', 'a\u200bb'],
+    ['holding a line separator', 'a\u2028b'],
+    ['holding a byte-order mark', 'a\ufeffb'],
   ])('refuses a label that is %s, and stores nothing', async (_name, label) => {
     const response = await makeKey(label)
 

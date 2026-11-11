@@ -4,10 +4,11 @@ import { ValidationError } from './validationError'
 
 export const MAX_CAPTURE_KEY_LABEL_LENGTH = 40
 const DEFAULT_LABEL = 'Shortcut'
-// Control characters and the bidirectional overrides: the label is shown back in a list, and a hostile one could
-// reorder what is around it. Written as escapes so the source holds no invisible character.
+// Control characters, zero-width and line-separator characters, the byte-order mark and the bidirectional overrides and
+// isolates: the label is shown back in a list, and a hostile one could hide or reorder what is around it. Written as
+// escapes so the source holds no invisible character.
 // eslint-disable-next-line no-control-regex
-const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/
+const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/
 
 /** A name for the key, so the person can tell their keys apart in the list. Blank or missing becomes "Shortcut". */
 export function validateCaptureKeyLabel(label: unknown): string {
