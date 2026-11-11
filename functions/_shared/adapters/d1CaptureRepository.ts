@@ -8,6 +8,7 @@ import {
   LIST_CARDS_SQL,
   READ_COUNTERS_SQL,
   RECORD_EVENT_SQL,
+  RECORD_RECOMMENDATION_SQL,
   SAVE_CARD_SQL,
 } from '../capture/captureEventsSql'
 import {
@@ -70,9 +71,33 @@ function keys(db: D1Database): Statements {
 
 function events(
   db: D1Database,
-): Pick<CaptureRepository, 'recordEvent' | 'eventsSince' | 'lastCaptureAt' | 'bumpCounter' | 'readCounters'> {
+): Pick<
+  CaptureRepository,
+  'recordEvent' | 'recordCapture' | 'eventsSince' | 'lastCaptureAt' | 'bumpCounter' | 'readCounters'
+> {
   return {
-    recordEvent: (event) => changed(db, RECORD_EVENT_SQL, ...eventParams(event)),
+    recordEvent: (event) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null)),
+    recordCapture: async (event, rec) => {
+      const results = await db.batch([
+        db.prepare(RECORD_EVENT_SQL).bind(...eventParams(event, rec.id)),
+        db
+          .prepare(RECORD_RECOMMENDATION_SQL)
+          .bind(
+            event.id,
+            rec.id,
+            rec.accountId,
+            rec.amountCents,
+            rec.currency,
+            rec.occurredAt,
+            rec.localDate,
+            rec.merchantRaw,
+            rec.descriptionSuggested,
+            rec.suggestedType,
+            rec.createdAt,
+          ),
+      ])
+      return (results[0]?.meta?.changes ?? 0) > 0
+    },
     eventsSince: async (keyId, since) => {
       const row = await db.prepare(EVENTS_SINCE_SQL).bind(keyId, since).first<{ n: number }>()
       return row?.n ?? 0

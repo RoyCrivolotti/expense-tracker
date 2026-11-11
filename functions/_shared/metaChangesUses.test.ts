@@ -25,7 +25,7 @@ const sources = import.meta.glob<string>(
 /** The uses of `meta.changes` per file, and why each is safe. */
 const LISTED: Record<string, { uses: number; why: string }> = {
   '/functions/_shared/access/accessDb.ts': { uses: 2, why: 'access tables, tested for > 0' },
-  '/functions/_shared/adapters/d1CaptureRepository.ts': { uses: 1, why: 'capture tables carry no trigger; tested for > 0 to say a guarded write took effect' },
+  '/functions/_shared/adapters/d1CaptureRepository.ts': { uses: 2, why: 'capture tables carry no trigger; tested for > 0 to say a guarded write took effect' },
   '/functions/_shared/dbBulkEdit.ts': { uses: 1, why: 'label links inserted: transaction_labels has no trigger' },
   '/functions/_shared/dbConfig.ts': { uses: 5, why: 'a deleted category, account, scenario: tested for 0 to answer 404' },
   '/functions/_shared/dbInstallments.ts': { uses: 1, why: 'the plan delete, tested for 0 to answer 404' },

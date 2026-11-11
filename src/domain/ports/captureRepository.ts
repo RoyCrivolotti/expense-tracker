@@ -28,17 +28,26 @@ export interface NewCaptureKey {
   createdAt: string
 }
 
-/** One recognised push. Fields that would hold another person's name are left null by the caller for those kinds. */
+/**
+ * One recognised push. Fields that would hold another person's name are left null by the caller for those kinds.
+ * There is no owner: the owner is the key's, read inside the insert, so an event cannot be filed under a person
+ * the key does not belong to, nor under a key revoked a moment ago.
+ */
 export interface CaptureEvent {
   id: string
-  owner: string
   keyId: string
   source: CaptureSource
+  /**
+   * Identifies the push so that sending it twice stores it once. The column holds whatever is passed. The pure
+   * `replayKey` is an unsalted SHA-256, which a guessable body (a one-time code) could be matched against, so the
+   * capture Worker must store an HMAC of it under a secret and pass that.
+   */
   replayKey: string
   kind: PushKind
   /** Signed: outflows are negative. Null when the body gave no amount the parser trusts. */
   amountCents: number | null
   currency: string | null
+  /** At most 200 characters. */
   merchantRaw: string | null
   last4: string | null
   accountDigits: string | null
@@ -46,7 +55,9 @@ export interface CaptureEvent {
   localDate: string
   offsetMinutes: number
   receivedAt: string
-  recId: string | null
+  /** Set by `recordCapture` from the recommendation it writes; ignored on input. */
+  recId?: string | null
+  /** Only for a recognised push that came out incomplete, never for a kind that names a person. Blank it once the user decides. At most 500 characters. */
   bodyExcerpt: string | null
 }
 
@@ -111,8 +122,17 @@ export interface CaptureRepository {
   /** Records a use, at most once a minute per key. */
   touchKey(keyId: string, at: string): Promise<void>
 
-  /** False when the same push was stored before: replaying it changes nothing. */
+  /**
+   * False when nothing was stored: the same push was stored before (replaying changes nothing), or the key is
+   * unknown or revoked. A row that breaks a constraint throws instead, so a lost push is never read as a replay.
+   */
   recordEvent(event: CaptureEvent): Promise<boolean>
+  /**
+   * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
+   * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
+   * recommendation takes its owner from the event. Returns false, writing neither, as `recordEvent` does.
+   */
+  recordCapture(event: CaptureEvent, recommendation: Omit<NewRecommendation, 'owner'>): Promise<boolean>
   eventsSince(keyId: string, since: string): Promise<number>
   lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
   bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>
