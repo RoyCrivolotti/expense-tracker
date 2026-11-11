@@ -20,6 +20,14 @@ describe('parsePushDate', () => {
     expect(parsed?.localDate).toBe('2026-07-02')
   })
 
+  it('accepts an offset written without a colon', () => {
+    expect(parsePushDate('2026-11-03T09:41:07+0100')?.instantMs).toBe(Date.UTC(2026, 10, 3, 8, 41, 7))
+  })
+
+  it('refuses a year under 100, which JavaScript would move to the 1900s', () => {
+    expect(parsePushDate('0026-11-03T09:41:07+01:00')).toBeNull()
+  })
+
   it('accepts Z, a negative offset and fractional seconds', () => {
     expect(parsePushDate('2026-11-03T09:41:07Z')?.instantMs).toBe(Date.UTC(2026, 10, 3, 9, 41, 7))
     expect(parsePushDate('2026-11-03T09:41:07.250-05:00')?.instantMs).toBe(Date.UTC(2026, 10, 3, 14, 41, 7))
