@@ -232,6 +232,12 @@ describe('the key', () => {
     expect((await send(request({ key: bobKey.key }))).status).toBe(401)
   })
 
+  it('is refused for the owner when OWNER_EMAIL is unset and no Expenses grant exists', async () => {
+    delete env.OWNER_EMAIL
+    expect((await send(request())).status).toBe(401)
+    expect(count('capture_events')).toBe(0)
+  })
+
   it('files the push under the key owner, whatever Access headers say', async () => {
     const res = await send(request({ headers: { 'cf-access-authenticated-user-email': BOB } }))
     expect(res.status).toBe(200)
@@ -280,7 +286,7 @@ describe('a push the app does not recognise', () => {
     expect(everyText()).not.toContain(MARKER)
   })
 
-  it('stores no marker from a recognised push whose kind names nobody either', async () => {
+  it('keeps a recognised purchase\'s text, and never a key or secret', async () => {
     await send(request({ body: { ...PURCHASE, body: `Shop ${MARKER} *4321 33,40 EUR` } }))
     expect(everyText().filter((t) => t.includes(MARKER)).length).toBeGreaterThan(0)
     expect(everyText().some((t) => /xpk_|secret/i.test(t))).toBe(false)
@@ -358,7 +364,31 @@ describe('the caps', () => {
   })
 })
 
+describe('a key revoked after it was checked', () => {
+  it('stores nothing when recordCapture runs for it', async () => {
+    await repos().captures.revokeKey(ALICE, minted.keyId, NOW.toISOString())
+    const event = {
+      id: 'e1', keyId: minted.keyId, source: 'iberia' as const, replayKey: 'r', kind: 'card-purchase' as const,
+      amountCents: -100, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null,
+      occurredAt: NOW.toISOString(), localDate: '2026-11-03', offsetMinutes: 60, receivedAt: NOW.toISOString(), bodyExcerpt: null,
+    }
+    const rec = { id: 'r1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: event.occurredAt, localDate: '2026-11-03', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense' as const, createdAt: event.receivedAt }
+    expect(await repos().captures.recordCapture(event, rec)).toBe(false)
+    expect(count('capture_events') + count('recommendations')).toBe(0)
+  })
+})
+
 describe('the Worker entry', () => {
+  it('fails closed with no database: a malformed key is still 401, a well-formed one a fixed 500', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const none = { ...env, DB: undefined } as unknown as CaptureEnv
+    expect((await worker.fetch(request({ key: 'xpk_nope' }), none)).status).toBe(401)
+    const res = await worker.fetch(request(), none)
+    expect(res.status).toBe(500)
+    expect(await res.text()).toBe('{"error":"server error"}')
+    error.mockRestore()
+  })
+
   it('answers a database failure with a fixed 500 that carries no push text', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const broken = { ...env, DB: { prepare: () => { throw new Error('boom Shop Example') } } } as unknown as CaptureEnv
