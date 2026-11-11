@@ -100,6 +100,23 @@ export interface Recommendation extends NewRecommendation {
   decidedAt: string | null
 }
 
+/** What one accepted push is counted against. Times are ISO strings, so the caller passes the clock in. */
+export interface CaptureCaps {
+  /** Pushes this key may store since `hourSince`, and since `daySince`. */
+  keyPerHour: number
+  keyPerDay: number
+  hourSince: string
+  daySince: string
+  /** Open recommendations the person may hold, so a flood cannot grow their list without bound. */
+  openPerOwner: number
+}
+
+/** The daily limits on pushes received, whether or not they are recognised. */
+export interface DailyCaps {
+  perOwner: number
+  global: number
+}
+
 /** Where the next page of the open list starts: after this row, in the list's order. */
 export interface RecommendationCursor {
   localDate: string
@@ -126,13 +143,24 @@ export interface CaptureRepository {
    * False when nothing was stored: the same push was stored before (replaying changes nothing), or the key is
    * unknown or revoked. A row that breaks a constraint throws instead, so a lost push is never read as a replay.
    */
-  recordEvent(event: CaptureEvent): Promise<boolean>
+  recordEvent(event: CaptureEvent, caps?: CaptureCaps): Promise<boolean>
   /**
    * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
    * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
    * recommendation takes its owner from the event. Returns false, writing neither, as `recordEvent` does.
    */
-  recordCapture(event: CaptureEvent, recommendation: Omit<NewRecommendation, 'owner'>): Promise<boolean>
+  recordCapture(
+    event: CaptureEvent,
+    recommendation: Omit<NewRecommendation, 'owner'>,
+    caps?: CaptureCaps,
+  ): Promise<boolean>
+  /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
+  hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
+  /**
+   * Counts one received push for the key's owner today, unless the owner or everyone has reached the daily cap.
+   * The check and the count are one statement, so parallel requests cannot pass the cap together.
+   */
+  admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<boolean>
   eventsSince(keyId: string, since: string): Promise<number>
   lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
   bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>

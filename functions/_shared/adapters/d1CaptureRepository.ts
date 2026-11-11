@@ -1,9 +1,16 @@
-import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type {
+  CaptureCaps,
+  CaptureEvent,
+  CaptureRepository,
+  NewRecommendation,
+} from '../../../src/domain/ports/captureRepository'
 import type { Env } from '../env'
 import {
   eventParams,
   BUMP_COUNTER_SQL,
+  ADMIT_SQL,
   EVENTS_SINCE_SQL,
+  HAS_EVENT_SQL,
   LAST_CAPTURE_SQL,
   LIST_CARDS_SQL,
   READ_COUNTERS_SQL,
@@ -69,35 +76,52 @@ function keys(db: D1Database): Statements {
   }
 }
 
+async function recordCapture(
+  db: D1Database,
+  event: CaptureEvent,
+  rec: Omit<NewRecommendation, 'owner'>,
+  caps: CaptureCaps | undefined,
+): Promise<boolean> {
+  const results = await db.batch([
+    db.prepare(RECORD_EVENT_SQL).bind(...eventParams(event, rec.id, caps)),
+    db
+      .prepare(RECORD_RECOMMENDATION_SQL)
+      .bind(
+        event.id,
+        rec.id,
+        rec.accountId,
+        rec.amountCents,
+        rec.currency,
+        rec.occurredAt,
+        rec.localDate,
+        rec.merchantRaw,
+        rec.descriptionSuggested,
+        rec.suggestedType,
+        rec.createdAt,
+      ),
+  ])
+  return (results[0]?.meta?.changes ?? 0) > 0
+}
+
 function events(
   db: D1Database,
 ): Pick<
   CaptureRepository,
-  'recordEvent' | 'recordCapture' | 'eventsSince' | 'lastCaptureAt' | 'bumpCounter' | 'readCounters'
+  | 'recordEvent'
+  | 'recordCapture'
+  | 'hasEvent'
+  | 'admit'
+  | 'eventsSince'
+  | 'lastCaptureAt'
+  | 'bumpCounter'
+  | 'readCounters'
 > {
   return {
-    recordEvent: (event) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null)),
-    recordCapture: async (event, rec) => {
-      const results = await db.batch([
-        db.prepare(RECORD_EVENT_SQL).bind(...eventParams(event, rec.id)),
-        db
-          .prepare(RECORD_RECOMMENDATION_SQL)
-          .bind(
-            event.id,
-            rec.id,
-            rec.accountId,
-            rec.amountCents,
-            rec.currency,
-            rec.occurredAt,
-            rec.localDate,
-            rec.merchantRaw,
-            rec.descriptionSuggested,
-            rec.suggestedType,
-            rec.createdAt,
-          ),
-      ])
-      return (results[0]?.meta?.changes ?? 0) > 0
-    },
+    recordEvent: (event, caps) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null, caps)),
+    recordCapture: (event, rec, caps) => recordCapture(db, event, rec, caps),
+    hasEvent: async (keyId, source, replayKey) =>
+      (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
+    admit: (owner, source, day, caps) => changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global),
     eventsSince: async (keyId, since) => {
       const row = await db.prepare(EVENTS_SINCE_SQL).bind(keyId, since).first<{ n: number }>()
       return row?.n ?? 0
