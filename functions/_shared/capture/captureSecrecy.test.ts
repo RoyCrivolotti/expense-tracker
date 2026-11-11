@@ -31,12 +31,19 @@ const sources = import.meta.glob<string>(
   { query: '?raw', import: 'default', eager: true },
 )
 
-/** The only files that may name the hash column: the statements that store and check it, and the type that carries it. */
+/**
+ * The only files that may name the hash column: the statements that store and check it, the type that carries it, and
+ * the code that makes a key and hands the hash to the port. None of them returns it to a caller outside the server.
+ */
 const MAY_NAME_THE_HASH = new Set([
   '/functions/_shared/capture/captureKeysSql.ts',
   '/src/domain/ports/captureRepository.ts',
   // functions/domain is a link to src/domain, so the glob sees the port twice.
   '/functions/domain/ports/captureRepository.ts',
+  '/src/domain/capture/captureKey.ts',
+  '/src/domain/application/captureKeyService.ts',
+  '/functions/domain/capture/captureKey.ts',
+  '/functions/domain/application/captureKeyService.ts',
 ])
 
 describe('the hash of a capture key', () => {
