@@ -69,7 +69,8 @@ WHERE k.key_id = ?1 AND e.source = ?2 AND e.replay_key = ?3`
 
 /**
  * Counts a received push for the owner and day when neither the owner's total nor the global total for the day has
- * reached its cap. The sums read the (owner, source, day) key and the day index; both are small, one row per source.
+ * reached its cap. The owner's sum reads that owner's rows by the table's key, and the global sum scans the table, which holds about
+ * two rows a day for one person. Add an index on `day` if the table ever grows enough for that scan to matter.
  */
 export const ADMIT_SQL = `INSERT INTO capture_counters (owner, source, day, received)
 SELECT ?1, ?2, ?3, 1
