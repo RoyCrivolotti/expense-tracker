@@ -57,6 +57,28 @@ describe('findAmount', () => {
     expect(findAmount('Paid 250.0 today', 'comma')).toBeNull()
   })
 
+  it('treats a prefix euro sign as a currency', () => {
+    expect(findAmount('Order 12 paid €33,40', 'comma')).toEqual({ cents: 3340, negative: false })
+  })
+
+  it('refuses to pick between several bare numbers', () => {
+    expect(findAmount('Card ending 4321 paid 5,00', 'comma')).toBeNull()
+    expect(findAmount('13:50 Shop 33,40', 'comma')).toEqual({ cents: 3340, negative: false })
+    expect(findAmount('Shop 7 items 33,40', 'comma')).toBeNull()
+  })
+
+  it('does not read a time as an amount', () => {
+    expect(findAmount('At 13:50 you paid', 'comma')).toBeNull()
+  })
+
+  it('refuses zero and amounts beyond the cap', () => {
+    expect(parseAmount('0,00', 'comma')).toBeNull()
+    expect(parseAmount('-0,00', 'comma')).toBeNull()
+    expect(parseAmount('9999999999.99', 'dot')).toBeNull()
+    expect(parseAmount('1000000.00', 'dot')).toEqual({ cents: 100_000_000, negative: false })
+    expect(parseAmount('1000000.01', 'dot')).toBeNull()
+  })
+
   it('returns null when there is no number', () => {
     expect(findAmount('Hello there', 'dot')).toBeNull()
   })
