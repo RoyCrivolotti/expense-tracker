@@ -111,8 +111,9 @@ no deploy.
 ## Pruning old deployments
 
 Pages keeps every deployment, and an old one is not dormant: its own `<id>.<project>.pages.dev` address keeps serving the
-code it was built from, with the project's current bindings, so the number of reachable old builds only grows. `.github/workflows/prune-deployments.yml` runs weekly and deletes the old ones from the production and
-staging projects, using the token the deploy uses (Cloudflare Pages Edit).
+code it was built from, with the project's current bindings, so the number of reachable old builds only grows.
+`.github/workflows/prune-deployments.yml` runs weekly and deletes the old ones from the production and staging
+projects, using the token the deploy uses (Cloudflare Pages Edit).
 
 It keeps the newest 10 production and the newest 5 preview deployments by creation date (`KEEP_PRODUCTION` and
 `KEEP_PREVIEW` in the script), and in addition:
