@@ -122,9 +122,15 @@ It keeps the newest 10 production and the newest 5 preview deployments by creati
 - the latest successful deployment of each environment, so a rollback target always exists,
 - any deployment a custom domain points at, and any still building.
 
-Everything else goes, including old previews that still have a branch alias. A pull request whose preview was pruned gets
-a new one on its next push. It stops before the first delete if the listing is incomplete, the response has an unexpected
-shape, or the current production deployment is not in the listing. The log holds counts and dates, never deployment ids.
+Everything else goes, including the previews of open pull requests that are older than the newest 5 (the preview link in
+such a pull request's description then returns 404 until its next push, which deploys a new one). It stops before the
+first delete if the listing is incomplete, the response has an unexpected shape, the current production deployment is not
+in the listing, or the plan would delete more than 300 deployments from one project (`MAX_DELETE`; a run by hand can pass
+`--max-delete`). It only touches the projects in `config/prune-projects.json`, the same list the workflow reads. The log
+holds counts and dates, never deployment ids.
+
+The first scheduled run is the Monday after this merges, at 04:17 UTC, and it deletes for real. Do a dry run first (below)
+to see how many it will remove.
 
 To see what it would delete, run it by hand, which deletes nothing:
 
