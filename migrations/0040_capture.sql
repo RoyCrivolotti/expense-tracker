@@ -32,8 +32,11 @@ CREATE TABLE IF NOT EXISTS capture_cards (
 
 -- One row per recognised push. `kind` is the app's own fixed list, never the bank's title. `amount_cents` is
 -- signed (outflows negative) so a balance alert can be paired on its sign. `merchant_raw` and `body_excerpt`
--- stay empty for kinds whose text names a person. `replay_key` is a keyed hash of the push, so posting the
--- same push twice stores it once.
+-- stay empty for kinds whose text names a person. `merchant_raw` is capped at 200 characters and `body_excerpt` at
+-- 500, so one hostile or oversized push cannot make a large row. `body_excerpt` is kept only for a recognised push
+-- that came out incomplete, and is blanked once the user decides. `replay_key` holds whatever the writer
+-- passes, which must be a keyed hash (HMAC) of the push and not a bare digest: a bare digest of a guessable
+-- body can be matched. Posting the same push twice stores it once.
 CREATE TABLE IF NOT EXISTS capture_events (
   id TEXT PRIMARY KEY,
   owner TEXT NOT NULL,
@@ -43,7 +46,7 @@ CREATE TABLE IF NOT EXISTS capture_events (
   kind TEXT NOT NULL,
   amount_cents INTEGER,
   currency TEXT,
-  merchant_raw TEXT,
+  merchant_raw TEXT CHECK (merchant_raw IS NULL OR length(merchant_raw) <= 200),
   last4 TEXT,
   account_digits TEXT,
   occurred_at TEXT NOT NULL,
@@ -51,7 +54,7 @@ CREATE TABLE IF NOT EXISTS capture_events (
   offset_minutes INTEGER NOT NULL,
   received_at TEXT NOT NULL,
   rec_id TEXT,
-  body_excerpt TEXT
+  body_excerpt TEXT CHECK (body_excerpt IS NULL OR length(body_excerpt) <= 500)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_capture_events_replay ON capture_events (owner, source, replay_key);
 -- The rate limit per key.
@@ -68,8 +71,6 @@ CREATE TABLE IF NOT EXISTS capture_counters (
   unrecognised INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (owner, source, day)
 );
--- The daily cap across every owner.
-CREATE INDEX IF NOT EXISTS idx_capture_counters_day ON capture_counters (day);
 
 -- What the user is asked to confirm. `amount_cents` is positive, as every type but an investment withdrawal is
 -- stored. `suggested_type` is a default the user changes on the form, and null where the user must pick.
@@ -82,8 +83,8 @@ CREATE TABLE IF NOT EXISTS recommendations (
   currency TEXT,
   occurred_at TEXT NOT NULL,
   local_date TEXT NOT NULL,
-  merchant_raw TEXT,
-  description_suggested TEXT,
+  merchant_raw TEXT CHECK (merchant_raw IS NULL OR length(merchant_raw) <= 200),
+  description_suggested TEXT CHECK (description_suggested IS NULL OR length(description_suggested) <= 200),
   suggested_type TEXT,
   state TEXT NOT NULL DEFAULT 'open',
   txn_id INTEGER,
