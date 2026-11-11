@@ -12,10 +12,10 @@ const purchase: RawPush = {
 }
 
 const bizumRule: KindRule = {
-  source: 'santander', title: 'Bizum test', kind: 'bizum-received', mark: 'dot', keepsText: false,
+  source: 'santander', title: 'Bizum test', kind: 'bizum-received', mark: 'dot', keepsText: false, bareAmount: true,
 }
 const cashRule: KindRule = {
-  source: 'santander', title: 'Cash test', kind: 'cash-withdrawal', mark: 'dot', keepsText: false,
+  source: 'santander', title: 'Cash test', kind: 'cash-withdrawal', mark: 'dot', keepsText: false, bareAmount: true,
 }
 
 describe('interpretPush', () => {
@@ -40,7 +40,7 @@ describe('interpretPush', () => {
   })
 
   it('does not read a dot-decimal amount the comma way', () => {
-    const result = interpretPush({ ...purchase, body: 'Shop 250.0 EUR' }, received)
+    const result = interpretPush({ ...purchase, body: 'Shop 345.0 EUR' }, received)
     expect(result).toMatchObject({ amountCents: null })
   })
 
@@ -73,7 +73,7 @@ describe('interpretPush', () => {
   })
 
   it('stores the amount positive and records the sign separately', () => {
-    const rules: KindRule[] = [{ ...bizumRule, source: 'iberia', title: 'Compra realizada', kind: 'transfer-sent' }]
+    const rules: KindRule[] = [{ ...bizumRule, source: 'iberia', title: 'Compra realizada', kind: 'transfer-sent', bareAmount: true }]
     const result = interpretPush({ ...purchase, body: 'sent -10.5' }, received, rules)
     expect(result).toMatchObject({ amountCents: 1050, bankWroteMinus: true, signedCents: -1050, suggestedType: 'expense' })
   })

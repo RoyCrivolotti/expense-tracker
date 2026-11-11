@@ -22,7 +22,7 @@ export type PushKind =
 /** The four types the app can store. A recommendation only ever suggests one. */
 export type SuggestedType = 'expense' | 'income' | 'investment' | 'refund'
 
-/** Decimal mark a source writes amounts with. Reading with the wrong one makes 250.0 into 2,500. */
+/** Decimal mark a source writes amounts with. Reading with the wrong one makes 345.0 into 3,450. */
 export type DecimalMark = 'comma' | 'dot'
 
 /** One row of the kind list: a Title plus a Body test, because one Title can mean two things. */
@@ -33,6 +33,8 @@ export interface KindRule {
   body?: RegExp
   kind: PushKind
   mark: DecimalMark
+  /** True only for kinds whose real body carries a bare number (a balance alert). Others must mark the amount with a currency. */
+  bareAmount?: boolean
   /** False for kinds whose body holds another person's name: the text is never kept. */
   keepsText: boolean
 }

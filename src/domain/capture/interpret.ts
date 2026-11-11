@@ -36,7 +36,7 @@ export function interpretPush(push: RawPush, receivedMs: number, rules?: readonl
   if (!withinClockSkew(date.instantMs, receivedMs)) {
     return { outcome: 'unknown', reason: 'clock-skew', source: push.source }
   }
-  const amount = findAmount(push.body, rule.mark)
+  const amount = findAmount(push.body, rule.mark, rule.bareAmount ?? false)
   return {
     outcome: 'recommend',
     kind: rule.kind,

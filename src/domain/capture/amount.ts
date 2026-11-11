@@ -35,13 +35,18 @@ export function parseAmount(text: string, mark: DecimalMark): ParsedAmount | nul
 
 /**
  * Finds the amount in a body, or null when it cannot be told safely. A token marked with a currency
- * wins. A bare number is accepted only when it is the one number in the body, because with two
- * there is no telling a time, a count or a card's digits from the amount. Never a guess (incomplete).
+ * wins, and several that disagree give null. A bare number is accepted only for a kind that really
+ * writes one (`allowBare`) and only when it is the one number in the body, because otherwise a time,
+ * a count or a card's digits look the same as the amount. Never a guess (incomplete).
  */
-export function findAmount(body: string, mark: DecimalMark): ParsedAmount | null {
+export function findAmount(body: string, mark: DecimalMark, allowBare = false): ParsedAmount | null {
   const token = new RegExp(`(?<![\\w.,:]|[*•·…]\\s?)${SHAPES[mark]}(?!\\w|[.,:]\\d|:)`, 'gi')
   const found = [...body.matchAll(token)]
   const marked = found.filter((m) => /^€|(EUR|€)$/i.test(m[0]))
-  const chosen = marked.length > 0 ? marked[0] : found.length === 1 ? found[0] : undefined
-  return chosen ? toAmount(chosen) : null
+  if (marked.length > 0) {
+    const amounts = marked.map(toAmount)
+    const [first] = amounts
+    return first && amounts.every((a) => a?.cents === first.cents && a.negative === first.negative) ? first : null
+  }
+  return allowBare && found.length === 1 && found[0] ? toAmount(found[0]) : null
 }

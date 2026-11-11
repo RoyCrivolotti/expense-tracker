@@ -6,7 +6,7 @@ describe('parseAmount', () => {
     ['10.50', 'dot', 1050, false],
     ['-10.5', 'dot', 1050, true],
     ['4.0', 'dot', 400, false],
-    ['250.0', 'dot', 25000, false],
+    ['345.0', 'dot', 34500, false],
     ['50,00EUR', 'comma', 5000, false],
     ['50,00 EUR', 'comma', 5000, false],
     ['12,5 €', 'comma', 1250, false],
@@ -16,9 +16,9 @@ describe('parseAmount', () => {
     expect(parseAmount(text, mark)).toEqual({ cents, negative })
   })
 
-  it('refuses the other mark rather than reading 250.0 as 2,500', () => {
-    expect(parseAmount('250.0', 'comma')).toBeNull()
-    expect(parseAmount('14990.0', 'comma')).toBeNull()
+  it('refuses the other mark rather than reading 345.0 as 3,450', () => {
+    expect(parseAmount('345.0', 'comma')).toBeNull()
+    expect(parseAmount('12345.0', 'comma')).toBeNull()
     expect(parseAmount('50,00EUR', 'dot')).toBeNull()
   })
 
@@ -36,12 +36,26 @@ describe('findAmount', () => {
     expect(findAmount('Order 12 paid 33,40 EUR on card', 'comma')).toEqual({ cents: 3340, negative: false })
   })
 
-  it('falls back to the first bare number', () => {
-    expect(findAmount('Payment of 8.5 done', 'dot')).toEqual({ cents: 850, negative: false })
+  it('refuses a bare number for a kind that does not write one', () => {
+    expect(findAmount('Payment of 8.5 done', 'dot')).toBeNull()
+    expect(findAmount('Compra en Tienda 24 con tarjeta *4321', 'comma')).toBeNull()
+  })
+
+  it('refuses several different currency tokens but accepts the same one repeated', () => {
+    expect(findAmount('Paid 5,00 EUR of 9,00 EUR', 'comma')).toBeNull()
+    expect(findAmount('Paid 5,00 EUR (5,00 EUR)', 'comma')).toEqual({ cents: 500, negative: false })
+  })
+
+  it('refuses several bare numbers even when bare is allowed', () => {
+    expect(findAmount('Card 24 paid 8.5', 'dot', true)).toBeNull()
+  })
+
+  it('falls back to the one bare number when the kind allows it', () => {
+    expect(findAmount('Payment of 8.5 done', 'dot', true)).toEqual({ cents: 850, negative: false })
   })
 
   it('keeps the sign of a signed amount', () => {
-    expect(findAmount('Balance change -20.5 account', 'dot')).toEqual({ cents: 2050, negative: true })
+    expect(findAmount('Balance change -20.5 account', 'dot', true)).toEqual({ cents: 2050, negative: true })
   })
 
   it('ignores the digits of a masked card or account', () => {
@@ -50,11 +64,11 @@ describe('findAmount', () => {
   })
 
   it('accepts a full stop that ends a sentence', () => {
-    expect(findAmount('You paid 9.99.', 'dot')).toEqual({ cents: 999, negative: false })
+    expect(findAmount('You paid 9.99.', 'dot', true)).toEqual({ cents: 999, negative: false })
   })
 
   it('returns null when the wrong mark would have misread it', () => {
-    expect(findAmount('Paid 250.0 today', 'comma')).toBeNull()
+    expect(findAmount('Paid 345.0 today', 'comma')).toBeNull()
   })
 
   it('treats a prefix euro sign as a currency', () => {
@@ -63,7 +77,7 @@ describe('findAmount', () => {
 
   it('refuses to pick between several bare numbers', () => {
     expect(findAmount('Card ending 4321 paid 5,00', 'comma')).toBeNull()
-    expect(findAmount('13:50 Shop 33,40', 'comma')).toEqual({ cents: 3340, negative: false })
+    expect(findAmount('13:50 Shop 33,40', 'comma', true)).toEqual({ cents: 3340, negative: false })
     expect(findAmount('Shop 7 items 33,40', 'comma')).toBeNull()
   })
 
