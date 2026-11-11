@@ -1,0 +1,154 @@
+import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
+
+/** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
+export const MAX_ACTIVE_CAPTURE_KEYS = 3
+
+export type RecommendationState = 'open' | 'submitted' | 'dismissed'
+
+/** What the list in Settings shows. The secret's hash is not part of it, so no caller can leak it by accident. */
+export interface CaptureKeySummary {
+  keyId: string
+  label: string
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** What a request is checked against: the stored hash of the secret, and who the key belongs to. */
+export interface CaptureKey extends CaptureKeySummary {
+  owner: string
+  secretHash: string
+  revokedAt: string | null
+}
+
+export interface NewCaptureKey {
+  keyId: string
+  owner: string
+  label: string
+  secretHash: string
+  createdAt: string
+}
+
+/**
+ * One recognised push. Fields that would hold another person's name are left null by the caller for those kinds.
+ * There is no owner: the owner is the key's, read inside the insert, so an event cannot be filed under a person
+ * the key does not belong to, nor under a key revoked a moment ago.
+ */
+export interface CaptureEvent {
+  id: string
+  keyId: string
+  source: CaptureSource
+  /**
+   * Identifies the push so that sending it twice stores it once. The column holds whatever is passed. The pure
+   * `replayKey` is an unsalted SHA-256, which a guessable body (a one-time code) could be matched against, so the
+   * capture Worker must store an HMAC of it under a secret and pass that.
+   */
+  replayKey: string
+  kind: PushKind
+  /** Signed: outflows are negative. Null when the body gave no amount the parser trusts. */
+  amountCents: number | null
+  currency: string | null
+  /** At most 200 characters. */
+  merchantRaw: string | null
+  last4: string | null
+  accountDigits: string | null
+  occurredAt: string
+  localDate: string
+  offsetMinutes: number
+  receivedAt: string
+  /** Set by `recordCapture` from the recommendation it writes; ignored on input. */
+  recId?: string | null
+  /** Only for a recognised push that came out incomplete, never for a kind that names a person. Blank it once the user decides. At most 500 characters. */
+  bodyExcerpt: string | null
+}
+
+/** What was dropped, by day. The only thing kept about a push the app does not recognise. */
+export interface CaptureCounter {
+  source: CaptureSource
+  day: string
+  received: number
+  unrecognised: number
+}
+
+export type CardDigitsKind = 'card' | 'account'
+
+export interface CaptureCard {
+  source: CaptureSource
+  digitsKind: CardDigitsKind
+  digits: string
+  accountId: number
+}
+
+export interface NewRecommendation {
+  id: string
+  owner: string
+  accountId: number | null
+  /** Positive cents, or null when the push gave no amount: shown as incomplete. */
+  amountCents: number | null
+  currency: string | null
+  occurredAt: string
+  localDate: string
+  merchantRaw: string | null
+  descriptionSuggested: string | null
+  /** Null where the user must pick, as for the two legs of a transfer between their own accounts. */
+  suggestedType: SuggestedType | null
+  createdAt: string
+}
+
+export interface Recommendation extends NewRecommendation {
+  state: RecommendationState
+  txnId: number | null
+  decidedAt: string | null
+}
+
+/** Where the next page of the open list starts: after this row, in the list's order. */
+export interface RecommendationCursor {
+  localDate: string
+  id: string
+}
+
+/**
+ * Persistence for capture. Every method is scoped by owner, except those that start from a key (a request
+ * is identified by its key, and the key row names the owner). Times are ISO strings in UTC, passed in so
+ * nothing here reads a clock.
+ */
+export interface CaptureRepository {
+  /** False, and nothing written, when the owner already holds the most keys allowed. Decided inside the insert. */
+  createKey(key: NewCaptureKey): Promise<boolean>
+  findKey(keyId: string): Promise<CaptureKey | null>
+  /** The owner's keys that are not revoked, newest first. */
+  listKeys(owner: string): Promise<CaptureKeySummary[]>
+  /** False when the key is not the owner's or is already revoked. */
+  revokeKey(owner: string, keyId: string, at: string): Promise<boolean>
+  /** Records a use, at most once a minute per key. */
+  touchKey(keyId: string, at: string): Promise<void>
+
+  /**
+   * False when nothing was stored: the same push was stored before (replaying changes nothing), or the key is
+   * unknown or revoked. A row that breaks a constraint throws instead, so a lost push is never read as a replay.
+   */
+  recordEvent(event: CaptureEvent): Promise<boolean>
+  /**
+   * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
+   * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
+   * recommendation takes its owner from the event. Returns false, writing neither, as `recordEvent` does.
+   */
+  recordCapture(event: CaptureEvent, recommendation: Omit<NewRecommendation, 'owner'>): Promise<boolean>
+  eventsSince(keyId: string, since: string): Promise<number>
+  lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
+  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>
+  readCounters(owner: string, fromDay: string): Promise<CaptureCounter[]>
+
+  saveCard(owner: string, card: CaptureCard): Promise<void>
+  listCards(owner: string): Promise<CaptureCard[]>
+
+  createRecommendation(rec: NewRecommendation): Promise<void>
+  getRecommendation(owner: string, id: string): Promise<Recommendation | null>
+  /** Open ones, newest day first, `limit` of them from after the cursor. */
+  listOpenRecommendations(owner: string, limit: number, after?: RecommendationCursor): Promise<Recommendation[]>
+  /** Moves an open recommendation to submitted or dismissed. False when it is not open, so a double tap acts once. */
+  decideRecommendation(
+    owner: string,
+    id: string,
+    decision: { state: 'submitted'; txnId: number; at: string } | { state: 'dismissed'; at: string },
+  ): Promise<boolean>
+}

@@ -41,6 +41,11 @@ describe('purgeOwnerData', () => {
       'DELETE FROM flags WHERE owner = ?',
       'DELETE FROM labels WHERE owner = ?',
       'DELETE FROM categories WHERE owner = ?',
+      'DELETE FROM capture_keys WHERE owner = ?',
+      'DELETE FROM capture_cards WHERE owner = ?',
+      'DELETE FROM capture_events WHERE owner = ?',
+      'DELETE FROM capture_counters WHERE owner = ?',
+      'DELETE FROM recommendations WHERE owner = ?',
       'DELETE FROM accounts WHERE owner = ?',
       'DELETE FROM settings WHERE owner = ?',
       'DELETE FROM goal_scenarios WHERE owner = ?',
@@ -138,5 +143,60 @@ describe('purgeOwnerData against SQLite', () => {
     expect(db.prepare('SELECT owner FROM labels').all()).toEqual([{ owner: 'kept@example.com' }])
     // The link rows go with their transactions, not through anything the purge names.
     expect(db.prepare('SELECT label_id FROM transaction_labels').all()).toEqual([{ label_id: 2 }])
+  })
+})
+
+describe('what a purge leaves behind', () => {
+  /** Tables that name an owner and are not deleted by the purge, each with the reason nothing of the owner is left. */
+  const NOT_DELETED_BY_NAME: Record<string, string> = {
+    allowed_users: 'the revoke removes the person from the allow-list before the purge runs',
+    user_group_grants: 'the revoke removes the grants before the purge runs',
+    ledger_cells: 'kept by triggers on transactions, so deleting the transactions empties it',
+    ledger_months: 'kept by triggers on transactions, so deleting the transactions empties it',
+  }
+
+  it('deletes from every table that has an owner or email column, or says why it need not', async () => {
+    const db = migratedDatabase()
+    const sent: string[] = []
+    const d1 = sqliteD1(db)
+    const batch = d1.batch.bind(d1)
+    d1.batch = ((statements: Array<{ sql: string }>) => {
+      sent.push(...statements.map((s) => s.sql))
+      return batch(statements as never)
+    }) as typeof d1.batch
+
+    await purgeOwnerData({ DB: d1 } as unknown as Env, 'gone@example.com')
+
+    const deleted = new Set(sent.map((sql) => /^DELETE FROM (\w+)/.exec(sql)?.[1]))
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> '_cf_KV'")
+      .all() as { name: string }[]
+    for (const { name } of tables) {
+      const columns = (db.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map((c) => c.name)
+      if (!columns.includes('owner') && !columns.includes('email')) continue
+      const covered = deleted.has(name) || Boolean(NOT_DELETED_BY_NAME[name])
+      expect(covered, `${name} names an owner: delete it in purgeOwnerData, or list it here with the reason it need not be`).toBe(true)
+    }
+  })
+
+  it('removes capture keys, events, counters, card maps and recommendations, and only the revoked owner’s', async () => {
+    const db = migratedDatabase()
+    for (const owner of ['gone@example.com', 'kept@example.com']) {
+      db.prepare("INSERT INTO capture_keys (key_id, owner, label, secret_hash, created_at) VALUES (?, ?, 'p', 'h', 't')").run(`k-${owner}`, owner)
+      db.prepare("INSERT INTO capture_cards (owner, source, digits_kind, digits, account_id) VALUES (?, 'iberia', 'card', '0000', 1)").run(owner)
+      db.prepare("INSERT INTO capture_counters (owner, source, day) VALUES (?, 'iberia', '2026-03-02')").run(owner)
+      db.prepare(
+        `INSERT INTO capture_events (id, owner, key_id, source, replay_key, kind, occurred_at, local_date, offset_minutes, received_at)
+         VALUES (?, ?, 'k', 'iberia', 'r', 'card-purchase', 't', 'd', 0, 't')`,
+      ).run(`e-${owner}`, owner)
+      db.prepare("INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, 't', 'd', 't')").run(`r-${owner}`, owner)
+    }
+
+    await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
+
+    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'recommendations']) {
+      const left = db.prepare(`SELECT owner FROM ${table}`).all()
+      expect(left, table).toEqual([{ owner: 'kept@example.com' }])
+    }
   })
 })

@@ -9,12 +9,12 @@ are both adapters around it.
 | Layer | Location | Depends on | Knows about |
 | --- | --- | --- | --- |
 | **Engine** (pure compute) | `src/domain/engine/` | Nothing | Money formatting, dates, budget totals, cash reconciliation, transaction status, goals math |
-| **Ports** (interfaces) | `src/domain/ports/` | Domain types only | `ExpenseRepository`, `AccessRepository`, `AuthProvider`, `BackupStore`, `EmailSender`: shapes the UI and Functions code against, never a vendor SDK |
+| **Ports** (interfaces) | `src/domain/ports/` | Domain types only | `ExpenseRepository`, `AccessRepository`, `CaptureRepository`, `AuthProvider`, `BackupStore`, `EmailSender`: shapes the UI and Functions code against, never a vendor SDK |
 | **Application** (use cases) | `src/domain/application/` | Ports, engine | Orchestration that needs more than one repository call (`installmentPlanService`, `transactionService`, `transactionQueryService`, `ledgerPartsService`, `goalService`, `categoryService`) |
 | **Data** (parsing) | `src/domain/data/` | Domain types | CSV import and export parsing, transaction ID helpers: pure, no I/O |
 | **Ledger** (pure model) | `src/domain/ledger/` | Domain types, engine | Splitting a dataset into reference data, pinned rows, hydrated months and per-month sums, and assembling the row lists the engines take |
 | **Capture** (pure rules) | `src/domain/capture/` | Nothing | Reading bank push notifications: which kinds count, amounts per decimal mark, dates with offset, replay identity, balance-alert and transfer-leg pairing, the type a recommendation starts with. Not imported by the client yet |
-| **Adapters, backend** | `functions/_shared/adapters/` | Ports | `d1ExpenseRepository`, `d1AccessRepository`, `r2BackupStore`, `cloudflareEmailSender`, `cloudflareAccessAuth` |
+| **Adapters, backend** | `functions/_shared/adapters/` | Ports | `d1ExpenseRepository`, `d1AccessRepository`, `d1CaptureRepository`, `r2BackupStore`, `cloudflareEmailSender`, `cloudflareAccessAuth` |
 | **Adapters, frontend** | `src/data/`, `src/testing/` | Ports | `apiDataSource` (HTTP client), `csvDataSource`, `inMemoryExpenseRepository` (test double) |
 | **Driving side, API** | `functions/api/` | Application, ports | Cloudflare Pages Functions HTTP handlers ([API.md](./API.md)) |
 | **Driving side, UI** | `src/ui/` | Application, engine, data | React components; no direct D1 or HTTP, always through `src/data/` |

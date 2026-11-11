@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { splitStatements } from '../../../scripts/sql-statements.mjs'
-import { applyMigrationSql, migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
+import { applyMigration, applyMigrationSql, migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { OWNER } from '../../_shared/testing/expenseWorld'
 import { emptySmallestMonth, pinningScenarios } from '../../_shared/testing/rollupScenarios'
 import { shapeScenarios } from '../../_shared/testing/rollupScenariosShape'
@@ -50,6 +50,7 @@ function parts(sql: string): { setup: string[]; backfill: string[] } {
 async function backfillIsWrong(sql: string): Promise<boolean> {
   for (const raced of [false, true]) {
     const sqlite = migratedDatabase('0038')
+    applyMigration(sqlite, '0040_capture.sql') // the walks purge an owner, which deletes from the capture tables
     const k = await newKit(sqlite, sqliteD1(sqlite, newStats()), raced ? 22 : 21)
     await seedRows(k, 20)
     await walk(k, 100, false)
@@ -76,6 +77,7 @@ async function backfillIsWrong(sql: string): Promise<boolean> {
 async function triggersAreWrong(sql: string): Promise<boolean> {
   const kitFor = async (seed: number) => {
     const sqlite = migratedDatabase('0038')
+    applyMigration(sqlite, '0040_capture.sql') // the walks purge an owner, which deletes from the capture tables
     applyMigrationSql(sqlite, sql)
     return newKit(sqlite, sqliteD1(sqlite, newStats()), seed)
   }
