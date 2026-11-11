@@ -7,8 +7,10 @@ import {
   KEEP_PRODUCTION,
   listDeployments,
   main,
+  MAX_DELETE,
   parseArgs,
   planPrune,
+  PROJECTS,
   pruneProject,
   summarize,
 } from './prune-pages-deployments.mjs'
@@ -21,6 +23,7 @@ interface Fake {
   latest_stage: { name: string; status: string }
 }
 
+const PROJECT = 'expense-tracker'
 const DAY = 86_400_000
 const T0 = Date.parse('2026-01-01T00:00:00Z')
 let counter = 0
@@ -216,6 +219,31 @@ describe('listDeployments', () => {
     expect(calls.filter((c) => c.path.endsWith('/deployments')).map((c) => c.query.page)).toEqual([1, 2, 3])
   })
 
+  it.each([
+    ['no total_pages', ({ total_pages: _pages, ...rest }: Record<string, unknown>) => rest],
+    ['no total_pages and no page size', ({ total_pages: _pages, per_page: _size, ...rest }: Record<string, unknown>) => rest],
+    ['null for both', (info: Record<string, unknown>) => ({ ...info, total_pages: null, per_page: null })],
+  ])('works out the page count when Cloudflare sends %s', async (_name, strip) => {
+    const { api, calls } = fakeApi(many(60, 'production'), { pageSize: 25 })
+    const bare: Api = (method, path, query = {}) =>
+      api(method, path, query).then((body: { result_info?: Record<string, unknown> }) =>
+        body.result_info ? { ...body, result_info: strip(body.result_info) } : body,
+      )
+
+    expect(await listDeployments(bare, 'proj')).toHaveLength(60)
+    expect(calls.filter((c) => c.path.endsWith('/deployments'))).toHaveLength(3)
+  })
+
+  it('still throws when the derived pages do not add up to the total', async () => {
+    const { api } = fakeApi(many(60, 'production'), { pageSize: 25 })
+    const lying: Api = (method, path, query = {}) =>
+      api(method, path, query).then((body: { result_info?: Record<string, unknown> }) =>
+        body.result_info ? { ...body, result_info: { total_count: 90, per_page: 25 } } : body,
+      )
+
+    await expect(listDeployments(lying, 'proj')).rejects.toThrow(/incomplete: read 60 of 90/)
+  })
+
   it('throws when the pages hold fewer than the total', async () => {
     const all = many(30, 'production')
     const { api } = fakeApi(all)
@@ -236,6 +264,8 @@ describe('listDeployments', () => {
     ['no result_info', { success: true, result: [] }],
     ['a result that is not a list', { success: true, result: {}, result_info: { total_count: 0, total_pages: 0 } }],
     ['a count that is not a number', { success: true, result: [], result_info: { total_count: '0', total_pages: 0 } }],
+    ['a page total that is not a number', { success: true, result: [], result_info: { total_count: 0, total_pages: 'many' } }],
+    ['a page size that is not usable', { success: true, result: [], result_info: { total_count: 0, per_page: 0 } }],
   ])('throws on %s', async (_name, body) => {
     await expect(listDeployments(() => Promise.resolve(body), 'proj')).rejects.toThrow(/shape this script does not know/)
   })
@@ -337,6 +367,41 @@ describe('pruneProject', () => {
     expect(lines.at(-1)).toBe('  deleted 70')
   })
 
+  it('deletes nothing when the plan is over the limit, and says how far over', async () => {
+    const { api, calls } = fakeApi(many(80, 'production'))
+
+    const error = await pruneProject({ api, project: 'proj', apply: true, maxDelete: 69, log: () => {} }).catch((e: Error) => e)
+
+    expect((error as Error).message).toContain('70 deployments would be deleted, over the limit of 69. Nothing was deleted.')
+    expect(deletes(calls)).toHaveLength(0)
+  })
+
+  it('deletes when the plan is exactly at the limit', async () => {
+    const { api, calls } = fakeApi(many(80, 'production'))
+
+    await pruneProject({ api, project: 'proj', apply: true, maxDelete: 70, log: () => {} })
+
+    expect(deletes(calls)).toHaveLength(70)
+  })
+
+  it('has a default limit that stops the scheduled run from deleting a surprising number', async () => {
+    expect(MAX_DELETE).toBe(300)
+    const { api, calls } = fakeApi(many(MAX_DELETE + KEEP_PRODUCTION + 1, 'production'))
+
+    await expect(pruneProject({ api, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(/over the limit of 300/)
+    expect(deletes(calls)).toHaveLength(0)
+  })
+
+  it('warns in a dry run that a real run would stop', async () => {
+    const { api, calls } = fakeApi(many(80, 'production'))
+    const lines: string[] = []
+
+    await pruneProject({ api, project: 'proj', apply: false, maxDelete: 5, log: (l: string) => lines.push(l) })
+
+    expect(lines.join('\n')).toContain('a real run would stop: 70 is over the limit of 5')
+    expect(deletes(calls)).toHaveLength(0)
+  })
+
   it('says so when there is nothing to delete', async () => {
     const { api, calls } = fakeApi(many(3, 'production'))
     const lines: string[] = []
@@ -413,11 +478,27 @@ describe('cloudflareApi', () => {
 
 describe('the command line', () => {
   it('reads the project and the delete flag', () => {
-    expect(parseArgs(['--project', 'my-proj'])).toEqual({ project: 'my-proj', apply: false })
-    expect(parseArgs(['--delete', '--project', 'my-proj'])).toEqual({ project: 'my-proj', apply: true })
+    expect(parseArgs(['--project', PROJECT])).toEqual({ project: PROJECT, apply: false, maxDelete: MAX_DELETE })
+    expect(parseArgs(['--delete', '--project', PROJECT])).toEqual({ project: PROJECT, apply: true, maxDelete: MAX_DELETE })
   })
 
-  it.each([[[]], [['--project']], [['--project', 'Bad Name']], [['--project', 'ok', '--force']], [['--project', '../x']]])(
+  it('reads the limit, and only as a whole number', () => {
+    expect(parseArgs(['--project', PROJECT, '--max-delete', '1000']).maxDelete).toBe(1000)
+    for (const bad of ['-1', '1.5', 'many', '']) expect(() => parseArgs(['--project', PROJECT, '--max-delete', bad])).toThrow(/whole number/)
+    expect(() => parseArgs(['--project', PROJECT, '--max-delete'])).toThrow(/whole number/)
+  })
+
+  it('knows exactly the two projects the deploy ships to', () => {
+    expect(PROJECTS).toEqual(['expense-tracker', 'roy-expenses-stg'])
+  })
+
+  it('refuses a project that is not listed, however well formed', () => {
+    for (const other of ['roy-private', 'expense-tracker-3hq', 'expense', 'Expense-Tracker', 'expense-tracker ', '../expense-tracker']) {
+      expect(() => parseArgs(['--project', other, '--delete'])).toThrow(/Usage/)
+    }
+  })
+
+  it.each([[[]], [['--project']], [['--project', 'Bad Name']], [['--project', PROJECT, '--force']], [['--project', '../x']]])(
     'rejects %j',
     (argv) => {
       expect(() => parseArgs(argv)).toThrow()
@@ -434,7 +515,7 @@ describe('the command line', () => {
     }) as unknown as typeof fetch
     const lines: string[] = []
 
-    await main(['--project', 'proj'], { token: 'tkn', fetchImpl, log: (l: string) => lines.push(l) })
+    await main(['--project', PROJECT], { token: 'tkn', fetchImpl, log: (l: string) => lines.push(l) })
 
     expect(deletes(calls)).toHaveLength(0)
     expect(lines.join('\n')).toContain('deleting 4')
@@ -445,7 +526,7 @@ describe('the command line', () => {
     const saved = process.env.CLOUDFLARE_API_TOKEN
     process.env.CLOUDFLARE_API_TOKEN = 'from-env'
     try {
-      await expect(main(['--project', 'proj'], { fetchImpl })).rejects.toThrow('stop here')
+      await expect(main(['--project', PROJECT], { fetchImpl })).rejects.toThrow('stop here')
     } finally {
       if (saved === undefined) delete process.env.CLOUDFLARE_API_TOKEN
       else process.env.CLOUDFLARE_API_TOKEN = saved

@@ -5,6 +5,9 @@
  *   node scripts/prune-pages-deployments.mjs --project <name>             dry run: print what would go
  *   node scripts/prune-pages-deployments.mjs --project <name> --delete    delete it
  *
+ * `--max-delete <n>` raises or lowers the limit on how many one run may delete (default MAX_DELETE).
+ * <name> must be listed in config/prune-projects.json.
+ *
  * Needs CLOUDFLARE_API_TOKEN with Account > Cloudflare Pages > Edit (the token the deploy uses).
  *
  * Why this exists. Pages keeps every deployment forever, and an old deployment is not inert: its own
@@ -15,14 +18,24 @@
  * that is protected whatever its age (see `planPrune`). Everything else is deleted.
  *
  * Never delete from a partial picture: any unexpected response, an incomplete listing, or a current
- * production deployment that is missing from the listing stops the run before the first delete. The log
- * carries counts and dates only, never a deployment id.
+ * production deployment that is missing from the listing stops the run before the first delete. So does a
+ * plan that would delete more than MAX_DELETE (or --max-delete): a surprise that large is not pruning, and
+ * half a deletion is worse than none. The log carries counts and dates only, never a deployment id.
  */
-import { pathToFileURL } from 'node:url'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { ACCOUNT_ID, requireToken } from './access-api.mjs'
 
 export const KEEP_PRODUCTION = 10
 export const KEEP_PREVIEW = 5
+/** A run that would delete more than this stops without deleting, unless --max-delete says otherwise. */
+export const MAX_DELETE = 300
+
+/** The Pages projects this script will touch, from the same file the workflow reads. */
+export const PROJECTS = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'config', 'prune-projects.json'), 'utf8'),
+)
 
 const PAGE_SIZE = 25
 const MAX_PAGES = 1000
@@ -80,6 +93,17 @@ function parseDeployment(raw) {
   }
 }
 
+/** Cloudflare does not always send `total_pages`; then it follows from the total and the page size it used. */
+function pageCount(info) {
+  if (info.total_pages !== undefined && info.total_pages !== null) {
+    if (!Number.isInteger(info.total_pages)) throw new Error('The deployment listing came back in a shape this script does not know')
+    return info.total_pages
+  }
+  const perPage = info.per_page ?? PAGE_SIZE
+  if (!Number.isInteger(perPage) || perPage < 1) throw new Error('The deployment listing came back in a shape this script does not know')
+  return Math.ceil(info.total_count / perPage)
+}
+
 /**
  * Every deployment of the project, or an error. Pages are walked until Cloudflare's own total is reached;
  * a short or repeated page throws, because the keep rules mean nothing over a listing with holes.
@@ -92,11 +116,11 @@ export async function listDeployments(api, project) {
     if (page > MAX_PAGES) throw new Error(`The deployment listing has more than ${MAX_PAGES} pages`)
     const body = await api('GET', `${projectPath(project)}/deployments`, { page, per_page: PAGE_SIZE })
     const info = body.result_info
-    if (!Array.isArray(body.result) || !Number.isInteger(info?.total_count) || !Number.isInteger(info?.total_pages)) {
+    if (!Array.isArray(body.result) || !Number.isInteger(info?.total_count)) {
       throw new Error('The deployment listing came back in a shape this script does not know')
     }
-    totalPages = info.total_pages
     totalCount = info.total_count
+    totalPages = pageCount(info)
     for (const raw of body.result) {
       const deployment = parseDeployment(raw)
       if (byId.has(deployment.id)) throw new Error('The deployment listing repeated a deployment, so it moved while being read')
@@ -226,15 +250,20 @@ export function summarize(project, plan) {
 }
 
 /** Plan and, when `apply` is set, carry out the pruning of one project. */
-export async function pruneProject({ api, project, apply, log = console.log }) {
+export async function pruneProject({ api, project, apply, maxDelete = MAX_DELETE, log = console.log }) {
   const { canonicalId, domains } = await readProject(api, project)
   const deployments = await listDeployments(api, project)
   const plan = planPrune({ deployments, canonicalId, domains })
   for (const line of summarize(project, plan)) log(line)
 
+  const overCap = plan.remove.length > maxDelete
   if (!apply) {
+    if (overCap) log(`  a real run would stop: ${plan.remove.length} is over the limit of ${maxDelete} (--max-delete)`)
     log('  dry run: nothing was deleted. Pass --delete to delete.')
     return plan
+  }
+  if (overCap) {
+    throw new Error(`${project}: ${plan.remove.length} deployments would be deleted, over the limit of ${maxDelete}. Nothing was deleted. Run it by hand with a dry run, then pass --max-delete if that many is right.`)
   }
   for (const [index, { deployment, force }] of plan.remove.entries()) {
     try {
@@ -251,23 +280,28 @@ export async function pruneProject({ api, project, apply, log = console.log }) {
 export function parseArgs(argv) {
   let project
   let apply = false
+  let maxDelete = MAX_DELETE
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--project') project = argv[++i]
     else if (argv[i] === '--delete') apply = true
-    else throw new Error(`Unknown argument: ${argv[i]}`)
+    else if (argv[i] === '--max-delete') {
+      const value = argv[++i]
+      if (!/^\d+$/.test(value ?? '')) throw new Error('--max-delete takes a whole number')
+      maxDelete = Number(value)
+    } else throw new Error(`Unknown argument: ${argv[i]}`)
   }
-  if (!project || !/^[a-z0-9][a-z0-9-]*$/.test(project)) {
-    throw new Error('Usage: prune-pages-deployments.mjs --project <pages-project-name> [--delete]')
+  if (!project || !PROJECTS.includes(project)) {
+    throw new Error(`Usage: prune-pages-deployments.mjs --project <${PROJECTS.join(' | ')}> [--delete] [--max-delete <n>]`)
   }
-  return { project, apply }
+  return { project, apply, maxDelete }
 }
 
 /** @param {{ token?: string | (() => string), fetchImpl?: typeof fetch, log?: (line: string) => void }} [deps] */
 export async function main(argv, deps = {}) {
   const { token = requireToken, fetchImpl = fetch, log = console.log } = deps
-  const { project, apply } = parseArgs(argv)
+  const { project, apply, maxDelete } = parseArgs(argv)
   const api = cloudflareApi(typeof token === 'function' ? token() : token, fetchImpl)
-  await pruneProject({ api, project, apply, log })
+  await pruneProject({ api, project, apply, maxDelete, log })
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

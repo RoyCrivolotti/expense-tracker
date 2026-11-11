@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const read = (file: string) => readFileSync(join(import.meta.dirname, '..', '.github/workflows', file), 'utf8')
+const ROOT = join(import.meta.dirname, '..')
+const read = (file: string) => readFileSync(join(ROOT, '.github/workflows', file), 'utf8')
 const prune = read('prune-deployments.yml')
 const triggers = prune.slice(prune.indexOf('\non:'), prune.indexOf('\npermissions:'))
 
@@ -36,11 +37,24 @@ describe('prune-deployments.yml', () => {
     expect(prune).toContain('CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}')
   })
 
-  it('prunes the projects the deploy ships to', () => {
-    const matrix = /project: \[([^\]]+)\]/.exec(prune)?.[1]?.split(',').map((name) => name.trim())
-    const deploy = read('deploy.yml')
+  it('prunes the projects listed in config, and only those', () => {
+    const projects = JSON.parse(readFileSync(join(ROOT, 'config/prune-projects.json'), 'utf8')) as string[]
 
-    expect(matrix).toHaveLength(2)
-    for (const project of matrix!) expect(deploy).toContain(project)
+    expect(projects).toEqual(['expense-tracker', 'roy-expenses-stg'])
+    expect(prune).toContain("jq -r '.[]' config/prune-projects.json")
+    // The names live in the config file alone (the repository name in the fork guard is not a project).
+    for (const name of projects) expect(prune).not.toMatch(new RegExp(`(^|[^\\w/-])${name}([^\\w-]|$)`, 'm'))
+  })
+
+  it('ships to exactly those projects', () => {
+    const projects = JSON.parse(readFileSync(join(ROOT, 'config/prune-projects.json'), 'utf8')) as string[]
+    const deployed = /for project in ((?:[\w-]+ ?)+); do/.exec(read('deploy.yml'))?.[1]?.trim().split(' ')
+
+    expect(deployed).toEqual(projects)
+  })
+
+  it('passes the limit only when one was given', () => {
+    expect(triggers).toMatch(/max_delete:[\s\S]*type: string/)
+    expect(prune).toContain('if [ -n "$MAX_DELETE" ]; then args+=(--max-delete "$MAX_DELETE"); fi')
   })
 })
