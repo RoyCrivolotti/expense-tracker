@@ -47,14 +47,14 @@ function FreshKey({ value, onDone }: { value: string; onDone: () => void }) {
   )
 }
 
-function MakeKeyForm({ busy, onMake }: { busy: boolean; onMake: (label: string) => Promise<void> }) {
+function MakeKeyForm({ busy, onMake }: { busy: boolean; onMake: (label: string) => Promise<boolean> }) {
   const [label, setLabel] = useState('')
   return (
     <form
       className={styles.make}
       onSubmit={(e) => {
         e.preventDefault()
-        void onMake(label).then(() => setLabel(''))
+        void onMake(label).then((made) => made && setLabel(''))
       }}
     >
       <label className={styles.field}>

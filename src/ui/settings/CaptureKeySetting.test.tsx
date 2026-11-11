@@ -117,6 +117,21 @@ describe('making a key', () => {
   })
 })
 
+describe('the name field', () => {
+  it.each([409, 500])('keeps what was typed when making the key fails with %i', async (status) => {
+    listed(phone)
+    vi.mocked(api.createCaptureKey).mockRejectedValue(new ApiError('nope', status))
+    render(<CaptureKeySetting />)
+    await screen.findByText('My iPhone')
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Work phone' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Make a key' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('nope')
+    expect(screen.getByLabelText('Name')).toHaveValue('Work phone')
+  })
+})
+
 describe('revoking a key', () => {
   it('asks first, then revokes and refreshes the list', async () => {
     listed(phone)

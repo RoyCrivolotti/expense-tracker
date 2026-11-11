@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { captureEnabled } from '../../config/captureFlag'
 import type { ExpenseModel } from '../useExpenseData'
 import { AccessRequestsSetting } from './AccessRequestsSetting'
@@ -18,11 +18,13 @@ export function AccountView({
   ownerAccess: { pendingCount: number } | undefined
   accountEmail: string | undefined
 }) {
+  // Read once: the flag writes to storage when the address sets it, which a render has no business repeating.
+  const [capture] = useState(captureEnabled)
   return (
     <>
       {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
-      {captureEnabled() ? (
+      {capture ? (
         <ChunkBoundary fallback={null}>
           <Suspense fallback={null}>
             <CaptureKeySetting />

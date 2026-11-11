@@ -35,14 +35,17 @@ export function useCaptureKeys() {
     }
   }, [version])
 
-  const act = useCallback(async (run: () => Promise<void>) => {
+  /** True when the change worked, so a caller can keep what the person typed when it did not. */
+  const act = useCallback(async (run: () => Promise<void>): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
       await run()
       setVersion((v) => v + 1)
+      return true
     } catch (e) {
       setError(messageOf(e))
+      return false
     } finally {
       setBusy(false)
     }
