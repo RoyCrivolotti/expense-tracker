@@ -19,7 +19,7 @@ export function matchRule(push: Pick<RawPush, 'source' | 'title' | 'body'>, rule
       (rule) =>
         rule.source === push.source &&
         foldTitle(rule.title) === title &&
-        (rule.body === undefined || rule.body.test(push.body)),
+        (rule.body === undefined || push.body.search(rule.body) >= 0),
     ) ?? null
   )
 }

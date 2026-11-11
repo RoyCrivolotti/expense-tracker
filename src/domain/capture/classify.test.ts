@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { foldTitle } from './text'
 import { KIND_RULES, matchRule } from './classify'
 import type { KindRule } from './types'
 
@@ -14,7 +15,7 @@ describe('matchRule', () => {
   })
 
   it('drops a kind that is not on the list, such as an instalment offer that repeats a purchase', () => {
-    expect(matchRule({ ...iberia, title: 'Fraccionar compra' })).toBeNull()
+    expect(matchRule({ ...iberia, title: 'Instalment offer' })).toBeNull()
     expect(matchRule({ ...iberia, title: 'Your code is 123456' })).toBeNull()
   })
 
@@ -33,8 +34,16 @@ describe('matchRule', () => {
     expect(matchRule({ ...base, body: 'Something else' }, rules)).toBeNull()
   })
 
+  it('is not made stateful by a global flag on a rule', () => {
+    const rules: KindRule[] = [
+      { source: 'santander', title: 'T', body: /atm/g, kind: 'cash-withdrawal', mark: 'dot', keepsText: false },
+    ]
+    const push = { source: 'santander' as const, title: 'T', body: 'atm' }
+    expect([1, 2, 3].map(() => matchRule(push, rules)?.kind)).toEqual(Array(3).fill('cash-withdrawal'))
+  })
+
   it('ships rules that fold to distinct source and title pairs', () => {
-    const keys = KIND_RULES.map((r) => `${r.source}|${r.title.toLowerCase()}|${r.body ?? ''}`)
+    const keys = KIND_RULES.map((r) => `${r.source}|${foldTitle(r.title)}|${r.body ?? ''}`)
     expect(new Set(keys).size).toBe(keys.length)
   })
 })
