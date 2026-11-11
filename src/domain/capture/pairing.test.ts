@@ -18,6 +18,15 @@ describe('pairBalanceAlerts', () => {
     expect(result.unpairedAlerts).toEqual([])
   })
 
+  it('attaches an alert exactly 10 seconds away, before or after', () => {
+    expect(pairBalanceAlerts([move('e', -1250, 20 * SEC)], [move('a', -1250, 10 * SEC)]).pairs).toHaveLength(1)
+    expect(pairBalanceAlerts([move('e', -1250, 0)], [move('a', -1250, 10 * SEC)]).pairs).toHaveLength(1)
+  })
+
+  it('does not attach an alert one millisecond over 10 seconds', () => {
+    expect(pairBalanceAlerts([move('e', -1250, 0)], [move('a', -1250, 10 * SEC + 1)]).pairs).toEqual([])
+  })
+
   it('does not attach an alert 11 seconds away', () => {
     const result = pairBalanceAlerts([move('e', -1250, 0)], [move('a', -1250, 11 * SEC)])
     expect(result.pairs).toEqual([])
@@ -53,6 +62,11 @@ describe('matchTransferLegs', () => {
   it('pairs when the inflow came first, 6.5 minutes earlier', () => {
     const result = matchTransferLegs([leg('i', 'inflow', 5000, 0, 'B'), leg('s', 'sent', 5000, 6.5 * MIN, 'A')])
     expect(result.pairs).toEqual([{ sentId: 's', inflowId: 'i' }])
+  })
+
+  it('pairs legs exactly 10 minutes apart', () => {
+    const result = matchTransferLegs([leg('s', 'sent', 5000, 0, 'A'), leg('i', 'inflow', 5000, 10 * MIN, 'B')])
+    expect(result.pairs).toHaveLength(1)
   })
 
   it('does not pair across more than 10 minutes', () => {
