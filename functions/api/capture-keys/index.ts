@@ -7,13 +7,11 @@ import { mapAppError } from '../../_shared/mapAppError'
 /** Only the label is read, so a key made here can never carry an owner, an id or a hash of the caller's choosing. */
 const MAX_BODY_BYTES = 1024
 
-/** The signed-in person's keys, without the secret or its hash. Never cached: a key just made must show at once. */
+/** The signed-in person's keys, without the secret or its hash. */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   try {
     const keys = await listCaptureKeys(createD1CaptureRepository(context.env), context.data.owner)
-    const response = json({ keys })
-    response.headers.set('cache-control', 'private, no-store')
-    return response
+    return json({ keys })
   } catch (error) {
     mapAppError(error)
   }
@@ -36,9 +34,7 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
       new Date(),
     )
     if (!created) throw new HttpError(409, 'You already have the most keys allowed. Revoke one first.')
-    const response = json(created, 201)
-    response.headers.set('cache-control', 'private, no-store')
-    return response
+    return json(created, 201)
   } catch (error) {
     mapAppError(error)
   }

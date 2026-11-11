@@ -19,7 +19,7 @@ separator, and a fixed length so one pattern refuses anything else before any lo
   was made and when it was last used.
 - **Three at a time** per person, checked inside the insert so two requests made at once cannot make a fourth. A fourth
   is a 409. Replacing a key is making a new one, then revoking the old.
-- **Revoked, not deleted.** Revoking takes effect on the next request the key makes. Another person's key, a revoked key
+- **Revoked, not deleted.** The row is kept, and the limit counts live keys only, so revoking frees a slot. Revoking takes effect on the next request the key makes. Another person's key, a revoked key
   and an unknown id all answer 404, so ids cannot be probed.
 - **Compared as digests.** The endpoint compares the SHA-256 of the secret it was sent with the stored one, using
   `crypto.subtle.timingSafeEqual` where the runtime has it and a loop over all 32 bytes where it does not.
@@ -34,5 +34,5 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `POST /api/capture-keys` | 201 with the same fields and `key`. Body: a JSON object with an optional `label` (at most 40 characters, no control characters; blank becomes "Shortcut"), at most 1 KB. 409 at the limit |
 | `DELETE /api/capture-keys/:id` | `{ ok: true }`, or 404 |
 
-Every answer is `private, no-store`. These writes leave the owner's dataset revision alone, since they change nothing a
+These writes leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
