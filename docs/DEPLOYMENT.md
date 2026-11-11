@@ -79,14 +79,14 @@ the access env, deploys the production and staging Pages projects, and then runs
 backup cron worker is redeployed on every merge to `main`. The migration and `ship` jobs run for `main` only. A pull
 request runs verify and deploys a staging preview only (`.github/workflows/deploy-dev.yml`, see [OPS.md](./OPS.md)).
 
-Secrets: `CLOUDFLARE_API_TOKEN` and `OWNER_EMAIL`. Token permissions (Cloudflare dashboard → My Profile → API Tokens):
+Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_API_TOKEN_PREVIEW` and `OWNER_EMAIL`. CI uses two Cloudflare tokens (dashboard
+→ My Profile → API Tokens), so a pull-request build never sees the main one. Neither has any Access permission; the
+token that can write Access stays on the maintainer's machine only.
 
-| Scope | Permission | Used for |
-| ----- | ---------- | -------- |
-| Account → Cloudflare Pages | Edit | Pages deploy |
-| Account → D1 | Edit | bootstrap and migrations |
-| Account → Workers Scripts | Edit | `expense-backup-cron` deploy |
-| Account → Workers R2 Storage | Edit | backup bucket bindings |
+| Token | Permissions (account scope) | Used by |
+| ----- | --------------------------- | ------- |
+| `CLOUDFLARE_API_TOKEN_PREVIEW` | Cloudflare Pages: Edit | `deploy-dev.yml`, pull-request previews |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare Pages, D1, Workers Scripts: Edit | `deploy.yml`, `restore-database.yml` |
 
 If the token lacks Workers Scripts Edit, `scripts/deploy-backup-cron.mjs` prints "expense-backup-cron: skipped in CI"
 and exits 0. The `ship` job still passes and the worker keeps running its old code. To notice, look for that line in the
