@@ -201,7 +201,7 @@ describe('what an event cannot do', () => {
 })
 
 describe('an event and its recommendation', () => {
-  const { owner: _owner, ...recFields } = rec()
+  const recFields: Omit<NewRecommendation, 'owner'> = { ...rec(), owner: undefined } as never
 
   it('are stored together, the recommendation under the key’s owner and named by the event', async () => {
     expect(await repo.recordCapture(event(), recFields)).toBe(true)
