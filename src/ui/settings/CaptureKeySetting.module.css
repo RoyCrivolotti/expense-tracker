@@ -1,0 +1,143 @@
+.fresh {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border-radius: 0.7rem;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-accent);
+}
+
+.freshTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* A long unbroken key must wrap inside a 375px card instead of widening the page. */
+.keyText {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.freshActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.make {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.primary,
+.copy {
+  min-height: 2.6rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.quiet,
+.revoke {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0.25rem 0;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.revoke {
+  flex-shrink: 0;
+  color: var(--exp-danger);
+}
+/* The text stays small; the tap area grows to 44px tall. */
+.quiet::after,
+.revoke::after {
+  content: '';
+  position: absolute;
+  inset: -0.6rem -0.5rem;
+}
+.revoke:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.label {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
