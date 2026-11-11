@@ -7,6 +7,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { findIbans } from './iban.mjs'
 
 const root = join(import.meta.dirname, '..')
 
@@ -68,6 +69,9 @@ function scanFile(file) {
     if (!SAFE_EMAIL_RE.test(match[0])) {
       failures.push(`${file}:${lineOf(text, match.index)}: possible real email "${match[0]}"`)
     }
+  }
+  for (const { iban, index } of findIbans(text)) {
+    failures.push(`${file}:${lineOf(text, index)}: looks like a real IBAN "${iban}"`)
   }
   for (const literal of BANNED_LITERALS) {
     if (literal.test(text)) failures.push(`${file}: contains banned literal matching ${literal}`)
