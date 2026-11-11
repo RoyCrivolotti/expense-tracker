@@ -34,6 +34,14 @@ function withoutTrailingSlash(pathname: string): string {
 const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 /**
+ * Writes that change nothing the dataset's readers see, so they leave its revision alone: replacing the token would
+ * make every cached copy of the person's ledger miss for no reason.
+ */
+function leavesDatasetAlone(path: string): boolean {
+  return path === '/api/capture-keys' || path.startsWith('/api/capture-keys/')
+}
+
+/**
  * Replace the owner's dataset revision before the handler runs and again after it, whether it
  * returned, answered with an error or threw (a write can land and the request still fail).
  *
@@ -100,7 +108,7 @@ const handle: PagesFunction<Env, string, ExpensesData> = async (context) => {
     context.data.owner = email
     const deps = createAccessDeps(context.env)
     await touchLastSeenIfNeeded(deps, email)
-    if (READ_ONLY_METHODS.has(context.request.method)) return await context.next()
+    if (READ_ONLY_METHODS.has(context.request.method) || leavesDatasetAlone(path)) return await context.next()
     return await aroundWrite(context.env.DB, email, context.data, () => context.next())
   } catch (e) {
     // Routes that do not catch their own errors land here, and used to answer a
