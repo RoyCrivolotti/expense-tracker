@@ -1,0 +1,62 @@
+name: Prune old deployments
+
+# Pages keeps every deployment, and an old one keeps serving the code it was built from. This deletes the old ones
+# (rules and numbers: scripts/prune-pages-deployments.mjs, docs/OPS.md). The weekly run deletes; a manual run is a
+# dry run unless dry_run is switched off. Nothing a pull request does can start it.
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only list what would be deleted'
+        type: boolean
+        default: true
+      max_delete:
+        description: 'Most deployments one project may lose in this run (empty: the script default)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# Two runs deleting from the same project would only race each other.
+concurrency:
+  group: prune-deployments
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: '800abdfb2ec1687266f66fd349c41d6a'
+
+jobs:
+  prune:
+    # A fork has no secrets, and a copy of this file must not be able to run against someone else's account.
+    if: github.repository == 'RoyCrivolotti/expense-tracker'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      # The script uses nothing it would have to install, so there is no npm ci, and the token is never in
+      # the environment of a dependency's install script.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      # One project failing does not skip the other. The projects are listed in config/prune-projects.json, which
+      # the script also reads to refuse any other name.
+      - name: Prune
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MAX_DELETE: ${{ inputs.max_delete }}
+        run: |
+          args=()
+          if [ "$EVENT" = schedule ] || [ "$DRY_RUN" = false ]; then args+=(--delete); fi
+          if [ -n "$MAX_DELETE" ]; then args+=(--max-delete "$MAX_DELETE"); fi
+          failed=0
+          for project in $(jq -r '.[]' config/prune-projects.json); do
+            node scripts/prune-pages-deployments.mjs --project "$project" "${args[@]}" || failed=1
+          done
+          exit "$failed"

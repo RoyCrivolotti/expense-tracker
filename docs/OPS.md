@@ -63,6 +63,7 @@ default. How the deploy applies migrations, and why a dev database ahead of `mai
 | `scripts/migrate.mjs` | `migrate`, `migrate:dev` | Check any database against `migrations/`, or apply what it lacks (`migrate:dev`: dev, post-seed only) |
 | `scripts/measure-d1.mjs` | `measure:d1` | Measure rows billed per route on the dev D1 as a synthetic owner; see [MEASURING.md](./MEASURING.md) |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to the staging project |
+| `scripts/prune-pages-deployments.mjs` | `prune:deployments` | Delete old deployments of a Pages project (dry run unless `--delete`) |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.
 
@@ -106,6 +107,39 @@ no deploy.
   `1000+` once there are more matches than the summary counts.
 - `npm run verify:ledger-mode` compares the demo instance's screens under `?ledger=off` and `?ledger=on`
   ([TESTING.md](./TESTING.md#real-browser-checks-manual)).
+
+## Pruning old deployments
+
+Pages keeps every deployment, and an old one is not dormant: its own `<id>.<project>.pages.dev` address keeps serving the
+code it was built from, with the project's current bindings, so the number of reachable old builds only grows.
+`.github/workflows/prune-deployments.yml` runs weekly and deletes the old ones from the production and staging
+projects, using the token the deploy uses (Cloudflare Pages Edit).
+
+It keeps the newest 10 production and the newest 5 preview deployments by creation date (`KEEP_PRODUCTION` and
+`KEEP_PREVIEW` in the script), and in addition:
+
+- the current production deployment,
+- the latest successful deployment of each environment, so a rollback target always exists,
+- any deployment a custom domain points at, and any still building.
+
+Everything else goes, including the previews of open pull requests that are older than the newest 5 (the preview link in
+such a pull request's description then returns 404 until its next push, which deploys a new one). It stops before the
+first delete if the listing is incomplete, the response has an unexpected shape, the current production deployment is not
+in the listing, or the plan would delete more than 300 deployments from one project (`MAX_DELETE`; a run by hand can pass
+`--max-delete`). It only touches the projects in `config/prune-projects.json`, the same list the workflow reads. The log
+holds counts and dates, never deployment ids.
+
+The first scheduled run is the Monday after this merges, at 04:17 UTC, and it deletes for real. Do a dry run first (below)
+to see how many it will remove.
+
+To see what it would delete, run it by hand, which deletes nothing:
+
+```bash
+CLOUDFLARE_API_TOKEN=… npm run prune:deployments -- --project <your-pages-project>
+```
+
+Add `--delete` to delete. In GitHub, Actions, Prune old deployments, Run workflow does the same, and lists only unless
+`dry_run` is switched off. To turn the weekly run off, disable the workflow (`gh workflow disable prune-deployments.yml`).
 
 ## Gitignored local paths
 
