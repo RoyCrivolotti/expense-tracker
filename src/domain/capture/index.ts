@@ -1,6 +1,6 @@
 export { findAmount, parseAmount } from './amount'
 export type { ParsedAmount } from './amount'
-export { CAPTURE_KEY_PATTERN, hashSecret, mintCaptureKey, parseCaptureKey, secretMatches } from './captureKey'
+export { CAPTURE_KEY_ID_PATTERN, CAPTURE_KEY_PATTERN, hashSecret, mintCaptureKey, parseCaptureKey, secretMatches } from './captureKey'
 export type { CaptureKeyParts, MintedCaptureKey } from './captureKey'
 export { KIND_RULES, matchRule } from './classify'
 export { MAX_CLOCK_SKEW_MS, parsePushDate, withinClockSkew } from './date'

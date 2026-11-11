@@ -6,6 +6,9 @@
  */
 export const CAPTURE_KEY_PATTERN = /^xpk_([0-9a-f]{16})_([0-9a-f]{64})$/
 
+/** The public half alone, as a route names it. */
+export const CAPTURE_KEY_ID_PATTERN = /^[0-9a-f]{16}$/
+
 export interface CaptureKeyParts {
   keyId: string
   secret: string
