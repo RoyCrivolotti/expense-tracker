@@ -17,3 +17,8 @@ export function suggestType(kind: PushKind): SuggestedType {
       return 'refund'
   }
 }
+
+/** Which way money moves for a kind: -1 out of the account, 1 in. Pairs with balance alerts, which are signed. */
+export function kindSign(kind: PushKind): -1 | 1 {
+  return suggestType(kind) === 'expense' ? -1 : 1
+}

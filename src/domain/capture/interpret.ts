@@ -1,7 +1,7 @@
 import { findAmount } from './amount'
 import { matchRule } from './classify'
 import { parsePushDate, withinClockSkew } from './date'
-import { suggestType } from './suggest'
+import { kindSign, suggestType } from './suggest'
 import { cleanText, findLastFour } from './text'
 import type { CaptureSource, KindRule, PushKind, RawPush, SuggestedType } from './types'
 
@@ -13,8 +13,10 @@ export type Interpretation =
       suggestedType: SuggestedType
       /** Positive cents, or null when the body gave no amount the parser trusts: incomplete, never guessed. */
       amountCents: number | null
-      /** Whether the bank wrote a minus sign. Recorded because direction decides the type, not the stored sign. */
-      outflow: boolean
+      /** Amount with the direction of the kind, the form balance alerts are paired in. Null when incomplete. */
+      signedCents: number | null
+      /** Whether the bank wrote a minus sign. Kept apart because the kind, not the text, decides direction. */
+      bankWroteMinus: boolean
       lastFour: string | null
       instantMs: number
       localDate: string
@@ -40,7 +42,8 @@ export function interpretPush(push: RawPush, receivedMs: number, rules?: readonl
     kind: rule.kind,
     suggestedType: suggestType(rule.kind),
     amountCents: amount?.cents ?? null,
-    outflow: amount?.negative ?? false,
+    signedCents: amount ? kindSign(rule.kind) * amount.cents : null,
+    bankWroteMinus: amount?.negative ?? false,
     lastFour: findLastFour(push.body),
     instantMs: date.instantMs,
     localDate: date.localDate,

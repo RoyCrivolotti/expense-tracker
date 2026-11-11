@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { interpretPush } from './interpret'
+import { pairBalanceAlerts } from './pairing'
 import type { KindRule, RawPush } from './types'
 
 const received = Date.UTC(2026, 10, 3, 9, 42)
@@ -24,7 +25,8 @@ describe('interpretPush', () => {
       kind: 'card-purchase',
       suggestedType: 'expense',
       amountCents: 3340,
-      outflow: false,
+      signedCents: -3340,
+      bankWroteMinus: false,
       lastFour: '4321',
       instantMs: Date.UTC(2026, 10, 3, 8, 41, 7),
       localDate: '2026-11-03',
@@ -34,7 +36,7 @@ describe('interpretPush', () => {
 
   it('marks a purchase incomplete rather than guessing when the amount does not parse', () => {
     const result = interpretPush({ ...purchase, body: 'Shop Example *4321 amount hidden' }, received)
-    expect(result).toMatchObject({ outcome: 'recommend', amountCents: null })
+    expect(result).toMatchObject({ outcome: 'recommend', amountCents: null, signedCents: null })
   })
 
   it('does not read a dot-decimal amount the comma way', () => {
@@ -73,7 +75,7 @@ describe('interpretPush', () => {
   it('stores the amount positive and records the sign separately', () => {
     const rules: KindRule[] = [{ ...bizumRule, source: 'iberia', title: 'Compra realizada', kind: 'transfer-sent' }]
     const result = interpretPush({ ...purchase, body: 'sent -10.5' }, received, rules)
-    expect(result).toMatchObject({ amountCents: 1050, outflow: true, suggestedType: 'expense' })
+    expect(result).toMatchObject({ amountCents: 1050, bankWroteMinus: true, signedCents: -1050, suggestedType: 'expense' })
   })
 
   it('never keeps another person’s name from a Bizum or an ATM body', () => {
@@ -92,5 +94,20 @@ describe('interpretPush', () => {
       expect(JSON.stringify(result)).not.toContain('Zebediah')
       expect(result).not.toHaveProperty('rawText')
     }
+  })
+
+  it('gives a purchase the signed amount a balance alert is paired with', () => {
+    const result = interpretPush(purchase, received)
+    if (result.outcome !== 'recommend' || result.signedCents === null) throw new Error('expected a recommendation')
+    const event = { id: 'e', account: '1', signedCents: result.signedCents, atMs: result.instantMs }
+    const alert = { id: 'a', account: '1', signedCents: -3340, atMs: result.instantMs + 4000 }
+    expect(pairBalanceAlerts([event], [alert]).pairs).toEqual([{ eventId: 'e', alertId: 'a' }])
+  })
+
+  it('gives an inflow kind a positive signed amount', () => {
+    const result = interpretPush(
+      { source: 'santander', title: 'Bizum test', body: 'got 4.0', date: purchase.date }, received, [bizumRule],
+    )
+    expect(result).toMatchObject({ signedCents: 400 })
   })
 })
