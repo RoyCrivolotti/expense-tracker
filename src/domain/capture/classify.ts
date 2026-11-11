@@ -3,8 +3,8 @@ import type { KindRule, RawPush } from './types'
 
 /**
  * The kind list. A push only creates anything if a row matches its Title and Body together;
- * everything else is dropped and counted. The Iberia purchase push is the only wording the plan has
- * confirmed. More rows join when blanked samples of their kinds arrive, so the Icon's instalment
+ * everything else is dropped and counted. The Iberia purchase push is the only wording confirmed so
+ * far. More rows join when blanked samples of their kinds arrive, so the Icon's instalment
  * offer, which repeats a purchase with no card, is dropped for lack of a row rather than special-cased.
  */
 export const KIND_RULES: readonly KindRule[] = [
