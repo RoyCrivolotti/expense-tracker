@@ -26,7 +26,7 @@ export interface RecommendationPage {
 
 export function parsePageLimit(raw: string | null): number {
   if (raw === null) return DEFAULT_RECOMMENDATION_PAGE
-  const n = Number(raw)
+  const n = /^\d+$/.test(raw) ? Number(raw) : NaN
   if (!Number.isInteger(n) || n < 1 || n > MAX_RECOMMENDATION_PAGE) {
     throw new ValidationError(`limit must be a whole number from 1 to ${MAX_RECOMMENDATION_PAGE}`)
   }
@@ -70,9 +70,10 @@ async function openOne(captures: CaptureRepository, owner: string, id: string): 
 
 /**
  * Creates the expense the person edited, through the ordinary create path, and marks the recommendation submitted.
- * The two writes cannot share a batch, so the recommendation is read first and, if a second tap decided it between
- * the read and the mark, the row just created is deleted again. The person's input is validated by the create path
- * before anything is written; nothing from the recommendation is trusted over what they sent.
+ * The two writes cannot share a batch, so the row just created is deleted again whenever the mark does not happen:
+ * a second tap decided it in between, or the mark failed. A failed delete is logged and the original failure is still
+ * the one thrown. The person's input is validated by the create path before anything is written; nothing from the
+ * recommendation is trusted over what they sent.
  */
 export async function submitRecommendation(
   captures: CaptureRepository,
@@ -85,16 +86,30 @@ export async function submitRecommendation(
   const open = await openOne(captures, owner, id)
   if (!open.ok) return open
   const transaction = await createTransaction(expenses, owner, input)
-  const marked = await captures.decideRecommendation(owner, id, {
-    state: 'submitted',
-    txnId: transaction.id,
-    at: now.toISOString(),
-  })
+  let marked: boolean
+  try {
+    marked = await captures.decideRecommendation(owner, id, {
+      state: 'submitted',
+      txnId: transaction.id,
+      at: now.toISOString(),
+    })
+  } catch (error) {
+    await removeQuietly(expenses, owner, transaction.id)
+    throw error
+  }
   if (!marked) {
     await expenses.deleteTransaction(owner, transaction.id)
     return { ok: false, reason: 'decided' }
   }
   return { ok: true, transaction }
+}
+
+async function removeQuietly(expenses: ExpenseRepository, owner: string, id: number): Promise<void> {
+  try {
+    await expenses.deleteTransaction(owner, id)
+  } catch (error) {
+    console.error('could not remove an expense whose recommendation was not marked', error)
+  }
 }
 
 /** Marks the recommendation as already entered by hand. The row must be the person's own and not answer for another. */
@@ -117,7 +132,8 @@ export async function linkRecommendation(
     const marked = await captures.decideRecommendation(owner, id, { state: 'submitted', txnId, at: now.toISOString() })
     return marked ? { ok: true } : { ok: false, reason: 'decided' }
   } catch (error) {
-    // The unique index: another recommendation already answers for this transaction. Any other failure is real.
+    // The unique index: another recommendation already answers for this transaction. D1 reports it only as message
+    // text, so that is what is matched; any other failure is real and is thrown.
     if (error instanceof Error && /UNIQUE/i.test(error.message)) return { ok: false, reason: 'taken' }
     throw error
   }

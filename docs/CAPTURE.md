@@ -1,7 +1,8 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key, the endpoint that accepts it and the routes that list and decide recommendations, all built; the screens are added as they land.
+key, the endpoint that accepts it and the routes that list and decide recommendations, all built; the screens are added
+as they land.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -46,13 +47,14 @@ the signed-in person's own; another person's recommendation and an id that is no
 | Route | Answers |
 | --- | --- |
 | `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400 |
-| `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way; nothing is copied from the recommendation |
-| `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing |
+| `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it |
+| `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing. Takes no body |
 | `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
 
 Each decision happens once: a second one is a 409. Submitting creates the row first and then marks the recommendation,
-because the two cannot share a D1 batch through the create path; if a second tap decided it in between, the row just
-created is deleted again. Submit and link move the dataset revision like any write that adds an expense; the list does not.
+because the two cannot share a D1 batch through the create path. If a second tap decided it in between, or the mark
+failed, the row just created is deleted again. Submit moves the dataset revision like any write that adds an expense.
+Dismiss, link and the list leave it alone, since the ledger a reader sees does not change.
 
 ## The capture endpoint
 

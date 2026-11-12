@@ -36,18 +36,22 @@ beforeEach(async () => {
   categoryId = await seeded(postCategory, '/categories', { name: 'Food', monthlyBudgetCents: 50_000, sortOrder: 0, active: true })
 })
 
-function call(handler: Handler, o: { n?: number; id?: string; query?: string; body?: unknown; email?: string } = {}) {
+function call(
+  handler: Handler,
+  o: { n?: number; id?: string; query?: string; body?: unknown; email?: string; empty?: boolean } = {},
+) {
   const id = o.id ?? (o.n === undefined ? undefined : idOf(o.n))
   const post = handler !== list
+  const action = new Map<Handler, string>([[submit, '/submit'], [dismiss, '/dismiss'], [link, '/link']]).get(handler) ?? ''
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
     env: world.env,
-    url: `${BASE}${id ? `/${id}` : ''}${o.query ?? ''}`,
+    url: `${BASE}${id ? `/${id}${action}` : ''}${o.query ?? ''}`,
     method: post ? 'POST' : 'GET',
     email: o.email ?? OWNER,
     ...(id ? { params: { id } } : {}),
-    ...(post ? { body: o.body ?? {} } : {}),
+    ...(post && !o.empty ? { body: o.body ?? {} } : {}),
   })
 }
 
@@ -104,7 +108,7 @@ describe('GET /api/recommendations', () => {
     expect(second).toMatchObject({ next: null, openCount: 3 })
   })
 
-  it.each(['?limit=0', '?limit=101', '?limit=x', '?after=nope', "?after=2026-03-02~'; DROP TABLE recommendations"])(
+  it.each(['?limit=0', '?limit=101', '?limit=x', '?limit=1e1', '?limit=+5', '?limit=%205', '?after=nope', "?after=2026-03-02~'; DROP TABLE recommendations"])(
     'refuses %s with a 400',
     async (query) => {
       expect((await call(list, { query })).status).toBe(400)
@@ -143,6 +147,31 @@ describe('POST /api/recommendations/:id/submit', () => {
     expect(transactions()).toBe(0)
   })
 
+  it('removes the row it created and fails when marking the recommendation throws, so a retry makes one', async () => {
+    await seed(1)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    world.intercept((sql) => {
+      if (sql.startsWith('UPDATE recommendations')) throw new Error('D1 is down')
+    })
+    expect((await call(submit, { n: 1, body: expense() })).status).toBe(500)
+    expect(transactions()).toBe(0)
+    world.intercept(() => undefined)
+    expect((await call(submit, { n: 1, body: expense() })).status).toBe(201)
+    expect(transactions()).toBe(1)
+  })
+
+  it('still fails with the original error when removing the row also fails', async () => {
+    await seed(1)
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    world.intercept((sql) => {
+      if (sql.startsWith('UPDATE recommendations')) throw new Error('D1 is down')
+      if (sql.startsWith('DELETE FROM transactions')) throw new Error('delete failed')
+    })
+    expect((await call(submit, { n: 1, body: expense() })).status).toBe(500)
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining('could not remove'), expect.any(Error))
+    expect(state(1).state).toBe('open')
+  })
+
   it('refuses an invalid expense without deciding the recommendation', async () => {
     await seed(1)
     const response = await call(submit, { n: 1, body: { ...expense(), amountCents: 'lots' } })
@@ -159,10 +188,26 @@ describe('POST /api/recommendations/:id/submit', () => {
   })
 })
 
+describe('the dataset revision', () => {
+  it('moves for a submit and stays put for the list, a dismiss and a link', async () => {
+    await seed(1)
+    await seed(2)
+    await seed(3)
+    const typedId = ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: expense() })).json()) as { id: number }).id
+    const before = world.token()
+    await call(list)
+    await call(dismiss, { n: 1, empty: true })
+    await call(link, { n: 2, body: { transactionId: typedId } })
+    expect(world.token()).toBe(before)
+    await call(submit, { n: 3, body: expense() })
+    expect(world.token()).not.toBe(before)
+  })
+})
+
 describe('POST /api/recommendations/:id/dismiss', () => {
   it('takes it off the list and creates nothing', async () => {
     await seed(1)
-    expect((await call(dismiss, { n: 1 })).status).toBe(200)
+    expect((await call(dismiss, { n: 1, empty: true })).status).toBe(200)
     expect(state(1)).toEqual({ state: 'dismissed', txn_id: null })
     expect(transactions()).toBe(0)
     expect((await call(dismiss, { n: 1 })).status).toBe(409)
@@ -187,6 +232,33 @@ describe('POST /api/recommendations/:id/link', () => {
     expect((await call(link, { n: 1, body: { transactionId: id } })).status).toBe(200)
     expect(state(1)).toEqual({ state: 'submitted', txn_id: id })
     expect(transactions()).toBe(1)
+  })
+
+  it("refuses another person's transaction with a 404 and leaves the recommendation open", async () => {
+    await seed(1)
+    const theirs = async (handler: Handler, path: string, body: unknown) =>
+      ((await (await world.call(handler, { method: 'POST', path, body, email: OTHER })).json()) as { id: number }).id
+    const account = await theirs(postAccount, '/accounts', { name: 'Debit', kind: 'debit', settlement: 'immediate', active: true })
+    const category = await theirs(postCategory, '/categories', { name: 'Food', monthlyBudgetCents: 50_000, sortOrder: 0, active: true })
+    const foreign = await world.call(postTransaction, {
+      method: 'POST',
+      path: '/transactions',
+      body: { ...expense(), accountId: account, categoryId: category },
+      email: OTHER,
+    })
+    const id = ((await foreign.json()) as { id: number }).id
+    expect((await call(link, { n: 1, body: { transactionId: id } })).status).toBe(404)
+    expect(state(1)).toEqual({ state: 'open', txn_id: null })
+  })
+
+  it("is a 404 for another person's recommendation and a 409 for one already decided", async () => {
+    await seed(1, {}, OTHER)
+    await seed(2)
+    const id = await typed()
+    expect((await call(link, { n: 1, body: { transactionId: id } })).status).toBe(404)
+    await call(dismiss, { n: 2, empty: true })
+    expect((await call(link, { n: 2, body: { transactionId: id } })).status).toBe(409)
+    expect(state(1).state).toBe('open')
   })
 
   it('refuses a row that is not there, one that another recommendation answers for, and a bad id', async () => {
