@@ -22,6 +22,8 @@ export const LIST_OPEN_AFTER_SQL = `SELECT ${COLUMNS} FROM recommendations
 WHERE owner = ?1 AND state = 'open' AND (local_date < ?3 OR (local_date = ?3 AND id < ?4))
 ORDER BY local_date DESC, id DESC LIMIT ?2`
 
+export const COUNT_OPEN_SQL = `SELECT COUNT(*) AS n FROM recommendations WHERE owner = ?1 AND state = 'open'`
+
 /** Only an open row moves, so a second tap or a retry finds nothing to change. */
 export const DECIDE_SQL = `UPDATE recommendations SET state = ?3, txn_id = ?4, decided_at = ?5
 WHERE owner = ?1 AND id = ?2 AND state = 'open'`

@@ -31,6 +31,7 @@ import {
 } from '../capture/captureKeysSql'
 import type { KeyRow } from '../capture/captureKeysSql'
 import {
+  COUNT_OPEN_SQL,
   CREATE_RECOMMENDATION_SQL,
   DECIDE_SQL,
   GET_RECOMMENDATION_SQL,
@@ -175,7 +176,7 @@ function recommendations(
   db: D1Database,
 ): Pick<
   CaptureRepository,
-  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'decideRecommendation'
+  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'decideRecommendation'
 > {
   return {
     createRecommendation: async (rec) => {
@@ -190,6 +191,8 @@ function recommendations(
         ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
         : await rows<RecommendationRow>(db, LIST_OPEN_FIRST_SQL, owner, limit)
       ).map(toRecommendation),
+    countOpenRecommendations: async (owner) =>
+      (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
     decideRecommendation: (owner, id, d) =>
       changed(db, DECIDE_SQL, owner, id, d.state, d.state === 'submitted' ? d.txnId : null, d.at),
   }
