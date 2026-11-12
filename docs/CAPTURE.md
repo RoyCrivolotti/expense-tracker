@@ -1,8 +1,8 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key, the endpoint that accepts it and the routes that list and decide recommendations, all built; the screens are added
-as they land.
+key, the endpoint that accepts it and the routes that list and decide recommendations, all built, and the Settings list of
+captured payments. The setup screen is not built yet.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -55,6 +55,23 @@ Each decision happens once: a second one is a 409. Submitting creates the row fi
 because the two cannot share a D1 batch through the create path. If a second tap decided it in between, or the mark
 failed, the row just created is deleted again. Submit moves the dataset revision like any write that adds an expense.
 Dismiss, link and the list leave it alone, since the ledger a reader sees does not change.
+
+## The Captured payments list
+
+On Settings, Account, behind the same flag as the capture key card, above it. It reads `GET /api/recommendations` and shows
+the open ones by day, newest first: the merchant text as the bank sent it, the account the card is mapped to, the local
+time and the amount. A chip says why a row needs a look (no amount, not euros, no suggested type). It is its own lazy chunk
+with its own line in the bundle budget.
+
+- **Opening a row** fills the normal add form from the recommendation. Saving goes to `POST /api/recommendations/:id/submit`
+  instead of the plain create, so the row and the decision are one write and the list refreshes. A captured payment cannot
+  also start or join an installment plan, since the plan would be a second write.
+- **Dismiss** takes it off the list and creates nothing.
+- **Link** is offered only when exactly one row you typed has the same account and amount and is a day or less apart. Two or
+  more fitting rows offer nothing, so the app never chooses between them. It looks at the rows the app has loaded, which in
+  the paged ledger mode are the months in view.
+
+The description field starts from the suggestion the Worker made, if any. The category stays on the form's default until you change it.
 
 ## The capture endpoint
 

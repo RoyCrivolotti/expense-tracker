@@ -4,6 +4,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import { AccountView } from './AccountView'
 
 vi.mock('./CaptureKeySetting', () => ({ CaptureKeySetting: () => <p>capture key card</p> }))
+vi.mock('./RecommendationsSetting', () => ({ RecommendationsSetting: () => <p>captured payments</p> }))
 vi.mock('./AppVersionSetting', () => ({ AppVersionSetting: () => <p>version</p> }))
 
 const render_ = () => render(<AccountView model={{} as ExpenseModel} ownerAccess={undefined} accountEmail={undefined} />)
@@ -16,6 +17,7 @@ describe('the capture key card', () => {
     render_()
 
     expect(screen.queryByText('capture key card')).not.toBeInTheDocument()
+    expect(screen.queryByText('captured payments')).not.toBeInTheDocument()
   })
 
   it('shows once the flag is on', async () => {
@@ -23,5 +25,6 @@ describe('the capture key card', () => {
     render_()
 
     expect(await screen.findByText('capture key card')).toBeInTheDocument()
+    expect(screen.getByText('captured payments')).toBeInTheDocument()
   })
 })

@@ -274,7 +274,7 @@ export function SettingsTab({
       )}
 
       {view === 'account' && (
-        <AccountView model={model} ownerAccess={ownerAccess} accountEmail={accountEmail} />
+        <AccountView model={model} actions={actions} ownerAccess={ownerAccess} accountEmail={accountEmail} />
       )}
 
       {view === 'data' && <DataView model={model} month={month} actions={actions} />}
