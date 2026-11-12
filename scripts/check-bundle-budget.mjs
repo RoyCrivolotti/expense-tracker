@@ -2,15 +2,15 @@
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
  * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a heavy
- * chart/vendor lib would blow these limits. Three are kept: the bundle without the chunks only the ledger mode
+ * chart/vendor lib would blow these limits. Four are kept: the bundle without the chunks only the ledger mode
  * loads (the whole-dataset app and everything both ways of reading the ledger run), the code only the Goals tab loads
- * (its own chunk, the chunks split out of it and its lazy card), and the code only the ledger mode loads, all
- * found from the imports in the built files by `bundleGraph.mjs`.
+ * (its own chunk, the chunks split out of it and its lazy card), the code only the ledger mode loads, and the code only
+ * the capture flag loads, all found from the imports in the built files by `bundleGraph.mjs`.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
+import { captureOnlyChunks, goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
@@ -26,6 +26,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 const TOTAL_MAX_GZIP = 294_400
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
+// CAPTURE: the Settings key card and the Dashboard review card only a browser with the capture flag on loads. Kept out of TOTAL so the
+// feature has a line of its own and the default build cannot be blamed for it.
+const CAPTURE_MAX_GZIP = 6_600
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
@@ -67,12 +70,26 @@ if (ledgerOnly.size === 0) {
   process.exit(1)
 }
 
+const captureOnly = new Set(
+  captureOnlyChunks({
+    files: jsFiles,
+    read: (name) => readFileSync(join(assetsDir, name), 'utf8'),
+    indexHtml: readFileSync(join(assetsDir, '..', 'index.html'), 'utf8'),
+  }),
+)
+if (captureOnly.size === 0) {
+  console.error('check-bundle-budget: found no capture-only chunk in dist/assets, so the capture limit would count nothing')
+  process.exit(1)
+}
+
 let total = 0
 let goals = 0
 let ledger = 0
+let capture = 0
 for (const name of jsFiles) {
   const size = gzipBytes(join(assetsDir, name))
   if (ledgerOnly.has(name)) ledger += size
+  else if (captureOnly.has(name)) capture += size
   else total += size
   if (goalsOnly.has(name)) goals += size
 }
@@ -84,6 +101,9 @@ if (total > TOTAL_MAX_GZIP) {
 }
 if (ledger > LEDGER_MAX_GZIP) {
   failures.push(`ledger-only JS ${kb(ledger)} gzip exceeds budget ${kb(LEDGER_MAX_GZIP)}`)
+}
+if (capture > CAPTURE_MAX_GZIP) {
+  failures.push(`capture-only JS ${kb(capture)} gzip exceeds budget ${kb(CAPTURE_MAX_GZIP)}`)
 }
 if (goals > GOALS_MAX_GZIP) {
   failures.push(`Goals-only JS ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
@@ -97,5 +117,5 @@ if (failures.length > 0) {
 const bytes = (n, max) => `${n.toLocaleString('en-US')} of ${max.toLocaleString('en-US')}`
 console.log(
   `bundle budget OK (${bytes(total, TOTAL_MAX_GZIP)} bytes gzip without the ledger chunks, ` +
-    `ledger-only ${bytes(ledger, LEDGER_MAX_GZIP)}, Goals-only ${bytes(goals, GOALS_MAX_GZIP)})`,
+    `ledger-only ${bytes(ledger, LEDGER_MAX_GZIP)}, capture-only ${bytes(capture, CAPTURE_MAX_GZIP)}, Goals-only ${bytes(goals, GOALS_MAX_GZIP)})`,
 )
