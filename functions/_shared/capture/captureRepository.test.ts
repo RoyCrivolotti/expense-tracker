@@ -271,6 +271,15 @@ describe('recommendations', () => {
     expect(third.map((r) => r.id)).toEqual(['r0'])
   })
 
+  it('counts the open ones for their owner only, leaving out those decided', async () => {
+    await repo.createRecommendation(rec({ id: 'a' }))
+    await repo.createRecommendation(rec({ id: 'b' }))
+    await repo.createRecommendation(rec({ id: 'c' }))
+    await repo.decideRecommendation(ALICE, 'c', { state: 'dismissed', at: T0 })
+    expect(await repo.countOpenRecommendations(ALICE)).toBe(2)
+    expect(await repo.countOpenRecommendations(BOB)).toBe(0)
+  })
+
   it('submits once, keeping the transaction, and leaves the open list', async () => {
     await repo.createRecommendation(rec())
     expect(await repo.decideRecommendation(ALICE, 'rec-1', { state: 'submitted', txnId: 42, at: T0 })).toBe(true)
