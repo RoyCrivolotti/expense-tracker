@@ -5,6 +5,7 @@ import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import { defaultExpenseSettings } from '../engine'
 import { makeScenario } from '../testing/factories'
 import type { WriteReach } from '../data/ledgerSession'
+import { announceRecommendationsChanged, submitRecommendation } from '../data/recommendationsApi'
 import { useExpenseActions } from './useExpenseActions'
 
 const baseDataset: ExpenseDataset = {
@@ -36,6 +37,11 @@ const newTxn = {
 
 const savedTxn: Transaction = { ...newTxn, id: 42, status: 'posted' }
 
+vi.mock('../data/recommendationsApi', () => ({
+  submitRecommendation: vi.fn(),
+  announceRecommendationsChanged: vi.fn(),
+}))
+
 describe('useExpenseActions', () => {
   it('returns undefined for read-only sources', () => {
     const source: ExpenseDataSource = { canWrite: false, load: vi.fn() }
@@ -66,6 +72,37 @@ describe('useExpenseActions', () => {
     expect(applyPatch).toHaveBeenCalledOnce()
     expect(dataset.transactions).toHaveLength(1)
     expect(dataset.transactions[0]?.id).toBe(42)
+  })
+
+  it('submitRecommendation adds the row it returns and tells the list', async () => {
+    vi.mocked(submitRecommendation).mockResolvedValue(savedTxn)
+    const source: ExpenseDataSource = { canWrite: true, load: vi.fn() }
+    let dataset = baseDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
+
+    await act(async () => {
+      expect(await result.current!.submitRecommendation!('rec-1', newTxn)).toBe(savedTxn)
+    })
+
+    expect(submitRecommendation).toHaveBeenCalledWith('rec-1', newTxn)
+    expect(dataset.transactions.map((t) => t.id)).toEqual([42])
+    expect(announceRecommendationsChanged).toHaveBeenCalledOnce()
+  })
+
+  it('submitRecommendation changes nothing when the server refuses', async () => {
+    vi.mocked(submitRecommendation).mockRejectedValue(new Error('already decided'))
+    const source: ExpenseDataSource = { canWrite: true, load: vi.fn() }
+    const applyPatch = vi.fn()
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
+
+    await act(async () => {
+      await expect(result.current!.submitRecommendation!('rec-1', newTxn)).rejects.toThrow('already decided')
+    })
+
+    expect(applyPatch).not.toHaveBeenCalled()
   })
 
   it('updateTransactions calls source and applyPatch', async () => {

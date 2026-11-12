@@ -836,3 +836,42 @@ describe('TransactionModal — following a link to another transaction', () => {
     expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Reimbursement')
   })
 })
+
+describe('TransactionModal — a captured payment', () => {
+  const REC = '0b0c0d0e-1111-4222-8333-444455556666'
+
+  it('saves through the recommendation, not a plain create', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions } = renderModal({
+      seed: { recommendationId: REC, amountCents: 1250, description: 'Cafe', type: 'expense', accountId: 1, categoryId: 1 },
+      actions: { submitRecommendation },
+    })
+
+    fillMinimum(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() =>
+      expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.objectContaining({ amountCents: 1000, description: 'Kyoto hotel' })),
+    )
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('refuses an installment plan rather than creating the row twice', async () => {
+    const submitRecommendation = vi.fn()
+    const { container, actions } = renderModal({
+      seed: { recommendationId: REC, amountCents: 1250, description: 'Cafe', type: 'expense', accountId: 1, categoryId: 1 },
+      actions: { submitRecommendation },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'New plan' }))
+    fireEvent.change(screen.getByLabelText('Total installments'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+    fillMinimum(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText(/cannot start or join an installment plan/)).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+})

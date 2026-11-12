@@ -139,3 +139,25 @@ export async function updateTransactionWithIntent(
   }
   await actions.updateTransaction(id, input)
 }
+
+/**
+ * Save the form: an update when the row is known, else a create. A create from a captured payment goes through that
+ * recommendation instead, which makes the row and settles it in one write, so a plan cannot ride along.
+ */
+export async function saveTransaction(
+  actions: ExpenseActions,
+  input: NewTransaction,
+  id: number | undefined,
+  intent: InstallmentIntent | undefined,
+  recommendationId: string | undefined,
+): Promise<Transaction | null> {
+  if (id != null) {
+    await updateTransactionWithIntent(actions, id, input, intent)
+    return null
+  }
+  if (recommendationId && actions.submitRecommendation) {
+    if (intent && intent.kind !== 'none') throw new Error('A captured payment cannot start or join an installment plan')
+    return actions.submitRecommendation(recommendationId, input)
+  }
+  return createTransactionWithIntent(actions, input, intent)
+}

@@ -13,7 +13,7 @@ import { Modal } from './Modal'
 import { Presence } from './Presence'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
-import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
+import { saveTransaction } from './transactionSaveIntent'
 import styles from './TransactionModal.module.css'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
@@ -184,13 +184,8 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
    * ToastProvider holds one message at a time. TransactionForm toasts once
    * everything has landed, the way BatchTransactionForm already does.
    */
-  const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
-    if (id != null) {
-      await updateTransactionWithIntent(actions, id, input, intent)
-      return null
-    }
-    return createTransactionWithIntent(actions, input, intent)
-  }
+  const submit = (input: NewTransaction, id?: number, intent?: InstallmentIntent) =>
+    saveTransaction(actions, input, id, intent, seed?.recommendationId)
 
   /**
    * The batch tab finished. The single form stays mounted behind it and keeps
