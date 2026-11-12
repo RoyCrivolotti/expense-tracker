@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
+import { captureOnlyChunks, goalsOnlyChunks, ledgerOnlyChunks } from './bundleGraph.mjs'
 
 type Build = Record<string, string>
 
@@ -107,5 +107,27 @@ describe('ledgerOnlyChunks', () => {
 
   it('is nothing when there is no ledger chunk', () => {
     expect(runLedger(base)).toEqual([])
+  })
+})
+
+describe('captureOnlyChunks', () => {
+  const withCapture: Build = {
+    ...base,
+    'index-a.js': `${base['index-a.js']};const k=lazy(()=>load(()=>import(\`./CaptureKeySetting-k.js\`)));const r=lazy(()=>load(()=>import(\`./RecommendationsSetting-r.js\`)))`,
+    'CaptureKeySetting-k.js': 'import{a}from"./index-a.js";import{c}from"./capture-shared-m.js"',
+    'RecommendationsSetting-r.js': 'import{a}from"./index-a.js";import{c}from"./capture-shared-m.js";import{s}from"./ScrollRegion-d.js"',
+    'capture-shared-m.js': 'export const c=1',
+  }
+
+  it('finds both cards and the chunk only they share, and not one the Goals tab loads too', () => {
+    expect(captureOnlyChunks(asBuild(withCapture))).toEqual([
+      'CaptureKeySetting-k.js',
+      'RecommendationsSetting-r.js',
+      'capture-shared-m.js',
+    ])
+  })
+
+  it('is nothing when the build has no capture chunk', () => {
+    expect(captureOnlyChunks(asBuild(base))).toEqual([])
   })
 })
