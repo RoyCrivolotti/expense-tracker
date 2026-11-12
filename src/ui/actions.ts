@@ -42,6 +42,8 @@ export interface TransactionSeed {
   planId?: number
   /** Installment number this payment represents (for the modal hint only). */
   installmentIndex?: number
+  /** When set, saving creates the transaction through this captured-payment recommendation and settles it. */
+  recommendationId?: string
 }
 
 /**
@@ -57,6 +59,8 @@ export interface ExpenseActions {
   /** Resolves with the stored row, so a caller can attach receipts to its id. */
   createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
+  /** Creates the transaction a captured payment became and marks that recommendation submitted, in one write. */
+  submitRecommendation?: (id: string, input: NewTransaction) => Promise<Transaction>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   /** Resolves with the number of rows the server actually touched, which can be

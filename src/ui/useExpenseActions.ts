@@ -1,14 +1,13 @@
 import { useMemo, useRef } from 'react'
 import type { ExpenseSettings } from '../types'
-import { wasRefused } from '../data/apiClient'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { type ApplyPatch, bulkWriteOf, unchanged } from './bulkWrite'
+import { createWrites } from './createWrites'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
   patchAfterAccount,
   patchAfterAccountDelete,
-  patchAfterBulkCreate,
   patchAfterBulkDelete,
   patchAfterBulkUpdate,
   patchAfterCashActual,
@@ -29,7 +28,6 @@ import {
   patchAfterScenarioUpdate,
   patchAfterSettings,
   patchAfterStatementPaid,
-  patchAfterTransactionCreate,
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
   patchAfterWealthAccountCreate,
@@ -64,18 +62,7 @@ export function useExpenseActions(
       onDuplicate: (txn) =>
         openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
-      createTransaction: async (input: NewTransaction) => {
-        const txn = await source.createTransaction!(input)
-        applyPatch((d) => patchAfterTransactionCreate(d, txn))
-        return txn
-      },
-      createTransactions: async (inputs: NewTransaction[]) => {
-        const txns = await source.createTransactions!(inputs).catch((error: unknown) => {
-          if (!wasRefused(error)) readAgain?.()
-          throw error
-        })
-        applyPatch((d) => patchAfterBulkCreate(d, txns))
-      },
+      ...createWrites(source, applyPatch, readAgain),
       updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
         const txn = await source.updateTransaction!(id, patch)
         applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [id], patch })
