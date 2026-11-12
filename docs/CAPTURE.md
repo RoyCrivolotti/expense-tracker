@@ -1,7 +1,7 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key and the endpoint that accepts it, both built; the screens that show recommendations are added as they land.
+key, the endpoint that accepts it and the routes that list and decide recommendations, all built; the screens are added as they land.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -36,6 +36,23 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 
 These writes leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
+
+## Recommendations
+
+A recommendation is what a recognised push becomes: an amount, the text as the bank sent it, a date, an account when the
+card is mapped, and a suggested type the person can change. It is never an expense until they submit it. All routes are
+the signed-in person's own; another person's recommendation and an id that is not one both answer 404.
+
+| Route | Answers |
+| --- | --- |
+| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400 |
+| `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way; nothing is copied from the recommendation |
+| `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing |
+| `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
+
+Each decision happens once: a second one is a 409. Submitting creates the row first and then marks the recommendation,
+because the two cannot share a D1 batch through the create path; if a second tap decided it in between, the row just
+created is deleted again. Submit and link move the dataset revision like any write that adds an expense; the list does not.
 
 ## The capture endpoint
 
