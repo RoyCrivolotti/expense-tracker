@@ -30,6 +30,7 @@ describe('interpretPush', () => {
       lastFour: '4321',
       instantMs: Date.UTC(2026, 10, 3, 8, 41, 7),
       localDate: '2026-11-03',
+      offsetMinutes: 60,
       rawText: 'Shop Example *4321 33,40 EUR',
     })
   })

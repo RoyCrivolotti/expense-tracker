@@ -4,7 +4,7 @@ import { MAX_CLOCK_SKEW_MS, parsePushDate, withinClockSkew } from './date'
 describe('parsePushDate', () => {
   it('reads the instant and the phone-local day', () => {
     const parsed = parsePushDate('2026-11-03T09:41:07+01:00')
-    expect(parsed).toEqual({ instantMs: Date.UTC(2026, 10, 3, 8, 41, 7), localDate: '2026-11-03' })
+    expect(parsed).toEqual({ instantMs: Date.UTC(2026, 10, 3, 8, 41, 7), localDate: '2026-11-03', offsetMinutes: 60 })
   })
 
   it('reads the offset from the string, so winter and summer differ by an hour', () => {

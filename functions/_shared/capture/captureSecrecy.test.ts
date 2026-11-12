@@ -40,6 +40,8 @@ const MAY_NAME_THE_HASH = new Set([
   '/src/domain/ports/captureRepository.ts',
   // functions/domain is a link to src/domain, so the glob sees the port twice.
   '/functions/domain/ports/captureRepository.ts',
+  // The capture Worker compares the stored hash with the one it makes of the secret it was sent.
+  '/workers/capture/src/authenticate.ts',
   '/src/domain/capture/captureKey.ts',
   '/src/domain/application/captureKeyService.ts',
   '/functions/domain/capture/captureKey.ts',
