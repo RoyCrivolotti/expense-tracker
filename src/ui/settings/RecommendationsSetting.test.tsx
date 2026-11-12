@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../data/apiClient'
 import * as api from '../../data/recommendationsApi'
@@ -35,6 +35,7 @@ const rec = (id: string, over: Partial<api.RecommendationInfo> = {}): api.Recomm
 })
 const A = '0b0c0d0e-1111-4222-8333-444455556661'
 const B = '0b0c0d0e-1111-4222-8333-444455556662'
+const C = '0b0c0d0e-1111-4222-8333-444455556663'
 const page = (...recommendations: api.RecommendationInfo[]): api.RecommendationPage => ({
   recommendations,
   next: null,
@@ -85,6 +86,58 @@ describe('the list', () => {
     expect(await screen.findByText('Payment')).toBeInTheDocument()
     expect(screen.getByText('Incomplete')).toBeInTheDocument()
     expect(screen.getByText('Pick a type')).toBeInTheDocument()
+  })
+
+  it('shows a payment in another currency with its own code, never as euros', async () => {
+    vi.mocked(api.fetchRecommendations).mockResolvedValue(page(rec(A, { currency: 'USD', amountCents: 1250 })))
+    show()
+
+    expect(await screen.findByText('US$12.50')).toBeInTheDocument()
+    expect(screen.getByText('In USD')).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('€')
+  })
+
+  it('offers a retry when the first read fails, and clears the error once it works', async () => {
+    vi.mocked(api.fetchRecommendations)
+      .mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
+      .mockResolvedValueOnce(page(rec(A)))
+    show()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('CAFE EXAMPLE')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('clears a failed Show more when the next read works', async () => {
+    vi.mocked(api.fetchRecommendations)
+      .mockResolvedValueOnce({ recommendations: [rec(A)], next: 'cursor', openCount: 2 })
+      .mockRejectedValueOnce(new ApiError('Request failed (503)', 503))
+      .mockResolvedValueOnce({ recommendations: [rec(B)], next: null, openCount: 1 })
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: 'Show more' }))
+    await screen.findByRole('alert')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('keeps the rows Show more loaded when one is decided', async () => {
+    vi.mocked(api.fetchRecommendations)
+      .mockResolvedValueOnce({ recommendations: [rec(A)], next: 'c1', openCount: 3 })
+      .mockResolvedValueOnce({ recommendations: [rec(B, { merchantRaw: 'SHOP TWO' })], next: 'c2', openCount: 3 })
+      .mockResolvedValueOnce({ recommendations: [rec(B, { merchantRaw: 'SHOP TWO' })], next: 'c2', openCount: 2 })
+      .mockResolvedValueOnce({ recommendations: [rec(C, { merchantRaw: 'SHOP THREE' })], next: null, openCount: 2 })
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: 'Show more' }))
+    await screen.findByText('SHOP TWO')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]!)
+
+    expect(await screen.findByText('SHOP THREE')).toBeInTheDocument()
+    expect(screen.getByText('SHOP TWO')).toBeInTheDocument()
+    expect(screen.queryByText('CAFE EXAMPLE')).not.toBeInTheDocument()
   })
 
   it('shows the reason when the list cannot be read', async () => {
@@ -152,6 +205,8 @@ describe('deciding', () => {
 
     expect(await screen.findByText('CAFE EXAMPLE')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /CAFE EXAMPLE/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Link' })).not.toBeInTheDocument()
   })
 
   it('dismisses and reads the list again', async () => {

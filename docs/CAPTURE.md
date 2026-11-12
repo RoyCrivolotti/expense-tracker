@@ -66,7 +66,10 @@ with its own line in the bundle budget.
 - **Opening a row** fills the normal add form from the recommendation. Saving goes to `POST /api/recommendations/:id/submit`
   instead of the plain create, so the row and the decision are one write and the list refreshes. A captured payment cannot
   also start or join an installment plan, since the plan would be a second write.
-- **Dismiss** takes it off the list and creates nothing.
+- **Dismiss** takes it off the list and creates nothing. Dismiss and Link are not shown where the app cannot write, such as
+  the offline saved copy.
+- **Another currency:** the amount shows with its own currency code and the form's amount starts empty, since cents in
+  another currency are not euros.
 - **Link** is offered only when exactly one row you typed has the same account and amount and is a day or less apart. Two or
   more fitting rows offer nothing, so the app never chooses between them. It looks at the rows the app has loaded, which in
   the paged ledger mode are the months in view.

@@ -99,3 +99,12 @@
   margin: 0;
   padding: 0;
 }
+
+/* A finger needs about 44px; a pointer does not, so the desktop row stays as tall as it was. */
+@media (pointer: coarse) {
+  .quiet {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

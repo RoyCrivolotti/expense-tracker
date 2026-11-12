@@ -2,14 +2,49 @@ import { Card, SectionTitle } from '../components/primitives'
 import { Money } from '../components/Money'
 import { shortDayLabel } from '../format'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
+import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
-import { entryFor, seedOf, warningsOf } from './recommendationRows'
+import { entryFor, foreignAmountText, groupByDay, isForeign, seedOf, warningsOf } from './recommendationRows'
 import styles from './RecommendationsSetting.module.css'
 import { useRecommendations } from './useRecommendations'
 
 function timeOf(rec: RecommendationInfo): string {
   return new Date(rec.occurredAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** In euros when the push was, else in its own currency, so a foreign amount is never read as euros. */
+function Amount({ rec }: { rec: RecommendationInfo }) {
+  if (rec.amountCents === null) return null
+  if (isForeign(rec)) return <span>{foreignAmountText(rec)}</span>
+  return <Money cents={rec.amountCents} type={rec.suggestedType ?? undefined} />
+}
+
+interface DecideProps {
+  rec: RecommendationInfo
+  typed: Transaction | null
+  busy: boolean
+  onDismiss: (id: string) => void
+  onLink: (id: string, transactionId: number) => void
+}
+
+/** Dismiss, and Link when one typed row fits. Only offered where the app can write. */
+function Decide({ rec, typed, busy, onDismiss, onLink }: DecideProps) {
+  return (
+    <div className={styles.actions}>
+      {typed ? (
+        <>
+          <span>Already entered as {typed.description || 'a typed row'}?</span>
+          <button type="button" className={styles.quiet} disabled={busy} onClick={() => onLink(rec.id, typed.id)}>
+            Link
+          </button>
+        </>
+      ) : null}
+      <button type="button" className={styles.quiet} disabled={busy} onClick={() => onDismiss(rec.id)}>
+        Dismiss
+      </button>
+    </div>
+  )
 }
 
 interface RowProps {
@@ -32,7 +67,7 @@ function Row({ rec, model, actions, busy, onDismiss, onLink }: RowProps) {
         {label}
         <span className={styles.meta}>{[account, timeOf(rec)].filter(Boolean).join(' · ')}</span>
       </span>
-      {rec.amountCents !== null ? <Money cents={rec.amountCents} type={rec.suggestedType ?? undefined} /> : null}
+      <Amount rec={rec} />
     </>
   )
   return (
@@ -53,32 +88,15 @@ function Row({ rec, model, actions, busy, onDismiss, onLink }: RowProps) {
           ))}
         </div>
       ) : null}
-      <div className={styles.actions}>
-        {typed ? (
-          <>
-            <span>Already entered as {typed.description || 'a typed row'}?</span>
-            <button type="button" className={styles.quiet} disabled={busy} onClick={() => onLink(rec.id, typed.id)}>
-              Link
-            </button>
-          </>
-        ) : null}
-        <button type="button" className={styles.quiet} disabled={busy} onClick={() => onDismiss(rec.id)}>
-          Dismiss
-        </button>
-      </div>
+      {actions ? <Decide rec={rec} typed={typed} busy={busy} onDismiss={onDismiss} onLink={onLink} /> : null}
     </li>
   )
 }
 
 /** Open recommendations, newest day first. Opening one fills the add form; nothing is an expense until it is saved. */
 export function RecommendationsSetting({ model, actions }: { model: ExpenseModel; actions: ExpenseActions | undefined }) {
-  const { items, hasMore, openCount, error, busy, more, dismiss, link } = useRecommendations()
-  const days: { date: string; rows: RecommendationInfo[] }[] = []
-  for (const rec of items ?? []) {
-    const last = days[days.length - 1]
-    if (last?.date === rec.localDate) last.rows.push(rec)
-    else days.push({ date: rec.localDate, rows: [rec] })
-  }
+  const { items, hasMore, openCount, error, busy, more, retry, dismiss, link } = useRecommendations()
+  const days = groupByDay(items ?? [])
   return (
     <>
       <SectionTitle>Captured payments</SectionTitle>
@@ -89,9 +107,19 @@ export function RecommendationsSetting({ model, actions }: { model: ExpenseModel
           </p>
         ) : null}
         {items === null ? (
-          error ? null : <p className={styles.empty}>Loading…</p>
+          error ? (
+            <button type="button" className={styles.quiet} onClick={() => void retry()}>
+              Try again
+            </button>
+          ) : (
+            <p className={styles.empty} aria-live="polite">
+              Loading…
+            </p>
+          )
         ) : items.length === 0 ? (
-          <p className={styles.empty}>Nothing to review.</p>
+          <p className={styles.empty} aria-live="polite">
+            Nothing to review.
+          </p>
         ) : (
           <div className={styles.list}>
             <p className={styles.meta}>{openCount === 1 ? '1 to review' : `${openCount} to review`}</p>

@@ -2,12 +2,27 @@ import type { RecommendationInfo } from '../../data/recommendationsApi'
 import type { Transaction } from '../../types'
 import type { TransactionSeed } from '../actions'
 
+export function isForeign(rec: RecommendationInfo): boolean {
+  return rec.currency !== null && rec.currency !== 'EUR'
+}
+
+/** The amount in its own currency code, for a push that was not in euros. Falls back to the bare code for an unknown one. */
+export function foreignAmountText(rec: RecommendationInfo): string {
+  const major = (rec.amountCents ?? 0) / 100
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: rec.currency ?? 'EUR' }).format(major)
+  } catch {
+    return `${major.toFixed(2)} ${rec.currency}`
+  }
+}
+
 /** What the add form opens with. A field the push could not give is left out, so the form's own default stands. */
 export function seedOf(rec: RecommendationInfo): TransactionSeed {
   return {
     recommendationId: rec.id,
     date: rec.localDate,
-    ...(rec.amountCents !== null ? { amountCents: rec.amountCents } : {}),
+    // Cents in another currency are not euros, so the person types the euro amount from their bank app.
+    ...(rec.amountCents !== null && !isForeign(rec) ? { amountCents: rec.amountCents } : {}),
     ...(rec.accountId !== null ? { accountId: rec.accountId } : {}),
     ...(rec.suggestedType ? { type: rec.suggestedType } : {}),
     ...(rec.descriptionSuggested ? { description: rec.descriptionSuggested } : {}),
@@ -18,7 +33,7 @@ export function seedOf(rec: RecommendationInfo): TransactionSeed {
 export function warningsOf(rec: RecommendationInfo): string[] {
   const out: string[] = []
   if (rec.amountCents === null) out.push('Incomplete')
-  if (rec.currency !== null && rec.currency !== 'EUR') out.push(`In ${rec.currency}`)
+  if (isForeign(rec)) out.push(`In ${rec.currency}`)
   if (rec.suggestedType === null) out.push('Pick a type')
   return out
 }
@@ -38,4 +53,15 @@ export function entryFor(rec: RecommendationInfo, transactions: readonly Transac
       !t.cancelled,
   )
   return found.length === 1 ? found[0]! : null
+}
+
+/** The list's rows in runs of one local day, in the order given. */
+export function groupByDay(rows: readonly RecommendationInfo[]): { date: string; rows: RecommendationInfo[] }[] {
+  const days: { date: string; rows: RecommendationInfo[] }[] = []
+  for (const rec of rows) {
+    const last = days[days.length - 1]
+    if (last?.date === rec.localDate) last.rows.push(rec)
+    else days.push({ date: rec.localDate, rows: [rec] })
+  }
+  return days
 }

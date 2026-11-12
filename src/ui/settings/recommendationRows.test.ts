@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { makeTransaction } from '../../testing/factories'
-import { entryFor, seedOf, warningsOf } from './recommendationRows'
+import { entryFor, foreignAmountText, seedOf, warningsOf } from './recommendationRows'
 
 const rec = (over: Partial<RecommendationInfo> = {}): RecommendationInfo => ({
   id: '0b0c0d0e-1111-4222-8333-444455556666',
@@ -32,6 +32,17 @@ describe('seedOf', () => {
     const seed = seedOf(rec({ amountCents: null, accountId: null, suggestedType: null, descriptionSuggested: null }))
 
     expect(seed).toEqual({ recommendationId: '0b0c0d0e-1111-4222-8333-444455556666', date: '2026-11-10' })
+  })
+})
+
+describe('a payment in another currency', () => {
+  it('is not seeded into the euro form', () => {
+    expect(seedOf(rec({ currency: 'USD' }))).not.toHaveProperty('amountCents')
+  })
+
+  it('reads in its own currency, and falls back to the bare code for one it cannot format', () => {
+    expect(foreignAmountText(rec({ currency: 'USD' }))).toBe('US$12.50')
+    expect(foreignAmountText(rec({ currency: 'ABCD' }))).toBe('12.50 ABCD')
   })
 })
 
