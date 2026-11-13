@@ -11,10 +11,17 @@ export interface RecommendationInfo {
   currency: string | null
   localDate: string
   occurredAt: string
+  /** When the push reached the server. */
+  createdAt: string
   merchantRaw: string | null
   descriptionSuggested: string | null
   /** Null where the person has to pick, as for the two legs of a move between their own accounts. */
   suggestedType: 'expense' | 'income' | 'investment' | 'refund' | null
+  /**
+   * A row the person typed that looks like this payment, when the server says so. Not sent yet: the screen treats its
+   * absence as "no match known", and its presence as a reason to look before adding.
+   */
+  possibleMatch?: { id: number; description: string; date: string } | null
 }
 
 export interface RecommendationPage {
