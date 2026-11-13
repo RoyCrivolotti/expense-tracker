@@ -127,13 +127,13 @@ describe('the first-payment check', () => {
 })
 
 describe('the steps', () => {
-  it('says plainly what it cannot know about the phone, and that the posting part has never run on a phone', async () => {
+  it('says plainly what it cannot know about the phone, and what was and was not tried', async () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('Waiting for your first payment')
 
     expect(screen.getByText(/This screen cannot tell your version/)).toBeInTheDocument()
-    expect(screen.getByText(/only shortcuts built so far append each notification to a note/)).toBeInTheDocument()
-    expect(screen.getByText(/has never run on a phone, so nothing here is proven end to end/)).toBeInTheDocument()
+    expect(screen.getByText(/built by hand from these steps worked on one phone/)).toBeInTheDocument()
+    expect(screen.getByText(/has not been tried on a second phone/)).toBeInTheDocument()
     expect(screen.getByText(/We have not tried an older iPhone or Android/)).toBeInTheDocument()
   })
 
@@ -182,5 +182,80 @@ describe('the steps', () => {
     expect(await screen.findByRole('checkbox', { name: /1\. Check your iPhone/ })).toBeChecked()
     fireEvent.click(screen.getByRole('checkbox', { name: /1\. Check your iPhone/ }))
     expect(screen.getByRole('checkbox', { name: /1\. Check your iPhone/ })).not.toBeChecked()
+  })
+})
+
+describe('with a shortcut link', () => {
+  // Invented: never a real link.
+  const LINK = 'https://www.icloud.com/shortcuts/example0000000000000000000000000000'
+
+  it('replaces the manual build with an Add the shortcut link that opens in its own tab, and says what was tried', async () => {
+    status(none, null, LINK)
+    render(<CaptureSetupSetting />)
+
+    const link = await screen.findByRole('link', { name: 'Add the shortcut' })
+    expect(link).toHaveAttribute('href', LINK)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByText(/Shortcuts opens and asks for your capture key/)).toBeInTheDocument()
+    expect(screen.getByText(/installed from a shared copy on one phone and worked/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/not been tried from the installed Home Screen app or on a second phone/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Build the shortcut/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Point it at the app/)).not.toBeInTheDocument()
+  })
+
+  it('numbers the steps in order, with the key first and copied, and keeps the later steps and the check', async () => {
+    status(none, null, LINK)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+
+    const titles = screen.getAllByText(/^\d\. /).map((e) => e.textContent)
+    expect(titles).toEqual([
+      '1. Check your iPhone',
+      '2. Make a key and copy it',
+      '3. Add the shortcut',
+      '4. Run it automatically',
+      '5. If iOS keeps asking',
+    ])
+    expect(screen.getByText(/Tap Copy as soon as it appears/)).toBeInTheDocument()
+    expect(screen.getByText(/arrive with its automation switched off/)).toBeInTheDocument()
+    expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
+    expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
+  })
+
+  it('shows neither the link nor the manual steps until the status has been read', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Checking')
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Build the shortcut/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the manual steps when the status cannot be read', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockRejectedValue(new Error('Request failed (500)'))
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('3. Build the shortcut')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+  })
+})
+
+describe('without a shortcut link', () => {
+  it('shows the manual steps, in order, and no Add the shortcut link', async () => {
+    render(<CaptureSetupSetting />)
+    await screen.findByText('3. Build the shortcut')
+
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    expect(screen.getAllByText(/^\d\. /).map((e) => e.textContent)).toEqual([
+      '1. Check your iPhone',
+      '2. Make a key',
+      '3. Build the shortcut',
+      '4. Point it at the app',
+      '5. Run it automatically',
+      '6. If iOS keeps asking',
+    ])
   })
 })

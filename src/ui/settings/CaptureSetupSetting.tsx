@@ -1,12 +1,12 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
 import { pastedEndpoint } from './captureSetup'
+import { AddShortcutStep } from './AddShortcutStep'
 import { Waiting } from './CaptureSetupCheck'
 import styles from './CaptureSetupSetting.module.css'
+import { Step, type Setup } from './SetupStep'
 import { useCaptureSetup } from './useCaptureSetup'
-
-type Setup = ReturnType<typeof useCaptureSetup>
 
 function Copy({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -28,20 +28,6 @@ function Copy({ text, label }: { text: string; label: string }) {
         {done === 'copied' ? 'Copied' : done === 'failed' ? 'Copy failed, select the text and copy it by hand' : ''}
       </span>
     </>
-  )
-}
-
-/** A step the person confirms themselves: the app cannot see their phone. */
-function Step({ id, title, setup, children }: { id: string; title: string; setup: Setup; children: ReactNode }) {
-  const done = setup.ticks.has(id)
-  return (
-    <li className={styles.step}>
-      <label className={styles.stepHead}>
-        <input type="checkbox" checked={done} onChange={(e) => setup.tick(id, e.target.checked)} />
-        <span className={styles.stepTitle}>{title}</span>
-      </label>
-      <div className={styles.stepBody}>{children}</div>
-    </li>
   )
 }
 
@@ -75,21 +61,28 @@ function Address({ setup }: { setup: Setup }) {
   )
 }
 
-function Steps({ setup }: { setup: Setup }) {
+function KeyStep({ setup, shortcut }: { setup: Setup; shortcut: boolean }) {
   return (
-    <ol className={styles.steps}>
-      <Step id="ios" title="1. Check your iPhone" setup={setup}>
+    <li className={styles.step}>
+      <span className={styles.stepTitle}>
+        2. Make a key{shortcut ? ' and copy it' : ''}
+        {setup.keys && setup.keys.length > 0 ? ' (done)' : ''}
+      </span>
+      <div className={styles.stepBody}>
         <p>
-          The trigger this uses was seen on iOS 27. We have not tried an older iPhone or Android. This screen cannot
-          tell your version; check Settings, General, About.
+          Name it after your phone and make it in Capture key below.{' '}
+          {shortcut
+            ? 'Tap Copy as soon as it appears: it is shown once, and you paste it into Shortcuts in the next step.'
+            : 'It is shown once; copy it.'}
         </p>
-      </Step>
-      <li className={styles.step}>
-        <span className={styles.stepTitle}>2. Make a key{setup.keys && setup.keys.length > 0 ? ' (done)' : ''}</span>
-        <div className={styles.stepBody}>
-          <p>Name it after your phone and make it in Capture key below. It is shown once; copy it.</p>
-        </div>
-      </li>
+      </div>
+    </li>
+  )
+}
+
+function ManualBuild({ setup }: { setup: Setup }) {
+  return (
+    <>
       <Step id="build" title="3. Build the shortcut" setup={setup}>
         <p>
           Add the trigger When I receive a notification from, and pick the app: IberiaCards for the Icon card (one word,
@@ -105,27 +98,54 @@ function Steps({ setup }: { setup: Setup }) {
         <Address setup={setup} />
         <p>Header Authorization with the value Bearer, a space, then your key.</p>
       </Step>
-      <Step id="run" title="5. Run it automatically" setup={setup}>
+    </>
+  )
+}
+
+function Steps({ setup }: { setup: Setup }) {
+  // Until the status has been read nobody knows which way the card goes, so the shortcut steps wait for it.
+  const loaded = setup.status !== null || setup.error !== null
+  const link = setup.status?.shortcutUrl ?? null
+  const last = link ? 3 : 4
+  return (
+    <ol className={styles.steps}>
+      <Step id="ios" title="1. Check your iPhone" setup={setup}>
         <p>
-          Keep Automation on. Notify was off on the automations that were tried, and whether it matters is untried. Turn
-          on Allow Running When Locked (info button, Privacy). The editor can say Automation is turned off while it
-          runs, so trust the automation list and your first real payment.
+          The trigger this uses was seen on iOS 27. We have not tried an older iPhone or Android. This screen cannot
+          tell your version; check Settings, General, About.
         </p>
       </Step>
-      <Step id="allow" title="6. If iOS keeps asking" setup={setup}>
-        <p>
-          If iOS asks whether the shortcut may send data to that address, allow it and choose the option that remembers
-          the answer. If it asks again on every payment, an unattended run cannot work yet. That is untested, so tell
-          us.
-        </p>
-      </Step>
+      <KeyStep setup={setup} shortcut={link !== null} />
+      {loaded && link ? <AddShortcutStep setup={setup} url={link} /> : null}
+      {loaded && !link ? <ManualBuild setup={setup} /> : null}
+      {loaded ? (
+        <>
+          <Step id="run" title={`${last + 1}. Run it automatically`} setup={setup}>
+            <p>
+              {link ? 'A shared shortcut can arrive with its automation switched off. ' : ''}Keep Automation on. Notify
+              was off on the automations that were tried, and whether it matters is untried. Turn on Allow Running When
+              Locked (info button, Privacy). The editor can say Automation is turned off while it runs, so trust the
+              automation list and your first real payment.
+            </p>
+          </Step>
+          <Step id="allow" title={`${last + 2}. If iOS keeps asking`} setup={setup}>
+            <p>
+              If iOS asks whether the shortcut may send data to that address, allow it and choose the option that
+              remembers the answer. If it asks again on every payment, an unattended run cannot work yet. That is
+              untested, so tell us.
+            </p>
+          </Step>
+        </>
+      ) : null}
       <Waiting setup={setup} />
     </ol>
   )
 }
 
-const NOT_PROVEN =
-  'These steps are written from research. The only shortcuts built so far append each notification to a note. The part that posts to the app (Get Contents of URL, the JSON body and the Authorization header) has never run on a phone, so nothing here is proven end to end.'
+const BY_HAND =
+  'A shortcut built by hand from these steps worked on one phone. It has not been tried on a second phone.'
+const FROM_LINK =
+  'The shortcut was installed from a shared copy on one phone and worked. It has not been tried from the installed Home Screen app or on a second phone.'
 
 /** Six steps to get Iberia notifications into the app, and a live check that the first one arrived. */
 export function CaptureSetupSetting() {
@@ -137,7 +157,7 @@ export function CaptureSetupSetting() {
         <div className={tabStyles.settingGroup}>
           <p className={tabStyles.settingHint}>
             Capture sends each Iberia card notification from your iPhone to the app, which turns it into a payment for
-            you to review. {NOT_PROVEN}
+            you to review. {setup.status?.shortcutUrl ? FROM_LINK : BY_HAND}
           </p>
           {setup.error ? (
             <p className={tabStyles.settingError} role="alert">
