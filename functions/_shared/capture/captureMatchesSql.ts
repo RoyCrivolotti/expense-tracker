@@ -8,6 +8,9 @@
  * (linked by hand, or made by submitting one), so a payment that was captured and added does not match the next push
  * of the same price. The owner is in the statement, never taken from a row.
  *
+
+ * Newest first, so a cap, should it ever be reached, drops the oldest rows and not the ones nearest the payments.
+ *
  * The amounts travel as one JSON value, since a statement binds at most 100 values.
  */
 export const MATCH_CANDIDATES_SQL = `SELECT t.id, t.date, t.description, t.type, t.amount_cents
@@ -15,5 +18,5 @@ FROM transactions t
 WHERE t.owner = ?1 AND t.date >= ?2 AND t.date <= ?3 AND t.cancelled = 0
 AND ABS(t.amount_cents) IN (SELECT value FROM json_each(?4))
 AND NOT EXISTS (SELECT 1 FROM recommendations r WHERE r.owner = ?1 AND r.txn_id = t.id)
-ORDER BY t.date, t.id
+ORDER BY t.date DESC, t.id DESC
 LIMIT 2000`

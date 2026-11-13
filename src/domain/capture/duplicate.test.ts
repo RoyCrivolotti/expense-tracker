@@ -6,6 +6,8 @@ import {
   dayGap,
   paymentDirection,
   possibleMatchFor,
+  possibleMatchesFor,
+  type PagePayment,
   rowDirection,
   type PaymentToMatch,
   type TypedRow,
@@ -106,3 +108,45 @@ describe('possibleMatchFor', () => {
     expect(possibleMatchFor(payment({ amountCents: null }), [row()])).toBeNull()
   })
 })
+
+describe('possibleMatchesFor, one row to one payment', () => {
+  const page = (id: string, localDate: string, createdAt = `${localDate}T09:00:00.000Z`, over: Partial<PaymentToMatch> = {}): PagePayment => ({ ...payment({ localDate, ...over }), id, createdAt })
+  const ids = (m: Map<string, { transactionId: number } | null>) => Object.fromEntries([...m].map(([k, v]) => [k, v?.transactionId ?? null]))
+
+  it('gives a row to the payment it is closest to, and the other payment of that price gets none', () => {
+    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-11')], [row({ id: 5, date: '2026-11-10' })])
+
+    expect(ids(result)).toEqual({ a: 5, b: null })
+  })
+
+  it('lets the payment that loses its row fall to its next best one', () => {
+    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-11')], [row({ id: 5, date: '2026-11-10' }), row({ id: 3, date: '2026-11-08' })])
+
+    expect(ids(result)).toEqual({ a: 5, b: 3 })
+  })
+
+  it('gives a row equally close to two payments to the newer one, whatever order they come in', () => {
+    const older = page('older', '2026-11-09', '2026-11-09T08:00:00.000Z')
+    const newer = page('newer', '2026-11-11', '2026-11-11T08:00:00.000Z')
+    const rows = [row({ id: 5, date: '2026-11-10' })]
+
+    expect(ids(possibleMatchesFor([older, newer], rows))).toEqual({ older: null, newer: 5 })
+    expect(ids(possibleMatchesFor([newer, older], rows))).toEqual({ older: null, newer: 5 })
+  })
+
+  it('keeps the same answer as the one-payment rule when there is no competition, and none for a payment that cannot match', () => {
+    const rows = [row({ id: 1, date: '2026-11-08' }), row({ id: 2, date: '2026-11-12' })]
+    const a = page('a', '2026-11-10')
+    const result = possibleMatchesFor([a, page('x', '2026-11-10', undefined, { suggestedType: null })], rows)
+
+    expect(result.get('a')?.transactionId).toBe(possibleMatchFor(a, rows)?.transactionId)
+    expect(result.get('x')).toBeNull()
+  })
+
+  it('does not let payments of different prices take each other\'s rows', () => {
+    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-10', undefined, { amountCents: 999 })], [row({ id: 5 }), row({ id: 6, amountCents: 999 })])
+
+    expect(ids(result)).toEqual({ a: 5, b: 6 })
+  })
+})
+

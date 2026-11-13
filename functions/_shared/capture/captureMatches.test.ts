@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
 import type { CaptureRepository, Recommendation } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
+import { MATCH_CANDIDATES_SQL } from './captureMatchesSql'
 
 const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
@@ -180,5 +181,25 @@ describe('the typed row a recommendation may duplicate', () => {
     const rowB = typed({ amountCents: 4590, date: '2026-11-02' })
 
     expect([(await matchOf(a))?.transactionId, (await matchOf(b))?.transactionId, await matchOf(c)]).toEqual([rowA, rowB, null])
+  })
+
+  it('gives one typed row to one payment of a page, the closest, and never offers it twice', async () => {
+    const tenth = await push({ localDate: '2026-11-10' })
+    const eleventh = await push({ localDate: '2026-11-11' })
+    const row = typed({ date: '2026-11-10' })
+
+    expect([(await matchOf(tenth))?.transactionId, await matchOf(eleventh)]).toEqual([row, null])
+    const earlier = typed({ date: '2026-11-08' })
+    expect((await matchOf(eleventh))?.transactionId).toBe(earlier)
+  })
+
+  it('reads the newest rows first, so a cap would drop the oldest', () => {
+    const old = typed({ date: '2026-10-27' })
+    const newer = typed({ date: '2026-11-10' })
+    const sameDay = typed({ date: '2026-11-10' })
+
+    const read = sqlite.prepare(MATCH_CANDIDATES_SQL).all(ALICE, '2026-10-01', '2026-11-30', '[1250]') as Array<{ id: number }>
+
+    expect(read.map((r) => r.id)).toEqual([sameDay, newer, old])
   })
 })

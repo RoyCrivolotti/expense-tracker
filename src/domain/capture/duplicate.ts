@@ -73,6 +73,14 @@ export function candidateSpan(payments: readonly PaymentToMatch[]): { from: stri
   return { from: shiftDay(first, -DUPLICATE_WINDOW.daysBack), to: shiftDay(last, DUPLICATE_WINDOW.daysForward) }
 }
 
+/** Whether a row looks like the same payment: the same direction, the amount to the cent, and a date inside the window. */
+function isMatch(payment: PaymentToMatch, row: TypedRow): boolean {
+  if (!canMatch(payment)) return false
+  const signed = dayGap(row.date, payment.localDate)
+  if (signed < -DUPLICATE_WINDOW.daysBack || signed > DUPLICATE_WINDOW.daysForward) return false
+  return Math.abs(row.amountCents) === payment.amountCents && rowDirection(row.type, row.amountCents) === paymentDirection(payment.suggestedType)
+}
+
 /**
  * The typed row that looks most like this payment among `rows`: the same direction, the same amount to the cent, and a
  * date inside the window. Several give the closest by date, and a tie goes to the highest id (the row entered last).
@@ -80,15 +88,47 @@ export function candidateSpan(payments: readonly PaymentToMatch[]): { from: stri
  * recommendation.
  */
 export function possibleMatchFor(payment: PaymentToMatch, rows: readonly TypedRow[]): PossibleMatch | null {
-  if (!canMatch(payment)) return null
-  const direction = paymentDirection(payment.suggestedType)
   let best: { row: TypedRow; gap: number } | null = null
   for (const row of rows) {
-    const signed = dayGap(row.date, payment.localDate)
-    if (signed < -DUPLICATE_WINDOW.daysBack || signed > DUPLICATE_WINDOW.daysForward) continue
-    if (Math.abs(row.amountCents) !== payment.amountCents || rowDirection(row.type, row.amountCents) !== direction) continue
-    const gap = Math.abs(signed)
+    if (!isMatch(payment, row)) continue
+    const gap = Math.abs(dayGap(row.date, payment.localDate))
     if (!best || gap < best.gap || (gap === best.gap && row.id > best.row.id)) best = { row, gap }
   }
   return best ? { transactionId: best.row.id, description: best.row.description, date: best.row.date } : null
+}
+
+/** A payment of a page, with what orders it among payments of the same day. */
+export interface PagePayment extends PaymentToMatch {
+  id: string
+  /** When the push reached the server: of two payments equally close to a row, the newer is given it first. */
+  createdAt: string
+}
+
+/**
+ * Each typed row goes to one payment of the page: the one it is closest to by date, the newer payment first on a tie,
+ * and a payment that loses its row falls to its next best, or to none. Otherwise two payments of one price would both
+ * offer the same row, and the second Link would be refused. The rule for one payment is `possibleMatchFor`.
+ */
+export function possibleMatchesFor(payments: readonly PagePayment[], rows: readonly TypedRow[]): Map<string, PossibleMatch | null> {
+  const pairs: Array<{ payment: PagePayment; row: TypedRow; gap: number }> = []
+  for (const payment of payments) {
+    for (const row of rows) {
+      if (isMatch(payment, row)) pairs.push({ payment, row, gap: Math.abs(dayGap(row.date, payment.localDate)) })
+    }
+  }
+  pairs.sort(
+    (a, b) =>
+      a.gap - b.gap ||
+      b.payment.createdAt.localeCompare(a.payment.createdAt) ||
+      b.payment.id.localeCompare(a.payment.id) ||
+      b.row.id - a.row.id,
+  )
+  const result = new Map<string, PossibleMatch | null>(payments.map((p) => [p.id, null]))
+  const taken = new Set<number>()
+  for (const { payment, row } of pairs) {
+    if (result.get(payment.id) !== null || taken.has(row.id)) continue
+    taken.add(row.id)
+    result.set(payment.id, { transactionId: row.id, description: row.description, date: row.date })
+  }
+  return result
 }
