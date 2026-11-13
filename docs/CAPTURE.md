@@ -57,6 +57,9 @@ read and write is for the signed-in person alone.
 - **Open payments follow the link.** The account is written when a push arrives, so saving a link also writes it onto
   the open recommendations those digits made, and removing a link unmaps them, in the same batch. The list then needs no
   join to know a payment's account, and decided payments are never touched.
+- **One known gap.** Removing an `account`-kind link unmaps the open payments those digits made even if a `card` link also gave
+  them their account. The Worker reads only card digits today, so it cannot happen yet; it needs a look when account
+  digits start to be read.
 - **The list says which card a payment came from** (`card: { source, digits }`, or null for a push with no digits), so
   the screen can ask "which account is the card ending ...?" the first time it sees one.
 
