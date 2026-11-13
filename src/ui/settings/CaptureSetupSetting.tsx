@@ -135,26 +135,29 @@ function Steps({ setup }: { setup: Setup }) {
       </li>
       <Step id="build" title="3. Build the shortcut" setup={setup}>
         <p>
-          In Shortcuts, Automation, New: When I receive a notification from Iberia Cards. Add Get Contents of URL with
-          method POST and a JSON body of four fields: source (type iberia), title, body and date from the notification,
-          the date in ISO 8601 with the offset. Add an If: when the answer is not ok, show Capture failed.
+          Add the trigger When I receive a notification from, and pick the app: IberiaCards for the Icon card (one word,
+          as it appears in the notification). Leave the filters empty. Add Get Contents of URL, tap Show More, set
+          Method to POST and Request Body to JSON, then add four fields: source (typed text, iberia), title and body
+          (the notification's Title and Body), and date (the notification's Date, in ISO 8601 with the phone's offset).
+          Optional: an If that checks the answer contains ok, and otherwise shows a notification, Capture failed.
         </p>
       </Step>
       <Step id="point" title="4. Point it at the app" setup={setup}>
-        <p>URL:</p>
+        <p>URL, exactly as shown:</p>
         <Address setup={setup} />
-        <p>Header Authorization with the value Bearer, a space, then your key. Leave Follow redirects off.</p>
+        <p>Header Authorization with the value Bearer, a space, then your key.</p>
       </Step>
       <Step id="run" title="5. Run it automatically" setup={setup}>
         <p>
-          Choose Run Immediately. Turn Notify off if you want it quiet. Turn on Allow Running When Locked (info button,
-          Privacy).
+          Keep Automation on. Notify can stay off. Turn on Allow Running When Locked (info button, Privacy). The editor
+          can say Automation is turned off while it runs, so trust the automation list and your first real payment.
         </p>
       </Step>
       <Step id="allow" title="6. If iOS keeps asking" setup={setup}>
         <p>
-          The first time, iOS may ask Allow sending data to this site: choose Always Allow. If it comes back on every
-          payment, an unattended run cannot work yet. That is untested, so tell us.
+          If iOS asks whether the shortcut may send data to that address, allow it and choose the option that remembers
+          the answer. If it asks again on every payment, an unattended run cannot work yet. That is untested, so tell
+          us.
         </p>
       </Step>
       <Waiting setup={setup} />

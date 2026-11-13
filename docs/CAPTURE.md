@@ -161,24 +161,31 @@ rows of one 18-day window and needs no new index.
 ## Setting up a phone
 
 Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **They are written from
-research and from one working shortcut, and have not yet been proven end to end on a second phone.** Only Iberia has a
+research and from one working shortcut, and have not yet been proven end to end on a second phone.** The shortcut that
+was actually built appends each notification to a note. The Get Contents of URL part (method, JSON body, header) comes
+from [Apple's guide](https://support.apple.com/guide/shortcuts/apd58d46713f/ios) and has not been run on a phone. The
+If step is untried too: the action returns the answer rather than failing, so it can catch a refusal but probably not a
+missing connection. Only Iberia has a
 recipe; Santander joins with its own change.
 
 1. **iOS 27 or later.** The trigger "When I receive a notification from" arrived in iOS 27. On Android or an older
    iPhone it cannot be built. The app cannot tell the phone's version (Safari freezes it in the user agent), so the screen
    asks the person to check Settings, General, About.
 2. **Make a key** in Settings, Capture key. It is shown once.
-3. **Build the shortcut.** In Shortcuts, Automation, New: When I receive a notification from Iberia Cards. Add Get
-   Contents of URL, method POST, request body JSON with four fields: `source` (the fixed text `iberia`), `title` and
-   `body` (the notification's), and `date` (ISO 8601 with the phone's offset, such as `2026-11-03T09:41:07+01:00`). Add an
-   If: when the answer is not `ok`, show "Capture failed".
-4. **Point it at the app.** URL: the address on the screen, for example `https://capture.example.workers.dev/capture`.
-   Header `Authorization` with the value `Bearer`, a space, then the key. Leave Follow redirects off, because a redirected
-   POST can lose its header.
-5. **Run it automatically.** Choose Run Immediately. Turn Notify off if the banner is unwanted. Turn on Allow Running When
-   Locked (the info button, Privacy).
-6. **If iOS asks "Allow sending data to this site"**, choose Always Allow. If the question comes back on every payment an
-   unattended run cannot work yet. That is untested.
+3. **Build the shortcut.** Add the trigger "When I receive a notification from" and pick the app: Santander, or
+   IberiaCards for the Icon card (one word, as it appears in the notification's App field). Leave the filters empty. Make
+   one automation per app. Add Get Contents of URL, tap Show More, set Method to POST and Request Body to JSON, then add
+   four fields: `source` (typed text, `iberia` or `santander`), `title` and `body` (the notification's Title and Body), and
+   `date` (the notification's Date in ISO 8601 with the phone's offset, such as `2026-11-03T09:41:07+01:00`; in Shortcuts
+   the option is called ISO 8601, under the Date token's Date Format or a Format Date action). Optional: add an If that
+   checks the answer contains `ok`, and otherwise shows the notification "Capture failed".
+4. **Point it at the app.** URL: the address on the screen, exactly as shown. Header `Authorization` with the value
+   `Bearer`, a space, then the key.
+5. **Run it automatically.** Keep Automation on. Notify can stay off. Turn on Allow Running When Locked (the info
+   button, Privacy). The automation's own editor has shown "Automation is turned off" while it was running, so trust the
+   automation list and the first real payment, not that line.
+6. **If iOS asks whether the shortcut may send data to that address**, allow it and choose the option that remembers
+   the answer. If it asks again on every payment an unattended run cannot work yet. That is untested.
 7. **Waiting for your first payment.** The screen reads `GET /api/capture-status`: grey until anything reaches the app,
    amber when pushes arrive (`capture_counters.received`) but none was read as a payment, green with the time of the
    last recognised push (`capture_events`). It shows information only: there is no stale threshold or banner, so a stopped
