@@ -14,6 +14,8 @@ export interface CaptureStatus {
   sources: SourceStatus[]
   /** The capture Worker's full address for this environment, or null when the server has none configured. */
   endpoint: string | null
+  /** An iCloud share link to the Shortcut, or null when the server has none. */
+  shortcutUrl: string | null
 }
 
 export function fetchCaptureStatus(): Promise<CaptureStatus> {

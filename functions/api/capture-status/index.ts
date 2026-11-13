@@ -14,7 +14,7 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
       await captureStatus(
         createD1CaptureRepository(context.env),
         context.data.owner,
-        context.env.CAPTURE_ENDPOINT,
+        { endpoint: context.env.CAPTURE_ENDPOINT, shortcutUrl: context.env.CAPTURE_SHORTCUT_URL },
         new Date(),
       ),
     )

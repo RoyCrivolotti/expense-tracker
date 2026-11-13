@@ -23,6 +23,12 @@ export interface Env {
    * Kept out of the repo because the hostname is private; unset, the screen asks the person to paste it.
    */
   CAPTURE_ENDPOINT?: string
+  /**
+   * An iCloud share link for the Shortcut that sends bank pushes to the app, shown as the setup screen's "Add the
+   * shortcut" button. A plain variable, never committed: re-sharing a shortcut gives a new link. Unset, the screen shows
+   * the manual steps.
+   */
+  CAPTURE_SHORTCUT_URL?: string
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string

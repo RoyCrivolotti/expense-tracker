@@ -66,11 +66,15 @@ const counter = (owner: string, source: string, day: string, received: number, u
     .prepare('INSERT INTO capture_counters (owner, source, day, received, unrecognised) VALUES (?, ?, ?, ?, ?)')
     .run(owner, source, day, received, unrecognised)
 
-const get = (setting?: string, email: string | false = OWNER) =>
+const get = (setting?: string, email: string | false = OWNER, shortcut?: string) =>
   invokeExpenseApiRoute({
     handler: status,
     repo: createD1ExpenseRepository(world.env),
-    env: setting === undefined ? world.env : { ...world.env, CAPTURE_ENDPOINT: setting },
+    env: {
+      ...world.env,
+      ...(setting === undefined ? {} : { CAPTURE_ENDPOINT: setting }),
+      ...(shortcut === undefined ? {} : { CAPTURE_SHORTCUT_URL: shortcut }),
+    },
     url: 'https://expenses.test/api/capture-status',
     method: 'GET',
     email,
@@ -91,6 +95,7 @@ describe('GET /api/capture-status', () => {
         { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
       ],
       endpoint: null,
+      shortcutUrl: null,
     })
   })
 
@@ -128,13 +133,51 @@ describe('GET /api/capture-status', () => {
     })
   })
 
-  it.each([
-    ['http://capture.example.workers.dev'],
-    ['not an address'],
-    [withCredentials()],
-    [''],
-  ])('gives no address for a setting that is not a usable https address (%j)', async (setting) => {
-    expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+  it.each([['http://capture.example.workers.dev'], ['not an address'], [withCredentials()], ['']])(
+    'gives no address for a setting that is not a usable https address (%j)',
+    async (setting) => {
+      expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+    },
+  )
+
+  describe('the shortcut link', () => {
+    // Invented: never a real link.
+    const LINK = 'https://www.icloud.com/shortcuts/example0000000000000000000000000000'
+    const link = async (shortcut: string) =>
+      ((await (await get(undefined, OWNER, shortcut)).json()) as { shortcutUrl: string | null }).shortcutUrl
+
+    it('is passed on when it is an iCloud shortcuts link, trimmed and without a query or fragment', async () => {
+      expect(await link(LINK)).toBe(LINK)
+      expect(await link(`  ${LINK}/  `)).toBe(LINK)
+      expect(await link(`${LINK}?x=1#top`)).toBe(LINK)
+      expect(await link('https://icloud.com/shortcuts/example0000')).toBe('https://icloud.com/shortcuts/example0000')
+    })
+
+    it('is null when the variable is unset', async () => {
+      expect(((await (await get()).json()) as { shortcutUrl: unknown }).shortcutUrl).toBeNull()
+    })
+
+    it.each([
+      ['http://www.icloud.com/shortcuts/example0000'],
+      ['https://www.icloud.com.evil.example/shortcuts/example0000'],
+      ['https://evilicloud.com/shortcuts/example0000'],
+      ['https://sub.icloud.com/shortcuts/example0000'],
+      ['https://www.icloud.com/'],
+      ['https://www.icloud.com/shortcuts/'],
+      ['https://www.icloud.com/other/example0000'],
+      ['https://www.icloud.com/shortcuts/a/b'],
+      ['https://www.icloud.com/shortcuts/../x'],
+      ['https://www.icloud.com:8443/shortcuts/example0000'],
+      ['javascript:alert(1)'],
+      ['not a link'],
+      [''],
+    ])('is null for %j', async (setting) => {
+      expect(await link(setting)).toBeNull()
+    })
+
+    it('is null for a link with credentials', async () => {
+      expect(await link(['https://user:secret', 'www.icloud.com/shortcuts/example0000'].join('@'))).toBeNull()
+    })
   })
 
   it('is refused without a sign-in', async () => {

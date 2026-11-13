@@ -21,6 +21,35 @@ export interface CaptureStatus {
   sources: SourceStatus[]
   /** The Worker's full address for this environment, or null when none is configured or the setting is not a usable address. */
   endpoint: string | null
+  /** An iCloud share link to the Shortcut, or null when none is configured or the setting is not one. */
+  shortcutUrl: string | null
+}
+
+const SHORTCUT_HOSTS = new Set(['www.icloud.com', 'icloud.com'])
+
+/**
+ * The link behind the "Add the shortcut" button. Only an https link on iCloud's own host under `/shortcuts/` is passed
+ * on, without a query or fragment, credentials or a port, so a mistyped or hostile setting cannot send a person to
+ * another site from a button that says it adds their shortcut.
+ */
+export function captureShortcutUrlOf(setting: string | undefined): string | null {
+  if (!setting) return null
+  try {
+    const url = new URL(setting.trim())
+    if (url.protocol !== 'https:' || !SHORTCUT_HOSTS.has(url.hostname) || url.username || url.password || url.port) {
+      return null
+    }
+    const id = url.pathname.startsWith('/shortcuts/') ? url.pathname.slice('/shortcuts/'.length) : ''
+    return /^[A-Za-z0-9_-]+\/?$/.test(id) ? `${url.origin}/shortcuts/${id.replace(/\/$/, '')}` : null
+  } catch {
+    return null
+  }
+}
+
+/** What the operator set for this environment. */
+export interface CaptureSettings {
+  endpoint: string | undefined
+  shortcutUrl: string | undefined
 }
 
 /**
@@ -43,7 +72,7 @@ export function captureEndpointOf(setting: string | undefined): string | null {
 export async function captureStatus(
   captures: CaptureRepository,
   owner: string,
-  setting: string | undefined,
+  settings: CaptureSettings,
   now: Date,
 ): Promise<CaptureStatus> {
   const from = shiftDay(now.toISOString().slice(0, 10), -(STATUS_DAYS - 1))
@@ -60,5 +89,9 @@ export async function captureStatus(
       unrecognised: mine.reduce((n, c) => n + c.unrecognised, 0),
     }
   })
-  return { sources, endpoint: captureEndpointOf(setting) }
+  return {
+    sources,
+    endpoint: captureEndpointOf(settings.endpoint),
+    shortcutUrl: captureShortcutUrlOf(settings.shortcutUrl),
+  }
 }
