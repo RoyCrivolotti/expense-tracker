@@ -107,7 +107,7 @@ describe('describeRecommendation', () => {
   })
 
   it('wants a look, and not one tap, when the server says a typed row looks the same', () => {
-    const v = view({ possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } })
+    const v = view({ possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })
 
     expect(v.reasons).toEqual(['possible-match'])
     expect(v.oneTap).toBe(false)
@@ -230,7 +230,7 @@ describe('transactionOf', () => {
 
   it('is null for any payment in doubt, so one tap cannot add it', () => {
     expect(transactionOf(view({ merchantRaw: 'BRAND NEW PLACE' }))).toBeNull()
-    expect(transactionOf(view({ possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } }))).toBeNull()
+    expect(transactionOf(view({ possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } }))).toBeNull()
     expect(transactionOf(view({ currency: 'USD' }))).toBeNull()
   })
 

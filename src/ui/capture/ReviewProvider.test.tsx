@@ -280,7 +280,7 @@ describe("Don't add", () => {
 
 describe('Link', () => {
   it('links to the typed row the server named, once the window ends', async () => {
-    await show([known(A, { possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } })])
+    await show([known(A, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })])
 
     press('link 1')
 
@@ -300,7 +300,7 @@ describe('Link', () => {
   })
 
   it('puts the row back when the server says another recommendation already answers for that row', async () => {
-    await show([known(A, { possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } })])
+    await show([known(A, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })])
     vi.mocked(decisions.linkRecommendation).mockRejectedValue(new Error('That transaction already answers for another recommendation'))
 
     press('link 1')

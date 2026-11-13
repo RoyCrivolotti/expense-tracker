@@ -130,7 +130,7 @@ describe('a payment in doubt', () => {
   })
 
   it('offers to link the typed row the server named, and holds the link', () => {
-    const core = makeCore({ items: [rec(1, { possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } })] })
+    const core = makeCore({ items: [rec(1, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })] })
     show(core)
 
     expect(screen.queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
