@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_CLOCK_SKEW_MS, parsePushDate, withinClockSkew } from './date'
+import { MAX_CLOCK_SKEW_MS, isoWithOffset, parsePushDate, withinClockSkew } from './date'
 
 describe('parsePushDate', () => {
   it('reads the instant and the phone-local day', () => {
@@ -47,6 +47,33 @@ describe('parsePushDate', () => {
     '2026-11-03T10:00:00+01:60',
   ])('refuses %j', (text) => {
     expect(parsePushDate(text)).toBeNull()
+  })
+})
+
+describe('isoWithOffset', () => {
+  const at = (iso: string) => Date.parse(iso)
+
+  it('writes the phone clock with its offset, the same instant as the UTC form', () => {
+    const ms = at('2026-11-30T22:52:00Z')
+
+    expect(isoWithOffset(ms, 60)).toBe('2026-11-30T23:52:00+01:00')
+    expect(Date.parse(isoWithOffset(ms, 60))).toBe(ms)
+  })
+
+  it('crosses a month and a year in the phone zone, and writes a zero offset as +00:00 never Z', () => {
+    expect(isoWithOffset(at('2026-12-31T23:30:00Z'), 120)).toBe('2027-01-01T01:30:00+02:00')
+    expect(isoWithOffset(at('2026-11-30T12:00:00Z'), 0)).toBe('2026-11-30T12:00:00+00:00')
+  })
+
+  it('handles negative and half-hour offsets', () => {
+    expect(isoWithOffset(at('2026-11-30T03:00:00Z'), -300)).toBe('2026-11-29T22:00:00-05:00')
+    expect(isoWithOffset(at('2026-11-30T12:00:00Z'), 330)).toBe('2026-11-30T17:30:00+05:30')
+  })
+
+  it('round trips through parsePushDate', () => {
+    const parsed = parsePushDate(isoWithOffset(at('2026-03-29T00:30:00Z'), 120))
+
+    expect(parsed).toMatchObject({ instantMs: at('2026-03-29T00:30:00Z'), localDate: '2026-03-29', offsetMinutes: 120 })
   })
 })
 
