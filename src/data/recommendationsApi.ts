@@ -17,13 +17,13 @@ export interface RecommendationInfo {
   descriptionSuggested: string | null
   /** Null where the person has to pick, as for the two legs of a move between their own accounts. */
   suggestedType: 'expense' | 'income' | 'investment' | 'refund' | null
-  /**
-   * A row the person typed that looks like this payment, when the server says so. Not sent yet: the screen treats its
-   * absence as "no match known", and its presence as a reason to look before adding.
-   */
   /** The card the push showed: the bank app and the last four digits. Null for a push with no digits. */
   card?: { source: 'iberia' | 'santander'; digits: string } | null
-  possibleMatch?: { id: number; description: string; date: string } | null
+  /**
+   * A row the person typed that looks like this payment: the same direction and price, from 14 days before to 3 days
+   * after. A reason to look before adding, and the row Link points the payment at.
+   */
+  possibleMatch?: { transactionId: number; description: string; date: string } | null
 }
 
 export interface RecommendationPage {

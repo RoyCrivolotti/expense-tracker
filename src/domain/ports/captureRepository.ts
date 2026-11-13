@@ -1,3 +1,4 @@
+import type { PossibleMatch } from '../capture/duplicate'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -119,6 +120,8 @@ export interface RecommendationCard {
 }
 
 export interface Recommendation extends NewRecommendation {
+  /** A row the person already typed that looks like this payment, or null. Filled in on a list read, not on a single read. */
+  possibleMatch?: PossibleMatch | null
   /** Null when the push showed no digits. Filled in on a list read, not on a single read. */
   card?: RecommendationCard | null
   state: RecommendationState

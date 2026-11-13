@@ -71,7 +71,7 @@ the signed-in person's own; another person's recommendation and an id that is no
 
 | Route | Answers |
 | --- | --- |
-| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400 |
+| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` (below) and the `card` it came from |
 | `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it |
 | `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing. Takes no body |
 | `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
@@ -99,11 +99,10 @@ same rule as the add form.
 | **One tap Add** | Only when nothing is in doubt. It sends the transaction shown, exactly |
 | **Review** | Everything else. It opens the normal add form, filled with only what the push said. With "Add and next (N left)" each save opens the next payment, and the form's "Don't add" moves on without creating anything |
 | **Don't add** | Removes only that suggestion. It creates nothing and teaches the app nothing |
-| **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`, not sent yet). It points the recommendation at that row and creates nothing |
+| **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`). It points the recommendation at that row and creates nothing |
 
 A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
-in use or never typed for this merchant, a card not mapped to an account (until the card-to-account map exists none is,
-so on live data one tap is not offered yet), a currency other than euros (the amount is not copied into the euro form),
+in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the amount is not copied into the euro form),
 no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
 looks the same, or a budget month that could differ.
 
@@ -127,6 +126,31 @@ account.
 Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The merchant
 history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
 earlier counts as new.
+
+## The typed row a payment may duplicate
+
+A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
+`possibleMatch: { transactionId, description, date }`, or null: a row the person already typed that looks like the same
+payment. It never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
+that row. The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
+`DUPLICATE_WINDOW`, which a check at submit time can reuse:
+
+- the same person's row, never another person's;
+- the same direction: an expense and an investment put in are money out, income and a refund and an investment taken
+  back out are money in, and a payment with no suggested type has no direction and matches nothing;
+- the same amount to the cent, in euros (a payment in another currency or with no amount matches nothing);
+- a date from 14 days before the payment's local date to 3 days after it. Back 14, because with no limit a regular price
+  (the 12,50 cafe) would match an old row every time and never allow one tap; forward 3, because a row may be dated by the
+  day the bank books it;
+- not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
+  so a payment that was captured and added does not match the next push of the same price;
+- the closest by date, and the highest id (entered last) on a tie. A row goes to one payment of the page only, the
+  one it is closest to (the newer payment first on a tie), and a payment that loses its row falls to its next best or to
+  none, so two payments of one price never offer the same row.
+
+The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
+prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
+whatever the page size.
 
 ## The capture endpoint
 

@@ -94,12 +94,26 @@ describe('the question asked for by a save', () => {
     render(<CardQuestion card={card} accounts={accounts} onPick={vi.fn()} />)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
-    act(() => card.ask!())
+    act(() => void card.ask!())
 
     expect(screen.getByRole('alert')).toHaveTextContent('Choose the account first')
+    expect(card.ask!()).toBe(true)
     expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
     fireEvent.change(screen.getByLabelText('Account for the card ending 4821'), { target: { value: '1' } })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('the question going away', () => {
+  it('takes its ask with it, so a save made while it is not on screen is told by the form', () => {
+    links([])
+    const card = seedCard()
+    const { unmount } = render(<CardQuestion card={card} accounts={accounts} onPick={vi.fn()} />)
+    expect(card.ask).toBeTypeOf('function')
+
+    unmount()
+
+    expect(card.ask).toBeUndefined()
   })
 })
 

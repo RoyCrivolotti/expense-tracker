@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildDescriptionIndex } from '../../data/descriptionIndex'
 import type { TransactionSeed } from '../actions'
 import { ClearableDescription } from './ClearableDescription'
@@ -79,5 +79,27 @@ describe('the description of a captured payment', () => {
     second.unmount()
     render(<Harness seed={undefined} initial="Anything" />)
     expect(clear()).not.toBeInTheDocument()
+  })
+})
+
+describe('the field going away right after it lost focus', () => {
+  it('clears its pending close of the list, so it cannot fire on a field that is no longer there', () => {
+    const setSpy = vi.spyOn(window, 'setTimeout')
+    const clearSpy = vi.spyOn(window, 'clearTimeout')
+    try {
+      const { unmount } = render(<Harness seed={captured} initial="TAXI DEMO" />)
+      screen.getByRole('combobox').focus()
+      screen.getByRole('combobox').blur()
+      const index = setSpy.mock.calls.findIndex(([, delay]) => delay === 120)
+      expect(index).toBeGreaterThanOrEqual(0)
+      const timer = setSpy.mock.results[index]!.value as number
+
+      unmount()
+
+      expect(clearSpy).toHaveBeenCalledWith(timer)
+    } finally {
+      setSpy.mockRestore()
+      clearSpy.mockRestore()
+    }
   })
 })
