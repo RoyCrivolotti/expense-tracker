@@ -16,8 +16,10 @@ function offsetMinutes(zone: string): number | null {
   if (zone === 'Z') return 0
   const hours = Number(zone.slice(1, 3))
   const minutes = Number(zone.slice(-2))
-  if (hours > 14 || minutes > 59) return null
-  return (zone.startsWith('-') ? -1 : 1) * (hours * 60 + minutes)
+  if (minutes > 59) return null
+  const total = (zone.startsWith('-') ? -1 : 1) * (hours * 60 + minutes)
+  // The real range of UTC offsets: +14:00 down to -12:00.
+  return total >= -12 * 60 && total <= 14 * 60 ? total : null
 }
 
 /** Parses the phone's Date. The offset is read from the string because daylight saving changes it. */

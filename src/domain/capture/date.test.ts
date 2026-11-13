@@ -44,9 +44,19 @@ describe('parsePushDate', () => {
     '2026-11-03T10:60:00+01:00',
     '2026-11-03T10:00:60+01:00',
     '2026-11-03T10:00:00+15:00',
+    '2026-11-03T10:00:00+14:30',
+    '2026-11-03T10:00:00-12:30',
+    '2026-11-03T10:00:00-13:00',
     '2026-11-03T10:00:00+01:60',
   ])('refuses %j', (text) => {
     expect(parsePushDate(text)).toBeNull()
+  })
+})
+
+describe('the offset range', () => {
+  it('accepts the two ends of the real range, +14:00 and -12:00', () => {
+    expect(parsePushDate('2026-11-03T10:00:00+14:00')?.offsetMinutes).toBe(14 * 60)
+    expect(parsePushDate('2026-11-03T10:00:00-12:00')?.offsetMinutes).toBe(-12 * 60)
   })
 })
 
