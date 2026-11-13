@@ -369,7 +369,7 @@ function batchRegion(container: HTMLElement) {
 async function fillAndStage(container: HTMLElement, file = receipt()) {
     const form = singleForm(container)
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Flight' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Flight' } })
   const input = container.querySelector('input[type=file]') as HTMLInputElement
   await userEvent.upload(input, file)
 }
@@ -378,7 +378,7 @@ async function fillAndStage(container: HTMLElement, file = receipt()) {
 function fillMinimum(container: HTMLElement) {
   const form = singleForm(container)
   fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '10,00' } })
-  fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Kyoto hotel' } })
+  fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Kyoto hotel' } })
 }
 
 describe('TransactionModal — withdrawals', () => {
@@ -403,7 +403,7 @@ describe('TransactionModal — withdrawals', () => {
     const form = singleForm(container)
     fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Sold ETF' } })
     fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
 
     expect(await screen.findByText(/cannot be split into installments/)).toBeInTheDocument()
@@ -418,7 +418,7 @@ describe('TransactionModal — withdrawals', () => {
     const form = singleForm(container)
     fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Sold ETF' } })
     fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(actions.createTransaction).toHaveBeenCalledTimes(1))
@@ -696,7 +696,7 @@ describe('TransactionModal — the other tab’s draft', () => {
     })
     const form = singleForm(container)
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '50' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Taxi' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Taxi' } })
 
     fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
     const batch = batchRegion(container)
@@ -834,7 +834,7 @@ describe('TransactionModal — following a link to another transaction', () => {
     const second = makeTransaction({ id: 2, description: 'Reimbursement', amountCents: 120_00 })
     const { container, rerender } = renderModal({ editing: first })
 
-    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Flight')
+    expect(singleForm(container).getByLabelText(/^description$/i)).toHaveValue('Flight')
 
     rerender(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -847,7 +847,7 @@ describe('TransactionModal — following a link to another transaction', () => {
       </MoneyFormatProvider>,
     )
 
-    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Reimbursement')
+    expect(singleForm(container).getByLabelText(/^description$/i)).toHaveValue('Reimbursement')
   })
 })
 
@@ -1063,3 +1063,16 @@ describe('TransactionModal, a card the person answered for', () => {
     expect(c.remember).not.toHaveBeenCalled()
   })
 })
+
+describe('TransactionModal, the description clear button', () => {
+  it('shows on a form opened for a captured payment, clears the text, and is not on an ordinary add', () => {
+    const captured = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'TAXI DEMO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Clear description' }))
+    expect(singleForm(captured.container).getByLabelText(/^description$/i)).toHaveValue('')
+    captured.unmount()
+
+    renderModal({ seed: { amountCents: 100, description: 'Copied' } })
+    expect(screen.queryByRole('button', { name: 'Clear description' })).not.toBeInTheDocument()
+  })
+})
+

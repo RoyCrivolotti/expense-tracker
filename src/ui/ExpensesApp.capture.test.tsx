@@ -122,8 +122,8 @@ describe('payments to review on the Dashboard', () => {
 
     const form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByLabelText(/amount/i)).toHaveValue('8,00')
-    expect(within(form).getByLabelText(/description/i)).toHaveValue('BRAND NEW PLACE')
-    fireEvent.change(within(form).getByLabelText(/description/i), { target: { value: 'Bakery' } })
+    expect(within(form).getByLabelText(/^description$/i)).toHaveValue('BRAND NEW PLACE')
+    fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' })))
@@ -142,7 +142,7 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Review' })[0]!)
     let form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByRole('button', { name: 'Add and next (1 left)' })).toBeInTheDocument()
-    fireEvent.change(within(form).getByLabelText(/description/i), { target: { value: 'Bakery' } })
+    fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
     fireEvent.click(within(form).getByRole('button', { name: 'Add and next (1 left)' }))
 
     await waitFor(() => expect(within(screen.getByRole('dialog').querySelector('form')!).getByLabelText(/amount/i)).toHaveValue('4,50'))

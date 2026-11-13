@@ -7,7 +7,7 @@ import type { ExpenseActions, TransactionSeed } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
-import { DescriptionCombobox } from './DescriptionCombobox'
+import { ClearableDescription } from './ClearableDescription'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
@@ -300,13 +300,7 @@ export function Fields({
             placeholder="e.g. Mercadona"
           />
         ) : (
-          <DescriptionCombobox
-            value={form.description}
-            index={model.descriptionIndex}
-            placeholder="e.g. Mercadona"
-            onChange={(v) => set('description', v)}
-            onAccept={onAcceptSuggestion}
-          />
+          <ClearableDescription seed={seed} value={form.description} index={model.descriptionIndex} onChange={(v) => set('description', v)} onAccept={onAcceptSuggestion} />
         )}
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
