@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCardLinks, unlinkCard, type CardLink, type CardLinks, type CardSource } from '../../data/captureCardsApi'
 import { announceRecommendationsChanged } from '../../data/recommendationsApi'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
 import type { ExpenseModel } from '../useExpenseData'
@@ -56,6 +57,7 @@ const cardName = (c: { source: CardSource; digits: string; digitsKind?: 'card' |
  */
 export function CaptureCardsSetting({ model }: { model: ExpenseModel }) {
   const { found, error, busy, remove } = useCardLinkList()
+  const [removing, setRemoving] = useState<CardLink | null>(null)
   const waiting = found?.waiting ?? []
   return (
     <>
@@ -85,7 +87,7 @@ export function CaptureCardsSetting({ model }: { model: ExpenseModel }) {
                   <span className={styles.label}>{cardName(link)}</span>
                   <span className={styles.meta}>{model.lookup.account(link.accountId)?.name ?? 'An account that was deleted'}</span>
                 </span>
-                <button type="button" className={styles.revoke} disabled={busy} aria-label={`Remove ${cardName(link)}`} onClick={() => void remove(link)}>
+                <button type="button" className={styles.revoke} disabled={busy} aria-label={`Remove ${cardName(link)}`} onClick={() => setRemoving(link)}>
                   Remove
                 </button>
               </li>
@@ -93,6 +95,20 @@ export function CaptureCardsSetting({ model }: { model: ExpenseModel }) {
           </ul>
         </div>
       </Card>
+      {removing ? (
+        <ConfirmSheet
+          title={`Remove ${cardName(removing)}?`}
+          message="Its payments that are waiting will need an account again. The card is linked again the next time you answer for it."
+          confirmLabel="Remove"
+          destructive
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => {
+            const target = removing
+            setRemoving(null)
+            void remove(target)
+          }}
+        />
+      ) : null}
     </>
   )
 }

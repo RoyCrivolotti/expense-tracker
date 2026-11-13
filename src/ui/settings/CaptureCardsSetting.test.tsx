@@ -56,11 +56,26 @@ describe('the linked cards list', () => {
     render(<CaptureCardsSetting model={model} />)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Remove Iberia card ending 4821' }))
+    expect(api.unlinkCard).not.toHaveBeenCalled()
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }))
 
     expect(await screen.findByText('No cards linked yet.')).toBeInTheDocument()
     expect(api.unlinkCard).toHaveBeenCalledWith(link())
     expect(recs.announceRecommendationsChanged).toHaveBeenCalledOnce()
     expect(screen.getByRole('status')).toHaveTextContent('waiting')
+  })
+
+  it('asks first, says what removing does, and removes nothing when the person cancels', async () => {
+    read([link()])
+    render(<CaptureCardsSetting model={model} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Iberia card ending 4821' }))
+    const sheet = screen.getByRole('alertdialog')
+    expect(within(sheet).getByText(/payments that are waiting will need an account again/)).toBeInTheDocument()
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(api.unlinkCard).not.toHaveBeenCalled()
   })
 
   it('shows why a remove failed and keeps the link', async () => {
@@ -69,6 +84,7 @@ describe('the linked cards list', () => {
     render(<CaptureCardsSetting model={model} />)
 
     fireEvent.click(await screen.findByRole('button', { name: /^Remove/ }))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Card link not found')
     expect(screen.getByText('Iberia card ending 4821')).toBeInTheDocument()
