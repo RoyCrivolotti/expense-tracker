@@ -160,53 +160,69 @@ rows of one 18-day window and needs no new index.
 
 ## Setting up a phone
 
-Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **A shortcut built by hand from these steps worked on one phone, and
-so did the same shortcut installed from a shared copy. Neither has been tried on a second phone, or from the installed Home
-Screen app.** The Get Contents of URL part follows [Apple's guide](https://support.apple.com/guide/shortcuts/apd58d46713f/ios).
-The If step is untried: the action returns the answer rather than failing, so it can catch a refusal but probably not a
-missing connection. Only Iberia has a recipe; Santander joins with its own change.
+Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. **A shortcut built by hand
+from steps like these worked on one phone, and a shared copy of it installed and worked on one phone. Neither has been
+tried on a second phone, and the shared copy has not been tried from the installed Home Screen app.** We have not seen the
+iOS 27 screens beyond the trigger, so names below may differ from yours; anything that does should be reported. The
+trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari
+freezes it in the user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander
+joins with its own change.
 
-1. **iOS 27.** The trigger "When I receive a notification from" was seen on iOS 27. Older iPhones and Android are untried.
-   The app cannot tell the phone's version (Safari freezes it in the user agent), so the screen asks the person to check
-   Settings, General, About.
-2. **Make a key** in Settings, Capture key. It is shown once.
-3. **Build the shortcut.** Add the trigger "When I receive a notification from" and pick the app: Santander, or
-   IberiaCards for the Icon card (one word, as it appears in the notification's App field). Leave the filters empty. Make
-   one automation per app. Add Get Contents of URL, tap Show More, set Method to POST and Request Body to JSON, then add
-   four fields: `source` (typed text, `iberia` or `santander`), `title` and `body` (the notification's Title and Body), and
-   `date` (the notification's Date). In saved notes the date arrived as ISO 8601 with the phone's offset, such as
-   `2026-11-03T09:41:07+01:00`, so try that date format (in Shortcuts it is called ISO 8601, under the Date token's Date
-   Format or a Format Date action). Optional: add an If that checks the answer contains `ok`, and otherwise shows the
-   notification "Capture failed".
-4. **Point it at the app.** URL: the address on the screen, exactly as shown. Header `Authorization` with the value
-   `Bearer`, a space, then the key.
-5. **Run it automatically.** Keep Automation on. Notify was off on the automations that were tried; whether it matters is
-   untried. Turn on Allow Running When Locked (the info button, Privacy). The automation's own editor has shown "Automation
-   is turned off" while it was running, so trust the automation list and the first real payment, not that line.
-6. **If iOS asks whether the shortcut may send data to that address**, allow it and choose the option that remembers
-   the answer. If it asks again on every payment an unattended run cannot work yet. That is untested.
-7. **The check.** The screen reads `GET /api/capture-status` and shows one of four states for Iberia. Grey "Waiting for
-   your first payment": nothing has reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
-   seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
-   was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
-   push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
-   with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
-   automation is noticed only by the person.
+### With a shared shortcut
+
+With `CAPTURE_SHORTCUT_URL` set (a plain Pages variable holding an iCloud share link, such as the invented
+`https://www.icloud.com/shortcuts/example0000000000000000000000000000`), the card shows these steps. The "Add the
+shortcut" button is an ordinary link that opens in its own tab; the app never fetches it. The shared shortcut is generic
+and the person edits it by hand.
+
+1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
+2. **Add the shortcut.** Tap **Add the shortcut**. Shortcuts opens and shows it. Add it.
+3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
+4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
+5. **Name your bank.** In the JSON, replace `CARD_NAME` in `source` with the bank's word. Today that is `iberia`, taken from
+   `SUPPORTED_SOURCES`, which is built from the same rules the server reads.
+6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
+   **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
+   untried. The editor has said "Automation is turned off" while it ran, so trust the automation list and the first payment.
+7. **Make one purchase** and watch the check below. If iOS asks whether the shortcut may send data, allow it and choose
+   the option that remembers the answer. If it asks again on every payment an unattended run cannot work yet (untested).
+
+The link is never committed: re-sharing a shortcut gives a new link. It is not known where the Worker's address sits in the
+shared file, so the card does not say.
+
+### By hand
+
+With no link set, or when the status cannot be read, the card shows these steps, one action each. The address is
+`endpoint` from `GET /api/capture-status` with a Copy button, or a field to paste it.
+
+1. Make a key and copy it, as above.
+2. Open **Shortcuts**, start a new automation and choose the trigger **When I receive a notification from**.
+3. Tap the app name and choose the bank's app (**IberiaCards** for the Icon card). Leave the filters empty.
+4. Tap the **Search** bar at the bottom, type **Get Contents of URL** and tap that action to add it.
+5. In the action, tap **URL** and type the address. The `/capture` is part of it.
+6. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
+7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the key.
+8. Under **Request Body**, choose **JSON**.
+9. Tap **Add new field**, choose **Text**, set the key to **source** and type the bank's word (`iberia`).
+10. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
+11. Add a field with the key **body** and the variable **Body**.
+12. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
+    **ISO 8601**. In saved notes the date arrived that way, such as `2026-11-03T09:41:07+01:00`.
+13. Save the automation. Optional: an If that checks the answer contains `ok`, otherwise shows "Capture failed" (untried: the
+    action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection).
+14. Check the automation is on, and make one purchase, as steps 6 and 7 above.
+
+**The check.** The screen reads `GET /api/capture-status` and shows one of four states for Iberia. Grey "Waiting for
+your first payment": nothing has reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
+seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
+was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
+push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
+with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
+automation is noticed only by the person.
 
 The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
 The hostname is private, so it is never committed; docs and tests use `https://capture.example.workers.dev`. Where the
 variable is unset the screen asks for the address to be pasted and keeps it in that browser only.
-
-### The "Add the shortcut" button
-
-With `CAPTURE_SHORTCUT_URL` set (a plain Pages variable holding an iCloud share link to the shortcut, such as the invented
-`https://www.icloud.com/shortcuts/example0000000000000000000000000000`), the card replaces steps 3 and 4 with a button that
-opens the link in its own tab. It is an ordinary link: the app never fetches it. Shortcuts opens and asks for the
-person's capture key, so the shared copy carries no key; the Worker's address is inside the shared shortcut, so
-`CAPTURE_ENDPOINT` is not needed on that path. The steps become: check the phone, make a key and copy it, add the
-shortcut, run it automatically, and the iOS question. Unset, or not an iCloud shortcuts link, the card shows the manual
-steps above. The variable is never committed, because re-sharing a shortcut gives a new link. Not tried: the button from
-the installed Home Screen app, and whether the notification automation arrives switched on.
 
 ### Turning the screens on
 
