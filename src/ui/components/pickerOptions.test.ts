@@ -65,3 +65,14 @@ describe('optionLabel', () => {
     expect(optionLabel({ name: 'Old category', active: false })).toBe('Old category (archived)')
   })
 })
+
+describe('selectableOptions with an empty label', () => {
+  const items = [{ id: 1, name: 'Main', active: true }]
+
+  it('puts the label first while nothing is chosen, and only then', () => {
+    expect(selectableOptions(items, 0, 'Pick an account').map((i) => i.name)).toEqual(['Pick an account', 'Main'])
+    expect(selectableOptions(items, 1, 'Pick an account').map((i) => i.name)).toEqual(['Main'])
+    expect(selectableOptions(items, 0).map((i) => i.name)).toEqual(['Main'])
+  })
+})
+

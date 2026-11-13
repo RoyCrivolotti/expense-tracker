@@ -176,8 +176,10 @@ describe('the card to ask about', () => {
   it('goes into the form seed with nothing answered and remembering on, only when there is something to remember with', () => {
     const asked = view({ card, accountId: null })
 
+    expect(seedOf(asked, remember).accountId).toBe(0)
     expect(seedOf(asked, remember).card).toEqual({ ...card, answer: { accountId: null, remember: true }, unanswered: 'Choose the account for the card ending 4821 first', remember })
     expect(seedOf(asked)).not.toHaveProperty('card')
+    expect(seedOf(asked)).not.toHaveProperty('accountId')
     expect(seedOf(view({ card, accountId: 1 }), remember)).not.toHaveProperty('card')
   })
 })

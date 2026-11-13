@@ -185,9 +185,12 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
     const form = (await screen.findByRole('dialog')).querySelector('form')!
 
+    expect(within(form).getByLabelText('Account')).toHaveDisplayValue('Pick an account')
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
-    expect(await screen.findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    const question = screen.getByText(/Which account is the card/).closest('fieldset')!
+    expect(await within(question).findByRole('alert')).toHaveTextContent('Choose the account for the card ending 4821 first')
+    expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
     expect(api.submitRecommendation).not.toHaveBeenCalled()
     expect(cardsApi.linkCard).not.toHaveBeenCalled()
   })

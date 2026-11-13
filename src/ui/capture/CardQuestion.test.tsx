@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../data/captureCardsApi'
 import type { Account } from '../../types'
@@ -84,6 +84,22 @@ describe('the question about a card', () => {
     render(<CardQuestion card={seedCard()} accounts={accounts} onPick={vi.fn()} />)
 
     expect(await screen.findByRole('option', { name: 'Main Debit' })).toBeInTheDocument()
+  })
+})
+
+describe('the question asked for by a save', () => {
+  it('shows its message beside the question and moves the cursor into it, and the message goes when an account is picked', () => {
+    links([])
+    const card = seedCard()
+    render(<CardQuestion card={card} accounts={accounts} onPick={vi.fn()} />)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    act(() => card.ask!())
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose the account first')
+    expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
+    fireEvent.change(screen.getByLabelText('Account for the card ending 4821'), { target: { value: '1' } })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
 

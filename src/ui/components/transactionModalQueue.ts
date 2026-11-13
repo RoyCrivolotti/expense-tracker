@@ -1,10 +1,17 @@
 import { useRef } from 'react'
 import type { NewTransaction } from '../../data/dataSource'
 import type { Transaction } from '../../types'
-import type { ExpenseActions, TransactionSeed } from '../actions'
+import type { ExpenseActions, SeedCard, TransactionSeed } from '../actions'
 import { useToast } from '../hooks/useToast'
 import type { InstallmentIntent } from './installmentIntent'
 import { saveTransaction } from './transactionSaveIntent'
+
+/** Nothing is saved for a card until it is answered, and the question is shown where it is. */
+function refuseUnanswered(card: SeedCard | undefined, input: NewTransaction): void {
+  if (!card || (card.answer.accountId !== null && input.accountId !== 0)) return
+  card.ask?.()
+  throw new Error(card.unanswered)
+}
 
 /**
  * What the add form does at the end of a queue of captured payments: after a save it opens the next payment's form in
@@ -26,7 +33,7 @@ export function useQueueAdvance(
     submit: async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
       const card = seed?.card
       // A card is asked about so that the account is never a guess: nothing is saved until it is answered.
-      if (id == null && card && card.answer.accountId === null) throw new Error(card.unanswered)
+      if (id == null) refuseUnanswered(card, input)
       const saved = await saveTransaction(actions, input, id, intent, seed?.recommendationId)
       // Remembered after the payment is saved, so the message is only ever about a payment that was added, and before
       // the queue moves on, so the payments behind this one already know the account.

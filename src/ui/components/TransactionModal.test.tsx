@@ -992,6 +992,7 @@ describe('TransactionModal, a card the person answered for', () => {
     answer: { accountId: 2, remember: true, ...over },
     unanswered: 'Choose the account for the card ending 4821 first',
     remember: vi.fn<(accountId: number) => Promise<string | null>>().mockResolvedValue(null),
+    ask: vi.fn(),
   })
   const seedWith = (c: ReturnType<typeof card>): TransactionSeed => ({ recommendationId: 'r', amountCents: 840, description: 'Kebab', type: 'expense', accountId: 1, categoryId: 1, card: c })
   const add = (container: HTMLElement) => fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
@@ -1023,6 +1024,7 @@ describe('TransactionModal, a card the person answered for', () => {
     add(container)
 
     expect(await screen.findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    expect(c.ask).toHaveBeenCalledOnce()
     expect(submitRecommendation).not.toHaveBeenCalled()
     expect(c.remember).not.toHaveBeenCalled()
   })
@@ -1073,6 +1075,28 @@ describe('TransactionModal, the description clear button', () => {
 
     renderModal({ seed: { amountCents: 100, description: 'Copied' } })
     expect(screen.queryByRole('button', { name: 'Clear description' })).not.toBeInTheDocument()
+  })
+})
+
+describe('TransactionModal, the account of a card still to be asked about', () => {
+  it('shows Pick an account, not a default, and the ordinary add form still starts on its default account', () => {
+    const asked = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 0 } })
+    expect(singleForm(asked.container).getByLabelText('Account')).toHaveDisplayValue('Pick an account')
+    asked.unmount()
+
+    const ordinary = renderModal()
+    expect(singleForm(ordinary.container).getByLabelText('Account')).not.toHaveDisplayValue('Pick an account')
+  })
+
+  it('refuses to save while the account is the empty choice, even when the question says answered', async () => {
+    const c = { source: 'iberia' as const, digits: '4821', answer: { accountId: 1, remember: true }, unanswered: 'Choose first', remember: vi.fn().mockResolvedValue(null), ask: vi.fn() }
+    const submitRecommendation = vi.fn()
+    const { container } = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 0, categoryId: 1, type: 'expense', card: c }, actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText('Choose first')).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
   })
 })
 

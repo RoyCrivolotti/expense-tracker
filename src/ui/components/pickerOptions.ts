@@ -5,7 +5,8 @@
  * Used by both the transaction form and the installment plan editor.
  *
  * `currentId === 0` is the "nothing selected yet" sentinel for a new record and is
- * never a real id, so it never triggers the placeholder branch below.
+ * never a real id, so it never triggers the placeholder branch below. A caller that
+ * wants the empty state shown passes `emptyLabel`, which is then the first option.
  *
  * If `currentId` doesn't match any item at all — not just inactive, but fully gone
  * (legacy data predating these delete guards, or a race with another tab's delete) —
@@ -17,8 +18,10 @@
 export function selectableOptions<T extends { id: number; name: string; active: boolean }>(
   items: T[],
   currentId: number,
+  emptyLabel?: string,
 ): T[] {
   const filtered = items.filter((item) => item.active || item.id === currentId)
+  if (currentId === 0 && emptyLabel) return [{ id: 0, name: emptyLabel, active: true } as T, ...filtered]
   if (currentId === 0 || items.some((item) => item.id === currentId)) return filtered
   // `active: true` here isn't really a claim that this record is active — it's so
   // `optionLabel` below doesn't also tack "(archived)" onto a name that already says

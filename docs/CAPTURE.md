@@ -115,6 +115,12 @@ One tap, "Don't add" and Link are held for five seconds, and nothing is sent unt
 a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
 back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.
 
+A payment from a card with no linked account opens with the Account field empty ("Pick an account") and a question under
+the date: which account is the card ending in those digits, with "Remember this card" on. Saving is refused until it is
+answered, with the message beside the question. The card is remembered after the payment is saved, against the account
+the payment was saved with, so if the person changes the form's Account after answering, the card follows the final
+account.
+
 Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The merchant
 history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
 earlier counts as new.

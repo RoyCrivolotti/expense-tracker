@@ -102,7 +102,8 @@ export function seedOf(view: ReviewView, remember?: SeedCard['remember']): Trans
     ...(view.type ? { type: view.type } : {}),
     // How the person typed this merchant before, else the bank's own text without its store number.
     ...(view.description ? { description: view.description } : {}),
-    ...(view.accountId !== null ? { accountId: view.accountId } : {}),
+    // 0 is the form's "nothing chosen" sentinel: a card to ask about starts with no account rather than a default.
+    ...(view.accountId !== null ? { accountId: view.accountId } : view.askCard && remember ? { accountId: 0 } : {}),
     ...(view.categoryId !== null ? { categoryId: view.categoryId } : {}),
     ...noticeOf(view),
     ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, unanswered: `Choose the account for the card ending ${view.askCard.digits} first`, remember } } : {}),

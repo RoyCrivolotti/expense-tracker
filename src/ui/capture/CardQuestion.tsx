@@ -1,8 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Account } from '../../types'
 import type { SeedCard } from '../actions'
 import { otherCardsOf, useCardLinks } from './cardLinks'
 import styles from './Review.module.css'
+
+/** Hands the form a way to show this question's message and move the cursor here, outside render. */
+function offerAsk(card: SeedCard, ask: () => void) {
+  card.ask = ask
+}
+
+/** What the form can ask of the question: show its message and move the cursor into it. */
+function useAsk(card: SeedCard) {
+  const [missing, setMissing] = useState(false)
+  const select = useRef<HTMLSelectElement>(null)
+  useEffect(() => {
+    offerAsk(card, () => {
+      setMissing(true)
+      select.current?.focus()
+      select.current?.scrollIntoView?.({ block: 'center' })
+    })
+  }, [card])
+  return { missing, setMissing, select }
+}
 
 /** Writes the answer where the form's save reads it, outside render. */
 function answer(card: SeedCard, patch: Partial<SeedCard['answer']>) {
@@ -18,18 +37,21 @@ export default function CardQuestion({ card, accounts, onPick }: { card: SeedCar
   const links = useCardLinks()
   const [picked, setPicked] = useState<number | null>(null)
   const [remember, setRemember] = useState(true)
+  const { missing, setMissing, select } = useAsk(card)
 
   const others = picked === null ? [] : otherCardsOf(links, picked, card)
   return (
     <fieldset className={styles.question}>
       <legend className={styles.questionTitle}>Which account is the card ending {card.digits}?</legend>
       <select
+        ref={select}
         aria-label={`Account for the card ending ${card.digits}`}
         className={styles.questionSelect}
         value={picked ?? ''}
         onChange={(e) => {
           const id = e.target.value === '' ? null : Number(e.target.value)
           setPicked(id)
+          setMissing(false)
           answer(card, { accountId: id })
           if (id !== null) onPick(id)
         }}
@@ -47,6 +69,11 @@ export default function CardQuestion({ card, accounts, onPick }: { card: SeedCar
             )
           })}
       </select>
+      {missing ? (
+        <p role="alert" className={styles.error}>
+          {card.unanswered}
+        </p>
+      ) : null}
       <label className={styles.questionRemember}>
         <input
           type="checkbox"

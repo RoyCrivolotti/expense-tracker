@@ -59,6 +59,8 @@ export interface SeedCard {
   answer: { accountId: number | null; remember: boolean }
   /** What the form says when the payment is saved before the card is answered. */
   unanswered: string
+  /** Set by the question while it is on screen: shows its message and moves the cursor to it. */
+  ask?: () => void
   /** Links the card to the account the payment was saved with. Never throws: resolves with the message to tell if it failed, or null. */
   remember: (accountId: number) => Promise<string | null>
 }
