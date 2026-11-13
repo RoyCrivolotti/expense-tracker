@@ -31,7 +31,12 @@ export function useDuplicateOffer(seed: TransactionSeed | undefined, moveOn: () 
           match: found.match,
           recommendationId: id,
           onLinked: () => onLinked(found.match),
-          addAnyway: () => void (anyway.current = true),
+          addAnyway: () => {
+            anyway.current = true
+            // The button submits the form, which reads this at once. If the form refuses (a field is invalid) nothing
+            // reads it, and it must not leak into the next ordinary Add.
+            setTimeout(() => (anyway.current = false), 0)
+          },
         }
       : undefined
 

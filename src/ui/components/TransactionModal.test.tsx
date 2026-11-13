@@ -1133,9 +1133,9 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     press(container)
 
     expect(await screen.findByText('Cafe at the till')).toBeInTheDocument()
-    expect(screen.getByRole('note')).toHaveTextContent('Already entered as Cafe at the till on 2026-11-09?')
+    // A live region, so a screen reader hears it: the form's own error line stays empty for this refusal.
+    expect(screen.getByRole('alert')).toHaveTextContent('Already entered as Cafe at the till on Mon 9 Nov?')
     expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), false)
   })
 
@@ -1180,10 +1180,26 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     press(container)
     fireEvent.click(await screen.findByRole('button', { name: 'Link' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Transaction not found You can still add this payment.')
+    expect(await screen.findByText('Transaction not found')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Add anyway' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('does not let an Add anyway the form refused skip the check on the next ordinary Add', async () => {
+    const submitRecommendation = refusedOnce()
+    const { container } = renderModal({ seed, actions: { submitRecommendation } })
+    press(container)
+    const anyway = await screen.findByRole('button', { name: 'Add anyway' })
+    const amount = singleForm(container).getByLabelText(/amount/i)
+    fireEvent.change(amount, { target: { value: '' } })
+    fireEvent.click(anyway)
+    await new Promise((r) => setTimeout(r, 5))
+    fireEvent.change(amount, { target: { value: '12,50' } })
+    press(container)
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalledTimes(2))
+    expect(submitRecommendation.mock.calls[1]?.[2]).toBe(false)
   })
 
   it('keeps a failure that is not a duplicate as the form error', async () => {

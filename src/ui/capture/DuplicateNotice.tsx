@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { linkRecommendation } from '../../data/recommendationDecisionsApi'
 import type { DuplicateOffer } from '../actions'
+import { formatDayLabel } from '../format'
 import styles from './Review.module.css'
 
 /**
@@ -13,9 +14,9 @@ export default function DuplicateNotice({ offer }: { offer: DuplicateOffer }) {
   const [problem, setProblem] = useState<string | null>(null)
   const { match } = offer
   return (
-    <div className={styles.duplicate} role="note">
+    <div className={styles.duplicate} role="alert">
       <p className={styles.duplicateText}>
-        Already entered as <strong>{match.description}</strong> on {match.date}?
+        Already entered as <strong>{match.description}</strong> on {formatDayLabel(match.date)}?
       </p>
       <div className={styles.duplicateActions}>
         <button
@@ -40,11 +41,7 @@ export default function DuplicateNotice({ offer }: { offer: DuplicateOffer }) {
           Add anyway
         </button>
       </div>
-      {problem ? (
-        <p role="alert" className={styles.error}>
-          {problem} You can still add this payment.
-        </p>
-      ) : null}
+      {problem ? <p className={styles.error}>{problem}</p> : null}
     </div>
   )
 }
