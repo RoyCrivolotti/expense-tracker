@@ -1,4 +1,4 @@
-import type { KeyboardEvent, RefObject } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type RefObject } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 
 export function moveHighlight(current: number, delta: number, max: number): number {
@@ -48,11 +48,30 @@ export function handleComboboxKeyDown(
   }
 }
 
+/** Closes the list 120ms after focus leaves, unless focus has come back inside. Returns the timer so it can be cleared. */
 export function scheduleBlurDismiss(
   rootRef: RefObject<HTMLDivElement | null>,
   dismiss: () => void,
-): void {
-  window.setTimeout(() => {
+): number {
+  return window.setTimeout(() => {
     if (!rootRef.current?.contains(document.activeElement)) dismiss()
   }, 120)
+}
+
+/**
+ * `scheduleBlurDismiss` for a component: the pending timer is cleared when the field goes away, so it cannot fire on
+ * something that is no longer there (a form closed within 120ms of leaving the field).
+ */
+export function useBlurDismiss(rootRef: RefObject<HTMLDivElement | null>, dismiss: () => void): () => void {
+  const timer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current)
+    },
+    [],
+  )
+  return () => {
+    if (timer.current !== null) window.clearTimeout(timer.current)
+    timer.current = scheduleBlurDismiss(rootRef, dismiss)
+  }
 }

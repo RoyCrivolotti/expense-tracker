@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
-import { handleComboboxKeyDown, scheduleBlurDismiss } from './descriptionComboboxUtils'
+import { handleComboboxKeyDown, useBlurDismiss } from './descriptionComboboxUtils'
 import styles from './DescriptionCombobox.module.css'
 
 interface ComboboxInputProps {
@@ -34,6 +34,7 @@ export function ComboboxInput({
   setFocused,
   onPick,
 }: ComboboxInputProps) {
+  const onBlur = useBlurDismiss(rootRef, onDismiss)
   return (
     <input
       className={styles.input}
@@ -49,7 +50,7 @@ export function ComboboxInput({
         onChange(e.target.value)
       }}
       onFocus={onFocus}
-      onBlur={() => scheduleBlurDismiss(rootRef, onDismiss)}
+      onBlur={onBlur}
       onKeyDown={(e) =>
         handleComboboxKeyDown(e, {
           open,
