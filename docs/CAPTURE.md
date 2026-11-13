@@ -34,9 +34,34 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-keys` | `{ keys: [{ keyId, label, createdAt, lastUsedAt }] }`, newest first, live keys only |
 | `POST /api/capture-keys` | 201 with the same fields and `key`. Body: a JSON object with an optional `label` (at most 40 characters, no control characters; blank becomes "Shortcut"), at most 1 KB. 409 at the limit |
 | `DELETE /api/capture-keys/:id` | `{ ok: true }`, or 404 |
+| `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
+| `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
+| `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
 
-These writes leave the owner's dataset revision alone, since they change nothing a
+These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
+
+## Card links
+
+A push shows the last four digits of the card it was paid with. A link says which of the person's accounts those digits
+are, so a payment arrives with its account. It is stored in `capture_cards` (source, kind, digits, account) and the
+digits are stored in clear, since they are four of sixteen and the person needs to see which card each link is. Every
+read and write is for the signed-in person alone.
+
+- **Several digit sets can share one account.** A bank reissues a card with new digits and the old card can still appear
+  on subscriptions and refunds, so linking new digits to an account adds a link and keeps the old one. Nothing is
+  replaced on its own: removing the old link is a person's choice, in Settings.
+- **The same digits from two bank apps are two links**, and a card and an account's digits are two kinds.
+- **A link that points at a deleted account** counts as no link: its payments wait again, and linking those digits
+  again points them at a live account.
+- **Open payments follow the link.** The account is written when a push arrives, so saving a link also writes it onto
+  the open recommendations those digits made, and removing a link unmaps them, in the same batch. The list then needs no
+  join to know a payment's account, and decided payments are never touched.
+- **One known gap.** Removing an `account`-kind link unmaps the open payments those digits made even if a `card` link also gave
+  them their account. The Worker reads only card digits today, so it cannot happen yet; it needs a look when account
+  digits start to be read.
+- **The list says which card a payment came from** (`card: { source, digits }`, or null for a push with no digits), so
+  the screen can ask "which account is the card ending ...?" the first time it sees one.
 
 ## Recommendations
 

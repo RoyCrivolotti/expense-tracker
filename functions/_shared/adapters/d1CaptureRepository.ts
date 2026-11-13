@@ -3,6 +3,7 @@ import type {
   CaptureEvent,
   CaptureRepository,
   NewRecommendation,
+  Recommendation,
 } from '../../../src/domain/ports/captureRepository'
 import type { Env } from '../env'
 import {
@@ -12,12 +13,13 @@ import {
   EVENTS_SINCE_SQL,
   HAS_EVENT_SQL,
   LAST_CAPTURE_SQL,
-  LIST_CARDS_SQL,
   READ_COUNTERS_SQL,
   RECORD_EVENT_SQL,
   RECORD_RECOMMENDATION_SQL,
-  SAVE_CARD_SQL,
 } from '../capture/captureEventsSql'
+import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
+import { cards } from './d1CaptureCards'
+import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
   FIND_KEY_SQL,
@@ -41,24 +43,6 @@ import {
   toRecommendation,
 } from '../capture/captureRecommendationsSql'
 import type { RecommendationRow } from '../capture/captureRecommendationsSql'
-
-/** D1 reports a change count on a write: 0 means the guard in the statement stopped it. */
-async function changed(db: D1Database, sql: string, ...params: Array<string | number | null>): Promise<boolean> {
-  const result = await db
-    .prepare(sql)
-    .bind(...params)
-    .run()
-  return (result.meta?.changes ?? 0) > 0
-}
-
-async function rows<T>(db: D1Database, sql: string, ...params: Array<string | number | null>): Promise<T[]> {
-  return (
-    await db
-      .prepare(sql)
-      .bind(...params)
-      .all<T>()
-  ).results
-}
 
 type Statements = Pick<CaptureRepository, 'createKey' | 'findKey' | 'listKeys' | 'revokeKey' | 'touchKey'>
 
@@ -151,25 +135,17 @@ function events(
   }
 }
 
-function cards(db: D1Database): Pick<CaptureRepository, 'saveCard' | 'listCards'> {
-  return {
-    saveCard: async (owner, c) => {
-      await changed(db, SAVE_CARD_SQL, owner, c.source, c.digitsKind, c.digits, c.accountId)
-    },
-    listCards: async (owner) =>
-      (
-        await rows<{ source: string; digits_kind: string; digits: string; account_id: number }>(
-          db,
-          LIST_CARDS_SQL,
-          owner,
-        )
-      ).map((r) => ({
-        source: r.source as 'iberia' | 'santander',
-        digitsKind: r.digits_kind as 'card' | 'account',
-        digits: r.digits,
-        accountId: r.account_id,
-      })),
-  }
+/** Adds the card each recommendation of a page came from, in one read. */
+async function withCards(db: D1Database, owner: string, page: Recommendation[]): Promise<Recommendation[]> {
+  if (page.length === 0) return page
+  const found = await rows<{ rec_id: string; source: string; last4: string }>(
+    db,
+    CARDS_OF_RECOMMENDATIONS_SQL,
+    owner,
+    JSON.stringify(page.map((r) => r.id)),
+  )
+  const byRec = new Map(found.map((r) => [r.rec_id, { source: r.source as 'iberia' | 'santander', digits: r.last4 }]))
+  return page.map((r) => ({ ...r, card: byRec.get(r.id) ?? null }))
 }
 
 function recommendations(
@@ -186,11 +162,14 @@ function recommendations(
       const row = await db.prepare(GET_RECOMMENDATION_SQL).bind(owner, id).first<RecommendationRow>()
       return row ? toRecommendation(row) : null
     },
-    listOpenRecommendations: async (owner, limit, after) =>
-      (after
-        ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
-        : await rows<RecommendationRow>(db, LIST_OPEN_FIRST_SQL, owner, limit)
-      ).map(toRecommendation),
+    listOpenRecommendations: async (owner, limit, after) => {
+      const page = (
+        after
+          ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
+          : await rows<RecommendationRow>(db, LIST_OPEN_FIRST_SQL, owner, limit)
+      ).map(toRecommendation)
+      return withCards(db, owner, page)
+    },
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
     decideRecommendation: (owner, id, d) =>
