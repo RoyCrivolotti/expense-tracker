@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CAPTURE_FLAG_KEY, captureEnabled, readCaptureFlag } from './captureFlag'
+import { CAPTURE_FLAG_KEY, captureEnabled, readCaptureFlag, setCaptureFlag } from './captureFlag'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial))
@@ -73,5 +73,27 @@ describe('captureEnabled', () => {
 
     expect(captureEnabled()).toBe(false)
     vi.restoreAllMocks()
+  })
+})
+
+describe('setCaptureFlag', () => {
+  it('keeps the choice so the next read sees it', () => {
+    const storage = memoryStorage()
+
+    expect(setCaptureFlag(true, storage)).toBe(true)
+    expect(readCaptureFlag({ search: '', storage })).toBe(true)
+    expect(setCaptureFlag(false, storage)).toBe(true)
+    expect(readCaptureFlag({ search: '', storage })).toBe(false)
+  })
+
+  it('says false when there is no storage or it refuses', () => {
+    expect(setCaptureFlag(true, null)).toBe(false)
+    expect(
+      setCaptureFlag(true, {
+        setItem: () => {
+          throw new Error('full')
+        },
+      }),
+    ).toBe(false)
   })
 })

@@ -1,5 +1,6 @@
 import { Card, SectionTitle } from '../components/primitives'
 import type { ExpenseModel } from '../useExpenseData'
+import { CaptureSwitch } from './CaptureSwitch'
 import styles from './AppVersionSetting.module.css'
 
 /**
@@ -22,6 +23,7 @@ export function AppVersionSetting({ model }: { model: Pick<ExpenseModel, 'pagedL
             <dt>Reads your data</dt>
             <dd>{model.pagedList ? 'In parts (ledger mode)' : 'As one dataset (classic)'}</dd>
           </div>
+          <CaptureSwitch />
         </dl>
       </Card>
     </>
