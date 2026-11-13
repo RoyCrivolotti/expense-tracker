@@ -1,8 +1,8 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key, the endpoint that accepts it and the routes that list and decide recommendations, all built; the screens are added
-as they land.
+key, the endpoint that accepts it and the routes that list and decide recommendations, all built, and the Dashboard card that
+reviews them. The setup screen is not built yet.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -55,6 +55,41 @@ Each decision happens once: a second one is a 409. Submitting creates the row fi
 because the two cannot share a D1 batch through the create path. If a second tap decided it in between, or the mark
 failed, the row just created is deleted again. Submit moves the dataset revision like any write that adds an expense.
 Dismiss, link and the list leave it alone, since the ledger a reader sees does not change.
+
+## The Dashboard card
+
+Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with
+all seven fields it would become (type, amount, description, category, account, date, budget month). It is absent when
+nothing is waiting, and the Dashboard tab carries the count (the Settings badge still means pending access requests).
+"See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
+list, the count and the undo window live in the main bundle, so the badge needs no download.
+
+What each payment becomes is worked out on the device from the push and the typed rows the app holds, never stored
+([`review.ts`](../src/domain/capture/review.ts)). The description and category are the newest typed row of the same
+merchant (bank text with the words that hold a digit dropped, case and accents folded). The budget month comes from the
+same rule as the add form.
+
+| | |
+| --- | --- |
+| **One tap Add** | Only when nothing is in doubt. It sends the transaction shown, exactly |
+| **Review** | Everything else. It opens the normal add form, filled with only what the push said. With "Add and next (N left)" each save opens the next payment, and the form's "Don't add" moves on without creating anything |
+| **Don't add** | Removes only that suggestion. It creates nothing and teaches the app nothing |
+| **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`, not sent yet). It points the recommendation at that row and creates nothing |
+
+A payment is reviewed rather than added by one tap when: no merchant text, no amount, a category not in use or never
+typed for this merchant, a card not mapped to an account, a currency other than euros (the amount is not copied into
+the euro form), no suggested type (the user's own money moved), a merchant typed fewer than twice, a typed row that
+looks the same, or a push near the end of a month: in the last hour of one, the first hour of the next, in a later
+month than the payment, or at a time that cannot be read in the payment's own day. For that last kind the add form shows a note under the date
+with both days it could be dated, and a button to move between them (the budget month follows).
+
+One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
+a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
+back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.
+
+Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The merchant
+history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
+earlier counts as new.
 
 ## The capture endpoint
 

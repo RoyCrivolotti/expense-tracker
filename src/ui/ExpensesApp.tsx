@@ -17,7 +17,8 @@ import { AppHeaderActions } from './components/AppHeaderActions'
 import { ExpensesOnboarding } from './components/ExpensesOnboarding'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import { PresenceValue } from './components/Presence'
-import { TransactionModal } from './components/TransactionModal'
+import { ActiveTransactionModal } from './ActiveTransactionModal'
+import { ReviewProvider } from './capture/ReviewProvider'
 import { EXIT_MS } from './hooks/motion'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
@@ -410,7 +411,7 @@ function ExpensesAppReady({
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
-    <>
+    <ReviewProvider model={model} actions={actions}>
       <ExpensesOnboarding
         open={onboardingOpen}
         source={source}
@@ -494,29 +495,6 @@ function ExpensesAppReady({
           )
         }
       </PresenceValue>
-    </>
-  )
-}
-
-function ActiveTransactionModal({
-  modal,
-  actions,
-  model,
-  onClose,
-}: {
-  modal: Exclude<ExpenseModalState, null>
-  actions: ExpenseActions
-  model: ExpenseModel
-  onClose: () => void
-}) {
-  return (
-    <TransactionModal
-      model={model}
-      actions={actions}
-      editing={modal.mode === 'edit' ? modal.txn : null}
-      seed={modal.mode === 'add' ? modal.seed : undefined}
-      hint={modal.mode === 'add' ? modal.hint : undefined}
-      onClose={onClose}
-    />
+    </ReviewProvider>
   )
 }

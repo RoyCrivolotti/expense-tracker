@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptyGroupGrants } from '../../domain/accessGroups'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import { ReviewContext, type ReviewCore } from '../capture/reviewContext'
 import { AppShell } from './AppShell'
 
 const baseProps = {
@@ -113,3 +114,41 @@ describe('AppShell fab leaving', () => {
     expect(fab.hasAttribute('inert')).toBe(false)
   })
 })
+
+describe('AppShell badges', () => {
+  const review = (count: number) => ({ count }) as ReviewCore
+
+  it('puts the count of payments to review on the Dashboard tab, and keeps Settings for access requests', () => {
+    render(
+      <ReviewContext.Provider value={review(4)}>
+        <AppShell {...baseProps} settingsBadge={2}>
+          content
+        </AppShell>
+      </ReviewContext.Provider>,
+    )
+
+    expect(screen.getAllByLabelText('4 payments to review').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('2 pending access requests').length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('4 pending access requests')).not.toBeInTheDocument()
+  })
+
+  it('shows no Dashboard badge with nothing to review or with the flag off, and 9+ for a long queue', () => {
+    const { rerender } = render(
+      <ReviewContext.Provider value={review(0)}>
+        <AppShell {...baseProps}>content</AppShell>
+      </ReviewContext.Provider>,
+    )
+    expect(screen.queryByLabelText(/payments to review/)).not.toBeInTheDocument()
+
+    rerender(<AppShell {...baseProps}>content</AppShell>)
+    expect(screen.queryByLabelText(/payments to review/)).not.toBeInTheDocument()
+
+    rerender(
+      <ReviewContext.Provider value={review(12)}>
+        <AppShell {...baseProps}>content</AppShell>
+      </ReviewContext.Provider>,
+    )
+    expect(screen.getAllByLabelText('12 payments to review')[0]).toHaveTextContent('9+')
+  })
+})
+

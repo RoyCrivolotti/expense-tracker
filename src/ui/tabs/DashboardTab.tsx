@@ -13,6 +13,7 @@ import { BudgetBar } from '../components/BudgetBar'
 import { GoalsCard } from '../components/GoalsCard'
 import { CardStatementsCard } from '../components/CardStatementsCard'
 import { DashboardRecentActivity } from './DashboardRecentActivity'
+import { ReviewCardSlot } from '../capture/ReviewCardSlot'
 import styles from './tabs.module.css'
 
 import type { TabId } from '../nav/navItems'
@@ -119,6 +120,7 @@ export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }
 
   return (
     <div className={styles.stack}>
+      <ReviewCardSlot />
       <Card className={styles.kpiGrid}>
         <Kpi label="Income" cents={totals?.incomeCents ?? 0} type="income" />
         <Kpi label="Expenses" cents={totals?.expensesCents ?? 0} type="expense" />
