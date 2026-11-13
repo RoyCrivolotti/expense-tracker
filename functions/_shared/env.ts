@@ -18,6 +18,11 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string
   /** The Access application's AUD tag; see ACCESS_TEAM_DOMAIN. */
   ACCESS_AUD?: string
+  /**
+   * The capture Worker's public address for this environment, shown on the setup screen. A plain variable, not a secret.
+   * Kept out of the repo because the hostname is private; unset, the screen asks the person to paste it.
+   */
+  CAPTURE_ENDPOINT?: string
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
