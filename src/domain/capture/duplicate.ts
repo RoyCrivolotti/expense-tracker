@@ -76,9 +76,11 @@ export function candidateSpan(payments: readonly PaymentToMatch[]): { from: stri
 /** Whether a row looks like the same payment: the same direction, the amount to the cent, and a date inside the window. */
 function isMatch(payment: PaymentToMatch, row: TypedRow): boolean {
   if (!canMatch(payment)) return false
+  // The amount first: it rules out almost every candidate, and the date arithmetic is the dearer test.
+  if (Math.abs(row.amountCents) !== payment.amountCents) return false
   const signed = dayGap(row.date, payment.localDate)
   if (signed < -DUPLICATE_WINDOW.daysBack || signed > DUPLICATE_WINDOW.daysForward) return false
-  return Math.abs(row.amountCents) === payment.amountCents && rowDirection(row.type, row.amountCents) === paymentDirection(payment.suggestedType)
+  return rowDirection(row.type, row.amountCents) === paymentDirection(payment.suggestedType)
 }
 
 /**
