@@ -404,15 +404,17 @@ describe('a card linked from the form', () => {
     expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['ready', 'ready', 'ready'])
   })
 
-  it('says so, and still lets the payment be added, when the card cannot be remembered', async () => {
+  it('says why, without showing a toast of its own, when the card cannot be remembered', async () => {
     vi.mocked(cardsApi.linkCard).mockRejectedValue(new Error('You already have the most card links allowed. Remove one first.'))
     const actions = await show([known(A, { accountId: null, card })])
     press('review 1')
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
 
-    await act(async () => void (await seed.card!.remember(2)))
+    let why: string | null = null
+    await act(async () => void (why = await seed.card!.remember(2)))
 
-    expect(showToast).toHaveBeenLastCalledWith('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.', 'error')
+    expect(why).toBe('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    expect(showToast).not.toHaveBeenCalled()
   })
 
   it('says something plain when the failure is not an Error', async () => {
@@ -421,9 +423,10 @@ describe('a card linked from the form', () => {
     press('review 1')
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
 
-    await act(async () => void (await seed.card!.remember(2)))
+    let why: string | null = null
+    await act(async () => void (why = await seed.card!.remember(2)))
 
-    expect(showToast).toHaveBeenLastCalledWith('The payment was added, but this card could not be remembered: something went wrong', 'error')
+    expect(why).toBe('The payment was added, but this card could not be remembered: something went wrong')
   })
 
   it('asks nothing for a payment whose account is known or that showed no card', async () => {

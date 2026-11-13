@@ -57,8 +57,10 @@ export interface SeedCard {
   source: 'iberia' | 'santander'
   digits: string
   answer: { accountId: number | null; remember: boolean }
-  /** Links the card to the account the payment is saved with. Does not throw: a failure is told to the person. */
-  remember: (accountId: number) => Promise<void>
+  /** What the form says when the payment is saved before the card is answered. */
+  unanswered: string
+  /** Links the card to the account the payment was saved with. Never throws: resolves with the message to tell if it failed, or null. */
+  remember: (accountId: number) => Promise<string | null>
 }
 
 /** The two readings of a payment's date, one of which the form starts on. The button moves between them. */

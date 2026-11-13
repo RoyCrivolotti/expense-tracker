@@ -169,7 +169,27 @@ describe('payments to review on the Dashboard', () => {
 
     await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 })))
     expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
-    expect(vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]!)
+    // The card is remembered once the payment is saved, so a failed save leaves no link.
+    expect(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]!)
+  })
+
+  it('does not let the payment be saved until the card is answered, so the account is never a guess', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
+      next: null,
+      openCount: 1,
+    })
+    vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [], waiting: [] })
+    open()
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    const form = (await screen.findByRole('dialog')).querySelector('form')!
+
+    fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    expect(api.submitRecommendation).not.toHaveBeenCalled()
+    expect(cardsApi.linkCard).not.toHaveBeenCalled()
   })
 
   it('does not ask about a card whose account is known', async () => {

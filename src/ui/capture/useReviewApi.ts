@@ -4,7 +4,6 @@ import { dismissRecommendation, linkRecommendation } from '../../data/recommenda
 import { announceRecommendationsChanged, type RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { useToast } from '../hooks/useToast'
 import type { ReviewCore } from './reviewContext'
 import { describeRecommendation, transactionOf, type ReviewView } from './reviewFields'
 import { toastText } from './reviewFormat'
@@ -41,7 +40,6 @@ const name = (view: ReviewView) => view.description || 'Payment'
 export function useReviewApi(core: ReviewCore): ReviewApi {
   const { model, decide, submit, openForm } = core
   const format = useMoneyFormat()
-  const { showToast } = useToast()
   const merchants = useMemo(() => buildMerchantIndex(model.dataset.transactions), [model.dataset.transactions])
   // Cards just linked, by `source:digits`, until the next read brings the server's own accounts.
   const [linked, setLinked] = useState<ReadonlyMap<string, number>>(new Map())
@@ -62,17 +60,18 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
     decide(view.rec.id, message, `remove ${name(view)}`, () => dismissRecommendation(view.rec.id))
   }
-  /** Remembers the card for the account the payment is saved with. A failure is told, and the payment is still added. */
-  const remember = (source: 'iberia' | 'santander', digits: string) => async (accountId: number) => {
+  /** Links the card to the account the payment was saved with, and says why when it cannot. */
+  const remember = (source: 'iberia' | 'santander', digits: string) => async (accountId: number): Promise<string | null> => {
     try {
       await linkCard(source, digits, accountId)
       setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))
       announceRecommendationsChanged()
+      return null
     } catch (e) {
-      showToast(`The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`, 'error')
+      return `The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`
     }
   }
-  const rememberFor = (v: ReviewView) => (accountId: number) => (v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve())
+  const rememberFor = (v: ReviewView) => (accountId: number) => (v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve(null))
   return {
     views,
     count: core.count,

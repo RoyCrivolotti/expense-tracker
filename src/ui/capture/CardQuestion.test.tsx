@@ -14,7 +14,7 @@ const accounts: Account[] = [
   { id: 2, name: 'Travel Credit', kind: 'credit', settlement: 'deferred', active: true },
   { id: 3, name: 'Closed', kind: 'debit', settlement: 'immediate', active: false },
 ]
-const seedCard = (): SeedCard => ({ source: 'iberia', digits: '4821', answer: { accountId: null, remember: true }, remember: vi.fn() })
+const seedCard = (): SeedCard => ({ source: 'iberia', digits: '4821', answer: { accountId: null, remember: true }, unanswered: 'Choose the account first', remember: vi.fn() })
 const links = (cards: api.CardLink[]) => vi.mocked(api.fetchCardLinks).mockResolvedValue({ cards, waiting: [] })
 
 describe('the question about a card', () => {

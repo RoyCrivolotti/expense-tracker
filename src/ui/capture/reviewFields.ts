@@ -43,8 +43,8 @@ function knownReferences(rec: RecommendationInfo, categoryIdFromHistory: number 
   return {
     categoryId: category?.active ? category.id : null,
     categoryName: category?.active ? category.name : null,
-    accountId: account ? account.id : null,
-    accountName: account?.name ?? null,
+    accountId: account?.active ? account.id : null,
+    accountName: account?.active ? account.name : null,
   }
 }
 
@@ -105,7 +105,7 @@ export function seedOf(view: ReviewView, remember?: SeedCard['remember']): Trans
     ...(view.accountId !== null ? { accountId: view.accountId } : {}),
     ...(view.categoryId !== null ? { categoryId: view.categoryId } : {}),
     ...noticeOf(view),
-    ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, remember } } : {}),
+    ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, unanswered: `Choose the account for the card ending ${view.askCard.digits} first`, remember } } : {}),
   }
 }
 

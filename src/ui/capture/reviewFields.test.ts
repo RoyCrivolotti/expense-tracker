@@ -157,7 +157,7 @@ describe('seedOf', () => {
 
 describe('the card to ask about', () => {
   const card = { source: 'iberia' as const, digits: '4821' }
-  const remember = () => Promise.resolve()
+  const remember = () => Promise.resolve(null)
 
   it('is asked when the push showed a card and no account is known for it', () => {
     expect(view({ card, accountId: null }).askCard).toEqual(card)
@@ -176,9 +176,22 @@ describe('the card to ask about', () => {
   it('goes into the form seed with nothing answered and remembering on, only when there is something to remember with', () => {
     const asked = view({ card, accountId: null })
 
-    expect(seedOf(asked, remember).card).toEqual({ ...card, answer: { accountId: null, remember: true }, remember })
+    expect(seedOf(asked, remember).card).toEqual({ ...card, answer: { accountId: null, remember: true }, unanswered: 'Choose the account for the card ending 4821 first', remember })
     expect(seedOf(asked)).not.toHaveProperty('card')
     expect(seedOf(view({ card, accountId: 1 }), remember)).not.toHaveProperty('card')
+  })
+})
+
+describe('an archived account', () => {
+  it('is not an account for one tap: the payment goes to Review and asks about its card', () => {
+    const v = view({ accountId: 3, card: { source: 'iberia', digits: '4821' } })
+
+    expect(v.accountId).toBeNull()
+    expect(v.accountName).toBeNull()
+    expect(v.reasons).toContain('no-account')
+    expect(v.oneTap).toBe(false)
+    expect(v.askCard).toEqual({ source: 'iberia', digits: '4821' })
+    expect(transactionOf(v)).toBeNull()
   })
 })
 

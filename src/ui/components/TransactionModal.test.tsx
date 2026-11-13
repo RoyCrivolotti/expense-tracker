@@ -8,6 +8,7 @@ import { makeActions } from '../../testing/makeActions'
 import { makeLabel, makeTransaction } from '../../testing/factories'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { ToastContext } from '../hooks/useToast'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
 
@@ -72,6 +73,19 @@ function renderModal(
         onClose={onClose}
       />
     </MoneyFormatProvider>,
+  )
+  return Object.assign(view, { actions, onClose })
+}
+
+function renderModalWithToasts(props: Parameters<typeof renderModal>[0], onToast: (message: string) => void) {
+  const actions = makeActions(props?.actions ?? {})
+  const onClose = vi.fn()
+  const view = render(
+    <ToastContext.Provider value={{ showToast: (message: string) => onToast(message) }}>
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <TransactionModal model={model(props?.plan, props?.labels)} actions={actions} editing={null} seed={props?.seed} onClose={onClose} />
+      </MoneyFormatProvider>
+    </ToastContext.Provider>,
   )
   return Object.assign(view, { actions, onClose })
 }
@@ -976,36 +990,74 @@ describe('TransactionModal, a card the person answered for', () => {
     source: 'iberia' as const,
     digits: '4821',
     answer: { accountId: 2, remember: true, ...over },
-    remember: vi.fn().mockResolvedValue(undefined),
+    unanswered: 'Choose the account for the card ending 4821 first',
+    remember: vi.fn<(accountId: number) => Promise<string | null>>().mockResolvedValue(null),
   })
   const seedWith = (c: ReturnType<typeof card>): TransactionSeed => ({ recommendationId: 'r', amountCents: 840, description: 'Kebab', type: 'expense', accountId: 1, categoryId: 1, card: c })
+  const add = (container: HTMLElement) => fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
 
-  it('remembers the card for the account the payment is saved with, before it is saved', async () => {
+  it('remembers the card for the account the payment is saved with, after it is saved', async () => {
     const order: string[] = []
     const c = card()
-    c.remember.mockImplementation(() => Promise.resolve(void order.push('remember')))
+    c.remember.mockImplementation(() => {
+      order.push('remember')
+      return Promise.resolve(null)
+    })
     const submitRecommendation = vi.fn().mockImplementation(() => {
       order.push('submit')
       return Promise.resolve(makeTransaction({ id: 9 }))
     })
     const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
 
-    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    add(container)
 
-    await waitFor(() => expect(submitRecommendation).toHaveBeenCalled())
-    expect(c.remember).toHaveBeenCalledWith(1)
-    expect(order).toEqual(['remember', 'submit'])
+    await waitFor(() => expect(c.remember).toHaveBeenCalledWith(1))
+    expect(order).toEqual(['submit', 'remember'])
   })
 
-  it.each([
-    ['it was not answered', { accountId: null }],
-    ['remembering is off', { remember: false }],
-  ])('does not remember it when %s', async (_name, answer) => {
+  it('does not save, or remember anything, until the card is answered, and says why', async () => {
+    const c = card({ accountId: null })
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    expect(await screen.findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+
+  it('does not remember the card when the payment could not be saved, so no message is told about a payment that was not added', async () => {
+    const c = card()
+    const submitRecommendation = vi.fn().mockRejectedValue(new Error('Request failed (500)'))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    expect(await screen.findByText('Request failed (500)')).toBeInTheDocument()
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+
+  it('tells that the payment was added but the card was not remembered, after the form says it was added, and still closes', async () => {
+    const shown: string[] = []
+    const c = card()
+    c.remember.mockResolvedValue('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, onClose } = renderModalWithToasts({ seed: seedWith(c), actions: { submitRecommendation } }, (m) => shown.push(m))
+
+    add(container)
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(shown.at(-1)).toBe('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    expect(shown.indexOf('Transaction added')).toBeLessThan(shown.length - 1)
+  })
+
+  it.each([['remembering is off', { remember: false }]])('does not remember it when %s', async (_name, answer) => {
     const c = card(answer)
     const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
     const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
 
-    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    add(container)
 
     await waitFor(() => expect(submitRecommendation).toHaveBeenCalled())
     expect(c.remember).not.toHaveBeenCalled()

@@ -40,6 +40,7 @@ export function makeReviewModel(): ExpenseModel {
       accounts: [
         { id: 1, name: 'Main Debit', kind: 'debit', settlement: 'immediate', active: true },
         { id: 2, name: 'Travel Credit', kind: 'credit', settlement: 'deferred', active: true },
+        { id: 3, name: 'Archived Card', kind: 'credit', settlement: 'deferred', active: false },
       ],
       transactions: [
         makeTransaction({ id: 1, description: 'Cafe Example', categoryId: 1, date: '2026-10-02', amountCents: 350 }),
