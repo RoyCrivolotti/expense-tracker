@@ -89,11 +89,40 @@ describe('the first-payment check', () => {
     await waitFor(() => expect(calls()).toBe(4))
   })
 
+  it('says only Checking while the read is out, and claims nothing about the phone', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Checking')).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Waiting for your first payment')).not.toBeInTheDocument()
+  })
+
+  it('adds how many were unread beside a recent payment, with no change of state', async () => {
+    status({ ...none, lastCaptureAt: new Date().toISOString(), received: 5, unrecognised: 2 })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
+    expect(screen.getByText(/2 of 5 unread in the last 7 days\./)).toBeInTheDocument()
+  })
+
+  it('says nothing of unread pushes when none was unread', async () => {
+    status({ ...none, lastCaptureAt: new Date().toISOString(), received: 5, unrecognised: 0 })
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Last payment captured')
+    expect(screen.queryByText(/unread in the last 7 days/)).not.toBeInTheDocument()
+  })
+
   it('shows why when it cannot read', async () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockRejectedValue(new Error('Request failed (500)'))
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Request failed (500)')
+    // The error line alone: no claim that nothing arrived, and no Checking left behind.
+    expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Waiting for your first payment')).not.toBeInTheDocument()
+    expect(screen.queryByText('Checking')).not.toBeInTheDocument()
   })
 })
 

@@ -25,7 +25,18 @@ function WaitingText({
   iberia: SourceStatus | undefined
   neverUsed: boolean
 }) {
-  if (state === 'ok') return <p>{lastText(iberia)}</p>
+  if (state === 'ok') {
+    const unread =
+      iberia && iberia.unrecognised > 0
+        ? ` ${iberia.unrecognised} of ${iberia.received} unread in the last 7 days.`
+        : ''
+    return (
+      <p>
+        {lastText(iberia)}
+        {unread}
+      </p>
+    )
+  }
   if (state === 'quiet') {
     return (
       <p>
@@ -50,7 +61,20 @@ function WaitingText({
   )
 }
 
-export function Waiting({ setup }: { setup: Pick<ReturnType<typeof useCaptureSetup>, 'status' | 'keys' | 'recheck'> }) {
+export function Waiting({
+  setup,
+}: {
+  setup: Pick<ReturnType<typeof useCaptureSetup>, 'status' | 'keys' | 'recheck' | 'error'>
+}) {
+  // A read that has not landed, or failed, says nothing about the phone: the card shows the error line, never a claim.
+  if (setup.error) return null
+  if (!setup.status) {
+    return (
+      <li className={styles.step} aria-live="polite">
+        <span className={styles.stepTitle}>Checking</span>
+      </li>
+    )
+  }
   const iberia = setup.status?.sources.find((s) => s.source === 'iberia')
   const state = sourceState(iberia, new Date())
   const neverUsed = setup.keys !== null && setup.keys.length > 0 && setup.keys.every((k) => !k.lastUsedAt)

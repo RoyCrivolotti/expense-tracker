@@ -191,7 +191,7 @@ Only Iberia has a recipe; Santander joins with its own change.
    seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
    was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
    push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
-   with the time, otherwise. It is information only: there is no banner, reconciliation or notification, so a stopped
+   with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
    automation is noticed only by the person.
 
 The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
