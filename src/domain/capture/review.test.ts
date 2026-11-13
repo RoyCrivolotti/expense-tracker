@@ -4,6 +4,7 @@ import { recommendedBudgetMonth } from '../engine/status'
 import {
   MIN_SIGHTINGS,
   bookingDates,
+  bankMerchantName,
   buildMerchantIndex,
   merchantHistory,
   merchantKey,
@@ -34,6 +35,18 @@ describe('merchantKey', () => {
   it('is empty when nothing readable is left', () => {
     expect(merchantKey('0042 7')).toBe('')
     expect(merchantKey('')).toBe('')
+  })
+})
+
+describe('bankMerchantName', () => {
+  it('drops the words that hold a digit and keeps the bank spelling', () => {
+    expect(bankMerchantName('CAFE EXAMPLE 0042')).toBe('CAFE EXAMPLE')
+    expect(bankMerchantName('Shop No7 North')).toBe('Shop North')
+  })
+
+  it('keeps the bank text when every word holds a digit, and is empty for nothing', () => {
+    expect(bankMerchantName('0042 7B')).toBe('0042 7B')
+    expect(bankMerchantName('')).toBe('')
   })
 })
 

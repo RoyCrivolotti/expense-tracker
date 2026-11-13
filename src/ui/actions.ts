@@ -48,6 +48,17 @@ export interface TransactionSeed {
   queue?: SeedQueue
   /** A note shown under the date for a payment whose date could be read two ways. */
   notice?: SeedNotice
+  /** Set for a payment from a card that is not linked to an account, so the form asks which account it is. */
+  card?: SeedCard
+}
+
+/** A card the form asks about. `answer` is filled in by the form as the person answers. */
+export interface SeedCard {
+  source: 'iberia' | 'santander'
+  digits: string
+  answer: { accountId: number | null; remember: boolean }
+  /** Links the card to the account the payment is saved with. Does not throw: a failure is told to the person. */
+  remember: (accountId: number) => Promise<void>
 }
 
 /** The two readings of a payment's date, one of which the form starts on. The button moves between them. */

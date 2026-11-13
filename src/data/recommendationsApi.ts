@@ -21,6 +21,8 @@ export interface RecommendationInfo {
    * A row the person typed that looks like this payment, when the server says so. Not sent yet: the screen treats its
    * absence as "no match known", and its presence as a reason to look before adding.
    */
+  /** The card the push showed: the bank app and the last four digits. Null for a push with no digits. */
+  card?: { source: 'iberia' | 'santander'; digits: string } | null
   possibleMatch?: { id: number; description: string; date: string } | null
 }
 
@@ -39,7 +41,7 @@ export function fetchRecommendations(after?: string): Promise<RecommendationPage
   return req<RecommendationPage>(`/api/recommendations?${query}`)
 }
 
-const path = (id: string, action: string) => `/api/recommendations/${encodeURIComponent(id)}/${action}`
+export const path = (id: string, action: string) => `/api/recommendations/${encodeURIComponent(id)}/${action}`
 
 /** Creates the transaction the person edited and marks the recommendation done, in one request. */
 export function submitRecommendation(id: string, input: NewTransaction): Promise<Transaction> {
@@ -47,19 +49,6 @@ export function submitRecommendation(id: string, input: NewTransaction): Promise
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
-  })
-}
-
-export async function dismissRecommendation(id: string): Promise<void> {
-  await req<{ ok: true }>(path(id, 'dismiss'), { method: 'POST' })
-}
-
-/** The person already typed this payment: point the recommendation at that row and create nothing. */
-export async function linkRecommendation(id: string, transactionId: number): Promise<void> {
-  await req<{ ok: true }>(path(id, 'link'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ transactionId }),
   })
 }
 

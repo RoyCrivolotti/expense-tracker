@@ -460,7 +460,7 @@ export function TransactionForm({
             pendingFiles={pendingFiles}
             onPendingChange={setPendingFiles}
             installmentChip={installment.chip}
-            seedNotice={seed?.notice}
+            seed={seed}
           />
           {installment.bar}
           <FormError message={err} />

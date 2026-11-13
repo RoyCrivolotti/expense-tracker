@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { dismissRecommendation, linkRecommendation } from '../../data/recommendationsApi'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { linkCard } from '../../data/captureCardsApi'
+import { dismissRecommendation, linkRecommendation } from '../../data/recommendationDecisionsApi'
+import { announceRecommendationsChanged, type RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { useToast } from '../hooks/useToast'
 import type { ReviewCore } from './reviewContext'
 import { describeRecommendation, transactionOf, type ReviewView } from './reviewFields'
 import { toastText } from './reviewFormat'
@@ -26,13 +29,28 @@ export interface ReviewApi {
   review: (view: ReviewView) => void
 }
 
+/** The payment with the account its card was just linked to, when it was. */
+function withLink(rec: RecommendationInfo, linked: ReadonlyMap<string, number>): RecommendationInfo {
+  const account = rec.card ? linked.get(`${rec.card.source}:${rec.card.digits}`) : undefined
+  return account === undefined ? rec : { ...rec, accountId: account }
+}
+
 const name = (view: ReviewView) => view.description || 'Payment'
 
 /** Works the payments out as the seven fields a person sees, and turns a press into a held decision. */
 export function useReviewApi(core: ReviewCore): ReviewApi {
-  const { model, items, decide, submit, openForm } = core
+  const { model, decide, submit, openForm } = core
   const format = useMoneyFormat()
+  const { showToast } = useToast()
   const merchants = useMemo(() => buildMerchantIndex(model.dataset.transactions), [model.dataset.transactions])
+  // Cards just linked, by `source:digits`, until the next read brings the server's own accounts.
+  const [linked, setLinked] = useState<ReadonlyMap<string, number>>(new Map())
+  const [seenLoads, setSeenLoads] = useState(core.loads)
+  if (seenLoads !== core.loads) {
+    setSeenLoads(core.loads)
+    setLinked(new Map())
+  }
+  const items = useMemo(() => core.items.map((r) => withLink(r, linked)), [core.items, linked])
   const views = useMemo(() => items.map((r) => describeRecommendation(r, model, merchants)), [items, model, merchants])
   // The queue reads the latest views when it moves on, not the ones it started with.
   const latest = useRef(views)
@@ -44,6 +62,17 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
     decide(view.rec.id, message, `remove ${name(view)}`, () => dismissRecommendation(view.rec.id))
   }
+  /** Remembers the card for the account the payment is saved with. A failure is told, and the payment is still added. */
+  const remember = (source: 'iberia' | 'santander', digits: string) => async (accountId: number) => {
+    try {
+      await linkCard(source, digits, accountId)
+      setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))
+      announceRecommendationsChanged()
+    } catch (e) {
+      showToast(`The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`, 'error')
+    }
+  }
+  const rememberFor = (v: ReviewView) => (accountId: number) => (v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve())
   return {
     views,
     count: core.count,
@@ -67,7 +96,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     review: (view) => {
       const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
       const after = latest.current.slice(at + 1).map((v) => v.rec.id)
-      openForm(queuedSeed(view, after, () => latest.current, dontAdd))
+      openForm(queuedSeed(view, after, () => latest.current, dontAdd, rememberFor))
     },
   }
 }

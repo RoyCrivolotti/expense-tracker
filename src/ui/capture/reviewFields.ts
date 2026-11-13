@@ -1,9 +1,9 @@
 import type { NewTransaction } from '../../data/dataSource'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { cleanText } from '../../domain/capture/text'
-import { merchantHistory, otherBudgetDays, paymentClock, reviewReasons, type MerchantIndex, type PaymentClock, type ReviewReason } from '../../domain/capture/review'
+import { bankMerchantName, merchantHistory, otherBudgetDays, paymentClock, reviewReasons, type MerchantIndex, type PaymentClock, type ReviewReason } from '../../domain/capture/review'
 import type { TxnType } from '../../types'
-import type { TransactionSeed } from '../actions'
+import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
 import { monthEdgeNotice } from './reviewNotice'
 import type { ExpenseModel } from '../useExpenseData'
@@ -11,11 +11,13 @@ import type { ExpenseModel } from '../useExpenseData'
 /** The seven things a payment becomes, worked out from the push and the person's own history. Never stored. */
 export interface ReviewView {
   rec: RecommendationInfo
+  /** The card to ask about: the push showed one and it is not linked to an account that exists. */
+  askCard: { source: 'iberia' | 'santander'; digits: string } | null
   type: TxnType | null
   amountCents: number | null
   /** The merchant as the person last typed it, else the bank's text cleaned, else empty. */
   description: string
-  /** True when the description is how the person typed this merchant before, not the bank's text. */
+  /** True when the description is how the person typed this merchant before, not the bank's own text. */
   fromHistory: boolean
   categoryId: number | null
   categoryName: string | null
@@ -67,9 +69,10 @@ export function describeRecommendation(rec: RecommendationInfo, model: ExpenseMo
   })
   return {
     rec,
+    askCard: refs.accountId === null && rec.card ? rec.card : null,
     type: rec.suggestedType,
     amountCents: rec.amountCents,
-    description: history.label ?? bankText ?? '',
+    description: history.label ?? (bankText ? bankMerchantName(bankText) : ''),
     fromHistory: history.label !== null,
     ...refs,
     date: rec.localDate,
@@ -88,7 +91,7 @@ const noticeOf = (view: ReviewView) => {
 }
 
 /** What the add form opens with. Nothing the push could not say is filled in, and the form shows the rest. */
-export function seedOf(view: ReviewView): TransactionSeed {
+export function seedOf(view: ReviewView, remember?: SeedCard['remember']): TransactionSeed {
   const foreign = view.reasons.includes('foreign')
   return {
     recommendationId: view.rec.id,
@@ -97,11 +100,12 @@ export function seedOf(view: ReviewView): TransactionSeed {
     // Cents in another currency are not euros: the person types what the bank charged.
     ...(view.amountCents !== null && !foreign ? { amountCents: view.amountCents } : {}),
     ...(view.type ? { type: view.type } : {}),
-    // A description only from the person's own history: an empty one beats a wrong one.
-    ...(view.fromHistory ? { description: view.description } : {}),
+    // How the person typed this merchant before, else the bank's own text without its store number.
+    ...(view.description ? { description: view.description } : {}),
     ...(view.accountId !== null ? { accountId: view.accountId } : {}),
     ...(view.categoryId !== null ? { categoryId: view.categoryId } : {}),
     ...noticeOf(view),
+    ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, remember } } : {}),
   }
 }
 

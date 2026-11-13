@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as cardsApi from '../../data/captureCardsApi'
+import * as decisions from '../../data/recommendationDecisionsApi'
 import * as api from '../../data/recommendationsApi'
 import { makeActions } from '../../testing/makeActions'
 import { makeTransaction } from '../../testing/factories'
@@ -13,12 +15,12 @@ import { useReviewApi } from './useReviewApi'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { UNDO_MS } from './usePendingAction'
 
+vi.mock('../../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), linkCard: vi.fn() }))
 vi.mock('../../data/recommendationsApi', async (original) => ({
   ...(await original<typeof api>()),
   fetchRecommendations: vi.fn(),
-  dismissRecommendation: vi.fn(),
-  linkRecommendation: vi.fn(),
 }))
+vi.mock('../../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
 
 const A = '0b0c0d0e-1111-4222-8333-444455556661'
 const B = '0b0c0d0e-1111-4222-8333-444455556662'
@@ -41,6 +43,7 @@ function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> })
       {r.views.map((v) => (
         <div key={v.rec.id} data-testid={v.rec.id}>
           <span>{v.description}</span>
+          <span data-testid={`ready-${v.rec.id.slice(-1)}`}>{v.oneTap ? 'ready' : `review:${v.accountId ?? 'none'}`}</span>
           <span>{r.failures.get(v.rec.id)}</span>
           <button onClick={() => r.add(v)}>add {v.rec.id.slice(-1)}</button>
           <button onClick={() => r.dontAdd(v)}>skip {v.rec.id.slice(-1)}</button>
@@ -77,8 +80,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   window.localStorage.clear()
   window.history.replaceState(null, '', '/?capture=on')
-  vi.mocked(api.dismissRecommendation).mockResolvedValue(undefined)
-  vi.mocked(api.linkRecommendation).mockResolvedValue(undefined)
+  vi.mocked(decisions.dismissRecommendation).mockResolvedValue(undefined)
+  vi.mocked(decisions.linkRecommendation).mockResolvedValue(undefined)
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -164,7 +167,7 @@ describe('one tap', () => {
     act(() => undo.onAction())
     await tick(UNDO_MS * 2)
 
-    expect(api.dismissRecommendation).not.toHaveBeenCalled()
+    expect(decisions.dismissRecommendation).not.toHaveBeenCalled()
     expect(screen.getByTestId(B)).toBeInTheDocument()
   })
 
@@ -243,7 +246,7 @@ describe('one tap', () => {
     await tick(UNDO_MS * 2)
 
     expect(showToast).not.toHaveBeenCalled()
-    expect(api.dismissRecommendation).not.toHaveBeenCalled()
+    expect(decisions.dismissRecommendation).not.toHaveBeenCalled()
     expect(screen.getByTestId(A)).toBeInTheDocument()
   })
 })
@@ -257,7 +260,7 @@ describe("Don't add", () => {
     expect(showToast.mock.calls[0]![0]).toContain('Only this suggestion is removed')
     expect(showToast.mock.calls[0]![0]).toContain('learns nothing')
     await tick(UNDO_MS)
-    expect(api.dismissRecommendation).toHaveBeenCalledExactlyOnceWith(A)
+    expect(decisions.dismissRecommendation).toHaveBeenCalledExactlyOnceWith(A)
     expect(actions!.submitRecommendation).not.toHaveBeenCalled()
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
     expect(screen.getByTestId(B)).toBeInTheDocument()
@@ -265,7 +268,7 @@ describe("Don't add", () => {
 
   it('puts the row back when the server refuses', async () => {
     await show([known(A)])
-    vi.mocked(api.dismissRecommendation).mockRejectedValue(new Error('Request failed (500)'))
+    vi.mocked(decisions.dismissRecommendation).mockRejectedValue(new Error('Request failed (500)'))
 
     press('skip 1')
     await tick(UNDO_MS)
@@ -283,7 +286,7 @@ describe('Link', () => {
 
     expect(showToast.mock.calls[0]![0]).toContain('To your typed row "Cafe". Nothing new is added.')
     await tick(UNDO_MS)
-    expect(api.linkRecommendation).toHaveBeenCalledExactlyOnceWith(A, 9)
+    expect(decisions.linkRecommendation).toHaveBeenCalledExactlyOnceWith(A, 9)
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
   })
 
@@ -293,12 +296,12 @@ describe('Link', () => {
     press('link 1')
     await tick(UNDO_MS)
 
-    expect(api.linkRecommendation).not.toHaveBeenCalled()
+    expect(decisions.linkRecommendation).not.toHaveBeenCalled()
   })
 
   it('puts the row back when the server says another recommendation already answers for that row', async () => {
     await show([known(A, { possibleMatch: { id: 9, description: 'Cafe', date: '2026-11-09' } })])
-    vi.mocked(api.linkRecommendation).mockRejectedValue(new Error('That transaction already answers for another recommendation'))
+    vi.mocked(decisions.linkRecommendation).mockRejectedValue(new Error('That transaction already answers for another recommendation'))
 
     press('link 1')
     await tick(UNDO_MS)
@@ -367,3 +370,69 @@ describe('review', () => {
     expect(showToast.mock.calls[0]![0]).toContain('Dec budget')
   })
 })
+
+describe('a card linked from the form', () => {
+  const card = { source: 'iberia' as const, digits: '4821' }
+  const three = () => [known(A, { accountId: null, card }), known(B, { accountId: null, card }), known(C, { accountId: null, card })]
+
+  it('asks about the card, then after it is linked all three payments from it are ready for one tap', async () => {
+    vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
+    const actions = await show(three())
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['review:none', 'review:none', 'review:none'])
+    press('review 1')
+    const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
+    expect(seed.card).toMatchObject({ ...card, answer: { accountId: null, remember: true } })
+
+    // The read that follows the link has not come back yet, so the payments take the account from what was just linked.
+    vi.mocked(api.fetchRecommendations).mockImplementation(() => new Promise(() => undefined))
+    await act(async () => void (await seed.card!.remember(2)))
+
+    expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['ready', 'ready', 'ready'])
+  })
+
+  it('keeps the account when the read that follows brings the server own rows', async () => {
+    vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
+    const actions = await show(three())
+    press('review 1')
+    const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
+    vi.mocked(api.fetchRecommendations).mockResolvedValue(page(...three().map((r) => ({ ...r, accountId: 2 }))))
+
+    await act(async () => void (await seed.card!.remember(2)))
+    await tick(0)
+
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['ready', 'ready', 'ready'])
+  })
+
+  it('says so, and still lets the payment be added, when the card cannot be remembered', async () => {
+    vi.mocked(cardsApi.linkCard).mockRejectedValue(new Error('You already have the most card links allowed. Remove one first.'))
+    const actions = await show([known(A, { accountId: null, card })])
+    press('review 1')
+    const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
+
+    await act(async () => void (await seed.card!.remember(2)))
+
+    expect(showToast).toHaveBeenLastCalledWith('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.', 'error')
+  })
+
+  it('says something plain when the failure is not an Error', async () => {
+    vi.mocked(cardsApi.linkCard).mockRejectedValue('boom')
+    const actions = await show([known(A, { accountId: null, card })])
+    press('review 1')
+    const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
+
+    await act(async () => void (await seed.card!.remember(2)))
+
+    expect(showToast).toHaveBeenLastCalledWith('The payment was added, but this card could not be remembered: something went wrong', 'error')
+  })
+
+  it('asks nothing for a payment whose account is known or that showed no card', async () => {
+    const actions = await show([known(A, { accountId: 1, card }), known(B, { accountId: null, card: null })])
+
+    press('review 1')
+    press('review 2')
+
+    for (const call of vi.mocked(actions!.onAdd).mock.calls) expect(call[0]!.card).toBeUndefined()
+  })
+})
+

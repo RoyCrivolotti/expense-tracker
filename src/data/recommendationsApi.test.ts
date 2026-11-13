@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   announceRecommendationsChanged,
-  dismissRecommendation,
   fetchRecommendations,
-  linkRecommendation,
   onRecommendationsChanged,
   submitRecommendation,
 } from './recommendationsApi'
@@ -47,27 +45,6 @@ describe('recommendation calls', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe(`/api/recommendations/${ID}/submit`)
     expect(init).toMatchObject({ method: 'POST', body: JSON.stringify(input) })
-  })
-
-  it('dismisses with no body', async () => {
-    const fetchMock = stub({ ok: true })
-
-    await dismissRecommendation(ID)
-
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`/api/recommendations/${ID}/dismiss`)
-    expect(init.method).toBe('POST')
-    expect(init.body).toBeUndefined()
-  })
-
-  it('links to the row the person typed', async () => {
-    const fetchMock = stub({ ok: true })
-
-    await linkRecommendation(ID, 12)
-
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`/api/recommendations/${ID}/link`)
-    expect(init.body).toBe('{"transactionId":12}')
   })
 })
 

@@ -19,6 +19,7 @@ function makeCore(over: Partial<ReviewCore> = {}): ReviewCore {
   return {
     model,
     items,
+    loads: 1,
     count: items.length,
     hasMore: false,
     more: vi.fn(),

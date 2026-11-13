@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LEDGER_MODE_KEY } from '../config/ledgerMode'
 import type { ExpenseDataSource } from '../data/dataSource'
+import * as cardsApi from '../data/captureCardsApi'
 import * as api from '../data/recommendationsApi'
 import { allGroupsGranted } from '../domain/accessGroups'
 import type { ExpenseDataset } from '../types'
@@ -12,11 +13,11 @@ import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
 import { UNDO_MS } from './capture/usePendingAction'
 
+vi.mock('../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), fetchCardLinks: vi.fn(), linkCard: vi.fn() }))
 vi.mock('../data/recommendationsApi', async (original) => ({
   ...(await original<typeof api>()),
   fetchRecommendations: vi.fn(),
   submitRecommendation: vi.fn(),
-  dismissRecommendation: vi.fn(),
 }))
 
 beforeAll(() => {
@@ -121,7 +122,7 @@ describe('payments to review on the Dashboard', () => {
 
     const form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByLabelText(/amount/i)).toHaveValue('8,00')
-    expect(within(form).getByLabelText(/description/i)).toHaveValue('')
+    expect(within(form).getByLabelText(/description/i)).toHaveValue('BRAND NEW PLACE')
     fireEvent.change(within(form).getByLabelText(/description/i), { target: { value: 'Bakery' } })
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
@@ -148,4 +149,38 @@ describe('payments to review on the Dashboard', () => {
     form = screen.getByRole('dialog').querySelector('form')!
     expect(within(form).getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
   })
+
+  it('asks which account a new card is, remembers the answer when the payment is saved, and uses it for the payment', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
+      next: null,
+      openCount: 1,
+    })
+    vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [{ source: 'iberia', digitsKind: 'card', digits: '1234', accountId: 2 }], waiting: [] })
+    vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
+    open()
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    const form = (await screen.findByRole('dialog')).querySelector('form')!
+
+    fireEvent.change(await screen.findByLabelText('Account for the card ending 4821'), { target: { value: '2' } })
+    expect(await screen.findByRole('option', { name: 'Travel Credit (also has card ending 1234)' })).toBeInTheDocument()
+    fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 })))
+    expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
+    expect(vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]!)
+  })
+
+  it('does not ask about a card whose account is known', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...unknown, accountId: 1, card: { source: 'iberia', digits: '4821' } }], next: null, openCount: 1 })
+    open()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+
+    await screen.findByRole('dialog')
+    expect(screen.queryByText(/Which account is the card/)).not.toBeInTheDocument()
+  })
 })
+

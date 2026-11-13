@@ -27,6 +27,8 @@ export function useRecommendationList(enabled: boolean) {
   const [openCount, setOpenCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
+  // How many reads have landed, so a caller can tell the rows are the server's latest.
+  const [loads, setLoads] = useState(0)
   // How many rows were showing, so a read brings back as many rather than only the first page.
   const shown = useRef(0)
 
@@ -41,6 +43,7 @@ export function useRecommendationList(enabled: boolean) {
         setNext(after)
         setOpenCount(count)
         setError(null)
+        setLoads((n) => n + 1)
       },
       (e: unknown) => current && setError(messageOf(e)),
     )
@@ -75,6 +78,7 @@ export function useRecommendationList(enabled: boolean) {
     items,
     hasMore: next !== null,
     openCount,
+    loads,
     error,
     more,
     remove,

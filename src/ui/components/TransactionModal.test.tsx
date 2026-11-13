@@ -970,3 +970,44 @@ describe('TransactionModal, a payment that could be dated two ways', () => {
     expect(singleForm(container).queryByRole('note')).not.toBeInTheDocument()
   })
 })
+
+describe('TransactionModal, a card the person answered for', () => {
+  const card = (over: Partial<NonNullable<TransactionSeed['card']>['answer']> = {}) => ({
+    source: 'iberia' as const,
+    digits: '4821',
+    answer: { accountId: 2, remember: true, ...over },
+    remember: vi.fn().mockResolvedValue(undefined),
+  })
+  const seedWith = (c: ReturnType<typeof card>): TransactionSeed => ({ recommendationId: 'r', amountCents: 840, description: 'Kebab', type: 'expense', accountId: 1, categoryId: 1, card: c })
+
+  it('remembers the card for the account the payment is saved with, before it is saved', async () => {
+    const order: string[] = []
+    const c = card()
+    c.remember.mockImplementation(() => Promise.resolve(void order.push('remember')))
+    const submitRecommendation = vi.fn().mockImplementation(() => {
+      order.push('submit')
+      return Promise.resolve(makeTransaction({ id: 9 }))
+    })
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalled())
+    expect(c.remember).toHaveBeenCalledWith(1)
+    expect(order).toEqual(['remember', 'submit'])
+  })
+
+  it.each([
+    ['it was not answered', { accountId: null }],
+    ['remembering is off', { remember: false }],
+  ])('does not remember it when %s', async (_name, answer) => {
+    const c = card(answer)
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalled())
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+})

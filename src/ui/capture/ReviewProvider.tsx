@@ -17,6 +17,7 @@ export function ReviewProvider({ model, actions, children }: { model: ExpenseMod
   const core: ReviewCore = {
     model,
     items: (list.items ?? []).filter((r) => !decisions.hidden.has(r.id)),
+    loads: list.loads,
     count: Math.max(0, list.openCount - decisions.hidden.size),
     hasMore: list.hasMore,
     more: () => void list.more(),

@@ -13,6 +13,8 @@ export interface ReviewCore {
   model: ExpenseModel
   /** The payments not yet decided here, newest day first. One waiting out its undo is not among them. */
   items: RecommendationInfo[]
+  /** How many reads of the list have landed, so the rows can be told apart from ones that were patched by hand. */
+  loads: number
   /** How many are open, counting those not loaded yet. */
   count: number
   hasMore: boolean

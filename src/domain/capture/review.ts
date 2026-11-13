@@ -36,6 +36,15 @@ export function merchantKey(text: string): string {
     .join(' ')
 }
 
+/**
+ * The merchant as the bank wrote it, less the words that hold a digit (store and terminal numbers), for a merchant the
+ * person has not typed before. The bank's own text when nothing else is left.
+ */
+export function bankMerchantName(text: string): string {
+  const words = text.split(' ').filter((word) => word !== '' && !/\d/.test(word))
+  return words.length > 0 ? words.join(' ') : text
+}
+
 /** Every merchant in the typed rows at once, so a list of payments is described in one pass over the rows. */
 export type MerchantIndex = ReadonlyMap<string, MerchantHistory & { newest: HistoryRow }>
 

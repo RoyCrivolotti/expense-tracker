@@ -1,4 +1,4 @@
-import type { TransactionSeed } from '../actions'
+import type { SeedCard, TransactionSeed } from '../actions'
 import type { ReviewView } from './reviewFields'
 import { seedOf } from './reviewFields'
 
@@ -11,17 +11,18 @@ export function queuedSeed(
   after: readonly string[],
   latest: () => readonly ReviewView[],
   dontAdd: (view: ReviewView) => void,
+  rememberFor: (view: ReviewView) => SeedCard['remember'],
 ): TransactionSeed {
   const stillOpen = (id: string) => latest().some((v) => v.rec.id === id)
   const next = (): TransactionSeed | undefined => {
     for (let i = 0; i < after.length; i++) {
       const found = latest().find((v) => v.rec.id === after[i])
-      if (found) return queuedSeed(found, after.slice(i + 1), latest, dontAdd)
+      if (found) return queuedSeed(found, after.slice(i + 1), latest, dontAdd, rememberFor)
     }
     return undefined
   }
   return {
-    ...seedOf(view),
+    ...seedOf(view, rememberFor(view)),
     queue: {
       left: after.filter(stillOpen).length,
       next,

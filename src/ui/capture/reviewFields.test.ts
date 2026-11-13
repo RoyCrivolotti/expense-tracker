@@ -132,10 +132,15 @@ describe('seedOf', () => {
     })
   })
 
-  it('leaves out what is not known: no description from bank text, no euros from another currency, no type for own money', () => {
-    const seed = seedOf(view({ merchantRaw: 'BRAND NEW PLACE', currency: 'USD', suggestedType: null, accountId: null }))
+  it('leaves out what is not known: no euros from another currency, no type for own money, no description with no merchant', () => {
+    const seed = seedOf(view({ merchantRaw: null, currency: 'USD', suggestedType: null, accountId: null }))
 
     expect(seed).toEqual({ recommendationId: '0b0c0d0e-1111-4222-8333-444455556661', date: '2026-11-10', budgetMonth: '2026-11' })
+  })
+
+  it('starts a merchant never typed from the bank text without its store number, and a known one from how it was typed', () => {
+    expect(seedOf(view({ merchantRaw: 'BRAND NEW PLACE 0042' })).description).toBe('BRAND NEW PLACE')
+    expect(seedOf(view()).description).toBe('Cafe Example')
   })
 
   it('carries the month-end note for a payment near a month end, and none otherwise', () => {
@@ -147,6 +152,33 @@ describe('seedOf', () => {
 
   it('leaves out an amount the push did not have', () => {
     expect(seedOf(view({ amountCents: null }))).not.toHaveProperty('amountCents')
+  })
+})
+
+describe('the card to ask about', () => {
+  const card = { source: 'iberia' as const, digits: '4821' }
+  const remember = () => Promise.resolve()
+
+  it('is asked when the push showed a card and no account is known for it', () => {
+    expect(view({ card, accountId: null }).askCard).toEqual(card)
+  })
+
+  it('is asked again when the account it was linked to has been deleted', () => {
+    expect(view({ card, accountId: 99 }).askCard).toEqual(card)
+  })
+
+  it('is not asked when the account is known, or when the push showed no digits', () => {
+    expect(view({ card, accountId: 1 }).askCard).toBeNull()
+    expect(view({ card: null, accountId: null }).askCard).toBeNull()
+    expect(view({ accountId: null }).askCard).toBeNull()
+  })
+
+  it('goes into the form seed with nothing answered and remembering on, only when there is something to remember with', () => {
+    const asked = view({ card, accountId: null })
+
+    expect(seedOf(asked, remember).card).toEqual({ ...card, answer: { accountId: null, remember: true }, remember })
+    expect(seedOf(asked)).not.toHaveProperty('card')
+    expect(seedOf(view({ card, accountId: 1 }), remember)).not.toHaveProperty('card')
   })
 })
 

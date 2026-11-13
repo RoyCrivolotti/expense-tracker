@@ -20,6 +20,9 @@ export function useQueueAdvance(
   return {
     /** Saves the form. After a create it asks the queue what comes next. */
     submit: async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
+      // A card the person answered for is remembered first, so the payments queued after this one already know it.
+      const card = seed?.card
+      if (id == null && card?.answer.remember && card.answer.accountId !== null) await card.remember(input.accountId)
       const saved = await saveTransaction(actions, input, id, intent, seed?.recommendationId)
       if (saved) next.current = queue?.next()
       return saved

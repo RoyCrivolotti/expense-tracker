@@ -3,7 +3,7 @@ import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
-import type { ExpenseActions, SeedNotice as SeedNoticeData } from '../actions'
+import type { ExpenseActions, TransactionSeed } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
@@ -18,7 +18,7 @@ import { createLabelInPlace } from './quickLabel'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
-import { SeedNotice } from './SeedNotice'
+import { SeedAddons } from './SeedAddons'
 import { dateChanger, type FormFields, type Setter } from './transactionFormState'
 import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
@@ -223,8 +223,8 @@ interface FieldsProps {
   receiptTargetId?: number | null
   /** Absent in read-only sessions, which is also when receipts are hidden. */
   actions?: ExpenseActions | undefined
-  /** A note under the date for a payment that could be dated two ways. */
-  seedNotice?: SeedNoticeData | undefined
+  /** What the form was opened for, which may ask about the card or note the date. */
+  seed?: TransactionSeed | undefined
   /**
    * The installment-plan toggle, rendered as a chip alongside "Add receipt" /
    * "Add note" when there's nothing to say about it yet ("Not part of a
@@ -264,7 +264,7 @@ export function Fields({
   onPendingChange,
   receiptTargetId = null,
   installmentChip,
-  seedNotice,
+  seed,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
@@ -311,7 +311,7 @@ export function Fields({
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
-      {seedNotice && <SeedNotice notice={seedNotice} date={form.date} onDate={onDate} />}
+      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} />
 
       {actions ? (
         <>
