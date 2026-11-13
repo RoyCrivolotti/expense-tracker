@@ -71,6 +71,9 @@ describe('a valid push', () => {
     ])
     const [rec] = rows('SELECT owner, amount_cents, suggested_type, state, account_id FROM recommendations')
     expect(rec).toEqual({ owner: ALICE, amount_cents: 3340, suggested_type: 'expense', state: 'open', account_id: null })
+    // The recommendation keeps the phone's own clock, the event the UTC instant.
+    expect(rows('SELECT occurred_at FROM recommendations')[0]?.occurred_at).toBe('2026-11-03T09:41:07+01:00')
+    expect(rows('SELECT occurred_at FROM capture_events')[0]?.occurred_at).toBe('2026-11-03T08:41:07.000Z')
     expect(rows('SELECT last_used_at FROM capture_keys WHERE key_id = ?'.replace('?', `'${minted.keyId}'`))[0]?.last_used_at).toBe(NOW.toISOString())
   })
 

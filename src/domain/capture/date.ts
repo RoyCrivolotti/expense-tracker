@@ -34,6 +34,18 @@ export function parsePushDate(date: string): PushInstant | null {
   return { instantMs: wall.getTime() - offset * 60_000, localDate: `${m[1]}-${m[2]}-${m[3]}`, offsetMinutes: offset }
 }
 
+/**
+ * The moment as the phone wrote it: wall-clock time with the phone's offset, never `Z`. The same instant as
+ * `new Date(instantMs).toISOString()`, but a reader can tell the phone's own time of day from it without a time
+ * zone database, and a `Z` still means "offset unknown".
+ */
+export function isoWithOffset(instantMs: number, offsetMinutes: number): string {
+  const wall = new Date(instantMs + offsetMinutes * 60_000).toISOString().slice(0, 19)
+  const abs = Math.abs(offsetMinutes)
+  const zone = `${offsetMinutes < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`
+  return `${wall}${zone}`
+}
+
 /** Whether a push dated at `instantMs` is believable when the server receives it at `receivedMs`. */
 export function withinClockSkew(instantMs: number, receivedMs: number): boolean {
   return Math.abs(instantMs - receivedMs) <= MAX_CLOCK_SKEW_MS
