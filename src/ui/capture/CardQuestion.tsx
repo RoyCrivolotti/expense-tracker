@@ -42,7 +42,7 @@ export default function CardQuestion({ card, accounts, onPick }: { card: SeedCar
             return (
               <option key={a.id} value={a.id}>
                 {a.name}
-                {also.length > 0 ? ` (also has card ending ${also.join(', ')})` : ''}
+                {also.length > 0 ? ` (also card ${also.join(', ')})` : ''}
               </option>
             )
           })}

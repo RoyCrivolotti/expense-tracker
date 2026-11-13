@@ -164,7 +164,7 @@ describe('payments to review on the Dashboard', () => {
     const form = (await screen.findByRole('dialog')).querySelector('form')!
 
     fireEvent.change(await screen.findByLabelText('Account for the card ending 4821'), { target: { value: '2' } })
-    expect(await screen.findByRole('option', { name: 'Travel Credit (also has card ending 1234)' })).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: 'Travel Credit (also card 1234)' })).toBeInTheDocument()
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 })))

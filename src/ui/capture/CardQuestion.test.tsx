@@ -70,7 +70,7 @@ describe('the question about a card', () => {
     links([{ source: 'iberia', digitsKind: 'card', digits: '1234', accountId: 1 }])
     render(<CardQuestion card={seedCard()} accounts={accounts} onPick={vi.fn()} />)
 
-    expect(await screen.findByRole('option', { name: 'Main Debit (also has card ending 1234)' })).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: 'Main Debit (also card 1234)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Travel Credit' })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Account for the card ending 4821'), { target: { value: '1' } })
 
