@@ -50,6 +50,17 @@ export interface TransactionSeed {
   notice?: SeedNotice
   /** Set for a payment from a card that is not linked to an account, so the form asks which account it is. */
   card?: SeedCard
+  /** The typed row the list already offered for this payment, so the form does not ask about it a second time. */
+  possibleMatch?: { transactionId: number; description: string; date: string }
+}
+
+/** What the add form offers when the server says a typed row already looks like the payment being added. */
+export interface DuplicateOffer {
+  match: { transactionId: number; description: string; date: string }
+  /** Points the payment at that row and creates nothing. Resolves with why it could not, or null once done. */
+  link: () => Promise<string | null>
+  /** Called by the button that submits the form again, which then goes ahead whatever the match. */
+  addAnyway: () => void
 }
 
 /** A card the form asks about. `answer` is filled in by the form as the person answers. */
@@ -96,7 +107,7 @@ export interface ExpenseActions {
   createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   /** Creates the transaction a captured payment became and marks that recommendation submitted, in one write. */
-  submitRecommendation?: (id: string, input: NewTransaction) => Promise<Transaction>
+  submitRecommendation?: (id: string, input: NewTransaction, allowDuplicate?: boolean) => Promise<Transaction>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   /** Resolves with the number of rows the server actually touched, which can be

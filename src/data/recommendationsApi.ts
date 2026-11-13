@@ -1,6 +1,6 @@
 import type { NewTransaction } from './dataSource'
 import type { Transaction } from '../types'
-import { req } from './apiClient'
+import { ApiError, req } from './apiClient'
 
 /** A push the app turned into something to review, as the list route sends it. Nothing here is an expense yet. */
 export interface RecommendationInfo {
@@ -26,6 +26,27 @@ export interface RecommendationInfo {
   possibleMatch?: { transactionId: number; description: string; date: string } | null
 }
 
+/** The typed row a payment may duplicate. */
+export type PossibleMatch = NonNullable<RecommendationInfo['possibleMatch']>
+
+/** The server refused a submit because a typed row already looks like the payment. Nothing was created. */
+export class PossibleDuplicateError extends Error {
+  readonly possibleMatch: PossibleMatch
+  constructor(possibleMatch: PossibleMatch) {
+    super('A typed row already looks like this payment')
+    this.name = 'PossibleDuplicateError'
+    this.possibleMatch = possibleMatch
+  }
+}
+
+function duplicateOf(error: unknown): PossibleMatch | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null
+  const body = error.body as { code?: unknown; possibleMatch?: Partial<PossibleMatch> } | undefined
+  const m = body?.possibleMatch
+  if (body?.code !== 'possible-duplicate' || !m || typeof m.transactionId !== 'number') return null
+  return { transactionId: m.transactionId, description: String(m.description ?? ''), date: String(m.date ?? '') }
+}
+
 export interface RecommendationPage {
   recommendations: RecommendationInfo[]
   next: string | null
@@ -43,13 +64,21 @@ export function fetchRecommendations(after?: string): Promise<RecommendationPage
 
 export const path = (id: string, action: string) => `/api/recommendations/${encodeURIComponent(id)}/${action}`
 
-/** Creates the transaction the person edited and marks the recommendation done, in one request. */
-export function submitRecommendation(id: string, input: NewTransaction): Promise<Transaction> {
-  return req<Transaction>(path(id, 'submit'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+/**
+ * Creates the transaction the person edited and marks the recommendation done, in one request. Rejects with
+ * `PossibleDuplicateError`, and nothing created, when a typed row already looks like it; `allowDuplicate` adds it anyway.
+ */
+export async function submitRecommendation(id: string, input: NewTransaction, allowDuplicate = false): Promise<Transaction> {
+  try {
+    return await req<Transaction>(path(id, 'submit'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(allowDuplicate ? { ...input, allowDuplicate: true } : input),
+    })
+  } catch (error) {
+    const match = duplicateOf(error)
+    throw match ? new PossibleDuplicateError(match) : error
+  }
 }
 
 const changes = new EventTarget()

@@ -20,8 +20,8 @@ export function createWrites(
       applyPatch((d) => patchAfterTransactionCreate(d, txn))
       return txn
     },
-    submitRecommendation: async (id: string, input: NewTransaction) => {
-      const txn = await submitRecommendation(id, input)
+    submitRecommendation: async (id: string, input: NewTransaction, allowDuplicate?: boolean) => {
+      const txn = await submitRecommendation(id, input, allowDuplicate)
       applyPatch((d) => patchAfterTransactionCreate(d, txn))
       announceRecommendationsChanged()
       return txn

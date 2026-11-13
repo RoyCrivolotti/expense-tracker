@@ -3,11 +3,17 @@ import { noteWriteResponse } from './writeReceipts'
 /** Thrown by `req` on a non-2xx response; `status` lets callers branch on e.g. 409 vs 404. */
 export class ApiError extends Error {
   readonly status: number
+  /**
+   * The JSON the server answered with, for the few routes whose refusal carries more than a message. Not enumerable,
+   * so an error still compares and prints as its message and status.
+   */
+  declare readonly body: unknown
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    Object.defineProperty(this, 'body', { value: body, enumerable: false })
   }
 }
 
@@ -23,13 +29,15 @@ export function wasRefused(error: unknown): boolean {
 
 export async function toApiError(res: Response): Promise<ApiError> {
   let message = `Request failed (${res.status})`
+  let parsed: unknown
   try {
     const body = (await res.json()) as { error?: string }
+    parsed = body
     if (body.error) message = body.error
   } catch {
     /* ignore */
   }
-  return new ApiError(message, res.status)
+  return new ApiError(message, res.status, parsed)
 }
 
 /**

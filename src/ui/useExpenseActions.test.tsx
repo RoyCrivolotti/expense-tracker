@@ -87,7 +87,7 @@ describe('useExpenseActions', () => {
       expect(await result.current!.submitRecommendation!('rec-1', newTxn)).toBe(savedTxn)
     })
 
-    expect(submitRecommendation).toHaveBeenCalledWith('rec-1', newTxn)
+    expect(submitRecommendation).toHaveBeenCalledWith('rec-1', newTxn, undefined)
     expect(dataset.transactions.map((t) => t.id)).toEqual([42])
     expect(announceRecommendationsChanged).toHaveBeenCalledOnce()
   })

@@ -31,7 +31,7 @@ export interface ReviewCore {
    */
   decide: (id: string, message: string, failure: string, send: () => Promise<unknown>) => void
   /** Creates the transaction for a payment through its recommendation. Absent where the app cannot write. */
-  submit?: ((id: string, input: NewTransaction) => Promise<Transaction>) | undefined
+  submit?: ((id: string, input: NewTransaction, allowDuplicate?: boolean) => Promise<Transaction>) | undefined
   /** Opens the add form. The form saves at once, so anything held is sent first. */
   openForm: (seed: TransactionSeed) => void
 }

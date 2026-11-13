@@ -3,6 +3,7 @@ import {
   announceRecommendationsChanged,
   fetchRecommendations,
   onRecommendationsChanged,
+  PossibleDuplicateError,
   submitRecommendation,
 } from './recommendationsApi'
 
@@ -45,6 +46,56 @@ describe('recommendation calls', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe(`/api/recommendations/${ID}/submit`)
     expect(init).toMatchObject({ method: 'POST', body: JSON.stringify(input) })
+  })
+})
+
+describe('submitting when a typed row looks the same', () => {
+  const input = {
+    date: '2026-11-10',
+    budgetMonth: '2026-11',
+    description: 'Coffee',
+    accountId: 1,
+    categoryId: 2,
+    type: 'expense' as const,
+    amountCents: 350,
+    cancelled: false,
+  }
+  const refuse = (body: unknown) =>
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 409, headers: { 'content-type': 'application/json' } })))
+
+  it('sends allowDuplicate: true only when asked to, and not otherwise', async () => {
+    const fetchMock = stub({ id: 7 })
+
+    await submitRecommendation(ID, input, true)
+    await submitRecommendation(ID, input)
+
+    expect(JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string)).toEqual({ ...input, allowDuplicate: true })
+    expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual(input)
+  })
+
+  it('rejects with the row the server named', async () => {
+    const match = { transactionId: 41, description: 'Cafe at the till', date: '2026-11-09' }
+    refuse({ error: 'A typed row already looks like this payment', code: 'possible-duplicate', possibleMatch: match })
+
+    const error: unknown = await submitRecommendation(ID, input).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(PossibleDuplicateError)
+    expect((error as PossibleDuplicateError).possibleMatch).toEqual(match)
+  })
+
+  it('leaves any other 409 as the plain error it is', async () => {
+    refuse({ error: 'This recommendation was already decided' })
+
+    const error: unknown = await submitRecommendation(ID, input).catch((e: unknown) => e)
+
+    expect(error).not.toBeInstanceOf(PossibleDuplicateError)
+    expect(error).toMatchObject({ status: 409, message: 'This recommendation was already decided' })
+  })
+
+  it('does not take a malformed duplicate answer for one', async () => {
+    refuse({ code: 'possible-duplicate', possibleMatch: { description: 'No id' } })
+
+    expect(await submitRecommendation(ID, input).catch((e: unknown) => e)).not.toBeInstanceOf(PossibleDuplicateError)
   })
 })
 
