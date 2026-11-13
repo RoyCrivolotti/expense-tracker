@@ -1,8 +1,8 @@
 # Bank-push capture
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
-key, the endpoint that accepts it and the routes that list and decide recommendations, all built, and the Dashboard card that
-reviews them. The setup screen is not built yet.
+key, the endpoint that accepts it and the routes that list and decide recommendations, the Dashboard card that reviews
+them, and the setup screen with the shortcut recipe, all built.
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -14,8 +14,8 @@ secret, 256 random bits, of which only a SHA-256 is stored. Hex rather than base
 separator, and a fixed length so one pattern refuses anything else before any lookup. The code is in
 [`captureKey.ts`](../src/domain/capture/captureKey.ts).
 
-- **Made in Settings** by the signed-in person, behind the capture flag (`?capture=on`, kept in the browser; off by
-  default). The owner is the verified email and nothing in the body can change it.
+- **Made in Settings** by the signed-in person, behind the capture flag (`?capture=on`, kept in the browser, or the "Capture screens (beta)" switch in Settings, About
+  this app; off by default). The owner is the verified email and nothing in the body can change it.
 - **Shown once.** The create call returns the whole key and nothing else ever does. The list returns id, name, when it
   was made and when it was last used.
 - **Three at a time** per person, checked inside the insert so two requests made at once cannot make a fourth. A fourth
@@ -37,6 +37,7 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
@@ -156,6 +157,42 @@ The candidates of a whole page come from one query, over the date span of the pa
 prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
 whatever the page size. The check at submit is the same statement for one amount and one date, so it reads at most the
 rows of one 18-day window and needs no new index.
+
+## Setting up a phone
+
+Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **They are written from
+research and from one working shortcut, and have not yet been proven end to end on a second phone.** Only Iberia has a
+recipe; Santander joins with its own change.
+
+1. **iOS 27 or later.** The trigger "When I receive a notification from" arrived in iOS 27. On Android or an older
+   iPhone it cannot be built. The app cannot tell the phone's version (Safari freezes it in the user agent), so the screen
+   asks the person to check Settings, General, About.
+2. **Make a key** in Settings, Capture key. It is shown once.
+3. **Build the shortcut.** In Shortcuts, Automation, New: When I receive a notification from Iberia Cards. Add Get
+   Contents of URL, method POST, request body JSON with four fields: `source` (the fixed text `iberia`), `title` and
+   `body` (the notification's), and `date` (ISO 8601 with the phone's offset, such as `2026-11-03T09:41:07+01:00`). Add an
+   If: when the answer is not `ok`, show "Capture failed".
+4. **Point it at the app.** URL: the address on the screen, for example `https://capture.example.workers.dev/capture`.
+   Header `Authorization` with the value `Bearer`, a space, then the key. Leave Follow redirects off, because a redirected
+   POST can lose its header.
+5. **Run it automatically.** Choose Run Immediately. Turn Notify off if the banner is unwanted. Turn on Allow Running When
+   Locked (the info button, Privacy).
+6. **If iOS asks "Allow sending data to this site"**, choose Always Allow. If the question comes back on every payment an
+   unattended run cannot work yet. That is untested.
+7. **Waiting for your first payment.** The screen reads `GET /api/capture-status`: grey until anything reaches the app,
+   amber when pushes arrive (`capture_counters.received`) but none was read as a payment, green with the time of the
+   last recognised push (`capture_events`). It shows information only: there is no stale threshold or banner, so a stopped
+   automation is noticed only by the person.
+
+The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
+The hostname is private, so it is never committed; docs and tests use `https://capture.example.workers.dev`. Where the
+variable is unset the screen asks for the address to be pasted and keeps it in that browser only.
+
+### Turning the screens on
+
+The flag is per browser: `?capture=on` in the address, or Settings, About this app, "Capture screens (beta)". The switch
+exists because an installed Home Screen app has no address bar. It sets the same value in that app's own storage and
+reloads. The screens read the flag when they mount, so nothing changes until the reload.
 
 ## The capture endpoint
 
