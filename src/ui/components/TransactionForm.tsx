@@ -232,6 +232,14 @@ async function saveLabelsIfChanged(
   }
 }
 
+function FormError({ message }: { message: string | null }) {
+  return message ? (
+    <p className={styles.error} role="alert">
+      {message}
+    </p>
+  ) : null
+}
+
 export function TransactionForm({
   model,
   editing,
@@ -452,13 +460,10 @@ export function TransactionForm({
             pendingFiles={pendingFiles}
             onPendingChange={setPendingFiles}
             installmentChip={installment.chip}
+            seedNotice={seed?.notice}
           />
           {installment.bar}
-          {err && (
-            <p className={styles.error} role="alert">
-              {err}
-            </p>
-          )}
+          <FormError message={err} />
         </>
       )}
       <div className={styles.actions}>

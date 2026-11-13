@@ -3,7 +3,7 @@ import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
-import type { ExpenseActions } from '../actions'
+import type { ExpenseActions, SeedNotice as SeedNoticeData } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
@@ -18,7 +18,8 @@ import { createLabelInPlace } from './quickLabel'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
-import { suggestBudgetMonth, type FormFields, type Setter } from './transactionFormState'
+import { SeedNotice } from './SeedNotice'
+import { dateChanger, type FormFields, type Setter } from './transactionFormState'
 import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
 
@@ -222,6 +223,8 @@ interface FieldsProps {
   receiptTargetId?: number | null
   /** Absent in read-only sessions, which is also when receipts are hidden. */
   actions?: ExpenseActions | undefined
+  /** A note under the date for a payment that could be dated two ways. */
+  seedNotice?: SeedNoticeData | undefined
   /**
    * The installment-plan toggle, rendered as a chip alongside "Add receipt" /
    * "Add note" when there's nothing to say about it yet ("Not part of a
@@ -261,15 +264,13 @@ export function Fields({
   onPendingChange,
   receiptTargetId = null,
   installmentChip,
+  seedNotice,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
   const receiptInputRef = useRef<HTMLInputElement>(null)
 
-  const onDate = (v: string) => {
-    set('date', v)
-    if (!editing) set('budgetMonth', suggestBudgetMonth(model, v))
-  }
+  const onDate = dateChanger(model, editing, set)
 
   const showNoteInput = noteExpanded || form.notes !== ''
   const investmentCategoryId = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
@@ -310,6 +311,7 @@ export function Fields({
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
+      {seedNotice && <SeedNotice notice={seedNotice} date={form.date} onDate={onDate} />}
 
       {actions ? (
         <>

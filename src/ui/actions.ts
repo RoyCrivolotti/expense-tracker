@@ -46,6 +46,15 @@ export interface TransactionSeed {
   recommendationId?: string
   /** Set while a person works through captured payments one after another. */
   queue?: SeedQueue
+  /** A note shown under the date for a payment whose date could be read two ways. */
+  notice?: SeedNotice
+}
+
+/** The two readings of a payment's date, one of which the form starts on. The button moves between them. */
+export interface SeedNotice {
+  text: string
+  original: { date: string; label: string }
+  alternate: { date: string; label: string }
 }
 
 /** The payments still to review after the one in the form. Each call acts for the form's payment and hands back the next. */

@@ -938,3 +938,35 @@ describe('TransactionModal — a queue of captured payments', () => {
     expect(singleForm(container).queryByRole('button', { name: "Don't add" })).not.toBeInTheDocument()
   })
 })
+
+describe('TransactionModal — a payment that could be dated two ways', () => {
+  const notice = {
+    text: 'Month end. Check the date and budget month before adding.',
+    original: { date: '2026-11-30', label: 'Mon 30 Nov' },
+    alternate: { date: '2026-12-01', label: 'Tue 1 Dec' },
+  }
+  const seed: TransactionSeed = { recommendationId: 'r', amountCents: 840, description: 'Kebab', date: '2026-11-30', budgetMonth: '2026-11', notice }
+
+  it('shows the note and moves the date, and the budget month with it, and back', () => {
+    const { container } = renderModal({ seed })
+    const form = singleForm(container)
+    expect(form.getByRole('note')).toHaveTextContent('Month end.')
+    expect(form.getByText(/30 Nov 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Nov '26/)).toBeInTheDocument()
+
+    fireEvent.click(form.getByRole('button', { name: 'Use Tue 1 Dec' }))
+    expect(form.getByText(/1 Dec 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Dec '26/)).toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Back to Mon 30 Nov' })).toBeInTheDocument()
+
+    fireEvent.click(form.getByRole('button', { name: 'Back to Mon 30 Nov' }))
+    expect(form.getByText(/30 Nov 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Nov '26/)).toBeInTheDocument()
+  })
+
+  it('shows no note for a seed without one', () => {
+    const { container } = renderModal({ seed: { amountCents: 100, description: 'Cafe' } })
+
+    expect(singleForm(container).queryByRole('note')).not.toBeInTheDocument()
+  })
+})

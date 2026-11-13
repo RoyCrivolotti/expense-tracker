@@ -210,3 +210,24 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* The note a captured payment shows when its date could be read two ways: the same amber as a warning elsewhere. */
+.notice {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--exp-warning) 18%, var(--color-surface));
+  color: var(--exp-warning-text);
+  font-size: 0.85rem;
+}
+
+.noticeButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
