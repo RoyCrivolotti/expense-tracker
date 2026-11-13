@@ -13,6 +13,13 @@ function Amount({ view }: { view: ReviewView }) {
   return <Money cents={view.amountCents} type={view.type ?? undefined} className={styles.amount} />
 }
 
+/** A long description is cut for the button, so it does not push the button off the row; the full text is its name and title. */
+function shortened(text: string): string {
+  return text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN - 1).trimEnd()}\u2026` : text
+}
+
+const MAX_SHOWN = 36
+
 function Missing({ text }: { text: string }) {
   return <span className={styles.missing}>{text}</span>
 }
@@ -55,8 +62,8 @@ function Buttons({ view, review, onReview }: { view: ReviewView; review: ReviewA
         {view.oneTap ? 'Change' : 'Review'}
       </button>
       {match ? (
-        <button type="button" className={styles.link} onClick={() => review.link(view)}>
-          Already entered as {match.description}? Link
+        <button type="button" className={styles.link} aria-label={`Already entered as ${match.description}? Link`} title={match.description} onClick={() => review.link(view)}>
+          Already entered as {shortened(match.description)}? Link
         </button>
       ) : null}
       <button type="button" className={`${styles.pill} ${styles.quiet}`} aria-label={`Don't add ${label}`} onClick={() => review.dontAdd(view)}>

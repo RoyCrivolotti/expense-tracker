@@ -144,7 +144,9 @@ that row. The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), 
   day the bank books it;
 - not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
   so a payment that was captured and added does not match the next push of the same price;
-- the closest by date, and the highest id (entered last) on a tie.
+- the closest by date, and the highest id (entered last) on a tie. A row goes to one payment of the page only, the
+  one it is closest to (the newer payment first on a tie), and a payment that loses its row falls to its next best or to
+  none, so two payments of one price never offer the same row.
 
 The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
 prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
