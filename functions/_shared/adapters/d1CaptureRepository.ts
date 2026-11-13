@@ -19,6 +19,7 @@ import {
 } from '../capture/captureEventsSql'
 import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
 import { cards } from './d1CaptureCards'
+import { withMatches } from './d1CaptureMatches'
 import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
@@ -168,7 +169,7 @@ function recommendations(
           ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
           : await rows<RecommendationRow>(db, LIST_OPEN_FIRST_SQL, owner, limit)
       ).map(toRecommendation)
-      return withCards(db, owner, page)
+      return withMatches(db, owner, await withCards(db, owner, page))
     },
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,

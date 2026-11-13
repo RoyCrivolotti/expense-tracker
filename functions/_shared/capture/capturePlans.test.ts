@@ -5,6 +5,7 @@
  * several owners present, because a planner with no statistics picks differently.
  */
 import { describe, expect, it } from 'vitest'
+import { MATCH_CANDIDATES_SQL } from './captureMatchesSql'
 import {
   CARDS_OF_RECOMMENDATIONS_SQL,
   CLEAR_OPEN_OF_UNLINKED_SQL,
@@ -118,6 +119,12 @@ const CASES: Array<[string, string, Array<string | number>, RegExp]> = [
     LIST_CARDS_SQL,
     [OWNER],
     /SEARCH capture_cards USING INDEX sqlite_autoindex_capture_cards_1 \(owner=\?\)/,
+  ],
+  [
+    'the typed rows a page may duplicate',
+    MATCH_CANDIDATES_SQL,
+    [OWNER, '2026-10-01', '2026-11-20', '[1250,4590]'],
+    /SEARCH t USING INDEX idx_txn_owner_date \(owner=\? AND date>\? AND date<\?\)/,
   ],
   [
     'get a recommendation',

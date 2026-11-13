@@ -116,6 +116,55 @@ describe('GET /api/recommendations', () => {
   )
 })
 
+describe('GET /api/recommendations, the typed row a payment may duplicate', () => {
+  type Listed = { recommendations: Array<{ id: string; possibleMatch: { transactionId: number; description: string; date: string } | null }> }
+  const listed = async (email = OWNER) => ((await (await call(list, { email })).json()) as Listed).recommendations
+  const typedRow = async (over: Record<string, unknown> = {}) =>
+    ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: { ...expense(), amountCents: 1250, ...over } })).json()) as { id: number }).id
+
+  it('names the row the person typed for the same price on the same day, as transactionId, description and date', async () => {
+    await seed(1)
+    const id = await typedRow({ description: 'Coffee at the till' })
+
+    expect((await listed())[0]?.possibleMatch).toEqual({ transactionId: id, description: 'Coffee at the till', date: '2026-03-02' })
+  })
+
+  it('is null on every payment when there is nothing like it, and the key is always there', async () => {
+    await seed(1)
+    await typedRow({ amountCents: 1251 })
+
+    const [first] = await listed()
+    expect(first).toHaveProperty('possibleMatch', null)
+  })
+
+  it("never uses another person's row, and never shows one person's description to another", async () => {
+    await seed(1)
+    await seed(2, {}, OTHER)
+    sqlite
+      .prepare("INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Their private coffee', ?, ?, 'expense', 1250, ?)")
+      .run(accountId, categoryId, OTHER)
+
+    expect((await listed())[0]?.possibleMatch).toBeNull()
+    expect(JSON.stringify(await listed())).not.toContain('Their private coffee')
+    expect((await listed(OTHER))[0]?.possibleMatch?.description).toBe('Their private coffee')
+  })
+
+  it('skips a row an earlier recommendation made or was linked to, so a captured and added payment does not match the next push', async () => {
+    await seed(1)
+    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250 } })).status).toBe(201)
+    await seed(2)
+
+    expect((await listed())[0]?.possibleMatch).toBeNull()
+  })
+
+  it('does not block anything: the payment can still be submitted whatever it matches', async () => {
+    await seed(1)
+    await typedRow()
+
+    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250 } })).status).toBe(201)
+  })
+})
+
 describe('POST /api/recommendations/:id/submit', () => {
   it('creates the expense from what the person sent and marks the recommendation submitted', async () => {
     await seed(1)
