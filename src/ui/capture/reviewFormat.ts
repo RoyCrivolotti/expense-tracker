@@ -51,3 +51,12 @@ export function foreignAmount(view: ReviewView): string {
     return `${major.toFixed(2)} ${code}`
   }
 }
+
+/** How many payments the card shows on a phone and on a wide screen. "See all" opens the rest. */
+export const SHOWN_PHONE = 3
+export const SHOWN_WIDE = 5
+
+/** One more than the limit shows them all: a "See all" for a single hidden payment is wasted effort. */
+export function rowsShown(total: number, limit: number): number {
+  return total === limit + 1 ? total : limit
+}

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { makeTransaction } from '../../testing/factories'
 import { makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
@@ -158,17 +158,35 @@ describe('the card', () => {
   })
 
   it('shows three payments and opens the rest in a sheet, whose Review closes it and opens the form', () => {
-    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4, { merchantRaw: 'BRAND NEW PLACE' })] })
+    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5, { merchantRaw: 'BRAND NEW PLACE' })] })
     show(core)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
 
-    fireEvent.click(screen.getByRole('button', { name: 'See all 4' }))
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
     const sheet = screen.getByRole('dialog')
-    expect(within(sheet).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(sheet).getAllByRole('listitem')).toHaveLength(5)
     fireEvent.click(within(sheet).getByRole('button', { name: 'Review' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(vi.mocked(core.openForm).mock.calls[0]![0]).toMatchObject({ recommendationId: id(4) })
+    expect(vi.mocked(core.openForm).mock.calls[0]![0]).toMatchObject({ recommendationId: id(5) })
+  })
+
+  it.each([
+    ['a phone', true, 3],
+    ['a wide screen', false, 5],
+  ])('shows %s the most rows, and all of them when it is exactly one more, with the full count on the heading', (_name, phone, limit) => {
+    viewport(phone)
+    for (const total of [0, 1, 3, 4, 5, 6, 7]) {
+      const items = Array.from({ length: total }, (_x, i) => rec(i + 1))
+      const { unmount } = show(makeCore({ items }))
+      const rows = screen.queryAllByRole('listitem').length
+      const expected = total === 0 ? 0 : total === limit + 1 ? total : Math.min(total, limit)
+
+      expect(rows, `${total} on ${limit}`).toBe(expected)
+      expect(screen.queryByRole('button', { name: `See all ${total}` }) !== null, `${total} see all`).toBe(total > expected)
+      if (total > 0) expect(screen.getByRole('heading', { name: total === 1 ? '1 payment to review' : `${total} payments to review` })).toBeInTheDocument()
+      unmount()
+    }
   })
 
   it('queues the payments after the one reviewed, so the form can move on to them', () => {
@@ -193,9 +211,9 @@ describe('the card', () => {
   })
 
   it('says all caught up in the sheet once nothing is left', () => {
-    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4)] })
+    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5)] })
     const { rerender } = show(core)
-    fireEvent.click(screen.getByRole('button', { name: 'See all 4' }))
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
 
     rerender(wrap({ ...core, items: [], count: 0 }))
 
@@ -227,6 +245,21 @@ describe('the card', () => {
     expect(core.decide).not.toHaveBeenCalled()
   })
 })
+
+/** The shell's breakpoint: matches below 768px, where it is a phone layout. */
+function viewport(phone: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: phone && query === '(max-width: 767px)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  })
+}
+
+beforeEach(() => viewport(true))
 
 afterEach(() => {
   vi.useRealTimers()
@@ -260,10 +293,10 @@ describe('the slot on the Dashboard', () => {
   it('keeps the sheet when its last payment is decided there, says all caught up, and lets it leave before the card goes', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     setMotionDisabledForTests(false)
-    const four = [rec(1), rec(2), rec(3), rec(4)]
+    const four = [rec(1), rec(2), rec(3), rec(4), rec(5)]
     const { rerender } = slot(makeCore({ items: four }))
     await act(async () => void (await vi.advanceTimersByTimeAsync(0)))
-    fireEvent.click(await screen.findByRole('button', { name: 'See all 4' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'See all 5' }))
 
     rerender(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -286,16 +319,16 @@ describe('the slot on the Dashboard', () => {
   it('lets the sheet play its exit when it is closed with payments still waiting', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     setMotionDisabledForTests(false)
-    slot(makeCore({ items: [rec(1), rec(2), rec(3), rec(4)] }))
+    slot(makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5)] }))
     await act(async () => void (await vi.advanceTimersByTimeAsync(0)))
-    fireEvent.click(await screen.findByRole('button', { name: 'See all 4' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'See all 5' }))
 
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }))
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     await act(async () => void (await vi.advanceTimersByTimeAsync(EXIT_MS.sheet + 10)))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '4 payments to review' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '5 payments to review' })).toBeInTheDocument()
   })
 })
 

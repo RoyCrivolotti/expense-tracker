@@ -1,23 +1,24 @@
 import { Presence } from '../components/Presence'
 import { Card } from '../components/primitives'
 import { EXIT_MS } from '../hooks/motion'
+import { useIsMobile } from '../hooks/useIsMobile'
 import type { ReviewCore } from './reviewContext'
 import type { ReviewView } from './reviewFields'
+import { SHOWN_PHONE, SHOWN_WIDE, rowsShown } from './reviewFormat'
 import { ReviewRow } from './ReviewRow'
 import { ReviewSheet } from './ReviewSheet'
 import { useReviewApi, type ReviewApi } from './useReviewApi'
 import styles from './Review.module.css'
 
-/** How many payments the card shows. "See all" opens the rest. */
-const SHOWN = 3
-
 function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (open: boolean) => void; onReview: (view: ReviewView) => void }) {
   const { views, count } = review
+  // The shell's own breakpoint: below 768px it is a phone layout.
+  const shown = rowsShown(views.length, useIsMobile() ? SHOWN_PHONE : SHOWN_WIDE)
   return (
     <Card className={styles.card}>
       <div className={styles.head}>
         <h2 className={styles.title}>{count === 1 ? '1 payment to review' : `${count} payments to review`}</h2>
-        {views.length > SHOWN || review.hasMore ? (
+        {views.length > shown || review.hasMore ? (
           <button type="button" className={styles.link} onClick={() => onSheet(true)}>
             See all {count}
           </button>
@@ -33,7 +34,7 @@ function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (
         </p>
       ) : null}
       <ul className={styles.rows}>
-        {views.slice(0, SHOWN).map((view) => (
+        {views.slice(0, shown).map((view) => (
           <ReviewRow key={view.rec.id} view={view} review={review} onReview={onReview} />
         ))}
       </ul>
