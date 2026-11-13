@@ -62,7 +62,7 @@ function Buttons({ view, review, onReview }: { view: ReviewView; review: ReviewA
         {view.oneTap ? 'Change' : 'Review'}
       </button>
       {match ? (
-        <button type="button" className={styles.link} aria-label={`Already entered as ${match.description}? Link`} title={match.description} onClick={() => review.link(view)}>
+        <button type="button" className={styles.link} aria-label={`Already entered as ${shortened(match.description)}? Link${shortened(match.description) === match.description ? '' : `, ${match.description}`}`} title={match.description} onClick={() => review.link(view)}>
           Already entered as {shortened(match.description)}? Link
         </button>
       ) : null}
