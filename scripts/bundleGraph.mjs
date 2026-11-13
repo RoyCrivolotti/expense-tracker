@@ -82,7 +82,7 @@ export function ledgerOnlyChunks(build) {
  */
 export function captureOnlyChunks(build) {
   const { allEdges, eager, named } = graphOf(build)
-  const roots = named('CaptureKeySetting', 'ReviewCard')
+  const roots = named('CaptureKeySetting', 'CaptureCardsSetting', 'ReviewCard', 'CardQuestion')
   const defaultPath = reach([...eager], allEdges, new Set(roots))
   return [...reach(roots, allEdges, eager)].filter((file) => !defaultPath.has(file)).sort()
 }
