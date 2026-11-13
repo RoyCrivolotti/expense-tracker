@@ -1,8 +1,17 @@
 import type { Env, ExpensesData } from '../../_shared/env'
 import { createD1CaptureRepository } from '../../_shared/adapters/d1CaptureRepository'
 import { linkCaptureCard, listCaptureCards, unlinkCaptureCard } from '../../domain/application/captureCardService'
+import { ValidationError } from '../../domain/application/validationError'
 import { HttpError, json, readJson } from '../../_shared/http'
 import { mapAppError } from '../../_shared/mapAppError'
+
+/**
+ * A failure the server did not expect keeps nothing of its message before it reaches the log: a database error can
+ * quote the statement or a value, and a value here is four digits of a card.
+ */
+function plainly(error: unknown): unknown {
+  return error instanceof HttpError || error instanceof ValidationError ? error : new Error('capture card request failed')
+}
 
 /** A link is a bank app, four digits and an account number. */
 const MAX_BODY_BYTES = 1024
@@ -12,7 +21,7 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
   try {
     return json(await listCaptureCards(createD1CaptureRepository(context.env), context.data.owner))
   } catch (error) {
-    mapAppError(error)
+    mapAppError(plainly(error))
   }
 }
 
@@ -29,7 +38,7 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
     if (result === 'limit') throw new HttpError(409, 'You already have the most card links allowed. Remove one first.')
     return json({ ok: true })
   } catch (error) {
-    mapAppError(error)
+    mapAppError(plainly(error))
   }
 }
 
@@ -42,6 +51,6 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
     }
     return json({ ok: true })
   } catch (error) {
-    mapAppError(error)
+    mapAppError(plainly(error))
   }
 }
