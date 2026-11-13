@@ -168,7 +168,8 @@
 .questionSelect {
   width: 100%;
   min-height: 2.75rem;
-  padding: 0 0.75rem;
+  padding: 0.5rem 1.75rem 0.5rem 0.75rem;
+  text-overflow: ellipsis;
   border: 1px solid transparent;
   border-radius: 0.7rem;
   background: var(--color-surface-muted);
