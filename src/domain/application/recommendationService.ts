@@ -1,5 +1,5 @@
 import type { NewTransaction } from '../data/dataSource'
-import type { PossibleMatch } from '../capture/duplicate'
+import { paymentOfRow, type PossibleMatch } from '../capture/duplicate'
 import type { CaptureRepository, Recommendation, RecommendationCursor } from '../ports/captureRepository'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
@@ -99,12 +99,7 @@ export async function submitRecommendation(
     // leaves nothing behind. The row looked for is the one being submitted, which is the payment unless the person
     // changed it. A row typed after the list was read is caught here; one typed between this read and the insert is not.
     const valid = validateNewTransaction(input)
-    const possibleMatch = await captures.findPossibleMatch(owner, {
-      localDate: valid.date,
-      amountCents: Math.abs(valid.amountCents),
-      currency: 'EUR',
-      suggestedType: valid.type,
-    })
+    const possibleMatch = await captures.findPossibleMatch(owner, paymentOfRow(valid))
     if (possibleMatch) return { ok: false, reason: 'possible-duplicate', possibleMatch }
   }
   const transaction = await createTransaction(expenses, owner, input)

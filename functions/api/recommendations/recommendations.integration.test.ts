@@ -236,6 +236,18 @@ describe('POST /api/recommendations/:id/submit', () => {
       expect((await call(submit, { n: 1, body: same() })).status).toBe(201)
     })
 
+    it('reads a Withdraw (an investment stored below zero) as money in, as the list does', async () => {
+      await seed(1)
+      await typedRow()
+      // Money in is not a duplicate of the typed expense of the same size.
+      expect((await call(submit, { n: 1, body: { ...expense(), type: 'investment', amountCents: -1250 } })).status).toBe(201)
+      await seed(2, { amountCents: 7000 })
+      const row = await typedRow({ type: 'investment', amountCents: -7000 })
+      const again = await call(submit, { n: 2, body: { ...expense(), type: 'investment', amountCents: -7000 } })
+      expect(again.status).toBe(409)
+      expect(await again.json()).toMatchObject({ possibleMatch: { transactionId: row } })
+    })
+
     it('matches the row being submitted, so a changed amount is not held up by the payment amount', async () => {
       await seed(1)
       await typedRow()

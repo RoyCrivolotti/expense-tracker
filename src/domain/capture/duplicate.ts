@@ -82,6 +82,20 @@ function isMatch(payment: PaymentToMatch, row: TypedRow): boolean {
 }
 
 /**
+ * The payment a row about to be saved stands for, so the submit-time check judges direction exactly as the list does:
+ * through `rowDirection`, where an investment stored below zero (a Withdraw) is money in. Only the direction matters to
+ * the match, so it is carried by the suggested type.
+ */
+export function paymentOfRow(row: { date: string; type: string; amountCents: number }): PaymentToMatch {
+  return {
+    localDate: row.date,
+    amountCents: Math.abs(row.amountCents),
+    currency: 'EUR',
+    suggestedType: rowDirection(row.type, row.amountCents) === 'in' ? 'income' : 'expense',
+  }
+}
+
+/**
  * The typed row that looks most like this payment among `rows`: the same direction, the same amount to the cent, and a
  * date inside the window. Several give the closest by date, and a tie goes to the highest id (the row entered last).
  * The caller has already left out rows that are cancelled, belong to another person or already answer for a
