@@ -18,10 +18,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const showToast = useCallback(
-    (message: string, tone: ToastTone = 'info', action?: ToastAction) => {
+    (message: string, tone: ToastTone = 'info', action?: ToastAction, holdMs?: number) => {
       clear()
       setToast({ id: Date.now(), message, tone, action })
-      timer.current = setTimeout(() => setToast(null), action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone])
+      timer.current = setTimeout(() => setToast(null), holdMs ?? (action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone]))
     },
     [clear],
   )

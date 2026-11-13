@@ -105,3 +105,28 @@ describe('ToastProvider', () => {
     expect(screen.getByRole('status').textContent).toMatch(/Something went wrong/)
   })
 })
+
+describe('ToastProvider hold time', () => {
+  it('keeps a message exactly as long as the caller says, and shows a line break as one', () => {
+    function Hold() {
+      const { showToast } = useToast()
+      return (
+        <button type="button" onClick={() => showToast('Added\nExpense', 'success', { label: 'Undo', onAction: () => {} }, 5000)}>
+          go
+        </button>
+      )
+    }
+    render(
+      <ToastProvider>
+        <Hold />
+      </ToastProvider>,
+    )
+    act(() => screen.getByText('go').click())
+
+    act(() => void vi.advanceTimersByTime(4999))
+    expect(screen.getByRole('status').textContent).toContain('Added\nExpense')
+    act(() => void vi.advanceTimersByTime(1))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+})
+
