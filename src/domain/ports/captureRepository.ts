@@ -211,9 +211,9 @@ export interface CaptureRepository {
   getRecommendation(owner: string, id: string): Promise<Recommendation | null>
   /** Open ones, newest day first, `limit` of them from after the cursor. */
   listOpenRecommendations(owner: string, limit: number, after?: RecommendationCursor): Promise<Recommendation[]>
-  /** How many are open, for the badge. */
   /** The typed row of the owner that looks like this payment, by the rule the list uses, or null. One read. */
   findPossibleMatch(owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null>
+  /** How many are open, for the badge. */
   countOpenRecommendations(owner: string): Promise<number>
   /** Moves an open recommendation to submitted or dismissed. False when it is not open, so a double tap acts once. */
   decideRecommendation(
