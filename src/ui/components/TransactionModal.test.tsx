@@ -875,3 +875,66 @@ describe('TransactionModal — a captured payment', () => {
     expect(actions.createTransaction).not.toHaveBeenCalled()
   })
 })
+
+describe('TransactionModal — a queue of captured payments', () => {
+  const A = '0b0c0d0e-1111-4222-8333-444455556661'
+  const B = '0b0c0d0e-1111-4222-8333-444455556662'
+  const seedB: TransactionSeed = { recommendationId: B, amountCents: 300, description: 'Bakery', type: 'expense', accountId: 1, categoryId: 1 }
+  const queued = (over: Partial<NonNullable<TransactionSeed['queue']>> = {}): TransactionSeed => ({
+    recommendationId: A,
+    amountCents: 1250,
+    description: 'Cafe',
+    type: 'expense',
+    accountId: 1,
+    categoryId: 1,
+    queue: { left: 2, next: () => seedB, dontAdd: () => seedB, ...over },
+  })
+
+  it('says how many are left on the save button, and ends with a plain label at the last one', () => {
+    const first = renderModal({ seed: queued() })
+    expect(singleForm(first.container).getByRole('button', { name: 'Add and next (2 left)' })).toBeInTheDocument()
+    first.unmount()
+
+    const last = renderModal({ seed: queued({ left: 0 }) })
+    expect(singleForm(last.container).getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
+  })
+
+  it('opens the next payment instead of closing after a save', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions, onClose } = renderModal({ seed: queued(), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
+
+    await waitFor(() => expect(actions.onAdd).toHaveBeenCalledWith(seedB))
+    expect(submitRecommendation).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes after the last save', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions, onClose } = renderModal({ seed: queued({ left: 0, next: () => undefined }), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(actions.onAdd).not.toHaveBeenCalled()
+  })
+
+  it("moves on to the next payment on Don't add, creating nothing, and closes at the end", () => {
+    const first = renderModal({ seed: queued() })
+    fireEvent.click(singleForm(first.container).getByRole('button', { name: "Don't add" }))
+    expect(first.actions.onAdd).toHaveBeenCalledWith(seedB)
+    expect(first.actions.createTransaction).not.toHaveBeenCalled()
+    first.unmount()
+
+    const last = renderModal({ seed: queued({ left: 0, dontAdd: () => undefined }) })
+    fireEvent.click(singleForm(last.container).getByRole('button', { name: "Don't add" }))
+    expect(last.onClose).toHaveBeenCalled()
+  })
+
+  it("has no Don't add outside a queue", () => {
+    const { container } = renderModal({ seed: { recommendationId: A, amountCents: 100, description: 'Cafe' } })
+
+    expect(singleForm(container).queryByRole('button', { name: "Don't add" })).not.toBeInTheDocument()
+  })
+})

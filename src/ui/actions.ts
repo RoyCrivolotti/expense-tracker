@@ -44,6 +44,18 @@ export interface TransactionSeed {
   installmentIndex?: number
   /** When set, saving creates the transaction through this captured-payment recommendation and settles it. */
   recommendationId?: string
+  /** Set while a person works through captured payments one after another. */
+  queue?: SeedQueue
+}
+
+/** The payments still to review after the one in the form. Each call acts for the form's payment and hands back the next. */
+export interface SeedQueue {
+  /** How many are left after this one. */
+  left: number
+  /** The form for the next one, or undefined at the end. Called once this one is saved. */
+  next: () => TransactionSeed | undefined
+  /** "Don't add" for this one. Hands back the form for the next one, or undefined at the end. */
+  dontAdd: () => TransactionSeed | undefined
 }
 
 /**
