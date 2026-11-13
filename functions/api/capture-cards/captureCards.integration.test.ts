@@ -188,3 +188,29 @@ describe('DELETE /api/capture-cards', () => {
     expect((await del(body)).status).toBe(400)
   })
 })
+
+describe('an unexpected failure', () => {
+  it.each([
+    ['listing', () => call(list)],
+    ['linking', () => post(good)],
+    ['removing', () => del(good)],
+  ])('answers a fixed 500 when %s fails, and the log never holds the message or the digits', async (_name, run) => {
+    // Only the capture statements break, so the sign-in around the route still works.
+    const real = world.env.DB
+    world.env.DB = {
+      ...real,
+      prepare: (sql: string) => {
+        if (/capture_cards|capture_events/.test(sql)) throw new Error(`D1_ERROR: constraint failed near '${DIGITS}'`)
+        return real.prepare(sql)
+      },
+      batch: real.batch.bind(real),
+    } as unknown as typeof world.env.DB
+
+    const response = await run()
+
+    expect(response.status).toBe(500)
+    expect(await response.text()).not.toContain(DIGITS)
+    expect(JSON.stringify(logged, (_k, v) => (v instanceof Error ? v.message : v))).not.toContain(DIGITS)
+    expect(JSON.stringify(logged)).toContain('unexpected error')
+  })
+})
