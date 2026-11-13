@@ -12,6 +12,7 @@ import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { TransactionSeed } from '../actions'
+import { SaveButtons } from './TransactionSaveButtons'
 import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
 import { acceptDescriptionSuggestion } from './transactionFormActions'
@@ -37,6 +38,8 @@ interface FormProps {
   onDelete?: ((id: number) => Promise<void>) | undefined
   onDuplicate?: ((txn: Transaction) => void) | undefined
   onClose: () => void
+  /** Set when this form is one of a queue of captured payments. */
+  queue?: { left: number; onSkip: () => void } | undefined
   /** Kept mounted but visually hidden (e.g. while the batch-entry tab is active),
    * so its own state survives switching back rather than losing what was typed. */
   hidden?: boolean
@@ -171,30 +174,6 @@ function installmentControl({
 }
 
 /**
- * The button carries the upload progress because the uploads happen *after* the
- * save: three phone photos is several seconds of a modal that would otherwise
- * sit on "Saving…" with nothing moving.
- */
-function saveLabel({
-  busy,
-  uploading,
-  editing,
-  retrying,
-}: {
-  busy: boolean
-  uploading: { done: number; total: number } | null
-  editing: Transaction | null
-  retrying: boolean
-}): string {
-  if (uploading) return `Uploading receipt ${uploading.done + 1} of ${uploading.total}…`
-  // "Save and retry", not "Retry receipts": the press also sends any field the
-  // user corrected while the banner was up.
-  if (retrying) return busy ? 'Retrying…' : 'Save and retry'
-  if (busy) return 'Saving…'
-  return editing ? 'Save changes' : 'Add transaction'
-}
-
-/**
  * A retry is neither an add nor an edit — the row landed on the first press and
  * this one finished its receipts, so "Transaction added" would be a second,
  * confusing claim about a row already in the list.
@@ -253,6 +232,14 @@ async function saveLabelsIfChanged(
   }
 }
 
+function FormError({ message }: { message: string | null }) {
+  return message ? (
+    <p className={styles.error} role="alert">
+      {message}
+    </p>
+  ) : null
+}
+
 export function TransactionForm({
   model,
   editing,
@@ -261,6 +248,7 @@ export function TransactionForm({
   onDelete,
   onDuplicate,
   onClose,
+  queue,
   hidden,
   onDirtyChange,
   onPartialSaveChange,
@@ -472,13 +460,10 @@ export function TransactionForm({
             pendingFiles={pendingFiles}
             onPendingChange={setPendingFiles}
             installmentChip={installment.chip}
+            seed={seed}
           />
           {installment.bar}
-          {err && (
-            <p className={styles.error} role="alert">
-              {err}
-            </p>
-          )}
+          <FormError message={err} />
         </>
       )}
       <div className={styles.actions}>
@@ -502,9 +487,7 @@ export function TransactionForm({
             Duplicate
           </button>
         )}
-        <button type="submit" className={`${styles.save} tapActive`} disabled={busy}>
-          {saveLabel({ busy, uploading, editing, retrying: savedId != null })}
-        </button>
+        <SaveButtons view={view} queue={queue} busy={busy} uploading={uploading} editing={editing} retrying={savedId != null} />
       </div>
     </form>
   )

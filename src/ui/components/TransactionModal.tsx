@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { Transaction } from '../../types'
-import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
@@ -12,8 +11,7 @@ import { ConfirmSheet } from './ConfirmSheet'
 import { Modal } from './Modal'
 import { Presence } from './Presence'
 import { TransactionForm } from './TransactionForm'
-import type { InstallmentIntent } from './installmentIntent'
-import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
+import { useQueueAdvance } from './transactionModalQueue'
 import styles from './TransactionModal.module.css'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
@@ -184,13 +182,8 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
    * ToastProvider holds one message at a time. TransactionForm toasts once
    * everything has landed, the way BatchTransactionForm already does.
    */
-  const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
-    if (id != null) {
-      await updateTransactionWithIntent(actions, id, input, intent)
-      return null
-    }
-    return createTransactionWithIntent(actions, input, intent)
-  }
+  const queue = useQueueAdvance(seed, actions, onClose, editing)
+  const submit = queue.submit
 
   /**
    * The batch tab finished. The single form stays mounted behind it and keeps
@@ -245,14 +238,15 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
          * the transaction you came *from* while the header and links described
          * the one you had just opened.
          */
-        key={editing?.id ?? 'new'}
+        key={queue.formKey}
         model={model}
         editing={editing}
         seed={seed}
         onSubmit={submit}
         onDelete={remove}
         onDuplicate={actions.onDuplicate}
-        onClose={onClose}
+        onClose={queue.finish}
+        queue={queue.forForm}
         hidden={canBatch && mode === 'batch'}
         onDirtyChange={setSingleDirty}
         onPartialSaveChange={setStranded}

@@ -44,6 +44,14 @@ export function suggestBudgetMonth(model: ExpenseModel, date: string): string {
   return recommendedBudgetMonth(date, todayIso(), dataset.settings.budgetRolloverDay, dataset)
 }
 
+/** What changing the date does: for a new transaction the budget month follows it, an edit keeps the month it has. */
+export function dateChanger(model: ExpenseModel, editing: Transaction | null, set: Setter) {
+  return (date: string) => {
+    set('date', date)
+    if (!editing) set('budgetMonth', suggestBudgetMonth(model, date))
+  }
+}
+
 function defaultFields(model: ExpenseModel): FormFields {
   const { categories, accounts } = model.dataset
   const today = todayIso()

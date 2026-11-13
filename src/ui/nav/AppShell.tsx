@@ -9,6 +9,7 @@ import { EXIT_MS, exitVars } from '../hooks/motion'
 import { useAutoHideFab } from '../hooks/useAutoHideFab'
 import { useKeyboardOpen } from '../hooks/useKeyboardOpen'
 import { useExit } from '../hooks/usePresence'
+import { useReviewCount } from '../capture/reviewContext'
 import styles from './AppShell.module.css'
 
 interface AppShellProps {
@@ -50,6 +51,15 @@ function AddButton({ onAdd, scrolling }: { onAdd: () => void; scrolling: boolean
   )
 }
 
+function NavBadge({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null
+  return (
+    <span className={styles.navBadge} aria-label={label}>
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
 function NavList({
   activeId,
   onSelect,
@@ -61,6 +71,7 @@ function NavList({
   variant: 'rail' | 'bar'
   settingsBadge?: number
 }) {
+  const reviewCount = useReviewCount()
   return (
     <ul className={variant === 'rail' ? styles.railList : styles.barList}>
       {navItems.map(({ id, label, Icon }) => (
@@ -75,11 +86,8 @@ function NavList({
               <span className={styles.navIcon}>
                 <Icon />
               </span>
-              {id === 'settings' && settingsBadge > 0 ? (
-                <span className={styles.navBadge} aria-label={`${settingsBadge} pending access requests`}>
-                  {settingsBadge > 9 ? '9+' : settingsBadge}
-                </span>
-              ) : null}
+              {id === 'dashboard' && <NavBadge count={reviewCount} label={`${reviewCount} ${reviewCount === 1 ? 'payment' : 'payments'} to review`} />}
+              {id === 'settings' && <NavBadge count={settingsBadge} label={`${settingsBadge} pending access requests`} />}
             </span>
             <span className={styles.navLabel}>{label}</span>
           </button>

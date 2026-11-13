@@ -42,6 +42,44 @@ export interface TransactionSeed {
   planId?: number
   /** Installment number this payment represents (for the modal hint only). */
   installmentIndex?: number
+  /** When set, saving creates the transaction through this captured-payment recommendation and settles it. */
+  recommendationId?: string
+  /** Set while a person works through captured payments one after another. */
+  queue?: SeedQueue
+  /** A note shown under the date for a payment whose date could be read two ways. */
+  notice?: SeedNotice
+  /** Set for a payment from a card that is not linked to an account, so the form asks which account it is. */
+  card?: SeedCard
+}
+
+/** A card the form asks about. `answer` is filled in by the form as the person answers. */
+export interface SeedCard {
+  source: 'iberia' | 'santander'
+  digits: string
+  answer: { accountId: number | null; remember: boolean }
+  /** What the form says when the payment is saved before the card is answered. */
+  unanswered: string
+  /** Set by the question while it is on screen: shows its message and moves the cursor to it. */
+  ask?: () => void
+  /** Links the card to the account the payment was saved with. Never throws: resolves with the message to tell if it failed, or null. */
+  remember: (accountId: number) => Promise<string | null>
+}
+
+/** The two readings of a payment's date, one of which the form starts on. The button moves between them. */
+export interface SeedNotice {
+  text: string
+  original: { date: string; label: string }
+  alternate: { date: string; label: string }
+}
+
+/** The payments still to review after the one in the form. Each call acts for the form's payment and hands back the next. */
+export interface SeedQueue {
+  /** How many are left after this one. */
+  left: number
+  /** The form for the next one, or undefined at the end. Called once this one is saved. */
+  next: () => TransactionSeed | undefined
+  /** "Don't add" for this one. Hands back the form for the next one, or undefined at the end. */
+  dontAdd: () => TransactionSeed | undefined
 }
 
 /**
@@ -57,6 +95,8 @@ export interface ExpenseActions {
   /** Resolves with the stored row, so a caller can attach receipts to its id. */
   createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
+  /** Creates the transaction a captured payment became and marks that recommendation submitted, in one write. */
+  submitRecommendation?: (id: string, input: NewTransaction) => Promise<Transaction>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   /** Resolves with the number of rows the server actually touched, which can be

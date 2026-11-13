@@ -8,6 +8,7 @@ import { makeActions } from '../../testing/makeActions'
 import { makeLabel, makeTransaction } from '../../testing/factories'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { ToastContext } from '../hooks/useToast'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
 
@@ -72,6 +73,19 @@ function renderModal(
         onClose={onClose}
       />
     </MoneyFormatProvider>,
+  )
+  return Object.assign(view, { actions, onClose })
+}
+
+function renderModalWithToasts(props: Parameters<typeof renderModal>[0], onToast: (message: string) => void) {
+  const actions = makeActions(props?.actions ?? {})
+  const onClose = vi.fn()
+  const view = render(
+    <ToastContext.Provider value={{ showToast: (message: string) => onToast(message) }}>
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <TransactionModal model={model(props?.plan, props?.labels)} actions={actions} editing={null} seed={props?.seed} onClose={onClose} />
+      </MoneyFormatProvider>
+    </ToastContext.Provider>,
   )
   return Object.assign(view, { actions, onClose })
 }
@@ -355,7 +369,7 @@ function batchRegion(container: HTMLElement) {
 async function fillAndStage(container: HTMLElement, file = receipt()) {
     const form = singleForm(container)
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Flight' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Flight' } })
   const input = container.querySelector('input[type=file]') as HTMLInputElement
   await userEvent.upload(input, file)
 }
@@ -364,7 +378,7 @@ async function fillAndStage(container: HTMLElement, file = receipt()) {
 function fillMinimum(container: HTMLElement) {
   const form = singleForm(container)
   fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '10,00' } })
-  fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Kyoto hotel' } })
+  fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Kyoto hotel' } })
 }
 
 describe('TransactionModal — withdrawals', () => {
@@ -389,7 +403,7 @@ describe('TransactionModal — withdrawals', () => {
     const form = singleForm(container)
     fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Sold ETF' } })
     fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
 
     expect(await screen.findByText(/cannot be split into installments/)).toBeInTheDocument()
@@ -404,7 +418,7 @@ describe('TransactionModal — withdrawals', () => {
     const form = singleForm(container)
     fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Sold ETF' } })
     fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(actions.createTransaction).toHaveBeenCalledTimes(1))
@@ -682,7 +696,7 @@ describe('TransactionModal — the other tab’s draft', () => {
     })
     const form = singleForm(container)
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '50' } })
-    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Taxi' } })
+    fireEvent.change(form.getByLabelText(/^description$/i), { target: { value: 'Taxi' } })
 
     fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
     const batch = batchRegion(container)
@@ -820,7 +834,7 @@ describe('TransactionModal — following a link to another transaction', () => {
     const second = makeTransaction({ id: 2, description: 'Reimbursement', amountCents: 120_00 })
     const { container, rerender } = renderModal({ editing: first })
 
-    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Flight')
+    expect(singleForm(container).getByLabelText(/^description$/i)).toHaveValue('Flight')
 
     rerender(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -833,6 +847,256 @@ describe('TransactionModal — following a link to another transaction', () => {
       </MoneyFormatProvider>,
     )
 
-    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Reimbursement')
+    expect(singleForm(container).getByLabelText(/^description$/i)).toHaveValue('Reimbursement')
   })
 })
+
+describe('TransactionModal, a captured payment', () => {
+  const REC = '0b0c0d0e-1111-4222-8333-444455556666'
+
+  it('saves through the recommendation, not a plain create', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions } = renderModal({
+      seed: { recommendationId: REC, amountCents: 1250, description: 'Cafe', type: 'expense', accountId: 1, categoryId: 1 },
+      actions: { submitRecommendation },
+    })
+
+    fillMinimum(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() =>
+      expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.objectContaining({ amountCents: 1000, description: 'Kyoto hotel' })),
+    )
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('refuses an installment plan rather than creating the row twice', async () => {
+    const submitRecommendation = vi.fn()
+    const { container, actions } = renderModal({
+      seed: { recommendationId: REC, amountCents: 1250, description: 'Cafe', type: 'expense', accountId: 1, categoryId: 1 },
+      actions: { submitRecommendation },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'New plan' }))
+    fireEvent.change(screen.getByLabelText('Total installments'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+    fillMinimum(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText(/cannot start or join an installment plan/)).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionModal, a queue of captured payments', () => {
+  const A = '0b0c0d0e-1111-4222-8333-444455556661'
+  const B = '0b0c0d0e-1111-4222-8333-444455556662'
+  const seedB: TransactionSeed = { recommendationId: B, amountCents: 300, description: 'Bakery', type: 'expense', accountId: 1, categoryId: 1 }
+  const queued = (over: Partial<NonNullable<TransactionSeed['queue']>> = {}): TransactionSeed => ({
+    recommendationId: A,
+    amountCents: 1250,
+    description: 'Cafe',
+    type: 'expense',
+    accountId: 1,
+    categoryId: 1,
+    queue: { left: 2, next: () => seedB, dontAdd: () => seedB, ...over },
+  })
+
+  it('says how many are left on the save button, and ends with a plain label at the last one', () => {
+    const first = renderModal({ seed: queued() })
+    expect(singleForm(first.container).getByRole('button', { name: 'Add and next (2 left)' })).toBeInTheDocument()
+    first.unmount()
+
+    const last = renderModal({ seed: queued({ left: 0 }) })
+    expect(singleForm(last.container).getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
+  })
+
+  it('opens the next payment instead of closing after a save', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions, onClose } = renderModal({ seed: queued(), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
+
+    await waitFor(() => expect(actions.onAdd).toHaveBeenCalledWith(seedB))
+    expect(submitRecommendation).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes after the last save', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, actions, onClose } = renderModal({ seed: queued({ left: 0, next: () => undefined }), actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(actions.onAdd).not.toHaveBeenCalled()
+  })
+
+  it("moves on to the next payment on Don't add, creating nothing, and closes at the end", () => {
+    const first = renderModal({ seed: queued() })
+    fireEvent.click(singleForm(first.container).getByRole('button', { name: "Don't add" }))
+    expect(first.actions.onAdd).toHaveBeenCalledWith(seedB)
+    expect(first.actions.createTransaction).not.toHaveBeenCalled()
+    first.unmount()
+
+    const last = renderModal({ seed: queued({ left: 0, dontAdd: () => undefined }) })
+    fireEvent.click(singleForm(last.container).getByRole('button', { name: "Don't add" }))
+    expect(last.onClose).toHaveBeenCalled()
+  })
+
+  it("has no Don't add outside a queue", () => {
+    const { container } = renderModal({ seed: { recommendationId: A, amountCents: 100, description: 'Cafe' } })
+
+    expect(singleForm(container).queryByRole('button', { name: "Don't add" })).not.toBeInTheDocument()
+  })
+})
+
+describe('TransactionModal, a payment that could be dated two ways', () => {
+  const notice = {
+    text: 'Month end. Check the date and budget month before adding.',
+    original: { date: '2026-11-30', label: 'Mon 30 Nov' },
+    alternate: { date: '2026-12-01', label: 'Tue 1 Dec' },
+  }
+  const seed: TransactionSeed = { recommendationId: 'r', amountCents: 840, description: 'Kebab', date: '2026-11-30', budgetMonth: '2026-11', notice }
+
+  it('shows the note and moves the date, and the budget month with it, and back', () => {
+    const { container } = renderModal({ seed })
+    const form = singleForm(container)
+    expect(form.getByRole('note')).toHaveTextContent('Month end.')
+    expect(form.getByText(/30 Nov 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Nov '26/)).toBeInTheDocument()
+
+    fireEvent.click(form.getByRole('button', { name: 'Use Tue 1 Dec' }))
+    expect(form.getByText(/1 Dec 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Dec '26/)).toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Back to Mon 30 Nov' })).toBeInTheDocument()
+
+    fireEvent.click(form.getByRole('button', { name: 'Back to Mon 30 Nov' }))
+    expect(form.getByText(/30 Nov 2026/)).toBeInTheDocument()
+    expect(form.getByText(/Nov '26/)).toBeInTheDocument()
+  })
+
+  it('shows no note for a seed without one', () => {
+    const { container } = renderModal({ seed: { amountCents: 100, description: 'Cafe' } })
+
+    expect(singleForm(container).queryByRole('note')).not.toBeInTheDocument()
+  })
+})
+
+describe('TransactionModal, a card the person answered for', () => {
+  const card = (over: Partial<NonNullable<TransactionSeed['card']>['answer']> = {}) => ({
+    source: 'iberia' as const,
+    digits: '4821',
+    answer: { accountId: 2, remember: true, ...over },
+    unanswered: 'Choose the account for the card ending 4821 first',
+    remember: vi.fn<(accountId: number) => Promise<string | null>>().mockResolvedValue(null),
+    ask: vi.fn(),
+  })
+  const seedWith = (c: ReturnType<typeof card>): TransactionSeed => ({ recommendationId: 'r', amountCents: 840, description: 'Kebab', type: 'expense', accountId: 1, categoryId: 1, card: c })
+  const add = (container: HTMLElement) => fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+  it('remembers the card for the account the payment is saved with, after it is saved', async () => {
+    const order: string[] = []
+    const c = card()
+    c.remember.mockImplementation(() => {
+      order.push('remember')
+      return Promise.resolve(null)
+    })
+    const submitRecommendation = vi.fn().mockImplementation(() => {
+      order.push('submit')
+      return Promise.resolve(makeTransaction({ id: 9 }))
+    })
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    await waitFor(() => expect(c.remember).toHaveBeenCalledWith(1))
+    expect(order).toEqual(['submit', 'remember'])
+  })
+
+  it('does not save, or remember anything, until the card is answered, and says why', async () => {
+    const c = card({ accountId: null })
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    expect(await screen.findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    expect(c.ask).toHaveBeenCalledOnce()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+
+  it('does not remember the card when the payment could not be saved, so no message is told about a payment that was not added', async () => {
+    const c = card()
+    const submitRecommendation = vi.fn().mockRejectedValue(new Error('Request failed (500)'))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    expect(await screen.findByText('Request failed (500)')).toBeInTheDocument()
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+
+  it('tells that the payment was added but the card was not remembered, after the form says it was added, and still closes', async () => {
+    const shown: string[] = []
+    const c = card()
+    c.remember.mockResolvedValue('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container, onClose } = renderModalWithToasts({ seed: seedWith(c), actions: { submitRecommendation } }, (m) => shown.push(m))
+
+    add(container)
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(shown.at(-1)).toBe('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    expect(shown.indexOf('Transaction added')).toBeLessThan(shown.length - 1)
+  })
+
+  it.each([['remembering is off', { remember: false }]])('does not remember it when %s', async (_name, answer) => {
+    const c = card(answer)
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalled())
+    expect(c.remember).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionModal, the description clear button', () => {
+  it('shows on a form opened for a captured payment, clears the text, and is not on an ordinary add', () => {
+    const captured = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'TAXI DEMO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Clear description' }))
+    expect(singleForm(captured.container).getByLabelText(/^description$/i)).toHaveValue('')
+    captured.unmount()
+
+    renderModal({ seed: { amountCents: 100, description: 'Copied' } })
+    expect(screen.queryByRole('button', { name: 'Clear description' })).not.toBeInTheDocument()
+  })
+})
+
+describe('TransactionModal, the account of a card still to be asked about', () => {
+  it('shows Pick an account, not a default, and the ordinary add form still starts on its default account', () => {
+    const asked = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 0 } })
+    expect(singleForm(asked.container).getByLabelText('Account')).toHaveDisplayValue('Pick an account')
+    asked.unmount()
+
+    const ordinary = renderModal()
+    expect(singleForm(ordinary.container).getByLabelText('Account')).not.toHaveDisplayValue('Pick an account')
+  })
+
+  it('refuses to save while the account is the empty choice, even when the question says answered', async () => {
+    const c = { source: 'iberia' as const, digits: '4821', answer: { accountId: 1, remember: true }, unanswered: 'Choose first', remember: vi.fn().mockResolvedValue(null), ask: vi.fn() }
+    const submitRecommendation = vi.fn()
+    const { container } = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 0, categoryId: 1, type: 'expense', card: c }, actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText('Choose first')).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+  })
+})
+

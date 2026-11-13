@@ -3,11 +3,11 @@ import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
-import type { ExpenseActions } from '../actions'
+import type { ExpenseActions, TransactionSeed } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
-import { DescriptionCombobox } from './DescriptionCombobox'
+import { ClearableDescription } from './ClearableDescription'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
@@ -18,7 +18,8 @@ import { createLabelInPlace } from './quickLabel'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
-import { suggestBudgetMonth, type FormFields, type Setter } from './transactionFormState'
+import { SeedAddons } from './SeedAddons'
+import { dateChanger, type FormFields, type Setter } from './transactionFormState'
 import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
 
@@ -124,7 +125,7 @@ function CategoryAccountRow({
 }) {
   const lockedCategoryId = form.type === 'investment' ? investmentCategoryId : null
   const categories = selectableOptions(model.dataset.categories, form.categoryId)
-  const accounts = selectableOptions(model.dataset.accounts, form.accountId)
+  const accounts = selectableOptions(model.dataset.accounts, form.accountId, 'Pick an account')
   const selectedCategory = model.dataset.categories.find((c) => c.id === form.categoryId)
   const categoryInactive = selectedCategory != null && !selectedCategory.active
   const selectedAccount = model.dataset.accounts.find((a) => a.id === form.accountId)
@@ -222,6 +223,8 @@ interface FieldsProps {
   receiptTargetId?: number | null
   /** Absent in read-only sessions, which is also when receipts are hidden. */
   actions?: ExpenseActions | undefined
+  /** What the form was opened for, which may ask about the card or note the date. */
+  seed?: TransactionSeed | undefined
   /**
    * The installment-plan toggle, rendered as a chip alongside "Add receipt" /
    * "Add note" when there's nothing to say about it yet ("Not part of a
@@ -261,15 +264,13 @@ export function Fields({
   onPendingChange,
   receiptTargetId = null,
   installmentChip,
+  seed,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
   const receiptInputRef = useRef<HTMLInputElement>(null)
 
-  const onDate = (v: string) => {
-    set('date', v)
-    if (!editing) set('budgetMonth', suggestBudgetMonth(model, v))
-  }
+  const onDate = dateChanger(model, editing, set)
 
   const showNoteInput = noteExpanded || form.notes !== ''
   const investmentCategoryId = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
@@ -299,17 +300,12 @@ export function Fields({
             placeholder="e.g. Mercadona"
           />
         ) : (
-          <DescriptionCombobox
-            value={form.description}
-            index={model.descriptionIndex}
-            placeholder="e.g. Mercadona"
-            onChange={(v) => set('description', v)}
-            onAccept={onAcceptSuggestion}
-          />
+          <ClearableDescription seed={seed} value={form.description} index={model.descriptionIndex} onChange={(v) => set('description', v)} onAccept={onAcceptSuggestion} />
         )}
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
+      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} />
 
       {actions ? (
         <>
