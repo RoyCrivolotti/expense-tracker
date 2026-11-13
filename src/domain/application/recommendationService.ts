@@ -1,8 +1,9 @@
 import type { NewTransaction } from '../data/dataSource'
+import type { PossibleMatch } from '../capture/duplicate'
 import type { CaptureRepository, Recommendation, RecommendationCursor } from '../ports/captureRepository'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
-import { createTransaction } from './transactionService'
+import { createTransaction, validateNewTransaction } from './transactionService'
 import { ValidationError } from './validationError'
 
 /** The most rows one page of the open list returns. */
@@ -14,6 +15,13 @@ export const RECOMMENDATION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[
 
 /** Why a decision did not happen: there is no such recommendation for this person, or it was decided already. */
 export type DecisionRefusal = 'missing' | 'decided'
+
+/** A submit refused because a typed row already looks like this payment and the person has not said to add it anyway. */
+export interface DuplicateRefusal {
+  ok: false
+  reason: 'possible-duplicate'
+  possibleMatch: PossibleMatch
+}
 
 export type Decision<T = object> = ({ ok: true } & T) | { ok: false; reason: DecisionRefusal }
 
@@ -82,9 +90,23 @@ export async function submitRecommendation(
   id: string,
   input: NewTransaction,
   now: Date,
-): Promise<Decision<{ transaction: Transaction }>> {
+  allowDuplicate = false,
+): Promise<Decision<{ transaction: Transaction }> | DuplicateRefusal> {
   const open = await openOne(captures, owner, id)
   if (!open.ok) return open
+  if (!allowDuplicate) {
+    // Checked after validation so a malformed body is still a 400, and before anything is written so a refusal
+    // leaves nothing behind. The row looked for is the one being submitted, which is the payment unless the person
+    // changed it. A row typed after the list was read is caught here; one typed between this read and the insert is not.
+    const valid = validateNewTransaction(input)
+    const possibleMatch = await captures.findPossibleMatch(owner, {
+      localDate: valid.date,
+      amountCents: Math.abs(valid.amountCents),
+      currency: 'EUR',
+      suggestedType: valid.type,
+    })
+    if (possibleMatch) return { ok: false, reason: 'possible-duplicate', possibleMatch }
+  }
   const transaction = await createTransaction(expenses, owner, input)
   let marked: boolean
   try {

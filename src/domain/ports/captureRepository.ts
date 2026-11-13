@@ -1,4 +1,4 @@
-import type { PossibleMatch } from '../capture/duplicate'
+import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -212,6 +212,8 @@ export interface CaptureRepository {
   /** Open ones, newest day first, `limit` of them from after the cursor. */
   listOpenRecommendations(owner: string, limit: number, after?: RecommendationCursor): Promise<Recommendation[]>
   /** How many are open, for the badge. */
+  /** The typed row of the owner that looks like this payment, by the rule the list uses, or null. One read. */
+  findPossibleMatch(owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null>
   countOpenRecommendations(owner: string): Promise<number>
   /** Moves an open recommendation to submitted or dismissed. False when it is not open, so a double tap acts once. */
   decideRecommendation(

@@ -84,6 +84,8 @@ const expense = () => ({
 })
 const state = (n: number) =>
   (sqlite.prepare('SELECT state, txn_id FROM recommendations WHERE id = ?').get(idOf(n)) as { state: string; txn_id: number | null })
+const typedRow = async (over: Record<string, unknown> = {}) =>
+  ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: { ...expense(), amountCents: 1250, ...over } })).json()) as { id: number }).id
 const transactions = () => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 
 describe('GET /api/recommendations', () => {
@@ -119,8 +121,6 @@ describe('GET /api/recommendations', () => {
 describe('GET /api/recommendations, the typed row a payment may duplicate', () => {
   type Listed = { recommendations: Array<{ id: string; possibleMatch: { transactionId: number; description: string; date: string } | null }> }
   const listed = async (email = OWNER) => ((await (await call(list, { email })).json()) as Listed).recommendations
-  const typedRow = async (over: Record<string, unknown> = {}) =>
-    ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: { ...expense(), amountCents: 1250, ...over } })).json()) as { id: number }).id
 
   it('names the row the person typed for the same price on the same day, as transactionId, description and date', async () => {
     await seed(1)
@@ -157,11 +157,12 @@ describe('GET /api/recommendations, the typed row a payment may duplicate', () =
     expect((await listed())[0]?.possibleMatch).toBeNull()
   })
 
-  it('does not block anything: the payment can still be submitted whatever it matches', async () => {
+  it('does not block the list: a payment with a match is still listed, and submitted once the person says to', async () => {
     await seed(1)
     await typedRow()
 
-    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250 } })).status).toBe(201)
+    expect(await listed()).toHaveLength(1)
+    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250, allowDuplicate: true } })).status).toBe(201)
   })
 })
 
@@ -174,6 +175,82 @@ describe('POST /api/recommendations/:id/submit', () => {
     expect(created.amountCents).toBe(1300)
     expect(state(1)).toEqual({ state: 'submitted', txn_id: created.id })
     expect(transactions()).toBe(1)
+  })
+
+  describe('when a typed row already looks like the payment', () => {
+    const same = () => ({ ...expense(), amountCents: 1250 })
+
+    it('answers 409 possible-duplicate with the row and creates nothing', async () => {
+      await seed(1)
+      const row = await typedRow({ description: 'Cafe at the till' })
+      const response = await call(submit, { n: 1, body: same() })
+
+      expect(response.status).toBe(409)
+      expect(await response.json()).toEqual({
+        error: expect.any(String),
+        code: 'possible-duplicate',
+        possibleMatch: { transactionId: row, description: 'Cafe at the till', date: '2026-03-02' },
+      })
+      expect(transactions()).toBe(1)
+      expect(state(1).state).toBe('open')
+    })
+
+    it('creates the row, once, when the body says to add it anyway, and keeps the flag off the row', async () => {
+      await seed(1)
+      await typedRow()
+      const response = await call(submit, { n: 1, body: { ...same(), allowDuplicate: true } })
+
+      expect(response.status).toBe(201)
+      expect(await response.json()).not.toHaveProperty('allowDuplicate')
+      expect(transactions()).toBe(2)
+      expect(state(1).state).toBe('submitted')
+      expect((await call(submit, { n: 1, body: { ...same(), allowDuplicate: true } })).status).toBe(409)
+      expect(transactions()).toBe(2)
+    })
+
+    it.each([['yes'], [1], [null], [[true]]])('refuses allowDuplicate: %j, which is not a boolean', async (flag) => {
+      await seed(1)
+      await typedRow()
+      expect((await call(submit, { n: 1, body: { ...same(), allowDuplicate: flag } })).status).toBe(400)
+      expect(transactions()).toBe(1)
+      expect(state(1).state).toBe('open')
+    })
+
+    it('treats allowDuplicate: false as no override', async () => {
+      await seed(1)
+      await typedRow()
+      expect((await call(submit, { n: 1, body: { ...same(), allowDuplicate: false } })).status).toBe(409)
+    })
+
+    it('ignores a row of another person, a cancelled row, one that answers for another recommendation, and one outside the window', async () => {
+      await seed(1)
+      sqlite
+        .prepare("INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Theirs', ?, ?, 'expense', 1250, ?)")
+        .run(accountId, categoryId, OTHER)
+      await typedRow({ cancelled: true })
+      await typedRow({ date: '2026-02-01' })
+      const owned = await typedRow()
+      await seed(2)
+      sqlite.prepare('UPDATE recommendations SET state = ?, txn_id = ? WHERE id = ?').run('submitted', owned, idOf(2))
+
+      expect((await call(submit, { n: 1, body: same() })).status).toBe(201)
+    })
+
+    it('matches the row being submitted, so a changed amount is not held up by the payment amount', async () => {
+      await seed(1)
+      await typedRow()
+      expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1300 } })).status).toBe(201)
+    })
+
+    it('answers 404 or 409 before it looks for a match, so a settled recommendation leaks nothing', async () => {
+      await seed(1)
+      await typedRow({ description: 'Private cafe' })
+      await call(submit, { n: 1, body: { ...same(), allowDuplicate: true } })
+      const again = await call(submit, { n: 1, body: same() })
+      expect(again.status).toBe(409)
+      expect(await again.json()).not.toHaveProperty('code', 'possible-duplicate')
+      expect((await call(submit, { n: 9, body: same() })).status).toBe(404)
+    })
   })
 
   it('creates nothing the second time, whatever the body', async () => {
