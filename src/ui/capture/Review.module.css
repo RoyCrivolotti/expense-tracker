@@ -188,3 +188,41 @@
   gap: 0.5rem;
   min-height: 2.75rem;
 }
+
+.duplicate {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--exp-warning) 18%, var(--color-surface));
+  color: var(--exp-warning-text);
+  font-size: 0.85rem;
+}
+
+.duplicateText {
+  margin: 0;
+}
+
+.duplicateActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.duplicateLink,
+.duplicateAnyway {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.duplicateLink:disabled,
+.duplicateAnyway:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

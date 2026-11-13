@@ -19,7 +19,7 @@ import {
 } from '../capture/captureEventsSql'
 import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
 import { cards } from './d1CaptureCards'
-import { withMatches } from './d1CaptureMatches'
+import { findMatch, withMatches } from './d1CaptureMatches'
 import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
@@ -153,7 +153,7 @@ function recommendations(
   db: D1Database,
 ): Pick<
   CaptureRepository,
-  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'decideRecommendation'
+  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'decideRecommendation' | 'findPossibleMatch'
 > {
   return {
     createRecommendation: async (rec) => {
@@ -171,6 +171,7 @@ function recommendations(
       ).map(toRecommendation)
       return withMatches(db, owner, await withCards(db, owner, page))
     },
+    findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
     decideRecommendation: (owner, id, d) =>

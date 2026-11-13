@@ -11,7 +11,7 @@ import { useToast } from '../hooks/useToast'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import type { TransactionSeed } from '../actions'
+import type { DuplicateOffer, TransactionSeed } from '../actions'
 import { SaveButtons } from './TransactionSaveButtons'
 import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
@@ -29,6 +29,8 @@ interface FormProps {
   model: ExpenseModel
   editing: Transaction | null
   seed?: TransactionSeed | undefined
+  /** A typed row the server says looks like this payment: the form offers to link it or add anyway. */
+  duplicate?: DuplicateOffer | undefined
   /** Resolves with the stored row on create, null on update (the id was known). */
   onSubmit: (
     input: NewTransaction,
@@ -244,6 +246,7 @@ export function TransactionForm({
   model,
   editing,
   seed,
+  duplicate,
   onSubmit,
   onDelete,
   onDuplicate,
@@ -461,6 +464,7 @@ export function TransactionForm({
             onPendingChange={setPendingFiles}
             installmentChip={installment.chip}
             seed={seed}
+            duplicate={duplicate}
           />
           {installment.bar}
           <FormError message={err} />

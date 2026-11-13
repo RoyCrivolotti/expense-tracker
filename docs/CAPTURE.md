@@ -72,7 +72,7 @@ the signed-in person's own; another person's recommendation and an id that is no
 | Route | Answers |
 | --- | --- |
 | `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` (below) and the `card` it came from |
-| `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it |
+| `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it. It is also refused with 409 `{ code: "possible-duplicate", possibleMatch }` when a typed row already looks like what is being submitted, unless the body carries `allowDuplicate: true` (a strict boolean; anything else is a 400, and it is never stored on the row) |
 | `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing. Takes no body |
 | `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
 
@@ -131,9 +131,13 @@ earlier counts as new.
 
 A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
 `possibleMatch: { transactionId, description, date }`, or null: a row the person already typed that looks like the same
-payment. It never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
-that row. The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
-`DUPLICATE_WINDOW`, which a check at submit time can reuse:
+payment. The list never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
+that row. Submit looks again, because a row can be typed between the list read and the press: it checks the row being
+submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
+and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`
+skips the check. A row typed between that one read and the insert is not caught, which is a deliberate advisory race.
+The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
+`DUPLICATE_WINDOW`, shared by both reads:
 
 - the same person's row, never another person's;
 - the same direction: an expense and an investment put in are money out, income and a refund and an investment taken
@@ -150,7 +154,8 @@ that row. The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), 
 
 The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
 prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
-whatever the page size.
+whatever the page size. The check at submit is the same statement for one amount and one date, so it reads at most the
+rows of one 18-day window and needs no new index.
 
 ## The capture endpoint
 

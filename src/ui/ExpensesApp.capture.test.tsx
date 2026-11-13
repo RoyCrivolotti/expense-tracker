@@ -98,7 +98,7 @@ describe('payments to review on the Dashboard', () => {
     // The server no longer lists it once it is decided.
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [unknown], next: null, openCount: 1 })
     await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
-    expect(api.submitRecommendation).toHaveBeenCalledWith(KNOWN, expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, type: 'expense' }))
+    expect(api.submitRecommendation).toHaveBeenCalledWith(KNOWN, expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, type: 'expense' }), undefined)
     expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
-    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' })))
+    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' }), false))
   })
 
   it('moves on to the next payment when the form is saved, and ends the queue at the last', async () => {
@@ -169,7 +169,7 @@ describe('payments to review on the Dashboard', () => {
     expect(await screen.findByRole('option', { name: 'Travel Credit (also card 1234)' })).toBeInTheDocument()
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
-    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 })))
+    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 }), false))
     expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
     // The card is remembered once the payment is saved, so a failed save leaves no link.
     expect(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]!)
@@ -257,6 +257,49 @@ describe('payments to review on the Dashboard', () => {
     await screen.findByRole('heading', { name: '1 payment to review' })
 
     expect(screen.getByRole('button', { name: 'Add Cafe Example' })).toBeInTheDocument()
+  })
+
+  describe('when the server finds a typed row at submit that the list did not', () => {
+    const MATCH = { transactionId: 41, description: 'Cafe', date: '2026-11-09' }
+    const tapAdd = async () => {
+      window.history.replaceState(null, '', '/?capture=on')
+      vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known], next: null, openCount: 1 })
+      vi.mocked(api.submitRecommendation).mockRejectedValueOnce(new api.PossibleDuplicateError(MATCH))
+      open()
+      await screen.findByRole('heading', { name: '1 payment to review' })
+      fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+      await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
+    }
+
+    it('puts the payment back in Review with the Link offer, and no error', async () => {
+      await tapAdd()
+
+      expect(await screen.findByRole('button', { name: 'Already entered as Cafe? Link' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Add Cafe Example' })).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+      expect(screen.queryByText(/Couldn't/)).not.toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('you may have entered this already')
+    })
+
+    it('links the returned payment to that row', async () => {
+      vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
+      await tapAdd()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Already entered as Cafe? Link' }))
+      await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
+
+      expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41)
+    })
+
+    it('adds it from Review without asking again, since the person has now seen the match', async () => {
+      await tapAdd()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+      const form = (await screen.findByRole('dialog')).querySelector('form')!
+      fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
+
+      await waitFor(() => expect(api.submitRecommendation).toHaveBeenLastCalledWith(KNOWN, expect.anything(), true))
+    })
   })
 })
 

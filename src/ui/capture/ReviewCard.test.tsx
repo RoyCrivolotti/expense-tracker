@@ -141,11 +141,11 @@ describe('a payment in doubt', () => {
     expect(message).toContain('To your typed row "Cafe". Nothing new is added.')
   })
 
-  it('cuts a long description of the typed row on the button and keeps the whole of it as the name', () => {
+  it('cuts a long description of the typed row on the button, starts the name with the words shown and keeps the whole of it after them', () => {
     const long = 'A very long description that somebody typed once and that runs past the end of any row'
     show(makeCore({ items: [rec(1, { possibleMatch: { transactionId: 9, description: long, date: '2026-11-09' } })] }))
 
-    const button = screen.getByRole('button', { name: `Already entered as ${long}? Link` })
+    const button = screen.getByRole('button', { name: `Already entered as A very long description that somebo\u2026? Link, ${long}` })
 
     expect(button).toHaveTextContent(/^Already entered as A very long description that somebo\u2026\? Link$/)
     expect(button).toHaveAttribute('title', long)

@@ -8,7 +8,6 @@
  * (linked by hand, or made by submitting one), so a payment that was captured and added does not match the next push
  * of the same price. The owner is in the statement, never taken from a row.
  *
-
  * Newest first, so a cap, should it ever be reached, drops the oldest rows and not the ones nearest the payments.
  *
  * The amounts travel as one JSON value, since a statement binds at most 100 values.

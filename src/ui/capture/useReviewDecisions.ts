@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { PossibleDuplicateError, type PossibleMatch } from '../../data/recommendationsApi'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { useToast } from '../hooks/useToast'
 import { UNDO_MS, usePendingAction } from './usePendingAction'
@@ -7,9 +8,10 @@ const messageOf = (e: unknown) => (e instanceof Error ? e.message : 'Something w
 
 /**
  * Holds one decision at a time for the undo window and keeps the payments it hides out of the list. A send that fails
- * puts its payment back with the reason. `done` is told once a payment has been decided on the server.
+ * puts its payment back with the reason. `done` is told once a payment has been decided on the server. A send the server
+ * refused for a typed row that looks the same is not a failure: the payment comes back with that row, via `matched`.
  */
-export function useReviewDecisions(done: (id: string) => void) {
+export function useReviewDecisions(done: (id: string) => void, matched: (id: string, match: PossibleMatch) => void) {
   const { showToast, dismissToast } = useToast()
   const pending = usePendingAction()
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
@@ -38,6 +40,12 @@ export function useReviewDecisions(done: (id: string) => void) {
             await send()
             done(id)
           } catch (e) {
+            if (e instanceof PossibleDuplicateError) {
+              matched(id, e.possibleMatch)
+              if (!pending.isHeld()) showToast('Not added yet \u00b7 you may have entered this already. Link it, or review it.', 'info')
+              hide(id, false)
+              return
+            }
             setFailures((held) => new Map(held).set(id, messageOf(e)))
             // The row says why. A toast would replace the Undo of a newer decision that is still being held.
             if (!pending.isHeld()) showToast(`Couldn't ${failure}. It is back in the list.`, 'error')
@@ -48,7 +56,7 @@ export function useReviewDecisions(done: (id: string) => void) {
       const action = { label: 'Undo', onAction: () => void pending.undo(), shortcut: UNDO_SHORTCUT }
       showToast(message, 'success', action, { holdMs: UNDO_MS, key: toastKey, keepOnTap: true })
     },
-    [dismissToast, done, hide, pending, showToast],
+    [dismissToast, done, hide, matched, pending, showToast],
   )
 
   return { hidden, failures, decide, flush: pending.flush }
