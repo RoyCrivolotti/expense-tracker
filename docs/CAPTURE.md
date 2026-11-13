@@ -72,7 +72,7 @@ What happens to a push:
 
 | Push | Result |
 | --- | --- |
-| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. Answers `{"ok":true}` |
+| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
 | Same push again | Stored once. The same 200 |
 | Any other kind, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
 | Over a cap | 429 with `Retry-After`, and nothing stored |

@@ -1,4 +1,4 @@
-import { replayKey } from '../../../src/domain/capture'
+import { isoWithOffset, replayKey } from '../../../src/domain/capture'
 import type { Interpretation, RawPush } from '../../../src/domain/capture'
 import type {
   CaptureCaps,
@@ -60,7 +60,8 @@ export async function storeRecognised(
     accountId: card?.accountId ?? null,
     amountCents: result.amountCents,
     currency: event.currency,
-    occurredAt,
+    // The recommendation keeps the phone's own clock, so the app can tell the time of day the payment was made.
+    occurredAt: isoWithOffset(result.instantMs, result.offsetMinutes),
     localDate: result.localDate,
     merchantRaw: event.merchantRaw,
     descriptionSuggested: null,
