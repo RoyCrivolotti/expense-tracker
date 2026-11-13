@@ -94,9 +94,10 @@ describe('the question asked for by a save', () => {
     render(<CardQuestion card={card} accounts={accounts} onPick={vi.fn()} />)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
-    act(() => card.ask!())
+    act(() => void card.ask!())
 
     expect(screen.getByRole('alert')).toHaveTextContent('Choose the account first')
+    expect(card.ask!()).toBe(true)
     expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
     fireEvent.change(screen.getByLabelText('Account for the card ending 4821'), { target: { value: '1' } })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()

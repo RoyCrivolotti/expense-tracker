@@ -992,7 +992,7 @@ describe('TransactionModal, a card the person answered for', () => {
     answer: { accountId: 2, remember: true, ...over },
     unanswered: 'Choose the account for the card ending 4821 first',
     remember: vi.fn<(accountId: number) => Promise<string | null>>().mockResolvedValue(null),
-    ask: vi.fn(),
+    ask: vi.fn<() => boolean>().mockReturnValue(false),
   })
   const seedWith = (c: ReturnType<typeof card>): TransactionSeed => ({ recommendationId: 'r', amountCents: 840, description: 'Kebab', type: 'expense', accountId: 1, categoryId: 1, card: c })
   const add = (container: HTMLElement) => fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
@@ -1016,7 +1016,7 @@ describe('TransactionModal, a card the person answered for', () => {
     expect(order).toEqual(['submit', 'remember'])
   })
 
-  it('does not save, or remember anything, until the card is answered, and says why', async () => {
+  it('does not save, or remember anything, until the card is answered, and says why when the question is not there to say it', async () => {
     const c = card({ accountId: null })
     const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
     const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
@@ -1027,6 +1027,19 @@ describe('TransactionModal, a card the person answered for', () => {
     expect(c.ask).toHaveBeenCalledOnce()
     expect(submitRecommendation).not.toHaveBeenCalled()
     expect(c.remember).not.toHaveBeenCalled()
+  })
+
+  it('leaves the saying to the question when it is on screen, so the message is shown once', async () => {
+    const c = card({ accountId: null })
+    c.ask.mockReturnValue(true)
+    const submitRecommendation = vi.fn()
+    const { container } = renderModal({ seed: seedWith(c), actions: { submitRecommendation } })
+
+    add(container)
+
+    await waitFor(() => expect(c.ask).toHaveBeenCalledOnce())
+    expect(screen.queryByText('Choose the account for the card ending 4821 first')).not.toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
   })
 
   it('does not remember the card when the payment could not be saved, so no message is told about a payment that was not added', async () => {

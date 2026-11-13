@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { LEDGER_MODE_KEY } from '../config/ledgerMode'
 import type { ExpenseDataSource } from '../data/dataSource'
 import * as cardsApi from '../data/captureCardsApi'
+import * as decisionsApi from '../data/recommendationDecisionsApi'
 import * as api from '../data/recommendationsApi'
 import { allGroupsGranted } from '../domain/accessGroups'
 import type { ExpenseDataset } from '../types'
@@ -14,6 +15,7 @@ import { ToastProvider } from './hooks/ToastProvider'
 import { UNDO_MS } from './capture/usePendingAction'
 
 vi.mock('../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), fetchCardLinks: vi.fn(), linkCard: vi.fn() }))
+vi.mock('../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
 vi.mock('../data/recommendationsApi', async (original) => ({
   ...(await original<typeof api>()),
   fetchRecommendations: vi.fn(),
@@ -190,6 +192,7 @@ describe('payments to review on the Dashboard', () => {
 
     const question = screen.getByText(/Which account is the card/).closest('fieldset')!
     expect(await within(question).findByRole('alert')).toHaveTextContent('Choose the account for the card ending 4821 first')
+    expect(screen.getAllByText('Choose the account for the card ending 4821 first')).toHaveLength(1)
     expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
     expect(api.submitRecommendation).not.toHaveBeenCalled()
     expect(cardsApi.linkCard).not.toHaveBeenCalled()
@@ -204,6 +207,35 @@ describe('payments to review on the Dashboard', () => {
 
     await screen.findByRole('dialog')
     expect(screen.queryByText(/Which account is the card/)).not.toBeInTheDocument()
+  })
+
+  it('sends a payment the server says is already typed to Review, offers to link it, and links it to that row', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...known, possibleMatch: { transactionId: 41, description: 'Cafe', date: '2026-11-09' } }],
+      next: null,
+      openCount: 1,
+    })
+    open()
+    await screen.findByRole('heading', { name: '1 payment to review' })
+
+    expect(screen.queryByRole('button', { name: 'Add Cafe Example' })).not.toBeInTheDocument()
+    expect(screen.getByText('May be entered already')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Already entered as Cafe? Link' }))
+    await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
+
+    expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41)
+    expect(api.submitRecommendation).not.toHaveBeenCalled()
+  })
+
+  it('still adds a known merchant with one tap when the server names no match', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...known, possibleMatch: null }], next: null, openCount: 1 })
+    open()
+    await screen.findByRole('heading', { name: '1 payment to review' })
+
+    expect(screen.getByRole('button', { name: 'Add Cafe Example' })).toBeInTheDocument()
   })
 })
 

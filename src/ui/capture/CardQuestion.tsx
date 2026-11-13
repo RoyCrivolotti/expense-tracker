@@ -5,7 +5,7 @@ import { otherCardsOf, useCardLinks } from './cardLinks'
 import styles from './Review.module.css'
 
 /** Hands the form a way to show this question's message and move the cursor here, outside render. */
-function offerAsk(card: SeedCard, ask: () => void) {
+function offerAsk(card: SeedCard, ask: () => boolean) {
   card.ask = ask
 }
 
@@ -18,6 +18,7 @@ function useAsk(card: SeedCard) {
       setMissing(true)
       select.current?.focus()
       select.current?.scrollIntoView?.({ block: 'center' })
+      return true
     })
   }, [card])
   return { missing, setMissing, select }

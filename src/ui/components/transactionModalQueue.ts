@@ -9,8 +9,8 @@ import { saveTransaction } from './transactionSaveIntent'
 /** Nothing is saved for a card until it is answered, and the question is shown where it is. */
 function refuseUnanswered(card: SeedCard | undefined, input: NewTransaction): void {
   if (!card || (card.answer.accountId !== null && input.accountId !== 0)) return
-  card.ask?.()
-  throw new Error(card.unanswered)
+  // The question says it itself when it is on screen, so the form does not say it a second time.
+  throw new Error(card.ask?.() ? '' : card.unanswered)
 }
 
 /**
