@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { buildDescriptionIndex } from '../../data/descriptionIndex'
 import type { TransactionSeed } from '../actions'
 import { ClearableDescription } from './ClearableDescription'
@@ -12,6 +12,12 @@ function Harness({ seed, initial }: { seed: TransactionSeed | undefined; initial
   const [value, setValue] = useState(initial)
   return <ClearableDescription seed={seed} value={value} index={index} onChange={setValue} onAccept={() => undefined} />
 }
+
+// The field dismisses its suggestion list 120ms after it loses focus. Waiting that out keeps the timer from firing after
+// the test environment is gone, which fails the run with an unhandled error.
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 150))
+})
 
 const captured: TransactionSeed = { recommendationId: 'r', description: 'TAXI DEMO' }
 const clear = () => screen.queryByRole('button', { name: 'Clear description' })
