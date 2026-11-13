@@ -37,7 +37,7 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` link when it is an https link on `www.icloud.com` or `icloud.com` under `/shortcuts/` (credentials and ports are refused, the query and fragment are dropped), else null. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
@@ -160,12 +160,11 @@ rows of one 18-day window and needs no new index.
 
 ## Setting up a phone
 
-Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **They are written from
-research. The only shortcuts built so far append each notification to a note. The part that posts to the app (Get
-Contents of URL, the JSON body and the Authorization header) has never run on a phone, so nothing here is proven end to
-end.** It comes from [Apple's guide](https://support.apple.com/guide/shortcuts/apd58d46713f/ios). The If step is untried
-too: the action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection.
-Only Iberia has a recipe; Santander joins with its own change.
+Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **A shortcut built by hand from these steps worked on one phone, and
+so did the same shortcut installed from a shared copy. Neither has been tried on a second phone, or from the installed Home
+Screen app.** The Get Contents of URL part follows [Apple's guide](https://support.apple.com/guide/shortcuts/apd58d46713f/ios).
+The If step is untried: the action returns the answer rather than failing, so it can catch a refusal but probably not a
+missing connection. Only Iberia has a recipe; Santander joins with its own change.
 
 1. **iOS 27.** The trigger "When I receive a notification from" was seen on iOS 27. Older iPhones and Android are untried.
    The app cannot tell the phone's version (Safari freezes it in the user agent), so the screen asks the person to check
@@ -197,6 +196,17 @@ Only Iberia has a recipe; Santander joins with its own change.
 The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
 The hostname is private, so it is never committed; docs and tests use `https://capture.example.workers.dev`. Where the
 variable is unset the screen asks for the address to be pasted and keeps it in that browser only.
+
+### The "Add the shortcut" button
+
+With `CAPTURE_SHORTCUT_URL` set (a plain Pages variable holding an iCloud share link to the shortcut, such as the invented
+`https://www.icloud.com/shortcuts/example0000000000000000000000000000`), the card replaces steps 3 and 4 with a button that
+opens the link in its own tab. It is an ordinary link: the app never fetches it. Shortcuts opens and asks for the
+person's capture key, so the shared copy carries no key; the Worker's address is inside the shared shortcut, so
+`CAPTURE_ENDPOINT` is not needed on that path. The steps become: check the phone, make a key and copy it, add the
+shortcut, run it automatically, and the iOS question. Unset, or not an iCloud shortcuts link, the card shows the manual
+steps above. The variable is never committed, because re-sharing a shortcut gives a new link. Not tried: the button from
+the installed Home Screen app, and whether the notification automation arrives switched on.
 
 ### Turning the screens on
 
