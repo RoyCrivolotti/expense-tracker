@@ -57,8 +57,10 @@ export interface TransactionSeed {
 /** What the add form offers when the server says a typed row already looks like the payment being added. */
 export interface DuplicateOffer {
   match: { transactionId: number; description: string; date: string }
-  /** Points the payment at that row and creates nothing. Resolves with why it could not, or null once done. */
-  link: () => Promise<string | null>
+  /** The recommendation to link, which the offer's Link button sends to the server. */
+  recommendationId: string
+  /** Called once the link is made: tells the list, says so, and moves the queue on. */
+  onLinked: () => void
   /** Called by the button that submits the form again, which then goes ahead whatever the match. */
   addAnyway: () => void
 }

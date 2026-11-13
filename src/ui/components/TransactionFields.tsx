@@ -3,7 +3,7 @@ import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
-import type { ExpenseActions, TransactionSeed } from '../actions'
+import type { DuplicateOffer, ExpenseActions, TransactionSeed } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
@@ -225,6 +225,7 @@ interface FieldsProps {
   actions?: ExpenseActions | undefined
   /** What the form was opened for, which may ask about the card or note the date. */
   seed?: TransactionSeed | undefined
+  duplicate?: DuplicateOffer | undefined
   /**
    * The installment-plan toggle, rendered as a chip alongside "Add receipt" /
    * "Add note" when there's nothing to say about it yet ("Not part of a
@@ -265,6 +266,7 @@ export function Fields({
   receiptTargetId = null,
   installmentChip,
   seed,
+  duplicate,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
@@ -305,7 +307,7 @@ export function Fields({
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
-      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} />
+      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} duplicate={duplicate} />
 
       {actions ? (
         <>

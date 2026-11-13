@@ -106,6 +106,7 @@ export function seedOf(view: ReviewView, remember?: SeedCard['remember']): Trans
     ...(view.accountId !== null ? { accountId: view.accountId } : view.askCard && remember ? { accountId: 0 } : {}),
     ...(view.categoryId !== null ? { categoryId: view.categoryId } : {}),
     ...noticeOf(view),
+    ...(view.rec.possibleMatch ? { possibleMatch: view.rec.possibleMatch } : {}),
     ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, unanswered: `Choose the account for the card ending ${view.askCard.digits} first`, remember } } : {}),
   }
 }

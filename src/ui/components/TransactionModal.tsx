@@ -242,6 +242,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         model={model}
         editing={editing}
         seed={seed}
+        duplicate={queue.duplicate}
         onSubmit={submit}
         onDelete={remove}
         onDuplicate={actions.onDuplicate}

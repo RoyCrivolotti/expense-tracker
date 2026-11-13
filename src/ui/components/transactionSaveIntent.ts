@@ -150,6 +150,7 @@ export async function saveTransaction(
   id: number | undefined,
   intent: InstallmentIntent | undefined,
   recommendationId: string | undefined,
+  allowDuplicate = false,
 ): Promise<Transaction | null> {
   if (id != null) {
     await updateTransactionWithIntent(actions, id, input, intent)
@@ -157,7 +158,7 @@ export async function saveTransaction(
   }
   if (recommendationId && actions.submitRecommendation) {
     if (intent && intent.kind !== 'none') throw new Error('A captured payment cannot start or join an installment plan')
-    return actions.submitRecommendation(recommendationId, input)
+    return actions.submitRecommendation(recommendationId, input, allowDuplicate)
   }
   return createTransactionWithIntent(actions, input, intent)
 }

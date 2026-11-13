@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../data/apiClient'
+import * as decisionsApi from '../../data/recommendationDecisionsApi'
+import { PossibleDuplicateError } from '../../data/recommendationsApi'
 import type { ExpenseDataset, InstallmentPlan, Label, Transaction } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions, TransactionSeed } from '../actions'
@@ -11,6 +14,8 @@ import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext } from '../hooks/useToast'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
+
+vi.mock('../../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
 
 function dataset(labels: Label[] = []): ExpenseDataset {
   return {
@@ -865,7 +870,7 @@ describe('TransactionModal, a captured payment', () => {
     fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() =>
-      expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.objectContaining({ amountCents: 1000, description: 'Kyoto hotel' })),
+      expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.objectContaining({ amountCents: 1000, description: 'Kyoto hotel' }), false),
     )
     expect(actions.createTransaction).not.toHaveBeenCalled()
   })
@@ -1113,3 +1118,81 @@ describe('TransactionModal, the account of a card still to be asked about', () =
   })
 })
 
+
+describe('TransactionModal, a captured payment a typed row may duplicate', () => {
+  const REC = '0b0c0d0e-1111-4222-8333-444455556677'
+  const MATCH = { transactionId: 41, description: 'Cafe at the till', date: '2026-11-09' }
+  const seed: TransactionSeed = { recommendationId: REC, amountCents: 1250, description: 'Cafe', type: 'expense', accountId: 1, categoryId: 1 }
+  const refusedOnce = () => vi.fn().mockRejectedValueOnce(new PossibleDuplicateError(MATCH)).mockResolvedValue(makeTransaction({ id: 9 }))
+  const press = (container: HTMLElement) => fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+  it('offers the row it found, with Link and Add anyway, and no error', async () => {
+    const submitRecommendation = refusedOnce()
+    const { container } = renderModal({ seed, actions: { submitRecommendation } })
+
+    press(container)
+
+    expect(await screen.findByText('Cafe at the till')).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent('Already entered as Cafe at the till on 2026-11-09?')
+    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), false)
+  })
+
+  it('sends the same form again with the override when Add anyway is pressed', async () => {
+    const submitRecommendation = refusedOnce()
+    const onClose = vi.fn()
+    const { container } = renderModal({ seed, onClose, actions: { submitRecommendation } })
+    press(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add anyway' }))
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalledTimes(2))
+    expect(submitRecommendation.mock.calls[1]).toEqual([REC, expect.objectContaining({ amountCents: 1250 }), true])
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('does not ask twice: a payment whose list row already showed the match is sent with the override at once', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: { ...seed, possibleMatch: MATCH }, actions: { submitRecommendation } })
+
+    press(container)
+
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), true))
+    expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument()
+  })
+
+  it('links the payment to the row, creates nothing and closes', async () => {
+    vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    const { container, actions } = renderModal({ seed, onClose, actions: { submitRecommendation: refusedOnce() } })
+    press(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'Link' }))
+
+    await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(REC, 41))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('says why when the row cannot be linked (gone, or taken by another payment) and still lets the payment be added', async () => {
+    vi.mocked(decisionsApi.linkRecommendation).mockRejectedValue(new ApiError('Transaction not found', 404))
+    const onClose = vi.fn()
+    const { container } = renderModal({ seed, onClose, actions: { submitRecommendation: refusedOnce() } })
+    press(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'Link' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Transaction not found You can still add this payment.')
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Add anyway' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('keeps a failure that is not a duplicate as the form error', async () => {
+    const submitRecommendation = vi.fn().mockRejectedValue(new Error('Offline'))
+    const { container } = renderModal({ seed, actions: { submitRecommendation } })
+
+    press(container)
+
+    expect(await screen.findByText('Offline')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument()
+  })
+})
