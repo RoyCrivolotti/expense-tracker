@@ -27,6 +27,10 @@ export interface ToastItem {
   message: string
   tone: ToastTone
   action?: ToastAction | undefined
+  /** Names the toast for a caller that may need to take this one down and no other. */
+  key?: string | undefined
+  /** A tap on its words leaves it up, for a toast whose button must not be taken away by a stray touch. */
+  keepOnTap?: boolean | undefined
 }
 
 /** Presentational snackbar. State + auto-dismiss live in ToastProvider. */
@@ -75,7 +79,7 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
         key={toast.id}
         className={`${styles.toast} ${styles[toast.tone]}${toast.action ? ` ${styles.withAction}` : ''}${leaving ? ` ${styles.leaving}` : ''}`}
         style={exitVars(leaving, exitMs)}
-        onClick={onDismiss}
+        onClick={toast.keepOnTap ? undefined : onDismiss}
         role="presentation"
       >
         {toast.message}

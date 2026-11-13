@@ -111,7 +111,7 @@ describe('ToastProvider hold time', () => {
     function Hold() {
       const { showToast } = useToast()
       return (
-        <button type="button" onClick={() => showToast('Added\nExpense', 'success', { label: 'Undo', onAction: () => {} }, 5000)}>
+        <button type="button" onClick={() => showToast('Added\nExpense', 'success', { label: 'Undo', onAction: () => {} }, { holdMs: 5000 })}>
           go
         </button>
       )
@@ -126,6 +126,67 @@ describe('ToastProvider hold time', () => {
     act(() => void vi.advanceTimersByTime(4999))
     expect(screen.getByRole('status').textContent).toContain('Added\nExpense')
     act(() => void vi.advanceTimersByTime(1))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+})
+
+describe('ToastProvider dismissToast and taps', () => {
+  function Pair() {
+    const { showToast, dismissToast } = useToast()
+    return (
+      <>
+        <button type="button" onClick={() => showToast('First', 'success', { label: 'Undo', onAction: () => {} }, { key: 'one', keepOnTap: true })}>
+          first
+        </button>
+        <button type="button" onClick={() => showToast('Second', 'info', undefined, { key: 'two' })}>
+          second
+        </button>
+        <button type="button" onClick={() => dismissToast?.('one')}>
+          dismiss one
+        </button>
+      </>
+    )
+  }
+  const show = () =>
+    render(
+      <ToastProvider>
+        <Pair />
+      </ToastProvider>,
+    )
+
+  it('takes down the toast with that key', () => {
+    show()
+    act(() => screen.getByText('first').click())
+
+    act(() => screen.getByText('dismiss one').click())
+
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('leaves a later toast alone when the key is of an earlier one', () => {
+    show()
+    act(() => screen.getByText('first').click())
+    act(() => screen.getByText('second').click())
+
+    act(() => screen.getByText('dismiss one').click())
+
+    expect(screen.getByRole('status').textContent).toBe('Second')
+  })
+
+  it('does nothing when no toast is up', () => {
+    show()
+
+    expect(() => act(() => screen.getByText('dismiss one').click())).not.toThrow()
+  })
+
+  it('keeps a toast up when its words are tapped only if it asked to, and a toast without that still goes', () => {
+    show()
+    act(() => screen.getByText('first').click())
+    act(() => screen.getByText('First').click())
+    expect(screen.getByRole('status').textContent).toContain('First')
+
+    act(() => screen.getByText('second').click())
+    act(() => screen.getByText('Second').click())
     expect(screen.queryByRole('status')).toBeNull()
   })
 })

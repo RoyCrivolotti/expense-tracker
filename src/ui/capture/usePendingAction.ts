@@ -65,5 +65,8 @@ export function usePendingAction() {
     }
   }, [flush])
 
-  return { hold, undo, flush }
+  /** Whether an action is being held now. */
+  const isHeld = useCallback(() => held.current !== null, [])
+
+  return { hold, undo, flush, isHeld }
 }

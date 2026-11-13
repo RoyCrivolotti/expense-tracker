@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ToastViewport, type ToastAction, type ToastItem, type ToastTone } from '../components/Toast'
-import { ToastContext } from './useToast'
+import { ToastContext, type ToastOptions } from './useToast'
 import { useFailureToast } from './useFailureToast'
 
 // An error has to be read and acted on, not just noticed, so it stays up longer.
@@ -11,6 +11,11 @@ const ACTION_TOAST_MS = 6000
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // What is showing, read without a render so a dismiss by key sees the toast that is up now.
+  const shown = useRef<ToastItem | null>(null)
+  useEffect(() => {
+    shown.current = toast
+  }, [toast])
 
   const clear = useCallback(() => {
     if (timer.current) clearTimeout(timer.current)
@@ -18,10 +23,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const showToast = useCallback(
-    (message: string, tone: ToastTone = 'info', action?: ToastAction, holdMs?: number) => {
+    (message: string, tone: ToastTone = 'info', action?: ToastAction, options?: ToastOptions) => {
       clear()
-      setToast({ id: Date.now(), message, tone, action })
-      timer.current = setTimeout(() => setToast(null), holdMs ?? (action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone]))
+      setToast({ id: Date.now(), message, tone, action, key: options?.key, keepOnTap: options?.keepOnTap })
+      timer.current = setTimeout(() => setToast(null), options?.holdMs ?? (action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone]))
+    },
+    [clear],
+  )
+
+  const dismissToast = useCallback(
+    (key: string) => {
+      if (shown.current?.key !== key) return
+      clear()
+      setToast(null)
     },
     [clear],
   )
@@ -29,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => clear, [clear])
   useFailureToast(showToast)
 
-  const api = useMemo(() => ({ showToast }), [showToast])
+  const api = useMemo(() => ({ showToast, dismissToast }), [showToast, dismissToast])
 
   return (
     <ToastContext.Provider value={api}>

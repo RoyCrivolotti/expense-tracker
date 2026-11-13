@@ -10,6 +10,7 @@ import { ToastContext } from '../hooks/useToast'
 import { ReviewProvider } from './ReviewProvider'
 import { useReviewCore } from './reviewContext'
 import { useReviewApi } from './useReviewApi'
+import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { UNDO_MS } from './usePendingAction'
 
 vi.mock('../../data/recommendationsApi', async (original) => ({
@@ -24,6 +25,7 @@ const B = '0b0c0d0e-1111-4222-8333-444455556662'
 const C = '0b0c0d0e-1111-4222-8333-444455556663'
 const model = makeReviewModel()
 const showToast = vi.fn()
+const dismissToast = vi.fn()
 
 function Probe() {
   const core = useReviewCore()
@@ -58,7 +60,7 @@ async function show(recs: api.RecommendationInfo[], readOnly = false) {
   vi.mocked(api.fetchRecommendations).mockResolvedValue(page(...recs))
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <ToastContext.Provider value={{ showToast }}>
+      <ToastContext.Provider value={{ showToast, dismissToast }}>
         <ReviewProvider model={model} actions={actions}>
           <Probe />
         </ReviewProvider>
@@ -82,6 +84,7 @@ afterEach(() => {
   vi.useRealTimers()
   vi.resetAllMocks()
   showToast.mockReset()
+  dismissToast.mockReset()
   window.history.replaceState(null, '', '/')
 })
 
@@ -104,9 +107,10 @@ describe('one tap', () => {
 
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
     expect(screen.getByTestId('count')).toHaveTextContent('1')
-    const [text, tone, action, ms] = showToast.mock.calls[0] as [string, string, { label: string }, number]
+    const [text, tone, action, options] = showToast.mock.calls[0] as [string, string, { label: string; shortcut: unknown }, object]
     expect(text.split('\n')[1]).toBe('Expense · Eating out · Main Debit · Tue 10 Nov · Nov budget')
-    expect([tone, action.label, ms]).toEqual(['success', 'Undo', UNDO_MS])
+    expect([tone, action.label, action.shortcut]).toEqual(['success', 'Undo', UNDO_SHORTCUT])
+    expect(options).toEqual({ holdMs: UNDO_MS, key: `review:${A}`, keepOnTap: true })
     await tick(UNDO_MS - 1)
     expect(actions!.submitRecommendation).not.toHaveBeenCalled()
 
@@ -186,6 +190,35 @@ describe('one tap', () => {
     press('add 1')
 
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument()
+  })
+
+  it('does not let an earlier action that fails replace the Undo of the newer one it made way for', async () => {
+    const actions = await show([known(A), known(B)])
+    vi.mocked(actions!.submitRecommendation!).mockRejectedValue(new Error('Request failed (500)'))
+    press('add 1')
+
+    press('skip 2')
+    await tick(0)
+
+    expect(screen.getByText('Request failed (500)')).toBeInTheDocument()
+    expect(showToast.mock.calls.map((c) => (c as unknown[])[1])).toEqual(['success', 'success'])
+    const undo = showToast.mock.calls[1]![2] as { onAction: () => void }
+    act(() => undo.onAction())
+    expect(screen.getByTestId(B)).toBeInTheDocument()
+  })
+
+  it('takes the Undo down when its action is sent, however it is sent', async () => {
+    const actions = await show([known(A), known(B)])
+    press('add 1')
+    await tick(UNDO_MS)
+    expect(dismissToast).toHaveBeenCalledWith(`review:${A}`)
+
+    dismissToast.mockClear()
+    press('skip 2')
+    expect(dismissToast).not.toHaveBeenCalled()
+    await tick(UNDO_MS)
+    expect(dismissToast).toHaveBeenCalledWith(`review:${B}`)
+    expect(actions!.onAdd).not.toHaveBeenCalled()
   })
 
   it('sends the held action when the app goes out of sight', async () => {
@@ -290,6 +323,16 @@ describe('review', () => {
     expect(next).toMatchObject({ recommendationId: C })
     expect(next!.queue!.left).toBe(0)
     expect(next!.queue!.next()).toBeUndefined()
+  })
+
+  it('takes the Undo down when the form opens and sends the held action first', async () => {
+    const actions = await show([known(A), known(B, { merchantRaw: 'BRAND NEW PLACE' })])
+    press('add 1')
+
+    press('review 2')
+
+    expect(dismissToast).toHaveBeenCalledWith(`review:${A}`)
+    expect(actions!.onAdd).toHaveBeenCalledOnce()
   })
 
   it('sends a held action before the form opens, because the form saves at once', async () => {
