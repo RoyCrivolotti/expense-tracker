@@ -76,12 +76,18 @@ same rule as the add form.
 | **Don't add** | Removes only that suggestion. It creates nothing and teaches the app nothing |
 | **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`, not sent yet). It points the recommendation at that row and creates nothing |
 
-A payment is reviewed rather than added by one tap when: no merchant text, no amount, a category not in use or never
-typed for this merchant, a card not mapped to an account, a currency other than euros (the amount is not copied into
-the euro form), no suggested type (the user's own money moved), a merchant typed fewer than twice, a typed row that
-looks the same, or a push near the end of a month: in the last hour of one, the first hour of the next, in a later
-month than the payment, or at a time that cannot be read in the payment's own day. For that last kind the add form shows a note under the date
-with both days it could be dated, and a button to move between them (the budget month follows).
+A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
+in use or never typed for this merchant, a card not mapped to an account (until the card-to-account map exists none is,
+so on live data one tap is not offered yet), a currency other than euros (the amount is not copied into the euro form),
+no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
+looks the same, or a budget month that could differ.
+
+That last test is one rule: the budget month (the add form's own rule, so the user's rollover day and a settled statement
+count) is worked out for the payment's day and for every day the bank might book it on, which are the day before or after
+when the payment is within an hour of midnight, and the day its push reached the server. If any of those gives another
+budget month the payment is reviewed, and the add form shows a note under the date with both days and a button to move
+between them. The payment's time of day is the phone's own, read from `occurredAt` (see the endpoint table below), so
+the device's zone does not matter; a row without it counts as next to an edge on the days either side of midnight.
 
 One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
 a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment

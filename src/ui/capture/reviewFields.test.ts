@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { localInstant, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { pushAt, arrivedAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import { buildMerchantIndex } from '../../domain/capture/review'
+import { buildExpenseModel } from '../buildExpenseModel'
 import { describeRecommendation, seedOf, transactionOf } from './reviewFields'
 
 const model = makeReviewModel()
@@ -29,7 +30,7 @@ describe('describeRecommendation', () => {
   })
 
   it('computes the budget month from the payment, never a fixed one', () => {
-    expect(view({ localDate: '2026-09-14', occurredAt: localInstant(2026, 9, 14), createdAt: localInstant(2026, 9, 14) }).budgetMonth).toBe('2026-09')
+    expect(view({ localDate: '2026-09-14', occurredAt: pushAt(2026, 9, 14), createdAt: arrivedAt(2026, 9, 14) }).budgetMonth).toBe('2026-09')
   })
 
   it('wants a look at a merchant seen once, and shows the bank text as its name', () => {
@@ -69,12 +70,40 @@ describe('describeRecommendation', () => {
   })
 
   it('wants a look near the end of a month and when the push arrived in a later month', () => {
-    expect(view({ localDate: '2026-11-30', occurredAt: localInstant(2026, 11, 30, 23, 52), createdAt: localInstant(2026, 11, 30, 23, 53) }).reasons).toContain('month-edge')
-    expect(view({ localDate: '2026-11-30', occurredAt: localInstant(2026, 11, 30, 18), createdAt: localInstant(2026, 12, 1, 0, 19) }).reasons).toContain('month-edge')
+    expect(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) }).reasons).toContain('month-edge')
+    expect(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 18), createdAt: arrivedAt(2026, 12, 1, 0, 19) }).reasons).toContain('month-edge')
   })
 
-  it('wants a look when the push time is in another day than the payment, since the hour then means nothing', () => {
-    expect(view({ localDate: '2026-11-11' }).reasons).toContain('month-edge')
+  it('has no clock for a row written in UTC: next to a month end it wants a look, in mid-month it does not', () => {
+    const utc = (localDate: string) => view({ localDate, occurredAt: `${localDate}T22:52:07.000Z` })
+
+    expect(utc('2026-11-30').reasons).toContain('month-edge')
+    expect(utc('2026-11-30').time).toBeNull()
+    expect(utc('2026-11-15').reasons).not.toContain('month-edge')
+  })
+
+  it("reads the payment's own time, so it does not depend on the zone of this device", () => {
+    const v = view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 30), createdAt: arrivedAt(2026, 11, 30, 23, 31) })
+
+    expect(v.time).toBe('23:30')
+    expect(v.clock.minuteOfDay).toBe(23 * 60 + 30)
+    expect(v.edgeDays).toEqual(['2026-12-01'])
+  })
+
+  it('follows the rollover day setting: the evening before it is a budget month edge and the calendar month end is not', () => {
+    const rollover = buildExpenseModel({ ...model.dataset, settings: { ...model.dataset.settings, budgetRolloverDay: 15 } })
+    const at = (day: number) => describeRecommendation(makeRecommendation({ localDate: `2026-11-${day}`, occurredAt: pushAt(2026, 11, day, 23, 30), createdAt: arrivedAt(2026, 11, day, 23, 31) }), rollover, merchants)
+
+    expect(at(14).reasons).toContain('month-edge')
+    expect(at(14).edgeDays).toEqual(['2026-11-15'])
+    expect(at(30).reasons).not.toContain('month-edge')
+  })
+
+  it('takes the budget month from the same rule for the payment day and the day an hour away', () => {
+    const v = view({ localDate: '2026-12-31', occurredAt: pushAt(2026, 12, 31, 23, 30), createdAt: arrivedAt(2026, 12, 31, 23, 31) })
+
+    expect(v.budgetMonth).toBe('2026-12')
+    expect(v.edgeDays).toEqual(['2027-01-01'])
   })
 
   it('wants a look, and not one tap, when the server says a typed row looks the same', () => {
@@ -110,7 +139,7 @@ describe('seedOf', () => {
   })
 
   it('carries the month-end note for a payment near a month end, and none otherwise', () => {
-    const edge = seedOf(view({ localDate: '2026-11-30', occurredAt: localInstant(2026, 11, 30, 23, 52), createdAt: localInstant(2026, 11, 30, 23, 53) }))
+    const edge = seedOf(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) }))
 
     expect(edge.notice?.alternate.date).toBe('2026-12-01')
     expect(seedOf(view())).not.toHaveProperty('notice')
@@ -118,6 +147,22 @@ describe('seedOf', () => {
 
   it('leaves out an amount the push did not have', () => {
     expect(seedOf(view({ amountCents: null }))).not.toHaveProperty('amountCents')
+  })
+})
+
+describe('one tap is never a no-op', () => {
+  it('for every suggested type and amount, a payment is either added as a real row or sent to Review', () => {
+    for (const suggestedType of ['expense', 'income', 'refund', 'investment', null] as const) {
+      for (const amountCents of [null, 0, 1250]) {
+        const v = view({ suggestedType, amountCents })
+        expect(transactionOf(v) !== null, `${suggestedType} ${amountCents}`).toBe(v.oneTap)
+      }
+    }
+  })
+
+  it('sends an investment and a zero amount to Review with a reason that says so', () => {
+    expect(view({ suggestedType: 'investment' }).reasons).toEqual(['own-money'])
+    expect(view({ amountCents: 0 }).reasons).toEqual(['zero-amount'])
   })
 })
 

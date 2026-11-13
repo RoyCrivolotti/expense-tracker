@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from '../../engine/money'
-import { localInstant, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { pushAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { describeRecommendation } from './reviewFields'
 import { detailLine, foreignAmount, monthWord, signedAmount, toastText, typeWord, weekdayDay } from './reviewFormat'
@@ -57,6 +57,6 @@ describe('reviewFormat', () => {
   })
 
   it('uses a mid-month push in the same way whatever the time of day', () => {
-    expect(weekdayDay(view({ occurredAt: localInstant(2026, 11, 10, 3) }).date)).toBe('Tue 10 Nov')
+    expect(weekdayDay(view({ occurredAt: pushAt(2026, 11, 10, 3) }).date)).toBe('Tue 10 Nov')
   })
 })

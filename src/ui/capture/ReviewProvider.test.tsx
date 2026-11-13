@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../data/recommendationsApi'
 import { makeActions } from '../../testing/makeActions'
 import { makeTransaction } from '../../testing/factories'
-import { localInstant, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { pushAt, arrivedAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import type { ExpenseActions } from '../actions'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext } from '../hooks/useToast'
@@ -315,7 +315,7 @@ describe('review', () => {
   })
 
   it('reads the clock of the payment, so the toast for a late push shows its own date', async () => {
-    const late = known(A, { localDate: '2026-12-01', occurredAt: localInstant(2026, 12, 1, 10, 41), createdAt: localInstant(2026, 12, 1, 10, 42) })
+    const late = known(A, { localDate: '2026-12-01', occurredAt: pushAt(2026, 12, 1, 10, 41), createdAt: arrivedAt(2026, 12, 1, 10, 42) })
     await show([late])
 
     press('add 1')

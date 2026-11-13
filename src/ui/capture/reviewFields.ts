@@ -1,7 +1,7 @@
 import type { NewTransaction } from '../../data/dataSource'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { cleanText } from '../../domain/capture/text'
-import { merchantHistory, nearMonthEdge, reviewReasons, type MerchantIndex, type ReviewReason } from '../../domain/capture/review'
+import { merchantHistory, otherBudgetDays, paymentClock, reviewReasons, type MerchantIndex, type PaymentClock, type ReviewReason } from '../../domain/capture/review'
 import type { TxnType } from '../../types'
 import type { TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
@@ -22,28 +22,16 @@ export interface ReviewView {
   accountId: number | null
   accountName: string | null
   date: string
-  /** `HH:MM` in this device's clock, or null when the push time is unreadable. */
+  /** `HH:MM` on the phone's clock, or null when the phone's offset is unknown. */
   time: string | null
   budgetMonth: string
+  /** The phone's own clock for the payment and its push. */
+  clock: PaymentClock
+  /** Days the bank might book it on that would be another budget month. Empty unless near an edge. */
+  edgeDays: string[]
   reasons: ReviewReason[]
   /** True only when nothing is in doubt, so one tap may add it. */
   oneTap: boolean
-}
-
-const pad = (n: number) => String(n).padStart(2, '0')
-const dayOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-
-/** The push's hour when this device's day is the payment's day, else null (a traveller's phone and this device differ). */
-function hourOf(rec: RecommendationInfo): { hour: number | null; time: string | null } {
-  const at = new Date(rec.occurredAt)
-  if (Number.isNaN(at.getTime())) return { hour: null, time: null }
-  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
-  return { hour: dayOf(at) === rec.localDate ? at.getHours() : null, time }
-}
-
-function arrivedMonth(rec: RecommendationInfo): string {
-  const at = new Date(rec.createdAt)
-  return Number.isNaN(at.getTime()) ? '' : dayOf(at).slice(0, 7)
 }
 
 /** The category and account the person's own history and settings give a payment, each null unless still in use. */
@@ -63,7 +51,9 @@ export function describeRecommendation(rec: RecommendationInfo, model: ExpenseMo
   const bankText = rec.merchantRaw === null ? null : cleanText(rec.merchantRaw)
   const history = merchantHistory(merchants, bankText)
   const refs = knownReferences(rec, history.categoryId, model)
-  const { hour, time } = hourOf(rec)
+  const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
+  const monthOf = (day: string) => suggestBudgetMonth(model, day)
+  const edgeDays = otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
   const reasons = reviewReasons({
     amountCents: rec.amountCents,
     currency: rec.currency,
@@ -72,7 +62,7 @@ export function describeRecommendation(rec: RecommendationInfo, model: ExpenseMo
     accountId: refs.accountId,
     suggestedType: rec.suggestedType,
     sightings: history.sightings,
-    monthEdge: nearMonthEdge({ localDate: rec.localDate, hour, arrivedMonth: arrivedMonth(rec) }),
+    monthEdge: edgeDays.length > 0,
     possibleMatch: rec.possibleMatch != null,
   })
   return {
@@ -83,8 +73,10 @@ export function describeRecommendation(rec: RecommendationInfo, model: ExpenseMo
     fromHistory: history.label !== null,
     ...refs,
     date: rec.localDate,
-    time,
-    budgetMonth: suggestBudgetMonth(model, rec.localDate),
+    time: clock.time,
+    budgetMonth: monthOf(rec.localDate),
+    clock,
+    edgeDays,
     reasons,
     oneTap: reasons.length === 0,
   }

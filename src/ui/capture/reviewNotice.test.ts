@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildMerchantIndex } from '../../domain/capture/review'
-import { localInstant, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { pushAt, arrivedAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import { describeRecommendation } from './reviewFields'
 import { monthEdgeNotice } from './reviewNotice'
 
@@ -14,23 +14,24 @@ describe('monthEdgeNotice', () => {
   })
 
   it('offers the day the push arrived on when that is another day', () => {
-    const n = notice({ localDate: '2026-11-30', occurredAt: localInstant(2026, 11, 30, 23, 52), createdAt: localInstant(2026, 12, 1, 0, 19) })!
+    const n = notice({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 12, 1, 0, 19) })!
 
     expect(n.original).toEqual({ date: '2026-11-30', label: 'Mon 30 Nov' })
     expect(n.alternate).toEqual({ date: '2026-12-01', label: 'Tue 1 Dec' })
     expect(n.text).toContain('dated Mon 30 Nov at 23:52')
     expect(n.text).toContain('The push arrived Tue 1 Dec at 00:19.')
     expect(n.text).toContain('Check the date and budget month before adding.')
+    expect(n.text).toContain('Budget month edge.')
   })
 
   it('offers the next day when the push arrived the same day in the last hour of a month', () => {
-    const n = notice({ localDate: '2026-11-30', occurredAt: localInstant(2026, 11, 30, 23, 52), createdAt: localInstant(2026, 11, 30, 23, 53) })!
+    const n = notice({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) })!
 
     expect(n.alternate.date).toBe('2026-12-01')
   })
 
   it('offers the day before in the first hour of a month, across a year end too', () => {
-    const n = notice({ localDate: '2027-01-01', occurredAt: localInstant(2027, 1, 1, 0, 10), createdAt: localInstant(2027, 1, 1, 0, 11) })!
+    const n = notice({ localDate: '2027-01-01', occurredAt: pushAt(2027, 1, 1, 0, 10), createdAt: arrivedAt(2027, 1, 1, 0, 11) })!
 
     expect(n.alternate.date).toBe('2026-12-31')
   })
