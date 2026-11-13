@@ -5,6 +5,14 @@
  * several owners present, because a planner with no statistics picks differently.
  */
 import { describe, expect, it } from 'vitest'
+import {
+  CARDS_OF_RECOMMENDATIONS_SQL,
+  CLEAR_OPEN_OF_UNLINKED_SQL,
+  LINK_CARD_SQL,
+  POINT_OPEN_AT_LINK_SQL,
+  UNLINK_CARD_SQL,
+  WAITING_CARDS_SQL,
+} from './captureCardsSql'
 import { migratedDatabase } from '../../../src/testing/sqliteD1'
 import {
   BUMP_COUNTER_SQL,
@@ -152,6 +160,22 @@ describe.each([false, true])('capture statement plans, with table statistics: %s
     const db = seeded(analyze)
     expect(planOf(db, LIST_OPEN_FIRST_SQL, [OWNER, 20])).not.toMatch(/TEMP B-TREE/)
     expect(planOf(db, LIST_OPEN_AFTER_SQL, [OWNER, 20, '2026-03-10', 'rec1-5'])).not.toMatch(/TEMP B-TREE/)
+  })
+
+  it('reaches the events and recommendations of a card by their owner, never by scanning them', () => {
+    const db = seeded(analyze)
+    const bound = [OWNER, 'iberia', 'card', '4821']
+    for (const [name, sql, params] of [
+      ['link', LINK_CARD_SQL, [...bound, 1]],
+      ['point open payments at the link', POINT_OPEN_AT_LINK_SQL, [...bound, 1]],
+      ['unlink', UNLINK_CARD_SQL, bound],
+      ['clear open payments of an unlinked card', CLEAR_OPEN_OF_UNLINKED_SQL, bound],
+      ['waiting cards', WAITING_CARDS_SQL, [OWNER]],
+      ['the cards of a page', CARDS_OF_RECOMMENDATIONS_SQL, [OWNER, '["rec1-1"]']],
+    ] as const) {
+      const plan = planOf(db, sql, [...params])
+      expect(plan, name).not.toMatch(/\bSCAN (capture_\w+|recommendations)\b/)
+    }
   })
 
   it('does not scan for a replay or a counter or a card write', () => {
