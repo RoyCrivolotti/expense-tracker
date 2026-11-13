@@ -198,6 +198,27 @@ describe('payments to review on the Dashboard', () => {
     expect(cardsApi.linkCard).not.toHaveBeenCalled()
   })
 
+  it('still says why nothing was saved when the installment view is open and the question is not on screen', async () => {
+    window.history.replaceState(null, '', '/?capture=on')
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
+      next: null,
+      openCount: 1,
+    })
+    vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [], waiting: [] })
+    open()
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    const dialog = await screen.findByRole('dialog')
+    await within(dialog).findByText(/Which account is the card/)
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /no plan/i }))
+    expect(within(dialog).queryByText(/Which account is the card/)).not.toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await within(dialog).findByText('Choose the account for the card ending 4821 first')).toBeInTheDocument()
+    expect(api.submitRecommendation).not.toHaveBeenCalled()
+  })
+
   it('does not ask about a card whose account is known', async () => {
     window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...unknown, accountId: 1, card: { source: 'iberia', digits: '4821' } }], next: null, openCount: 1 })

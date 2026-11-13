@@ -104,6 +104,19 @@ describe('the question asked for by a save', () => {
   })
 })
 
+describe('the question going away', () => {
+  it('takes its ask with it, so a save made while it is not on screen is told by the form', () => {
+    links([])
+    const card = seedCard()
+    const { unmount } = render(<CardQuestion card={card} accounts={accounts} onPick={vi.fn()} />)
+    expect(card.ask).toBeTypeOf('function')
+
+    unmount()
+
+    expect(card.ask).toBeUndefined()
+  })
+})
+
 describe('otherCardsOf', () => {
   const found: api.CardLink[] = [
     { source: 'iberia', digitsKind: 'card', digits: '1234', accountId: 1 },

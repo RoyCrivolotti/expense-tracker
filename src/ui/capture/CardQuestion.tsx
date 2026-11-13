@@ -5,7 +5,7 @@ import { otherCardsOf, useCardLinks } from './cardLinks'
 import styles from './Review.module.css'
 
 /** Hands the form a way to show this question's message and move the cursor here, outside render. */
-function offerAsk(card: SeedCard, ask: () => boolean) {
+function offerAsk(card: SeedCard, ask: (() => boolean) | undefined) {
   card.ask = ask
 }
 
@@ -15,11 +15,15 @@ function useAsk(card: SeedCard) {
   const select = useRef<HTMLSelectElement>(null)
   useEffect(() => {
     offerAsk(card, () => {
+      // Only says it did when the question is on screen. Without the select (the form shows another view) the form says it.
+      if (!select.current) return false
       setMissing(true)
-      select.current?.focus()
-      select.current?.scrollIntoView?.({ block: 'center' })
+      select.current.focus()
+      select.current.scrollIntoView?.({ block: 'center' })
       return true
     })
+    // Gone with the question: the form must not hand the message to something that is not there.
+    return () => offerAsk(card, undefined)
   }, [card])
   return { missing, setMissing, select }
 }
