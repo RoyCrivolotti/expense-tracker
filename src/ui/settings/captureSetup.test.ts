@@ -1,15 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { lastCaptureText, pastedEndpoint, readSetupMemory, sourceState, writeSetupMemory } from './captureSetup'
+import {
+  STALE_DAYS,
+  lastCaptureText,
+  pastedEndpoint,
+  readSetupMemory,
+  sourceState,
+  writeSetupMemory,
+} from './captureSetup'
 
 // Built in two pieces so the source holds no address-shaped text for the PII scan to flag.
 const withCredentials = () => ['https://user:secret', 'capture.example.workers.dev'].join('@')
 
 describe('sourceState', () => {
-  it('is waiting when nothing arrived, arriving when pushes came but none was read, and ok once one was', () => {
-    expect(sourceState(undefined)).toBe('waiting')
-    expect(sourceState({ lastCaptureAt: null, received: 0 })).toBe('waiting')
-    expect(sourceState({ lastCaptureAt: null, received: 3 })).toBe('unrecognised')
-    expect(sourceState({ lastCaptureAt: '2026-11-12T09:41:00.000Z', received: 0 })).toBe('ok')
+  const now = new Date('2026-11-13T12:00:00.000Z')
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString()
+  const DAY = 86_400_000
+
+  it('is waiting when nothing arrived, and when there is no status yet', () => {
+    expect(sourceState(undefined, now)).toBe('waiting')
+    expect(sourceState({ lastCaptureAt: null, received: 0, unrecognised: 0 }, now)).toBe('waiting')
+  })
+
+  it('is unrecognised when pushes arrive and none was ever read', () => {
+    expect(sourceState({ lastCaptureAt: null, received: 3, unrecognised: 3 }, now)).toBe('unrecognised')
+  })
+
+  it('is ok for a payment captured lately, with unread pushes beside it as long as some were read', () => {
+    expect(sourceState({ lastCaptureAt: ago(DAY), received: 0, unrecognised: 0 }, now)).toBe('ok')
+    expect(sourceState({ lastCaptureAt: ago(DAY), received: 5, unrecognised: 4 }, now)).toBe('ok')
+  })
+
+  it('is unrecognised, though a payment was once captured, when every push of the week went unread', () => {
+    expect(sourceState({ lastCaptureAt: ago(DAY), received: 5, unrecognised: 5 }, now)).toBe('unrecognised')
+    expect(sourceState({ lastCaptureAt: ago(DAY), received: 1, unrecognised: 1 }, now)).toBe('unrecognised')
+  })
+
+  it(`is quiet when the last payment is more than ${STALE_DAYS} days old, and ok at exactly ${STALE_DAYS}`, () => {
+    expect(sourceState({ lastCaptureAt: ago(STALE_DAYS * DAY), received: 0, unrecognised: 0 }, now)).toBe('ok')
+    expect(sourceState({ lastCaptureAt: ago(STALE_DAYS * DAY + 1), received: 0, unrecognised: 0 }, now)).toBe('quiet')
+    expect(sourceState({ lastCaptureAt: ago(90 * DAY), received: 0, unrecognised: 0 }, now)).toBe('quiet')
+  })
+
+  it('puts unread pushes before age', () => {
+    expect(sourceState({ lastCaptureAt: ago(90 * DAY), received: 2, unrecognised: 2 }, now)).toBe('unrecognised')
   })
 })
 
@@ -29,12 +62,10 @@ describe('pastedEndpoint', () => {
       'https://capture.example.workers.dev/capture',
     )
   })
-  it.each([
-    ['http://capture.example.workers.dev'],
-    ['capture.example.workers.dev'],
-    [withCredentials()],
-    [''],
-  ])('refuses %j', (text) => expect(pastedEndpoint(text)).toBeNull())
+  it.each([['http://capture.example.workers.dev'], ['capture.example.workers.dev'], [withCredentials()], ['']])(
+    'refuses %j',
+    (text) => expect(pastedEndpoint(text)).toBeNull(),
+  )
 })
 
 describe('setup memory', () => {

@@ -56,8 +56,24 @@ describe('the first-payment check', () => {
     status({ ...none, lastCaptureAt: new Date().toISOString(), received: 1 })
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText('Working')).toBeInTheDocument()
-    expect(screen.getByText(/Iberia: last capture today at/)).toBeInTheDocument()
+    expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
+    expect(screen.getByText(/Iberia: last payment captured today at/)).toBeInTheDocument()
+  })
+
+  it('does not read green for an old capture, and says nothing has been captured lately', async () => {
+    status({ ...none, lastCaptureAt: new Date(Date.now() - 10 * 86_400_000).toISOString(), received: 0 })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Nothing captured lately')).toBeInTheDocument()
+    expect(screen.queryByText('Last payment captured')).not.toBeInTheDocument()
+  })
+
+  it('does not read green when every push of the week went unread, though one was read before', async () => {
+    status({ ...none, lastCaptureAt: new Date(Date.now() - 86_400_000).toISOString(), received: 6, unrecognised: 6 })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Arriving, not read as a payment')).toBeInTheDocument()
+    expect(screen.getByText(/Iberia: last payment captured yesterday at/)).toBeInTheDocument()
   })
 
   it('reads again on Check again, on a key change and when the screen comes back into view', async () => {
@@ -82,12 +98,14 @@ describe('the first-payment check', () => {
 })
 
 describe('the steps', () => {
-  it('says plainly what it cannot know about the phone, and that it is not proven on a second phone', async () => {
+  it('says plainly what it cannot know about the phone, and that the posting part has never run on a phone', async () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('Waiting for your first payment')
 
     expect(screen.getByText(/This screen cannot tell your version/)).toBeInTheDocument()
-    expect(screen.getByText(/not yet been proven end to end on a second phone/)).toBeInTheDocument()
+    expect(screen.getByText(/only shortcuts built so far append each notification to a note/)).toBeInTheDocument()
+    expect(screen.getByText(/has never run on a phone, so nothing here is proven end to end/)).toBeInTheDocument()
+    expect(screen.getByText(/We have not tried an older iPhone or Android/)).toBeInTheDocument()
   })
 
   it("shows the server's address with a Copy button", async () => {
@@ -98,7 +116,8 @@ describe('the steps', () => {
     expect(await screen.findByText(ADDRESS)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Copy the address' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(ADDRESS))
-    expect(await screen.findByText('Copied')).toBeInTheDocument()
+    expect(await screen.findByText('Copied', { selector: 'button' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Copied')
   })
 
   it('says so when the clipboard refuses', async () => {
@@ -110,6 +129,7 @@ describe('the steps', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Copy the address' }))
 
     expect(await screen.findByText('Copy failed, select it')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Copy failed')
   })
 
   it('asks for the address when the server has none, keeps a pasted https one, and refuses another', async () => {

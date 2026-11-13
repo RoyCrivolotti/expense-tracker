@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
-import type { SourceStatus } from '../../data/captureStatusApi'
-import { lastCaptureText, pastedEndpoint, sourceState, type SourceState } from './captureSetup'
+import { pastedEndpoint } from './captureSetup'
+import { Waiting } from './CaptureSetupCheck'
 import styles from './CaptureSetupSetting.module.css'
 import { useCaptureSetup } from './useCaptureSetup'
 
@@ -19,9 +19,15 @@ function Copy({ text, label }: { text: string; label: string }) {
     }
   }
   return (
-    <button type="button" className={styles.copy} aria-label={label} onClick={() => void copy()}>
-      {done === 'copied' ? 'Copied' : done === 'failed' ? 'Copy failed, select it' : 'Copy'}
-    </button>
+    <>
+      <button type="button" className={styles.copy} aria-label={label} onClick={() => void copy()}>
+        {done === 'copied' ? 'Copied' : done === 'failed' ? 'Copy failed, select it' : 'Copy'}
+      </button>
+      {/* The button's name stays the same, so the result is said from here. */}
+      <span role="status" className={styles.srOnly}>
+        {done === 'copied' ? 'Copied' : done === 'failed' ? 'Copy failed, select the text and copy it by hand' : ''}
+      </span>
+    </>
   )
 }
 
@@ -51,7 +57,8 @@ function Address({ setup }: { setup: Setup }) {
   return (
     <label className={styles.paste}>
       <span>
-        The app does not know the address of the capture Worker. Paste it here (https only). It is kept in this browser.
+        The app does not know the address of the capture Worker. Paste it here, in the form
+        https://capture.example.workers.dev (https only; the app adds /capture). It is kept in this browser.
       </span>
       <input
         className={styles.input}
@@ -68,63 +75,13 @@ function Address({ setup }: { setup: Setup }) {
   )
 }
 
-const WAITING_TITLE: Record<SourceState, string> = {
-  ok: 'Working',
-  unrecognised: 'Arriving, not read as a payment',
-  waiting: 'Waiting for your first payment',
-}
-
-function WaitingText({
-  state,
-  iberia,
-  neverUsed,
-}: {
-  state: SourceState
-  iberia: SourceStatus | undefined
-  neverUsed: boolean
-}) {
-  if (state === 'ok' && iberia?.lastCaptureAt)
-    return <p>Iberia: last capture {lastCaptureText(iberia.lastCaptureAt, new Date())}.</p>
-  if (state === 'unrecognised') {
-    return (
-      <p>
-        Notifications are reaching the app ({iberia?.received} in the last 7 days) but none was read as a payment. The
-        bank may have reworded its message, or the shortcut sends the wrong fields.
-      </p>
-    )
-  }
-  return (
-    <p>
-      Nothing has reached the app yet. Pay with your card; a small amount will do.
-      {neverUsed ? ' Your key has not been used yet.' : ''}
-    </p>
-  )
-}
-
-function Waiting({ setup }: { setup: Setup }) {
-  const iberia = setup.status?.sources.find((s) => s.source === 'iberia')
-  const state = sourceState(iberia)
-  const neverUsed = setup.keys !== null && setup.keys.length > 0 && setup.keys.every((k) => !k.lastUsedAt)
-  return (
-    <li className={`${styles.step} ${styles[state]}`} aria-live="polite">
-      <span className={styles.stepTitle}>{WAITING_TITLE[state]}</span>
-      <div className={styles.stepBody}>
-        <WaitingText state={state} iberia={iberia} neverUsed={neverUsed} />
-        <button type="button" className={styles.copy} onClick={setup.recheck}>
-          Check again
-        </button>
-      </div>
-    </li>
-  )
-}
-
 function Steps({ setup }: { setup: Setup }) {
   return (
     <ol className={styles.steps}>
       <Step id="ios" title="1. Check your iPhone" setup={setup}>
         <p>
-          This needs an iPhone on iOS 27 or later. On Android or an older iPhone the automation cannot be built. This
-          screen cannot tell your version; check Settings, General, About.
+          The trigger this uses was seen on iOS 27. We have not tried an older iPhone or Android. This screen cannot
+          tell your version; check Settings, General, About.
         </p>
       </Step>
       <li className={styles.step}>
@@ -138,8 +95,9 @@ function Steps({ setup }: { setup: Setup }) {
           Add the trigger When I receive a notification from, and pick the app: IberiaCards for the Icon card (one word,
           as it appears in the notification). Leave the filters empty. Add Get Contents of URL, tap Show More, set
           Method to POST and Request Body to JSON, then add four fields: source (typed text, iberia), title and body
-          (the notification's Title and Body), and date (the notification's Date, in ISO 8601 with the phone's offset).
-          Optional: an If that checks the answer contains ok, and otherwise shows a notification, Capture failed.
+          (the notification's Title and Body), and date (the notification's Date). In saved notes the date arrived as
+          ISO 8601 with the phone's offset, so try that date format; the app reads that form. Optional: an If that
+          checks the answer contains ok, and otherwise shows a notification, Capture failed.
         </p>
       </Step>
       <Step id="point" title="4. Point it at the app" setup={setup}>
@@ -149,8 +107,9 @@ function Steps({ setup }: { setup: Setup }) {
       </Step>
       <Step id="run" title="5. Run it automatically" setup={setup}>
         <p>
-          Keep Automation on. Notify can stay off. Turn on Allow Running When Locked (info button, Privacy). The editor
-          can say Automation is turned off while it runs, so trust the automation list and your first real payment.
+          Keep Automation on. Notify was off on the automations that were tried, and whether it matters is untried. Turn
+          on Allow Running When Locked (info button, Privacy). The editor can say Automation is turned off while it
+          runs, so trust the automation list and your first real payment.
         </p>
       </Step>
       <Step id="allow" title="6. If iOS keeps asking" setup={setup}>
@@ -165,10 +124,10 @@ function Steps({ setup }: { setup: Setup }) {
   )
 }
 
-const SECOND_PHONE =
-  'These steps come from research and from a shortcut that works on one phone. They have not yet been proven end to end on a second phone.'
+const NOT_PROVEN =
+  'These steps are written from research. The only shortcuts built so far append each notification to a note. The part that posts to the app (Get Contents of URL, the JSON body and the Authorization header) has never run on a phone, so nothing here is proven end to end.'
 
-/** Seven steps to get Iberia notifications into the app, and a live check that the first one arrived. */
+/** Six steps to get Iberia notifications into the app, and a live check that the first one arrived. */
 export function CaptureSetupSetting() {
   const setup = useCaptureSetup()
   return (
@@ -178,7 +137,7 @@ export function CaptureSetupSetting() {
         <div className={tabStyles.settingGroup}>
           <p className={tabStyles.settingHint}>
             Capture sends each Iberia card notification from your iPhone to the app, which turns it into a payment for
-            you to review. {SECOND_PHONE}
+            you to review. {NOT_PROVEN}
           </p>
           {setup.error ? (
             <p className={tabStyles.settingError} role="alert">

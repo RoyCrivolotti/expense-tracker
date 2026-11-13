@@ -1,12 +1,26 @@
 import type { SourceStatus } from '../../data/captureStatusApi'
 import { shortDayLabel } from '../format'
 
-/** Where a bank app stands: nothing has reached the app, pushes arrive but none was read as a payment, or one was. */
-export type SourceState = 'waiting' | 'unrecognised' | 'ok'
+/**
+ * Where a bank app stands: nothing has reached the app (waiting), pushes arrive but none of the last week's was read as a
+ * payment (unrecognised), the last payment captured is older than `STALE_DAYS` (quiet), or a payment was captured lately.
+ * Information only: there is no banner or reconciliation behind it, so a stopped automation is still noticed by the person.
+ */
+export type SourceState = 'waiting' | 'unrecognised' | 'quiet' | 'ok'
 
-export function sourceState(status: Pick<SourceStatus, 'lastCaptureAt' | 'received'> | undefined): SourceState {
-  if (status?.lastCaptureAt) return 'ok'
-  return status && status.received > 0 ? 'unrecognised' : 'waiting'
+/** How old the last captured payment may be before the card says nothing has been captured lately. */
+export const STALE_DAYS = 3
+
+export function sourceState(
+  status: Pick<SourceStatus, 'lastCaptureAt' | 'received' | 'unrecognised'> | undefined,
+  now: Date,
+): SourceState {
+  if (!status) return 'waiting'
+  if (!status.lastCaptureAt) return status.received > 0 ? 'unrecognised' : 'waiting'
+  // Everything of the last week went unread: the last payment is from before the bank reworded its message.
+  if (status.received > 0 && status.unrecognised >= status.received) return 'unrecognised'
+  const age = now.getTime() - new Date(status.lastCaptureAt).getTime()
+  return age > STALE_DAYS * 86_400_000 ? 'quiet' : 'ok'
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
