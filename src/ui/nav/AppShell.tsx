@@ -86,7 +86,7 @@ function NavList({
               <span className={styles.navIcon}>
                 <Icon />
               </span>
-              {id === 'dashboard' && <NavBadge count={reviewCount} label={`${reviewCount} payments to review`} />}
+              {id === 'dashboard' && <NavBadge count={reviewCount} label={`${reviewCount} ${reviewCount === 1 ? 'payment' : 'payments'} to review`} />}
               {id === 'settings' && <NavBadge count={settingsBadge} label={`${settingsBadge} pending access requests`} />}
             </span>
             <span className={styles.navLabel}>{label}</span>

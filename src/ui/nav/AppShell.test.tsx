@@ -132,6 +132,17 @@ describe('AppShell badges', () => {
     expect(screen.queryByLabelText('4 pending access requests')).not.toBeInTheDocument()
   })
 
+  it('says payment, not payments, for one', () => {
+    render(
+      <ReviewContext.Provider value={review(1)}>
+        <AppShell {...baseProps}>content</AppShell>
+      </ReviewContext.Provider>,
+    )
+
+    expect(screen.getAllByLabelText('1 payment to review').length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('1 payments to review')).not.toBeInTheDocument()
+  })
+
   it('shows no Dashboard badge with nothing to review or with the flag off, and 9+ for a long queue', () => {
     const { rerender } = render(
       <ReviewContext.Provider value={review(0)}>

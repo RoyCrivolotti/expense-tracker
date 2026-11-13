@@ -837,7 +837,7 @@ describe('TransactionModal — following a link to another transaction', () => {
   })
 })
 
-describe('TransactionModal — a captured payment', () => {
+describe('TransactionModal, a captured payment', () => {
   const REC = '0b0c0d0e-1111-4222-8333-444455556666'
 
   it('saves through the recommendation, not a plain create', async () => {
@@ -876,7 +876,7 @@ describe('TransactionModal — a captured payment', () => {
   })
 })
 
-describe('TransactionModal — a queue of captured payments', () => {
+describe('TransactionModal, a queue of captured payments', () => {
   const A = '0b0c0d0e-1111-4222-8333-444455556661'
   const B = '0b0c0d0e-1111-4222-8333-444455556662'
   const seedB: TransactionSeed = { recommendationId: B, amountCents: 300, description: 'Bakery', type: 'expense', accountId: 1, categoryId: 1 }
@@ -939,7 +939,7 @@ describe('TransactionModal — a queue of captured payments', () => {
   })
 })
 
-describe('TransactionModal — a payment that could be dated two ways', () => {
+describe('TransactionModal, a payment that could be dated two ways', () => {
   const notice = {
     text: 'Month end. Check the date and budget month before adding.',
     original: { date: '2026-11-30', label: 'Mon 30 Nov' },
