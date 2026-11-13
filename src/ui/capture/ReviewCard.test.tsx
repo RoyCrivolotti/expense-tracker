@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { useState } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { makeTransaction } from '../../testing/factories'
 import { makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import ReviewCard from './ReviewCard'
 import { ReviewCardSlot } from './ReviewCardSlot'
@@ -31,12 +33,18 @@ function makeCore(over: Partial<ReviewCore> = {}): ReviewCore {
   }
 }
 
-const show = (core: ReviewCore) =>
-  render(
-    <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <ReviewCard core={core} />
-    </MoneyFormatProvider>,
-  )
+/** The card with the sheet state its slot would hold. */
+function Harness({ core }: { core: ReviewCore }) {
+  const [sheet, setSheet] = useState(false)
+  return <ReviewCard core={core} sheet={sheet} onSheet={setSheet} />
+}
+
+const wrap = (core: ReviewCore) => (
+  <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+    <Harness core={core} />
+  </MoneyFormatProvider>
+)
+const show = (core: ReviewCore) => render(wrap(core))
 
 describe('a known payment', () => {
   it("shows all seven fields and offers Add, Change and Don't add", () => {
@@ -189,11 +197,7 @@ describe('the card', () => {
     const { rerender } = show(core)
     fireEvent.click(screen.getByRole('button', { name: 'See all 4' }))
 
-    rerender(
-      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <ReviewCard core={{ ...core, items: [], count: 0 }} />
-      </MoneyFormatProvider>,
-    )
+    rerender(wrap({ ...core, items: [], count: 0 }))
 
     expect(within(screen.getByRole('dialog')).getByText('All caught up.')).toBeInTheDocument()
   })
@@ -224,6 +228,11 @@ describe('the card', () => {
   })
 })
 
+afterEach(() => {
+  vi.useRealTimers()
+  setMotionDisabledForTests(true)
+})
+
 describe('the slot on the Dashboard', () => {
   const slot = (value: ReviewCore | null) =>
     render(
@@ -247,4 +256,46 @@ describe('the slot on the Dashboard', () => {
 
     expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
   })
+
+  it('keeps the sheet when its last payment is decided there, says all caught up, and lets it leave before the card goes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    setMotionDisabledForTests(false)
+    const four = [rec(1), rec(2), rec(3), rec(4)]
+    const { rerender } = slot(makeCore({ items: four }))
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)))
+    fireEvent.click(await screen.findByRole('button', { name: 'See all 4' }))
+
+    rerender(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ReviewContext.Provider value={makeCore({ items: [], count: 0 })}>
+          <ReviewCardSlot />
+        </ReviewContext.Provider>
+      </MoneyFormatProvider>,
+    )
+
+    const sheet = screen.getByRole('dialog')
+    expect(within(sheet).getByText('All caught up.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /payments? to review/ })).not.toBeInTheDocument()
+
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await act(async () => void (await vi.advanceTimersByTimeAsync(EXIT_MS.sheet + 10)))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('lets the sheet play its exit when it is closed with payments still waiting', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    setMotionDisabledForTests(false)
+    slot(makeCore({ items: [rec(1), rec(2), rec(3), rec(4)] }))
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)))
+    fireEvent.click(await screen.findByRole('button', { name: 'See all 4' }))
+
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }))
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await act(async () => void (await vi.advanceTimersByTimeAsync(EXIT_MS.sheet + 10)))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '4 payments to review' })).toBeInTheDocument()
+  })
 })
+
