@@ -17,6 +17,11 @@ import { TransactionModal } from './TransactionModal'
 
 vi.mock('../../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
 
+// The card question is a lazy chunk that sets `card.ask` when it mounts. Left real, it replaces the spies the card tests
+// install whenever the chunk has loaded before the click (under load, or after another test loaded it), so which test
+// saw the spy depended on timing. The question has its own tests in CardQuestion.test.tsx; here the spy stands in for it.
+vi.mock('../capture/CardQuestion', () => ({ default: () => null }))
+
 function dataset(labels: Label[] = []): ExpenseDataset {
   return {
     flags: [],
