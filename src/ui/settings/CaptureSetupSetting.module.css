@@ -1,0 +1,126 @@
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.7rem;
+  background: var(--color-surface-muted);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.stepHead input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+.stepTitle {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+
+.stepBody p {
+  margin: 0;
+}
+
+.address {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+
+/* A long address must wrap inside a 375px card instead of widening the page. */
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+  color: var(--color-text);
+}
+
+.copy {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.paste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.warn {
+  color: var(--exp-warning-text);
+}
+
+.ok {
+  border-left: 4px solid var(--exp-positive, #17663f);
+}
+
+.unrecognised {
+  border-left: 4px solid var(--exp-warning, #8a5200);
+}
+
+.waiting {
+  border-left: 4px solid var(--color-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.quiet {
+  border-left: 4px solid var(--exp-warning, #8a5200);
+}

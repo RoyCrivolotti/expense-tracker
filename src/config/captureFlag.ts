@@ -22,6 +22,19 @@ export function readCaptureFlag({ search, storage }: CaptureFlagInput): boolean 
   return wanted === 'on'
 }
 
+/**
+ * Turns the screens on or off for this browser from the app itself, for an installed Home Screen app, which has no address
+ * bar to put `?capture=on` in. False when the browser refused to keep the choice.
+ */
+export function setCaptureFlag(on: boolean, storage: Pick<Storage, 'setItem'> | null): boolean {
+  try {
+    storage?.setItem(CAPTURE_FLAG_KEY, on ? 'on' : 'off')
+    return storage !== null
+  } catch {
+    return false
+  }
+}
+
 /** The flag for this page, read from the browser. */
 export function captureEnabled(): boolean {
   let storage: CaptureFlagInput['storage'] = null

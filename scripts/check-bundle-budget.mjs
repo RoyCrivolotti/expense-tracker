@@ -23,12 +23,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // TOTAL: the JS outside the chunks only the ledger mode loads, which is what a browser that turned the ledger mode off
 // runs. LEDGER: the chunks only the ledger mode loads, which every other browser downloads too, since it is the default.
 // GOALS: the Goals tab's own chunk and the chunks split out of it, which overlap TOTAL.
-const TOTAL_MAX_GZIP = 295_700
+const TOTAL_MAX_GZIP = 296_100
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
 // CAPTURE: the Settings key card and the Dashboard review card only a browser with the capture flag on loads. Kept out of TOTAL so the
 // feature has a line of its own and the default build cannot be blamed for it.
-const CAPTURE_MAX_GZIP = 10_500
+const CAPTURE_MAX_GZIP = 14_300
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

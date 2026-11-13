@@ -7,6 +7,7 @@ import { AppVersionSetting } from './AppVersionSetting'
 import { ChunkBoundary } from '../components/ChunkBoundary'
 
 // Its own chunk: most people never turn the flag on, and the card is the only thing here that talks to the capture routes.
+const CaptureSetupSetting = lazy(() => import('./CaptureSetupSetting').then((m) => ({ default: m.CaptureSetupSetting })))
 const CaptureKeySetting = lazy(() => import('./CaptureKeySetting').then((m) => ({ default: m.CaptureKeySetting })))
 const CaptureCardsSetting = lazy(() => import('./CaptureCardsSetting').then((m) => ({ default: m.CaptureCardsSetting })))
 
@@ -28,6 +29,7 @@ export function AccountView({
       {capture ? (
         <ChunkBoundary fallback={null}>
           <Suspense fallback={null}>
+            <CaptureSetupSetting />
             <CaptureKeySetting />
             <CaptureCardsSetting model={model} />
           </Suspense>

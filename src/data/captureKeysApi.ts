@@ -28,3 +28,15 @@ export function createCaptureKey(label: string): Promise<CreatedCaptureKey> {
 export async function revokeCaptureKey(keyId: string): Promise<void> {
   await req<{ ok: true }>(`/api/capture-keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' })
 }
+
+const changes = new EventTarget()
+
+/** Tells the setup screen that a key was made or revoked in the card below it. */
+export function announceCaptureKeysChanged(): void {
+  changes.dispatchEvent(new Event('changed'))
+}
+
+export function onCaptureKeysChanged(listener: () => void): () => void {
+  changes.addEventListener('changed', listener)
+  return () => changes.removeEventListener('changed', listener)
+}

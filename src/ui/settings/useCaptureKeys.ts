@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  announceCaptureKeysChanged,
   createCaptureKey,
   fetchCaptureKeys,
   revokeCaptureKey,
@@ -42,6 +43,7 @@ export function useCaptureKeys() {
     try {
       await run()
       setVersion((v) => v + 1)
+      announceCaptureKeysChanged()
       return true
     } catch (e) {
       setError(messageOf(e))
