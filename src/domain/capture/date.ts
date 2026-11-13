@@ -16,8 +16,10 @@ function offsetMinutes(zone: string): number | null {
   if (zone === 'Z') return 0
   const hours = Number(zone.slice(1, 3))
   const minutes = Number(zone.slice(-2))
-  if (hours > 14 || minutes > 59) return null
-  return (zone.startsWith('-') ? -1 : 1) * (hours * 60 + minutes)
+  if (minutes > 59) return null
+  const total = (zone.startsWith('-') ? -1 : 1) * (hours * 60 + minutes)
+  // The real range of UTC offsets: +14:00 down to -12:00.
+  return total >= -12 * 60 && total <= 14 * 60 ? total : null
 }
 
 /** Parses the phone's Date. The offset is read from the string because daylight saving changes it. */
@@ -32,6 +34,18 @@ export function parsePushDate(date: string): PushInstant | null {
   const wall = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
   if (wall.getUTCMonth() !== month - 1 || wall.getUTCDate() !== day) return null
   return { instantMs: wall.getTime() - offset * 60_000, localDate: `${m[1]}-${m[2]}-${m[3]}`, offsetMinutes: offset }
+}
+
+/**
+ * The moment as the phone wrote it: wall-clock time with the phone's offset, never `Z`. The same instant as
+ * `new Date(instantMs).toISOString()`, but a reader can tell the phone's own time of day from it without a time
+ * zone database, and a `Z` still means "offset unknown".
+ */
+export function isoWithOffset(instantMs: number, offsetMinutes: number): string {
+  const wall = new Date(instantMs + offsetMinutes * 60_000).toISOString().slice(0, 19)
+  const abs = Math.abs(offsetMinutes)
+  const zone = `${offsetMinutes < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`
+  return `${wall}${zone}`
 }
 
 /** Whether a push dated at `instantMs` is believable when the server receives it at `receivedMs`. */

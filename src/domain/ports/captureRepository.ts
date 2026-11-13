@@ -51,6 +51,7 @@ export interface CaptureEvent {
   merchantRaw: string | null
   last4: string | null
   accountDigits: string | null
+  /** The moment as a UTC instant (`...Z`). */
   occurredAt: string
   localDate: string
   offsetMinutes: number
@@ -85,6 +86,10 @@ export interface NewRecommendation {
   /** Positive cents, or null when the push gave no amount: shown as incomplete. */
   amountCents: number | null
   currency: string | null
+  /**
+   * The moment on the phone's own clock, with the phone's offset (`2026-11-03T09:41:07+01:00`). A row written before
+   * this was kept in UTC (`...Z`), which carries no offset, so the phone's time of day cannot be read from it.
+   */
   occurredAt: string
   localDate: string
   merchantRaw: string | null
