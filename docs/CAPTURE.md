@@ -162,18 +162,17 @@ rows of one 18-day window and needs no new index.
 ## Setting up a phone
 
 Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. **A shortcut built by hand
-from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. Downloading it from this app and opening it has
-not been tried, nor has the installed Home Screen app or a second phone.** We have not seen the
-iOS 27 screens beyond the trigger, so names below may differ from yours; anything that does should be reported. The
-trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari
-freezes it in the user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander
-joins with its own change.
+from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. Downloading
+it from this app and opening it has not been tried, nor has the installed Home Screen app or a second phone.** We have not
+seen the iOS 27 screens beyond the trigger, so names below may differ from yours; report any that do. The trigger was seen on
+iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
+user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander joins later.
 
 ### With the shortcut file
 
 When the shortcut file has been uploaded (see "Putting the shortcut file in place"), `GET /api/capture-status` says
-`shortcut: true` and the card shows these steps. The "Add the shortcut" button is an ordinary `<a href="/api/capture-shortcut"
-download>`: the browser saves the bytes and the app never fetches them. The file is generic and the person edits it by hand.
+`shortcut: true` (false if the bucket cannot be read) and the card shows these steps. The "Add the shortcut" button is
+an ordinary `<a href="/api/capture-shortcut" download>`: the browser saves the bytes and the app never fetches them.
 
 1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
 2. **Add the shortcut.** Tap **Add the shortcut**. A file called Expense capture downloads. Open it from the downloads; iOS
@@ -189,6 +188,7 @@ download>`: the browser saves the bytes and the app never fetches them. The file
    the option that remembers the answer. If it asks again on every payment an unattended run cannot work yet (untested).
 
 The Worker's address, with `/capture`, is already inside the file (checked), so none is typed.
+
 ### Putting the shortcut file in place
 
 The file is specific to a deployment (it has that deployment's Worker address inside) and is signed by Apple, so it cannot
@@ -198,10 +198,10 @@ be edited per person or per deployment, and it is never committed. An operator d
    `source` set to `CARD_NAME_HERE`. Export it from the Shortcuts app as a file.
 2. **Inspect it before it goes anywhere:** no real key, no personal data. A file checked this way was signed by an Apple
    certificate chain, held an opaque id, and carried only the placeholders.
-3. Upload it to the receipts bucket under one fixed key (the bucket name here is invented):
-   `wrangler r2 object put expense-receipts/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --content-type application/octet-stream --remote`
-4. Re-exporting means uploading again. The route sets its own headers whatever the object stores, so the type given here only keeps the two consistent. The file is served as it is, at most 256 KB, as `application/octet-stream` with
-   `Content-Disposition: attachment`; no registered media type for a Shortcut file is known.
+3. Upload it to the bucket bound as `RECEIPTS`, under one fixed key (`<bucket>` is that bucket's name):
+   `wrangler r2 object put <bucket>/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --content-type application/octet-stream --remote`
+4. Re-exporting means uploading again. The route sets its own headers; `application/octet-stream` is an inference (no
+   registered type for a Shortcut file is known), so report it if a phone does not offer to open the download.
 
 The receipts bucket is used because the app already binds it and nothing lists it: receipt bytes are read and deleted
 only by keys taken from the database, and no job treats an unknown key as an orphan. Check the bucket has no lifecycle
