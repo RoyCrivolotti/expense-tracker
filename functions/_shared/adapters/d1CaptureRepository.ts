@@ -107,7 +107,7 @@ function events(
     recordCapture: (event, rec, caps) => recordCapture(db, event, rec, caps),
     hasEvent: async (keyId, source, replayKey) =>
       (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
-    admit: (owner, source, day, caps) => changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global),
+    admit: (owner, source, day, caps) => changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global, caps.sourcesPerOwner),
     eventsSince: async (keyId, since) => {
       const row = await db.prepare(EVENTS_SINCE_SQL).bind(keyId, since).first<{ n: number }>()
       return row?.n ?? 0
@@ -128,7 +128,7 @@ function events(
           fromDay,
         )
       ).map((r) => ({
-        source: r.source as 'iberia' | 'santander',
+        source: r.source,
         day: r.day,
         received: r.received,
         unrecognised: r.unrecognised,
@@ -145,7 +145,7 @@ async function withCards(db: D1Database, owner: string, page: Recommendation[]):
     owner,
     JSON.stringify(page.map((r) => r.id)),
   )
-  const byRec = new Map(found.map((r) => [r.rec_id, { source: r.source as 'iberia' | 'santander', digits: r.last4 }]))
+  const byRec = new Map(found.map((r) => [r.rec_id, { source: r.source, digits: r.last4 }]))
   return page.map((r) => ({ ...r, card: byRec.get(r.id) ?? null }))
 }
 

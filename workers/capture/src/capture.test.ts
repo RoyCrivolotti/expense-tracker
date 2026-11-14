@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import { createD1AccessRepository } from '../../../functions/_shared/adapters/d1AccessRepository'
 import { createD1CaptureRepository } from '../../../functions/_shared/adapters/d1CaptureRepository'
-import { mintCaptureKey } from '../../../src/domain/capture'
+import { MAX_SOURCES_PER_OWNER, mintCaptureKey } from '../../../src/domain/capture'
 import type { MintedCaptureKey } from '../../../src/domain/capture'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import type { SqliteD1Stats } from '../../../src/testing/sqliteD1'
@@ -256,7 +256,15 @@ describe('a body that is not a push', () => {
     ['an array', '[]'],
     ['a number', '3'],
     ['no source', { ...PURCHASE, source: undefined }],
-    ['an unknown source', { ...PURCHASE, source: 'other' }],
+    ['a source that is not text', { ...PURCHASE, source: 5 }],
+    ['an empty source', { ...PURCHASE, source: '' }],
+    ['a source over 32 characters', { ...PURCHASE, source: 'a'.repeat(33) }],
+    ['an uppercase source', { ...PURCHASE, source: 'Iberia' }],
+    ['a source with a space', { ...PURCHASE, source: 'my bank' }],
+    ['a source with a trailing newline', { ...PURCHASE, source: 'iberia\n' }],
+    ['a source with accents', { ...PURCHASE, source: 'bañco' }],
+    ['a source that looks like a path', { ...PURCHASE, source: '../iberia' }],
+    ['a source that looks like SQL', { ...PURCHASE, source: "x'; DROP TABLE capture_events;--" }],
     ['a title that is not text', { ...PURCHASE, title: 5 }],
     ['a title over 200 characters', { ...PURCHASE, title: 'a'.repeat(201) }],
     ['a body over 4000 characters', { ...PURCHASE, body: 'a'.repeat(4001) }],
@@ -267,6 +275,61 @@ describe('a body that is not a push', () => {
     expect(res.status).toBe(400)
     expect(await res.text()).toBe('{"error":"bad request"}')
     expect(count('capture_events')).toBe(0)
+  })
+})
+
+describe('a source word with no row in the kind list', () => {
+  const push = (source: string) => ({ source, title: 'Compra realizada', body: 'invented text', date: PURCHASE.date })
+
+  it('is accepted and only counted, whatever the title says', async () => {
+    expect((await send(request({ body: push('some-bank-2') }))).status).toBe(200)
+    expect(rows('SELECT source, received, unrecognised FROM capture_counters')).toEqual([
+      { source: 'some-bank-2', received: 1, unrecognised: 1 },
+    ])
+    expect(count('capture_events') + count('recommendations')).toBe(0)
+  })
+
+  it('still reads the Iberia purchase as before', async () => {
+    expect((await send(request())).status).toBe(200)
+    expect(count('capture_events')).toBe(1)
+    expect(count('recommendations')).toBe(1)
+  })
+
+  it('accepts a source of exactly 32 characters and refuses 33', async () => {
+    expect((await send(request({ body: push('a'.repeat(32)) }))).status).toBe(200)
+    expect((await send(request({ body: push('a'.repeat(33)) }))).status).toBe(400)
+  })
+})
+
+describe('the distinct-source cap', () => {
+  const push = (source: string) => ({ source, title: 'Promo', body: 'x', date: PURCHASE.date })
+  const words = Array.from({ length: MAX_SOURCES_PER_OWNER }, (_, i) => `bank-${i}`)
+
+  it('refuses a new source once a person has 8, with the 429 the other caps give', async () => {
+    for (const word of words) expect((await send(request({ body: push(word) }))).status).toBe(200)
+    const over = await send(request({ body: push('bank-new') }))
+    expect(over.status).toBe(429)
+    expect(over.headers.get('retry-after')).toBe('3600')
+    expect(count('capture_counters')).toBe(MAX_SOURCES_PER_OWNER)
+  })
+
+  it('still counts a source the person already has, and the next day too', async () => {
+    for (const word of words) await send(request({ body: push(word) }))
+    expect((await send(request({ body: push('bank-0') }))).status).toBe(200)
+    const tomorrow = new Date(NOW.getTime() + 24 * 60 * 60 * 1000)
+    expect((await send(request({ body: push('bank-3') }), tomorrow)).status).toBe(200)
+    expect((await send(request({ body: push('bank-new') }), tomorrow)).status).toBe(429)
+  })
+
+  it('is counted per person', async () => {
+    for (const word of words) await send(request({ body: push(word) }))
+    expect((await send(request({ key: bobKey.key, body: push('bank-new') }))).status).toBe(200)
+  })
+
+  it('never admits more than the cap when new sources arrive at once', async () => {
+    const answers = await Promise.all(Array.from({ length: 15 }, (_, i) => send(request({ body: push(`race-${i}`) }))))
+    expect(answers.filter((a) => a.status === 200)).toHaveLength(MAX_SOURCES_PER_OWNER)
+    expect(count('capture_counters')).toBe(MAX_SOURCES_PER_OWNER)
   })
 })
 

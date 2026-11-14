@@ -1,7 +1,5 @@
-import type { RawPush } from '../../../src/domain/capture'
+import { isSourceWord, type RawPush } from '../../../src/domain/capture'
 import { MAX_BODY_TEXT_LENGTH, MAX_DATE_LENGTH, MAX_TITLE_LENGTH } from './limits'
-
-const SOURCES: readonly string[] = ['iberia', 'santander']
 
 /**
  * The push in a request body, or null when it is not JSON or any field is missing, not text or too long. Only these
@@ -16,9 +14,9 @@ export function parsePush(text: string): RawPush | null {
   }
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   const { source, title, body, date } = value as Record<string, unknown>
-  if (typeof source !== 'string' || !SOURCES.includes(source)) return null
+  if (!isSourceWord(source)) return null
   if (!isText(title, MAX_TITLE_LENGTH) || !isText(body, MAX_BODY_TEXT_LENGTH) || !isText(date, MAX_DATE_LENGTH)) return null
-  return { source: source as RawPush['source'], title, body, date }
+  return { source, title, body, date }
 }
 
 function isText(value: unknown, max: number): value is string {

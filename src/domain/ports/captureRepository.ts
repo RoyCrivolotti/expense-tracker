@@ -144,6 +144,8 @@ export interface CaptureCaps {
 export interface DailyCaps {
   perOwner: number
   global: number
+  /** Different source words one person may have counted, ever. A word already counted is always admitted. */
+  sourcesPerOwner: number
 }
 
 /** Where the next page of the open list starts: after this row, in the list's order. */

@@ -30,7 +30,7 @@ export function cards(
     },
     listWaitingCards: async (owner) =>
       (await rows<{ source: string; digits: string; n: number }>(db, WAITING_CARDS_SQL, owner)).map((r) => ({
-        source: r.source as 'iberia' | 'santander',
+        source: r.source,
         digits: r.digits,
         count: r.n,
       })),
@@ -45,7 +45,7 @@ export function cards(
           owner,
         )
       ).map((r) => ({
-        source: r.source as 'iberia' | 'santander',
+        source: r.source,
         digitsKind: r.digits_kind as 'card' | 'account',
         digits: r.digits,
         accountId: r.account_id,

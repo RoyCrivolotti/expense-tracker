@@ -61,7 +61,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     decide(view.rec.id, message, `remove ${name(view)}`, () => dismissRecommendation(view.rec.id))
   }
   /** Links the card to the account the payment was saved with, and says why when it cannot. */
-  const remember = (source: 'iberia' | 'santander', digits: string) => async (accountId: number): Promise<string | null> => {
+  const remember = (source: string, digits: string) => async (accountId: number): Promise<string | null> => {
     try {
       await linkCard(source, digits, accountId)
       setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))

@@ -12,7 +12,7 @@ import type { ExpenseModel } from '../useExpenseData'
 export interface ReviewView {
   rec: RecommendationInfo
   /** The card to ask about: the push showed one and it is not linked to an account that exists. */
-  askCard: { source: 'iberia' | 'santander'; digits: string } | null
+  askCard: { source: string; digits: string } | null
   type: TxnType | null
   amountCents: number | null
   /** The merchant as the person last typed it, else the bank's text cleaned, else empty. */

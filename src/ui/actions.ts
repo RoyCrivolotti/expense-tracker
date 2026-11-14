@@ -67,7 +67,7 @@ export interface DuplicateOffer {
 
 /** A card the form asks about. `answer` is filled in by the form as the person answers. */
 export interface SeedCard {
-  source: 'iberia' | 'santander'
+  source: string
   digits: string
   answer: { accountId: number | null; remember: boolean }
   /** What the form says when the payment is saved before the card is answered. */
