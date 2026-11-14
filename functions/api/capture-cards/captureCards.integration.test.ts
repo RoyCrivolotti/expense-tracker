@@ -106,7 +106,9 @@ describe('POST /api/capture-cards', () => {
   })
 
   it.each([
-    ['an unknown source', { ...good, source: 'bbva' }],
+    ['an uppercase source', { ...good, source: 'BBVA' }],
+    ['a source over 32 characters', { ...good, source: 'a'.repeat(33) }],
+    ['a source that looks like a path', { ...good, source: '../x' }],
     ['no source', { digits: DIGITS, accountId: 1 }],
     ['three digits', { ...good, digits: '482' }],
     ['five digits', { ...good, digits: '48211' }],
@@ -182,7 +184,7 @@ describe('DELETE /api/capture-cards', () => {
 
   it.each([
     ['no digits', { source: 'iberia' }],
-    ['an unknown source', { source: 'x', digits: DIGITS }],
+    ['a source with a space', { source: 'x y', digits: DIGITS }],
     ['bad digits', { source: 'iberia', digits: '12' }],
   ])('refuses %s with 400', async (_name, body) => {
     expect((await del(body)).status).toBe(400)

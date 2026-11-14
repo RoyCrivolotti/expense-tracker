@@ -17,5 +17,7 @@ export const methodNotAllowed = () => reply(405, '{"error":"method not allowed"}
 export const tooLarge = () => reply(413, '{"error":"too large"}')
 export const unsupportedType = () => reply(415, '{"error":"unsupported media type"}')
 export const tooManyRequests = () => reply(429, '{"error":"too many requests"}', { 'retry-after': '3600' })
+/** No `Retry-After`: unlike a rate limit, this lasts until the person's counters are cleared. */
+export const tooManySources = () => reply(429, '{"error":"too many requests"}')
 export const serverError = () => reply(500, '{"error":"server error"}')
 export const unavailable = () => reply(503, '{"error":"unavailable"}')

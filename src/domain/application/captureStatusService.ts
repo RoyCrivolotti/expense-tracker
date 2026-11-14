@@ -1,7 +1,9 @@
 import { shiftDay } from '../capture/review'
 import type { CaptureSource } from '../capture/types'
 import type { CaptureRepository } from '../ports/captureRepository'
-import { CARD_SOURCES } from './captureCardService'
+
+/** Listed even before anything arrives, because the setup card is written for them. Any other source shows once it is counted. */
+const ALWAYS_LISTED: readonly CaptureSource[] = ['iberia', 'santander']
 
 /** How far back the counts reach, in UTC days including today. */
 export const STATUS_DAYS = 7
@@ -60,11 +62,10 @@ export async function captureStatus(
   now: Date,
 ): Promise<CaptureStatus> {
   const from = shiftDay(now.toISOString().slice(0, 10), -(STATUS_DAYS - 1))
-  const [counters, lasts] = await Promise.all([
-    captures.readCounters(owner, from),
-    Promise.all(CARD_SOURCES.map((source) => captures.lastCaptureAt(owner, source))),
-  ])
-  const sources = CARD_SOURCES.map((source, i) => {
+  const counters = await captures.readCounters(owner, from)
+  const listed = [...new Set([...ALWAYS_LISTED, ...counters.map((c) => c.source)])]
+  const lasts = await Promise.all(listed.map((source) => captures.lastCaptureAt(owner, source)))
+  const sources = listed.map((source, i) => {
     const mine = counters.filter((c) => c.source === source)
     return {
       source,

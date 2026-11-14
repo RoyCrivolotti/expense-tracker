@@ -10,6 +10,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [LEDGER-MODE.md](./LEDGER-MODE.md) | Contributor | How the browser holds and reads a ledger in parts: the switch, the session, the lists in pages, the writes, and what a window asks the server |
 | [API.md](./API.md) | Contributor | Every read and bulk route: parameters, bounds, errors, caching, cost |
 | [CAPTURE.md](./CAPTURE.md) | Contributor | Bank-push capture: the capture key, its routes and what it may and may not do |
+| [CAPTURE-KINDS.md](./CAPTURE-KINDS.md) | Contributor | How to add a push kind from a real sample |
 | [BEHAVIOR.md](./BEHAVIOR.md) | Contributor | How import, instalment plans, recurring suggestions and budget months behave |
 | [TESTING.md](./TESTING.md) | Contributor | Test layers, coverage gates, local test tooling |
 | [GOALS-MODEL.md](./GOALS-MODEL.md) | Contributor | The Goals projection engine and its assumptions |

@@ -49,7 +49,9 @@ export async function handleCapture(request: Request, env: CaptureEnv, deps: Cap
 
   const now = deps.now()
   const day = now.toISOString().slice(0, 10)
-  if (!(await deps.captures.admit(key.owner, push.source, day, DAILY_CAPS))) return reply.tooManyRequests()
+  const admitted = await deps.captures.admit(key.owner, push.source, day, DAILY_CAPS)
+  if (admitted === 'sources') return reply.tooManySources()
+  if (admitted === 'limited') return reply.tooManyRequests()
   // Best effort: a missed update only shows an older "last used" time, and must not lose the push.
   await deps.captures.touchKey(key.keyId, now.toISOString()).catch(() => undefined)
 

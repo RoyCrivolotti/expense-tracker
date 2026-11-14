@@ -1,3 +1,4 @@
+import { MAX_SOURCES_PER_OWNER } from '../../../src/domain/capture'
 import type { CaptureCaps, DailyCaps } from '../../../src/domain/ports/captureRepository'
 
 /** Largest request body the Worker reads. A real push is a few hundred bytes. */
@@ -18,7 +19,11 @@ export const OPEN_PER_OWNER = 2000
 
 const HOUR_MS = 60 * 60 * 1000
 
-export const DAILY_CAPS: DailyCaps = { perOwner: OWNER_PER_DAY, global: GLOBAL_PER_DAY }
+export const DAILY_CAPS: DailyCaps = {
+  perOwner: OWNER_PER_DAY,
+  global: GLOBAL_PER_DAY,
+  sourcesPerOwner: MAX_SOURCES_PER_OWNER,
+}
 
 export function captureCaps(now: Date): CaptureCaps {
   return {

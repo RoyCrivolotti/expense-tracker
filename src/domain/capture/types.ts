@@ -1,5 +1,8 @@
-/** Where a bank push came from. One phone automation per bank app, each with a fixed source word. */
-export type CaptureSource = 'iberia' | 'santander'
+/**
+ * Where a bank push came from: one phone automation per bank app, each with a fixed source word. Any word that
+ * passes `isSourceWord` is accepted; a word with no row in the kind list is only counted.
+ */
+export type CaptureSource = string
 
 /** What the phone automation sends: the notification's own fields and nothing else. */
 export interface RawPush {

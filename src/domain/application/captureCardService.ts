@@ -1,4 +1,4 @@
-import type { CaptureSource } from '../capture/types'
+import { isSourceWord } from '../capture/source'
 import type {
   CaptureCard,
   CaptureRepository,
@@ -8,8 +8,6 @@ import type {
 } from '../ports/captureRepository'
 import { ValidationError } from './validationError'
 
-/** The bank apps the Worker accepts. */
-export const CARD_SOURCES: readonly CaptureSource[] = ['iberia', 'santander']
 const DIGIT_KINDS: readonly CardDigitsKind[] = ['card', 'account']
 /** A card's last four and an account's last digits are four digits in the pushes seen, so four is all that is accepted. */
 const DIGITS_PATTERN = /^\d{4}$/
@@ -26,8 +24,8 @@ function objectOf(body: unknown): Record<string, unknown> {
  * log. `digitsKind` is a card unless the person says otherwise.
  */
 function parseDigits(body: Record<string, unknown>): Omit<CaptureCard, 'accountId'> {
-  const source = CARD_SOURCES.find((s) => s === body.source)
-  if (!source) throw new ValidationError('source must be a bank app this app knows')
+  const source = body.source
+  if (!isSourceWord(source)) throw new ValidationError('source must be lowercase letters, digits and hyphens, 1 to 32 characters')
   const kind = body.digitsKind === undefined ? 'card' : DIGIT_KINDS.find((k) => k === body.digitsKind)
   if (!kind) throw new ValidationError('digitsKind must be card or account')
   if (typeof body.digits !== 'string' || !DIGITS_PATTERN.test(body.digits)) {

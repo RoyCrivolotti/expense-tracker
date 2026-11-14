@@ -2,7 +2,7 @@ import { req } from './apiClient'
 
 /** What reached the app from one bank app. */
 export interface SourceStatus {
-  source: 'iberia' | 'santander'
+  source: string
   /** When the newest recognised push was stored, or null when none was. */
   lastCaptureAt: string | null
   /** Pushes accepted over the last seven days, recognised or not, and how many of them were not read as a payment. */

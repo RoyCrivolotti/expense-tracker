@@ -1,6 +1,6 @@
 import { req } from './apiClient'
 
-export type CardSource = 'iberia' | 'santander'
+export type CardSource = string
 
 /** One link: the digits a bank app shows, and the account they are. */
 export interface CardLink {

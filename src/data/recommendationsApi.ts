@@ -18,7 +18,7 @@ export interface RecommendationInfo {
   /** Null where the person has to pick, as for the two legs of a move between their own accounts. */
   suggestedType: 'expense' | 'income' | 'investment' | 'refund' | null
   /** The card the push showed: the bank app and the last four digits. Null for a push with no digits. */
-  card?: { source: 'iberia' | 'santander'; digits: string } | null
+  card?: { source: string; digits: string } | null
   /**
    * A row the person typed that looks like this payment: the same direction and price, from 14 days before to 3 days
    * after. A reason to look before adding, and the row Link points the payment at.

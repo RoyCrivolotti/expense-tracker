@@ -7,7 +7,7 @@ import tabStyles from '../tabs/tabs.module.css'
 import type { ExpenseModel } from '../useExpenseData'
 import styles from './CaptureKeySetting.module.css'
 
-const SOURCE_NAME: Record<CardSource, string> = { iberia: 'Iberia', santander: 'Santander' }
+const SOURCE_NAME: Record<string, string> = { iberia: 'Iberia', santander: 'Santander' }
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
@@ -48,7 +48,7 @@ function useCardLinkList() {
 }
 
 const cardName = (c: { source: CardSource; digits: string; digitsKind?: 'card' | 'account' }) =>
-  `${SOURCE_NAME[c.source]} ${c.digitsKind === 'account' ? 'account' : 'card'} ending ${c.digits}`
+  `${SOURCE_NAME[c.source] ?? c.source} ${c.digitsKind === 'account' ? 'account' : 'card'} ending ${c.digits}`
 
 /**
  * Which account each bank card is, so a captured payment arrives with its account. Several cards can point at one

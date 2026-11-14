@@ -99,6 +99,19 @@ describe('GET /api/capture-status', () => {
     })
   })
 
+  it('lists a source that has no kind rows once it has been counted, after the two always shown', async () => {
+    counter(OWNER, 'some-bank', '2026-11-12', 3, 3)
+    counter('other@example.com', 'not-mine', '2026-11-12', 1, 1)
+
+    expect(await (await get()).json()).toMatchObject({
+      sources: [
+        { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 },
+        { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
+        { source: 'some-bank', lastCaptureAt: null, received: 3, unrecognised: 3 },
+      ],
+    })
+  })
+
   it('gives the newest recognised capture per bank app and the sums of the last seven days only', async () => {
     await stored('k1', 'iberia', '2026-11-11T08:00:00.000Z')
     await stored('k1', 'iberia', '2026-11-12T09:41:00.000Z')
