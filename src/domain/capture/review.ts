@@ -6,12 +6,17 @@ export const MIN_SIGHTINGS = 2
 
 /** What a person's own history says about a merchant, from the rows the app holds. */
 export interface MerchantHistory {
-  /** Typed expenses that carry this merchant's name. */
+  /** Typed expenses that carry this merchant's name, however long ago. */
   sightings: number
-  /** The newest such row's description, the way the person spells it. */
+  /** The description the person most often gives this merchant, the way they last spelled it. */
   label: string | null
-  /** The newest such row's category. */
+  /** The category most often given with that description. */
   categoryId: number | null
+  /**
+   * True when the person has settled on `label`: it was typed at least `MIN_SIGHTINGS` times and strictly more often than
+   * any other description. False for a merchant with no history too, which `sightings` already reports.
+   */
+  settled: boolean
 }
 
 /** The part of a typed row the history reads. */
@@ -45,30 +50,90 @@ export function bankMerchantName(text: string): string {
   return words.length > 0 ? words.join(' ') : text
 }
 
-/** Every merchant in the typed rows at once, so a list of payments is described in one pass over the rows. */
-export type MerchantIndex = ReadonlyMap<string, MerchantHistory & { newest: HistoryRow }>
+/** Rows older than this many months do not vote, so a lasting rename overtakes the old name and ancient history cannot dominate. */
+export const DESCRIPTION_WINDOW_MONTHS = 12
 
-export function buildMerchantIndex(rows: readonly HistoryRow[]): MerchantIndex {
-  const index = new Map<string, MerchantHistory & { newest: HistoryRow }>()
-  for (const row of rows) {
-    if (row.cancelled || row.type !== 'expense') continue
-    const key = merchantKey(row.description)
-    if (key === '') continue
-    const held = index.get(key)
-    const newer = !held || row.date > held.newest.date || (row.date === held.newest.date && row.id > held.newest.id)
-    const newest = newer ? row : held.newest
-    index.set(key, { sightings: (held?.sightings ?? 0) + 1, label: newest.description.trim(), categoryId: newest.categoryId, newest })
+/** Every merchant in the typed rows at once, so a list of payments is described in one pass over the rows. */
+export type MerchantIndex = ReadonlyMap<string, MerchantHistory>
+
+const isNewer = (a: HistoryRow, b: HistoryRow) => a.date > b.date || (a.date === b.date && a.id > b.id)
+
+/** The same calendar day `months` earlier, as `YYYY-MM-DD`, clamped to the month's last day. */
+function monthsBefore(iso: string, months: number): string {
+  const [y = 0, m = 1, d = 1] = iso.split('-').map(Number)
+  const last = new Date(Date.UTC(y, m - 1 - months + 1, 0))
+  return new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), Math.min(d, last.getUTCDate()))).toISOString().slice(0, 10)
+}
+
+const localToday = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/** Highest count wins, a tie goes to the more recent. `rows` is every row behind one candidate. */
+function pickMost<K>(groups: Map<K, HistoryRow[]>): { key: K; rows: HistoryRow[]; runnerUp: number } {
+  const ranked = [...groups.entries()].map(([key, rows]) => ({ key, rows, newest: rows.reduce((a, b) => (isNewer(b, a) ? b : a)) }))
+  ranked.sort((a, b) => b.rows.length - a.rows.length || (isNewer(b.newest, a.newest) ? 1 : -1))
+  const [first, second] = ranked as [(typeof ranked)[number], (typeof ranked)[number] | undefined]
+  return { key: first.key, rows: first.rows, runnerUp: second?.rows.length ?? 0 }
+}
+
+const groupBy = <K>(rows: readonly HistoryRow[], by: (r: HistoryRow) => K): Map<K, HistoryRow[]> => {
+  const groups = new Map<K, HistoryRow[]>()
+  for (const r of rows) {
+    const held = groups.get(by(r))
+    if (held) held.push(r)
+    else groups.set(by(r), [r])
+  }
+  return groups
+}
+
+const newestOf = (rows: readonly HistoryRow[]) => rows.reduce((a, b) => (isNewer(b, a) ? b : a))
+
+/** One merchant's history from all its typed rows. */
+function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistory {
+  const recent = all.filter((r) => r.date >= since)
+  if (recent.length < MIN_SIGHTINGS) {
+    // Too little recent history to call a habit: the newest row, as before, and never one tap on its own.
+    const newest = newestOf(all)
+    return { sightings: all.length, label: newest.description.trim(), categoryId: newest.categoryId, settled: false }
+  }
+  const top = pickMost(groupBy(recent, (r) => foldTitle(r.description)))
+  return {
+    sightings: all.length,
+    label: newestOf(top.rows).description.trim(),
+    categoryId: pickMost(groupBy(top.rows, (r) => r.categoryId)).key,
+    settled: top.rows.length >= MIN_SIGHTINGS && top.rows.length > top.runnerUp,
+  }
+}
+
+/**
+ * What each merchant's description and category should be, from the typed rows. A person may type a different
+ * description once for a recurring merchant, and that must not become the suggestion, so the description is the one
+ * they give most often, not the newest. Only the rows the app holds are counted, which are the signed-in person's own.
+ *
+ * Descriptions are compared folded (case and accents), and the label is the latest spelling of the winner. Only rows
+ * within `DESCRIPTION_WINDOW_MONTHS` of `today` vote, so that a rename which has since become the habit takes over. A
+ * merchant with fewer than two rows in that window has no habit to read and falls back to its newest row. The category
+ * is the most common one among the winning description's rows, so the pair always belongs together. Ties go to the more
+ * recent in both choices.
+ */
+export function buildMerchantIndex(rows: readonly HistoryRow[], today: string = localToday()): MerchantIndex {
+  const since = monthsBefore(today, DESCRIPTION_WINDOW_MONTHS)
+  const typed = rows.filter((r) => !r.cancelled && r.type === 'expense')
+  const index = new Map<string, MerchantHistory>()
+  for (const [key, all] of groupBy(typed, (r) => merchantKey(r.description))) {
+    if (key !== '') index.set(key, readMerchant(all, since))
   }
   return index
 }
 
-const NONE: MerchantHistory = { sightings: 0, label: null, categoryId: null }
+const NONE: MerchantHistory = { sightings: 0, label: null, categoryId: null, settled: false }
 
-/** What the typed rows say about a merchant named in bank text: how often, and the newest row's spelling and category. */
+/** What the typed rows say about a merchant named in bank text: how often, and the person's usual description and category. */
 export function merchantHistory(index: MerchantIndex, bankText: string | null): MerchantHistory {
   const key = bankText === null ? '' : merchantKey(bankText)
-  const found = key === '' ? undefined : index.get(key)
-  return found ? { sightings: found.sightings, label: found.label, categoryId: found.categoryId } : NONE
+  return (key === '' ? undefined : index.get(key)) ?? NONE
 }
 
 /** What the recommendation's two instants say about when the payment happened, in the phone's own clock. */
@@ -152,6 +217,7 @@ export type ReviewReason =
   | 'month-edge'
   | 'possible-match'
   | 'new-merchant'
+  | 'mixed-description'
 
 /** What the payment is known to be, as far as the app can tell. */
 export interface ReviewFacts {
@@ -162,6 +228,8 @@ export interface ReviewFacts {
   accountId: number | null
   suggestedType: SuggestedType | null
   sightings: number
+  /** The person's usual description for the merchant is settled: see `MerchantHistory.settled`. */
+  settled: boolean
   /** The budget month could differ: see `otherBudgetDays`. */
   monthEdge: boolean
   /** A typed row that looks the same, when the server says so. Absent until it does. */
@@ -181,6 +249,8 @@ const RULES: ReadonlyArray<readonly [ReviewReason, (f: ReviewFacts) => boolean]>
   ['month-edge', (f) => f.monthEdge],
   ['possible-match', (f) => f.possibleMatch],
   ['new-merchant', (f) => f.hasMerchant && f.sightings < MIN_SIGHTINGS],
+  // Not for a new merchant, which already says so: this is for one the person has typed more than one way.
+  ['mixed-description', (f) => f.hasMerchant && f.sightings >= MIN_SIGHTINGS && !f.settled],
 ]
 
 /** Why a payment needs a look before it is added. Empty means one tap may add it. */
@@ -199,4 +269,5 @@ export const REVIEW_TEXT: Record<ReviewReason, string> = {
   'month-edge': 'Budget month could differ',
   'possible-match': 'May be entered already',
   'new-merchant': 'New merchant',
+  'mixed-description': 'Description not settled',
 }
