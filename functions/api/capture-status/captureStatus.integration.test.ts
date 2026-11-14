@@ -162,6 +162,31 @@ describe('GET /api/capture-status', () => {
     })
   })
 
+  describe('when the bucket cannot be read', () => {
+    const FILE = 'shortcuts/capture.shortcut'
+    const unreadable = (method: 'head' | 'get') => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      vi.spyOn(world.env.RECEIPTS!, method).mockRejectedValue(new Error('bucket secret-name unavailable'))
+    }
+
+    it('still answers, with shortcut false and a fixed log line, when head throws', async () => {
+      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      unreadable('head')
+      const response = await get()
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
+      expect(console.warn).toHaveBeenCalledWith('capture status: the shortcut file could not be checked')
+    })
+
+    it('is unaffected by a failing get, since the status never reads the bytes', async () => {
+      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      unreadable('get')
+      const response = await get()
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(true)
+    })
+  })
+
   it('is refused without a sign-in', async () => {
     expect((await get(undefined, false)).status).toBe(401)
   })
