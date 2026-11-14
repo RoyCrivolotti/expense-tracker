@@ -198,8 +198,10 @@ describe('with the shortcut file available', () => {
 
     const link = await screen.findByRole('link', { name: 'Add the shortcut' })
     expect(link).toHaveAttribute('href', '/api/capture-shortcut')
-    expect(link).toHaveAttribute('download', 'Expense capture.shortcut')
-    expect(link).not.toHaveAttribute('target')
+    // A new context, so the installed app keeps its own window; `download` would keep the file preview in this one.
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener')
+    expect(link).not.toHaveAttribute('download')
     expect(screen.getByText(/installed from a shared copy on one phone and worked/)).toBeInTheDocument()
     expect(screen.getByText(/Downloading it from this app and opening it has not been tried/)).toBeInTheDocument()
     expect(screen.getByText(/nor has the installed Home Screen app or a second phone/)).toBeInTheDocument()

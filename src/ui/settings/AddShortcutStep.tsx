@@ -2,8 +2,10 @@ import { useId } from 'react'
 import styles from './CaptureSetupSetting.module.css'
 
 /**
- * Downloads the generic Shortcut file the app serves behind the sign-in. An ordinary link with the `download` hint, so
- * the browser saves the bytes and the app never fetches them. The sentence under it says what happens, and the link
+ * Downloads the generic Shortcut file the app serves behind the sign-in. The app never fetches the bytes. The link opens
+ * a new context (`_blank`) and has no `download` attribute: in the installed Home Screen app a same-window link replaces
+ * the whole app with iOS's file preview, which has no back button, whereas a new context gets its own Done button. The
+ * filename comes from the response's `Content-Disposition`. The sentence under the link says what happens, and the link
  * points at it, so a screen reader announces that it is a file download before the person follows it.
  */
 export function AddShortcutLink() {
@@ -13,7 +15,8 @@ export function AddShortcutLink() {
       <a
         className={styles.linkButton}
         href="/api/capture-shortcut"
-        download="Expense capture.shortcut"
+        target="_blank"
+        rel="noopener"
         aria-describedby={hint}
       >
         Add the shortcut

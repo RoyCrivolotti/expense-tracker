@@ -172,7 +172,7 @@ user agent), so the screen says to check Settings, General, About. Only Iberia h
 
 When the shortcut file has been uploaded (see "Putting the shortcut file in place"), `GET /api/capture-status` says
 `shortcut: true` (false if the bucket cannot be read) and the card shows these steps. The "Add the shortcut" button is
-an ordinary `<a href="/api/capture-shortcut" download>`: the browser saves the bytes and the app never fetches them.
+an ordinary `<a href="/api/capture-shortcut" target="_blank" rel="noopener">` with no `download` attribute: the app never fetches the bytes, and the new context keeps the installed Home Screen app from being replaced by iOS's file preview, which has no way back (untried on a phone).
 
 1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
 2. **Add the shortcut.** Tap **Add the shortcut**. A file called Expense capture downloads. Open it from the downloads; iOS
