@@ -169,10 +169,10 @@ user agent), so the screen says to check Settings, General, About. Only Iberia h
 
 ### With the shortcut link
 
-When `CAPTURE_SHORTCUT_URL` holds a valid iCloud share link, `GET /api/capture-status` reports it as `shortcutUrl` and
-the card shows these steps. The "Add the shortcut" button is a plain link (`target="_blank"`) to it, which opens
-Shortcuts' Add Shortcut page on the owner's iPhone from Safari and from the installed Home Screen app. A link to the file
-traps the installed app in iOS's file preview, and neither `shortcuts://import-shortcut` nor the Web Share API works.
+With a valid `CAPTURE_SHORTCUT_URL`, `GET /api/capture-status` reports it as `shortcutUrl` and the card shows these
+steps. "Add the shortcut" is a plain link (`target="_blank"`) that opens Shortcuts' Add Shortcut page, verified on one
+iPhone from Safari and the installed Home Screen app. A link to the file traps the installed app in iOS's file preview;
+`shortcuts://import-shortcut` and the Web Share API do not work there.
 
 1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
 2. **Add the shortcut.** Tap **Add the shortcut**. Shortcuts opens its Add Shortcut page in a new window. Tap **Add
@@ -192,20 +192,20 @@ The Worker's address, with `/capture`, is already inside the file (checked), so 
 ### Publishing the shortcut
 
 The shortcut is signed by Apple, so it cannot be edited per person, and the file is never committed. The copy in the
-app-files bucket (`shortcuts/capture.shortcut`, [APP-FILES.md](APP-FILES.md)) is the keyless master copy, still served by
-`GET /api/capture-shortcut` but not linked from the card. An operator publishes it once per environment:
+app-files bucket (`shortcuts/capture.shortcut`, [APP-FILES.md](APP-FILES.md)) is the keyless master copy, still served
+by `GET /api/capture-shortcut` but not linked from the card. Publish it once per environment:
 
-1. Build the shortcut as in "By hand", with the trigger's app left unchosen, the header `Bearer KEY_HERE` and the JSON
-   `source` set to `CARD_NAME_HERE`. Export it as a file and upload it to the bucket as the master copy:
+1. Build the shortcut as in "By hand", trigger app unchosen, header `Bearer KEY_HERE`, JSON `source` `CARD_NAME_HERE`.
+   Export it as a file and upload it to the bucket as the master copy:
    `wrangler r2 object put expense-tracker-app-files/shortcuts/capture.shortcut --remote --file ./Expense\ capture.shortcut --content-type application/octet-stream`
-2. Inspect it first: only the placeholders and the Worker address, no real key or personal data. Import it into
-   Shortcuts as a clean copy, placeholders untouched, then Share, **Copy iCloud Link**.
-3. Set `CAPTURE_SHORTCUT_URL` to that link on the Pages and staging projects, production and preview, and redeploy.
+2. The link must come from a clean import of that keyless file, with `KEY_HERE` and `CARD_NAME_HERE` untouched, never
+   from a copy that already holds a real key. Import it into Shortcuts, then Share, **Copy iCloud Link**.
+3. In the Cloudflare dashboard open the Pages project, Settings, Variables and Secrets, add `CAPTURE_SHORTCUT_URL`
+   as plain text to both Production and Preview, repeat on the separate staging Pages project, then redeploy.
 4. When you replace a link, **Stop Sharing** the old one in Shortcuts (Share).
 
-The link is public: anyone with it can read the shortcut, which holds only the placeholders and the baked Worker address
-(not a secret), never a key. It is a plain variable, never committed. Unset or invalid, the status route says
-`shortcutUrl: null` and the card shows the manual steps below.
+The link is public: it holds only the placeholders and the baked Worker address (not a secret), never a key, and is never
+committed. Unset or invalid, the status route says `shortcutUrl: null` and the card shows the manual steps.
 
 ### By hand
 

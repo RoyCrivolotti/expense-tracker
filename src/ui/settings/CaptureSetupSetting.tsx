@@ -6,10 +6,14 @@ import { Step, type Setup } from './SetupStep'
 import { fileSteps, manualSteps } from './setupSteps'
 import { useCaptureSetup } from './useCaptureSetup'
 
+const SHORTCUT_LINK_PREFIX = 'https://www.icloud.com/shortcuts/'
+
 function Steps({ setup }: { setup: Setup }) {
   // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
   const loaded = setup.status !== null || setup.error !== null
-  const shortcutUrl = setup.status?.shortcutUrl ?? null
+  const link = setup.status?.shortcutUrl ?? null
+  // The server already vets the link; only an iCloud Shortcuts address is ever rendered as a button here too.
+  const shortcutUrl = link?.startsWith(SHORTCUT_LINK_PREFIX) ? link : null
   const steps = !loaded ? [] : shortcutUrl ? fileSteps(setup, shortcutUrl) : manualSteps(setup)
   return (
     <ol className={styles.steps}>
@@ -43,7 +47,7 @@ export function CaptureSetupSetting() {
             you to review.
           </p>
           <p className={tabStyles.settingHint}>{IOS_NOTE}</p>
-          <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl ? FROM_LINK : BY_HAND}</p>
+          <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl?.startsWith(SHORTCUT_LINK_PREFIX) ? FROM_LINK : BY_HAND}</p>
           {setup.error ? (
             <p className={tabStyles.settingError} role="alert">
               {setup.error}

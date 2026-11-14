@@ -252,6 +252,17 @@ describe('with the shortcut link available', () => {
     expect(link).toHaveAccessibleDescription(/opens Shortcuts. Add Shortcut page in a new window/i)
   })
 
+  it.each(['https://example.com/shortcuts/abc123', 'javascript:alert(1)', 'http://www.icloud.com/shortcuts/abc123'])(
+    'shows the manual steps and no link when the status carries %s',
+    async (url) => {
+      status(none, null, url)
+      render(<CaptureSetupSetting />)
+
+      expect(await screen.findByText('4. Add the action')).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    },
+  )
+
   it('shows neither the link nor the manual steps until the status has been read', async () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
