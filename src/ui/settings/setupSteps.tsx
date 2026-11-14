@@ -52,11 +52,11 @@ const purchaseStep = (): SetupStepSpec => ({
   ),
 })
 
-/** With the shortcut file available: download it, then make the three edits it needs by hand. */
-export function fileSteps(setup: Setup): SetupStepSpec[] {
+/** With the shortcut's share link available: add it in Shortcuts, then make the three edits it needs by hand. */
+export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
   return [
     keyStep(setup),
-    { id: 'add', title: 'Add the shortcut', body: <AddShortcutLink /> },
+    { id: 'add', title: 'Add the shortcut', body: <AddShortcutLink href={shortcutUrl} /> },
     {
       id: 'app',
       title: 'Choose your bank’s app',

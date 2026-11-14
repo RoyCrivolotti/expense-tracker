@@ -2,26 +2,21 @@ import { useId } from 'react'
 import styles from './CaptureSetupSetting.module.css'
 
 /**
- * Downloads the generic Shortcut file the app serves behind the sign-in. An ordinary link with the `download` hint, so
- * the browser saves the bytes and the app never fetches them. The sentence under it says what happens, and the link
- * points at it, so a screen reader announces that it is a file download before the person follows it.
+ * Opens the Shortcut's iCloud share link, which Shortcuts shows as its Add Shortcut page. A plain link in a new window:
+ * a file download traps the installed Home Screen app in iOS's file preview, and a custom `shortcuts://` address is
+ * not opened from it. The sentence under it says what happens, and the link points at it, so a screen reader hears
+ * that it opens a new window before the person follows it.
  */
-export function AddShortcutLink() {
+export function AddShortcutLink({ href }: { href: string }) {
   const hint = useId()
   return (
     <>
-      <a
-        className={styles.linkButton}
-        href="/api/capture-shortcut"
-        download="Expense capture.shortcut"
-        aria-describedby={hint}
-      >
+      <a className={styles.linkButton} href={href} target="_blank" rel="noopener noreferrer" aria-describedby={hint}>
         Add the shortcut
       </a>
       <p id={hint}>
-        This downloads a file called Expense capture. Open it from your downloads and add it in Shortcuts. Opening it
-        there is not tried yet, and neither is this download from the installed Home Screen app. The next three steps
-        are edits you make inside it. The address it posts to is already in it.
+        This opens Shortcuts&rsquo; Add Shortcut page in a new window. Add it there, then come back here. The next three
+        steps are edits you make inside it. The address it posts to is already in it.
       </p>
     </>
   )

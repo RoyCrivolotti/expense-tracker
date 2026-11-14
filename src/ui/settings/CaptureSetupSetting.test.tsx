@@ -14,10 +14,11 @@ const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
 const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 }
 
-const status = (iberia = none, endpoint: string | null = ADDRESS, shortcut = false) =>
+const LINK = 'https://www.icloud.com/shortcuts/abc123'
+const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null) =>
   vi
     .mocked(statusApi.fetchCaptureStatus)
-    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint, shortcut })
+    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint, shortcutUrl })
 
 beforeEach(() => {
   localStorage.clear()
@@ -189,27 +190,28 @@ describe('the steps', () => {
 /** A step's sentence, whose bold words split it into several elements. */
 const para = (pattern: RegExp) => screen.getByText((_, el) => el?.tagName === 'P' && pattern.test(el.textContent ?? ''))
 
-describe('with the shortcut file available', () => {
+describe('with the shortcut link available', () => {
   const titles = () => screen.getAllByText(/^\d+\. /).map((e) => e.textContent)
 
-  it('shows an Add the shortcut link that downloads the file, and says what was tried', async () => {
-    status(none, null, true)
+  it('shows an Add the shortcut link to the iCloud share link, in a new window, and says what was tried', async () => {
+    status(none, null, LINK)
     render(<CaptureSetupSetting />)
 
     const link = await screen.findByRole('link', { name: 'Add the shortcut' })
-    expect(link).toHaveAttribute('href', '/api/capture-shortcut')
-    expect(link).toHaveAttribute('download', 'Expense capture.shortcut')
-    expect(link).not.toHaveAttribute('target')
+    expect(link).toHaveAttribute('href', LINK)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(link).not.toHaveAttribute('download')
+    expect(link.className).toContain('linkButton')
     expect(screen.getByText(/installed from a shared copy on one phone and worked/)).toBeInTheDocument()
-    expect(screen.getByText(/Downloading it from this app and opening it has not been tried/)).toBeInTheDocument()
-    expect(screen.getByText(/nor has the installed Home Screen app or a second phone/)).toBeInTheDocument()
+    expect(screen.getByText(/not been tried on a second phone/)).toBeInTheDocument()
     expect(screen.getByText(/tell us what differs/)).toBeInTheDocument()
-    expect(screen.getByText(/Opening it there is not tried yet/)).toBeInTheDocument()
     expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
+    expect(document.querySelector('a[href*="/api/capture-shortcut"]')).toBeNull()
   })
 
   it('gives the key, the link, the three edits one at a time, the automation check and a purchase, in order', async () => {
-    status(none, null, true)
+    status(none, null, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
@@ -231,7 +233,7 @@ describe('with the shortcut file available', () => {
   })
 
   it('names the source words the server rules read, and no others', async () => {
-    status(none, null, true)
+    status(none, null, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
@@ -240,14 +242,14 @@ describe('with the shortcut file available', () => {
     expect(word).not.toContain('santander')
   })
 
-  it('says the address is already in the shortcut, and points the link at its hint for a screen reader', async () => {
-    status(none, ADDRESS, true)
+  it('says the link opens a new window and that the address is in the shortcut, and points the link at that hint', async () => {
+    status(none, ADDRESS, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
     expect(screen.getByText(/The address it posts to is already in it/)).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'Add the shortcut' })
-    expect(link).toHaveAccessibleDescription(/downloads a file called Expense capture/)
+    expect(link).toHaveAccessibleDescription(/opens Shortcuts. Add Shortcut page in a new window/i)
   })
 
   it('shows neither the link nor the manual steps until the status has been read', async () => {
@@ -268,7 +270,7 @@ describe('with the shortcut file available', () => {
   })
 })
 
-describe('without the shortcut file', () => {
+describe('without the shortcut link', () => {
   it('shows the manual steps, one action each, in order, and no Add the shortcut link', async () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('4. Add the action')

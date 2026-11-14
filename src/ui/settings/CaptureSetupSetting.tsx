@@ -9,8 +9,8 @@ import { useCaptureSetup } from './useCaptureSetup'
 function Steps({ setup }: { setup: Setup }) {
   // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
   const loaded = setup.status !== null || setup.error !== null
-  const file = setup.status?.shortcut === true
-  const steps = !loaded ? [] : file ? fileSteps(setup) : manualSteps(setup)
+  const shortcutUrl = setup.status?.shortcutUrl ?? null
+  const steps = !loaded ? [] : shortcutUrl ? fileSteps(setup, shortcutUrl) : manualSteps(setup)
   return (
     <ol className={styles.steps}>
       {steps.map((step, i) => (
@@ -27,8 +27,8 @@ const IOS_NOTE =
   'Needs iOS 27 or later (the trigger was seen on iOS 27); older iPhones and Android are not tried. Check your version in Settings, General, About.'
 const BY_HAND =
   'A shortcut built by hand from steps like these worked on one phone. It has not been tried on a second phone. We have not seen the iOS 27 screens beyond the trigger, so names here may differ from yours: tell us what does.'
-const FROM_FILE =
-  'The shortcut was installed from a shared copy on one phone and worked. Downloading it from this app and opening it has not been tried, nor has the installed Home Screen app or a second phone. The names on these screens come from that file and one phone: tell us what differs.'
+const FROM_LINK =
+  'The shortcut was installed from a shared copy on one phone and worked. It has not been tried on a second phone. The names on these screens come from that file and one phone: tell us what differs.'
 
 /** The steps to get Iberia notifications into the app, and a live check that the first one arrived. */
 export function CaptureSetupSetting() {
@@ -43,7 +43,7 @@ export function CaptureSetupSetting() {
             you to review.
           </p>
           <p className={tabStyles.settingHint}>{IOS_NOTE}</p>
-          <p className={tabStyles.settingHint}>{setup.status?.shortcut ? FROM_FILE : BY_HAND}</p>
+          <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl ? FROM_LINK : BY_HAND}</p>
           {setup.error ? (
             <p className={tabStyles.settingError} role="alert">
               {setup.error}
