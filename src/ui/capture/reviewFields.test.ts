@@ -1,14 +1,35 @@
 import { describe, expect, it } from 'vitest'
+import { makeTransaction } from '../../testing/factories'
 import { pushAt, arrivedAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { describeRecommendation, seedOf, transactionOf } from './reviewFields'
 
 const model = makeReviewModel()
-const merchants = buildMerchantIndex(model.dataset.transactions)
+const merchants = buildMerchantIndex(model.dataset.transactions, '2026-11-14')
 const view = (over = {}) => describeRecommendation(makeRecommendation(over), model, merchants)
 
 describe('describeRecommendation', () => {
+  const withRows = (descriptions: string[]) => {
+    const rows = descriptions.map((description, i) => makeTransaction({ id: 100 + i, description, categoryId: 1, date: `2026-10-${String(10 + i).padStart(2, '0')}`, amountCents: 400 }))
+    const own = buildExpenseModel({ ...model.dataset, transactions: rows })
+    return describeRecommendation(makeRecommendation(), own, buildMerchantIndex(own.dataset.transactions, '2026-11-14'))
+  }
+
+  it('sends a merchant the person types two ways equally often to Review, with the winner prefilled', () => {
+    const v = withRows(['Cafe Example 1', 'Cafe Example 2', 'Cafe Example 1', 'Cafe Example 2'])
+
+    expect(v.oneTap).toBe(false)
+    expect(v.reasons).toEqual(['mixed-description'])
+    expect(v.description).toBe('Cafe Example 2')
+  })
+
+  it('still allows one tap when one description leads strictly, and suggests it over a newer one-off', () => {
+    const v = withRows(['Cafe Example', 'Cafe Example', 'Cafe Example 7'])
+
+    expect(v).toMatchObject({ oneTap: true, reasons: [], description: 'Cafe Example' })
+  })
+
   it('fills all seven fields for a known merchant and allows one tap', () => {
     const v = view()
 

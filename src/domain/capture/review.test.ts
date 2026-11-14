@@ -94,20 +94,24 @@ describe('merchantHistory', () => {
     expect(history(held, 'Cafe Example')).toMatchObject({ label: 'Cafe Example', sightings: 7, settled: true })
   })
 
-  it('counts a row exactly one year back and not the day before', () => {
-    const edge = [row({ id: 1, date: '2025-11-14', description: 'Cafe Example' }), row({ id: 2, date: '2025-11-13', description: 'Cafe Example' })]
+  // Three rows of one description on `edge` against two recent rows of another: the three win only if `edge` is in the window.
+  const winnerWith = (today: string, edge: string) => {
+    const held = [
+      ...[1, 2, 3].map((id) => row({ id, date: edge, description: 'Cafe Example 2' })),
+      ...[4, 5].map((id) => row({ id, date: today, description: 'Cafe Example 1' })),
+    ]
+    return merchantHistory(buildMerchantIndex(held, today), 'Cafe Example').label
+  }
 
-    expect(history(edge, 'Cafe Example').settled).toBe(false)
-    expect(history([...edge, row({ id: 3, date: '2026-01-01', description: 'Cafe Example' })], 'Cafe Example').settled).toBe(true)
+  it('counts a row exactly one year back and not the day before', () => {
+    expect(winnerWith('2027-01-14', '2026-01-14')).toBe('Cafe Example 2')
+    expect(winnerWith('2027-01-14', '2026-01-13')).toBe('Cafe Example 1')
   })
 
   it('clamps the window start on a short month', () => {
-    const at = (today: string, dates: string[]) =>
-      merchantHistory(buildMerchantIndex(dates.map((date, i) => row({ id: i + 1, date })), today), 'Cafe Example').settled
-
     // A year before 29 Feb 2028 is 28 Feb 2027, since 2027 has no 29 Feb.
-    expect(at('2028-02-29', ['2027-02-28', '2027-03-01'])).toBe(true)
-    expect(at('2028-02-29', ['2027-02-27', '2027-02-28'])).toBe(false)
+    expect(winnerWith('2028-02-29', '2027-02-28')).toBe('Cafe Example 2')
+    expect(winnerWith('2028-02-29', '2027-02-27')).toBe('Cafe Example 1')
   })
 
   it('gives the tie to the more recent description, but never settles it', () => {
@@ -148,6 +152,56 @@ describe('merchantHistory', () => {
     ]
 
     expect(history(held, 'Cafe Example').categoryId).toBe(6)
+  })
+
+  it('settles on a lead of 3 to 2 and of 2 to 1, and not on 2 to 2 or 1 to 1', () => {
+    const mix = (a: number, b: number) => [
+      ...Array.from({ length: a }, (_, i) => row({ id: 10 + i, date: '2026-09-01', description: 'Cafe Example 1' })),
+      ...Array.from({ length: b }, (_, i) => row({ id: 50 + i, date: '2026-09-02', description: 'Cafe Example 2' })),
+    ]
+
+    expect(history(mix(3, 2), 'Cafe Example').settled).toBe(true)
+    expect(history(mix(2, 1), 'Cafe Example').settled).toBe(true)
+    expect(history(mix(2, 2), 'Cafe Example').settled).toBe(false)
+    expect(history(mix(1, 1), 'Cafe Example').settled).toBe(false)
+  })
+
+  it('folds runs of spaces inside a description as well as case', () => {
+    const held = [
+      row({ id: 1, description: 'Cafe   Example 1' }),
+      row({ id: 2, description: 'CAFE Example  1 ' }),
+      row({ id: 3, description: 'Cafe Example 2' }),
+    ]
+
+    expect(history(held, 'Cafe Example')).toMatchObject({ label: 'CAFE Example  1', settled: true })
+  })
+
+  it('is settled when the history is old but never varies', () => {
+    const held = [row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }), row({ id: 2, date: '2026-11-01', description: 'cafe example 1' })]
+
+    expect(history(held, 'Cafe Example')).toMatchObject({ label: 'cafe example 1', sightings: 2, settled: true })
+  })
+
+  it('is not settled on old history that varies, when too little of it is recent to vote', () => {
+    const held = [row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }), row({ id: 2, date: '2026-11-01', description: 'Cafe Example 2' })]
+
+    expect(history(held, 'Cafe Example')).toMatchObject({ label: 'Cafe Example 2', settled: false })
+  })
+
+  it('is not settled on a single row', () => {
+    expect(history([row()], 'Cafe Example')).toMatchObject({ sightings: 1, settled: false })
+  })
+
+  it('takes the category from the winner rows that carry one, a tie to the more recent', () => {
+    const held = [
+      row({ id: 1, date: '2026-09-01', categoryId: null }),
+      row({ id: 2, date: '2026-09-02', categoryId: null }),
+      row({ id: 3, date: '2026-09-03', categoryId: 7 }),
+    ]
+
+    expect(history(held, 'Cafe Example').categoryId).toBe(7)
+    expect(history([...held, row({ id: 4, date: '2026-09-04', categoryId: 8 })], 'Cafe Example').categoryId).toBe(8)
+    expect(history(held.slice(0, 2), 'Cafe Example').categoryId).toBeNull()
   })
 
   it('needs the winner at least twice to settle', () => {

@@ -25,7 +25,7 @@ export interface HistoryRow {
   date: string
   description: string
   type: string
-  categoryId: number
+  categoryId: number | null
   cancelled: boolean
 }
 
@@ -90,20 +90,31 @@ const groupBy = <K>(rows: readonly HistoryRow[], by: (r: HistoryRow) => K): Map<
 
 const newestOf = (rows: readonly HistoryRow[]) => rows.reduce((a, b) => (isNewer(b, a) ? b : a))
 
+/** The most common category among rows that carry one, a tie to the more recent. Null when none does. */
+function usualCategory(rows: readonly HistoryRow[]): number | null {
+  const categorised = rows.filter((r) => r.categoryId !== null)
+  return categorised.length === 0 ? null : pickMost(groupBy(categorised, (r) => r.categoryId)).key
+}
+
 /** One merchant's history from all its typed rows. */
 function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistory {
   const recent = all.filter((r) => r.date >= since)
   if (recent.length < MIN_SIGHTINGS) {
-    // Too little recent history to call a habit: the newest row, as before, and never one tap on its own.
+    // Too little recent history to read a habit, so the newest row speaks, as it did before. It is still settled when
+    // every row the person typed for this merchant, in the window or not, carries one description: nothing is mixed, the
+    // history is only old. Rows that differ and are too few to vote leave the choice to the person.
     const newest = newestOf(all)
-    return { sightings: all.length, label: newest.description.trim(), categoryId: newest.categoryId, settled: false }
+    const sameThroughout = new Set(all.map((r) => foldTitle(r.description))).size === 1
+    return { sightings: all.length, label: newest.description.trim(), categoryId: newest.categoryId, settled: all.length >= MIN_SIGHTINGS && sameThroughout }
   }
   const top = pickMost(groupBy(recent, (r) => foldTitle(r.description)))
   return {
     sightings: all.length,
     label: newestOf(top.rows).description.trim(),
-    categoryId: pickMost(groupBy(top.rows, (r) => r.categoryId)).key,
-    settled: top.rows.length >= MIN_SIGHTINGS && top.rows.length > top.runnerUp,
+    categoryId: usualCategory(top.rows),
+    // Two or more rows vote here, so a winner with a single row has a rival with one too and fails the strict lead: the
+    // winner being typed at least twice is implied by leading strictly.
+    settled: top.rows.length > top.runnerUp,
   }
 }
 
@@ -115,8 +126,8 @@ function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistor
  * Descriptions are compared folded (case and accents), and the label is the latest spelling of the winner. Only rows
  * within `DESCRIPTION_WINDOW_MONTHS` of `today` vote, so that a rename which has since become the habit takes over. A
  * merchant with fewer than two rows in that window has no habit to read and falls back to its newest row. The category
- * is the most common one among the winning description's rows, so the pair always belongs together. Ties go to the more
- * recent in both choices.
+ * is the most common one among the winning description's rows that carry one, so the pair belongs together. Ties go to
+ * the more recent in both choices.
  */
 export function buildMerchantIndex(rows: readonly HistoryRow[], today: string = localToday()): MerchantIndex {
   const since = monthsBefore(today, DESCRIPTION_WINDOW_MONTHS)
