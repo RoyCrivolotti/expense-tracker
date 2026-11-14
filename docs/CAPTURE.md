@@ -35,9 +35,9 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `POST /api/capture-keys` | 201 with the same fields and `key`. Body: a JSON object with an optional `label` (at most 40 characters, no control characters; blank becomes "Shortcut"), at most 1 KB. 409 at the limit |
 | `DELETE /api/capture-keys/:id` | `{ ok: true }`, or 404 |
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
-| `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
+| `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is a source word (see CAPTURE-KINDS.md), `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app: `iberia` and `santander` always, then any other source that has been counted. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
 | `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
@@ -257,7 +257,7 @@ Refusals come in this order, and the first five touch no database: wrong path 40
 `Authorization: Bearer xpk_<16 hex>_<64 hex>` 401, a declared size over 16 KB 413, a content type other than JSON 415.
 Then one read by key id. Every key problem (unknown id, wrong secret, revoked, owner off the allow-list or without the
 Expenses group) is the same 401, byte for byte, and an unknown id still compares against a dummy hash. A body is read
-through a counted stream and stops at 16 KB. A body that is not `{ source, title, body, date }` is a fixed 400.
+through a counted stream and stops at 16 KB. A body that is not `{ source, title, body, date }`, or whose `source` is not a source word, is a fixed 400. Source words and adding kinds: [CAPTURE-KINDS.md](CAPTURE-KINDS.md).
 
 What happens to a push:
 
@@ -265,12 +265,12 @@ What happens to a push:
 | --- | --- |
 | Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
 | Same push again | Stored once. The same 200 |
-| Any other kind, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
+| Any other kind, a source with no rows, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
 | Over a cap | 429 with `Retry-After`, and nothing stored |
 
 Caps, all checked inside the insert that stores the count or the row, so parallel requests cannot pass them together:
 20 pushes an hour and 100 a day per key, 200 pushes a day per person (recognised or not), 2,000 a day across everyone,
-and 2,000 open recommendations per person. They are starting guesses.
+2,000 open recommendations per person, and 8 different source words per person. They are starting guesses.
 
 Two things are stored under a secret. The replay hash is an HMAC under `CAPTURE_REPLAY_SECRET`, so a stored hash cannot
 be matched against a guessed body such as a one-time code. With the secret unset the Worker answers 503 to everything.

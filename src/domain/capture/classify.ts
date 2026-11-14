@@ -6,6 +6,11 @@ import type { CaptureSource, KindRule, RawPush } from './types'
  * everything else is dropped and counted. The Iberia purchase push is the only wording confirmed so
  * far. More rows join when blanked samples of their kinds arrive, so the Icon's instalment
  * offer, which repeats a purchase with no card, is dropped for lack of a row rather than special-cased.
+ *
+ * To add a row, work from a real push and write only its wording: the title as received (folded, so case and
+ * accents do not matter), a body pattern only when two pushes share a title, the decimal mark and `keepsText`. Never
+ * put an amount, merchant, name or digits in a row or its test, and never fill one from memory of a bank's phrasing.
+ * Add a test with an invented body. The steps are in docs/CAPTURE.md, "Adding a kind from a real push".
  */
 export const KIND_RULES: readonly KindRule[] = [
   { source: 'iberia', title: 'Compra realizada', kind: 'card-purchase', mark: 'comma', keepsText: true },
