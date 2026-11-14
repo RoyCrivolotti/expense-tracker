@@ -5,7 +5,7 @@ import { BINDING, BUCKET, cloudflareApi, main, parseArgs, planBinding } from './
 
 const project = (production: object | undefined, preview: object | undefined) => ({
   deployment_configs: {
-    production: production === undefined ? {} : { r2_buckets: production, env_vars: { A: 1 } },
+    production: production === undefined ? {} : { r2_buckets: production, env_vars: { A: 1 }, d1_databases: { DB: { id: 'x' } } },
     preview: preview === undefined ? {} : { r2_buckets: preview },
   },
 })
@@ -18,6 +18,8 @@ describe('planBinding', () => {
     expect(patch).toEqual({
       deployment_configs: {
         production: {
+          env_vars: { A: 1 },
+          d1_databases: { DB: { id: 'x' } },
           r2_buckets: { RECEIPTS: { name: 'receipts' }, BACKUPS: { name: 'backups' }, [BINDING]: { name: BUCKET } },
         },
         preview: { r2_buckets: { RECEIPTS: { name: 'receipts' }, [BINDING]: { name: BUCKET } } },

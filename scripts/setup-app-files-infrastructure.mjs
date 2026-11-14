@@ -34,15 +34,17 @@ export function parseArgs(argv) {
 }
 
 /**
- * The PATCH body that adds the binding. Each environment keeps every R2 binding it already has, and nothing else in
- * the deployment config is sent. An existing APP_FILES pointing at another bucket is an error, never overwritten.
+ * The PATCH body that adds the binding. Each environment sends its whole existing config (D1, variables, other
+ * bindings) with `r2_buckets` extended, as the receipts script does, so nothing is lost if the API replaces rather
+ * than merges. An existing APP_FILES pointing at another bucket is an error, never overwritten.
  */
 export function planBinding(project) {
   const configs = project.deployment_configs ?? {}
   const patch = { deployment_configs: {} }
   const changes = []
   for (const env of ENVIRONMENTS) {
-    const existing = configs[env]?.r2_buckets ?? {}
+    const base = configs[env] ?? {}
+    const existing = base.r2_buckets ?? {}
     const current = existing[BINDING]?.name
     if (current && current !== BUCKET) {
       throw new Error(`${env} already binds ${BINDING} to a different bucket; leaving it alone`)
@@ -51,7 +53,7 @@ export function planBinding(project) {
       changes.push({ env, change: 'already bound' })
       continue
     }
-    patch.deployment_configs[env] = { r2_buckets: { ...existing, [BINDING]: { name: BUCKET } } }
+    patch.deployment_configs[env] = { ...base, r2_buckets: { ...existing, [BINDING]: { name: BUCKET } } }
     changes.push({ env, change: 'bind', keeps: Object.keys(existing).sort() })
   }
   return { patch: Object.keys(patch.deployment_configs).length ? patch : null, changes }
