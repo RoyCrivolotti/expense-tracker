@@ -37,7 +37,7 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcut }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcut` is true when the shortcut file is in the app-files bucket and no larger than 256 KB (a size-only `head`). Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
 | `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
@@ -162,21 +162,21 @@ rows of one 18-day window and needs no new index.
 ## Setting up a phone
 
 Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. **A shortcut built by hand
-from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. Downloading
-it from this app and opening it has not been tried, nor has the installed Home Screen app or a second phone.** We have not
-seen the iOS 27 screens beyond the trigger, so names below may differ from yours; report any that do. The trigger was seen on
-iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
+from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. A second
+phone has not been tried.** We have not seen the iOS 27 screens beyond the trigger, so names below may differ from
+yours; report any that do. The trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
 user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander joins later.
 
-### With the shortcut file
+### With the shortcut link
 
-When the shortcut file has been uploaded (see "Putting the shortcut file in place"), `GET /api/capture-status` says
-`shortcut: true` (false if the bucket cannot be read) and the card shows these steps. The "Add the shortcut" button is
-an ordinary `<a href="/api/capture-shortcut" download>`: the browser saves the bytes and the app never fetches them.
+When `CAPTURE_SHORTCUT_URL` holds a valid iCloud share link, `GET /api/capture-status` reports it as `shortcutUrl` and
+the card shows these steps. The "Add the shortcut" button is a plain link (`target="_blank"`) to it, which opens
+Shortcuts' Add Shortcut page on the owner's iPhone from Safari and from the installed Home Screen app. A link to the file
+traps the installed app in iOS's file preview, and neither `shortcuts://import-shortcut` nor the Web Share API works.
 
 1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
-2. **Add the shortcut.** Tap **Add the shortcut**. A file called Expense capture downloads. Open it from the downloads; iOS
-   should offer it to Shortcuts, where it is added (untried from this app).
+2. **Add the shortcut.** Tap **Add the shortcut**. Shortcuts opens its Add Shortcut page in a new window. Tap **Add
+   Shortcut**, then come back to the app.
 3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
 4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
 5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with the bank's word. Today that is `iberia`, taken from
@@ -189,27 +189,27 @@ an ordinary `<a href="/api/capture-shortcut" download>`: the browser saves the b
 
 The Worker's address, with `/capture`, is already inside the file (checked), so none is typed.
 
-### Putting the shortcut file in place
+### Publishing the shortcut
 
-The file is specific to a deployment (it has that deployment's Worker address inside) and is signed by Apple, so it cannot
-be edited per person or per deployment, and it is never committed. An operator does this once per environment:
+The shortcut is signed by Apple, so it cannot be edited per person, and the file is never committed. The copy in the
+app-files bucket (`shortcuts/capture.shortcut`, [APP-FILES.md](APP-FILES.md)) is the keyless master copy, still served by
+`GET /api/capture-shortcut` but not linked from the card. An operator publishes it once per environment:
 
 1. Build the shortcut as in "By hand", with the trigger's app left unchosen, the header `Bearer KEY_HERE` and the JSON
-   `source` set to `CARD_NAME_HERE`. Export it from the Shortcuts app as a file.
-2. **Inspect it before it goes anywhere:** no real key, no personal data. A file checked this way was signed by an Apple
-   certificate chain, held an opaque id, and carried only the placeholders.
-3. Make sure the bucket exists and is bound as `APP_FILES` ([APP-FILES.md](APP-FILES.md)), then upload the file:
+   `source` set to `CARD_NAME_HERE`. Export it as a file and upload it to the bucket as the master copy:
    `wrangler r2 object put expense-tracker-app-files/shortcuts/capture.shortcut --remote --file ./Expense\ capture.shortcut --content-type application/octet-stream`
-4. Re-exporting means uploading again. The route sets its own headers; `application/octet-stream` is an inference (no
-   registered type for a Shortcut file is known), so report it if a phone does not offer to open the download.
+2. Inspect it first: only the placeholders and the Worker address, no real key or personal data. Import it into
+   Shortcuts as a clean copy, placeholders untouched, then Share, **Copy iCloud Link**.
+3. Set `CAPTURE_SHORTCUT_URL` to that link on the Pages and staging projects, production and preview, and redeploy.
+4. When you replace a link, **Stop Sharing** the old one in Shortcuts (Share).
 
-Only the placeholder version goes in the bucket (no real key, no personal data inside), and the file is never committed.
-Until the bucket, binding and file all exist the status route says `shortcut: false` and the card shows the manual steps
-below. Nothing errors.
+The link is public: anyone with it can read the shortcut, which holds only the placeholders and the baked Worker address
+(not a secret), never a key. It is a plain variable, never committed. Unset or invalid, the status route says
+`shortcutUrl: null` and the card shows the manual steps below.
 
 ### By hand
 
-With no file uploaded, or when the status cannot be read, the card shows these steps, one action each. The address is
+With no valid link set, or when the status cannot be read, the card shows these steps, one action each. The address is
 `endpoint` from `GET /api/capture-status` with a Copy button, or a field to paste it.
 
 1. Make a key and copy it, as above.
