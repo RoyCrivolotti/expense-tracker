@@ -199,8 +199,8 @@ be edited per person or per deployment, and it is never committed. An operator d
 2. **Inspect it before it goes anywhere:** no real key, no personal data. A file checked this way was signed by an Apple
    certificate chain, held an opaque id, and carried only the placeholders.
 3. Upload it to the receipts bucket under one fixed key (the bucket name here is invented):
-   `wrangler r2 object put expense-receipts/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --remote`
-4. Re-exporting means uploading again. The file is served as it is, at most 256 KB, as `application/octet-stream` with
+   `wrangler r2 object put expense-receipts/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --content-type application/octet-stream --remote`
+4. Re-exporting means uploading again. The route sets its own headers whatever the object stores, so the type given here only keeps the two consistent. The file is served as it is, at most 256 KB, as `application/octet-stream` with
    `Content-Disposition: attachment`; no registered media type for a Shortcut file is known.
 
 The receipts bucket is used because the app already binds it and nothing lists it: receipt bytes are read and deleted
