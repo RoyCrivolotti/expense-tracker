@@ -12,8 +12,8 @@ import { error } from '../../_shared/http'
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const bucket = context.env.APP_FILES
-  if ((await shortcutSize(bucket)) === null) return error(404, 'The shortcut is not available')
-  const object = await bucket!.get(SHORTCUT_OBJECT_KEY)
+  if (!bucket || (await shortcutSize(bucket)) === null) return error(404, 'The shortcut is not available')
+  const object = await bucket.get(SHORTCUT_OBJECT_KEY)
   // The file can be replaced between the check and the read, so the length and the cap come from what is streamed.
   if (!object || object.size > MAX_SHORTCUT_BYTES) return error(404, 'The shortcut is not available')
   return new Response(object.body, {
