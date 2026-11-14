@@ -25,6 +25,9 @@ export interface CaptureStatus {
   shortcutUrl: string | null
 }
 
+/** Whether the address carries anything before the host (`name:value@`), which no link here should. */
+const hasUserInfo = (url: URL): boolean => !url.href.startsWith(`${url.protocol}//${url.host}`)
+
 const SHORTCUT_HOSTS = new Set(['www.icloud.com', 'icloud.com'])
 
 /**
@@ -36,7 +39,7 @@ export function captureShortcutUrlOf(setting: string | undefined): string | null
   if (!setting) return null
   try {
     const url = new URL(setting.trim())
-    if (url.protocol !== 'https:' || !SHORTCUT_HOSTS.has(url.hostname) || url.username || url.password || url.port) {
+    if (url.protocol !== 'https:' || !SHORTCUT_HOSTS.has(url.hostname) || hasUserInfo(url) || url.port) {
       return null
     }
     const id = url.pathname.startsWith('/shortcuts/') ? url.pathname.slice('/shortcuts/'.length) : ''
@@ -61,7 +64,7 @@ export function captureEndpointOf(setting: string | undefined): string | null {
   if (!setting) return null
   try {
     const url = new URL(setting.trim())
-    if (url.protocol !== 'https:' || url.username || url.password) return null
+    if (url.protocol !== 'https:' || hasUserInfo(url)) return null
     return `${url.origin}/capture`
   } catch {
     return null
