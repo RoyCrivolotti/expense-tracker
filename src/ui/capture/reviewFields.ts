@@ -64,6 +64,7 @@ export function describeRecommendation(rec: RecommendationInfo, model: ExpenseMo
     accountId: refs.accountId,
     suggestedType: rec.suggestedType,
     sightings: history.sightings,
+    settled: history.settled,
     monthEdge: edgeDays.length > 0,
     possibleMatch: rec.possibleMatch != null,
   })

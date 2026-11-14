@@ -92,9 +92,9 @@ nothing is waiting, and the Dashboard tab carries the count (the Settings badge 
 list, the count and the undo window live in the main bundle, so the badge needs no download.
 
 What each payment becomes is worked out on the device from the push and the typed rows the app holds, never stored
-([`review.ts`](../src/domain/capture/review.ts)). The description and category are the newest typed row of the same
-merchant (bank text with the words that hold a digit dropped, case and accents folded). The budget month comes from the
-same rule as the add form.
+([`review.ts`](../src/domain/capture/review.ts)). Description and category are the person's most common ones for the
+merchant (digit words dropped, case and accents folded) over their last 12 months, else the newest row, ties to the more
+recent. One tap needs it typed twice and strictly more than any other, else "Description not settled".
 
 | | |
 | --- | --- |
