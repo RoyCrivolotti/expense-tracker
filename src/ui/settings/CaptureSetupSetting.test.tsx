@@ -33,7 +33,7 @@ describe('the first-payment check', () => {
 
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
     expect(await screen.findByText(/Your key has not been used yet/)).toBeInTheDocument()
-    expect(screen.getByText(/1\. Make a key and copy it \(done\)/)).toBeInTheDocument()
+    expect(screen.getByText(/1\. Make a key and copy it \(a key already exists\)/)).toBeInTheDocument()
   })
 
   it('does not say the key is unused when there is none', async () => {
@@ -41,7 +41,7 @@ describe('the first-payment check', () => {
 
     await screen.findByText('Waiting for your first payment')
     expect(screen.queryByText(/key has not been used/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/\(done\)/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\(a key already exists\)/)).not.toBeInTheDocument()
   })
 
   it('says pushes are arriving but none was read as a payment', async () => {
@@ -226,7 +226,7 @@ describe('with a shortcut link', () => {
     ])
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
-    expect(para(/replace CARD_NAME in the source field with the word for your bank/)).toBeInTheDocument()
+    expect(para(/replace CARD_NAME_HERE in the source field with the word for your bank/)).toBeInTheDocument()
     expect(screen.getByText(/arrive with its automation switched off/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
@@ -237,17 +237,19 @@ describe('with a shortcut link', () => {
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
-    const word = para(/replace CARD_NAME/).textContent
+    const word = para(/replace CARD_NAME_HERE/).textContent
     expect(word).toContain('Today that is iberia.')
     expect(word).not.toContain('santander')
   })
 
-  it('does not claim where the Worker address lives', async () => {
+  it('says the address is already in the shortcut, and links the hint to the link for a screen reader', async () => {
     status(none, ADDRESS, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
-    expect(document.body.textContent).not.toMatch(/built in|baked/i)
+    expect(screen.getByText(/The address it posts to is already in it/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'Add the shortcut' })
+    expect(link).toHaveAccessibleDescription(/opens the shortcut in Shortcuts, in a new tab/)
   })
 
   it('shows neither the link nor the manual steps until the status has been read', async () => {

@@ -18,7 +18,7 @@ const sourceWords = words.flatMap((w, i) => (i === 0 ? [w] : [' or ', w]))
 
 const keyStep = (setup: Setup): SetupStepSpec => ({
   id: 'key',
-  title: `Make a key and copy it${setup.keys && setup.keys.length > 0 ? ' (done)' : ''}`,
+  title: `Make a key and copy it${setup.keys && setup.keys.length > 0 ? ' (a key already exists)' : ''}`,
   body: (
     <p>
       In <b>Capture key</b> below, type a name for your phone and tap <b>Make a key</b>. Tap <b>Copy</b> at once: the
@@ -82,7 +82,7 @@ export function linkSteps(setup: Setup, url: string): SetupStepSpec[] {
       title: 'Name your bank',
       body: (
         <p>
-          In the JSON, replace <b>CARD_NAME</b> in the <b>source</b> field with the word for your bank. Today that is{' '}
+          In the JSON, replace <b>CARD_NAME_HERE</b> in the <b>source</b> field with the word for your bank. Today that is{' '}
           {sourceWords}.
         </p>
       ),
