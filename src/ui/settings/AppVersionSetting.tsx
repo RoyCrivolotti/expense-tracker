@@ -1,6 +1,7 @@
 import { Card, SectionTitle } from '../components/primitives'
 import type { ExpenseModel } from '../useExpenseData'
 import { CaptureSwitch } from './CaptureSwitch'
+import { ShareSpikeCard } from './ShareSpikeCard'
 import styles from './AppVersionSetting.module.css'
 
 /**
@@ -12,6 +13,7 @@ import styles from './AppVersionSetting.module.css'
 export function AppVersionSetting({ model }: { model: Pick<ExpenseModel, 'pagedList'> }) {
   return (
     <>
+      <ShareSpikeCard />
       <SectionTitle>About this app</SectionTitle>
       <Card>
         <dl className={styles.list}>
