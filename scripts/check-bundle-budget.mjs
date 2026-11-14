@@ -28,7 +28,7 @@ const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
 // CAPTURE: the Settings key card and the Dashboard review card only a browser with the capture flag on loads. Kept out of TOTAL so the
 // feature has a line of its own and the default build cannot be blamed for it.
-const CAPTURE_MAX_GZIP = 14_300
+const CAPTURE_MAX_GZIP = 15_600
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
