@@ -21,8 +21,18 @@ export interface CaptureStatus {
   sources: SourceStatus[]
   /** The Worker's full address for this environment, or null when none is configured or the setting is not a usable address. */
   endpoint: string | null
-  /** Whether the generic Shortcut file is available to download. */
-  shortcut: boolean
+  /** The public iCloud share link of the generic Shortcut, or null when none is set or the setting is not a share link. */
+  shortcutUrl: string | null
+}
+
+const SHORTCUT_LINK = /^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]+$/
+
+/**
+ * The share link an operator sets for the Shortcut. Only an iCloud Shortcuts link is used, exactly as written (no
+ * trimming, no query, no extra path), so whatever else the variable holds is never turned into a link on the screen.
+ */
+export function captureShortcutUrlOf(setting: string | undefined): string | null {
+  return setting !== undefined && SHORTCUT_LINK.test(setting) ? setting : null
 }
 
 /**
@@ -46,7 +56,7 @@ export async function captureStatus(
   captures: CaptureRepository,
   owner: string,
   setting: string | undefined,
-  shortcut: boolean,
+  shortcutSetting: string | undefined,
   now: Date,
 ): Promise<CaptureStatus> {
   const from = shiftDay(now.toISOString().slice(0, 10), -(STATUS_DAYS - 1))
@@ -63,5 +73,5 @@ export async function captureStatus(
       unrecognised: mine.reduce((n, c) => n + c.unrecognised, 0),
     }
   })
-  return { sources, endpoint: captureEndpointOf(setting), shortcut }
+  return { sources, endpoint: captureEndpointOf(setting), shortcutUrl: captureShortcutUrlOf(shortcutSetting) }
 }

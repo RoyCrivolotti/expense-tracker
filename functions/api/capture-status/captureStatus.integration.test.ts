@@ -66,11 +66,15 @@ const counter = (owner: string, source: string, day: string, received: number, u
     .prepare('INSERT INTO capture_counters (owner, source, day, received, unrecognised) VALUES (?, ?, ?, ?, ?)')
     .run(owner, source, day, received, unrecognised)
 
-const get = (setting?: string, email: string | false = OWNER) =>
+const get = (setting?: string, email: string | false = OWNER, shortcut?: string) =>
   invokeExpenseApiRoute({
     handler: status,
     repo: createD1ExpenseRepository(world.env),
-    env: setting === undefined ? world.env : { ...world.env, CAPTURE_ENDPOINT: setting },
+    env: {
+      ...world.env,
+      ...(setting === undefined ? {} : { CAPTURE_ENDPOINT: setting }),
+      ...(shortcut === undefined ? {} : { CAPTURE_SHORTCUT_URL: shortcut }),
+    },
     url: 'https://expenses.test/api/capture-status',
     method: 'GET',
     email,
@@ -91,7 +95,7 @@ describe('GET /api/capture-status', () => {
         { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
       ],
       endpoint: null,
-      shortcut: false,
+      shortcutUrl: null,
     })
   })
 
@@ -136,59 +140,38 @@ describe('GET /api/capture-status', () => {
     },
   )
 
-  describe('the shortcut flag', () => {
-    const FILE = 'shortcuts/capture.shortcut'
-    const flag = async () => ((await (await get()).json()) as { shortcut: boolean }).shortcut
-    const put = (bytes: number) => world.env.APP_FILES!.put(FILE, new Uint8Array(bytes))
+  describe('the shortcut link', () => {
+    const LINK = 'https://www.icloud.com/shortcuts/abc123'
+    const link = async (setting?: string) =>
+      ((await (await get(undefined, OWNER, setting)).json()) as { shortcutUrl: string | null }).shortcutUrl
 
-    it('is false with nothing uploaded, true once the file is there, and false when it is oversized', async () => {
-      expect(await flag()).toBe(false)
-      await put(23_000)
-      expect(await flag()).toBe(true)
-      await put(256 * 1024 + 1)
-      expect(await flag()).toBe(false)
+    it('is reported as set when the variable holds an iCloud Shortcuts link', async () => {
+      expect(await link(LINK)).toBe(LINK)
     })
 
-    it('is false when the file is only in the receipts bucket', async () => {
-      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
-      expect(await flag()).toBe(false)
+    it('is null when the variable is unset', async () => {
+      expect(await link()).toBeNull()
     })
 
-    it('is false when the bucket is not bound', async () => {
-      const response = await invokeExpenseApiRoute({
-        handler: status,
-        repo: createD1ExpenseRepository(world.env),
-        env: { ...world.env, APP_FILES: undefined },
-        url: 'https://expenses.test/api/capture-status',
-        method: 'GET',
-        email: OWNER,
-      })
-      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
-    })
-  })
-
-  describe('when the bucket cannot be read', () => {
-    const FILE = 'shortcuts/capture.shortcut'
-    const unreadable = (method: 'head' | 'get') => {
-      vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      vi.spyOn(world.env.APP_FILES!, method).mockRejectedValue(new Error('bucket secret-name unavailable'))
-    }
-
-    it('still answers, with shortcut false and a fixed log line, when head throws', async () => {
-      await world.env.APP_FILES!.put(FILE, new Uint8Array(100))
-      unreadable('head')
-      const response = await get()
-      expect(response.status).toBe(200)
-      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
-      expect(console.warn).toHaveBeenCalledWith('capture status: the shortcut file could not be checked')
-    })
-
-    it('is unaffected by a failing get, since the status never reads the bytes', async () => {
-      await world.env.APP_FILES!.put(FILE, new Uint8Array(100))
-      unreadable('get')
-      const response = await get()
-      expect(response.status).toBe(200)
-      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(true)
+    it.each([
+      ['an empty value', ''],
+      ['another host', 'https://example.com/shortcuts/abc123'],
+      ['a lookalike host', 'https://www.icloud.com.example.com/shortcuts/abc123'],
+      ['no www', 'https://icloud.com/shortcuts/abc123'],
+      ['http', 'http://www.icloud.com/shortcuts/abc123'],
+      ['an extra path', 'https://www.icloud.com/shortcuts/abc123/more'],
+      ['a query string', 'https://www.icloud.com/shortcuts/abc123?x=1'],
+      ['a fragment', 'https://www.icloud.com/shortcuts/abc123#x'],
+      ['a missing id', 'https://www.icloud.com/shortcuts/'],
+      ['an id with punctuation', 'https://www.icloud.com/shortcuts/abc-123'],
+      ['leading whitespace', ` ${LINK}`],
+      ['trailing whitespace', `${LINK} `],
+      ['a trailing newline', `${LINK}\n`],
+      ['text around a link', `see ${LINK}`],
+      ['credentials in the address', ['https://user:pw', 'www.icloud.com/shortcuts/abc123'].join('@')],
+      ['a script address', 'javascript:alert(1)'],
+    ])('is treated as unset for %s', async (_name, setting) => {
+      expect(await link(setting)).toBeNull()
     })
   })
 
