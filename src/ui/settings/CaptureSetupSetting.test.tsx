@@ -204,6 +204,7 @@ describe('with the shortcut file available', () => {
     expect(screen.getByText(/Downloading it from this app and opening it has not been tried/)).toBeInTheDocument()
     expect(screen.getByText(/nor has the installed Home Screen app or a second phone/)).toBeInTheDocument()
     expect(screen.getByText(/tell us what differs/)).toBeInTheDocument()
+    expect(screen.getByText(/Opening it there is not tried yet/)).toBeInTheDocument()
     expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
   })
 
@@ -224,7 +225,7 @@ describe('with the shortcut file available', () => {
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
     expect(para(/replace CARD_NAME_HERE in the source field with the word for your bank/)).toBeInTheDocument()
-    expect(screen.getByText(/arrive with its automation switched off/)).toBeInTheDocument()
+    expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })

@@ -19,9 +19,9 @@ export function AddShortcutLink() {
         Add the shortcut
       </a>
       <p id={hint}>
-        This downloads a file called Expense capture. Open it from your downloads; iOS should offer to open it in
-        Shortcuts, where you add it. The next three steps are edits you make inside it. The address it posts to is
-        already in it. Not tried: this download from the installed Home Screen app.
+        This downloads a file called Expense capture. Open it from your downloads and add it in Shortcuts. Opening it
+        there is not tried yet, and neither is this download from the installed Home Screen app. The next three steps
+        are edits you make inside it. The address it posts to is already in it.
       </p>
     </>
   )

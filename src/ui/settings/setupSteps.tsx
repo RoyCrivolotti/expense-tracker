@@ -32,9 +32,9 @@ const automationStep = (shared: boolean): SetupStepSpec => ({
   title: 'Check the automation is on',
   body: (
     <p>
-      {shared ? 'A shared shortcut can arrive with its automation switched off. ' : ''}Open the automation and keep{' '}
+      {shared ? 'A shared shortcut may arrive with its automation switched off; that is not tried yet. ' : ''}Open the automation and keep{' '}
       <b>Automation</b> on. Turn on <b>Allow Running When Locked</b> (info button, Privacy). Notify was off on the
-      automations that were tried, and whether it matters is untried. The editor can say Automation is turned off while
+      automations that were tried, and whether it matters is not tried yet. The editor can say Automation is turned off while
       it runs, so trust the automation list and your first real payment.
     </p>
   ),
