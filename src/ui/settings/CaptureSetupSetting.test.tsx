@@ -131,11 +131,11 @@ describe('the steps', () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('Waiting for your first payment')
 
-    expect(screen.getByText(/This screen cannot tell your version/)).toBeInTheDocument()
+    expect(screen.getByText(/Check your version in Settings, General, About/)).toBeInTheDocument()
     expect(screen.getByText(/built by hand from steps like these worked on one phone/)).toBeInTheDocument()
     expect(screen.getByText(/has not been tried on a second phone/)).toBeInTheDocument()
     expect(screen.getByText(/not seen the iOS 27 screens beyond the trigger/)).toBeInTheDocument()
-    expect(screen.getByText(/We have not tried an older iPhone or Android/)).toBeInTheDocument()
+    expect(screen.getByText(/older iPhones and Android are not tried/)).toBeInTheDocument()
   })
 
   it("shows the server's address with a Copy button", async () => {

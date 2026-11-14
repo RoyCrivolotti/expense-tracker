@@ -24,7 +24,7 @@ function Steps({ setup }: { setup: Setup }) {
 }
 
 const IOS_NOTE =
-  'This needs an iPhone on iOS 27 or later: the trigger was seen on iOS 27. We have not tried an older iPhone or Android. This screen cannot tell your version; check Settings, General, About.'
+  'Needs iOS 27 or later (the trigger was seen on iOS 27); older iPhones and Android are not tried. Check your version in Settings, General, About.'
 const BY_HAND =
   'A shortcut built by hand from steps like these worked on one phone. It has not been tried on a second phone. We have not seen the iOS 27 screens beyond the trigger, so names here may differ from yours: tell us what does.'
 const FROM_FILE =
@@ -40,8 +40,10 @@ export function CaptureSetupSetting() {
         <div className={tabStyles.settingGroup}>
           <p className={tabStyles.settingHint}>
             Capture sends each Iberia card notification from your iPhone to the app, which turns it into a payment for
-            you to review. {IOS_NOTE} {setup.status?.shortcut ? FROM_FILE : BY_HAND}
+            you to review.
           </p>
+          <p className={tabStyles.settingHint}>{IOS_NOTE}</p>
+          <p className={tabStyles.settingHint}>{setup.status?.shortcut ? FROM_FILE : BY_HAND}</p>
           {setup.error ? (
             <p className={tabStyles.settingError} role="alert">
               {setup.error}
