@@ -21,6 +21,8 @@ export interface CaptureStatus {
   sources: SourceStatus[]
   /** The Worker's full address for this environment, or null when none is configured or the setting is not a usable address. */
   endpoint: string | null
+  /** Whether the generic Shortcut file is available to download. */
+  shortcut: boolean
 }
 
 /**
@@ -44,6 +46,7 @@ export async function captureStatus(
   captures: CaptureRepository,
   owner: string,
   setting: string | undefined,
+  shortcut: boolean,
   now: Date,
 ): Promise<CaptureStatus> {
   const from = shiftDay(now.toISOString().slice(0, 10), -(STATUS_DAYS - 1))
@@ -60,5 +63,5 @@ export async function captureStatus(
       unrecognised: mine.reduce((n, c) => n + c.unrecognised, 0),
     }
   })
-  return { sources, endpoint: captureEndpointOf(setting) }
+  return { sources, endpoint: captureEndpointOf(setting), shortcut }
 }

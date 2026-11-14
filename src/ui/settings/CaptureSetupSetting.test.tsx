@@ -14,10 +14,10 @@ const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
 const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 }
 
-const status = (iberia = none, endpoint: string | null = ADDRESS) =>
+const status = (iberia = none, endpoint: string | null = ADDRESS, shortcut = false) =>
   vi
     .mocked(statusApi.fetchCaptureStatus)
-    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint })
+    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint, shortcut })
 
 beforeEach(() => {
   localStorage.clear()

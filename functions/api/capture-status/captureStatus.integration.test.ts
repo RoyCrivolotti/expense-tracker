@@ -91,6 +91,7 @@ describe('GET /api/capture-status', () => {
         { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
       ],
       endpoint: null,
+      shortcut: false,
     })
   })
 
@@ -128,13 +129,37 @@ describe('GET /api/capture-status', () => {
     })
   })
 
-  it.each([
-    ['http://capture.example.workers.dev'],
-    ['not an address'],
-    [withCredentials()],
-    [''],
-  ])('gives no address for a setting that is not a usable https address (%j)', async (setting) => {
-    expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+  it.each([['http://capture.example.workers.dev'], ['not an address'], [withCredentials()], ['']])(
+    'gives no address for a setting that is not a usable https address (%j)',
+    async (setting) => {
+      expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+    },
+  )
+
+  describe('the shortcut flag', () => {
+    const FILE = 'shortcuts/capture.shortcut'
+    const flag = async () => ((await (await get()).json()) as { shortcut: boolean }).shortcut
+    const put = (bytes: number) => world.env.RECEIPTS!.put(FILE, new Uint8Array(bytes))
+
+    it('is false with nothing uploaded, true once the file is there, and false when it is oversized', async () => {
+      expect(await flag()).toBe(false)
+      await put(23_000)
+      expect(await flag()).toBe(true)
+      await put(256 * 1024 + 1)
+      expect(await flag()).toBe(false)
+    })
+
+    it('is false when the bucket is not bound', async () => {
+      const response = await invokeExpenseApiRoute({
+        handler: status,
+        repo: createD1ExpenseRepository(world.env),
+        env: { ...world.env, RECEIPTS: undefined },
+        url: 'https://expenses.test/api/capture-status',
+        method: 'GET',
+        email: OWNER,
+      })
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
+    })
   })
 
   it('is refused without a sign-in', async () => {

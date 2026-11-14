@@ -1,6 +1,7 @@
 import type { Env, ExpensesData } from '../../_shared/env'
 import { createD1CaptureRepository } from '../../_shared/adapters/d1CaptureRepository'
 import { captureStatus } from '../../domain/application/captureStatusService'
+import { shortcutSize } from '../../_shared/captureShortcut'
 import { json } from '../../_shared/http'
 import { mapAppError } from '../../_shared/mapAppError'
 
@@ -15,6 +16,7 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
         createD1CaptureRepository(context.env),
         context.data.owner,
         context.env.CAPTURE_ENDPOINT,
+        (await shortcutSize(context.env.RECEIPTS)) !== null,
         new Date(),
       ),
     )
