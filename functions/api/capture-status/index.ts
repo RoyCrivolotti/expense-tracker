@@ -9,7 +9,7 @@ import { mapAppError } from '../../_shared/mapAppError'
  * A bucket that cannot be read only means the button is not offered: the manual steps and the capture counts still
  * have to load. The log line is fixed text, never the error, which can carry a bucket or key name.
  */
-async function shortcutAvailable(bucket: Env['RECEIPTS']): Promise<boolean> {
+async function shortcutAvailable(bucket: Env['APP_FILES']): Promise<boolean> {
   try {
     return (await shortcutSize(bucket)) !== null
   } catch {
@@ -29,7 +29,7 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
         createD1CaptureRepository(context.env),
         context.data.owner,
         context.env.CAPTURE_ENDPOINT,
-        await shortcutAvailable(context.env.RECEIPTS),
+        await shortcutAvailable(context.env.APP_FILES),
         new Date(),
       ),
     )

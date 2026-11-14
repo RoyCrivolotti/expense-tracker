@@ -6,6 +6,11 @@ export interface Env {
   BACKUPS?: R2Bucket
   /** Receipt bytes. Optional: unbound means the upload route 503s and nothing else changes. */
   RECEIPTS?: R2Bucket
+  /**
+   * Deployment files the app serves that are not user data (today only the capture Shortcut). Optional: unbound means
+   * the files are simply not offered. Never receipts or anything else tied to a person.
+   */
+  APP_FILES?: R2Bucket
   /** Cloudflare Email Sending binding (optional; backup alerts only). */
   EMAIL?: SendEmail
   /** Bootstrap fallback when allowed_users is empty (comma-separated). Requires ALLOW_BOOTSTRAP=1. */

@@ -246,7 +246,7 @@ migrate -- <database> --apply` straight after.
 
 Receipt photos and PDFs attached to a transaction. Bytes live in R2, and only metadata lives in D1.
 
-1. Enable R2 on the account (already done if backups are running).
+1. Enable R2 on the account (already done if backups are running). The capture shortcut has its own bucket, see [APP-FILES.md](APP-FILES.md).
 2. Run `npm run setup:receipts`. It creates the bucket `receipts` and binds `RECEIPTS` on production and preview.
 3. Redeploy (`npm run deploy`) so the binding reaches the running Functions.
 

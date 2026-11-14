@@ -1,10 +1,10 @@
 /**
  * The generic Shortcut file the setup screen hands out. It is specific to one deployment (the Worker's address is inside
  * it) and signed by Apple, so it cannot be edited per person and is never in the repo: an operator uploads it once to the
- * receipts bucket, under this key, and the app serves it behind the sign-in.
+ * app-files bucket (the `APP_FILES` binding), under this key, and the app serves it behind the sign-in.
  *
- * The receipts bucket is used because the app already binds it and nothing in it is ever listed: receipt bytes are read
- * and deleted only by keys taken from the database, and no job treats an unknown key as an orphan.
+ * That bucket holds deployment files that are not user data, which is why the shortcut is not kept with the receipts.
+ * Nothing sweeps, lists or expires it. Files are prefixed by kind so others can be added beside this one.
  */
 export const SHORTCUT_OBJECT_KEY = 'shortcuts/capture.shortcut'
 

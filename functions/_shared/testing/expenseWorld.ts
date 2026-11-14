@@ -88,7 +88,7 @@ export function createExpenseWorld(sqlite: SqliteHandle, d1: D1Database): World 
     },
     batch: (statements: Parameters<D1Database['batch']>[0]) => d1.batch(statements),
   } as unknown as D1Database
-  const env: Env = { DB: recording, OWNER_EMAIL: OWNER, RECEIPTS: fakeBucket() }
+  const env: Env = { DB: recording, OWNER_EMAIL: OWNER, RECEIPTS: fakeBucket(), APP_FILES: fakeBucket() }
   for (const email of [OWNER, OTHER]) {
     sqlite.prepare('INSERT INTO allowed_users (email, granted_by) VALUES (?, ?)').run(email, OWNER)
     sqlite.prepare("INSERT INTO user_group_grants (email, group_id) VALUES (?, 'expenses')").run(email)
