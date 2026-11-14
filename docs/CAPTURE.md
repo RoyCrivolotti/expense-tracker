@@ -179,7 +179,7 @@ and the person edits it by hand.
 2. **Add the shortcut.** Tap **Add the shortcut**. Shortcuts opens and shows it. Add it.
 3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
 4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
-5. **Name your bank.** In the JSON, replace `CARD_NAME` in `source` with the bank's word. Today that is `iberia`, taken from
+5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with the bank's word. Today that is `iberia`, taken from
    `SUPPORTED_SOURCES`, which is built from the same rules the server reads.
 6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
    **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
@@ -187,8 +187,8 @@ and the person edits it by hand.
 7. **Make one purchase** and watch the check below. If iOS asks whether the shortcut may send data, allow it and choose
    the option that remembers the answer. If it asks again on every payment an unattended run cannot work yet (untested).
 
-The link is never committed: re-sharing a shortcut gives a new link. It is not known where the Worker's address sits in the
-shared file, so the card does not say.
+The link is never committed: re-sharing a shortcut gives a new link. The Worker's address, with `/capture`, is already inside the shared
+shortcut (checked in the file), so nothing about the address is typed.
 
 ### By hand
 
