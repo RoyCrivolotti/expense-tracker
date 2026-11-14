@@ -69,6 +69,39 @@ describe('GET /api/capture-shortcut', () => {
     expect((await get()).status).toBe(404)
   })
 
+  it('sends the length of the object it streams when the file is replaced after the check', async () => {
+    await world.env.RECEIPTS!.put(KEY, FAKE)
+    const bucket = world.env.RECEIPTS!
+    const real = bucket.get.bind(bucket)
+    vi.spyOn(bucket, 'get').mockImplementation(async (key: string) => {
+      await bucket.put(KEY, new Uint8Array(20))
+      return real(key)
+    })
+    const response = await get()
+    expect(response.headers.get('content-length')).toBe('20')
+    expect((await response.arrayBuffer()).byteLength).toBe(20)
+  })
+
+  it('answers 404 when the file grew past the cap between the check and the read', async () => {
+    await world.env.RECEIPTS!.put(KEY, FAKE)
+    const bucket = world.env.RECEIPTS!
+    const real = bucket.get.bind(bucket)
+    vi.spyOn(bucket, 'get').mockImplementation(async (key: string) => {
+      await bucket.put(KEY, new Uint8Array(256 * 1024 + 1))
+      return real(key)
+    })
+    expect((await get()).status).toBe(404)
+  })
+
+  it('answers the fixed 500 when the bucket cannot be read, never the error text', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await world.env.RECEIPTS!.put(KEY, FAKE)
+    vi.spyOn(world.env.RECEIPTS!, 'get').mockRejectedValue(new Error('bucket secret-name unavailable'))
+    const response = await get()
+    expect(response.status).toBe(500)
+    expect(await response.text()).not.toContain('secret-name')
+  })
+
   it('is refused without a sign-in, and never offers a receipt under another key', async () => {
     await world.env.RECEIPTS!.put(KEY, FAKE)
     expect((await get({ email: false })).status).toBe(401)
