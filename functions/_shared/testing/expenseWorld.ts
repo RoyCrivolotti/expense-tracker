@@ -66,6 +66,10 @@ function fakeBucket(): R2Bucket {
       })
       return Promise.resolve({ body, size: stored.length, httpEtag: `"${key}"` })
     },
+    head: (key: string) => {
+      const stored = objects.get(key)
+      return Promise.resolve(stored ? { size: stored.length, httpEtag: `"${key}"` } : null)
+    },
     delete: (keys: string | string[]) => {
       for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key)
       return Promise.resolve()

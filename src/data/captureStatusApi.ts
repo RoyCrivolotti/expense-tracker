@@ -14,6 +14,8 @@ export interface CaptureStatus {
   sources: SourceStatus[]
   /** The capture Worker's full address for this environment, or null when the server has none configured. */
   endpoint: string | null
+  /** Whether the generic Shortcut file can be downloaded from `/api/capture-shortcut`. */
+  shortcut: boolean
 }
 
 export function fetchCaptureStatus(): Promise<CaptureStatus> {

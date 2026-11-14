@@ -91,6 +91,7 @@ describe('GET /api/capture-status', () => {
         { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
       ],
       endpoint: null,
+      shortcut: false,
     })
   })
 
@@ -128,13 +129,62 @@ describe('GET /api/capture-status', () => {
     })
   })
 
-  it.each([
-    ['http://capture.example.workers.dev'],
-    ['not an address'],
-    [withCredentials()],
-    [''],
-  ])('gives no address for a setting that is not a usable https address (%j)', async (setting) => {
-    expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+  it.each([['http://capture.example.workers.dev'], ['not an address'], [withCredentials()], ['']])(
+    'gives no address for a setting that is not a usable https address (%j)',
+    async (setting) => {
+      expect(await (await get(setting)).json()).toMatchObject({ endpoint: null })
+    },
+  )
+
+  describe('the shortcut flag', () => {
+    const FILE = 'shortcuts/capture.shortcut'
+    const flag = async () => ((await (await get()).json()) as { shortcut: boolean }).shortcut
+    const put = (bytes: number) => world.env.RECEIPTS!.put(FILE, new Uint8Array(bytes))
+
+    it('is false with nothing uploaded, true once the file is there, and false when it is oversized', async () => {
+      expect(await flag()).toBe(false)
+      await put(23_000)
+      expect(await flag()).toBe(true)
+      await put(256 * 1024 + 1)
+      expect(await flag()).toBe(false)
+    })
+
+    it('is false when the bucket is not bound', async () => {
+      const response = await invokeExpenseApiRoute({
+        handler: status,
+        repo: createD1ExpenseRepository(world.env),
+        env: { ...world.env, RECEIPTS: undefined },
+        url: 'https://expenses.test/api/capture-status',
+        method: 'GET',
+        email: OWNER,
+      })
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
+    })
+  })
+
+  describe('when the bucket cannot be read', () => {
+    const FILE = 'shortcuts/capture.shortcut'
+    const unreadable = (method: 'head' | 'get') => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      vi.spyOn(world.env.RECEIPTS!, method).mockRejectedValue(new Error('bucket secret-name unavailable'))
+    }
+
+    it('still answers, with shortcut false and a fixed log line, when head throws', async () => {
+      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      unreadable('head')
+      const response = await get()
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(false)
+      expect(console.warn).toHaveBeenCalledWith('capture status: the shortcut file could not be checked')
+    })
+
+    it('is unaffected by a failing get, since the status never reads the bytes', async () => {
+      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      unreadable('get')
+      const response = await get()
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as { shortcut: boolean }).shortcut).toBe(true)
+    })
   })
 
   it('is refused without a sign-in', async () => {

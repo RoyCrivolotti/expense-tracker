@@ -10,7 +10,7 @@ describe('the navigations the service worker answers', () => {
   })
 
   it('are not an API URL opened in a tab, nor an Access endpoint', () => {
-    for (const path of ['/api/expenses', '/api/expenses/attachments/7', '/api/expenses/export', '/cdn-cgi/access/logout']) {
+    for (const path of ['/api/expenses', '/api/expenses/attachments/7', '/api/expenses/export', '/api/capture-shortcut', '/cdn-cgi/access/logout']) {
       expect(navigate(path), path).toBe(false)
     }
   })

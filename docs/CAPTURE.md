@@ -37,7 +37,8 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcut }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcut` is true when the shortcut file is in the receipts bucket and no larger than 256 KB (a size-only `head`). Reads only |
+| `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the receipts bucket as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, the bucket is not bound, or the object is over 256 KB. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
@@ -160,39 +161,81 @@ rows of one 18-day window and needs no new index.
 
 ## Setting up a phone
 
-Settings, Account, "Set up capture" lists these steps and checks that the first payment arrived. **They are written from
-research. The only shortcuts built so far append each notification to a note. The part that posts to the app (Get
-Contents of URL, the JSON body and the Authorization header) has never run on a phone, so nothing here is proven end to
-end.** It comes from [Apple's guide](https://support.apple.com/guide/shortcuts/apd58d46713f/ios). The If step is untried
-too: the action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection.
-Only Iberia has a recipe; Santander joins with its own change.
+Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. **A shortcut built by hand
+from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. Downloading
+it from this app and opening it has not been tried, nor has the installed Home Screen app or a second phone.** We have not
+seen the iOS 27 screens beyond the trigger, so names below may differ from yours; report any that do. The trigger was seen on
+iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
+user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander joins later.
 
-1. **iOS 27.** The trigger "When I receive a notification from" was seen on iOS 27. Older iPhones and Android are untried.
-   The app cannot tell the phone's version (Safari freezes it in the user agent), so the screen asks the person to check
-   Settings, General, About.
-2. **Make a key** in Settings, Capture key. It is shown once.
-3. **Build the shortcut.** Add the trigger "When I receive a notification from" and pick the app: Santander, or
-   IberiaCards for the Icon card (one word, as it appears in the notification's App field). Leave the filters empty. Make
-   one automation per app. Add Get Contents of URL, tap Show More, set Method to POST and Request Body to JSON, then add
-   four fields: `source` (typed text, `iberia` or `santander`), `title` and `body` (the notification's Title and Body), and
-   `date` (the notification's Date). In saved notes the date arrived as ISO 8601 with the phone's offset, such as
-   `2026-11-03T09:41:07+01:00`, so try that date format (in Shortcuts it is called ISO 8601, under the Date token's Date
-   Format or a Format Date action). Optional: add an If that checks the answer contains `ok`, and otherwise shows the
-   notification "Capture failed".
-4. **Point it at the app.** URL: the address on the screen, exactly as shown. Header `Authorization` with the value
-   `Bearer`, a space, then the key.
-5. **Run it automatically.** Keep Automation on. Notify was off on the automations that were tried; whether it matters is
-   untried. Turn on Allow Running When Locked (the info button, Privacy). The automation's own editor has shown "Automation
-   is turned off" while it was running, so trust the automation list and the first real payment, not that line.
-6. **If iOS asks whether the shortcut may send data to that address**, allow it and choose the option that remembers
-   the answer. If it asks again on every payment an unattended run cannot work yet. That is untested.
-7. **The check.** The screen reads `GET /api/capture-status` and shows one of four states for Iberia. Grey "Waiting for
-   your first payment": nothing has reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
-   seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
-   was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
-   push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
-   with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
-   automation is noticed only by the person.
+### With the shortcut file
+
+When the shortcut file has been uploaded (see "Putting the shortcut file in place"), `GET /api/capture-status` says
+`shortcut: true` (false if the bucket cannot be read) and the card shows these steps. The "Add the shortcut" button is
+an ordinary `<a href="/api/capture-shortcut" download>`: the browser saves the bytes and the app never fetches them.
+
+1. **Make a key and copy it.** In **Capture key**, type a name and tap **Make a key**. Tap **Copy** at once: it is shown once.
+2. **Add the shortcut.** Tap **Add the shortcut**. A file called Expense capture downloads. Open it from the downloads; iOS
+   should offer it to Shortcuts, where it is added (untried from this app).
+3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
+4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
+5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with the bank's word. Today that is `iberia`, taken from
+   `SUPPORTED_SOURCES`, which is built from the same rules the server reads.
+6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
+   **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
+   untried. The editor has said "Automation is turned off" while it ran, so trust the automation list and the first payment.
+7. **Make one purchase** and watch the check below. If iOS asks whether the shortcut may send data, allow it and choose
+   the option that remembers the answer. If it asks again on every payment an unattended run cannot work yet (untested).
+
+The Worker's address, with `/capture`, is already inside the file (checked), so none is typed.
+
+### Putting the shortcut file in place
+
+The file is specific to a deployment (it has that deployment's Worker address inside) and is signed by Apple, so it cannot
+be edited per person or per deployment, and it is never committed. An operator does this once per environment:
+
+1. Build the shortcut as in "By hand", with the trigger's app left unchosen, the header `Bearer KEY_HERE` and the JSON
+   `source` set to `CARD_NAME_HERE`. Export it from the Shortcuts app as a file.
+2. **Inspect it before it goes anywhere:** no real key, no personal data. A file checked this way was signed by an Apple
+   certificate chain, held an opaque id, and carried only the placeholders.
+3. Upload it to the bucket bound as `RECEIPTS`, under one fixed key (`<bucket>` is that bucket's name):
+   `wrangler r2 object put <bucket>/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --content-type application/octet-stream --remote`
+4. Re-exporting means uploading again. The route sets its own headers; `application/octet-stream` is an inference (no
+   registered type for a Shortcut file is known), so report it if a phone does not offer to open the download.
+
+The receipts bucket is used because the app already binds it and nothing lists it: receipt bytes are read and deleted
+only by keys taken from the database, and no job treats an unknown key as an orphan. Check the bucket has no lifecycle
+rule that expires objects.
+
+### By hand
+
+With no file uploaded, or when the status cannot be read, the card shows these steps, one action each. The address is
+`endpoint` from `GET /api/capture-status` with a Copy button, or a field to paste it.
+
+1. Make a key and copy it, as above.
+2. Open **Shortcuts**, start a new automation and choose the trigger **When I receive a notification from**.
+3. Tap the app name and choose the bank's app (**IberiaCards** for the Icon card). Leave the filters empty.
+4. Tap the **Search** bar at the bottom, type **Get Contents of URL** and tap that action to add it.
+5. In the action, tap **URL** and type the address. The `/capture` is part of it.
+6. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
+7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the key.
+8. Under **Request Body**, choose **JSON**.
+9. Tap **Add new field**, choose **Text**, set the key to **source** and type the bank's word (`iberia`).
+10. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
+11. Add a field with the key **body** and the variable **Body**.
+12. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
+    **ISO 8601**. In saved notes the date arrived that way, such as `2026-11-03T09:41:07+01:00`.
+13. Save the automation. Optional: an If that checks the answer contains `ok`, otherwise shows "Capture failed" (untried: the
+    action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection).
+14. Check the automation is on, and make one purchase, as steps 6 and 7 above.
+
+**The check.** The screen reads `GET /api/capture-status` and shows one of four states for Iberia. Grey "Waiting for
+your first payment": nothing has reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
+seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
+was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
+push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
+with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
+automation is noticed only by the person.
 
 The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
 The hostname is private, so it is never committed; docs and tests use `https://capture.example.workers.dev`. Where the
