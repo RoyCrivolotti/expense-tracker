@@ -44,6 +44,7 @@
     "setup:access-google": "node scripts/setup-access-google.mjs",
     "setup:backups": "node scripts/setup-backup-infrastructure.mjs",
     "setup:receipts": "node scripts/setup-receipts-infrastructure.mjs",
+    "setup:app-files": "node scripts/setup-app-files-infrastructure.mjs",
     "sync:backup-alerts": "node scripts/sync-backup-alerts.mjs",
     "restore:backup": "tsx scripts/restore-backup.ts",
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs",
