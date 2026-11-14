@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { foldTitle } from './text'
-import { KIND_RULES, matchRule } from './classify'
+import { KIND_RULES, SUPPORTED_SOURCES, matchRule } from './classify'
 import type { KindRule } from './types'
 
 const iberia = { source: 'iberia' as const, body: 'whatever' }
@@ -45,5 +45,12 @@ describe('matchRule', () => {
   it('ships rules that fold to distinct source and title pairs', () => {
     const keys = KIND_RULES.map((r) => `${r.source}|${foldTitle(r.title)}|${r.body ?? ''}`)
     expect(new Set(keys).size).toBe(keys.length)
+  })
+})
+
+describe('SUPPORTED_SOURCES', () => {
+  it('is the source of every kind rule, once, so a screen naming the word to type cannot drift from the rules', () => {
+    expect(SUPPORTED_SOURCES).toEqual([...new Set(KIND_RULES.map((r) => r.source))])
+    expect(SUPPORTED_SOURCES).toContain('iberia')
   })
 })

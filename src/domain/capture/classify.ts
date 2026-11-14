@@ -1,5 +1,5 @@
 import { foldTitle } from './text'
-import type { KindRule, RawPush } from './types'
+import type { CaptureSource, KindRule, RawPush } from './types'
 
 /**
  * The kind list. A push only creates anything if a row matches its Title and Body together;
@@ -23,3 +23,6 @@ export function matchRule(push: Pick<RawPush, 'source' | 'title' | 'body'>, rule
     ) ?? null
   )
 }
+
+/** The source words the rules above read, for whatever tells a person which word to type into their Shortcut. */
+export const SUPPORTED_SOURCES: readonly CaptureSource[] = [...new Set(KIND_RULES.map((rule) => rule.source))]
