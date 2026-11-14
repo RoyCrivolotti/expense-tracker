@@ -28,6 +28,12 @@ export interface Env {
    * Kept out of the repo because the hostname is private; unset, the screen asks the person to paste it.
    */
   CAPTURE_ENDPOINT?: string
+  /**
+   * The public iCloud share link of the generic capture Shortcut (`https://www.icloud.com/shortcuts/<id>`), behind the
+   * setup card's "Add the shortcut" button. A plain variable, not a secret: anyone with the link can read what the
+   * Shortcut holds, which is only placeholders and the Worker address. Anything else is treated as unset.
+   */
+  CAPTURE_SHORTCUT_URL?: string
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
