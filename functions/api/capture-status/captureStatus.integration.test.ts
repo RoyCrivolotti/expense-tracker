@@ -139,7 +139,7 @@ describe('GET /api/capture-status', () => {
   describe('the shortcut flag', () => {
     const FILE = 'shortcuts/capture.shortcut'
     const flag = async () => ((await (await get()).json()) as { shortcut: boolean }).shortcut
-    const put = (bytes: number) => world.env.RECEIPTS!.put(FILE, new Uint8Array(bytes))
+    const put = (bytes: number) => world.env.APP_FILES!.put(FILE, new Uint8Array(bytes))
 
     it('is false with nothing uploaded, true once the file is there, and false when it is oversized', async () => {
       expect(await flag()).toBe(false)
@@ -149,11 +149,16 @@ describe('GET /api/capture-status', () => {
       expect(await flag()).toBe(false)
     })
 
+    it('is false when the file is only in the receipts bucket', async () => {
+      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      expect(await flag()).toBe(false)
+    })
+
     it('is false when the bucket is not bound', async () => {
       const response = await invokeExpenseApiRoute({
         handler: status,
         repo: createD1ExpenseRepository(world.env),
-        env: { ...world.env, RECEIPTS: undefined },
+        env: { ...world.env, APP_FILES: undefined },
         url: 'https://expenses.test/api/capture-status',
         method: 'GET',
         email: OWNER,
@@ -166,11 +171,11 @@ describe('GET /api/capture-status', () => {
     const FILE = 'shortcuts/capture.shortcut'
     const unreadable = (method: 'head' | 'get') => {
       vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      vi.spyOn(world.env.RECEIPTS!, method).mockRejectedValue(new Error('bucket secret-name unavailable'))
+      vi.spyOn(world.env.APP_FILES!, method).mockRejectedValue(new Error('bucket secret-name unavailable'))
     }
 
     it('still answers, with shortcut false and a fixed log line, when head throws', async () => {
-      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      await world.env.APP_FILES!.put(FILE, new Uint8Array(100))
       unreadable('head')
       const response = await get()
       expect(response.status).toBe(200)
@@ -179,7 +184,7 @@ describe('GET /api/capture-status', () => {
     })
 
     it('is unaffected by a failing get, since the status never reads the bytes', async () => {
-      await world.env.RECEIPTS!.put(FILE, new Uint8Array(100))
+      await world.env.APP_FILES!.put(FILE, new Uint8Array(100))
       unreadable('get')
       const response = await get()
       expect(response.status).toBe(200)

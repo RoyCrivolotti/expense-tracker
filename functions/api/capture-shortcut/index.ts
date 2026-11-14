@@ -7,11 +7,11 @@ import { error } from '../../_shared/http'
  * `application/octet-stream` with an attachment disposition, since no registered media type for a Shortcut file is
  * known, and `nosniff` so the browser does not guess one. Reads only; a missing or oversized object answers 404.
  *
- * It reads the bucket directly rather than through the receipt store: this is one fixed shared object, not an owner's
- * receipt, so there is no owner, key from the database or attachment row to go through.
+ * It reads the app-files bucket directly rather than through the receipt store: this is one fixed shared object, not
+ * user data, so there is no owner, key from the database or attachment row to go through.
  */
 export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (context) => {
-  const bucket = context.env.RECEIPTS
+  const bucket = context.env.APP_FILES
   if ((await shortcutSize(bucket)) === null) return error(404, 'The shortcut is not available')
   const object = await bucket!.get(SHORTCUT_OBJECT_KEY)
   // The file can be replaced between the check and the read, so the length and the cap come from what is streamed.
