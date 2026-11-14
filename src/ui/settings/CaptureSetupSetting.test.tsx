@@ -33,7 +33,7 @@ describe('the first-payment check', () => {
 
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
     expect(await screen.findByText(/Your key has not been used yet/)).toBeInTheDocument()
-    expect(screen.getByText(/2\. Make a key \(done\)/)).toBeInTheDocument()
+    expect(screen.getByText(/1\. Make a key and copy it \(a key already exists\)/)).toBeInTheDocument()
   })
 
   it('does not say the key is unused when there is none', async () => {
@@ -41,7 +41,7 @@ describe('the first-payment check', () => {
 
     await screen.findByText('Waiting for your first payment')
     expect(screen.queryByText(/key has not been used/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/\(done\)/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\(a key already exists\)/)).not.toBeInTheDocument()
   })
 
   it('says pushes are arriving but none was read as a payment', async () => {
@@ -127,13 +127,14 @@ describe('the first-payment check', () => {
 })
 
 describe('the steps', () => {
-  it('says plainly what it cannot know about the phone, and that the posting part has never run on a phone', async () => {
+  it('says plainly what it cannot know about the phone, and what was and was not tried', async () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('Waiting for your first payment')
 
     expect(screen.getByText(/This screen cannot tell your version/)).toBeInTheDocument()
-    expect(screen.getByText(/only shortcuts built so far append each notification to a note/)).toBeInTheDocument()
-    expect(screen.getByText(/has never run on a phone, so nothing here is proven end to end/)).toBeInTheDocument()
+    expect(screen.getByText(/built by hand from steps like these worked on one phone/)).toBeInTheDocument()
+    expect(screen.getByText(/has not been tried on a second phone/)).toBeInTheDocument()
+    expect(screen.getByText(/not seen the iOS 27 screens beyond the trigger/)).toBeInTheDocument()
     expect(screen.getByText(/We have not tried an older iPhone or Android/)).toBeInTheDocument()
   })
 
@@ -175,12 +176,131 @@ describe('the steps', () => {
 
   it('keeps what the person ticked in this browser', async () => {
     const { unmount } = render(<CaptureSetupSetting />)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /1\. Check your iPhone/ }))
+    fireEvent.click(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ }))
     unmount()
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByRole('checkbox', { name: /1\. Check your iPhone/ })).toBeChecked()
-    fireEvent.click(screen.getByRole('checkbox', { name: /1\. Check your iPhone/ }))
-    expect(screen.getByRole('checkbox', { name: /1\. Check your iPhone/ })).not.toBeChecked()
+    expect(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ })).toBeChecked()
+    fireEvent.click(screen.getByRole('checkbox', { name: /1\. Make a key and copy it/ }))
+    expect(screen.getByRole('checkbox', { name: /1\. Make a key and copy it/ })).not.toBeChecked()
+  })
+})
+
+/** A step's sentence, whose bold words split it into several elements. */
+const para = (pattern: RegExp) => screen.getByText((_, el) => el?.tagName === 'P' && pattern.test(el.textContent ?? ''))
+
+describe('with the shortcut file available', () => {
+  const titles = () => screen.getAllByText(/^\d+\. /).map((e) => e.textContent)
+
+  it('shows an Add the shortcut link that downloads the file, and says what was tried', async () => {
+    status(none, null, true)
+    render(<CaptureSetupSetting />)
+
+    const link = await screen.findByRole('link', { name: 'Add the shortcut' })
+    expect(link).toHaveAttribute('href', '/api/capture-shortcut')
+    expect(link).toHaveAttribute('download', 'Expense capture.shortcut')
+    expect(link).not.toHaveAttribute('target')
+    expect(screen.getByText(/installed from a shared copy on one phone and worked/)).toBeInTheDocument()
+    expect(screen.getByText(/Downloading it from this app and opening it has not been tried/)).toBeInTheDocument()
+    expect(screen.getByText(/nor has the installed Home Screen app or a second phone/)).toBeInTheDocument()
+    expect(screen.getByText(/tell us what differs/)).toBeInTheDocument()
+    expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
+  })
+
+  it('gives the key, the link, the three edits one at a time, the automation check and a purchase, in order', async () => {
+    status(none, null, true)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+
+    expect(titles()).toEqual([
+      '1. Make a key and copy it',
+      '2. Add the shortcut',
+      '3. Choose your bank\u2019s app',
+      '4. Paste your key',
+      '5. Name your bank',
+      '6. Check the automation is on',
+      '7. Make one purchase and watch the line below',
+    ])
+    expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
+    expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
+    expect(para(/replace CARD_NAME_HERE in the source field with the word for your bank/)).toBeInTheDocument()
+    expect(screen.getByText(/arrive with its automation switched off/)).toBeInTheDocument()
+    expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
+    expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
+  })
+
+  it('names the source words the server rules read, and no others', async () => {
+    status(none, null, true)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+
+    const word = para(/replace CARD_NAME_HERE/).textContent
+    expect(word).toContain('Today that is iberia.')
+    expect(word).not.toContain('santander')
+  })
+
+  it('says the address is already in the shortcut, and points the link at its hint for a screen reader', async () => {
+    status(none, ADDRESS, true)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+
+    expect(screen.getByText(/The address it posts to is already in it/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'Add the shortcut' })
+    expect(link).toHaveAccessibleDescription(/downloads a file called Expense capture/)
+  })
+
+  it('shows neither the link nor the manual steps until the status has been read', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Checking')
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the manual steps when the status cannot be read', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockRejectedValue(new Error('Request failed (500)'))
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('4. Add the action')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+  })
+})
+
+describe('without the shortcut file', () => {
+  it('shows the manual steps, one action each, in order, and no Add the shortcut link', async () => {
+    render(<CaptureSetupSetting />)
+    await screen.findByText('4. Add the action')
+
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    expect(screen.getAllByText(/^\d+\. /).map((e) => e.textContent)).toEqual([
+      '1. Make a key and copy it',
+      '2. Start the automation',
+      '3. Choose the bank\u2019s app',
+      '4. Add the action',
+      '5. Type the address',
+      '6. Set the method',
+      '7. Add the key',
+      '8. Choose JSON',
+      '9. Add the source field',
+      '10. Add the title field',
+      '11. Add the body field',
+      '12. Add the date field',
+      '13. Save it',
+      '14. Check the automation is on',
+      '15. Make one purchase and watch the line below',
+    ])
+  })
+
+  it('says exactly what to tap and type, with the address from the server', async () => {
+    render(<CaptureSetupSetting />)
+    await screen.findByText('5. Type the address')
+
+    expect(para(/Tap the Search bar at the bottom and type Get Contents of URL/)).toBeInTheDocument()
+    expect(screen.getByText(ADDRESS)).toBeInTheDocument()
+    expect(para(/Change Method from GET to POST/)).toBeInTheDocument()
+    expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
+    expect(para(/look for a date format called ISO 8601/)).toBeInTheDocument()
+    expect(para(/type the word for your bank: iberia\./)).toBeInTheDocument()
   })
 })

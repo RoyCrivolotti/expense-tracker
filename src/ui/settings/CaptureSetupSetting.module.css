@@ -124,3 +124,21 @@
 .quiet {
   border-left: 4px solid var(--exp-warning, #8a5200);
 }
+
+/* An ordinary link that looks like the other buttons here, at the 44px these screens use. */
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast, #fff);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
