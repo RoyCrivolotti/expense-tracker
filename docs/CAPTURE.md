@@ -37,8 +37,8 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is `iberia` or `santander`, `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcut }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcut` is true when the shortcut file is in the receipts bucket and no larger than 256 KB (a size-only `head`). Reads only |
-| `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the receipts bucket as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, the bucket is not bound, or the object is over 256 KB. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcut }`, one entry per bank app. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcut` is true when the shortcut file is in the app-files bucket and no larger than 256 KB (a size-only `head`). Reads only |
+| `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
 
 These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
@@ -198,14 +198,14 @@ be edited per person or per deployment, and it is never committed. An operator d
    `source` set to `CARD_NAME_HERE`. Export it from the Shortcuts app as a file.
 2. **Inspect it before it goes anywhere:** no real key, no personal data. A file checked this way was signed by an Apple
    certificate chain, held an opaque id, and carried only the placeholders.
-3. Upload it to the bucket bound as `RECEIPTS`, under one fixed key (`<bucket>` is that bucket's name):
-   `wrangler r2 object put <bucket>/shortcuts/capture.shortcut --file ./Expense\ capture.shortcut --content-type application/octet-stream --remote`
+3. Make sure the bucket exists and is bound as `APP_FILES` ([APP-FILES.md](APP-FILES.md)), then upload the file:
+   `wrangler r2 object put expense-tracker-app-files/shortcuts/capture.shortcut --remote --file ./Expense\ capture.shortcut --content-type application/octet-stream`
 4. Re-exporting means uploading again. The route sets its own headers; `application/octet-stream` is an inference (no
    registered type for a Shortcut file is known), so report it if a phone does not offer to open the download.
 
-The receipts bucket is used because the app already binds it and nothing lists it: receipt bytes are read and deleted
-only by keys taken from the database, and no job treats an unknown key as an orphan. Check the bucket has no lifecycle
-rule that expires objects.
+Only the placeholder version goes in the bucket (no real key, no personal data inside), and the file is never committed.
+Until the bucket, binding and file all exist the status route says `shortcut: false` and the card shows the manual steps
+below. Nothing errors.
 
 ### By hand
 
