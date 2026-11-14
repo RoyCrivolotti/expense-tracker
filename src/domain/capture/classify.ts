@@ -10,7 +10,7 @@ import type { CaptureSource, KindRule, RawPush } from './types'
  * To add a row, work from a real push and write only its wording: the title as received (folded, so case and
  * accents do not matter), a body pattern only when two pushes share a title, the decimal mark and `keepsText`. Never
  * put an amount, merchant, name or digits in a row or its test, and never fill one from memory of a bank's phrasing.
- * Add a test with an invented body. The steps are in docs/CAPTURE.md, "Adding a kind from a real push".
+ * Add a test with an invented body. The steps are in docs/CAPTURE-KINDS.md, "Adding a kind".
  */
 export const KIND_RULES: readonly KindRule[] = [
   { source: 'iberia', title: 'Compra realizada', kind: 'card-purchase', mark: 'comma', keepsText: true },

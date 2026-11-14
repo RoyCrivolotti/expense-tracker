@@ -7,8 +7,8 @@ For a contributor who has a real bank push to teach the app. How capture reads p
 A **source word** is a free label for one phone automation, usually a bank's name: lowercase `a-z`, digits and hyphens,
 1 to 32 characters (`isSourceWord` in [`source.ts`](../src/domain/capture/source.ts), used by the Worker and by the
 card-link route). A word with no kind rows is accepted and only counted as unrecognised, so a bank can start sending
-before its kinds are written. A person may have at most 8 different words. A ninth is a 429, and a word already counted
-is always admitted. The status route lists `iberia` and `santander` always, then any other counted word.
+before its kinds are written. A person may have at most 8 different words. A ninth is a 429 with no `Retry-After`, because
+the cap is permanent until the person's `capture_counters` rows are cleared. A word already counted is always admitted. The status route lists `iberia` and `santander` always, then any other counted word.
 
 ## Adding a kind
 

@@ -189,9 +189,11 @@ export interface CaptureRepository {
   hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
   /**
    * Counts one received push for the key's owner today, unless the owner or everyone has reached the daily cap.
-   * The check and the count are one statement, so parallel requests cannot pass the cap together.
+   * The check and the count are one statement, so parallel requests cannot pass the cap together. 'sources' means
+   * the person already has the most source words allowed and this one is new: unlike a daily cap, that does not lift
+   * with time.
    */
-  admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<boolean>
+  admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<'admitted' | 'limited' | 'sources'>
   eventsSince(keyId: string, since: string): Promise<number>
   lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
   bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>

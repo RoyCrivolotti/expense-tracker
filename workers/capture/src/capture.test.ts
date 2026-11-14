@@ -305,11 +305,11 @@ describe('the distinct-source cap', () => {
   const push = (source: string) => ({ source, title: 'Promo', body: 'x', date: PURCHASE.date })
   const words = Array.from({ length: MAX_SOURCES_PER_OWNER }, (_, i) => `bank-${i}`)
 
-  it('refuses a new source once a person has 8, with the 429 the other caps give', async () => {
+  it('refuses a new source once a person has 8, with a 429 and no Retry-After because it does not lift with time', async () => {
     for (const word of words) expect((await send(request({ body: push(word) }))).status).toBe(200)
     const over = await send(request({ body: push('bank-new') }))
     expect(over.status).toBe(429)
-    expect(over.headers.get('retry-after')).toBe('3600')
+    expect(over.headers.get('retry-after')).toBeNull()
     expect(count('capture_counters')).toBe(MAX_SOURCES_PER_OWNER)
   })
 

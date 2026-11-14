@@ -10,6 +10,7 @@ import {
   eventParams,
   BUMP_COUNTER_SQL,
   ADMIT_SQL,
+  SOURCE_FULL_SQL,
   EVENTS_SINCE_SQL,
   HAS_EVENT_SQL,
   LAST_CAPTURE_SQL,
@@ -107,7 +108,11 @@ function events(
     recordCapture: (event, rec, caps) => recordCapture(db, event, rec, caps),
     hasEvent: async (keyId, source, replayKey) =>
       (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
-    admit: (owner, source, day, caps) => changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global, caps.sourcesPerOwner),
+    admit: async (owner, source, day, caps) => {
+      if (await changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global, caps.sourcesPerOwner)) return 'admitted'
+      const full = await db.prepare(SOURCE_FULL_SQL).bind(owner, source, caps.sourcesPerOwner).first()
+      return full === null ? 'limited' : 'sources'
+    },
     eventsSince: async (keyId, since) => {
       const row = await db.prepare(EVENTS_SINCE_SQL).bind(keyId, since).first<{ n: number }>()
       return row?.n ?? 0

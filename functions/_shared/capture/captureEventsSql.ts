@@ -70,7 +70,9 @@ WHERE k.key_id = ?1 AND e.source = ?2 AND e.replay_key = ?3`
 /**
  * Counts a received push for the owner and day when neither the owner's total nor the global total for the day has
  * reached its cap, and the source is one the owner already has or the owner has room for another. The distinct-source
- * test sits in the same statement as the insert, so parallel requests with new words cannot pass it together. The owner's sum reads that owner's rows by the table's key, and the global sum scans the table, which holds about
+ * test sits in the same statement as the insert, so parallel requests with new words cannot pass it together.
+ *
+ * The owner's sum reads that owner's rows by the table's key, and the global sum scans the table, which holds about
  * two rows a day for one person. Add an index on `day` if the table ever grows enough for that scan to matter.
  */
 export const ADMIT_SQL = `INSERT INTO capture_counters (owner, source, day, received)
@@ -80,6 +82,10 @@ AND (SELECT COALESCE(SUM(received), 0) FROM capture_counters WHERE day = ?3) < ?
 AND (EXISTS (SELECT 1 FROM capture_counters WHERE owner = ?1 AND source = ?2)
   OR (SELECT COUNT(DISTINCT source) FROM capture_counters WHERE owner = ?1) < ?6)
 ON CONFLICT (owner, source, day) DO UPDATE SET received = received + 1`
+
+/** Run only after `ADMIT_SQL` stored nothing: a row when the refusal was the source cap, not a daily one. */
+export const SOURCE_FULL_SQL = `SELECT 1 AS full WHERE NOT EXISTS (SELECT 1 FROM capture_counters WHERE owner = ?1 AND source = ?2)
+AND (SELECT COUNT(DISTINCT source) FROM capture_counters WHERE owner = ?1) >= ?3`
 
 export const EVENTS_SINCE_SQL = 'SELECT COUNT(*) AS n FROM capture_events WHERE key_id = ?1 AND received_at >= ?2'
 
