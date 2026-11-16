@@ -20,3 +20,13 @@ export function findLastFour(body: string): string | null {
 export function foldTitle(title: string): string {
   return title.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim()
 }
+
+// What a bank puts around a word or number without it being part of it: opening brackets and quotes in
+// front, closing ones and sentence punctuation behind. A leading dot or comma is kept (".5" is not "5").
+const LEADING_EDGE = /^[([{"'“‘«<¿¡]+/u
+const TRAILING_EDGE = /[)\]}"'”’»>;:!?,.]+$/u
+
+/** A token without the brackets, quotes and sentence punctuation stuck to its ends. */
+export function trimEdges(token: string): string {
+  return token.replace(LEADING_EDGE, '').replace(TRAILING_EDGE, '')
+}
