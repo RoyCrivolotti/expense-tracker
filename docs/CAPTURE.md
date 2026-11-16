@@ -2,7 +2,7 @@
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
 key, the endpoint that accepts it and the routes that list and decide recommendations, the Dashboard card that reviews
-them, and the setup screen with the shortcut recipe, all built.
+them, and the setup screen with the shortcut recipe, all built. The reader that will replace the kind rules is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md).
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
