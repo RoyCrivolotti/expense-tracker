@@ -11,6 +11,11 @@ workers_dev = true
 # Each version would otherwise get a public address of its own that runs the same code.
 preview_urls = false
 
+# One structured line per request (workers/capture/src/log.ts): outcome, reason, source, kind. No push text. Read it
+# in the dashboard under the Worker's Logs, or with `wrangler tail`.
+[observability]
+enabled = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "<database name>"
