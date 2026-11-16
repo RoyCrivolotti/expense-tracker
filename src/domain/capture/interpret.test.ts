@@ -48,13 +48,13 @@ describe('interpretPush', () => {
   it('drops an unrecognised push and keeps only its source and day', () => {
     const push = { ...purchase, title: 'Your code is 481516', body: 'Do not share 481516' }
     const result = interpretPush(push, received)
-    expect(result).toEqual({ outcome: 'dropped', source: 'iberia', localDate: '2026-11-03' })
+    expect(result).toEqual({ outcome: 'dropped', reason: 'no-amount', source: 'iberia', localDate: '2026-11-03' })
     expect(JSON.stringify(result)).not.toMatch(/481516|code/i)
   })
 
   it('still counts a dropped push whose Date is unreadable', () => {
-    const result = interpretPush({ ...purchase, title: 'Other', date: 'garbage' }, received)
-    expect(result).toEqual({ outcome: 'dropped', source: 'iberia', localDate: null })
+    const result = interpretPush({ ...purchase, title: 'Other', body: 'Enter the app', date: 'garbage' }, received)
+    expect(result).toEqual({ outcome: 'dropped', reason: 'no-amount', source: 'iberia', localDate: null })
   })
 
   it('lists a recognised push with an unreadable Date as unknown', () => {

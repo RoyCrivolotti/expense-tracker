@@ -13,9 +13,17 @@ export interface RawPush {
   date: string
 }
 
-/** Kinds of push the app acts on. Anything else is dropped and counted. */
+/**
+ * Kinds of push the app acts on. The first six come from a bank-specific rule or from the words of a push; `charge`,
+ * `card-hold`, `scheduled-charge` and `unclassified` only from the words (see generic.ts). Anything with no amount, or
+ * promotional, is dropped and counted.
+ */
 export type PushKind =
   | 'card-purchase'
+  | 'charge'
+  | 'card-hold'
+  | 'scheduled-charge'
+  | 'unclassified'
   | 'cash-withdrawal'
   | 'bizum-received'
   | 'transfer-sent'

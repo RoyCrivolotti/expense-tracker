@@ -122,7 +122,7 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   if (result.outcome !== 'recommend') {
     await deps.captures.bumpCounter(key.owner, push.source, day, 'unrecognised')
     line.outcome = 'dropped'
-    line.reason = result.outcome === 'dropped' ? 'no-matching-kind' : result.reason
+    line.reason = result.reason
     return reply.ok()
   }
   line.kind = result.kind

@@ -7,6 +7,10 @@ import type { PushKind, SuggestedType } from './types'
 export function suggestType(kind: PushKind): SuggestedType {
   switch (kind) {
     case 'card-purchase':
+    case 'charge':
+    case 'card-hold':
+    case 'scheduled-charge':
+    case 'unclassified':
     case 'cash-withdrawal':
     case 'transfer-sent':
       return 'expense'

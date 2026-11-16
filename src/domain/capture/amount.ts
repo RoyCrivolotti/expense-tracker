@@ -50,3 +50,16 @@ export function findAmount(body: string, mark: DecimalMark, allowBare = false): 
   }
   return allowBare && found.length === 1 && found[0] ? toAmount(found[0]) : null
 }
+
+/**
+ * The amount in a body whichever decimal mark the bank writes with. A source is not known to write one way, since a new
+ * bank may write either (`4.54 EUR`, `33,40 EUR`), so both readings are tried and one that does not fit is refused
+ * rather than misread: `4.54` is not a comma-mark number and `33,40` is not a dot-mark number. When both fit they must
+ * agree (`40 EUR` reads the same either way), otherwise the body is ambiguous and gives null.
+ */
+export function findAmountAnyMark(body: string): ParsedAmount | null {
+  const comma = findAmount(body, 'comma')
+  const dot = findAmount(body, 'dot')
+  if (comma && dot) return comma.cents === dot.cents && comma.negative === dot.negative ? comma : null
+  return comma ?? dot
+}

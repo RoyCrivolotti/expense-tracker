@@ -17,9 +17,9 @@ What happens to a push:
 
 | Push | Result |
 | --- | --- |
-| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
+| A push with one euro amount that is not an advertisement (a bank rule in [`KIND_RULES`](../src/domain/capture/classify.ts), else its words, see [CAPTURE-KINDS.md](CAPTURE-KINDS.md)), readable Date | One event and one open recommendation, in one batch. The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
 | Same push again | Stored once. The same 200 |
-| Any other kind, a source with no rows, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
+| An advertisement, a push with no single euro amount, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
 | Over a cap | 429 with `Retry-After`, and nothing stored |
 
 Caps, all checked inside the insert that stores the count or the row, so parallel requests cannot pass them together:
@@ -30,9 +30,8 @@ Two things are stored under a secret. The replay hash is an HMAC under `CAPTURE_
 be matched against a guessed body such as a one-time code. With the secret unset the Worker answers 503 to everything.
 Errors answer a fixed 500 and log a fixed line, never text built from a push.
 
-Not yet here: pairing a balance alert with the push it follows, holding a card approval until its purchase push
-arrives, a list of pushes that could not be read, the Santander kinds, and the screens. Until then only Iberia's
-purchase push creates anything.
+Not here: pairing a balance alert with the push it follows, and a list of pushes that could not be read (the log says why
+each was dropped, and the counter says how many).
 
 There is no per-address rate limit. A caller with no key who sends a well-formed header costs one hash and one D1 read
 per request and cannot write anything. A `workers.dev` address has no zone, so no rate rule can sit in front of it. If

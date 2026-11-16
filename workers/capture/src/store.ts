@@ -19,8 +19,8 @@ export type StoreResult = 'stored' | 'replay' | 'limited'
 
 /**
  * Stores a recognised push and the recommendation it becomes, in one batch. The text kept is the cleaned body
- * and only for kinds whose body names nobody (`rawText` is absent for the rest). A body is kept as an excerpt
- * only when no amount could be read, so the person can see what to fix.
+ * and only for kinds whose body names nobody (`rawText` is absent for the rest). The whole body is kept as an excerpt
+ * when a merchant was picked out of it, or when no amount could be read, so the person can see what the bank said.
  */
 export async function storeRecognised(
   captures: CaptureRepository,
@@ -53,7 +53,7 @@ export async function storeRecognised(
     localDate: result.localDate,
     offsetMinutes: result.offsetMinutes,
     receivedAt,
-    bodyExcerpt: incomplete && text !== null ? text.slice(0, MAX_EXCERPT) : null,
+    bodyExcerpt: result.excerpt ? result.excerpt.slice(0, MAX_EXCERPT) : incomplete && text !== null ? text.slice(0, MAX_EXCERPT) : null,
   }
   const recommendation: Omit<NewRecommendation, 'owner'> = {
     id: crypto.randomUUID(),

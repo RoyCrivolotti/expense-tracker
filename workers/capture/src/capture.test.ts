@@ -340,16 +340,25 @@ describe('a push the app does not recognise', () => {
   it('adds to the counter and keeps nothing else', async () => {
     const dropped = [
       { source: 'iberia', title: `Promo ${MARKER}`, body: `Oferta ${MARKER}`, date: PURCHASE.date },
-      { source: 'santander', title: 'BIZUM recibido', body: `Has recibido 10.0 EUR de ${MARKER} Persona`, date: PURCHASE.date },
       { source: 'santander', title: 'Operacion', body: `Cajero a nombre de ${MARKER}`, date: PURCHASE.date },
       { ...PURCHASE, date: '2030-01-01T00:00:00+01:00' },
     ]
     for (const body of dropped) expect((await send(request({ body }))).status).toBe(200)
     expect(rows('SELECT source, received, unrecognised FROM capture_counters ORDER BY source')).toEqual([
       { source: 'iberia', received: 2, unrecognised: 2 },
-      { source: 'santander', received: 2, unrecognised: 2 },
+      { source: 'santander', received: 1, unrecognised: 1 },
     ])
     expect(count('capture_events') + count('recommendations')).toBe(0)
+    expect(everyText()).not.toContain(MARKER)
+  })
+
+  it('keeps a Bizum received as income, with its amount and never the sender', async () => {
+    const bizum = { source: 'santander', title: 'BIZUM recibido', body: `Has recibido 10.0 EUR de ${MARKER} Persona`, date: PURCHASE.date }
+    expect((await send(request({ body: bizum }))).status).toBe(200)
+    expect(rows('SELECT amount_cents, kind, merchant_raw, body_excerpt FROM capture_events')).toEqual([
+      { amount_cents: 1000, kind: 'inflow', merchant_raw: null, body_excerpt: null },
+    ])
+    expect(rows('SELECT suggested_type FROM recommendations')).toEqual([{ suggested_type: 'income' }])
     expect(everyText()).not.toContain(MARKER)
   })
 
@@ -497,9 +506,11 @@ describe('the log line', () => {
     expect(typeof last()?.ms).toBe('number')
   })
 
-  it('says a push with no matching kind was dropped, and why', async () => {
+  it('says a dropped push was dropped, and why', async () => {
     await sendLogged(request({ body: { ...PURCHASE, title: 'Oferta para ti' } }))
-    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'no-matching-kind', status: 200, source: 'iberia' }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'promotional', status: 200, source: 'iberia' }))
+    await sendLogged(request({ body: { ...PURCHASE, title: 'Aviso', body: 'Entra en tu app' } }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'no-amount', status: 200, source: 'iberia' }))
   })
 
   it('says a replayed push was a replay', async () => {
