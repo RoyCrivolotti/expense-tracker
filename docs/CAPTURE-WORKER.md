@@ -38,6 +38,14 @@ There is no per-address rate limit. A caller with no key who sends a well-formed
 per request and cannot write anything. A `workers.dev` address has no zone, so no rate rule can sit in front of it. If
 abuse is seen, a Workers Rate Limiting binding is the fix.
 
+## Reading what the Worker did
+
+Each request writes one line to Workers Logs (`[observability]` in `workers/capture/wrangler.toml`), whatever its
+outcome: `outcome` (`stored`, `replay`, `dropped`, `refused`, `limited`, `error`), a short `reason`, the `status` the
+phone got, the `source` word, the public `keyId`, the matched `kind`, whether an `amount` was read, and `ms`. Nothing from
+the push goes in: no title, body, merchant, amount, digits or email, and an error is logged by its class only. A phone
+whose request never shows up here never reached the Worker, which points at the Shortcut rather than the app.
+
 ## Deploying it (not done by any script here)
 
 Everything below changes Cloudflare and needs the account owner's say-so, staging first.

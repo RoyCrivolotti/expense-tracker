@@ -7,7 +7,8 @@ import { serverError } from './responses'
 /**
  * Accepts a bank push from a person's phone and turns it into a recommendation. It serves this one route and
  * nothing else, reads nothing back, and never looks at the Access headers: the owner comes from the capture key.
- * A failure answers a fixed 500 and logs a fixed line, because an error built from a push would carry bank text.
+ * A failure answers a fixed 500. `handleCapture` has already logged it by the error's class alone, because an
+ * error built from a push would carry bank text.
  */
 export default {
   async fetch(request: Request, env: CaptureEnv): Promise<Response> {
@@ -18,7 +19,6 @@ export default {
         now: () => new Date(),
       })
     } catch {
-      console.error('capture: request failed')
       return serverError()
     }
   },

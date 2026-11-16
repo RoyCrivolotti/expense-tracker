@@ -8,6 +8,7 @@ import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqlit
 import type { SqliteD1Stats } from '../../../src/testing/sqliteD1'
 import type { CaptureEnv } from './env'
 import { handleCapture } from './handle'
+import type { CaptureLogLine } from './log'
 import worker from './index'
 
 const ALICE = 'alice@example.com'
@@ -365,7 +366,7 @@ describe('a push the app does not recognise', () => {
 })
 
 describe('hostile text', () => {
-  it('is stored cleaned of control and bidi characters, capped, and never logged', async () => {
+  it('is stored cleaned of control and bidi characters and capped, and none of it reaches the log', async () => {
     const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => undefined))
     const evil = `<script>x</script>‮\u0000=SUM(A1) ${'y'.repeat(300)} *4321 33,40 EUR`
     await send(request({ body: { ...PURCHASE, body: evil } }))
@@ -374,7 +375,9 @@ describe('hostile text', () => {
     expect(stored.startsWith('<script>x</script>=SUM(A1)')).toBe(true)
     expect(stored.includes(String.fromCharCode(0x202e)) || stored.includes(String.fromCharCode(0))).toBe(false)
     expect(stored.length).toBeLessThanOrEqual(200)
-    expect(spies.flatMap((s) => s.mock.calls).length).toBe(0)
+    const logged = JSON.stringify(spies.flatMap((s) => s.mock.calls))
+    for (const secret of ['HOSTILE-MARKER', 'script', 'SUM(A1)', '33,40', '4321', ALICE]) expect(logged).not.toContain(secret)
+    expect(spies.flatMap((s) => s.mock.calls).length).toBe(2)
     spies.forEach((s) => s.mockRestore())
   })
 })
@@ -447,27 +450,90 @@ describe('a key revoked after it was checked', () => {
 describe('the Worker entry', () => {
   it('fails closed with no database: a malformed key is still 401, a well-formed one a fixed 500', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const none = { ...env, DB: undefined } as unknown as CaptureEnv
     expect((await worker.fetch(request({ key: 'xpk_nope' }), none)).status).toBe(401)
     const res = await worker.fetch(request(), none)
     expect(res.status).toBe(500)
     expect(await res.text()).toBe('{"error":"server error"}')
     error.mockRestore()
+    log.mockRestore()
   })
 
   it('answers a database failure with a fixed 500 that carries no push text', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const broken = { ...env, DB: { prepare: () => { throw new Error('boom Shop Example') } } } as unknown as CaptureEnv
     const res = await worker.fetch(request(), broken)
     expect(res.status).toBe(500)
     expect(await res.text()).toBe('{"error":"server error"}')
-    expect(error.mock.calls).toEqual([['capture: request failed']])
+    expect(error.mock.calls).toEqual([])
+    expect(log.mock.calls).toEqual([[expect.objectContaining({ outcome: 'error', reason: 'exception', status: 500, errorName: 'Error' })]])
+    expect(JSON.stringify(log.mock.calls)).not.toContain('boom')
     error.mockRestore()
+    log.mockRestore()
   })
 
   it('serves a push through the real clock and repositories', async () => {
     const res = await worker.fetch(request({ body: { ...PURCHASE, date: new Date().toISOString() } }), env)
     expect(res.status).toBe(200)
     expect(count('capture_events')).toBe(1)
+  })
+})
+
+describe('the log line', () => {
+  const lines: CaptureLogLine[] = []
+  const sendLogged = (req: Request) => handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+  beforeEach(() => {
+    lines.length = 0
+  })
+  const last = () => lines[lines.length - 1]
+
+  it('says a stored push was stored, with its source, kind and whether an amount was read', async () => {
+    await sendLogged(request())
+    expect(lines).toEqual([
+      expect.objectContaining({ event: 'capture', outcome: 'stored', reason: 'stored', status: 200, source: 'iberia', keyId: minted.keyId, kind: 'card-purchase', amount: 'read' }),
+    ])
+    expect(typeof last()?.ms).toBe('number')
+  })
+
+  it('says a push with no matching kind was dropped, and why', async () => {
+    await sendLogged(request({ body: { ...PURCHASE, title: 'Oferta para ti' } }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'no-matching-kind', status: 200, source: 'iberia' }))
+  })
+
+  it('says a replayed push was a replay', async () => {
+    await sendLogged(request())
+    await sendLogged(request())
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'replay', reason: 'replay', status: 200 }))
+  })
+
+  it.each([
+    ['a wrong path', { url: 'https://capture.example.test/other' }, 404, 'wrong-path'],
+    ['a GET', { method: 'GET' }, 405, 'wrong-method'],
+    ['no key', { key: null }, 401, 'no-valid-key-header'],
+    ['a wrong content type', { headers: { 'content-type': 'text/plain' } }, 415, 'not-json'],
+    ['a body that is not JSON', { body: 'not json' }, 400, 'bad-body'],
+  ])('says %s was refused as %s', async (_name, over, status, reason) => {
+    await sendLogged(request(over as Parameters<typeof request>[0]))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason, status }))
+  })
+
+  it('says a key the server does not accept was rejected, naming its public id but nothing else', async () => {
+    const other = await mintCaptureKey()
+    await sendLogged(request({ key: other.key }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason: 'key-rejected', status: 401, keyId: other.keyId }))
+    expect(JSON.stringify(last())).not.toContain(other.key)
+  })
+
+  it('says a refusal because the Worker has no replay secret', async () => {
+    env = { ...env, CAPTURE_REPLAY_SECRET: undefined }
+    await sendLogged(request())
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason: 'not-configured', status: 503 }))
+  })
+
+  it('names no field outside the fixed set, so a push cannot leak into it', async () => {
+    await sendLogged(request({ body: { ...PURCHASE, body: 'Shop Example *4321 33,40 EUR' } }))
+    expect(Object.keys(last() ?? {}).sort()).toEqual(['amount', 'event', 'keyId', 'kind', 'ms', 'outcome', 'reason', 'source', 'status'])
   })
 })
