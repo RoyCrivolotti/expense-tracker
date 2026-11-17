@@ -34,7 +34,7 @@ const BY_HAND =
 const FROM_LINK =
   'The shortcut was installed from a shared copy on one phone and worked. It has not been tried on a second phone. The names on these screens come from that file and one phone: tell us what differs.'
 
-/** The steps to get Iberia notifications into the app, and a live check that the first one arrived. */
+/** The steps to get a bank app's notifications into the app, and a live check that the first one arrived. */
 export function CaptureSetupSetting() {
   const setup = useCaptureSetup()
   return (
@@ -43,8 +43,8 @@ export function CaptureSetupSetting() {
       <Card>
         <div className={tabStyles.settingGroup}>
           <p className={tabStyles.settingHint}>
-            Capture sends each Iberia card notification from your iPhone to the app, which turns it into a payment for
-            you to review.
+            Capture sends your bank app&rsquo;s notifications from your iPhone to the app. Each one that shows an amount
+            with its currency becomes a payment for you to review; the rest are only counted.
           </p>
           <p className={tabStyles.settingHint}>{IOS_NOTE}</p>
           <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl?.startsWith(SHORTCUT_LINK_PREFIX) ? FROM_LINK : BY_HAND}</p>

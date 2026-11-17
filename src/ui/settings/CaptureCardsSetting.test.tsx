@@ -25,9 +25,9 @@ describe('the linked cards list', () => {
     read([link(), link({ digits: '1234' }), link({ source: 'santander', digitsKind: 'account', digits: '7777', accountId: 2 })])
     render(<CaptureCardsSetting model={model} />)
 
-    expect(await screen.findByText('Iberia card ending 4821')).toBeInTheDocument()
-    expect(screen.getByText('Iberia card ending 1234')).toBeInTheDocument()
-    expect(screen.getByText('Santander account ending 7777')).toBeInTheDocument()
+    expect(await screen.findByText('iberia card ending 4821')).toBeInTheDocument()
+    expect(screen.getByText('iberia card ending 1234')).toBeInTheDocument()
+    expect(screen.getByText('santander account ending 7777')).toBeInTheDocument()
     expect(screen.getAllByText('Main Debit')).toHaveLength(2)
     expect(screen.getByText('Travel Credit')).toBeInTheDocument()
   })
@@ -42,12 +42,12 @@ describe('the linked cards list', () => {
   it('counts the cards waiting for an account, in the singular and the plural', async () => {
     read([], [{ source: 'iberia', digits: '5533', count: 1 }])
     const { unmount } = render(<CaptureCardsSetting model={model} />)
-    expect(await screen.findByRole('status')).toHaveTextContent('1 card is waiting for an account: Iberia card ending 5533 (1 payment).')
+    expect(await screen.findByRole('status')).toHaveTextContent('1 card is waiting for an account: iberia card ending 5533 (1 payment).')
     unmount()
 
     read([], [{ source: 'iberia', digits: '5533', count: 3 }, { source: 'santander', digits: '6644', count: 1 }])
     render(<CaptureCardsSetting model={model} />)
-    expect(await screen.findByRole('status')).toHaveTextContent('2 cards are waiting for an account: Iberia card ending 5533 (3 payments), Santander card ending 6644 (1 payment).')
+    expect(await screen.findByRole('status')).toHaveTextContent('2 cards are waiting for an account: iberia card ending 5533 (3 payments), santander card ending 6644 (1 payment).')
   })
 
   it('removes a link, reads the list again and tells the review card', async () => {
@@ -55,7 +55,7 @@ describe('the linked cards list', () => {
     vi.mocked(api.unlinkCard).mockResolvedValue(undefined)
     render(<CaptureCardsSetting model={model} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove Iberia card ending 4821' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove iberia card ending 4821' }))
     expect(api.unlinkCard).not.toHaveBeenCalled()
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }))
 
@@ -69,7 +69,7 @@ describe('the linked cards list', () => {
     read([link()])
     render(<CaptureCardsSetting model={model} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove Iberia card ending 4821' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove iberia card ending 4821' }))
     const sheet = screen.getByRole('alertdialog')
     expect(within(sheet).getByText(/payments that are waiting will need an account again/)).toBeInTheDocument()
     fireEvent.click(within(sheet).getByRole('button', { name: 'Cancel' }))
@@ -87,7 +87,7 @@ describe('the linked cards list', () => {
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Card link not found')
-    expect(screen.getByText('Iberia card ending 4821')).toBeInTheDocument()
+    expect(screen.getByText('iberia card ending 4821')).toBeInTheDocument()
   })
 
   it('shows why the list could not be read, plainly when the failure is not an Error', async () => {

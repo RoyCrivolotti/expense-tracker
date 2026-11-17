@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { SUPPORTED_SOURCES } from '../../domain/capture/classify'
 import { AddShortcutLink } from './AddShortcutStep'
-import { BEFORE_ADDRESS, afterAddress } from './manualSteps'
+import { BEFORE_ADDRESS, SOURCE_WORD_HINT, afterAddress } from './manualSteps'
 import { Address } from './SetupAddress'
 import type { Setup } from './SetupStep'
 
@@ -11,10 +10,6 @@ export interface SetupStepSpec {
   title: string
   body: ReactNode
 }
-
-const words = SUPPORTED_SOURCES.map((s) => <b key={s}>{s}</b>)
-/** "iberia", or "iberia or santander": whatever the server's rules read, so this cannot drift from them. */
-const sourceWords = words.flatMap((w, i) => (i === 0 ? [w] : [' or ', w]))
 
 const keyStep = (setup: Setup): SetupStepSpec => ({
   id: 'key',
@@ -82,8 +77,7 @@ export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
       title: 'Name your bank',
       body: (
         <p>
-          In the JSON, replace <b>CARD_NAME_HERE</b> in the <b>source</b> field with the word for your bank. Today that
-          is {sourceWords}.
+          In the JSON, replace <b>CARD_NAME_HERE</b> in the <b>source</b> field with {SOURCE_WORD_HINT}.
         </p>
       ),
     },
@@ -109,7 +103,7 @@ export function manualSteps(setup: Setup): SetupStepSpec[] {
         </>
       ),
     },
-    ...afterAddress(sourceWords),
+    ...afterAddress(),
     automationStep(false),
     purchaseStep(),
   ]
