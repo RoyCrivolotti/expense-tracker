@@ -1,26 +1,75 @@
-import { isoWithOffset, replayKey } from '../../../src/domain/capture'
-import type { Interpretation, RawPush } from '../../../src/domain/capture'
+import { cleanText, isoWithOffset, readPush, replayKey, shapeId, spanText } from '../../../src/domain/capture'
+import type { Interpretation, RawPush, Slot } from '../../../src/domain/capture'
 import type {
   CaptureCaps,
   CaptureEvent,
   CaptureKey,
   CaptureRepository,
   NewRecommendation,
+  TemplateDecision,
 } from '../../../src/domain/ports/captureRepository'
 import { hmacHex } from './hmac'
+import { decideTemplate } from './templates'
 
 type Recommended = Extract<Interpretation, { outcome: 'recommend' }>
 
 const MAX_MERCHANT = 200
-const MAX_EXCERPT = 500
+const MAX_BODY = 500
+const MAX_SLOTS_JSON = 2000
 const CURRENCY = 'EUR'
 
 export type StoreResult = 'stored' | 'replay' | 'limited'
 
 /**
- * Stores a recognised push and the recommendation it becomes, in one batch. The text kept is the cleaned body
- * and only for kinds whose body names nobody (`rawText` is absent for the rest). A body is kept as an excerpt
- * only when no amount could be read, so the person can see what to fix.
+ * The slots as JSON, keeping the longest run from the start that fits the column. Each slot is written once and the
+ * lengths added up, so a body full of numbers costs one pass rather than one stringify per slot dropped.
+ */
+export function slotsJson(slots: readonly Slot[]): string {
+  const parts: string[] = []
+  let length = 2
+  for (const slot of slots) {
+    const part = JSON.stringify(slot)
+    const next = length + part.length + (parts.length > 0 ? 1 : 0)
+    if (next > MAX_SLOTS_JSON) break
+    parts.push(part)
+    length = next
+  }
+  return `[${parts.join(',')}]`
+}
+
+interface Reading {
+  decision: TemplateDecision
+  shapeId: string
+  slots: string
+  merchantRaw: string | null
+  body: string | null
+}
+
+/**
+ * What the push's words give: its template, its shape and slots, the description and the body to keep. The
+ * description is the merchant when the template knows where it sits, otherwise the whole cleaned body (`rawText`,
+ * absent for kinds whose body names a person), which the person edits once. No text of a push is kept, as body or
+ * description, unless it shows an amount with a currency marker, so a one-time code never lands.
+ */
+async function readForStore(captures: CaptureRepository, owner: string, push: RawPush, rawText: string | undefined): Promise<Reading> {
+  const body = cleanText(push.body)
+  const reading = readPush(push.title, body)
+  const templates = reading.currencyAmount === null ? [] : await captures.findTemplates(owner, push.source, reading.titleSkeleton)
+  const { decision, merchant } = decideTemplate(templates, reading, () => crypto.randomUUID())
+  const keepsText = reading.currencyAmount !== null && rawText !== undefined
+  const text = keepsText ? (merchant ? spanText(reading, merchant) : '') || rawText : ''
+  return {
+    decision,
+    shapeId: await shapeId(push.source, reading.skeleton),
+    slots: slotsJson(reading.slots),
+    merchantRaw: text ? text.slice(0, MAX_MERCHANT) : null,
+    body: reading.currencyAmount !== null && body !== '' ? body.slice(0, MAX_BODY) : null,
+  }
+}
+
+/**
+ * Stores a recognised push and the recommendation it becomes, in one batch, with its shape, its slots and the
+ * template it belongs to.
  */
 export async function storeRecognised(
   captures: CaptureRepository,
@@ -33,7 +82,7 @@ export async function storeRecognised(
 ): Promise<StoreResult> {
   const receivedAt = now.toISOString()
   const hash = await hmacHex(secret, await replayKey(push))
-  const text = result.rawText ?? null
+  const read = await readForStore(captures, key.owner, push, result.rawText)
   const incomplete = result.amountCents === null
   const cards = result.lastFour ? await captures.listCards(key.owner) : []
   const card = cards.find((c) => c.source === push.source && c.digitsKind === 'card' && c.digits === result.lastFour)
@@ -46,14 +95,16 @@ export async function storeRecognised(
     kind: result.kind,
     amountCents: result.signedCents,
     currency: incomplete ? null : CURRENCY,
-    merchantRaw: text === null ? null : text.slice(0, MAX_MERCHANT),
+    merchantRaw: read.merchantRaw,
     last4: result.lastFour,
     accountDigits: null,
     occurredAt,
     localDate: result.localDate,
     offsetMinutes: result.offsetMinutes,
     receivedAt,
-    bodyExcerpt: incomplete && text !== null ? text.slice(0, MAX_EXCERPT) : null,
+    shapeId: read.shapeId,
+    slots: read.slots,
+    body: read.body,
   }
   const recommendation: Omit<NewRecommendation, 'owner'> = {
     id: crypto.randomUUID(),
@@ -68,6 +119,6 @@ export async function storeRecognised(
     suggestedType: result.suggestedType,
     createdAt: receivedAt,
   }
-  if (await captures.recordCapture(event, recommendation, caps)) return 'stored'
+  if (await captures.recordCapture(event, recommendation, caps, read.decision)) return 'stored'
   return (await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited'
 }

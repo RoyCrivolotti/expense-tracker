@@ -10,8 +10,8 @@ import type { CaptureCaps, CaptureEvent } from '../../../src/domain/ports/captur
  */
 export const RECORD_EVENT_SQL = `INSERT INTO capture_events
 (id, owner, key_id, source, replay_key, kind, amount_cents, currency, merchant_raw, last4, account_digits,
- occurred_at, local_date, offset_minutes, received_at, rec_id, body_excerpt)
-SELECT ?1, owner, key_id, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
+ occurred_at, local_date, offset_minutes, received_at, rec_id, body, shape_id, template_id, slots)
+SELECT ?1, owner, key_id, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?22, ?23, ?24
 FROM capture_keys WHERE key_id = ?2 AND revoked_at IS NULL
 AND (SELECT COUNT(*) FROM capture_events WHERE key_id = ?2 AND received_at >= ?17) < ?18
 AND (SELECT COUNT(*) FROM capture_events WHERE key_id = ?2 AND received_at >= ?19) < ?20
@@ -38,6 +38,7 @@ export function eventParams(
   e: CaptureEvent,
   recId: string | null,
   caps: CaptureCaps = NO_CAPS,
+  templateId: string | null = null,
 ): Array<string | number | null> {
   return [
     e.id,
@@ -55,12 +56,15 @@ export function eventParams(
     e.offsetMinutes,
     e.receivedAt,
     recId,
-    e.bodyExcerpt,
+    e.body,
     caps.hourSince,
     caps.keyPerHour,
     caps.daySince,
     caps.keyPerDay,
     caps.openPerOwner,
+    e.shapeId ?? null,
+    templateId,
+    e.slots ?? null,
   ]
 }
 

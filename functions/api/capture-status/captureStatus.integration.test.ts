@@ -57,7 +57,7 @@ async function stored(keyId: string, source: 'iberia' | 'santander', receivedAt:
     localDate: receivedAt.slice(0, 10),
     offsetMinutes: 60,
     receivedAt,
-    bodyExcerpt: null,
+    body: null,
   })
   expect(ok).toBe(true)
 }

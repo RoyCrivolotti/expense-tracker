@@ -40,7 +40,7 @@ function event(over: Partial<CaptureEvent> = {}): CaptureEvent {
     localDate: '2026-03-02',
     offsetMinutes: 60,
     receivedAt: T0,
-    bodyExcerpt: null,
+    body: null,
     ...over,
   }
 }
@@ -193,10 +193,10 @@ describe('what an event cannot do', () => {
     expect(await repo.eventsSince('k1', '2026-01-01T00:00:00.000Z')).toBe(1)
   })
 
-  it('refuses a merchant over 200 characters and an excerpt over 500', async () => {
+  it('refuses a merchant over 200 characters and a body over 500', async () => {
     await expect(repo.recordEvent(event({ merchantRaw: 'x'.repeat(201) }))).rejects.toThrow()
-    await expect(repo.recordEvent(event({ bodyExcerpt: 'x'.repeat(501) }))).rejects.toThrow()
-    expect(await repo.recordEvent(event({ merchantRaw: 'x'.repeat(200), bodyExcerpt: 'x'.repeat(500) }))).toBe(true)
+    await expect(repo.recordEvent(event({ body: 'x'.repeat(501) }))).rejects.toThrow()
+    expect(await repo.recordEvent(event({ merchantRaw: 'x'.repeat(200), body: 'x'.repeat(500) }))).toBe(true)
   })
 })
 

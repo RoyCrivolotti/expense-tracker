@@ -59,9 +59,48 @@ export interface CaptureEvent {
   receivedAt: string
   /** Set by `recordCapture` from the recommendation it writes; ignored on input. */
   recId?: string | null
-  /** Only for a recognised push that came out incomplete, never for a kind that names a person. Blank it once the user decides. At most 500 characters. */
-  bodyExcerpt: string | null
+  /** `shapeId` of the push's source and skeleton. Null for a row written without the reader. */
+  shapeId?: string | null
+  /** The person's template the push belongs to. `recordCapture` sets it from the template decision; ignored on input. */
+  templateId?: string | null
+  /** The slots the reader found, as JSON, at most 2,000 characters. */
+  slots?: string | null
+  /** The cleaned body, only for a push that shows an amount with a currency marker. At most 500 characters. */
+  body: string | null
 }
+
+/** Templates one person may hold. At the cap, the least recently seen one nobody has accepted makes room. */
+export const MAX_CAPTURE_TEMPLATES = 500
+
+/** Templates of one title a new push is compared with, the most recently seen first. */
+export const TEMPLATE_LOOKUP_LIMIT = 50
+
+/** A template as a new push is matched against it. */
+export interface CaptureTemplate {
+  templateId: string
+  /** The masked words, with `<M>` where the merchant goes once a sibling push has shown it. */
+  skeleton: string
+  /** The `<M>` token's run in `skeleton`, end exclusive. Null until known. */
+  merchantStart: number | null
+  merchantEnd: number | null
+}
+
+/** The run a template has just learned from a sibling push, and its skeleton rewritten with the wildcard there. */
+export interface LearnedRun {
+  start: number
+  end: number
+  skeleton: string
+}
+
+/**
+ * Which template a push joins, decided before the write so the batch that stores the push stores the template
+ * change with it. A new template takes its owner, source and dates from the event. `none` is for a push whose
+ * template would be too large to keep.
+ */
+export type TemplateDecision =
+  | { kind: 'existing'; templateId: string; learnedRun?: LearnedRun }
+  | { kind: 'new'; template: { templateId: string; title: string; skeleton: string } }
+  | { kind: 'none' }
 
 /** What was dropped, by day. The only thing kept about a push the app does not recognise. */
 export interface CaptureCounter {
@@ -178,13 +217,21 @@ export interface CaptureRepository {
   /**
    * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
    * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
-   * recommendation takes its owner from the event. Returns false, writing neither, as `recordEvent` does.
+   * recommendation takes its owner from the event. The same batch applies the template decision (a new template,
+   * evicting one at the cap, or a learned run, and the count of pushes seen). Returns false, writing nothing, as
+   * `recordEvent` does: a replay changes no template.
    */
   recordCapture(
     event: CaptureEvent,
     recommendation: Omit<NewRecommendation, 'owner'>,
     caps?: CaptureCaps,
+    template?: TemplateDecision,
   ): Promise<boolean>
+  /**
+   * The owner's templates for this source and masked title, at most `TEMPLATE_LOOKUP_LIMIT`, the most recently seen
+   * first.
+   */
+  findTemplates(owner: string, source: CaptureSource, title: string): Promise<CaptureTemplate[]>
   /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
   hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
   /**

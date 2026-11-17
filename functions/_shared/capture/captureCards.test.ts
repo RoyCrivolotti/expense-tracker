@@ -46,7 +46,7 @@ async function push(opts: { digits?: string | null; key?: string; source?: 'iber
       localDate: '2026-03-02',
       offsetMinutes: 60,
       receivedAt: T0,
-      bodyExcerpt: null,
+      body: null,
     },
     {
       id: `rec${n}`,
