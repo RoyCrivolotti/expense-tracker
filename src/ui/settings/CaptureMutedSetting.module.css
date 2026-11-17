@@ -1,0 +1,18 @@
+/* A muted wording wraps rather than truncate: the words are how the person recognises it. */
+.wording {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.slot {
+  display: inline-block;
+  margin: 0 0.15rem;
+  padding: 0 0.4rem;
+  border-radius: 0.4rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}

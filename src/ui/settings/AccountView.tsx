@@ -10,6 +10,7 @@ import { ChunkBoundary } from '../components/ChunkBoundary'
 const CaptureSetupSetting = lazy(() => import('./CaptureSetupSetting').then((m) => ({ default: m.CaptureSetupSetting })))
 const CaptureKeySetting = lazy(() => import('./CaptureKeySetting').then((m) => ({ default: m.CaptureKeySetting })))
 const CaptureCardsSetting = lazy(() => import('./CaptureCardsSetting').then((m) => ({ default: m.CaptureCardsSetting })))
+const CaptureMutedSetting = lazy(() => import('./CaptureMutedSetting').then((m) => ({ default: m.CaptureMutedSetting })))
 
 export function AccountView({
   model,
@@ -32,6 +33,7 @@ export function AccountView({
             <CaptureSetupSetting />
             <CaptureKeySetting />
             <CaptureCardsSetting model={model} />
+            <CaptureMutedSetting />
           </Suspense>
         </ChunkBoundary>
       ) : null}
