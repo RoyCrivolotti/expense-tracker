@@ -1,5 +1,5 @@
 import type { SourceStatus } from '../../data/captureStatusApi'
-import { lastCaptureText, sourceState, type SourceState } from './captureSetup'
+import { lastCaptureText, overall, sourceState, type SourceState } from './captureSetup'
 import styles from './CaptureSetupSetting.module.css'
 import type { useCaptureSetup } from './useCaptureSetup'
 
@@ -10,29 +10,29 @@ const WAITING_TITLE: Record<SourceState, string> = {
   waiting: 'Waiting for your first payment',
 }
 
-function lastText(iberia: SourceStatus | undefined): string {
-  return iberia?.lastCaptureAt
-    ? `Iberia: last payment captured ${lastCaptureText(iberia.lastCaptureAt, new Date())}.`
+function lastText(status: SourceStatus | undefined): string {
+  return status?.lastCaptureAt
+    ? `Last payment captured ${lastCaptureText(status.lastCaptureAt, new Date())}, from ${status.source}.`
     : ''
 }
 
 function WaitingText({
   state,
-  iberia,
+  status,
   neverUsed,
 }: {
   state: SourceState
-  iberia: SourceStatus | undefined
+  status: SourceStatus | undefined
   neverUsed: boolean
 }) {
   if (state === 'ok') {
     const unread =
-      iberia && iberia.unrecognised > 0
-        ? ` ${iberia.unrecognised} of ${iberia.received} unread in the last 7 days.`
+      status && status.unrecognised > 0
+        ? ` ${status.unrecognised} of ${status.received} unread in the last 7 days.`
         : ''
     return (
       <p>
-        {lastText(iberia)}
+        {lastText(status)}
         {unread}
       </p>
     )
@@ -40,7 +40,7 @@ function WaitingText({
   if (state === 'quiet') {
     return (
       <p>
-        {lastText(iberia)} Nothing since. That may only mean no card payments; if you did pay, check the shortcut. This
+        {lastText(status)} Nothing since. That may only mean no card payments; if you did pay, check the shortcut. This
         is information only.
       </p>
     )
@@ -48,8 +48,9 @@ function WaitingText({
   if (state === 'unrecognised') {
     return (
       <p>
-        Notifications are reaching the app ({iberia?.received} in the last 7 days) but none was read as a payment. The
-        bank may have reworded its message, or the shortcut sends the wrong fields. {lastText(iberia)}
+        Notifications are reaching the app ({status?.received} in the last 7 days) but none was read as a payment: none
+        showed an amount with its currency, or you muted its wording. The shortcut may also send the wrong fields.{' '}
+        {lastText(status)}
       </p>
     )
   }
@@ -75,14 +76,14 @@ export function Waiting({
       </li>
     )
   }
-  const iberia = setup.status?.sources.find((s) => s.source === 'iberia')
-  const state = sourceState(iberia, new Date())
+  const status = overall(setup.status.sources)
+  const state = sourceState(status, new Date())
   const neverUsed = setup.keys !== null && setup.keys.length > 0 && setup.keys.every((k) => !k.lastUsedAt)
   return (
     <li className={`${styles.step} ${styles[state]}`} aria-live="polite">
       <span className={styles.stepTitle}>{WAITING_TITLE[state]}</span>
       <div className={styles.stepBody}>
-        <WaitingText state={state} iberia={iberia} neverUsed={neverUsed} />
+        <WaitingText state={state} status={status} neverUsed={neverUsed} />
         <button type="button" className={styles.copy} onClick={setup.recheck}>
           Check again
         </button>

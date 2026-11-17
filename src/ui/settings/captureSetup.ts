@@ -8,6 +8,22 @@ import { shortDayLabel } from '../format'
  */
 export type SourceState = 'waiting' | 'unrecognised' | 'quiet' | 'ok'
 
+/**
+ * Every source as one: the counts added up, and the newest capture with the source it came from. Undefined when no
+ * push has arrived from any. A source quiet for a week while another sends still reads as captured, since the person
+ * may simply not have used that card.
+ */
+export function overall(sources: readonly SourceStatus[]): SourceStatus | undefined {
+  const [first, ...rest] = sources
+  if (!first) return undefined
+  const newest = rest.reduce((a, b) => ((b.lastCaptureAt ?? '') > (a.lastCaptureAt ?? '') ? b : a), first)
+  return {
+    ...newest,
+    received: sources.reduce((n, s) => n + s.received, 0),
+    unrecognised: sources.reduce((n, s) => n + s.unrecognised, 0),
+  }
+}
+
 /** How old the last captured payment may be before the card says nothing has been captured lately. */
 export const STALE_DAYS = 3
 

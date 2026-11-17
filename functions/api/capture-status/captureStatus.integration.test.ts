@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
- * What the setup screen reads: per bank app, the last recognised capture and the week's counts, and the Worker's
- * address. For the signed-in person alone, and reads only.
+ * What the setup and diagnostics screens read: per bank app, the last recognised capture, the week's counts, the last
+ * 30 days of outcomes, and the Worker's address. For the signed-in person alone, and reads only.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
@@ -40,15 +40,19 @@ beforeEach(async () => {
 afterEach(() => vi.useRealTimers())
 
 let n = 0
-async function stored(keyId: string, source: 'iberia' | 'santander', receivedAt: string) {
+async function stored(keyId: string, source: string, receivedAt: string, outcome: string | null = null, state = 'open') {
   n += 1
+  const owner = keyId === 'k1' ? OWNER : OTHER
+  sqlite
+    .prepare("INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at, state) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(`rec${n}`, owner, receivedAt, receivedAt.slice(0, 10), receivedAt, state)
   const ok = await createD1CaptureRepository(world.env).recordEvent({
     id: `e${n}`,
     keyId,
     source,
     replayKey: `r${n}`,
-    kind: 'card-purchase',
-    amountCents: -1250,
+    kind: 'push',
+    amountCents: 1250,
     currency: 'EUR',
     merchantRaw: 'CAFE EXAMPLE',
     last4: '4821',
@@ -60,7 +64,16 @@ async function stored(keyId: string, source: 'iberia' | 'santander', receivedAt:
     body: null,
   })
   expect(ok).toBe(true)
+  sqlite.prepare('UPDATE capture_events SET rec_id = ?, outcome = ? WHERE id = ?').run(`rec${n}`, outcome, `e${n}`)
 }
+const muted = (owner: string, source: string, id: string, ignoredAt: string | null) =>
+  sqlite
+    .prepare(
+      `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen, ignored_at)
+       VALUES (?, ?, ?, 't', 's', '2026-11-01', '2026-11-01', ?)`,
+    )
+    .run(owner, id, source, ignoredAt)
+const NONE = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 const counter = (owner: string, source: string, day: string, received: number, unrecognised: number) =>
   sqlite
     .prepare('INSERT INTO capture_counters (owner, source, day, received, unrecognised) VALUES (?, ?, ?, ?, ?)')
@@ -84,31 +97,33 @@ const get = (setting?: string, email: string | false = OWNER, shortcut?: string)
 const withCredentials = () => ['https://user:secret', 'capture.example.workers.dev'].join('@')
 
 describe('GET /api/capture-status', () => {
-  it('says nothing has arrived for a person with no pushes, and has no address when none is set', async () => {
+  it('lists no source for a person with no pushes, and has no address when none is set', async () => {
     const response = await get()
 
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
-    expect(await response.json()).toEqual({
-      sources: [
-        { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 },
-        { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
-      ],
-      endpoint: null,
-      shortcutUrl: null,
-    })
+    expect(await response.json()).toEqual({ sources: [], endpoint: null, shortcutUrl: null })
   })
 
-  it('lists a source that has no kind rows once it has been counted, after the two always shown', async () => {
+  it('lists every source the person was counted under, in order, and names no bank of its own', async () => {
     counter(OWNER, 'some-bank', '2026-11-12', 3, 3)
+    counter(OWNER, 'another', '2026-11-12', 1, 0)
     counter('other@example.com', 'not-mine', '2026-11-12', 1, 1)
 
     expect(await (await get()).json()).toMatchObject({
       sources: [
-        { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 },
-        { source: 'santander', lastCaptureAt: null, received: 0, unrecognised: 0 },
+        { source: 'another', lastCaptureAt: null, received: 1, unrecognised: 0 },
         { source: 'some-bank', lastCaptureAt: null, received: 3, unrecognised: 3 },
       ],
+    })
+  })
+
+  it('keeps a source listed after a quiet week, so the check can say nothing came lately', async () => {
+    await stored('k1', 'newbank', '2026-09-01T08:00:00.000Z')
+    counter(OWNER, 'newbank', '2026-09-01', 1, 0)
+
+    expect(await (await get()).json()).toMatchObject({
+      sources: [{ source: 'newbank', lastCaptureAt: '2026-09-01T08:00:00.000Z', received: 0, unrecognised: 0, diagnostics: NONE }],
     })
   })
 
@@ -132,8 +147,49 @@ describe('GET /api/capture-status', () => {
     await stored('k2', 'iberia', '2026-11-12T09:41:00.000Z')
     counter(OTHER, 'iberia', '2026-11-13', 9, 9)
 
+    counter(OWNER, 'iberia', '2026-11-13', 1, 1)
+    muted(OTHER, 'iberia', 'tm', '2026-11-10')
+
     expect(await (await get()).json()).toMatchObject({
-      sources: [{ lastCaptureAt: null, received: 0, unrecognised: 0 }, expect.anything()],
+      sources: [{ source: 'iberia', lastCaptureAt: null, received: 1, unrecognised: 1, diagnostics: { ...NONE, received: 1, unread: 1 } }],
+    })
+  })
+
+  describe('the diagnostics of the last 30 days', () => {
+    it('count what became of each source’s pushes, from the decisions and the counters', async () => {
+      counter(OWNER, 'newbank', '2026-11-13', 6, 1)
+      counter(OWNER, 'newbank', '2026-10-15', 2, 2)
+      counter(OWNER, 'newbank', '2026-10-14', 40, 40)
+      await stored('k1', 'newbank', '2026-11-13T08:00:00.000Z', 'added-as-is', 'submitted')
+      await stored('k1', 'newbank', '2026-11-12T08:00:00.000Z', 'edited:description,category', 'submitted')
+      await stored('k1', 'newbank', '2026-11-11T08:00:00.000Z', 'linked', 'submitted')
+      await stored('k1', 'newbank', '2026-11-10T08:00:00.000Z', 'dismissed', 'dismissed')
+      await stored('k1', 'newbank', '2026-10-15T00:00:00.000Z')
+      await stored('k1', 'newbank', '2026-10-14T23:59:59.000Z', 'dismissed', 'dismissed')
+      muted(OWNER, 'newbank', 't1', '2026-11-01')
+      muted(OWNER, 'newbank', 't2', null)
+
+      expect(await (await get()).json()).toMatchObject({
+        sources: [
+          {
+            source: 'newbank',
+            received: 6,
+            unrecognised: 1,
+            diagnostics: { received: 8, recommended: 5, unread: 3, addedAsIs: 1, edited: 1, linked: 1, dismissed: 1, open: 1, muted: 1 },
+          },
+        ],
+      })
+    })
+
+    it('count another person’s decisions and muted wordings for nobody else', async () => {
+      counter(OWNER, 'iberia', '2026-11-13', 1, 0)
+      counter(OTHER, 'iberia', '2026-11-13', 1, 0)
+      await stored('k2', 'iberia', '2026-11-13T08:00:00.000Z', 'added-as-is', 'submitted')
+      muted(OTHER, 'iberia', 'tm', '2026-11-10')
+
+      expect(await (await get()).json()).toMatchObject({
+        sources: [{ source: 'iberia', diagnostics: { ...NONE, received: 1 } }],
+      })
     })
   })
 

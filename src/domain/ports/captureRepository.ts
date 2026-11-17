@@ -2,7 +2,8 @@ import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
 import type { TemplateFacts } from '../capture/learn'
 import type { MerchantVote } from '../capture/merchants'
 import type { MerchantRow, Suggestion } from '../capture/suggestion'
-import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
+import type { CaptureSource, SuggestedType } from '../capture/types'
+import type { CaptureStatusReads } from './captureStatusReads'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
 export const MAX_ACTIVE_CAPTURE_KEYS = 3
@@ -33,8 +34,7 @@ export interface NewCaptureKey {
 }
 
 /**
- * One recognised push. Fields that would hold another person's name are left null by the caller for those kinds.
- * There is no owner: the owner is the key's, read inside the insert, so an event cannot be filed under a person
+ * One stored push: one that shows an amount with a currency marker. There is no owner: the owner is the key's, read inside the insert, so an event cannot be filed under a person
  * the key does not belong to, nor under a key revoked a moment ago.
  */
 export interface CaptureEvent {
@@ -47,8 +47,12 @@ export interface CaptureEvent {
    * capture Worker must store an HMAC of it under a secret and pass that.
    */
   replayKey: string
-  kind: PushKind
-  /** Signed: outflows are negative. Null when the body gave no amount the parser trusts. */
+  /**
+   * Always `push`: the reader names no kind, and what a push is comes from the person's decisions. Rows stored before
+   * that hold the name of the rule that matched them.
+   */
+  kind: 'push'
+  /** Positive: the push says nothing the server trusts about direction. Null only on rows stored before that rule. */
   amountCents: number | null
   currency: string | null
   /** At most 200 characters. */
@@ -250,7 +254,7 @@ export interface RecommendationCursor {
  * is identified by its key, and the key row names the owner). Times are ISO strings in UTC, passed in so
  * nothing here reads a clock.
  */
-export interface CaptureRepository {
+export interface CaptureRepository extends CaptureStatusReads {
   /** False, and nothing written, when the owner already holds the most keys allowed. Decided inside the insert. */
   createKey(key: NewCaptureKey): Promise<boolean>
   findKey(keyId: string): Promise<CaptureKey | null>

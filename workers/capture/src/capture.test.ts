@@ -68,7 +68,7 @@ describe('a valid push', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
     expect(rows('SELECT owner, key_id, kind, amount_cents, currency, local_date, offset_minutes, last4, merchant_raw FROM capture_events')).toEqual([
-      { owner: ALICE, key_id: minted.keyId, kind: 'card-purchase', amount_cents: -3340, currency: 'EUR', local_date: '2026-11-03', offset_minutes: 60, last4: '4321', merchant_raw: 'Shop Example *4321 33,40 EUR' },
+      { owner: ALICE, key_id: minted.keyId, kind: 'push', amount_cents: 3340, currency: 'EUR', local_date: '2026-11-03', offset_minutes: 60, last4: '4321', merchant_raw: 'Shop Example *4321 33,40 EUR' },
     ])
     const [rec] = rows('SELECT owner, amount_cents, suggested_type, state, account_id FROM recommendations')
     expect(rec).toEqual({ owner: ALICE, amount_cents: 3340, suggested_type: 'expense', state: 'open', account_id: null })
@@ -84,12 +84,10 @@ describe('a valid push', () => {
     expect(rows('SELECT account_id FROM recommendations')[0]?.account_id).toBe(7)
   })
 
-  it('keeps no body, and no amount, when the push shows no amount with a currency marker', async () => {
+  it('stores nothing, and counts the push as unread, when it shows no amount with a currency marker', async () => {
     await send(request({ body: { ...PURCHASE, body: 'Shop Example *4321 sin importe' } }))
-    expect(rows('SELECT amount_cents, currency, body, body_excerpt FROM capture_events')).toEqual([
-      { amount_cents: null, currency: null, body: null, body_excerpt: null },
-    ])
-    expect(rows('SELECT amount_cents FROM recommendations')[0]?.amount_cents).toBeNull()
+    expect(count('capture_events') + count('recommendations') + count('capture_templates')).toBe(0)
+    expect(rows('SELECT received, unrecognised FROM capture_counters')).toEqual([{ received: 1, unrecognised: 1 }])
   })
 
   it('answers the same push twice with an identical 200 and stores it once', async () => {
@@ -279,21 +277,50 @@ describe('a body that is not a push', () => {
   })
 })
 
-describe('a source word with no row in the kind list', () => {
-  const push = (source: string) => ({ source, title: 'Compra realizada', body: 'invented text', date: PURCHASE.date })
+describe('a push from any bank, in any words', () => {
+  const push = (source: string) => ({ source, title: 'Notice', body: 'invented text', date: PURCHASE.date })
 
-  it('is accepted and only counted, whatever the title says', async () => {
+  it('becomes a recommendation when it shows an amount with a currency marker, in that currency', async () => {
+    const card = { source: 'newbank', title: 'Card used', body: 'You spent $18.20 at Sample Diner, card ending 7788', date: PURCHASE.date }
+    expect((await send(request({ body: card }))).status).toBe(200)
+    expect(rows('SELECT source, kind, amount_cents, currency, last4 FROM capture_events')).toEqual([
+      { source: 'newbank', kind: 'push', amount_cents: 1820, currency: 'USD', last4: '7788' },
+    ])
+    expect(rows('SELECT amount_cents, currency, suggested_type, merchant_raw FROM recommendations')).toEqual([
+      { amount_cents: 1820, currency: 'USD', suggested_type: 'expense', merchant_raw: 'You spent $18.20 at Sample Diner, card ending 7788' },
+    ])
+  })
+
+  it('makes nothing of a push with two different marked amounts, which could be a charge and a balance', async () => {
+    const lines: CaptureLogLine[] = []
+    await handleCapture(request({ body: { ...PURCHASE, body: 'Pago 12,50 EUR. Saldo 400,00 EUR' } }), env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+    expect(count('capture_events') + count('recommendations') + count('capture_templates')).toBe(0)
+    expect(rows('SELECT received, unrecognised FROM capture_counters')).toEqual([{ received: 1, unrecognised: 1 }])
+    expect(lines).toEqual([expect.objectContaining({ outcome: 'dropped', reason: 'no-amount' })])
+  })
+
+  it('gives no description, rather than an empty one, when the amount is in the title and the body is empty', async () => {
+    await send(request({ body: { ...PURCHASE, title: 'Paid 12,50 EUR', body: '' } }))
+    expect(rows('SELECT amount_cents, merchant_raw, body FROM capture_events')).toEqual([{ amount_cents: 1250, merchant_raw: null, body: null }])
+    expect(rows('SELECT merchant_raw FROM recommendations')).toEqual([{ merchant_raw: null }])
+  })
+
+  it('reads the amount as positive whatever sign the bank wrote', async () => {
+    await send(request({ body: { ...PURCHASE, body: 'Movimiento -50.0 EUR en cuenta' } }))
+    expect(rows('SELECT amount_cents FROM recommendations')).toEqual([{ amount_cents: 5000 }])
+  })
+
+  it('names a card only when the push shows one set of digits', async () => {
+    await send(request({ body: { ...PURCHASE, body: 'Transfer 20,00 EUR from **1111 to **2222' } }))
+    expect(rows('SELECT last4 FROM capture_events')).toEqual([{ last4: null }])
+  })
+
+  it('makes nothing of a push with no amount from a source no push came from before', async () => {
     expect((await send(request({ body: push('some-bank-2') }))).status).toBe(200)
     expect(rows('SELECT source, received, unrecognised FROM capture_counters')).toEqual([
       { source: 'some-bank-2', received: 1, unrecognised: 1 },
     ])
     expect(count('capture_events') + count('recommendations')).toBe(0)
-  })
-
-  it('still reads the Iberia purchase as before', async () => {
-    expect((await send(request())).status).toBe(200)
-    expect(count('capture_events')).toBe(1)
-    expect(count('recommendations')).toBe(1)
   })
 
   it('accepts a source of exactly 32 characters and refuses 33', async () => {
@@ -334,19 +361,20 @@ describe('the distinct-source cap', () => {
   })
 })
 
-describe('a push the app does not recognise', () => {
+describe('a push that makes no recommendation', () => {
   const MARKER = 'ZZMARKERZZ'
 
   it('adds to the counter and keeps nothing else', async () => {
     const dropped = [
       { source: 'iberia', title: `Promo ${MARKER}`, body: `Oferta ${MARKER}`, date: PURCHASE.date },
-      { source: 'santander', title: 'BIZUM recibido', body: `Has recibido 10.0 EUR de ${MARKER} Persona`, date: PURCHASE.date },
-      { source: 'santander', title: 'Operacion', body: `Cajero a nombre de ${MARKER}`, date: PURCHASE.date },
-      { ...PURCHASE, date: '2030-01-01T00:00:00+01:00' },
+      { source: 'santander', title: 'Codigo', body: `Tu codigo es 482913 ${MARKER}`, date: PURCHASE.date },
+      { source: 'santander', title: 'Recibos', body: `Recibo de ${MARKER} pagado, total 3`, date: PURCHASE.date },
+      { ...PURCHASE, body: `Pago ${MARKER} 10,00 EUR`, date: '2030-01-01T00:00:00+01:00' },
+      { ...PURCHASE, body: `Pago ${MARKER} 10,00 EUR`, date: 'yesterday' },
     ]
     for (const body of dropped) expect((await send(request({ body }))).status).toBe(200)
     expect(rows('SELECT source, received, unrecognised FROM capture_counters ORDER BY source')).toEqual([
-      { source: 'iberia', received: 2, unrecognised: 2 },
+      { source: 'iberia', received: 3, unrecognised: 3 },
       { source: 'santander', received: 2, unrecognised: 2 },
     ])
     expect(count('capture_events') + count('recommendations')).toBe(0)
@@ -437,8 +465,8 @@ describe('a key revoked after it was checked', () => {
   it('stores nothing when recordCapture runs for it', async () => {
     await repos().captures.revokeKey(ALICE, minted.keyId, NOW.toISOString())
     const event = {
-      id: 'e1', keyId: minted.keyId, source: 'iberia' as const, replayKey: 'r', kind: 'card-purchase' as const,
-      amountCents: -100, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null,
+      id: 'e1', keyId: minted.keyId, source: 'iberia' as const, replayKey: 'r', kind: 'push' as const,
+      amountCents: 100, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null,
       occurredAt: NOW.toISOString(), localDate: '2026-11-03', offsetMinutes: 60, receivedAt: NOW.toISOString(), body: null,
     }
     const rec = { id: 'r1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: event.occurredAt, localDate: '2026-11-03', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense' as const, createdAt: event.receivedAt }
@@ -489,17 +517,24 @@ describe('the log line', () => {
   })
   const last = () => lines[lines.length - 1]
 
-  it('says a stored push was stored, with its source, kind and whether an amount was read', async () => {
+  it('says a stored push was stored, with its source and key', async () => {
     await sendLogged(request())
     expect(lines).toEqual([
-      expect.objectContaining({ event: 'capture', outcome: 'stored', reason: 'stored', status: 200, source: 'iberia', keyId: minted.keyId, kind: 'card-purchase', amount: 'read' }),
+      expect.objectContaining({ event: 'capture', outcome: 'stored', reason: 'stored', status: 200, source: 'iberia', keyId: minted.keyId }),
     ])
     expect(typeof last()?.ms).toBe('number')
   })
 
-  it('says a push with no matching kind was dropped, and why', async () => {
-    await sendLogged(request({ body: { ...PURCHASE, title: 'Oferta para ti' } }))
-    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'no-matching-kind', status: 200, source: 'iberia' }))
+  it.each([
+    ['no amount with a currency marker', { body: 'Recibo pagado, referencia AB-12' }, 'no-amount'],
+    ['a code and no other number', { body: 'Your code is 482913' }, 'code-like'],
+    ['a code beside a number with no marker', { body: 'Code 482913, valid 5 minutes' }, 'no-amount'],
+    ['a Date that cannot be read', { date: 'tomorrow' }, 'bad-date'],
+    ['a Date three days from the clock', { date: '2026-11-06T09:41:07+01:00' }, 'clock-skew'],
+  ])('says a push with %s was dropped, and why', async (_name, over, reason) => {
+    await sendLogged(request({ body: { ...PURCHASE, ...over } }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason, status: 200, source: 'iberia' }))
+    expect(count('capture_events')).toBe(0)
   })
 
   it('says a replayed push was a replay', async () => {
@@ -534,7 +569,7 @@ describe('the log line', () => {
 
   it('names no field outside the fixed set, so a push cannot leak into it', async () => {
     await sendLogged(request({ body: { ...PURCHASE, body: 'Shop Example *4321 33,40 EUR' } }))
-    expect(Object.keys(last() ?? {}).sort()).toEqual(['amount', 'event', 'keyId', 'kind', 'ms', 'outcome', 'reason', 'source', 'status'])
+    expect(Object.keys(last() ?? {}).sort()).toEqual(['event', 'keyId', 'ms', 'outcome', 'reason', 'source', 'status'])
   })
 })
 
@@ -587,12 +622,10 @@ describe('shapes and templates', () => {
     expect(templates()[0]?.seen).toBe(2)
   })
 
-  it('keeps no text of a push with no amount marked by a currency', async () => {
+  it('keeps no text, and no template, of a push with no amount marked by a currency', async () => {
     await send(request({ body: { ...PURCHASE, body: 'Has pagado 12,50 en Example Cafe con tu tarjeta *4321' } }))
-    expect(rows('SELECT body, merchant_raw FROM capture_events')).toEqual([{ body: null, merchant_raw: null }])
-    expect(rows('SELECT merchant_raw FROM recommendations')).toEqual([{ merchant_raw: null }])
+    expect(count('capture_events') + count('recommendations')).toBe(0)
     expect(templates()).toEqual([])
-    expect(rows('SELECT shape_id, template_id FROM capture_events')).toEqual([{ shape_id: expect.stringMatching(/^[0-9a-f]{64}$/), template_id: null }])
   })
 
   it('stores a push with more slots than the column holds, keeping the first ones', async () => {

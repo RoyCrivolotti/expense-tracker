@@ -18,8 +18,7 @@ export const BEFORE_ADDRESS: SetupStepSpec[] = [
     title: 'Choose the bank’s app',
     body: (
       <p>
-        Tap the app name and choose your bank&rsquo;s app (<b>IberiaCards</b> for the Icon card). Leave the filters
-        empty.
+        Tap the app name and choose your bank&rsquo;s app. Leave the filters empty.
       </p>
     ),
   },
@@ -96,15 +95,22 @@ const SAVE: SetupStepSpec = {
   ),
 }
 
-/** The manual steps after the address. `sourceWords` is the word for the bank, from the server's own rules. */
-export function afterAddress(sourceWords: ReactNode): SetupStepSpec[] {
+/** What the source word may be: any short name the person picks for the bank's app, which the app shows back to them. */
+export const SOURCE_WORD_HINT: ReactNode = (
+  <>
+    a short lowercase name for your bank&rsquo;s app (letters, digits or hyphens), such as <b>mybank</b>. Use one name
+    per bank and keep it: the app lists your payments and cards under it
+  </>
+)
+
+/** The manual steps after the address. */
+export function afterAddress(): SetupStepSpec[] {
   const source: SetupStepSpec = {
     id: 'source',
     title: 'Add the source field',
     body: (
       <p>
-        Tap <b>Add new field</b>, choose <b>Text</b>, set the key to <b>source</b> and type the word for your bank:{' '}
-        {sourceWords}.
+        Tap <b>Add new field</b>, choose <b>Text</b>, set the key to <b>source</b> and type {SOURCE_WORD_HINT}.
       </p>
     ),
   }

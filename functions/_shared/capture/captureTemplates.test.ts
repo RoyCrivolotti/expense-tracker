@@ -26,7 +26,7 @@ beforeEach(async () => {
 function store(decision: TemplateDecision, over: Partial<CaptureEvent> = {}): Promise<boolean> {
   n += 1
   const event: CaptureEvent = {
-    id: `e${n}`, keyId: 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'card-purchase', amountCents: -1250, currency: 'EUR',
+    id: `e${n}`, keyId: 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'push', amountCents: 1250, currency: 'EUR',
     merchantRaw: 'Example Cafe', last4: null, accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 60,
     receivedAt: T0, shapeId: 'shape', slots: '[]', body: null, ...over,
   }
@@ -157,8 +157,8 @@ describe('a push with no template', () => {
   })
 
   it('is what recordCapture assumes when no decision is passed', async () => {
-    const event = { id: 'x', keyId: 'k1', source: 'iberia', replayKey: 'rx', kind: 'card-purchase', amountCents: null, currency: null, merchantRaw: null, last4: null, accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 0, receivedAt: T0, body: null } as const
-    expect(await repo.recordCapture(event, { id: 'rx', accountId: null, amountCents: null, currency: null, occurredAt: T0, localDate: '2026-03-02', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 })).toBe(true)
+    const event = { id: 'x', keyId: 'k1', source: 'iberia', replayKey: 'rx', kind: 'push', amountCents: 1250, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 0, receivedAt: T0, body: null } as const
+    expect(await repo.recordCapture(event, { id: 'rx', accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: T0, localDate: '2026-03-02', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 })).toBe(true)
     expect(rows('SELECT template_id, shape_id, slots FROM capture_events')).toEqual([{ template_id: null, shape_id: null, slots: null }])
   })
 })

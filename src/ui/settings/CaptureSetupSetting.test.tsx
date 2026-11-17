@@ -12,7 +12,8 @@ vi.mock('../../data/captureStatusApi')
 
 const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
-const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0 }
+const diagnostics = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
 
 const LINK = 'https://www.icloud.com/shortcuts/abc123'
 const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null) =>
@@ -58,7 +59,7 @@ describe('the first-payment check', () => {
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
-    expect(screen.getByText(/Iberia: last payment captured today at/)).toBeInTheDocument()
+    expect(screen.getByText(/Last payment captured today at \d\d:\d\d, from iberia\./)).toBeInTheDocument()
   })
 
   it('does not read green for an old capture, and says nothing has been captured lately', async () => {
@@ -74,7 +75,7 @@ describe('the first-payment check', () => {
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Arriving, not read as a payment')).toBeInTheDocument()
-    expect(screen.getByText(/Iberia: last payment captured yesterday at/)).toBeInTheDocument()
+    expect(screen.getByText(/Last payment captured yesterday at \d\d:\d\d, from iberia\./)).toBeInTheDocument()
   })
 
   it('reads again on Check again, on a key change and when the screen comes back into view', async () => {
@@ -105,6 +106,30 @@ describe('the first-payment check', () => {
 
     expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
     expect(screen.getByText(/2 of 5 unread in the last 7 days\./)).toBeInTheDocument()
+  })
+
+  it('reads every source as one, naming the one the newest payment came from', async () => {
+    const earlier = new Date(Date.now() - 2 * 86_400_000).toISOString()
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({
+      sources: [
+        { ...none, source: 'bank-a', lastCaptureAt: earlier, received: 3, unrecognised: 1 },
+        { ...none, source: 'bank-b', lastCaptureAt: new Date().toISOString(), received: 2, unrecognised: 1 },
+        { ...none, source: 'bank-c', received: 4, unrecognised: 4 },
+      ],
+      endpoint: ADDRESS,
+      shortcutUrl: null,
+    })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
+    expect(screen.getByText(/from bank-b\. 6 of 9 unread in the last 7 days\./)).toBeInTheDocument()
+  })
+
+  it('waits when no source has sent anything yet', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], endpoint: ADDRESS, shortcutUrl: null })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
   })
 
   it('says nothing of unread pushes when none was unread', async () => {
@@ -226,20 +251,20 @@ describe('with the shortcut link available', () => {
     ])
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
-    expect(para(/replace CARD_NAME_HERE in the source field with the word for your bank/)).toBeInTheDocument()
+    expect(para(/replace CARD_NAME_HERE in the source field with a short lowercase name for your bank’s app/)).toBeInTheDocument()
     expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })
 
-  it('names the source words the server rules read, and no others', async () => {
+  it('says any short name for the bank will do, with examples rather than a list the app reads', async () => {
     status(none, null, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
     const word = para(/replace CARD_NAME_HERE/).textContent
-    expect(word).toContain('Today that is iberia.')
-    expect(word).not.toContain('santander')
+    expect(word).toContain('a short lowercase name for your bank\u2019s app (letters, digits or hyphens), such as mybank.')
+    expect(word).not.toMatch(/today|iberia|santander/i)
   })
 
   it('says the link opens a new window and that the address is in the shortcut, and points the link at that hint', async () => {
@@ -315,6 +340,6 @@ describe('without the shortcut link', () => {
     expect(para(/Change Method from GET to POST/)).toBeInTheDocument()
     expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
     expect(para(/look for a date format called ISO 8601/)).toBeInTheDocument()
-    expect(para(/type the word for your bank: iberia\./)).toBeInTheDocument()
+    expect(para(/set the key to source and type a short lowercase name for your bank’s app/)).toBeInTheDocument()
   })
 })

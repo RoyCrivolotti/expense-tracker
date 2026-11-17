@@ -152,7 +152,7 @@ describe('GET /api/capture-cards', () => {
     const repo = createD1CaptureRepository(world.env)
     await repo.createKey({ keyId: 'k1', owner: OWNER, label: 'Phone', secretHash: 'h', createdAt: T0 })
     await repo.recordCapture(
-      { id: 'e1', keyId: 'k1', source: 'iberia', replayKey: 'r1', kind: 'card-purchase', amountCents: -100, currency: 'EUR', merchantRaw: 'X', last4: '5533', accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 60, receivedAt: T0, body: null },
+      { id: 'e1', keyId: 'k1', source: 'iberia', replayKey: 'r1', kind: 'push', amountCents: 100, currency: 'EUR', merchantRaw: 'X', last4: '5533', accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 60, receivedAt: T0, body: null },
       { id: 'rec1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: T0, localDate: '2026-03-02', merchantRaw: 'X', descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 },
     )
     await post(good)
