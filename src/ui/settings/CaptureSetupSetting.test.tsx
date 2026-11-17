@@ -271,26 +271,28 @@ describe('with the shortcut link available', () => {
       '2. Add the shortcut',
       '3. Choose your bank\u2019s app',
       '4. Paste your key',
-      '5. Name your bank',
+      '5. Check the app field',
       '6. Check the automation is on',
       '7. Make one purchase and watch the line below',
     ])
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
-    expect(para(/replace CARD_NAME_HERE in the source field with a short lowercase name for your bank’s app/)).toBeInTheDocument()
+    expect(para(/Leave no empty row under Headers: an empty header makes the request fail before it reaches the app\./)).toBeInTheDocument()
+    expect(para(/the app field holds the notification’s App variable/)).toBeInTheDocument()
     expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })
 
-  it('says any short name for the bank will do, with examples rather than a list the app reads', async () => {
+  it('asks for nothing typed for the bank, says how to swap an old source placeholder, and keeps a typed source', async () => {
     status(none, null, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
-    const word = para(/replace CARD_NAME_HERE/).textContent
-    expect(word).toContain('a short lowercase name for your bank\u2019s app (letters, digits or hyphens), such as mybank.')
-    expect(word).not.toMatch(/today|iberia|santander/i)
+    const step = para(/the app field holds/).textContent
+    expect(step).toContain('If your copy has a source field with CARD_NAME_HERE instead, delete it')
+    expect(step).toContain('An older shortcut that sends a source name instead keeps working: leave it.')
+    expect(step).not.toMatch(/lowercase|iberia|santander/i)
   })
 
   it('says the link opens a new window and that the address is in the shortcut, and points the link at that hint', async () => {
@@ -347,7 +349,7 @@ describe('without the shortcut link', () => {
       '6. Set the method',
       '7. Add the key',
       '8. Choose JSON',
-      '9. Add the source field',
+      '9. Add the app field',
       '10. Add the title field',
       '11. Add the body field',
       '12. Add the date field',
@@ -366,6 +368,8 @@ describe('without the shortcut link', () => {
     expect(para(/Change Method from GET to POST/)).toBeInTheDocument()
     expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
     expect(para(/look for a date format called ISO 8601/)).toBeInTheDocument()
-    expect(para(/set the key to source and type a short lowercase name for your bank’s app/)).toBeInTheDocument()
+    expect(para(/followed by your key\. Leave no empty row under Headers/)).toBeInTheDocument()
+    expect(para(/set the key to app\. Tap the value field, choose the notification’s variable, then pick App\. The app files/)).toBeInTheDocument()
+    expect(para(/An older shortcut that sends a source name instead keeps working/)).toBeInTheDocument()
   })
 })

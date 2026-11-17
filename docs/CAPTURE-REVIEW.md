@@ -54,6 +54,16 @@ Without write access (the offline saved copy, a read-only source) the card shows
 own merchant history reads the rows the app holds, which in the paged ledger mode are the months in view, so without a
 suggestion a merchant typed only earlier counts as new.
 
+## One payment, several pushes
+
+A recommendation can have several pushes behind it: a card payment and the balance alert of the same amount, or a
+purchase and an offer to split it, join one recommendation at receipt ([CAPTURE.md](CAPTURE.md), "One movement, one
+recommendation"). The card shows it once. Everything about it comes from the push that made it: the slots and template
+the suggestion reads, the card it names (a balance alert that joined it may show account digits, which do not count),
+and the template a decision teaches. A later push only gives the description, when it shows the merchant and the first
+push could only give its whole text. Every push behind it is blanked and gets the decision's outcome, and the
+diagnostics count the later ones as "Same payment as another", not as suggestions.
+
 ## What the list suggests
 
 Each recommendation in `GET /api/recommendations` carries a `suggestion`: what the person's own decisions on earlier

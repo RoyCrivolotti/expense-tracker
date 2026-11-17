@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { AddShortcutLink } from './AddShortcutStep'
-import { BEFORE_ADDRESS, SOURCE_WORD_HINT, afterAddress } from './manualSteps'
+import { BEFORE_ADDRESS, NO_EMPTY_HEADER, OLDER_SOURCE, afterAddress } from './manualSteps'
 import { Address } from './SetupAddress'
 import type { Setup } from './SetupStep'
 
@@ -47,7 +47,7 @@ const purchaseStep = (): SetupStepSpec => ({
   ),
 })
 
-/** With the shortcut's share link available: add it in Shortcuts, then make the three edits it needs by hand. */
+/** With the shortcut's share link available: add it in Shortcuts, then make the edits it needs by hand. */
 export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
   return [
     keyStep(setup),
@@ -68,16 +68,19 @@ export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
       body: (
         <p>
           In the header <b>Authorization</b>, replace <b>KEY_HERE</b> with your key. Keep <b>Bearer</b> and the space
-          after it in front of the key.
+          after it in front of the key. {NO_EMPTY_HEADER}
         </p>
       ),
     },
     {
-      id: 'word',
-      title: 'Name your bank',
+      id: 'app-field',
+      title: 'Check the app field',
       body: (
         <p>
-          In the JSON, replace <b>CARD_NAME_HERE</b> in the <b>source</b> field with {SOURCE_WORD_HINT}.
+          In the JSON, the <b>app</b> field holds the notification&rsquo;s <b>App</b> variable, so the bank app&rsquo;s
+          name is sent for you. If your copy has a <b>source</b> field with <b>CARD_NAME_HERE</b> instead, delete it,
+          tap <b>Add new field</b>, choose <b>Text</b>, set the key to <b>app</b> and pick the notification&rsquo;s{' '}
+          <b>App</b> variable. {OLDER_SOURCE}
         </p>
       ),
     },

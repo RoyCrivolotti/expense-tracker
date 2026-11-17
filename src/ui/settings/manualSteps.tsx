@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react'
 import type { SetupStepSpec } from './setupSteps'
 
+/**
+ * Said where the header is set: an empty row under Headers makes Cloudflare refuse the request before the app sees it,
+ * so nothing on the app's side can count or report it.
+ */
+export const NO_EMPTY_HEADER: ReactNode = (
+  <>
+    Leave no empty row under <b>Headers</b>: an empty header makes the request fail before it reaches the app.
+  </>
+)
+
 /** The manual steps that come before the address: the trigger, its app and the action. */
 export const BEFORE_ADDRESS: SetupStepSpec[] = [
   {
@@ -49,7 +59,7 @@ const SETTINGS: SetupStepSpec[] = [
     body: (
       <p>
         Under <b>Headers</b>, tap <b>Add new header</b>. Set the key to <b>Authorization</b>. Set the text to{' '}
-        <b>Bearer</b> (with a space after it) followed by your key.
+        <b>Bearer</b> (with a space after it) followed by your key. {NO_EMPTY_HEADER}
       </p>
     ),
   },
@@ -65,20 +75,34 @@ const SETTINGS: SetupStepSpec[] = [
 ]
 
 /** One JSON field taken from the notification: add it as Text, name it, and pick the notification's variable. */
-function field(key: string, variable: string, more?: string): SetupStepSpec {
+function field(key: string, variable: string, more?: ReactNode): SetupStepSpec {
   return {
     id: `field-${key}`,
     title: `Add the ${key} field`,
     body: (
       <p>
         Tap <b>Add new field</b>, choose <b>Text</b>, set the key to <b>{key}</b>. Tap the value field, choose the
-        notification&rsquo;s variable, then pick <b>{variable}</b>.{more ? ` ${more}` : ''}
+        notification&rsquo;s variable, then pick <b>{variable}</b>.{more ? <> {more}</> : null}
       </p>
     ),
   }
 }
 
+/** Said where the source would once have been typed, so a person with an older shortcut leaves it alone. */
+export const OLDER_SOURCE: ReactNode = (
+  <>
+    An older shortcut that sends a <b>source</b> name instead keeps working: leave it.
+  </>
+)
+
 const FIELDS: SetupStepSpec[] = [
+  field(
+    'app',
+    'App',
+    <>
+      The app files your payments and cards under the bank app&rsquo;s name, so there is nothing to type. {OLDER_SOURCE}
+    </>,
+  ),
   field('title', 'Title'),
   field('body', 'Body'),
   field('date', 'Date', 'Tap the variable once more and look for a date format called ISO 8601.'),
@@ -95,24 +119,7 @@ const SAVE: SetupStepSpec = {
   ),
 }
 
-/** What the source word may be: any short name the person picks for the bank's app, which the app shows back to them. */
-export const SOURCE_WORD_HINT: ReactNode = (
-  <>
-    a short lowercase name for your bank&rsquo;s app (letters, digits or hyphens), such as <b>mybank</b>. Use one name
-    per bank and keep it: the app lists your payments and cards under it
-  </>
-)
-
 /** The manual steps after the address. */
 export function afterAddress(): SetupStepSpec[] {
-  const source: SetupStepSpec = {
-    id: 'source',
-    title: 'Add the source field',
-    body: (
-      <p>
-        Tap <b>Add new field</b>, choose <b>Text</b>, set the key to <b>source</b> and type {SOURCE_WORD_HINT}.
-      </p>
-    ),
-  }
-  return [...SETTINGS, source, ...FIELDS, SAVE]
+  return [...SETTINGS, ...FIELDS, SAVE]
 }

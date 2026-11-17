@@ -24,6 +24,17 @@ merchant is. Everything else is counted per source and day as unread, and nothin
 
 The Worker's log says which of these each push was ([CAPTURE-WORKER.md](CAPTURE-WORKER.md)).
 
+**One movement, one recommendation.** A bank often sends several pushes for one movement: a card payment and a balance
+alert of the same amount seconds later, or a purchase and an offer to split it. A push with the same amount and currency
+as an open recommendation of the person, at most 2 minutes from it by the moment each push gives, and of another
+wording, joins that recommendation instead of making a second (`sameMovement`, `src/domain/capture/grouping.ts`). The
+window is short because in real pushes the second push of one movement came within seconds, while two real movements
+of one amount (money in, then the same amount sent on) came minutes apart. It is not limited to one bank app: two apps
+reporting one payment join, and so would two shops charging the same price within two minutes. Two
+pushes of one wording are always two movements, two coffees at the same price being two payments, and a decided
+recommendation takes no more pushes. The statement that stores the push decides it, so two pushes arriving together
+cannot both make one. What the person sees is in [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
+
 ## The capture key
 
 A key is `xpk_<16 hex>_<64 hex>`. The first part is a public id the server looks the key up by. The second is the
@@ -54,7 +65,7 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
 | `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is a source word ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)), `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised, diagnostics }], endpoint, shortcutUrl }`, one entry per source word the person's pushes were ever counted under, in order, and none before the first push. `lastCaptureAt` is when the newest stored push arrived (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `diagnostics` covers the last 30 UTC days: `received` and `unread` from the counters, `recommended` (pushes stored), `addedAsIs`, `edited`, `linked` and `dismissed` from `capture_events.outcome`, `open` (recommendations still waiting) and `muted` (the source's templates muted now). Counts only. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised, diagnostics }], malformed, endpoint, shortcutUrl }`, one entry per source word the person's pushes were ever counted under, in order, and none before the first push. `lastCaptureAt` is when the newest stored push arrived (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `malformed` is how many requests from the person's keys over the same seven days had a body the Worker could not read. `diagnostics` covers the last 30 UTC days: `received` and `unread` from the counters, `recommended` (pushes that made a recommendation), `grouped` (pushes that joined one), `addedAsIs`, `edited`, `linked` and `dismissed` from `capture_events.outcome`, `open` (recommendations still waiting) and `muted` (the source's templates muted now). Counts only. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
 | `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
 | `GET /api/capture-templates?ignored=1` | `{ templates: [{ templateId, source, skeleton, seen, dismissals, ignoredAt }] }`: the person's ignored templates (below, "What it learns"), newest ignore first, at most 100. `skeleton` is the masked wording, never a push's body. Any other query is a 400. Reads only |
 | `POST /api/capture-templates/:id/unignore` | `{ ok: true }`, or 404 for another person's template or an id that is none. Clears the ignore and the dismissal streak, so the next push of that wording is suggested again. Takes no body |
@@ -178,9 +189,13 @@ iPhone from Safari and the installed Home Screen app. A link to the file traps t
 2. **Add the shortcut.** Tap **Add the shortcut**. Shortcuts opens its Add Shortcut page in a new window. Tap **Add
    Shortcut**, then come back to the app.
 3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
-4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
-5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with a short lowercase name for the bank's app,
-   such as `mybank` (a source word, [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)). Any name works; keep one per bank.
+4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in
+   front. Leave no empty row under **Headers**: an empty header makes Cloudflare refuse the request with its own 400
+   before the Worker sees it, so the app can neither count nor log it.
+5. **Check the app field.** The JSON's `app` field holds the notification's **App** variable, which the Worker folds into
+   the source word ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)), so nothing is typed. A copy published before that has a
+   `source` field holding `CARD_NAME_HERE` instead: delete it and add `app`. A shortcut that sends a real `source`
+   word keeps working, and that word wins over `app`, so its payments and cards stay filed where they were.
 6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
    **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
    untried. The editor has said "Automation is turned off" while it ran, so trust the automation list and the first payment.
@@ -195,10 +210,11 @@ The shortcut is signed by Apple, so it cannot be edited per person, and the file
 app-files bucket (`shortcuts/capture.shortcut`, [APP-FILES.md](APP-FILES.md)) is the keyless master copy, still served
 by `GET /api/capture-shortcut` but not linked from the card. Publish it once per environment:
 
-1. Build the shortcut as in "By hand", trigger app unchosen, header `Bearer KEY_HERE`, JSON `source` `CARD_NAME_HERE`.
+1. Build the shortcut as in "By hand", trigger app unchosen, header `Bearer KEY_HERE`, JSON `app` set to the App variable
+   and no `source` field.
    Export it as a file and upload it to the bucket as the master copy:
    `wrangler r2 object put expense-tracker-app-files/shortcuts/capture.shortcut --remote --file ./Expense\ capture.shortcut --content-type application/octet-stream`
-2. The link must come from a clean import of that keyless file, with `KEY_HERE` and `CARD_NAME_HERE` untouched, never
+2. The link must come from a clean import of that keyless file, with `KEY_HERE` untouched, never
    from a copy that already holds a real key. Import it into Shortcuts, then Share, **Copy iCloud Link**.
 3. In the Cloudflare dashboard open the Pages project, Settings, Variables and Secrets, add `CAPTURE_SHORTCUT_URL`
    as plain text to both Production and Preview, repeat on the separate staging Pages project, then redeploy.
@@ -218,9 +234,11 @@ With no valid link set, or when the status cannot be read, the card shows these 
 4. Tap the **Search** bar at the bottom, type **Get Contents of URL** and tap that action to add it.
 5. In the action, tap **URL** and type the address. The `/capture` is part of it.
 6. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
-7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the key.
+7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the
+   key. Leave no empty row there, as in step 4 above.
 8. Under **Request Body**, choose **JSON**.
-9. Tap **Add new field**, choose **Text**, set the key to **source** and type the bank's source word, as in step 5 above.
+9. Tap **Add new field**, choose **Text**, set the key to **app** and, from the value field, the notification's variable
+   **App**. Nothing is typed for the bank.
 10. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
 11. Add a field with the key **body** and the variable **Body**.
 12. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
@@ -235,7 +253,10 @@ reached the app. Amber "Arriving, not read as a payment": pushes arrived over th
 seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
 was read, which is what a shortcut sending the wrong fields, or only muted wordings, looks like. Amber "Nothing captured
 lately": the newest stored push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
-with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
+with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. In any state, when
+requests from the person's keys over the last week could not be read (`malformed`), it says how many and to check the
+shortcut's fields, in place of "nothing has reached the app", and that a bank app whose name has no Latin letters or
+digits needs a typed `source` field. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
 automation is noticed only by the person.
 
 The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain variable holding the Worker's address.
@@ -255,7 +276,8 @@ Behind the same flag, Settings, Account has two more cards, each its own lazy ch
 always shown as what they are, and the merchant only once a second push of the wording has shown where it sits (until
 then the first push's merchant is among the words), with its source, how often it was seen and dismissed, and when it
 was muted; "Suggest again" calls the un-ignore route and reads the list again. "Capture diagnostics" reads the status
-route's `diagnostics` and shows, per source, every count and three shares of the decided recommendations: added as
+route's `diagnostics` and shows, per source, every count (a push that joined another's recommendation as "Same payment
+as another") and three shares of the decided recommendations: added as
 shown, edited, and dismissed. A link counts as decided, so the three need not add up to 100. The diagnostics card quotes no push.
 
 ## The capture endpoint

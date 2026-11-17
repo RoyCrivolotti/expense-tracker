@@ -95,10 +95,16 @@ usual and teaches the template its run. A push that starts a new template is nev
 
 ## Source words
 
-A **source word** is a label the person picks for one phone automation, usually their bank app's name: lowercase
-`a-z`, digits and hyphens, 1 to 32 characters (`isSourceWord` in [`source.ts`](../src/domain/capture/source.ts), used by
-the Worker and by the card-link route). Every word is read the same way, and nothing in the app depends on which word
-it is: it keeps one bank's templates and card links apart from another's, and the Settings screens show it as typed. A
+A **source word** is the label of one bank app's pushes: lowercase `a-z`, digits and hyphens, 1 to 32 characters,
+starting with a letter or digit (`isSourceWord` in [`source.ts`](../src/domain/capture/source.ts), used by the Worker
+and by the card-link route). The shortcut sends the notification's App name as `app`, and the Worker folds it into the
+word (`sourceWordOf`): lowercased, accents dropped, every run of other characters a hyphen, trimmed, so "SampleCards"
+is `samplecards` and "Bank 24 Online" is `bank-24-online`. A name with nothing left is a 400, so a bank app whose name has no Latin letter or digit (one written in another
+script) needs a typed `source` word. An older shortcut sends a typed
+`source` word instead, and a valid one wins over `app`, so its templates and card links keep their word. Every word is
+read the same way, and nothing in the app depends on which word it is: it keeps one bank's templates and card links
+apart from another's, and the Settings screens show it as it is. The word `-` is never a source: it is where
+unreadable requests are counted ([CAPTURE-WORKER.md](CAPTURE-WORKER.md)). A
 person may have at most 8 different words. A ninth is a 429 with no `Retry-After`, because the cap is permanent until the
 person's `capture_counters` rows are cleared. A word already counted is always admitted.
 
