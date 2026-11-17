@@ -114,6 +114,12 @@ The recommendation's description (`merchant_raw`) is the merchant when the templ
 cleaned body for the first push of a template, which the person edits once. How the template and the merchant are found
 is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt".
 
+A person's merchants are in `capture_merchants` ([migration 0042](../migrations/0042_capture_merchants.sql)): per
+merchant, the descriptions the person added its payments with, each with its category, type, account and a count of
+votes, once for any price and once per price. The merchant is only a key, its name folded with digit words dropped, at
+most 80 characters, and a key is only written from a recommendation whose text is the merchant rather than a whole push
+(below). Nothing else of a push is kept there. A person holds at most 2,000 rows; the least recently seen make room.
+
 ## What it learns
 
 Each decision teaches that person's template of the push ([`learn.ts`](../src/domain/capture/learn.ts)). An accept is
@@ -123,6 +129,10 @@ a submit or a link, read from the row saved or linked:
   assumed, learned from an accept whose amount matches exactly one reading. A tie or no match teaches nothing.
 - **Type**: the saved row's type. The last accept wins.
 - **Account**: the saved row's account, only when the push showed no card digits. A card's account is its link.
+- **Merchant**: the saved row's description, as typed and trimmed, with its category, type and account, one vote at any
+  price and one at the saved price ([`merchants.ts`](../src/domain/capture/merchants.ts)). Only when the recommendation's
+  text is the merchant: text that shows the amount with its currency marker is a whole push, which is never learned. A
+  dismissal teaches the merchant nothing. Votes are counted in SQL, so two decisions at once both count.
 - **Ignoring a wording**: three dismissals in a row on a template nobody has accepted mute it. Its later pushes of the
   same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak;
   the Settings list of ignored pushes is still to come. An accepted template is never muted this way.

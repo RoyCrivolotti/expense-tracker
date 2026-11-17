@@ -1,4 +1,4 @@
-import type { Candidate, TemplateFacts } from '../../../src/domain/capture'
+import type { Candidate, MerchantVote, TemplateFacts } from '../../../src/domain/capture'
 import type { RecommendationEvent } from '../../../src/domain/ports/captureRepository'
 
 /*
@@ -26,6 +26,25 @@ export const LEARN_DECISION_SQL = `UPDATE capture_templates SET accepts = ?3, di
 amount_slot = ?6, amount_mark = ?7, type = ?8, account_id = ?9, ignored_at = ?10
 WHERE owner = ?1 AND template_id = ?2
 AND EXISTS (SELECT 1 FROM capture_events WHERE owner = ?1 AND rec_id = ?11 AND outcome IS NULL)`
+
+/**
+ * One vote for what the person called a merchant, at one price or at any (`ANY_AMOUNT`). Guarded by the empty outcome
+ * like `LEARN_DECISION_SQL`, so a decision votes once. The vote is an increment, so two decisions at the same moment
+ * both count; the category, type and account are the latest saved with that description.
+ */
+export const VOTE_MERCHANT_SQL = `INSERT INTO capture_merchants
+(owner, key, amount_cents, description, category_id, type, account_id, votes, last_seen)
+SELECT ?1, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9
+WHERE EXISTS (SELECT 1 FROM capture_events WHERE owner = ?1 AND rec_id = ?2 AND outcome IS NULL)
+ON CONFLICT (owner, key, amount_cents, description) DO UPDATE SET votes = votes + 1,
+category_id = excluded.category_id, type = excluded.type, account_id = excluded.account_id, last_seen = excluded.last_seen`
+
+/**
+ * Keeps the owner's newest `?2` merchant rows and deletes the rest, the least recently seen first. Rows written by one
+ * decision share a time, and the later row id keeps them ahead of older rows that share it.
+ */
+export const EVICT_MERCHANTS_SQL = `DELETE FROM capture_merchants WHERE owner = ?1 AND rowid IN
+(SELECT rowid FROM capture_merchants WHERE owner = ?1 ORDER BY last_seen DESC, rowid DESC LIMIT -1 OFFSET ?2)`
 
 export const RECORD_OUTCOME_SQL = `UPDATE capture_events SET outcome = ?3 WHERE owner = ?1 AND rec_id = ?2 AND outcome IS NULL`
 
@@ -65,6 +84,11 @@ export function toFacts(row: FactsRow): TemplateFacts {
     accountId: row.account_id,
     ignoredAt: row.ignored_at,
   }
+}
+
+/** The values of `VOTE_MERCHANT_SQL`, in order. */
+export function voteParams(owner: string, recId: string, v: MerchantVote, at: string): Array<string | number | null> {
+  return [owner, recId, v.key, v.amountCents, v.description, v.categoryId, v.type, v.accountId, at]
 }
 
 /** The values of `LEARN_DECISION_SQL`, in order. */

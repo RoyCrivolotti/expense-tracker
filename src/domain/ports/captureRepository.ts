@@ -1,5 +1,6 @@
 import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
 import type { TemplateFacts } from '../capture/learn'
+import type { MerchantVote } from '../capture/merchants'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -134,6 +135,17 @@ export interface RecommendationEvent {
   last4: string | null
   /** What the template has learned so far. Null when the push has no template or it no longer exists. */
   facts: TemplateFacts | null
+}
+
+/** What one decision teaches, written in one batch by `applyDecisionLearning`. */
+export interface DecisionLearning {
+  /** The template's facts after the decision, or null when the push has no template to teach. */
+  template: { templateId: string; facts: TemplateFacts } | null
+  /** Votes for what the person called the merchant. Empty for a dismissal and for text that is not a merchant. */
+  merchants: readonly MerchantVote[]
+  outcome: string
+  /** When the decision was made, the merchant rows' `last_seen`. */
+  at: string
 }
 
 /** What was dropped, by day. The only thing kept about a push the app does not recognise. */
@@ -329,14 +341,10 @@ export interface CaptureRepository {
    */
   eventOfRecommendation(owner: string, recId: string): Promise<RecommendationEvent | null>
   /**
-   * Writes what a decision taught, in one batch: the template's new facts, when there is a template to teach, and the
-   * outcome on the recommendation's events. Both happen only while the outcome is still empty, so a decision learns
-   * once however often this runs for it.
+   * Writes what a decision taught, in one batch: the template's new facts, when there is a template to teach, the
+   * merchant's votes, and the outcome on the recommendation's events. All of it happens only while the outcome is still
+   * empty, so a decision learns once however often this runs for it. Merchant rows past `MAX_CAPTURE_MERCHANTS` are
+   * evicted in the same batch.
    */
-  applyDecisionLearning(
-    owner: string,
-    recId: string,
-    template: { templateId: string; facts: TemplateFacts } | null,
-    outcome: string,
-  ): Promise<void>
+  applyDecisionLearning(owner: string, recId: string, learning: DecisionLearning): Promise<void>
 }

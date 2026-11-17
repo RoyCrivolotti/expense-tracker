@@ -207,7 +207,7 @@ describe('learning', () => {
     const id = (await push(NO_CARD('Example Cafe')))!
     const rec = (await captures().getRecommendation(OWNER, id))!
     await decide(dismiss, id)
-    await learnAfterDecision(captures(), OWNER, rec, { kind: 'submitted', saved: { amountCents: 3340, type: 'expense', accountId } }, NOW)
+    await learnAfterDecision(captures(), OWNER, rec, { kind: 'submitted', saved: { amountCents: 3340, type: 'expense', accountId, description: 'Coffee', categoryId } }, NOW)
 
     expect(templates()[0]).toMatchObject({ accepts: 0, dismissals: 1, amount_slot: null, type: null, account_id: null })
     expect(outcome(id)).toBe('dismissed')

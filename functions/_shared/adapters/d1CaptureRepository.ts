@@ -178,7 +178,7 @@ function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendatio
       const row = await db.prepare(EVENT_OF_RECOMMENDATION_SQL).bind(owner, recId).first<EventRow>()
       return row ? toEvent(row) : null
     },
-    applyDecisionLearning: (owner, recId, template, outcome) => applyDecisionLearning(db, owner, recId, template, outcome),
+    applyDecisionLearning: (owner, recId, learning) => applyDecisionLearning(db, owner, recId, learning),
   }
 }
 

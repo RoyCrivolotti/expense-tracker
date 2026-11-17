@@ -2,6 +2,7 @@ import type { NewTransaction } from '../data/dataSource'
 import { paymentOfRow, type PossibleMatch } from '../capture/duplicate'
 import { learnFromAccept, learnFromDismiss, outcomeOf, pushHadDigits, storedSlots } from '../capture/learn'
 import type { SavedRow } from '../capture/learn'
+import { merchantVotes, type SavedForMerchant } from '../capture/merchants'
 import type { CaptureRepository, Recommendation, RecommendationCursor } from '../ports/captureRepository'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
@@ -78,13 +79,17 @@ async function openOne(captures: CaptureRepository, owner: string, id: string): 
   return rec.state === 'open' ? { ok: true, rec } : { ok: false, reason: 'decided' }
 }
 
-function savedRow(t: Pick<Transaction, 'amountCents' | 'type' | 'accountId'>): SavedRow {
-  return { amountCents: t.amountCents, type: t.type, accountId: t.accountId }
+/** What a decision learns from the row the person saved or linked. */
+export type Saved = SavedRow & SavedForMerchant
+
+function savedRow(t: Pick<Transaction, 'amountCents' | 'type' | 'accountId' | 'description' | 'categoryId'>): Saved {
+  return { amountCents: t.amountCents, type: t.type, accountId: t.accountId, description: t.description, categoryId: t.categoryId }
 }
 
 /**
  * Teaches the template of the push behind a recommendation what the person just decided, and records the outcome on
- * the push. Called only after this request's decide changed the row, so a retry that lost the race teaches nothing.
+ * the push. An accept also votes for what the person called the merchant (`merchantVotes`); a dismissal teaches the
+ * merchant nothing, since dismissing says the push was not a payment, not what the merchant is called. Called only after this request's decide changed the row, so a retry that lost the race teaches nothing.
  * `rec` is the recommendation as it was shown before the decision. Best
  * effort: the decision has been made whatever happens here, so a failure is logged by its class alone (a message
  * could quote the push) and the request still succeeds.
@@ -93,7 +98,7 @@ export async function learnAfterDecision(
   captures: CaptureRepository,
   owner: string,
   rec: Recommendation,
-  decision: { kind: 'submitted' | 'linked'; saved: SavedRow } | { kind: 'dismissed' },
+  decision: { kind: 'submitted' | 'linked'; saved: Saved } | { kind: 'dismissed' },
   now: Date,
 ): Promise<void> {
   try {
@@ -101,16 +106,18 @@ export async function learnAfterDecision(
     if (!event) return
     const { facts, templateId } = event
     const outcome = outcomeOf(rec, decision.kind === 'submitted' ? decision.saved : decision.kind)
+    const merchants = decision.kind === 'dismissed' ? [] : merchantVotes(rec.merchantRaw, decision.saved)
+    const at = now.toISOString()
     if (facts === null || templateId === null) {
-      await captures.applyDecisionLearning(owner, rec.id, null, outcome)
+      await captures.applyDecisionLearning(owner, rec.id, { template: null, merchants, outcome, at })
       return
     }
     const slots = storedSlots(event.slots)
     const learned =
       decision.kind === 'dismissed'
-        ? learnFromDismiss(facts, now.toISOString())
+        ? learnFromDismiss(facts, at)
         : learnFromAccept(facts, slots, decision.saved, pushHadDigits(event.last4, slots))
-    await captures.applyDecisionLearning(owner, rec.id, { templateId, facts: learned }, outcome)
+    await captures.applyDecisionLearning(owner, rec.id, { template: { templateId, facts: learned }, merchants, outcome, at })
   } catch (error) {
     console.error('capture: learning failed', error instanceof Error ? error.name : 'unknown')
   }
