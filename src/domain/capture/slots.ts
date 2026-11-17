@@ -1,4 +1,3 @@
-import { MAX_AMOUNT_CENTS } from './amount'
 import { gluedMarker, splitNumberToken, standaloneMarker } from './currency'
 import type { Marker, NumberToken } from './currency'
 import { tokenise } from './shape'
@@ -56,6 +55,9 @@ export interface CodeSlot {
 }
 
 export type Slot = NumberSlot | MaskedDigitsSlot | DateSlot | CodeSlot
+
+/** Largest amount a push is believed to carry, in cents: a million in any currency. A bigger number is a misread. */
+export const MAX_AMOUNT_CENTS = 100_000_000
 
 const GROUPING = (separator: string) => new RegExp(`^[1-9]\\d{0,2}(?:\\${separator}\\d{3})+$`)
 const OTHER_MARK: Record<'.' | ',', DecimalMark> = { '.': 'comma', ',': 'dot' }
