@@ -59,4 +59,27 @@ each side, `{ a, b }`, and `withWildcard(tokens, run)` replaces a run with `<M>`
 texts that only share a few words: the shared start and end must cover half of the shorter one and hold at least three
 tokens that are not placeholders, and a run may not pass 8 tokens.
 
-Nothing reads these modules yet; a later change wires them into the Worker.
+## At receipt
+
+The Worker still decides with the kind rules which pushes to store. For each one it stores,
+[`readPush(title, body)`](../src/domain/capture/readPush.ts) reads the words, the slots and the skeleton in one pass, so
+a position means the same token in all three. The skeleton is not one token per word (a glued `50,00EUR` gives `<N>
+<C>`), so `readPush` also keeps which word each skeleton token came from, and `spanText` turns a run back into the words
+as the bank wrote them.
+
+Then it finds the person's template ([`templates.ts`](../workers/capture/src/templates.ts)):
+
+1. It reads their templates for the same source and the same masked title, the 50 most recently seen.
+2. One with the same skeleton is the template.
+3. Otherwise the first that is a sibling of the push. If that template already knows where its merchant is, the push
+   must differ from it exactly at the `<M>`. If it does not know yet, it learns it now: the run is recorded and the
+   template's skeleton is rewritten with `<M>` there. Either way the push's own run is its merchant.
+4. If none pairs, the push starts a new template, which knows no merchant yet. A push whose skeleton passes 1,000
+   characters gets no template.
+
+So the first push of a new wording is described by its whole body, as before, and from the second push at another
+merchant the description is the merchant. A third merchant joins the same template. One pair cannot tell a merchant
+from a verb, so a purchase and a refund that share a title and differ in one word can put the `<M>` on that word;
+learning a type per template is what settles it. All of it is written in the batch that stores the push, so a failure
+stores none of it and a replay changes no template. What is kept, and for how long, is in [CAPTURE.md](CAPTURE.md),
+"What is stored".

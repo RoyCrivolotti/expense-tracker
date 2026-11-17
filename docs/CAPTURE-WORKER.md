@@ -17,7 +17,7 @@ What happens to a push:
 
 | Push | Result |
 | --- | --- |
-| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
+| Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The event keeps the push's shape and slots, and the push joins or starts one of the person's templates in the same batch ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt"). The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
 | Same push again | Stored once. The same 200 |
 | Any other kind, a source with no rows, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
 | Over a cap | 429 with `Retry-After`, and nothing stored |
@@ -60,3 +60,5 @@ Everything below changes Cloudflare and needs the account owner's say-so, stagin
 5. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
    `/api/expenses` 401.
 6. Repeat for production, after migration 0040 is on that database.
+7. Redeploy the Worker for a database only after migration 0041 is on it, since this Worker writes the columns it adds.
+   The Worker deployed before 0041 keeps working after it, because 0041 only adds.
