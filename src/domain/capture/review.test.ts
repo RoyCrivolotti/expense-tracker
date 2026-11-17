@@ -11,6 +11,7 @@ import {
   otherBudgetDays,
   paymentClock,
   reviewReasons,
+  REVIEW_TEXT,
   shiftDay,
   type HistoryRow,
   type ReviewFacts,
@@ -421,6 +422,8 @@ describe('reviewReasons', () => {
     ['a possible match', { possibleMatch: true }, 'possible-match'],
     ['seen once', { sightings: MIN_SIGHTINGS - 1, settled: false }, 'new-merchant'],
     ['a description not settled', { settled: false }, 'mixed-description'],
+    ['a wording never accepted', { newShape: true }, 'new-shape'],
+    ['an amount re-read', { amountRelearned: true }, 'amount-relearned'],
   ])('asks for a look on %s', (_name, over, reason) => {
     expect(reviewReasons({ ...clean, ...over })).toContain(reason)
   })
@@ -442,6 +445,15 @@ describe('reviewReasons', () => {
         expect(reasons.length === 0, `${suggestedType} ${amountCents}`).toBe(addable)
       }
     }
+  })
+
+  it('treats the server’s flags as absent until it sends them', () => {
+    expect(reviewReasons({ ...clean, newShape: false, amountRelearned: false })).toEqual([])
+  })
+
+  it('names the server’s reasons in plain words, the amount next to the other amount reasons', () => {
+    expect(reviewReasons({ ...clean, amountCents: 0, amountRelearned: true, newShape: true })).toEqual(['zero-amount', 'amount-relearned', 'new-shape'])
+    expect([REVIEW_TEXT['new-shape'], REVIEW_TEXT['amount-relearned']]).toEqual(['New push wording', 'Amount re-read'])
   })
 
   it('lists every reason, not only the first', () => {

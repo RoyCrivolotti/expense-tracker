@@ -12,10 +12,13 @@ nothing is waiting, and the Dashboard tab carries the count (the Settings badge 
 "See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
 list, the count and the undo window live in the main bundle, so the badge needs no download.
 
-What each payment becomes is worked out on the device from the push and the typed rows the app holds, never stored
-([`review.ts`](../src/domain/capture/review.ts)). Description and category are the person's most common ones for the
-merchant (digit words dropped, case and accents folded) over their last 12 months, else the newest row, ties to the more
-recent. One tap needs it typed twice and strictly more than any other, else "Description not settled".
+What each payment becomes is worked out on the device, never stored ([`reviewFields.ts`](../src/ui/capture/reviewFields.ts)).
+It takes the list's `suggestion` (below, "What the list suggests") first: its description, category, type, account and
+amount. When the suggestion names no description, description and category come from the typed rows the app holds
+([`review.ts`](../src/domain/capture/review.ts)): the person's most common ones for the merchant (digit words dropped,
+case and accents folded) over their last 12 months, else the newest row, ties to the more recent. Either way one tap
+needs the description given at least twice and strictly more than any other, else "Description not settled". Budget
+month, edge days and whether a category or account is still in use are always worked out here.
 
 | | |
 | --- | --- |
@@ -27,7 +30,8 @@ recent. One tap needs it typed twice and strictly more than any other, else "Des
 A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
 in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the amount is not copied into the euro form),
 no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
-looks the same, or a budget month that could differ.
+looks the same, a budget month that could differ, a push wording the person has never added ("New push wording"), or an
+amount the wording taught the app to read differently ("Amount re-read").
 
 That last test is one rule: the budget month (the add form's own rule, so the user's rollover day and a settled statement
 count) is worked out for the payment's day and for every day the bank might book it on, which are the day before or after
@@ -46,9 +50,9 @@ answered, with the message beside the question. The card is remembered after the
 the payment was saved with, so if the person changes the form's Account after answering, the card follows the final
 account.
 
-Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The merchant
-history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
-earlier counts as new.
+Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The phone's
+own merchant history reads the rows the app holds, which in the paged ledger mode are the months in view, so without a
+suggestion a merchant typed only earlier counts as new.
 
 ## What the list suggests
 
