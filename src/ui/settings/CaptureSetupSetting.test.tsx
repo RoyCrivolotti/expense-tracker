@@ -16,10 +16,10 @@ const diagnostics = { received: 0, recommended: 0, grouped: 0, unread: 0, addedA
 const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
 
 const LINK = 'https://www.icloud.com/shortcuts/abc123'
-const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null) =>
+const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null, malformed = 0) =>
   vi
     .mocked(statusApi.fetchCaptureStatus)
-    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint, shortcutUrl })
+    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], malformed, endpoint, shortcutUrl })
 
 beforeEach(() => {
   localStorage.clear()
@@ -116,6 +116,7 @@ describe('the first-payment check', () => {
         { ...none, source: 'bank-b', lastCaptureAt: new Date().toISOString(), received: 2, unrecognised: 1 },
         { ...none, source: 'bank-c', received: 4, unrecognised: 4 },
       ],
+      malformed: 0,
       endpoint: ADDRESS,
       shortcutUrl: null,
     })
@@ -126,10 +127,35 @@ describe('the first-payment check', () => {
   })
 
   it('waits when no source has sent anything yet', async () => {
-    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], endpoint: ADDRESS, shortcutUrl: null })
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 0, endpoint: ADDRESS, shortcutUrl: null })
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
+  })
+
+  it('says how many requests from the shortcut could not be read, rather than that nothing arrived', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 3, endpoint: ADDRESS, shortcutUrl: null })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText(/^3 requests from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
+    expect(para(/If your bank app’s name has no Latin letters or digits, add a source field with a short name you type, such as mybank\./)).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
+  })
+
+  it('says one request could not be read beside a recent payment', async () => {
+    status({ ...none, lastCaptureAt: new Date().toISOString(), received: 1 }, ADDRESS, null, 1)
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
+    expect(screen.getByText(/^1 request from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
+  })
+
+  it('says nothing of unreadable requests when there were none', async () => {
+    status()
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Waiting for your first payment')
+    expect(screen.queryByText(/could not be read/)).not.toBeInTheDocument()
   })
 
   it('says nothing of unread pushes when none was unread', async () => {

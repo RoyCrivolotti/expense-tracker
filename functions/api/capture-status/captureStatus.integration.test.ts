@@ -102,7 +102,7 @@ describe('GET /api/capture-status', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
-    expect(await response.json()).toEqual({ sources: [], endpoint: null, shortcutUrl: null })
+    expect(await response.json()).toEqual({ sources: [], malformed: 0, endpoint: null, shortcutUrl: null })
   })
 
   it('lists every source the person was counted under, in order, and names no bank of its own', async () => {
@@ -153,6 +153,17 @@ describe('GET /api/capture-status', () => {
     expect(await (await get()).json()).toMatchObject({
       sources: [{ source: 'iberia', lastCaptureAt: null, received: 1, unrecognised: 1, diagnostics: { ...NONE, received: 1, unread: 1 } }],
     })
+  })
+
+  it('counts the requests of the last seven days that could not be read, and lists no source for them', async () => {
+    const malformed = (owner: string, day: string, n: number) =>
+      sqlite.prepare("INSERT INTO capture_counters (owner, source, day, malformed) VALUES (?, '-', ?, ?)").run(owner, day, n)
+    malformed(OWNER, '2026-11-13', 2)
+    malformed(OWNER, '2026-11-07', 1)
+    malformed(OWNER, '2026-11-06', 40)
+    malformed(OTHER, '2026-11-13', 9)
+
+    expect(await (await get()).json()).toMatchObject({ sources: [], malformed: 3 })
   })
 
   describe('the diagnostics of the last 30 days', () => {

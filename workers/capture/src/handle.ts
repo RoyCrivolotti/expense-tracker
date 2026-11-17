@@ -1,4 +1,4 @@
-import { parseCaptureKey, parsePushDate, withinClockSkew } from '../../../src/domain/capture'
+import { MALFORMED_SOURCE, parseCaptureKey, parsePushDate, withinClockSkew } from '../../../src/domain/capture'
 import type { AccessRepository } from '../../../src/domain/ports/accessRepository'
 import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { authenticate, bearerKey } from './authenticate'
@@ -94,6 +94,10 @@ async function run(request: Request, env: CaptureEnv, deps: CaptureDeps, line: C
   const push = parsePush(text)
   if (!push) {
     line.reason = 'bad-body'
+    // Counted for the key's owner so the setup screen can say the shortcut sends something unreadable; best effort,
+    // since the phone gets its 400 either way. Only a request with a valid key gets this far, so nobody else can count.
+    const day = deps.now().toISOString().slice(0, 10)
+    await deps.captures.bumpCounter(key.owner, MALFORMED_SOURCE, day, 'malformed').catch(() => undefined)
     return reply.badRequest()
   }
   line.source = push.source

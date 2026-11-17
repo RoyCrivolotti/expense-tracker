@@ -44,6 +44,8 @@ export interface SourceStatus {
 
 export interface CaptureStatus {
   sources: SourceStatus[]
+  /** Requests from the person's keys in the last `STATUS_DAYS` whose body could not be read. Counts only. */
+  malformed: number
   /** The Worker's full address for this environment, or null when none is configured or the setting is not a usable address. */
   endpoint: string | null
   /** The public iCloud share link of the generic Shortcut, or null when none is set or the setting is not a share link. */
@@ -76,7 +78,7 @@ export function captureEndpointOf(setting: string | undefined): string | null {
   }
 }
 
-const total = (rows: readonly CaptureCounter[], field: 'received' | 'unrecognised') => rows.reduce((n, c) => n + c[field], 0)
+const total = (rows: readonly CaptureCounter[], field: 'received' | 'unrecognised' | 'malformed') => rows.reduce((n, c) => n + c[field], 0)
 
 const NO_OUTCOMES: Omit<SourceOutcomes, 'source'> = { recommended: 0, grouped: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0 }
 
@@ -133,5 +135,9 @@ export async function captureStatus(
       ),
     }
   })
-  return { sources, endpoint: captureEndpointOf(setting), shortcutUrl: captureShortcutUrlOf(shortcutSetting) }
+  const malformed = total(
+    counters.filter((c) => c.day >= weekFrom),
+    'malformed',
+  )
+  return { sources, malformed, endpoint: captureEndpointOf(setting), shortcutUrl: captureShortcutUrlOf(shortcutSetting) }
 }

@@ -30,6 +30,8 @@ export interface SourceDiagnostics {
 
 export interface CaptureStatus {
   sources: SourceStatus[]
+  /** Requests from the person's shortcut over the last seven days whose fields could not be read. */
+  malformed: number
   /** The capture Worker's full address for this environment, or null when the server has none configured. */
   endpoint: string | null
   /** The iCloud share link of the generic Shortcut, or null when the server has none (or an invalid one). */

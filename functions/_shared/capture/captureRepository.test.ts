@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { MALFORMED_SOURCE } from '../../../src/domain/capture'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
 import type { CaptureEvent, CaptureRepository, NewRecommendation } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
@@ -160,11 +161,14 @@ describe('capture events', () => {
     await repo.bumpCounter(ALICE, 'iberia', '2026-03-02', 'received')
     await repo.bumpCounter(ALICE, 'iberia', '2026-03-03', 'received')
     await repo.bumpCounter(BOB, 'iberia', '2026-03-02', 'received')
+    await repo.bumpCounter(ALICE, MALFORMED_SOURCE, '2026-03-03', 'malformed')
+    await repo.bumpCounter(ALICE, MALFORMED_SOURCE, '2026-03-03', 'malformed')
     expect(await repo.readCounters(ALICE, '2026-03-02')).toEqual([
-      { source: 'iberia', day: '2026-03-02', received: 1, unrecognised: 2 },
-      { source: 'iberia', day: '2026-03-03', received: 1, unrecognised: 0 },
+      { source: MALFORMED_SOURCE, day: '2026-03-03', received: 0, unrecognised: 0, malformed: 2 },
+      { source: 'iberia', day: '2026-03-02', received: 1, unrecognised: 2, malformed: 0 },
+      { source: 'iberia', day: '2026-03-03', received: 1, unrecognised: 0, malformed: 0 },
     ])
-    expect(await repo.readCounters(ALICE, '2026-03-03')).toHaveLength(1)
+    expect(await repo.readCounters(ALICE, '2026-03-03')).toHaveLength(2)
   })
 })
 

@@ -320,6 +320,33 @@ describe('the source word', () => {
   })
 })
 
+describe('a body the Worker cannot read', () => {
+  const malformed = () => rows('SELECT owner, source, day, received, unrecognised, malformed FROM capture_counters')
+
+  it('is counted for the key’s owner and the day, under a word no source can be, and still answered 400', async () => {
+    const lines: CaptureLogLine[] = []
+    for (const body of ['{nope', { ...PURCHASE, source: undefined }]) {
+      const res = await handleCapture(request({ body }), env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+      expect(res.status).toBe(400)
+    }
+    expect(malformed()).toEqual([{ owner: ALICE, source: '-', day: '2026-11-03', received: 0, unrecognised: 0, malformed: 2 }])
+    expect(lines.map((l) => l.reason)).toEqual(['bad-body', 'bad-body'])
+    expect(count('capture_events')).toBe(0)
+  })
+
+  it('is counted for nobody when the key is missing or not accepted', async () => {
+    expect((await send(request({ key: null, body: '{nope' }))).status).toBe(401)
+    expect((await send(request({ key: `xpk_${minted.keyId}_${'0'.repeat(64)}`, body: '{nope' }))).status).toBe(401)
+    expect(malformed()).toEqual([])
+  })
+
+  it('is still answered 400 when the count cannot be written', async () => {
+    const captures = { ...repos().captures, bumpCounter: vi.fn().mockRejectedValue(new Error('D1 down')) }
+    const res = await handleCapture(request({ body: '{nope' }), env, { captures, access: repos().access, now: () => NOW })
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('a push from any bank, in any words', () => {
   const push = (source: string) => ({ source, title: 'Notice', body: 'invented text', date: PURCHASE.date })
 
@@ -395,6 +422,13 @@ describe('the distinct-source cap', () => {
   it('is counted per person', async () => {
     for (const word of words) await send(request({ body: push(word) }))
     expect((await send(request({ key: bobKey.key, body: push('bank-new') }))).status).toBe(200)
+  })
+
+  it('gives no place to the word unreadable requests are counted under', async () => {
+    await send(request({ body: '{nope' }))
+    for (const word of words) expect((await send(request({ body: push(word) }))).status).toBe(200)
+    expect((await send(request({ body: push('bank-new') }))).status).toBe(429)
+    expect(count('capture_counters')).toBe(MAX_SOURCES_PER_OWNER + 1)
   })
 
   it('never admits more than the cap when new sources arrive at once', async () => {

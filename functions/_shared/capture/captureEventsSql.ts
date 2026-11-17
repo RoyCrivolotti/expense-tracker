@@ -1,4 +1,5 @@
 import { GROUP_WINDOW_MS } from '../../../src/domain/capture/grouping'
+import { MALFORMED_SOURCE } from '../../../src/domain/capture/source'
 import type { CaptureCaps, CaptureEvent } from '../../../src/domain/ports/captureRepository'
 
 /**
@@ -134,6 +135,12 @@ export const HAS_EVENT_SQL = `SELECT 1 AS found FROM capture_events e JOIN captu
 WHERE k.key_id = ?1 AND e.source = ?2 AND e.replay_key = ?3`
 
 /**
+ * The owner's distinct sources, less the word unreadable requests are counted under, which is not a source of theirs
+ * and must not take one of their places.
+ */
+const OWNER_SOURCES = `(SELECT COUNT(DISTINCT source) FROM capture_counters WHERE owner = ?1 AND source <> '${MALFORMED_SOURCE}')`
+
+/**
  * Counts a received push for the owner and day when neither the owner's total nor the global total for the day has
  * reached its cap, and the source is one the owner already has or the owner has room for another. The distinct-source
  * test sits in the same statement as the insert, so parallel requests with new words cannot pass it together.
@@ -146,12 +153,12 @@ SELECT ?1, ?2, ?3, 1
 WHERE (SELECT COALESCE(SUM(received), 0) FROM capture_counters WHERE owner = ?1 AND day = ?3) < ?4
 AND (SELECT COALESCE(SUM(received), 0) FROM capture_counters WHERE day = ?3) < ?5
 AND (EXISTS (SELECT 1 FROM capture_counters WHERE owner = ?1 AND source = ?2)
-  OR (SELECT COUNT(DISTINCT source) FROM capture_counters WHERE owner = ?1) < ?6)
+  OR ${OWNER_SOURCES} < ?6)
 ON CONFLICT (owner, source, day) DO UPDATE SET received = received + 1`
 
 /** Run only after `ADMIT_SQL` stored nothing: a row when the refusal was the source cap, not a daily one. */
 export const SOURCE_FULL_SQL = `SELECT 1 AS full WHERE NOT EXISTS (SELECT 1 FROM capture_counters WHERE owner = ?1 AND source = ?2)
-AND (SELECT COUNT(DISTINCT source) FROM capture_counters WHERE owner = ?1) >= ?3`
+AND ${OWNER_SOURCES} >= ?3`
 
 export const EVENTS_SINCE_SQL = 'SELECT COUNT(*) AS n FROM capture_events WHERE key_id = ?1 AND received_at >= ?2'
 
@@ -163,9 +170,11 @@ export const BUMP_COUNTER_SQL = {
 ON CONFLICT (owner, source, day) DO UPDATE SET received = received + 1`,
   unrecognised: `INSERT INTO capture_counters (owner, source, day, unrecognised) VALUES (?1, ?2, ?3, 1)
 ON CONFLICT (owner, source, day) DO UPDATE SET unrecognised = unrecognised + 1`,
+  malformed: `INSERT INTO capture_counters (owner, source, day, malformed) VALUES (?1, ?2, ?3, 1)
+ON CONFLICT (owner, source, day) DO UPDATE SET malformed = malformed + 1`,
 } as const
 
-export const READ_COUNTERS_SQL = `SELECT source, day, received, unrecognised FROM capture_counters
+export const READ_COUNTERS_SQL = `SELECT source, day, received, unrecognised, malformed FROM capture_counters
 WHERE owner = ?1 AND day >= ?2 ORDER BY source, day`
 
 export const SAVE_CARD_SQL = `INSERT INTO capture_cards (owner, source, digits_kind, digits, account_id)

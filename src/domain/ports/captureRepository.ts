@@ -170,6 +170,8 @@ export interface CaptureCounter {
   day: string
   received: number
   unrecognised: number
+  /** Requests from a valid key whose body could not be read, counted under `MALFORMED_SOURCE` alone. */
+  malformed: number
 }
 
 export type CardDigitsKind = 'card' | 'account'
@@ -325,7 +327,7 @@ export interface CaptureRepository extends CaptureStatusReads {
   admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<'admitted' | 'limited' | 'sources'>
   eventsSince(keyId: string, since: string): Promise<number>
   lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
-  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>
+  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised' | 'malformed'): Promise<void>
   readCounters(owner: string, fromDay: string): Promise<CaptureCounter[]>
 
   saveCard(owner: string, card: CaptureCard): Promise<void>

@@ -15,7 +15,7 @@ const source = (name: string, diagnostics: statusApi.SourceDiagnostics): statusA
   diagnostics,
 })
 const answer = (sources: statusApi.SourceStatus[]) =>
-  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources, endpoint: null, shortcutUrl: null })
+  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources, malformed: 0, endpoint: null, shortcutUrl: null })
 
 describe('the capture diagnostics card', () => {
   it('shows every count and the three rates for each source', async () => {

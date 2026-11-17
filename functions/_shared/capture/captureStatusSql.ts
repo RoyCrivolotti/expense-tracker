@@ -1,10 +1,16 @@
+import { MALFORMED_SOURCE } from '../../../src/domain/capture/source'
+
 /**
  * What the setup and diagnostics screens read about a person's pushes. Counts only: nothing here returns a push's
  * text, digits or amount.
  */
 
-/** Every source word the person's pushes were ever counted under, from the counters' key alone. */
-export const COUNTED_SOURCES_SQL = 'SELECT DISTINCT source FROM capture_counters WHERE owner = ?1 ORDER BY source'
+/**
+ * Every source word the person's pushes were ever counted under, from the counters' key alone. The word unreadable
+ * requests are counted under is not a source.
+ */
+export const COUNTED_SOURCES_SQL = `SELECT DISTINCT source FROM capture_counters WHERE owner = ?1 AND source <> '${MALFORMED_SOURCE}'
+ORDER BY source`
 
 /**
  * Per source, the pushes stored since a day and what became of them: `capture_events.outcome` as the decision wrote

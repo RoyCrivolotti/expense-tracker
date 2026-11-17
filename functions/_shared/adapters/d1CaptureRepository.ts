@@ -99,7 +99,7 @@ function events(
     },
     readCounters: async (owner, fromDay) =>
       (
-        await rows<{ source: string; day: string; received: number; unrecognised: number }>(
+        await rows<{ source: string; day: string; received: number; unrecognised: number; malformed: number }>(
           db,
           READ_COUNTERS_SQL,
           owner,
@@ -110,6 +110,7 @@ function events(
         day: r.day,
         received: r.received,
         unrecognised: r.unrecognised,
+        malformed: r.malformed,
       })),
   }
 }
