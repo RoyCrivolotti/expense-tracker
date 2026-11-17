@@ -20,11 +20,27 @@ export const WILDCARD = '<M>'
 const PLACEHOLDERS: ReadonlySet<string> = new Set([...Object.values(PLACEHOLDER), CURRENCY_PLACEHOLDER, OTHER_NUMBER_PLACEHOLDER, WILDCARD])
 
 /** A number with its marker glued on is written as the marker and the number apart, as `50 EUR` is, so the spelling does not change the shape. */
-function numberPlaceholder(token: string): string {
+function numberPlaceholder(token: string): string[] {
   const parts = splitNumberToken(token)
   const marker = parts && gluedMarker(parts) ? CURRENCY_PLACEHOLDER : null
-  if (!marker || !parts) return PLACEHOLDER.number
-  return parts.prefix ? `${marker} ${PLACEHOLDER.number}` : `${PLACEHOLDER.number} ${marker}`
+  if (!marker || !parts) return [PLACEHOLDER.number]
+  return parts.prefix ? [marker, PLACEHOLDER.number] : [PLACEHOLDER.number, marker]
+}
+
+/** What one token of a push becomes in the skeleton: usually one token, two for a number with a glued marker, none for a token that folds to nothing. */
+function pieceOf(token: string, kind: Slot['kind'] | undefined): string[] {
+  if (kind === 'number') return numberPlaceholder(token)
+  if (kind) return [PLACEHOLDER[kind]]
+  if (isMarkerToken(token)) return [CURRENCY_PLACEHOLDER]
+  if (/\d/.test(token)) return [OTHER_NUMBER_PLACEHOLDER]
+  const folded = foldTitle(token)
+  return folded === '' ? [] : [folded]
+}
+
+/** The skeleton of each token in turn, so a caller can tell which token of the push each skeleton token came from. */
+export function skeletonPieces(tokens: readonly string[], slots: readonly Slot[]): string[][] {
+  const byIndex = new Map(slots.map((slot) => [slot.index, slot.kind]))
+  return tokens.map((token, index) => pieceOf(token, byIndex.get(index)))
 }
 
 /**
@@ -35,17 +51,7 @@ function numberPlaceholder(token: string): string {
  * `slots` must come from `readPushSlots(title, body)`, so their positions match the tokens used here.
  */
 export function skeletonOf(title: string, body: string, slots: readonly Slot[]): string {
-  const byIndex = new Map(slots.map((slot) => [slot.index, slot.kind]))
-  return [...tokenise(title), ...tokenise(body)]
-    .map((token, index) => {
-      const kind = byIndex.get(index)
-      if (kind === 'number') return numberPlaceholder(token)
-      if (kind) return PLACEHOLDER[kind]
-      if (isMarkerToken(token)) return CURRENCY_PLACEHOLDER
-      return /\d/.test(token) ? OTHER_NUMBER_PLACEHOLDER : foldTitle(token)
-    })
-    .filter((token) => token !== '')
-    .join(' ')
+  return skeletonPieces([...tokenise(title), ...tokenise(body)], slots).flat().join(' ')
 }
 
 /**

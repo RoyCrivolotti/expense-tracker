@@ -1,10 +1,5 @@
-import type {
-  CaptureCaps,
-  CaptureEvent,
-  CaptureRepository,
-  NewRecommendation,
-  Recommendation,
-} from '../../../src/domain/ports/captureRepository'
+import { TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
+import type { CaptureRepository, Recommendation } from '../../../src/domain/ports/captureRepository'
 import type { Env } from '../env'
 import {
   eventParams,
@@ -16,11 +11,13 @@ import {
   LAST_CAPTURE_SQL,
   READ_COUNTERS_SQL,
   RECORD_EVENT_SQL,
-  RECORD_RECOMMENDATION_SQL,
 } from '../capture/captureEventsSql'
 import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
+import { FIND_TEMPLATES_SQL } from '../capture/captureTemplatesSql'
+import type { TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
+import { decide, recordCapture } from './d1CaptureWrites'
 import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
@@ -37,7 +34,6 @@ import type { KeyRow } from '../capture/captureKeysSql'
 import {
   COUNT_OPEN_SQL,
   CREATE_RECOMMENDATION_SQL,
-  DECIDE_SQL,
   GET_RECOMMENDATION_SQL,
   LIST_OPEN_AFTER_SQL,
   LIST_OPEN_FIRST_SQL,
@@ -63,39 +59,13 @@ function keys(db: D1Database): Statements {
   }
 }
 
-async function recordCapture(
-  db: D1Database,
-  event: CaptureEvent,
-  rec: Omit<NewRecommendation, 'owner'>,
-  caps: CaptureCaps | undefined,
-): Promise<boolean> {
-  const results = await db.batch([
-    db.prepare(RECORD_EVENT_SQL).bind(...eventParams(event, rec.id, caps)),
-    db
-      .prepare(RECORD_RECOMMENDATION_SQL)
-      .bind(
-        event.id,
-        rec.id,
-        rec.accountId,
-        rec.amountCents,
-        rec.currency,
-        rec.occurredAt,
-        rec.localDate,
-        rec.merchantRaw,
-        rec.descriptionSuggested,
-        rec.suggestedType,
-        rec.createdAt,
-      ),
-  ])
-  return (results[0]?.meta?.changes ?? 0) > 0
-}
-
 function events(
   db: D1Database,
 ): Pick<
   CaptureRepository,
   | 'recordEvent'
   | 'recordCapture'
+  | 'findTemplates'
   | 'hasEvent'
   | 'admit'
   | 'eventsSince'
@@ -105,7 +75,14 @@ function events(
 > {
   return {
     recordEvent: (event, caps) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null, caps)),
-    recordCapture: (event, rec, caps) => recordCapture(db, event, rec, caps),
+    recordCapture: (event, rec, caps, template = { kind: 'none' }) => recordCapture(db, event, rec, caps, template),
+    findTemplates: async (owner, source, title) =>
+      (await rows<TemplateRow>(db, FIND_TEMPLATES_SQL, owner, source, title, TEMPLATE_LOOKUP_LIMIT)).map((r) => ({
+        templateId: r.template_id,
+        skeleton: r.skeleton,
+        merchantStart: r.merchant_start,
+        merchantEnd: r.merchant_end,
+      })),
     hasEvent: async (keyId, source, replayKey) =>
       (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
     admit: async (owner, source, day, caps) => {
@@ -179,8 +156,7 @@ function recommendations(
     findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
-    decideRecommendation: (owner, id, d) =>
-      changed(db, DECIDE_SQL, owner, id, d.state, d.state === 'submitted' ? d.txnId : null, d.at),
+    decideRecommendation: (owner, id, d) => decide(db, owner, id, d),
   }
 }
 

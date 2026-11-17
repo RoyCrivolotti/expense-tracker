@@ -16,6 +16,7 @@ import {
 } from './captureCardsSql'
 import { migratedDatabase } from '../../../src/testing/sqliteD1'
 import {
+  BLANK_OLD_TEXT_SQL,
   BUMP_COUNTER_SQL,
   EVENTS_SINCE_SQL,
   LAST_CAPTURE_SQL,
@@ -27,6 +28,15 @@ import {
 } from './captureEventsSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
+  DROP_MISSING_TEMPLATE_SQL,
+  EVICT_TEMPLATE_SQL,
+  FIND_TEMPLATES_SQL,
+  INSERT_TEMPLATE_SQL,
+  LEARN_RUN_SQL,
+  SEEN_TEMPLATE_SQL,
+} from './captureTemplatesSql'
+import {
+  BLANK_DECIDED_TEXT_SQL,
   CREATE_RECOMMENDATION_SQL,
   DECIDE_SQL,
   GET_RECOMMENDATION_SQL,
@@ -47,9 +57,9 @@ function seeded(analyze: boolean) {
     )
     for (let i = 0; i < 40; i++) {
       db.prepare(
-        `INSERT INTO capture_events (id, owner, key_id, source, replay_key, kind, occurred_at, local_date, offset_minutes, received_at)
-         VALUES (?, ?, ?, 'iberia', ?, 'card-purchase', '2026-03-01', '2026-03-01', 60, ?)`,
-      ).run(`e${o}-${i}`, owner, `k${o}`, `r${o}-${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`)
+        `INSERT INTO capture_events (id, owner, key_id, source, replay_key, kind, occurred_at, local_date, offset_minutes, received_at, rec_id, body)
+         VALUES (?, ?, ?, 'iberia', ?, 'card-purchase', '2026-03-01', '2026-03-01', 60, ?, ?, ?)`,
+      ).run(`e${o}-${i}`, owner, `k${o}`, `r${o}-${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`, `rec${o}-${i}`, i % 5 === 0 ? 'text' : null)
       db.prepare(
         `INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, '2026-03-01', ?, '2026-03-01')`,
       ).run(`rec${o}-${i}`, owner, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`)
@@ -57,6 +67,10 @@ function seeded(analyze: boolean) {
         owner,
         `2026-02-${String(1 + (i % 28)).padStart(2, '0')}-${i}`,
       )
+      db.prepare(
+        `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen)
+         VALUES (?, ?, 'iberia', ?, ?, '2026-03-01', ?)`,
+      ).run(owner, `t${o}-${i}`, `title ${i % 4}`, `skeleton ${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`)
     }
   }
   if (analyze) db.exec('ANALYZE')
@@ -139,6 +153,29 @@ const CASES: Array<[string, string, Array<string | number>, RegExp]> = [
     /SEARCH recommendations USING (INDEX sqlite_autoindex_recommendations_1|PRIMARY KEY) \(id=\?\)/,
   ],
   [
+    'the templates of a title',
+    FIND_TEMPLATES_SQL,
+    [OWNER, 'iberia', 'title 1', 50],
+    /SEARCH capture_templates USING INDEX idx_capture_templates_lookup \(owner=\? AND source=\? AND title=\?\)/,
+  ],
+  ['make room at the template cap', EVICT_TEMPLATE_SQL, ['e1-1', 500], /SEARCH capture_templates USING (COVERING )?INDEX idx_capture_templates_seen \(owner=\?\)/],
+  ['a new template', INSERT_TEMPLATE_SQL, ['e1-1', 'tn', 'title', 'sk', 500], /SEARCH e USING INDEX sqlite_autoindex_capture_events_1 \(id=\?\)/],
+  ['learn a run', LEARN_RUN_SQL, ['e1-1', 't1-1', 'sk', 1, 2], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  ['count a push', SEEN_TEMPLATE_SQL, ['e1-1', 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  ['drop a template that is gone', DROP_MISSING_TEMPLATE_SQL, ['e1-1'], /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  [
+    'blank the text of a decided push',
+    BLANK_DECIDED_TEXT_SQL,
+    [OWNER, 'rec1-1'],
+    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'blank text older than 30 days',
+    BLANK_OLD_TEXT_SQL,
+    ['k1', '2026-03-10'],
+    /SEARCH capture_events USING INDEX idx_capture_events_text \(owner=\? AND received_at<\?\)/,
+  ],
+  [
     'first page of open ones',
     LIST_OPEN_FIRST_SQL,
     [OWNER, 20],
@@ -161,6 +198,10 @@ describe.each([false, true])('capture statement plans, with table statistics: %s
 
   it('reads counters in key order, with no sort', () => {
     expect(planOf(seeded(analyze), READ_COUNTERS_SQL, [OWNER, '2026-02-01'])).not.toMatch(/TEMP B-TREE/)
+  })
+
+  it('reads the templates of a title newest first from the index, with no sort', () => {
+    expect(planOf(seeded(analyze), FIND_TEMPLATES_SQL, [OWNER, 'iberia', 'title 1', 50])).not.toMatch(/TEMP B-TREE/)
   })
 
   it('pages the open list in index order, with no sort', () => {

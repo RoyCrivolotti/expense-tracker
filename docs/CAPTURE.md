@@ -83,6 +83,33 @@ because the two cannot share a D1 batch through the create path. If a second tap
 failed, the row just created is deleted again. Submit moves the dataset revision like any write that adds an expense.
 Dismiss, link and the list leave it alone, since the ledger a reader sees does not change.
 
+## What is stored
+
+A push the Worker recognises becomes one `capture_events` row and one open recommendation. What it keeps of the push's
+text follows one rule. The cleaned body (`body`, at most 500 characters) is kept only when the push shows an amount with
+a currency marker, and it is blanked when the person decides the recommendation (submit, dismiss or link, in the same
+batch as the decision) or 30 days after the push arrived, whichever comes first. A push with no currency-marked amount
+keeps no text at all, neither body nor description, which keeps one-time codes out without the app knowing what a code
+push says. The event's copy of the description (`merchant_raw`, which for a first push of a wording is the whole body)
+and the older `body_excerpt` column, no longer written, are blanked by the same rule. The recommendation's description
+is the person's and stays. The 30-day rule is checked whenever a new push arrives, so when a person's pushes stop,
+text older than 30 days stays until their next push.
+
+Each stored push also keeps its shape (`shape_id`) and its slots (`slots`: the numbers, card digits, dates and codes as
+JSON, at most 2,000 characters). A push with a currency-marked amount also joins a template (`template_id`), a row of
+`capture_templates`, one per person and per way their bank words a push: the title and text with every number masked,
+and how often it was seen. A push with no such amount gets no template, so none of its words are kept anywhere.
+
+A template is not covered by the 30-day rule, and it keeps words. The first push of a wording leaves its merchant, or
+the name of the person it names, in the template's text. Once a second push shows which words vary, those words become
+`<M>`, and until one does they stay for as long as the template lives. A name in the title is never replaced, since the
+title is how sibling pushes are found. A person holds at most 500 templates; at the cap the least recently seen one
+nobody has accepted makes room, and an ignored one is never evicted.
+
+The recommendation's description (`merchant_raw`) is the merchant when the template knows where it sits, and the whole
+cleaned body for the first push of a template, which the person edits once. How the template and the merchant are found
+is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt".
+
 ## The Dashboard card
 
 Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with

@@ -84,10 +84,10 @@ describe('a valid push', () => {
     expect(rows('SELECT account_id FROM recommendations')[0]?.account_id).toBe(7)
   })
 
-  it('keeps the body only as an excerpt, and no amount, when none could be read', async () => {
+  it('keeps no body, and no amount, when the push shows no amount with a currency marker', async () => {
     await send(request({ body: { ...PURCHASE, body: 'Shop Example *4321 sin importe' } }))
-    expect(rows('SELECT amount_cents, currency, body_excerpt FROM capture_events')).toEqual([
-      { amount_cents: null, currency: null, body_excerpt: 'Shop Example *4321 sin importe' },
+    expect(rows('SELECT amount_cents, currency, body, body_excerpt FROM capture_events')).toEqual([
+      { amount_cents: null, currency: null, body: null, body_excerpt: null },
     ])
     expect(rows('SELECT amount_cents FROM recommendations')[0]?.amount_cents).toBeNull()
   })
@@ -439,7 +439,7 @@ describe('a key revoked after it was checked', () => {
     const event = {
       id: 'e1', keyId: minted.keyId, source: 'iberia' as const, replayKey: 'r', kind: 'card-purchase' as const,
       amountCents: -100, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null,
-      occurredAt: NOW.toISOString(), localDate: '2026-11-03', offsetMinutes: 60, receivedAt: NOW.toISOString(), bodyExcerpt: null,
+      occurredAt: NOW.toISOString(), localDate: '2026-11-03', offsetMinutes: 60, receivedAt: NOW.toISOString(), body: null,
     }
     const rec = { id: 'r1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: event.occurredAt, localDate: '2026-11-03', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense' as const, createdAt: event.receivedAt }
     expect(await repos().captures.recordCapture(event, rec)).toBe(false)
@@ -535,5 +535,91 @@ describe('the log line', () => {
   it('names no field outside the fixed set, so a push cannot leak into it', async () => {
     await sendLogged(request({ body: { ...PURCHASE, body: 'Shop Example *4321 33,40 EUR' } }))
     expect(Object.keys(last() ?? {}).sort()).toEqual(['amount', 'event', 'keyId', 'kind', 'ms', 'outcome', 'reason', 'source', 'status'])
+  })
+})
+
+describe('shapes and templates', () => {
+  const at = (merchant: string, minute: number, amount = '12,50') => ({
+    ...pushAt(minute),
+    body: `Has pagado ${amount} EUR en ${merchant} con tu tarjeta *4321`,
+  })
+  const templates = () => rows('SELECT title, skeleton, merchant_start, merchant_end, seen FROM capture_templates')
+
+  it('makes a template on the first push, describing it by the whole body', async () => {
+    await send(request({ body: at('Example Cafe', 1) }))
+    expect(templates()).toEqual([
+      { title: 'compra realizada', skeleton: 'compra realizada has pagado <N> <C> en example cafe con tu tarjeta <D>', merchant_start: null, merchant_end: null, seen: 1 },
+    ])
+    const [event] = rows('SELECT shape_id, template_id, slots, body, merchant_raw FROM capture_events')
+    expect(event?.shape_id).toMatch(/^[0-9a-f]{64}$/)
+    expect(event?.template_id).toEqual(expect.any(String))
+    expect(JSON.parse(event?.slots as string)).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'number', currency: 'EUR' })]))
+    expect(event?.body).toBe('Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321')
+    expect(event?.merchant_raw).toBe('Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321')
+  })
+
+  it('learns where the merchant is from a second push, and describes that push by its merchant', async () => {
+    await send(request({ body: at('Example Cafe', 1) }))
+    await send(request({ body: at('Sample Books Ltd', 2, '3,99') }))
+    expect(templates()).toEqual([
+      { title: 'compra realizada', skeleton: 'compra realizada has pagado <N> <C> en <M> con tu tarjeta <D>', merchant_start: 7, merchant_end: 8, seen: 2 },
+    ])
+    expect(rows('SELECT merchant_raw FROM recommendations ORDER BY created_at, amount_cents DESC').map((r) => r.merchant_raw)).toEqual([
+      'Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321',
+      'Sample Books Ltd',
+    ])
+    expect(rows('SELECT COUNT(DISTINCT template_id) AS n FROM capture_events')[0]?.n).toBe(1)
+  })
+
+  it('puts a third merchant in the same template', async () => {
+    await send(request({ body: at('Example Cafe', 1) }))
+    await send(request({ body: at('Sample Books Ltd', 2) }))
+    await send(request({ body: at('Corner Shop', 3) }))
+    expect(templates()).toHaveLength(1)
+    expect(templates()[0]?.seen).toBe(3)
+    expect(rows("SELECT merchant_raw FROM capture_events WHERE body LIKE '%Corner%'")).toEqual([{ merchant_raw: 'Corner Shop' }])
+  })
+
+  it('counts nothing again for a replay', async () => {
+    await send(request({ body: at('Example Cafe', 1) }))
+    await send(request({ body: at('Sample Books Ltd', 2) }))
+    await send(request({ body: at('Sample Books Ltd', 2) }))
+    expect(templates()[0]?.seen).toBe(2)
+  })
+
+  it('keeps no text of a push with no amount marked by a currency', async () => {
+    await send(request({ body: { ...PURCHASE, body: 'Has pagado 12,50 en Example Cafe con tu tarjeta *4321' } }))
+    expect(rows('SELECT body, merchant_raw FROM capture_events')).toEqual([{ body: null, merchant_raw: null }])
+    expect(rows('SELECT merchant_raw FROM recommendations')).toEqual([{ merchant_raw: null }])
+    expect(templates()).toEqual([])
+    expect(rows('SELECT shape_id, template_id FROM capture_events')).toEqual([{ shape_id: expect.stringMatching(/^[0-9a-f]{64}$/), template_id: null }])
+  })
+
+  it('stores a push with more slots than the column holds, keeping the first ones', async () => {
+    const res = await send(request({ body: { ...PURCHASE, body: `Has pagado 12,50 EUR en Example Cafe ${'7 '.repeat(1500)}` } }))
+    expect(res.status).toBe(200)
+    const [event] = rows('SELECT slots FROM capture_events')
+    const slots = JSON.parse(event?.slots as string) as Array<{ index: number }>
+    expect((event?.slots as string).length).toBeLessThanOrEqual(2000)
+    expect(slots[0]).toEqual(expect.objectContaining({ kind: 'number', currency: 'EUR' }))
+  })
+
+  it('finds the merchant past an amount with its marker glued on', async () => {
+    const glued = (merchant: string, minute: number) => ({ ...pushAt(minute), body: `Has pagado 12,50EUR en ${merchant} con tu tarjeta *4321` })
+    await send(request({ body: glued('Example Cafe', 1) }))
+    await send(request({ body: glued('Sample Books Ltd', 2) }))
+    expect(templates()[0]?.skeleton).toBe('compra realizada has pagado <N> <C> en <M> con tu tarjeta <D>')
+    expect(rows("SELECT merchant_raw FROM recommendations WHERE merchant_raw NOT LIKE 'Has %'")).toEqual([{ merchant_raw: 'Sample Books Ltd' }])
+  })
+
+  it('writes no body, merchant or skeleton to the log', async () => {
+    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => undefined))
+    await send(request({ body: at('Example Cafe', 1) }))
+    await send(request({ body: at('Sample Books Ltd', 2) }))
+    const calls = spies.flatMap((s) => s.mock.calls)
+    const logged = JSON.stringify(calls)
+    for (const secret of ['Example', 'Sample', 'pagado', 'tarjeta', '12,50', '4321', '<M>']) expect(logged).not.toContain(secret)
+    expect(calls).toHaveLength(2)
+    spies.forEach((s) => s.mockRestore())
   })
 })

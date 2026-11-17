@@ -3,6 +3,7 @@ import type {
   Recommendation,
   RecommendationState,
 } from '../../../src/domain/ports/captureRepository'
+import { EVENT_HAS_TEXT, EVENT_TEXT_SET } from './captureEventsSql'
 
 const COLUMNS = `id, owner, account_id, amount_cents, currency, occurred_at, local_date, merchant_raw,
 description_suggested, suggested_type, state, txn_id, created_at, decided_at`
@@ -27,6 +28,13 @@ export const COUNT_OPEN_SQL = `SELECT COUNT(*) AS n FROM recommendations WHERE o
 /** Only an open row moves, so a second tap or a retry finds nothing to change. */
 export const DECIDE_SQL = `UPDATE recommendations SET state = ?3, txn_id = ?4, decided_at = ?5
 WHERE owner = ?1 AND id = ?2 AND state = 'open'`
+
+/**
+ * Run with `DECIDE_SQL`: once the person has decided, the push's text has done its job. Harmless when the decide
+ * changed nothing, since a recommendation that is not open had its text blanked when it was decided.
+ */
+export const BLANK_DECIDED_TEXT_SQL = `UPDATE capture_events SET ${EVENT_TEXT_SET}
+WHERE owner = ?1 AND rec_id = ?2 AND ${EVENT_HAS_TEXT}`
 
 export interface RecommendationRow {
   id: string

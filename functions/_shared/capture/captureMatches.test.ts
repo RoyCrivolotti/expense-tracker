@@ -53,7 +53,7 @@ async function push(o: Push = {}): Promise<string> {
   const ok = await repo.recordCapture(
     {
       id: `e${n}`, keyId: o.key ?? 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'card-purchase', amountCents: -1250, currency: 'EUR',
-      merchantRaw: 'CAFE EXAMPLE', last4: '4821', accountDigits: null, occurredAt: T0, localDate: o.localDate ?? '2026-11-10', offsetMinutes: 60, receivedAt: T0, bodyExcerpt: null,
+      merchantRaw: 'CAFE EXAMPLE', last4: '4821', accountDigits: null, occurredAt: T0, localDate: o.localDate ?? '2026-11-10', offsetMinutes: 60, receivedAt: T0, body: null,
     },
     {
       id: `rec${n}`, accountId: null, amountCents: o.amountCents === undefined ? 1250 : o.amountCents, currency: o.currency === undefined ? 'EUR' : o.currency,
