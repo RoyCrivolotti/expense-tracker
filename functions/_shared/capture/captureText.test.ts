@@ -2,7 +2,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import type { CaptureEvent, CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureEvent, CaptureRecorded, CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'
@@ -22,12 +22,12 @@ beforeEach(async () => {
   }
 })
 
-function store(id: string, receivedDay: string, over: Partial<CaptureEvent> = {}): Promise<boolean> {
+function store(id: string, receivedDay: string, over: Partial<CaptureEvent> = {}): Promise<CaptureRecorded> {
   const receivedAt = at(receivedDay)
   return repo.recordCapture(
     {
       id, keyId: 'k1', source: 'iberia', replayKey: `r-${id}`, kind: 'push', amountCents: 1250, currency: 'EUR', merchantRaw: BODY,
-      last4: null, accountDigits: null, occurredAt: receivedAt, localDate: receivedDay, offsetMinutes: 0, receivedAt, body: BODY, ...over,
+      last4: null, accountDigits: null, occurredAt: receivedAt, localDate: receivedDay, offsetMinutes: 0, receivedAt, body: BODY, shapeId: 'one-wording', ...over,
     },
     {
       id: `rec-${id}`, accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: receivedAt, localDate: receivedDay, merchantRaw: BODY,

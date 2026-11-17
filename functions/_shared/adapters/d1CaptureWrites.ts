@@ -2,12 +2,21 @@ import { BODY_KEEP_DAYS, MAX_CAPTURE_TEMPLATES } from '../../../src/domain/ports
 import type {
   CaptureCaps,
   CaptureEvent,
+  CaptureRecorded,
   CaptureRepository,
   DecisionLearning,
   NewRecommendation,
   TemplateDecision,
 } from '../../../src/domain/ports/captureRepository'
-import { BLANK_OLD_TEXT_SQL, BUMP_COUNTER_SQL, RECORD_EVENT_SQL, RECORD_RECOMMENDATION_SQL, eventParams } from '../capture/captureEventsSql'
+import {
+  BLANK_OLD_TEXT_SQL,
+  BUMP_COUNTER_SQL,
+  EVENT_GROUPED_SQL,
+  JOIN_MERCHANT_SQL,
+  RECORD_EVENT_SQL,
+  RECORD_RECOMMENDATION_SQL,
+  eventParams,
+} from '../capture/captureEventsSql'
 import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL } from '../capture/captureRecommendationsSql'
 import { SEEN_IGNORED_SQL, templateIdOf, templateStatements } from '../capture/captureTemplatesSql'
 import { EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL, learnParams, voteParams } from '../capture/captureLearningSql'
@@ -43,7 +52,9 @@ export async function recordCapture(
   rec: Omit<NewRecommendation, 'owner'>,
   caps: CaptureCaps | undefined,
   template: TemplateDecision,
-): Promise<boolean> {
+): Promise<CaptureRecorded> {
+  // A merchant the template found can replace the whole body on a recommendation this push joins.
+  const span = event.merchantIsSpan && event.merchantRaw !== null ? event.merchantRaw : null
   const results = await db.batch([
     db.prepare(RECORD_EVENT_SQL).bind(...eventParams(event, rec.id, caps, templateIdOf(template))),
     db
@@ -62,9 +73,13 @@ export async function recordCapture(
         rec.createdAt,
       ),
     ...templateStatements(event.id, template, MAX_CAPTURE_TEMPLATES).map(([sql, params]) => db.prepare(sql).bind(...params)),
+    ...(span === null ? [] : [db.prepare(JOIN_MERCHANT_SQL).bind(event.id, span)]),
     db.prepare(BLANK_OLD_TEXT_SQL).bind(event.keyId, keepTextSince(event.receivedAt)),
+    db.prepare(EVENT_GROUPED_SQL).bind(event.id),
   ])
-  return (results[0]?.meta?.changes ?? 0) > 0
+  if ((results[0]?.meta?.changes ?? 0) === 0) return false
+  const row = results[results.length - 1]?.results?.[0] as { grouped: number } | undefined
+  return row?.grouped === 1 ? 'grouped' : 'created'
 }
 
 /** The template's facts and the merchant's votes first, each guarded by the empty outcome the last statement then fills. */

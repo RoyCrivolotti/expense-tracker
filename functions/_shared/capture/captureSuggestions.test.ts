@@ -44,7 +44,7 @@ async function push(o: Push = {}): Promise<string> {
   const ok = await repo.recordCapture(
     {
       id: `e${n}`, keyId: o.key ?? 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'push', amountCents: 1250, currency: 'EUR',
-      merchantRaw: merchant, last4: null, accountDigits: null, occurredAt: T0, localDate, offsetMinutes: 60, receivedAt: T0, body: null,
+      merchantRaw: merchant, last4: null, accountDigits: null, shapeId: 'one-wording', occurredAt: T0, localDate, offsetMinutes: 60, receivedAt: T0, body: null,
       slots: JSON.stringify(o.slots ?? SLOTS),
     },
     {
@@ -54,7 +54,7 @@ async function push(o: Push = {}): Promise<string> {
     undefined,
     template,
   )
-  expect(ok).toBe(true)
+  expect(ok).toBe('created')
   return `rec${String(n).padStart(4, '0')}`
 }
 

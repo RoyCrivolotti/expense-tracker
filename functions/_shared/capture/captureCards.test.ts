@@ -40,6 +40,8 @@ async function push(opts: { digits?: string | null; key?: string; source?: 'iber
       amountCents: 1250,
       currency: 'EUR',
       merchantRaw: 'CAFE EXAMPLE',
+      // One wording, so these stay separate payments rather than pushes of one movement.
+      shapeId: 'one-wording',
       last4: opts.digits === undefined ? '4821' : opts.digits,
       accountDigits: null,
       occurredAt: '2026-03-02T08:59:00.000Z',
@@ -56,12 +58,14 @@ async function push(opts: { digits?: string | null; key?: string; source?: 'iber
       occurredAt: '2026-03-02T08:59:00.000+01:00',
       localDate: '2026-03-02',
       merchantRaw: 'CAFE EXAMPLE',
+      // One wording, so these stay separate payments rather than pushes of one movement.
+      shapeId: 'one-wording',
       descriptionSuggested: null,
       suggestedType: 'expense',
       createdAt: T0,
     },
   )
-  expect(ok).toBe(true)
+  expect(ok).toBe('created')
   return `rec${n}`
 }
 

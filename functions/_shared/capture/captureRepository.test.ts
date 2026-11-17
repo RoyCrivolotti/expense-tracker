@@ -204,7 +204,7 @@ describe('an event and its recommendation', () => {
   const recFields: Omit<NewRecommendation, 'owner'> = { ...rec(), owner: undefined } as never
 
   it('are stored together, the recommendation under the key’s owner and named by the event', async () => {
-    expect(await repo.recordCapture(event(), recFields)).toBe(true)
+    expect(await repo.recordCapture(event(), recFields)).toBe('created')
     expect(await repo.getRecommendation(ALICE, 'rec-1')).toMatchObject({ state: 'open', amountCents: 1250 })
     expect(await repo.getRecommendation(BOB, 'rec-1')).toBeNull()
   })
@@ -225,7 +225,8 @@ describe('an event and its recommendation', () => {
     await repo.createRecommendation(rec())
     await expect(repo.recordCapture(event(), recFields)).rejects.toThrow()
     expect(await repo.eventsSince('k1', '2026-01-01T00:00:00.000Z')).toBe(0)
-    expect(await repo.recordCapture(event(), { ...recFields, id: 'rec-9' })).toBe(true)
+    // Stored, not a replay: it joins the open recommendation of the same amount that blocked the first try.
+    expect(await repo.recordCapture(event(), { ...recFields, id: 'rec-9' })).toBe('grouped')
   })
 })
 

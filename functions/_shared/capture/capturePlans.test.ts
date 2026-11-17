@@ -19,12 +19,14 @@ import {
   BLANK_OLD_TEXT_SQL,
   BUMP_COUNTER_SQL,
   EVENTS_SINCE_SQL,
+  JOIN_MERCHANT_SQL,
   LAST_CAPTURE_SQL,
   LIST_CARDS_SQL,
   READ_COUNTERS_SQL,
   RECORD_EVENT_SQL,
   RECORD_RECOMMENDATION_SQL,
   SAVE_CARD_SQL,
+  eventParams,
 } from './captureEventsSql'
 import { EVENT_OF_RECOMMENDATION_SQL, EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL } from './captureLearningSql'
 import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from './captureSuggestionsSql'
@@ -89,6 +91,18 @@ function seeded(analyze: boolean) {
 }
 
 const OWNER = 'owner1@example.com'
+
+/** A push that brings a recommendation of its own, so the statement looks for an open one of the same movement. */
+const GROUPING_PUSH = eventParams(
+  {
+    id: 'e-new', keyId: 'k1', source: 'iberia', replayKey: 'r-new', kind: 'push', amountCents: 100, currency: 'EUR',
+    merchantRaw: null, last4: null, accountDigits: null, occurredAt: '2026-03-01T08:00:00.000Z', localDate: '2026-03-01',
+    offsetMinutes: 60, receivedAt: '2026-03-01T08:00:05.000Z', body: null, shapeId: 's',
+  },
+  'rec-new',
+  undefined,
+  't1-1',
+)
 const planOf = (db: ReturnType<typeof seeded>, sql: string, params: Array<string | number | null>): string => {
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params)
   return rows.map((r) => String(r.detail)).join('\n')
@@ -195,6 +209,18 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
   ['the ignored templates', LIST_IGNORED_SQL, [OWNER, 100], /SEARCH capture_templates USING INDEX (sqlite_autoindex_capture_templates_1|idx_capture_templates_seen) \(owner=\?\)/],
   ['un-ignore a template', UNIGNORE_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['drop a template that is gone', DROP_MISSING_TEMPLATE_SQL, ['e1-1'], /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  [
+    'the open recommendation a push joins',
+    RECORD_EVENT_SQL,
+    GROUPING_PUSH,
+    /SEARCH r USING INDEX idx_recommendations_movement \(owner=\? AND state=\? AND amount_cents=\? AND occurred_at>\? AND occurred_at<\?\)[\s\S]*SEARCH f USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'the merchant a joining push gives',
+    JOIN_MERCHANT_SQL,
+    ['e1-1', 'Shop'],
+    /SEARCH recommendations USING INDEX sqlite_autoindex_recommendations_1 \(id=\?\)[\s\S]*SEARCH f USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
   [
     'blank the text of a decided push',
     BLANK_DECIDED_TEXT_SQL,
