@@ -90,6 +90,8 @@ export interface CaptureTemplate {
   /** The `<M>` token's run in `skeleton`, end exclusive. Null until known. */
   merchantStart: number | null
   merchantEnd: number | null
+  /** When the person's dismissals muted it. Its pushes are then counted and never stored. */
+  ignoredAt: string | null
 }
 
 /** The run a template has just learned from a sibling push, and its skeleton rewritten with the wildcard there. */
@@ -250,6 +252,11 @@ export interface CaptureRepository {
    * first.
    */
   findTemplates(owner: string, source: CaptureSource, title: string): Promise<CaptureTemplate[]>
+  /**
+   * Counts a push of an ignored template, in one batch: as unrecognised on the owner's counter for `day`, and as seen
+   * on the template, which stays ignored. Nothing of the push is stored.
+   */
+  countIgnoredPush(owner: string, source: CaptureSource, day: string, templateId: string, at: string): Promise<void>
   /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
   hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
   /**

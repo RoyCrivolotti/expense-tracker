@@ -1,6 +1,6 @@
 import type { TemplateDecision } from '../../../src/domain/ports/captureRepository'
 
-export const FIND_TEMPLATES_SQL = `SELECT template_id, skeleton, merchant_start, merchant_end FROM capture_templates
+export const FIND_TEMPLATES_SQL = `SELECT template_id, skeleton, merchant_start, merchant_end, ignored_at FROM capture_templates
 WHERE owner = ?1 AND source = ?2 AND title = ?3 ORDER BY last_seen DESC LIMIT ?4`
 
 export interface TemplateRow {
@@ -8,7 +8,12 @@ export interface TemplateRow {
   skeleton: string
   merchant_start: number | null
   merchant_end: number | null
+  ignored_at: string | null
 }
+
+/** A push of an ignored template is seen, and nothing else. Only while it is still ignored. */
+export const SEEN_IGNORED_SQL = `UPDATE capture_templates SET seen = seen + 1, last_seen = ?3
+WHERE owner = ?1 AND template_id = ?2 AND ignored_at IS NOT NULL`
 
 /*
  * The statements below run in the batch that stores a push, after its event. Each takes the owner, and the source and

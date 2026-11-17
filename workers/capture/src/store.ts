@@ -9,7 +9,7 @@ import type {
   TemplateDecision,
 } from '../../../src/domain/ports/captureRepository'
 import { hmacHex } from './hmac'
-import { decideTemplate } from './templates'
+import { decideTemplate, mutes } from './templates'
 
 type Recommended = Extract<Interpretation, { outcome: 'recommend' }>
 
@@ -18,7 +18,8 @@ const MAX_BODY = 500
 const MAX_SLOTS_JSON = 2000
 const CURRENCY = 'EUR'
 
-export type StoreResult = 'stored' | 'replay' | 'limited'
+/** `ignored`: the push belongs to a template the person has ignored, so it was counted and not stored. */
+export type StoreResult = 'stored' | 'replay' | 'limited' | 'ignored'
 
 /**
  * The slots as JSON, keeping the longest run from the start that fits the column. Each slot is written once and the
@@ -39,6 +40,8 @@ export function slotsJson(slots: readonly Slot[]): string {
 
 interface Reading {
   decision: TemplateDecision
+  /** The template the push joins when that template mutes it (`mutes`), else null. */
+  ignoredTemplate: string | null
   shapeId: string
   slots: string
   merchantRaw: string | null
@@ -56,10 +59,12 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
   const reading = readPush(push.title, body)
   const templates = reading.currencyAmount === null ? [] : await captures.findTemplates(owner, push.source, reading.titleSkeleton)
   const { decision, merchant } = decideTemplate(templates, reading, () => crypto.randomUUID())
+  const joined = decision.kind === 'existing' ? templates.find((t) => t.templateId === decision.templateId) : undefined
   const keepsText = reading.currencyAmount !== null && rawText !== undefined
   const text = keepsText ? (merchant ? spanText(reading, merchant) : '') || rawText : ''
   return {
     decision,
+    ignoredTemplate: joined && mutes(joined, reading.skeleton) ? joined.templateId : null,
     shapeId: await shapeId(push.source, reading.skeleton),
     slots: slotsJson(reading.slots),
     merchantRaw: text ? text.slice(0, MAX_MERCHANT) : null,
@@ -69,7 +74,9 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
 
 /**
  * Stores a recognised push and the recommendation it becomes, in one batch, with its shape, its slots and the
- * template it belongs to.
+ * template it belongs to. A push of a template the person has ignored is only counted, as an unread push of the day
+ * and a sighting of the template, so the setup screen's counts stay true. A push that makes a new template is never
+ * ignored.
  */
 export async function storeRecognised(
   captures: CaptureRepository,
@@ -81,8 +88,12 @@ export async function storeRecognised(
   caps: CaptureCaps,
 ): Promise<StoreResult> {
   const receivedAt = now.toISOString()
-  const hash = await hmacHex(secret, await replayKey(push))
   const read = await readForStore(captures, key.owner, push, result.rawText)
+  if (read.ignoredTemplate !== null) {
+    await captures.countIgnoredPush(key.owner, push.source, receivedAt.slice(0, 10), read.ignoredTemplate, receivedAt)
+    return 'ignored'
+  }
+  const hash = await hmacHex(secret, await replayKey(push))
   const incomplete = result.amountCents === null
   const cards = result.lastFour ? await captures.listCards(key.owner) : []
   const card = cards.find((c) => c.source === push.source && c.digitsKind === 'card' && c.digits === result.lastFour)

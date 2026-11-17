@@ -40,6 +40,16 @@ export function matchTemplate(rows: readonly CaptureTemplate[], skeleton: readon
   return null
 }
 
+/**
+ * Whether a push that joined `row` is muted. Only when the person's dismissals ignored the template and the push is the
+ * same wording: the same skeleton, or a sibling at the template's `<M>`. A template muted before it learned its merchant
+ * still holds the first merchant's words, so a sibling that differs there is another merchant: it is stored, and it
+ * teaches the template its run.
+ */
+export function mutes(row: CaptureTemplate, skeleton: string): boolean {
+  return row.ignoredAt !== null && (row.skeleton === skeleton || row.merchantStart !== null)
+}
+
 const NONE: TemplateMatch = { decision: { kind: 'none' }, merchant: null }
 
 /**

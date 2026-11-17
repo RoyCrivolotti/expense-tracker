@@ -142,13 +142,28 @@ describe('dismissing', () => {
     expect(templates()[0]).toMatchObject({ dismissals: 1, dismiss_streak: 1, ignored_at: null })
   })
 
-  it('three times in a row ignores the template', async () => {
+  it('three times in a row ignores the template, and its next push is counted but not stored', async () => {
     for (const merchant of ['Offer One', 'Offer Two', 'Offer Three']) {
       const id = (await push(WITH_CARD(merchant)))!
       await decide(dismiss, id)
     }
     expect(templates()).toHaveLength(1)
     expect(templates()[0]).toMatchObject({ dismissals: 3, dismiss_streak: 3, ignored_at: expect.any(String) })
+    expect(await push(WITH_CARD('Offer Four'))).toBeNull()
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM capture_events').get()).toEqual({ n: 3 })
+    expect(sqlite.prepare('SELECT unrecognised FROM capture_counters').get()).toEqual({ unrecognised: 1 })
+  })
+
+  it('three times on one merchant mute that merchant, and a push of another is stored and teaches the run', async () => {
+    for (let i = 0; i < 3; i++) await decide(dismiss, (await push(WITH_CARD('Offer Shop')))!)
+    const muted = () => sqlite.prepare('SELECT skeleton, merchant_start, ignored_at FROM capture_templates').get() as { skeleton: string; merchant_start: number | null; ignored_at: string | null }
+    expect(muted()).toMatchObject({ merchant_start: null, ignored_at: expect.any(String) })
+    expect(await push(WITH_CARD('Offer Shop'))).toBeNull()
+
+    expect(await push(WITH_CARD('Example Cafe'))).toEqual(expect.any(String))
+    expect(muted().merchant_start).not.toBeNull()
+    expect(muted().skeleton).toContain('<M>')
+    expect(muted().skeleton).not.toContain('offer')
   })
 
   it('never ignores a template the person accepted once', async () => {

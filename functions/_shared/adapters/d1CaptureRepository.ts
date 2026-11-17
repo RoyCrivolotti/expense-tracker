@@ -17,7 +17,7 @@ import { FIND_TEMPLATES_SQL } from '../capture/captureTemplatesSql'
 import type { TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
-import { applyDecisionLearning, decide, recordCapture } from './d1CaptureWrites'
+import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
 import { EVENT_OF_RECOMMENDATION_SQL, TEMPLATE_FACTS_SQL, toFacts } from '../capture/captureLearningSql'
 import type { FactsRow } from '../capture/captureLearningSql'
 import { changed, rows } from './d1CaptureSupport'
@@ -67,7 +67,6 @@ function events(
   CaptureRepository,
   | 'recordEvent'
   | 'recordCapture'
-  | 'findTemplates'
   | 'hasEvent'
   | 'admit'
   | 'eventsSince'
@@ -78,13 +77,6 @@ function events(
   return {
     recordEvent: (event, caps) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null, caps)),
     recordCapture: (event, rec, caps, template = { kind: 'none' }) => recordCapture(db, event, rec, caps, template),
-    findTemplates: async (owner, source, title) =>
-      (await rows<TemplateRow>(db, FIND_TEMPLATES_SQL, owner, source, title, TEMPLATE_LOOKUP_LIMIT)).map((r) => ({
-        templateId: r.template_id,
-        skeleton: r.skeleton,
-        merchantStart: r.merchant_start,
-        merchantEnd: r.merchant_end,
-      })),
     hasEvent: async (keyId, source, replayKey) =>
       (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
     admit: async (owner, source, day, caps) => {
@@ -162,6 +154,20 @@ function recommendations(
   }
 }
 
+function templates(db: D1Database): Pick<CaptureRepository, 'findTemplates' | 'countIgnoredPush'> {
+  return {
+    findTemplates: async (owner, source, title) =>
+      (await rows<TemplateRow>(db, FIND_TEMPLATES_SQL, owner, source, title, TEMPLATE_LOOKUP_LIMIT)).map((r) => ({
+        templateId: r.template_id,
+        skeleton: r.skeleton,
+        merchantStart: r.merchant_start,
+        merchantEnd: r.merchant_end,
+        ignoredAt: r.ignored_at,
+      })),
+    countIgnoredPush: (owner, source, day, templateId, at) => countIgnoredPush(db, owner, source, day, templateId, at),
+  }
+}
+
 function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'templateFacts' | 'applyDecisionLearning'> {
   return {
     eventOfRecommendation: async (owner, recId) => {
@@ -181,5 +187,5 @@ function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendatio
 
 export function createD1CaptureRepository(env: Pick<Env, 'DB'>): CaptureRepository {
   const db = env.DB
-  return { ...keys(db), ...events(db), ...cards(db), ...recommendations(db), ...learning(db) }
+  return { ...keys(db), ...events(db), ...cards(db), ...recommendations(db), ...templates(db), ...learning(db) }
 }

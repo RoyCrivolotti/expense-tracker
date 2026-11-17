@@ -623,3 +623,39 @@ describe('shapes and templates', () => {
     spies.forEach((s) => s.mockRestore())
   })
 })
+
+describe('a push of a template the person has ignored', () => {
+  const at = (merchant: string, minute: number) => ({ ...pushAt(minute), body: `Has pagado 12,50 EUR en ${merchant} con tu tarjeta *4321` })
+  const IGNORED_AT = '2026-11-02T10:00:00.000Z'
+  const lines: CaptureLogLine[] = []
+  const sendLogged = (req: Request) => handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+
+  beforeEach(async () => {
+    lines.length = 0
+    await send(request({ body: at('Example Cafe', 1) }))
+    await send(request({ body: at('Sample Books Ltd', 2) }))
+    db.prepare('UPDATE capture_templates SET ignored_at = ?').run(IGNORED_AT)
+  })
+
+  it('stores no event and no recommendation, counts it once as unread and as seen, and answers ok', async () => {
+    const res = await sendLogged(request({ body: at('Corner Shop', 3) }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(count('capture_events')).toBe(2)
+    expect(count('recommendations')).toBe(2)
+    expect(rows('SELECT received, unrecognised FROM capture_counters')).toEqual([{ received: 3, unrecognised: 1 }])
+    expect(rows('SELECT seen, last_seen, ignored_at FROM capture_templates')).toEqual([{ seen: 3, last_seen: NOW.toISOString(), ignored_at: IGNORED_AT }])
+  })
+
+  it('logs it as dropped for an ignored shape, with none of its text', async () => {
+    await sendLogged(request({ body: at('Corner Shop', 3) }))
+    expect(lines).toEqual([expect.objectContaining({ outcome: 'dropped', reason: 'ignored-shape', status: 200, source: 'iberia' })])
+    for (const secret of ['Corner', 'pagado', '12,50', '4321']) expect(JSON.stringify(lines)).not.toContain(secret)
+  })
+
+  it('still stores a push of another wording, which makes a template of its own', async () => {
+    await sendLogged(request({ body: { ...pushAt(3), body: 'Cargo de 12,50 EUR, comercio Corner Shop' } }))
+    expect(lines[0]).toEqual(expect.objectContaining({ outcome: 'stored' }))
+    expect(count('capture_templates')).toBe(2)
+  })
+})

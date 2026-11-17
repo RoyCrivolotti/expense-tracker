@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_SIBLING_RUN, readPush, spanText } from '../../../src/domain/capture'
 import type { CaptureTemplate } from '../../../src/domain/ports/captureRepository'
-import { MAX_TEMPLATE_TEXT, decideTemplate, matchTemplate } from './templates'
+import { MAX_TEMPLATE_TEXT, decideTemplate, matchTemplate, mutes } from './templates'
 
 const TITLE = 'Card payment'
 const push = (merchant: string, amount = '12,50') => readPush(TITLE, `You paid ${amount} EUR at ${merchant} with your card **4821`)
 const row = (templateId: string, skeleton: string, merchantStart: number | null = null): CaptureTemplate => ({
+  ignoredAt: null,
   templateId,
   skeleton,
   merchantStart,
@@ -107,5 +108,28 @@ describe('decideTemplate', () => {
     expect(code.currencyAmount).toBeNull()
     expect(decideTemplate([], code, ids())).toEqual({ decision: { kind: 'none' }, merchant: null })
     expect(decideTemplate([row('t1', code.skeleton)], code, ids())).toEqual({ decision: { kind: 'none' }, merchant: null })
+  })
+})
+
+describe('mutes', () => {
+  const ignored = (skeleton: string, merchantStart: number | null = null) => ({ ...row('t1', skeleton, merchantStart), ignoredAt: '2026-11-02T10:00:00.000Z' })
+  const wildcard = 'card payment you paid <N> <C> at <M> with your card <D>'
+
+  it('mutes the same wording of an ignored template', () => {
+    const first = push('Example Cafe')
+    expect(mutes(ignored(first.skeleton), push('Example Cafe', '3,99').skeleton)).toBe(true)
+  })
+
+  it('mutes a sibling at the <M> of an ignored template that knows its merchant', () => {
+    expect(mutes(ignored(wildcard, 7), push('Corner Shop').skeleton)).toBe(true)
+  })
+
+  it('does not mute another merchant of an ignored template that has not learned where its merchant is', () => {
+    expect(mutes(ignored(push('Example Cafe').skeleton), push('Sample Books Ltd').skeleton)).toBe(false)
+  })
+
+  it('never mutes a template that is not ignored', () => {
+    const first = push('Example Cafe')
+    expect(mutes(row('t1', first.skeleton), first.skeleton)).toBe(false)
   })
 })
