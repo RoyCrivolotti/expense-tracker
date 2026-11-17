@@ -26,6 +26,7 @@ import {
   RECORD_RECOMMENDATION_SQL,
   SAVE_CARD_SQL,
 } from './captureEventsSql'
+import { EVENT_OF_RECOMMENDATION_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, TEMPLATE_FACTS_SQL } from './captureLearningSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
   DROP_MISSING_TEMPLATE_SQL,
@@ -78,13 +79,13 @@ function seeded(analyze: boolean) {
 }
 
 const OWNER = 'owner1@example.com'
-const planOf = (db: ReturnType<typeof seeded>, sql: string, params: Array<string | number>): string => {
+const planOf = (db: ReturnType<typeof seeded>, sql: string, params: Array<string | number | null>): string => {
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params)
   return rows.map((r) => String(r.detail)).join('\n')
 }
 
 // [name, sql, params, a pattern every plan must match]
-const CASES: Array<[string, string, Array<string | number>, RegExp]> = [
+const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
   ['find a key', FIND_KEY_SQL, ['k1'], /SEARCH capture_keys USING (INDEX sqlite_autoindex_capture_keys_1|PRIMARY KEY)/],
   [
     'list the owner’s keys',
@@ -167,6 +168,25 @@ const CASES: Array<[string, string, Array<string | number>, RegExp]> = [
     'blank the text of a decided push',
     BLANK_DECIDED_TEXT_SQL,
     [OWNER, 'rec1-1'],
+    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'the push behind a recommendation',
+    EVENT_OF_RECOMMENDATION_SQL,
+    [OWNER, 'rec1-1'],
+    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  ['what a template has learned', TEMPLATE_FACTS_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  [
+    'teach a template a decision',
+    LEARN_DECISION_SQL,
+    [OWNER, 't1-1', 1, 0, 0, 4, 'comma', 'expense', null, null, 'rec1-1'],
+    /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)[\s\S]*SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'record what the person did',
+    RECORD_OUTCOME_SQL,
+    [OWNER, 'rec1-1', 'dismissed'],
     /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
   ],
   [

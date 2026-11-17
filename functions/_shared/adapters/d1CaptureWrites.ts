@@ -3,6 +3,8 @@ import type { CaptureCaps, CaptureEvent, CaptureRepository, NewRecommendation, T
 import { BLANK_OLD_TEXT_SQL, RECORD_EVENT_SQL, RECORD_RECOMMENDATION_SQL, eventParams } from '../capture/captureEventsSql'
 import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL } from '../capture/captureRecommendationsSql'
 import { templateIdOf, templateStatements } from '../capture/captureTemplatesSql'
+import { LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, learnParams } from '../capture/captureLearningSql'
+import type { TemplateFacts } from '../../../src/domain/capture'
 
 /*
  * The capture writes that are one D1 batch each, so what they change together commits together or not at all.
@@ -56,4 +58,16 @@ export async function recordCapture(
     db.prepare(BLANK_OLD_TEXT_SQL).bind(event.keyId, keepTextSince(event.receivedAt)),
   ])
   return (results[0]?.meta?.changes ?? 0) > 0
+}
+
+/** The template's facts first, guarded by the empty outcome the second statement then fills. */
+export async function applyDecisionLearning(
+  db: D1Database,
+  owner: string,
+  recId: string,
+  template: { templateId: string; facts: TemplateFacts } | null,
+  outcome: string,
+): Promise<void> {
+  const learn = template ? [db.prepare(LEARN_DECISION_SQL).bind(...learnParams(owner, recId, template.templateId, template.facts))] : []
+  await db.batch([...learn, db.prepare(RECORD_OUTCOME_SQL).bind(owner, recId, outcome)])
 }
