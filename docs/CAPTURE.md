@@ -42,8 +42,7 @@ secret, 256 random bits, of which only a SHA-256 is stored. Hex rather than base
 separator, and a fixed length so one pattern refuses anything else before any lookup. The code is in
 [`captureKey.ts`](../src/domain/capture/captureKey.ts).
 
-- **Made in Settings** by the signed-in person, behind the capture flag (`?capture=on`, kept in the browser, or the "Capture screens (beta)" switch in Settings, About
-  this app; off by default). The owner is the verified email and nothing in the body can change it.
+- **Made in Settings**, Account by the signed-in person. The owner is the verified email and nothing in the body can change it.
 - **Shown once.** The create call returns the whole key and nothing else ever does. The list returns id, name, when it
   was made and when it was last used.
 - **Three at a time** per person, checked inside the insert so two requests made at once cannot make a fourth. A fourth
@@ -172,7 +171,9 @@ these facts to suggest what each payment becomes ([CAPTURE-REVIEW.md](CAPTURE-RE
 
 ## Setting up a phone
 
-Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. **A shortcut built by hand
+Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. On `npm run dev` the
+demo data has no capture routes behind it, so the review list read fails silently and these cards say "Request failed";
+that is expected, and production and the staging previews have the routes. **A shortcut built by hand
 from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. A second
 phone has not been tried.** We have not seen the iOS 27 screens beyond the trigger, so names below may differ from
 yours; report any that do. The trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
@@ -263,15 +264,9 @@ The address is the `CAPTURE_ENDPOINT` Pages variable of the environment, a plain
 The hostname is private, so it is never committed; docs and tests use `https://capture.example.workers.dev`. Where the
 variable is unset the screen asks for the address to be pasted and keeps it in that browser only.
 
-### Turning the screens on
-
-The flag is per browser: `?capture=on` in the address, or Settings, About this app, "Capture screens (beta)". The switch
-exists because an installed Home Screen app has no address bar. It sets the same value in that app's own storage and
-reloads. The screens read the flag when they mount, so nothing changes until the reload.
-
 ## Muted pushes and diagnostics
 
-Behind the same flag, Settings, Account has two more cards, each its own lazy chunk. "Muted pushes" reads
+Settings, Account has two more cards, each its own lazy chunk. "Muted pushes" reads
 `GET /api/capture-templates?ignored=1` and lists each muted wording by its masked words: numbers, cards, dates and codes
 always shown as what they are, and the merchant only once a second push of the wording has shown where it sits (until
 then the first push's merchant is among the words), with its source, how often it was seen and dismissed, and when it
