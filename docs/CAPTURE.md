@@ -76,7 +76,7 @@ the signed-in person's own; another person's recommendation and an id that is no
 
 | Route | Answers |
 | --- | --- |
-| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md)) and the `card` it came from |
+| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` and `suggestion` ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md)) and the `card` it came from |
 | `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it. It is also refused with 409 `{ code: "possible-duplicate", possibleMatch }` when a typed row already looks like what is being submitted, unless the body carries `allowDuplicate: true` (a strict boolean; anything else is a 400, and it is never stored on the row) |
 | `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing. Takes no body |
 | `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
@@ -139,8 +139,8 @@ a submit or a link, read from the row saved or linked:
 
 The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
 account; the description is compared once the server suggests it), `linked` or `dismissed`. Learning runs after the decision, in one batch guarded by that empty
-outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. Nothing reads
-these facts yet; suggestions built from them come later.
+outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. The list reads
+these facts to suggest what each payment becomes ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md), "What the list suggests").
 
 ## Setting up a phone
 

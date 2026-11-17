@@ -17,6 +17,7 @@ import { FIND_TEMPLATES_SQL, LIST_IGNORED_SQL, UNIGNORE_SQL, toIgnored } from '.
 import type { IgnoredRow, TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
+import { withSuggestions } from './d1CaptureSuggestions'
 import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
 import { EVENT_OF_RECOMMENDATION_SQL, toEvent } from '../capture/captureLearningSql'
 import type { EventRow } from '../capture/captureLearningSql'
@@ -145,7 +146,8 @@ function recommendations(
           ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
           : await rows<RecommendationRow>(db, LIST_OPEN_FIRST_SQL, owner, limit)
       ).map(toRecommendation)
-      return withMatches(db, owner, await withCards(db, owner, page))
+      // The suggestion first, so the duplicate check looks for the amount and direction the person will see.
+      return withMatches(db, owner, await withSuggestions(db, owner, await withCards(db, owner, page)))
     },
     findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>

@@ -36,18 +36,23 @@ export async function findMatch(db: D1Database, owner: string, payment: PaymentT
   return possibleMatchFor(payment, candidates)
 }
 
+/** A payment as the person will see it: the suggested amount and type when there is a suggestion. */
+const asShown = (r: Recommendation): Recommendation =>
+  r.suggestion ? { ...r, amountCents: r.suggestion.amountCents, suggestedType: r.suggestion.type } : r
+
 /**
  * Adds the typed row each recommendation of a page may duplicate. One read for the whole page, however many payments
  * it holds, and none when no payment on it can be matched. The candidates of every payment come back together and
- * `possibleMatchesFor` gives each row to one payment.
+ * `possibleMatchesFor` gives each row to one payment. Each payment is matched as it is shown (`asShown`).
  */
 export async function withMatches(db: D1Database, owner: string, page: Recommendation[]): Promise<Recommendation[]> {
-  const span = candidateSpan(page)
+  const shown = page.map(asShown)
+  const span = candidateSpan(shown)
   if (!span) return page.map((r) => ({ ...r, possibleMatch: null }))
-  const amounts = [...new Set(page.flatMap((r) => (r.amountCents === null ? [] : [r.amountCents])))]
+  const amounts = [...new Set(shown.flatMap((r) => (r.amountCents === null ? [] : [r.amountCents])))]
   const candidates: TypedRow[] = (
     await rows<CandidateRow>(db, MATCH_CANDIDATES_SQL, owner, span.from, span.to, JSON.stringify(amounts))
   ).map(toTypedRow)
-  const matches = possibleMatchesFor(page, candidates)
+  const matches = possibleMatchesFor(shown, candidates)
   return page.map((r) => ({ ...r, possibleMatch: matches.get(r.id) ?? null }))
 }

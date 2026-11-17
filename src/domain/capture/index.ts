@@ -13,6 +13,8 @@ export { IGNORE_AFTER_DISMISSALS, MAX_OUTCOME, chooseAmountSlot, learnFromAccept
 export type { SavedRow, ShownRecommendation, TemplateFacts } from './learn'
 export { ANY_AMOUNT, MAX_CAPTURE_MERCHANTS, MAX_MERCHANT_DESCRIPTION, MAX_MERCHANT_KEY, merchantKeyOf, merchantVotes } from './merchants'
 export type { MerchantVote, SavedForMerchant } from './merchants'
+export { suggestFor } from './suggestion'
+export type { MerchantRow, Suggestion, SuggestionInput, SuggestionReason } from './suggestion'
 export { MAX_SOURCES_PER_OWNER, isSourceWord } from './source'
 export { readPush, spanText } from './readPush'
 export type { PushReading } from './readPush'

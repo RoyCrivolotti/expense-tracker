@@ -27,6 +27,7 @@ import {
   SAVE_CARD_SQL,
 } from './captureEventsSql'
 import { EVENT_OF_RECOMMENDATION_SQL, EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL } from './captureLearningSql'
+import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from './captureSuggestionsSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
   DROP_MISSING_TEMPLATE_SQL,
@@ -204,6 +205,18 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
     EVICT_MERCHANTS_SQL,
     [OWNER, 2000],
     /SEARCH capture_merchants USING (COVERING )?INDEX idx_capture_merchants_seen \(owner=\?\)/,
+  ],
+  [
+    'the pushes and templates of a page',
+    SUGGESTION_EVENTS_SQL,
+    [OWNER, '["rec1-1","rec1-2"]'],
+    /^SCAN j VIRTUAL TABLE[\s\S]*SEARCH e USING INDEX sqlite_autoindex_capture_events_1 \(id=\?\)[\s\S]*SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)[\s\S]*SEARCH t USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'the merchants of a page',
+    MERCHANT_ROWS_SQL,
+    [OWNER, '["merchant 1","merchant 2"]'],
+    /^SEARCH capture_merchants USING INDEX sqlite_autoindex_capture_merchants_1 \(owner=\? AND key=\?\)/,
   ],
   [
     'record what the person did',

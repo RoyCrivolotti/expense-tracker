@@ -16,6 +16,7 @@ import { onRequestPost as postTransaction } from '../expenses/transactions/index
 import { onRequestPost as submit } from './[id]/submit'
 import { onRequestPost as dismiss } from './[id]/dismiss'
 import { onRequestPost as link } from './[id]/link'
+import { onRequestGet as list } from './index'
 
 const NOW = new Date('2026-11-03T08:45:00.000Z')
 const PUSH = (merchant: string, amount = '33,40') => `Has pagado ${amount} EUR en ${merchant} con tu tarjeta *4321`
@@ -114,6 +115,61 @@ describe('an accept', () => {
     await learnAfterDecision(createD1CaptureRepository(world.env), OWNER, rec, { kind: 'submitted', saved }, NOW)
 
     expect(merchants()).toEqual([expect.objectContaining({ votes: 1 }), expect.objectContaining({ votes: 1 })])
+  })
+})
+
+type Listed = { id: string; amountCents: number; suggestion: Record<string, unknown> | null }
+async function suggestionOf(id: string) {
+  const body = (await (await world.call(list, { method: 'GET', path: '/../recommendations' })).json()) as { recommendations: Listed[] }
+  return body.recommendations.find((r) => r.id === id)?.suggestion
+}
+
+describe('the list', () => {
+  it('suggests the description once it is settled by two adds, with its category, the type and the account', async () => {
+    await learnTheWording()
+    await decide(submit, (await push(PUSH('Example Cafe')))!, row('Coffee', { type: 'expense' }))
+    const second = (await push(PUSH('Example Cafe')))!
+    expect(await suggestionOf(second)).toMatchObject({ description: 'Coffee', sightings: 1, settled: false, reasons: [] })
+    await decide(submit, second, row('Coffee'))
+
+    const third = (await push(PUSH('Example Cafe 0099')))!
+    expect(await suggestionOf(third)).toEqual({
+      description: 'Coffee',
+      categoryId,
+      type: 'expense',
+      // The card is not linked and the push showed its digits, so the template does not learn an account either.
+      accountId: null,
+      amountCents: 3340,
+      sightings: 2,
+      settled: true,
+      reasons: [],
+    })
+  })
+
+  it('suggests by the price when one merchant name stands for several', async () => {
+    await learnTheWording()
+    for (const [amount, cents, description] of [['2,99', 299, 'Music'], ['9,99', 999, 'Video'], ['9,99', 999, 'Video']] as const) {
+      await decide(submit, (await push(PUSH('Example Store', amount)))!, row(description, { amountCents: cents }))
+    }
+
+    expect(await suggestionOf((await push(PUSH('Example Store', '2,99')))!)).toMatchObject({ description: 'Music', sightings: 1, settled: false })
+    expect(await suggestionOf((await push(PUSH('Example Store', '9,99')))!)).toMatchObject({ description: 'Video', sightings: 2, settled: true })
+    // A price never seen falls back to every price, where Video leads.
+    expect(await suggestionOf((await push(PUSH('Example Store', '4,50')))!)).toMatchObject({ description: 'Video', sightings: 3, settled: true })
+  })
+
+  it('lets one add at a price give way to the merchant’s settled history, so one tap stays open', async () => {
+    await learnTheWording()
+    for (const amount of ['3,40', '4,10', '2,80']) {
+      const cents = Number(amount.replace(',', ''))
+      await decide(submit, (await push(PUSH('Example Cafe', amount)))!, row('Coffee', { amountCents: cents }))
+    }
+
+    expect(await suggestionOf((await push(PUSH('Example Cafe', '3,40')))!)).toMatchObject({ description: 'Coffee', sightings: 3, settled: true })
+  })
+
+  it('says a wording the person has never accepted is new', async () => {
+    expect(await suggestionOf((await push(PUSH('Example Cafe')))!)).toMatchObject({ description: null, reasons: ['new-shape'] })
   })
 })
 

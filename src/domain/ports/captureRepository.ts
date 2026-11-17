@@ -1,6 +1,7 @@
 import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
 import type { TemplateFacts } from '../capture/learn'
 import type { MerchantVote } from '../capture/merchants'
+import type { Suggestion } from '../capture/suggestion'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -209,6 +210,11 @@ export interface Recommendation extends NewRecommendation {
   possibleMatch?: PossibleMatch | null
   /** Null when the push showed no digits. Filled in on a list read, not on a single read. */
   card?: RecommendationCard | null
+  /**
+   * What the person's own history says the payment should become (`suggestFor`), or null for one no push made. Filled
+   * in on a list read, not on a single read.
+   */
+  suggestion?: Suggestion | null
   state: RecommendationState
   txnId: number | null
   decidedAt: string | null

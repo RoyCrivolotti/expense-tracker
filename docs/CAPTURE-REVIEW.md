@@ -50,6 +50,28 @@ Without write access (the offline saved copy, a read-only source) the card shows
 history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
 earlier counts as new.
 
+## What the list suggests
+
+Each recommendation in `GET /api/recommendations` carries a `suggestion`: what the person's own decisions on earlier
+pushes say it should become ([`suggestion.ts`](../src/domain/capture/suggestion.ts)). It is worked out on every list read
+and never stored, so it always follows the latest decision, and the recommendation's own amount and type stay as the
+push was first read. A recommendation no push made has `suggestion: null`, and the single read leaves it out.
+
+- **Description and category**: the description the person added this merchant with most often at any price, unless
+  the votes at this payment's price are settled, or name something other than the settled winner at any price (one
+  merchant name can stand for several fixed prices, such as two subscriptions). With no votes at any price, the price's. Spellings that differ only in case and accents count together, the label is the latest spelling,
+  and a tie goes to the more recently used. With no votes there is none, and the card falls back to the phone's own
+  history and then the bank's text. `sightings` is the votes counted and `settled` says the winner has at least two and
+  strictly more than any other, the same rule the phone's history uses.
+- **Amount**: the number the template learned to read, when the push has a number with a currency marker at that place,
+  else the first reading. When the two differ the reasons say `amount-relearned`.
+- **Type**: the template's, else the first guess. **Account**: the card's link, else the template's.
+- **Reasons**: `new-shape` when the person has never accepted a push of this wording (or it has no template), so one tap
+  never adds a wording before the person has added one by hand.
+
+Two reads serve a whole page, together: the pushes with their templates, and the merchants of the page by key. Both run
+before the duplicate check below, which then looks for the amount and direction the person will see.
+
 ## The typed row a payment may duplicate
 
 A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
