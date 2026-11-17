@@ -17,7 +17,7 @@ import { FIND_TEMPLATES_SQL, LIST_IGNORED_SQL, UNIGNORE_SQL, toIgnored } from '.
 import type { IgnoredRow, TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
-import { withSuggestions } from './d1CaptureSuggestions'
+import { merchantRows, withSuggestions } from './d1CaptureSuggestions'
 import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
 import { EVENT_OF_RECOMMENDATION_SQL, toEvent } from '../capture/captureLearningSql'
 import type { EventRow } from '../capture/captureLearningSql'
@@ -174,8 +174,9 @@ function templates(
   }
 }
 
-function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning'> {
+function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning' | 'merchantRows'> {
   return {
+    merchantRows: async (owner, key) => (await merchantRows(db, owner, [key])).get(key) ?? [],
     eventOfRecommendation: async (owner, recId) => {
       const row = await db.prepare(EVENT_OF_RECOMMENDATION_SQL).bind(owner, recId).first<EventRow>()
       return row ? toEvent(row) : null

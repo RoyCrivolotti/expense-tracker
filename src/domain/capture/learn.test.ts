@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IGNORE_AFTER_DISMISSALS, chooseAmountSlot, learnFromAccept, learnFromDismiss, outcomeOf, pushHadDigits, storedSlots } from './learn'
-import type { SavedRow, TemplateFacts } from './learn'
+import type { TemplateFacts } from './learn'
 import { readPushSlots } from './slots'
 import type { Slot } from './slots'
 
@@ -110,11 +110,12 @@ describe('learnFromDismiss', () => {
 })
 
 describe('outcomeOf', () => {
-  const shown = { amountCents: 3340, suggestedType: 'expense', accountId: 4 }
-  const saved: SavedRow = { amountCents: 3340, type: 'expense', accountId: 4 }
+  const shown = { amountCents: 3340, suggestedType: 'expense', accountId: 4, description: 'Coffee', categoryId: 2 }
+  const saved = { amountCents: 3340, type: 'expense', accountId: 4, description: 'Coffee', categoryId: 2 }
 
-  it('is added-as-is when amount, type and account are the ones shown', () => {
+  it('is added-as-is when every field is the one shown, the description compared trimmed', () => {
     expect(outcomeOf(shown, saved)).toBe('added-as-is')
+    expect(outcomeOf(shown, { ...saved, description: ' Coffee ' })).toBe('added-as-is')
   })
 
   it('compares the amount without its sign, so an investment taken back out matches', () => {
@@ -123,11 +124,13 @@ describe('outcomeOf', () => {
 
   it('names each field the person changed, in a fixed order', () => {
     expect(outcomeOf(shown, { ...saved, amountCents: 3000 })).toBe('edited:amount')
-    expect(outcomeOf(shown, { amountCents: 1, type: 'refund', accountId: 5 })).toBe('edited:amount,type,account')
+    expect(outcomeOf(shown, { ...saved, description: 'coffee' })).toBe('edited:description')
+    expect(outcomeOf(shown, { amountCents: 1, type: 'refund', accountId: 5, description: 'Tea', categoryId: 3 })).toBe('edited:amount,type,account,description,category')
   })
 
-  it('counts a field the recommendation left empty as changed', () => {
-    expect(outcomeOf({ amountCents: null, suggestedType: null, accountId: null }, saved)).toBe('edited:amount,type,account')
+  it('counts a field the card left empty as changed', () => {
+    const empty = { amountCents: null, suggestedType: null, accountId: null, description: '', categoryId: null }
+    expect(outcomeOf(empty, saved)).toBe('edited:amount,type,account,description,category')
   })
 
   it('is linked or dismissed for those decisions', () => {

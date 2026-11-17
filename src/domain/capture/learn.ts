@@ -1,3 +1,4 @@
+import type { SavedForMerchant } from './merchants'
 import type { Candidate, NumberSlot, Slot } from './slots'
 
 /**
@@ -86,25 +87,29 @@ export function learnFromDismiss(facts: TemplateFacts, now: string): TemplateFac
   }
 }
 
-/** The recommendation as it was shown before the decision. */
+/** The payment as the card showed it before the decision. */
 export interface ShownRecommendation {
   amountCents: number | null
   suggestedType: string | null
   accountId: number | null
+  /** Empty when the card showed none. */
+  description: string
+  categoryId: number | null
 }
 
 /**
- * What the person did, as `capture_events.outcome` keeps it: `added-as-is`, `edited:` and which of amount, type and
- * account they changed, `linked` or `dismissed`. The description is left out: the stored one is the push's text, while
- * the form shows the person's own label for the merchant, so nearly every add would read as edited. It is compared once
- * the server suggests the description itself.
+ * What the person did, as `capture_events.outcome` keeps it: `added-as-is`, `edited:` and which of amount, type,
+ * account, description and category they changed, `linked` or `dismissed`. Descriptions are compared trimmed, so a
+ * change of case is an edit.
  */
-export function outcomeOf(shown: ShownRecommendation, decision: SavedRow | 'linked' | 'dismissed'): string {
+export function outcomeOf(shown: ShownRecommendation, decision: SavedForMerchant | 'linked' | 'dismissed'): string {
   if (decision === 'linked' || decision === 'dismissed') return decision
   const changed = [
     shown.amountCents !== Math.abs(decision.amountCents) && 'amount',
     shown.suggestedType !== decision.type && 'type',
     shown.accountId !== decision.accountId && 'account',
+    shown.description.trim() !== decision.description.trim() && 'description',
+    shown.categoryId !== decision.categoryId && 'category',
   ].filter((c): c is string => c !== false)
   return changed.length === 0 ? 'added-as-is' : `edited:${changed.join(',')}`.slice(0, MAX_OUTCOME)
 }

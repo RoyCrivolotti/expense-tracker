@@ -1,7 +1,7 @@
 import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
 import type { TemplateFacts } from '../capture/learn'
 import type { MerchantVote } from '../capture/merchants'
-import type { Suggestion } from '../capture/suggestion'
+import type { MerchantRow, Suggestion } from '../capture/suggestion'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -353,4 +353,6 @@ export interface CaptureRepository {
    * evicted in the same batch.
    */
   applyDecisionLearning(owner: string, recId: string, learning: DecisionLearning): Promise<void>
+  /** The owner's rows for one merchant key, at any price and at each one. */
+  merchantRows(owner: string, key: string): Promise<MerchantRow[]>
 }

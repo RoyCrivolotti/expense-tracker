@@ -138,7 +138,9 @@ a submit or a link, read from the row saved or linked:
   the Settings list of ignored pushes is still to come. An accepted template is never muted this way.
 
 The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
-account; the description is compared once the server suggests it), `linked` or `dismissed`. Learning runs after the decision, in one batch guarded by that empty
+account, description, category), `linked` or `dismissed`. An add is compared with what the card showed: the list's
+suggestion, worked out again from what was known before the decision rather than stored on the read, and the bank's
+words where it named no description, since the server cannot see the phone's own history. Learning runs after the decision, in one batch guarded by that empty
 outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. The list reads
 these facts to suggest what each payment becomes ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md), "What the list suggests").
 

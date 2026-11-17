@@ -78,13 +78,13 @@ const outcome = (recId: string) => (sqlite.prepare('SELECT outcome FROM capture_
 const linkCard = () => captures().saveCard(OWNER, { source: 'iberia', digitsKind: 'card', digits: '4321', accountId })
 
 describe('submitting a recommendation', () => {
-  it('as it was shown learns the amount slot, its mark and the type, and records added-as-is', async () => {
+  it('learns the amount slot, its mark and the type, and records the description and category the person gave', async () => {
     await linkCard()
     const id = (await push(WITH_CARD('Example Cafe')))!
-    // The description is not compared yet: the form shows the person's own label, never the push's text.
+    // A first push has no history: the card showed the bank's words and no category.
     expect((await decide(submit, id, row('Coffee'))).status).toBe(201)
 
-    expect(outcome(id)).toBe('added-as-is')
+    expect(outcome(id)).toBe('edited:description,category')
     expect(templates()).toEqual([
       { accepts: 1, dismissals: 0, dismiss_streak: 0, amount_slot: 4, amount_mark: 'comma', type: 'expense', account_id: null, ignored_at: null },
     ])
@@ -93,9 +93,10 @@ describe('submitting a recommendation', () => {
   it('after editing the amount records edited:amount and learns no slot when no reading matches', async () => {
     await linkCard()
     const id = (await push(WITH_CARD('Example Cafe')))!
-    expect((await decide(submit, id, row(WITH_CARD('Example Cafe'), { amountCents: 3000 }))).status).toBe(201)
+    // The bank's words as the card shows them, less the words that hold a digit.
+    expect((await decide(submit, id, row('Has pagado EUR en Example Cafe con tu tarjeta', { amountCents: 3000 }))).status).toBe(201)
 
-    expect(outcome(id)).toBe('edited:amount')
+    expect(outcome(id)).toBe('edited:amount,category')
     expect(templates()[0]).toMatchObject({ accepts: 1, amount_slot: null, amount_mark: null, type: 'expense' })
   })
 
@@ -103,7 +104,7 @@ describe('submitting a recommendation', () => {
     const id = (await push(WITH_CARD('Example Cafe')))!
     await decide(submit, id, row('Coffee', { type: 'refund' }))
 
-    expect(outcome(id)).toBe('edited:type,account')
+    expect(outcome(id)).toBe('edited:type,account,description,category')
     expect(templates()[0]?.type).toBe('refund')
   })
 

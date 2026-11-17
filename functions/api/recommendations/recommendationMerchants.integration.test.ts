@@ -173,6 +173,41 @@ describe('the list', () => {
   })
 })
 
+describe('the outcome of an add', () => {
+  const outcome = (id: string) => (sqlite.prepare('SELECT outcome FROM capture_events WHERE rec_id = ?').get(id) as { outcome: string | null }).outcome
+  beforeEach(() => createD1CaptureRepository(world.env).saveCard(OWNER, { source: 'iberia', digitsKind: 'card', digits: '4321', accountId }))
+
+  async function settled(): Promise<void> {
+    await learnTheWording()
+    for (let i = 0; i < 2; i++) await decide(submit, (await push(PUSH('Example Cafe')))!, row('Coffee'))
+  }
+
+  it('is added-as-is when the person adds the suggestion the card showed', async () => {
+    await settled()
+    const id = (await push(PUSH('Example Cafe')))!
+    await decide(submit, id, row('Coffee'))
+
+    expect(outcome(id)).toBe('added-as-is')
+  })
+
+  it('names the description when the person changed the suggested one', async () => {
+    await settled()
+    const id = (await push(PUSH('Example Cafe')))!
+    await decide(submit, id, row('Coffee and cake'))
+
+    expect(outcome(id)).toBe('edited:description')
+  })
+
+  it('compares with the suggestion as it was before this add voted', async () => {
+    await learnTheWording()
+    const first = (await push(PUSH('Example Cafe')))!
+    await decide(submit, first, row('Coffee'))
+
+    // The merchant had no votes when the card showed it, so the bank's words and no category were shown.
+    expect(outcome(first)).toBe('edited:description,category')
+  })
+})
+
 describe('a dismissal', () => {
   it('teaches the merchant nothing', async () => {
     await learnTheWording()
