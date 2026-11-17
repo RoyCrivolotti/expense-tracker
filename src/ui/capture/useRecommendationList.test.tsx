@@ -23,16 +23,9 @@ const page = (ids: string[], next: string | null = null, openCount = ids.length)
 const fetchMock = () => vi.mocked(api.fetchRecommendations)
 
 describe('useRecommendationList', () => {
-  it('reads nothing while it is off', () => {
-    const { result } = renderHook(() => useRecommendationList(false))
-
-    expect(fetchMock()).not.toHaveBeenCalled()
-    expect(result.current.items).toBeNull()
-  })
-
   it('reads the first page and the count', async () => {
     fetchMock().mockResolvedValue(page(['a', 'b'], null, 2))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
 
     await waitFor(() => expect(result.current.items?.map((r) => r.id)).toEqual(['a', 'b']))
     expect(result.current.openCount).toBe(2)
@@ -41,7 +34,7 @@ describe('useRecommendationList', () => {
 
   it('shows the reason a read failed, and clears it when a retry works', async () => {
     fetchMock().mockRejectedValueOnce(new ApiError('Request failed (500)', 500)).mockResolvedValueOnce(page(['a']))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.error).toBe('Request failed (500)'))
 
     act(() => result.current.retry())
@@ -52,14 +45,14 @@ describe('useRecommendationList', () => {
 
   it('says something plain when the failure is not an Error', async () => {
     fetchMock().mockRejectedValue('boom')
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
 
     await waitFor(() => expect(result.current.error).toBe('Something went wrong'))
   })
 
   it('appends the next page, and keeps what it has when that read fails', async () => {
     fetchMock().mockResolvedValueOnce(page(['a'], 'c1', 2)).mockRejectedValueOnce(new ApiError('Request failed (503)', 503)).mockResolvedValueOnce(page(['b'], null, 2))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.hasMore).toBe(true))
 
     await act(() => result.current.more())
@@ -74,7 +67,7 @@ describe('useRecommendationList', () => {
 
   it('does nothing on more when there is no next page', async () => {
     fetchMock().mockResolvedValue(page(['a']))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     await act(() => result.current.more())
@@ -84,7 +77,7 @@ describe('useRecommendationList', () => {
 
   it('drops a decided row and the count without another read', async () => {
     fetchMock().mockResolvedValue(page(['a', 'b'], null, 2))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.items).toHaveLength(2))
 
     act(() => result.current.remove('a'))
@@ -100,7 +93,7 @@ describe('useRecommendationList', () => {
       .mockResolvedValueOnce(page(['b'], 'c2', 3))
       .mockResolvedValueOnce(page(['b'], 'c2', 2))
       .mockResolvedValueOnce(page(['c'], null, 2))
-    const { result } = renderHook(() => useRecommendationList(true))
+    const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.hasMore).toBe(true))
     await act(() => result.current.more())
 

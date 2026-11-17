@@ -64,20 +64,24 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.resetAllMocks()
-  window.history.replaceState(null, '', '/')
 })
 
 describe('payments to review on the Dashboard', () => {
-  it('shows no card, no badge and reads nothing with the capture flag off', async () => {
+  it('shows no card and no badge when nothing is open', async () => {
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [], next: null, openCount: 0 })
     open()
 
     await screen.findByText('Income')
-    expect(screen.queryByText(/payments? to review/)).not.toBeInTheDocument()
-    expect(api.fetchRecommendations).not.toHaveBeenCalled()
+    await waitFor(() => expect(api.fetchRecommendations).toHaveBeenCalled())
+    // Give the card's lazy chunk every chance to mount, so its absence is not a slow import.
+    await import('./capture/ReviewCard')
+    for (let i = 0; i < 3; i++) await act(async () => void (await vi.advanceTimersByTimeAsync(50)))
+
+    expect(screen.queryByRole('heading', { name: /to review|caught up/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/payments? to review/)).not.toBeInTheDocument()
   })
 
   it('shows the card at the top and a count on the Dashboard tab, and the Settings badge keeps its own meaning', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     open()
 
     expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
@@ -86,7 +90,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('adds a known merchant with one tap after the undo window, and the count drops', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     open()
     await screen.findByRole('heading', { name: '2 payments to review' })
 
@@ -103,7 +106,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('takes a one tap back with Undo and sends nothing', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     open()
     await screen.findByRole('heading', { name: '2 payments to review' })
 
@@ -116,7 +118,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('opens the add form for a payment in doubt, with only what the push said, and saves it through the recommendation', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     open()
     await screen.findByRole('heading', { name: '2 payments to review' })
 
@@ -132,7 +133,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('moves on to the next payment when the form is saved, and ends the queue at the last', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
       recommendations: [unknown, makeRecommendation({ id: KNOWN, merchantRaw: 'OTHER NEW PLACE', amountCents: 450 })],
       next: null,
@@ -153,7 +153,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('asks which account a new card is, remembers the answer when the payment is saved, and uses it for the payment', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
       recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
       next: null,
@@ -176,7 +175,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('does not let the payment be saved until the card is answered, so the account is never a guess', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
       recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
       next: null,
@@ -199,7 +197,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('still says why nothing was saved when the installment view is open and the question is not on screen', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
       recommendations: [{ ...unknown, accountId: null, card: { source: 'iberia', digits: '4821' } }],
       next: null,
@@ -220,7 +217,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('does not ask about a card whose account is known', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...unknown, accountId: 1, card: { source: 'iberia', digits: '4821' } }], next: null, openCount: 1 })
     open()
 
@@ -231,7 +227,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('sends a payment the server says is already typed to Review, offers to link it, and links it to that row', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
       recommendations: [{ ...known, possibleMatch: { transactionId: 41, description: 'Cafe', date: '2026-11-09' } }],
@@ -251,7 +246,6 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('still adds a known merchant with one tap when the server names no match', async () => {
-    window.history.replaceState(null, '', '/?capture=on')
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...known, possibleMatch: null }], next: null, openCount: 1 })
     open()
     await screen.findByRole('heading', { name: '1 payment to review' })
@@ -262,7 +256,6 @@ describe('payments to review on the Dashboard', () => {
   describe('when the server finds a typed row at submit that the list did not', () => {
     const MATCH = { transactionId: 41, description: 'Cafe', date: '2026-11-09' }
     const tapAdd = async () => {
-      window.history.replaceState(null, '', '/?capture=on')
       vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known], next: null, openCount: 1 })
       vi.mocked(api.submitRecommendation).mockRejectedValueOnce(new api.PossibleDuplicateError(MATCH))
       open()

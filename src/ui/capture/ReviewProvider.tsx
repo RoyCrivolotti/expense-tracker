@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { PossibleMatch } from '../../data/recommendationsApi'
-import { captureEnabled } from '../../config/captureFlag'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { ReviewContext, type ReviewCore } from './reviewContext'
@@ -8,7 +7,7 @@ import { useRecommendationList } from './useRecommendationList'
 import { useReviewDecisions } from './useReviewDecisions'
 
 /**
- * Reads the payments waiting for a look (only with the capture flag on) and holds what the person decides about them
+ * Reads the payments waiting for a look and holds what the person decides about them
  * for the undo window. What a payment becomes is worked out where it is shown (`useReviewApi`).
  */
 export function ReviewProvider({
@@ -20,8 +19,7 @@ export function ReviewProvider({
   actions: ExpenseActions | undefined
   children: ReactNode
 }) {
-  const [enabled] = useState(captureEnabled)
-  const list = useRecommendationList(enabled)
+  const list = useRecommendationList()
   // Matches the server found when a one-tap add was refused, until the next read brings its own.
   const [found, setFound] = useState<ReadonlyMap<string, PossibleMatch>>(new Map())
   const [seenLoads, setSeenLoads] = useState(list.loads)
@@ -60,5 +58,5 @@ export function ReviewProvider({
       actions?.onAdd(seed)
     },
   }
-  return <ReviewContext.Provider value={enabled ? core : null}>{children}</ReviewContext.Provider>
+  return <ReviewContext.Provider value={core}>{children}</ReviewContext.Provider>
 }

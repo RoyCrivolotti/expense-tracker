@@ -18,10 +18,10 @@ async function readLoaded(want: number) {
 }
 
 /**
- * The person's open recommendations, newest day first, read once on mount (when `enabled`) and again whenever one is
+ * The person's open recommendations, newest day first, read once on mount and again whenever one is
  * decided in the add form. `remove` drops a row the caller has just decided, without another read.
  */
-export function useRecommendationList(enabled: boolean) {
+export function useRecommendationList() {
   const [items, setItems] = useState<RecommendationInfo[] | null>(null)
   const [next, setNext] = useState<string | null>(null)
   const [openCount, setOpenCount] = useState(0)
@@ -33,7 +33,6 @@ export function useRecommendationList(enabled: boolean) {
   const shown = useRef(0)
 
   useEffect(() => {
-    if (!enabled) return
     let current = true
     readLoaded(shown.current).then(
       ({ rows, next: after, openCount: count }) => {
@@ -50,9 +49,9 @@ export function useRecommendationList(enabled: boolean) {
     return () => {
       current = false
     }
-  }, [enabled, version])
+  }, [version])
 
-  useEffect(() => (enabled ? onRecommendationsChanged(() => setVersion((v) => v + 1)) : undefined), [enabled])
+  useEffect(() => onRecommendationsChanged(() => setVersion((v) => v + 1)), [])
 
   const more = useCallback(async () => {
     if (!next) return

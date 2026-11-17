@@ -31,7 +31,7 @@ const dismissToast = vi.fn()
 
 function Probe() {
   const core = useReviewCore()
-  return core ? <Rows core={core} /> : <p>off</p>
+  return core ? <Rows core={core} /> : null
 }
 
 function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> }) {
@@ -79,7 +79,6 @@ const press = (name: string) => act(() => void fireEvent.click(screen.getByRole(
 beforeEach(() => {
   vi.useFakeTimers()
   window.localStorage.clear()
-  window.history.replaceState(null, '', '/?capture=on')
   vi.mocked(decisions.dismissRecommendation).mockResolvedValue(undefined)
   vi.mocked(decisions.linkRecommendation).mockResolvedValue(undefined)
 })
@@ -88,17 +87,6 @@ afterEach(() => {
   vi.resetAllMocks()
   showToast.mockReset()
   dismissToast.mockReset()
-  window.history.replaceState(null, '', '/')
-})
-
-describe('the capture flag', () => {
-  it('keeps everything off, and reads nothing, until it is on', async () => {
-    window.history.replaceState(null, '', '/?capture=off')
-    await show([known(A)])
-
-    expect(screen.getByText('off')).toBeInTheDocument()
-    expect(api.fetchRecommendations).not.toHaveBeenCalled()
-  })
 })
 
 describe('one tap', () => {

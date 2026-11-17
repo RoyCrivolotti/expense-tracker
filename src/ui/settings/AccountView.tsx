@@ -1,12 +1,12 @@
-import { Suspense, lazy, useState } from 'react'
-import { captureEnabled } from '../../config/captureFlag'
+import { Suspense, lazy } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { AccessRequestsSetting } from './AccessRequestsSetting'
 import { AccountSetting } from './AccountSetting'
 import { AppVersionSetting } from './AppVersionSetting'
 import { ChunkBoundary } from '../components/ChunkBoundary'
 
-// Its own chunk: most people never turn the flag on, and the card is the only thing here that talks to the capture routes.
+// Their own chunk, fetched when the Account view opens: nothing else here talks to the capture routes, and the budget
+// check measures them apart from the rest of the app.
 const CaptureSetupSetting = lazy(() => import('./CaptureSetupSetting').then((m) => ({ default: m.CaptureSetupSetting })))
 const CaptureKeySetting = lazy(() => import('./CaptureKeySetting').then((m) => ({ default: m.CaptureKeySetting })))
 const CaptureCardsSetting = lazy(() => import('./CaptureCardsSetting').then((m) => ({ default: m.CaptureCardsSetting })))
@@ -22,23 +22,19 @@ export function AccountView({
   ownerAccess: { pendingCount: number } | undefined
   accountEmail: string | undefined
 }) {
-  // Read once: the flag writes to storage when the address sets it, which a render has no business repeating.
-  const [capture] = useState(captureEnabled)
   return (
     <>
       {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
-      {capture ? (
-        <ChunkBoundary fallback={null}>
-          <Suspense fallback={null}>
-            <CaptureSetupSetting />
-            <CaptureKeySetting />
-            <CaptureCardsSetting model={model} />
-            <CaptureMutedSetting />
-            <CaptureDiagnosticsSetting />
-          </Suspense>
-        </ChunkBoundary>
-      ) : null}
+      <ChunkBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <CaptureSetupSetting />
+          <CaptureKeySetting />
+          <CaptureCardsSetting model={model} />
+          <CaptureMutedSetting />
+          <CaptureDiagnosticsSetting />
+        </Suspense>
+      </ChunkBoundary>
       <AppVersionSetting model={model} />
     </>
   )

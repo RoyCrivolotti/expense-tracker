@@ -5,7 +5,7 @@
  * chart/vendor lib would blow these limits. Four are kept: the bundle without the chunks only the ledger mode
  * loads (the whole-dataset app and everything both ways of reading the ledger run), the code only the Goals tab loads
  * (its own chunk, the chunks split out of it and its lazy card), the code only the ledger mode loads, and the code only
- * the capture flag loads, all found from the imports in the built files by `bundleGraph.mjs`.
+ * the capture screens load on demand, all found from the imports in the built files by `bundleGraph.mjs`.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
@@ -26,7 +26,7 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 const TOTAL_MAX_GZIP = 296_100
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
-// CAPTURE: the Settings capture cards and the Dashboard review card only a browser with the capture flag on loads. Kept out of TOTAL so the
+// CAPTURE: the Settings capture cards and the Dashboard review card, each loaded only when shown. Kept out of TOTAL so the
 // feature has a line of its own and the default build cannot be blamed for it.
 const CAPTURE_MAX_GZIP = 19_300
 
