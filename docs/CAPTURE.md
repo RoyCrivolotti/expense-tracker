@@ -2,7 +2,8 @@
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
 key, the endpoint that accepts it and the routes that list and decide recommendations, the Dashboard card that reviews
-them, and the setup screen with the shortcut recipe, all built. The reader that will replace the kind rules is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md).
+them, and the setup screen with the shortcut recipe, all built. The reader that will replace the kind rules is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md),
+and the Dashboard card that reviews recommendations is in [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
@@ -75,7 +76,7 @@ the signed-in person's own; another person's recommendation and an id that is no
 
 | Route | Answers |
 | --- | --- |
-| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` (below) and the `card` it came from |
+| `GET /api/recommendations?limit=&after=` | `{ recommendations, next, openCount }`: open ones, newest day first. `limit` is 1 to 100 (default 50). `next` is the `after` for the following page, or `null` on the last. Anything else for either is a 400. Each one carries `possibleMatch` and `suggestion` ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md)) and the `card` it came from |
 | `POST /api/recommendations/:id/submit` | 201 with the new transaction. The body is the transaction exactly as `POST /transactions` takes it, and is validated the same way. It is not checked against the recommendation: the person may change anything, and nothing is copied from it. It is also refused with 409 `{ code: "possible-duplicate", possibleMatch }` when a typed row already looks like what is being submitted, unless the body carries `allowDuplicate: true` (a strict boolean; anything else is a 400, and it is never stored on the row) |
 | `POST /api/recommendations/:id/dismiss` | `{ ok: true }`. Creates nothing. Takes no body |
 | `POST /api/recommendations/:id/link` | `{ ok: true }`. Body `{ "transactionId": n }`: the person already typed that row. 404 if it is not theirs, 409 if another recommendation answers for it |
@@ -113,6 +114,12 @@ The recommendation's description (`merchant_raw`) is the merchant when the templ
 cleaned body for the first push of a template, which the person edits once. How the template and the merchant are found
 is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt".
 
+A person's merchants are in `capture_merchants` ([migration 0042](../migrations/0042_capture_merchants.sql)): per
+merchant, the descriptions the person added its payments with, each with its category, type, account and a count of
+votes, once for any price and once per price. The merchant is only a key, its name folded with digit words dropped, at
+most 80 characters, and a key is only written from a recommendation whose text is the merchant rather than a whole push
+(below). Nothing else of a push is kept there. A person holds at most 2,000 rows; the least recently seen make room.
+
 ## What it learns
 
 Each decision teaches that person's template of the push ([`learn.ts`](../src/domain/capture/learn.ts)). An accept is
@@ -122,90 +129,20 @@ a submit or a link, read from the row saved or linked:
   assumed, learned from an accept whose amount matches exactly one reading. A tie or no match teaches nothing.
 - **Type**: the saved row's type. The last accept wins.
 - **Account**: the saved row's account, only when the push showed no card digits. A card's account is its link.
+- **Merchant**: the saved row's description, as typed and trimmed, with its category, type and account, one vote at any
+  price and one at the saved price ([`merchants.ts`](../src/domain/capture/merchants.ts)). Only when the recommendation's
+  text is the merchant: text that shows the amount with its currency marker is a whole push, which is never learned. A
+  dismissal teaches the merchant nothing. Votes are counted in SQL, so two decisions at once both count.
 - **Ignoring a wording**: three dismissals in a row on a template nobody has accepted mute it. Its later pushes of the
   same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak;
   the Settings list of ignored pushes is still to come. An accepted template is never muted this way.
 
 The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
-account; the description is compared once the server suggests it), `linked` or `dismissed`. Learning runs after the decision, in one batch guarded by that empty
-outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. Nothing reads
-these facts yet; suggestions built from them come later.
-
-## The Dashboard card
-
-Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with
-all seven fields it would become (type, amount, description, category, account, date, budget month). It is absent when
-nothing is waiting, and the Dashboard tab carries the count (the Settings badge still means pending access requests).
-"See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
-list, the count and the undo window live in the main bundle, so the badge needs no download.
-
-What each payment becomes is worked out on the device from the push and the typed rows the app holds, never stored
-([`review.ts`](../src/domain/capture/review.ts)). Description and category are the person's most common ones for the
-merchant (digit words dropped, case and accents folded) over their last 12 months, else the newest row, ties to the more
-recent. One tap needs it typed twice and strictly more than any other, else "Description not settled".
-
-| | |
-| --- | --- |
-| **One tap Add** | Only when nothing is in doubt. It sends the transaction shown, exactly |
-| **Review** | Everything else. It opens the normal add form, filled with only what the push said. With "Add and next (N left)" each save opens the next payment, and the form's "Don't add" moves on without creating anything |
-| **Don't add** | Removes only that suggestion and creates nothing. Three in a row on one wording never added stop it being suggested ("What it learns") |
-| **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`). It points the recommendation at that row and creates nothing |
-
-A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
-in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the amount is not copied into the euro form),
-no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
-looks the same, or a budget month that could differ.
-
-That last test is one rule: the budget month (the add form's own rule, so the user's rollover day and a settled statement
-count) is worked out for the payment's day and for every day the bank might book it on, which are the day before or after
-when the payment is within an hour of midnight, and the day its push reached the server. If any of those gives another
-budget month the payment is reviewed, and the add form shows a note under the date with both days and a button to move
-between them. The payment's time of day is the phone's own, read from `occurredAt` (see the endpoint table below), so
-the device's zone does not matter; a row without it counts as next to an edge on the days either side of midnight.
-
-One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
-a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
-back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.
-
-A payment from a card with no linked account opens with the Account field empty ("Pick an account") and a question under
-the date: which account is the card ending in those digits, with "Remember this card" on. Saving is refused until it is
-answered, with the message beside the question. The card is remembered after the payment is saved, against the account
-the payment was saved with, so if the person changes the form's Account after answering, the card follows the final
-account.
-
-Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The merchant
-history reads the rows the app holds, which in the paged ledger mode are the months in view, so a merchant typed only
-earlier counts as new.
-
-## The typed row a payment may duplicate
-
-A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
-`possibleMatch: { transactionId, description, date }`, or null: a row the person already typed that looks like the same
-payment. The list never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
-that row. Submit looks again, because a row can be typed between the list read and the press: it checks the row being
-submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
-and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`
-skips the check. A row typed between that one read and the insert is not caught, which is a deliberate advisory race.
-The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
-`DUPLICATE_WINDOW`, shared by both reads:
-
-- the same person's row, never another person's;
-- the same direction: an expense and an investment put in are money out, income and a refund and an investment taken
-  back out are money in, and a payment with no suggested type has no direction and matches nothing;
-- the same amount to the cent, in euros (a payment in another currency or with no amount matches nothing);
-- a date from 14 days before the payment's local date to 3 days after it. Back 14, because with no limit a regular price
-  (the 12,50 cafe) would match an old row every time and never allow one tap; forward 3, because a row may be dated by the
-  day the bank books it;
-- not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
-  so a payment that was captured and added does not match the next push of the same price;
-- the closest by date, and the highest id (entered last) on a tie. A row goes to one payment of the page only, the
-  one it is closest to (the newer payment first on a tie), and a payment that loses its row falls to its next best or to
-  none, so two payments of one price never offer the same row.
-
-The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
-prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
-whatever the page size. The check at submit is the same statement for one amount and one date, so it reads at most the
-rows of one 18-day window and needs no new index.
+account, description, category), `linked` or `dismissed`. An add is compared with what the card showed: the list's
+suggestion, worked out again from what was known before the decision rather than stored on the read, and the bank's
+words where it named no description, since the server cannot see the phone's own history. Learning runs after the decision, in one batch guarded by that empty
+outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. The list reads
+these facts to suggest what each payment becomes ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md), "What the list suggests").
 
 ## Setting up a phone
 

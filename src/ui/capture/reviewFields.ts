@@ -1,7 +1,17 @@
 import type { NewTransaction } from '../../data/dataSource'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { cleanText } from '../../domain/capture/text'
-import { bankMerchantName, merchantHistory, otherBudgetDays, paymentClock, reviewReasons, type MerchantIndex, type PaymentClock, type ReviewReason } from '../../domain/capture/review'
+import {
+  bankMerchantName,
+  merchantHistory,
+  otherBudgetDays,
+  paymentClock,
+  reviewReasons,
+  type MerchantHistory,
+  type MerchantIndex,
+  type PaymentClock,
+  type ReviewReason,
+} from '../../domain/capture/review'
 import type { TxnType } from '../../types'
 import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
@@ -15,9 +25,12 @@ export interface ReviewView {
   askCard: { source: string; digits: string } | null
   type: TxnType | null
   amountCents: number | null
-  /** The merchant as the person last typed it, else the bank's text cleaned, else empty. */
+  /**
+   * The person's own description for the merchant, from the server's memory of what they added it with, else from the
+   * rows the app holds; else the bank's text cleaned, else empty.
+   */
   description: string
-  /** True when the description is how the person typed this merchant before, not the bank's own text. */
+  /** True when the description is how the person named this merchant before, not the bank's own text. */
   fromHistory: boolean
   categoryId: number | null
   categoryName: string | null
@@ -37,9 +50,9 @@ export interface ReviewView {
 }
 
 /** The category and account the person's own history and settings give a payment, each null unless still in use. */
-function knownReferences(rec: RecommendationInfo, categoryIdFromHistory: number | null, model: ExpenseModel) {
+function knownReferences(categoryIdFromHistory: number | null, accountId: number | null, model: ExpenseModel) {
   const category = categoryIdFromHistory === null ? undefined : model.lookup.category(categoryIdFromHistory)
-  const account = rec.accountId === null ? undefined : model.lookup.account(rec.accountId)
+  const account = accountId === null ? undefined : model.lookup.account(accountId)
   return {
     categoryId: category?.active ? category.id : null,
     categoryName: category?.active ? category.name : null,
@@ -48,31 +61,58 @@ function knownReferences(rec: RecommendationInfo, categoryIdFromHistory: number 
   }
 }
 
+/**
+ * What the person's history says about the merchant. The server's suggestion when it names a description, since it
+ * remembers what the person added this merchant with whatever they typed; else the rows the app holds, which match only
+ * when a typed description equals the bank's text.
+ */
+function historyOf(rec: RecommendationInfo, merchants: MerchantIndex, bankText: string | null): MerchantHistory {
+  const s = rec.suggestion
+  if (s?.description != null) return { sightings: s.sightings, label: s.description, categoryId: s.categoryId, settled: s.settled }
+  return merchantHistory(merchants, bankText)
+}
+
+/** The amount, type and account the push's wording taught, and its flags; without a suggestion, the push's first reading. */
+function taught(rec: RecommendationInfo) {
+  const s = rec.suggestion
+  if (!s) return { amountCents: rec.amountCents, type: rec.suggestedType, accountId: rec.accountId, newShape: false, amountRelearned: false }
+  return {
+    amountCents: s.amountCents,
+    type: s.type,
+    accountId: s.accountId,
+    newShape: s.reasons.includes('new-shape'),
+    amountRelearned: s.reasons.includes('amount-relearned'),
+  }
+}
+
 /** Works out what a recommendation would become and whether one tap may add it. */
 export function describeRecommendation(rec: RecommendationInfo, model: ExpenseModel, merchants: MerchantIndex): ReviewView {
   const bankText = rec.merchantRaw === null ? null : cleanText(rec.merchantRaw)
-  const history = merchantHistory(merchants, bankText)
-  const refs = knownReferences(rec, history.categoryId, model)
+  const history = historyOf(rec, merchants, bankText)
+  const { amountCents, type, accountId, newShape, amountRelearned } = taught(rec)
+  const refs = knownReferences(history.categoryId, accountId, model)
   const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
   const monthOf = (day: string) => suggestBudgetMonth(model, day)
   const edgeDays = otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
   const reasons = reviewReasons({
-    amountCents: rec.amountCents,
+    amountCents,
     currency: rec.currency,
     hasMerchant: !!bankText,
     categoryId: refs.categoryId,
     accountId: refs.accountId,
-    suggestedType: rec.suggestedType,
+    suggestedType: type,
     sightings: history.sightings,
     settled: history.settled,
     monthEdge: edgeDays.length > 0,
     possibleMatch: rec.possibleMatch != null,
+    newShape,
+    amountRelearned,
   })
   return {
     rec,
     askCard: refs.accountId === null && rec.card ? rec.card : null,
-    type: rec.suggestedType,
-    amountCents: rec.amountCents,
+    type,
+    amountCents,
     description: history.label ?? (bankText ? bankMerchantName(bankText) : ''),
     fromHistory: history.label !== null,
     ...refs,

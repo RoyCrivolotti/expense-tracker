@@ -19,7 +19,7 @@ import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 
 afterEach(() => vi.useRealTimers())
 
-const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql']
+const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql']
 const MIGRATION = readFileSync(join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'), 'utf8')
 
 /** The migration with one statement changed; throws if the change finds nothing to change, so a mutant cannot be a no-op. */

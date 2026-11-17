@@ -47,6 +47,31 @@ const wrap = (core: ReviewCore) => (
 )
 const show = (core: ReviewCore) => render(wrap(core))
 
+describe('a payment the server suggests from the person’s history', () => {
+  const suggested = rec(1, {
+    merchantRaw: 'NEW PLACE 0099',
+    suggestion: { description: 'Weekly shop', categoryId: 2, type: 'expense', accountId: 1, amountCents: 1250, sightings: 2, settled: true, reasons: [] },
+  })
+
+  it('shows the person’s own description and category instead of the bank’s words', () => {
+    show(makeCore({ items: [suggested] }))
+
+    const row = screen.getByRole('listitem')
+    expect(within(row).getByText('Weekly shop')).toBeInTheDocument()
+    expect(within(row).getByText('Groceries')).toBeInTheDocument()
+    expect(within(row).queryByText(/NEW PLACE/)).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Add Weekly shop' })).toBeInTheDocument()
+  })
+
+  it('names a wording the person has never accepted as the reason to look', () => {
+    show(makeCore({ items: [{ ...suggested, suggestion: { ...suggested.suggestion!, reasons: ['new-shape'] } }] }))
+
+    const row = screen.getByRole('listitem')
+    expect(within(row).getByText('New push wording')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Add Weekly shop' })).not.toBeInTheDocument()
+  })
+})
+
 describe('a known payment', () => {
   it("shows all seven fields and offers Add, Change and Don't add", () => {
     show(makeCore())

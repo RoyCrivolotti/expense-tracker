@@ -9,6 +9,67 @@ const model = makeReviewModel()
 const merchants = buildMerchantIndex(model.dataset.transactions, '2026-11-14')
 const view = (over = {}) => describeRecommendation(makeRecommendation(over), model, merchants)
 
+const suggestion = (over = {}) => ({
+  description: 'Morning coffee',
+  categoryId: 2,
+  type: 'expense' as const,
+  accountId: 1,
+  amountCents: 1250,
+  sightings: 3,
+  settled: true,
+  reasons: [],
+  ...over,
+})
+
+describe('describeRecommendation with the server’s suggestion', () => {
+  it('prefers the person’s own description and category from the server over the rows the app holds', () => {
+    const v = view({ suggestion: suggestion() })
+
+    expect(v).toMatchObject({ description: 'Morning coffee', fromHistory: true, categoryId: 2, categoryName: 'Groceries', oneTap: true, reasons: [] })
+  })
+
+  it('reads a merchant the phone has never seen typed', () => {
+    const v = view({ merchantRaw: 'BRAND NEW PLACE', suggestion: suggestion() })
+
+    expect(v).toMatchObject({ description: 'Morning coffee', categoryId: 2, oneTap: true })
+  })
+
+  it('falls back to the rows the app holds when the server names no description', () => {
+    const v = view({ suggestion: suggestion({ description: null, categoryId: null, sightings: 0, settled: false }) })
+
+    expect(v).toMatchObject({ description: 'Cafe Example', categoryId: 1, oneTap: true })
+  })
+
+  it('maps the server’s votes onto the one-tap rule: one vote is a new merchant, a tie is not settled', () => {
+    expect(view({ suggestion: suggestion({ sightings: 1, settled: false }) }).reasons).toEqual(['new-merchant'])
+    expect(view({ suggestion: suggestion({ sightings: 4, settled: false }) }).reasons).toEqual(['mixed-description'])
+  })
+
+  it('takes the amount, type and account the wording taught, and says so when the amount was re-read', () => {
+    const v = view({ accountId: null, amountCents: 123400, suggestion: suggestion({ amountCents: 1234, type: 'refund', reasons: ['amount-relearned'] }) })
+
+    expect(v).toMatchObject({ amountCents: 1234, type: 'refund', accountId: 1, accountName: 'Main Debit', reasons: ['amount-relearned'], oneTap: false })
+  })
+
+  it('sends a wording the person has never accepted to Review', () => {
+    const v = view({ suggestion: suggestion({ reasons: ['new-shape'] }) })
+
+    expect(v).toMatchObject({ reasons: ['new-shape'], oneTap: false })
+    expect(transactionOf(v)).toBeNull()
+  })
+
+  it('still checks that a suggested category or account is in use', () => {
+    const v = view({ merchantRaw: 'ARCHIVE SHOP', accountId: null, suggestion: suggestion({ categoryId: 99, accountId: 99 }) })
+
+    expect(v).toMatchObject({ categoryId: null, accountId: null })
+    expect(v.reasons).toEqual(expect.arrayContaining(['no-category', 'no-account']))
+  })
+
+  it('adds the suggested fields in one tap', () => {
+    expect(transactionOf(view({ suggestion: suggestion() }))).toMatchObject({ description: 'Morning coffee', categoryId: 2, amountCents: 1250, accountId: 1 })
+  })
+})
+
 describe('describeRecommendation', () => {
   const withRows = (descriptions: string[]) => {
     const rows = descriptions.map((description, i) => makeTransaction({ id: 100 + i, description, categoryId: 1, date: `2026-10-${String(10 + i).padStart(2, '0')}`, amountCents: 400 }))

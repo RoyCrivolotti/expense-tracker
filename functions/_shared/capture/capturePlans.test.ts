@@ -26,7 +26,8 @@ import {
   RECORD_RECOMMENDATION_SQL,
   SAVE_CARD_SQL,
 } from './captureEventsSql'
-import { EVENT_OF_RECOMMENDATION_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, TEMPLATE_FACTS_SQL } from './captureLearningSql'
+import { EVENT_OF_RECOMMENDATION_SQL, EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL } from './captureLearningSql'
+import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from './captureSuggestionsSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
   DROP_MISSING_TEMPLATE_SQL,
@@ -75,6 +76,11 @@ function seeded(analyze: boolean) {
         `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen)
          VALUES (?, ?, 'iberia', ?, ?, '2026-03-01', ?)`,
       ).run(owner, `t${o}-${i}`, `title ${i % 4}`, `skeleton ${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`)
+      for (const amount of [-1, 100 * (1 + (i % 3))]) {
+        db.prepare(
+          `INSERT INTO capture_merchants (owner, key, amount_cents, description, votes, last_seen) VALUES (?, ?, ?, ?, 1, ?)`,
+        ).run(owner, `merchant ${i % 10}`, amount, `Shop ${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}`)
+      }
     }
   }
   if (analyze) db.exec('ANALYZE')
@@ -180,14 +186,37 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
     'the push behind a recommendation',
     EVENT_OF_RECOMMENDATION_SQL,
     [OWNER, 'rec1-1'],
-    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+    /SEARCH e USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)[\s\S]*SEARCH t USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
   ],
-  ['what a template has learned', TEMPLATE_FACTS_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   [
     'teach a template a decision',
     LEARN_DECISION_SQL,
     [OWNER, 't1-1', 1, 0, 0, 4, 'comma', 'expense', null, null, 'rec1-1'],
     /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)[\s\S]*SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'vote for a merchant',
+    VOTE_MERCHANT_SQL,
+    [OWNER, 'rec1-1', 'merchant 1', -1, 'Shop', 2, 'expense', 3, '2026-03-30'],
+    /SEARCH capture_events (EXISTS )?USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'evict merchants past the cap',
+    EVICT_MERCHANTS_SQL,
+    [OWNER, 2000],
+    /SEARCH capture_merchants USING (COVERING )?INDEX idx_capture_merchants_seen \(owner=\?\)/,
+  ],
+  [
+    'the pushes and templates of a page',
+    SUGGESTION_EVENTS_SQL,
+    [OWNER, '["rec1-1","rec1-2"]'],
+    /^SCAN j VIRTUAL TABLE[\s\S]*SEARCH e USING INDEX sqlite_autoindex_capture_events_1 \(id=\?\)[\s\S]*SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)[\s\S]*SEARCH t USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'the merchants of a page',
+    MERCHANT_ROWS_SQL,
+    [OWNER, '["merchant 1","merchant 2"]'],
+    /^SEARCH capture_merchants USING INDEX sqlite_autoindex_capture_merchants_1 \(owner=\? AND key=\?\)/,
   ],
   [
     'record what the person did',
@@ -228,6 +257,10 @@ describe.each([false, true])('capture statement plans, with table statistics: %s
 
   it('reads the templates of a title newest first from the index, with no sort', () => {
     expect(planOf(seeded(analyze), FIND_TEMPLATES_SQL, [OWNER, 'iberia', 'title 1', 50])).not.toMatch(/TEMP B-TREE/)
+  })
+
+  it('evicts merchants in the order of the index that holds them, with no sort', () => {
+    expect(planOf(seeded(analyze), EVICT_MERCHANTS_SQL, [OWNER, 2000])).not.toMatch(/TEMP B-TREE/)
   })
 
   it('pages the open list in index order, with no sort', () => {

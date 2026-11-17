@@ -1,6 +1,7 @@
 import type { NewTransaction } from './dataSource'
 import type { Transaction } from '../types'
 import { ApiError, req } from './apiClient'
+import type { Suggestion } from '../domain/capture/suggestion'
 
 /** A push the app turned into something to review, as the list route sends it. Nothing here is an expense yet. */
 export interface RecommendationInfo {
@@ -24,6 +25,11 @@ export interface RecommendationInfo {
    * after. A reason to look before adding, and the row Link points the payment at.
    */
   possibleMatch?: { transactionId: number; description: string; date: string } | null
+  /**
+   * What the person's own decisions on earlier pushes say the payment becomes: their description and category for the
+   * merchant, the type, account and amount the push's wording taught. Null for a recommendation no push made.
+   */
+  suggestion?: Suggestion | null
 }
 
 /** The typed row a payment may duplicate. */

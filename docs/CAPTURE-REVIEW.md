@@ -1,0 +1,107 @@
+# Reviewing captured payments
+
+For a contributor changing the Dashboard card that turns recommendations into expenses. It covers what the card shows
+for each payment, when one tap may add it, and the typed row a payment may duplicate. The capture key, the routes and
+what is stored are in [CAPTURE.md](CAPTURE.md).
+
+## The card
+
+Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with
+all seven fields it would become (type, amount, description, category, account, date, budget month). It is absent when
+nothing is waiting, and the Dashboard tab carries the count (the Settings badge still means pending access requests).
+"See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
+list, the count and the undo window live in the main bundle, so the badge needs no download.
+
+What each payment becomes is worked out on the device, never stored ([`reviewFields.ts`](../src/ui/capture/reviewFields.ts)).
+It takes the list's `suggestion` (below, "What the list suggests") first: its description, category, type, account and
+amount. When the suggestion names no description, description and category come from the typed rows the app holds
+([`review.ts`](../src/domain/capture/review.ts)): the person's most common ones for the merchant (digit words dropped,
+case and accents folded) over their last 12 months, else the newest row, ties to the more recent. Either way one tap
+needs the description given at least twice and strictly more than any other, else "Description not settled". Budget
+month, edge days and whether a category or account is still in use are always worked out here.
+
+| | |
+| --- | --- |
+| **One tap Add** | Only when nothing is in doubt. It sends the transaction shown, exactly |
+| **Review** | Everything else. It opens the normal add form, filled with only what the push said. With "Add and next (N left)" each save opens the next payment, and the form's "Don't add" moves on without creating anything |
+| **Don't add** | Removes only that suggestion and creates nothing. Three in a row on one wording never added stop it being suggested ([CAPTURE.md](CAPTURE.md), "What it learns") |
+| **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`). It points the recommendation at that row and creates nothing |
+
+A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
+in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the amount is not copied into the euro form),
+no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
+looks the same, a budget month that could differ, a push wording the person has never added ("New push wording"), or an
+amount the wording taught the app to read differently ("Amount re-read").
+
+That last test is one rule: the budget month (the add form's own rule, so the user's rollover day and a settled statement
+count) is worked out for the payment's day and for every day the bank might book it on, which are the day before or after
+when the payment is within an hour of midnight, and the day its push reached the server. If any of those gives another
+budget month the payment is reviewed, and the add form shows a note under the date with both days and a button to move
+between them. The payment's time of day is the phone's own, read from `occurredAt` (the endpoint in [CAPTURE-WORKER.md](CAPTURE-WORKER.md)), so
+the device's zone does not matter; a row without it counts as next to an edge on the days either side of midnight.
+
+One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
+a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
+back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.
+
+A payment from a card with no linked account opens with the Account field empty ("Pick an account") and a question under
+the date: which account is the card ending in those digits, with "Remember this card" on. Saving is refused until it is
+answered, with the message beside the question. The card is remembered after the payment is saved, against the account
+the payment was saved with, so if the person changes the form's Account after answering, the card follows the final
+account.
+
+Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The phone's
+own merchant history reads the rows the app holds, which in the paged ledger mode are the months in view, so without a
+suggestion a merchant typed only earlier counts as new.
+
+## What the list suggests
+
+Each recommendation in `GET /api/recommendations` carries a `suggestion`: what the person's own decisions on earlier
+pushes say it should become ([`suggestion.ts`](../src/domain/capture/suggestion.ts)). It is worked out on every list read
+and never stored, so it always follows the latest decision, and the recommendation's own amount and type stay as the
+push was first read. A recommendation no push made has `suggestion: null`, and the single read leaves it out.
+
+- **Description and category**: the description the person added this merchant with most often at any price, unless
+  the votes at this payment's price are settled, or name something other than the settled winner at any price (one
+  merchant name can stand for several fixed prices, such as two subscriptions). With no votes at any price, the price's. Spellings that differ only in case and accents count together, the label is the latest spelling,
+  and a tie goes to the more recently used. With no votes there is none, and the card falls back to the phone's own
+  history and then the bank's text. `sightings` is the votes counted and `settled` says the winner has at least two and
+  strictly more than any other, the same rule the phone's history uses.
+- **Amount**: the number the template learned to read, when the push has a number with a currency marker at that place,
+  else the first reading. When the two differ the reasons say `amount-relearned`.
+- **Type**: the template's, else the first guess. **Account**: the card's link, else the template's.
+- **Reasons**: `new-shape` when the person has never accepted a push of this wording (or it has no template), so one tap
+  never adds a wording before the person has added one by hand.
+
+Two reads serve a whole page, together: the pushes with their templates, and the merchants of the page by key. Both run
+before the duplicate check below, which then looks for the amount and direction the person will see.
+
+## The typed row a payment may duplicate
+
+A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
+`possibleMatch: { transactionId, description, date }`, or null: a row the person already typed that looks like the same
+payment. The list never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
+that row. Submit looks again, because a row can be typed between the list read and the press: it checks the row being
+submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
+and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`
+skips the check. A row typed between that one read and the insert is not caught, which is a deliberate advisory race.
+The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
+`DUPLICATE_WINDOW`, shared by both reads:
+
+- the same person's row, never another person's;
+- the same direction: an expense and an investment put in are money out, income and a refund and an investment taken
+  back out are money in, and a payment with no suggested type has no direction and matches nothing;
+- the same amount to the cent, in euros (a payment in another currency or with no amount matches nothing);
+- a date from 14 days before the payment's local date to 3 days after it. Back 14, because with no limit a regular price
+  (the 12,50 cafe) would match an old row every time and never allow one tap; forward 3, because a row may be dated by the
+  day the bank books it;
+- not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
+  so a payment that was captured and added does not match the next push of the same price;
+- the closest by date, and the highest id (entered last) on a tie. A row goes to one payment of the page only, the
+  one it is closest to (the newer payment first on a tie), and a payment that loses its row falls to its next best or to
+  none, so two payments of one price never offer the same row.
+
+The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
+prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
+whatever the page size. The check at submit is the same statement for one amount and one date, so it reads at most the
+rows of one 18-day window and needs no new index.

@@ -229,6 +229,8 @@ export type ReviewReason =
   | 'possible-match'
   | 'new-merchant'
   | 'mixed-description'
+  | 'new-shape'
+  | 'amount-relearned'
 
 /** What the payment is known to be, as far as the app can tell. */
 export interface ReviewFacts {
@@ -245,12 +247,17 @@ export interface ReviewFacts {
   monthEdge: boolean
   /** A typed row that looks the same, when the server says so. Absent until it does. */
   possibleMatch: boolean
+  /** The person has never accepted a push of this wording, when the server says so. */
+  newShape?: boolean
+  /** The amount was re-read with what the wording taught, when the server says so. */
+  amountRelearned?: boolean
 }
 
 /** Each reason a payment needs a look, in the order they are shown, with the test that finds it. */
 const RULES: ReadonlyArray<readonly [ReviewReason, (f: ReviewFacts) => boolean]> = [
   ['no-amount', (f) => f.amountCents === null],
   ['zero-amount', (f) => f.amountCents !== null && f.amountCents <= 0],
+  ['amount-relearned', (f) => f.amountRelearned === true],
   ['no-merchant', (f) => !f.hasMerchant],
   ['no-category', (f) => f.categoryId === null],
   ['no-account', (f) => f.accountId === null],
@@ -259,6 +266,7 @@ const RULES: ReadonlyArray<readonly [ReviewReason, (f: ReviewFacts) => boolean]>
   ['own-money', (f) => f.suggestedType === null || f.suggestedType === 'investment'],
   ['month-edge', (f) => f.monthEdge],
   ['possible-match', (f) => f.possibleMatch],
+  ['new-shape', (f) => f.newShape === true],
   ['new-merchant', (f) => f.hasMerchant && f.sightings < MIN_SIGHTINGS],
   // Not for a new merchant, which already says so: this is for one the person has typed more than one way.
   ['mixed-description', (f) => f.hasMerchant && f.sightings >= MIN_SIGHTINGS && !f.settled],
@@ -281,4 +289,6 @@ export const REVIEW_TEXT: Record<ReviewReason, string> = {
   'possible-match': 'May be entered already',
   'new-merchant': 'New merchant',
   'mixed-description': 'Description not settled',
+  'new-shape': 'New push wording',
+  'amount-relearned': 'Amount re-read',
 }

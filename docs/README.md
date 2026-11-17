@@ -10,6 +10,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [LEDGER-MODE.md](./LEDGER-MODE.md) | Contributor | How the browser holds and reads a ledger in parts: the switch, the session, the lists in pages, the writes, and what a window asks the server |
 | [API.md](./API.md) | Contributor | Every read and bulk route: parameters, bounds, errors, caching, cost |
 | [CAPTURE.md](./CAPTURE.md) | Contributor | Bank-push capture: the capture key, its routes and what it may and may not do |
+| [CAPTURE-REVIEW.md](./CAPTURE-REVIEW.md) | Contributor | The Dashboard card that reviews captured payments: the fields, one tap, the duplicate check |
 | [CAPTURE-WORKER.md](./CAPTURE-WORKER.md) | Contributor | The capture Worker: refusals, what it stores, deploying it, reading its log |
 | [CAPTURE-KINDS.md](./CAPTURE-KINDS.md) | Contributor | How to add a push kind from a real sample |
 | [CAPTURE-SHAPES.md](./CAPTURE-SHAPES.md) | Contributor | Shapes and slots: how a push is reduced to a template and its numbers, without a bank or language word |
