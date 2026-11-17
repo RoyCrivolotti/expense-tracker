@@ -12,8 +12,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [CAPTURE.md](./CAPTURE.md) | Contributor | Bank-push capture: the capture key, its routes and what it may and may not do |
 | [CAPTURE-REVIEW.md](./CAPTURE-REVIEW.md) | Contributor | The Dashboard card that reviews captured payments: the fields, one tap, the duplicate check |
 | [CAPTURE-WORKER.md](./CAPTURE-WORKER.md) | Contributor | The capture Worker: refusals, what it stores, deploying it, reading its log |
-| [CAPTURE-KINDS.md](./CAPTURE-KINDS.md) | Contributor | How to add a push kind from a real sample |
-| [CAPTURE-SHAPES.md](./CAPTURE-SHAPES.md) | Contributor | Shapes and slots: how a push is reduced to a template and its numbers, without a bank or language word |
+| [CAPTURE-SHAPES.md](./CAPTURE-SHAPES.md) | Contributor | How any push is read into a template and its numbers, without a bank or language word, source words, and what to do when a bank is read wrong |
 | [BEHAVIOR.md](./BEHAVIOR.md) | Contributor | How import, instalment plans, recurring suggestions and budget months behave |
 | [TESTING.md](./TESTING.md) | Contributor | Test layers, coverage gates, local test tooling |
 | [GOALS-MODEL.md](./GOALS-MODEL.md) | Contributor | The Goals projection engine and its assumptions |

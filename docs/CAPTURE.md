@@ -2,11 +2,27 @@
 
 For a contributor changing how the app turns a bank's push notifications into recommendations. It covers the capture
 key, the endpoint that accepts it and the routes that list and decide recommendations, the Dashboard card that reviews
-them, and the setup screen with the shortcut recipe, all built. The reader that will replace the kind rules is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md),
-and the Dashboard card that reviews recommendations is in [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
+them, and the Settings screens, all built. How any push is read, with no bank or language word in the code, is in
+[CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), and the Dashboard card that reviews recommendations is in
+[CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
 
 A person's phone runs a Shortcuts automation for each bank app and posts each notification with a capture key. The app
 only ever adds a recommendation the person edits and submits, never an expense of its own.
+
+## What a push becomes
+
+Every push that shows one amount with a currency marker (`12,50 EUR`, `$18.20`, `€4`) becomes a recommendation, from
+any bank and in any words: the amount, the marker's currency, the type `expense` until the person's decisions teach
+the wording another, and the whole push as its description until a second push of the wording shows where the
+merchant is. Everything else is counted per source and day as unread, and nothing of it is kept:
+
+- **No amount with a currency marker**, such as a "bills paid" push with no total, or two marked amounts that differ (a
+  charge and a balance), which the reader cannot tell apart.
+- **Only a code**: no amount and a 4 to 8 digit number, which is what a one-time code looks like.
+- **A Date it cannot trust**: unreadable, or more than two days from the server's clock.
+- **A muted wording**: three dismissals in a row on a wording never added.
+
+The Worker's log says which of these each push was ([CAPTURE-WORKER.md](CAPTURE-WORKER.md)).
 
 ## The capture key
 
@@ -36,9 +52,9 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `POST /api/capture-keys` | 201 with the same fields and `key`. Body: a JSON object with an optional `label` (at most 40 characters, no control characters; blank becomes "Shortcut"), at most 1 KB. 409 at the limit |
 | `DELETE /api/capture-keys/:id` | `{ ok: true }`, or 404 |
 | `GET /api/capture-cards` | `{ cards: [{ source, digitsKind, digits, accountId }], waiting: [{ source, digits, count }] }`. `waiting` is the cards open payments wait on for want of an account, with how many wait |
-| `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is a source word (see CAPTURE-KINDS.md), `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
+| `POST /api/capture-cards` | `{ ok: true }`. Body: `{ source, digits, accountId }` and an optional `digitsKind` (`card` by default, or `account`), at most 1 KB. `source` is a source word ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)), `digits` is exactly four digits, `accountId` is one of the person's own accounts (404 otherwise, as for one that does not exist). Saving the same link again changes nothing, and saving it for another account moves it. 409 at 50 links |
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
-| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app: `iberia` and `santander` always, then any other source that has been counted. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
+| `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised, diagnostics }], endpoint, shortcutUrl }`, one entry per source word the person's pushes were ever counted under, in order, and none before the first push. `lastCaptureAt` is when the newest stored push arrived (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `diagnostics` covers the last 30 UTC days: `received` and `unread` from the counters, `recommended` (pushes stored), `addedAsIs`, `edited`, `linked` and `dismissed` from `capture_events.outcome`, `open` (recommendations still waiting) and `muted` (the source's templates muted now). Counts only. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
 | `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
 | `GET /api/capture-templates?ignored=1` | `{ templates: [{ templateId, source, skeleton, seen, dismissals, ignoredAt }] }`: the person's ignored templates (below, "What it learns"), newest ignore first, at most 100. `skeleton` is the masked wording, never a push's body. Any other query is a 400. Reads only |
 | `POST /api/capture-templates/:id/unignore` | `{ ok: true }`, or 404 for another person's template or an id that is none. Clears the ignore and the dismissal streak, so the next push of that wording is suggested again. Takes no body |
@@ -70,7 +86,7 @@ read and write is for the signed-in person alone.
 
 ## Recommendations
 
-A recommendation is what a recognised push becomes: an amount, the text as the bank sent it, a date, an account when the
+A recommendation is what a stored push becomes: an amount, the text as the bank sent it, a date, an account when the
 card is mapped, and a suggested type the person can change. It is never an expense until they submit it. All routes are
 the signed-in person's own; another person's recommendation and an id that is not one both answer 404.
 
@@ -89,20 +105,19 @@ the row, the template of the push behind it learns from it (below).
 
 ## What is stored
 
-A push the Worker recognises becomes one `capture_events` row and one open recommendation. What it keeps of the push's
-text follows one rule. The cleaned body (`body`, at most 500 characters) is kept only when the push shows an amount with
-a currency marker, and it is blanked when the person decides the recommendation (submit, dismiss or link, in the same
-batch as the decision) or 30 days after the push arrived, whichever comes first. A push with no currency-marked amount
-keeps no text at all, neither body nor description, which keeps one-time codes out without the app knowing what a code
-push says. The event's copy of the description (`merchant_raw`, which for a first push of a wording is the whole body)
+A stored push becomes one `capture_events` row and one open recommendation. What it keeps of the push's text follows
+one rule. The cleaned body (`body`, at most 500 characters) is blanked when the person decides the recommendation
+(submit, dismiss or link, in the same batch as the decision) or 30 days after the push arrived, whichever comes first.
+Only a push with a currency-marked amount is stored at all, so a push that holds nothing but a code keeps no text,
+without the app knowing what a code push says. A push that shows a code beside a currency amount is stored like any
+other, and its body, code included, stays until it is decided or for 30 days. The event's copy of the description (`merchant_raw`, which for a first push of a wording is the whole body)
 and the older `body_excerpt` column, no longer written, are blanked by the same rule. The recommendation's description
 is the person's and stays. The 30-day rule is checked whenever a new push arrives, so when a person's pushes stop,
 text older than 30 days stays until their next push.
 
 Each stored push also keeps its shape (`shape_id`) and its slots (`slots`: the numbers, card digits, dates and codes as
-JSON, at most 2,000 characters). A push with a currency-marked amount also joins a template (`template_id`), a row of
-`capture_templates`, one per person and per way their bank words a push: the title and text with every number masked,
-and how often it was seen. A push with no such amount gets no template, so none of its words are kept anywhere.
+JSON, at most 2,000 characters), and joins a template (`template_id`), a row of `capture_templates`, one per person and
+per way their bank words a push: the title and text with every number masked, and how often it was seen.
 
 A template is not covered by the 30-day rule, and it keeps words. The first push of a wording leaves its merchant, or
 the name of the person it names, in the template's text. Once a second push shows which words vary, those words become
@@ -134,8 +149,8 @@ a submit or a link, read from the row saved or linked:
   text is the merchant: text that shows the amount with its currency marker is a whole push, which is never learned. A
   dismissal teaches the merchant nothing. Votes are counted in SQL, so two decisions at once both count.
 - **Ignoring a wording**: three dismissals in a row on a template nobody has accepted mute it. Its later pushes of the
-  same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak;
-  the Settings list of ignored pushes is still to come. An accepted template is never muted this way.
+  same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak.
+  Settings, Account, "Muted pushes" lists the muted wordings by their masked words, with "Suggest again". An accepted template is never muted this way.
 
 The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
 account, description, category), `linked` or `dismissed`. An add is compared with what the card showed: the list's
@@ -150,7 +165,7 @@ Settings, Account, "Set up capture" lists the steps and checks that the first pa
 from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. A second
 phone has not been tried.** We have not seen the iOS 27 screens beyond the trigger, so names below may differ from
 yours; report any that do. The trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
-user agent), so the screen says to check Settings, General, About. Only Iberia has a recipe; Santander joins later.
+user agent), so the screen says to check Settings, General, About. The steps are the same for every bank app.
 
 ### With the shortcut link
 
@@ -164,8 +179,8 @@ iPhone from Safari and the installed Home Screen app. A link to the file traps t
    Shortcut**, then come back to the app.
 3. **Choose your bank's app.** In the trigger **When I receive a notification from**, tap the app name and choose the app.
 4. **Paste your key.** In the header **Authorization**, replace `KEY_HERE` with the key. Keep `Bearer` and its space in front.
-5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with the bank's word. Today that is `iberia`, taken from
-   `SUPPORTED_SOURCES`, which is built from the same rules the server reads.
+5. **Name your bank.** In the JSON, replace `CARD_NAME_HERE` in `source` with a short lowercase name for the bank's app,
+   such as `mybank` (a source word, [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)). Any name works; keep one per bank.
 6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
    **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
    untried. The editor has said "Automation is turned off" while it ran, so trust the automation list and the first payment.
@@ -199,13 +214,13 @@ With no valid link set, or when the status cannot be read, the card shows these 
 
 1. Make a key and copy it, as above.
 2. Open **Shortcuts**, start a new automation and choose the trigger **When I receive a notification from**.
-3. Tap the app name and choose the bank's app (**IberiaCards** for the Icon card). Leave the filters empty.
+3. Tap the app name and choose the bank's app. Leave the filters empty.
 4. Tap the **Search** bar at the bottom, type **Get Contents of URL** and tap that action to add it.
 5. In the action, tap **URL** and type the address. The `/capture` is part of it.
 6. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
 7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the key.
 8. Under **Request Body**, choose **JSON**.
-9. Tap **Add new field**, choose **Text**, set the key to **source** and type the bank's word (`iberia`).
+9. Tap **Add new field**, choose **Text**, set the key to **source** and type the bank's source word, as in step 5 above.
 10. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
 11. Add a field with the key **body** and the variable **Body**.
 12. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
@@ -214,11 +229,12 @@ With no valid link set, or when the status cannot be read, the card shows these 
     action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection).
 14. Check the automation is on, and make one purchase, as steps 6 and 7 above.
 
-**The check.** The screen reads `GET /api/capture-status` and shows one of four states for Iberia. Grey "Waiting for
-your first payment": nothing has reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
+**The check.** The screen reads `GET /api/capture-status` and shows one of four states for every source together: the
+counts added up, and the newest capture with the source it came from. Grey "Waiting for your first payment": nothing has
+reached the app. Amber "Arriving, not read as a payment": pushes arrived over the last
 seven days (`capture_counters.received`) and every one went unread (`unrecognised` equals `received`), or none ever
-was read, which is what a bank rewording its message looks like. Amber "Nothing captured lately": the newest recognised
-push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
+was read, which is what a shortcut sending the wrong fields, or only muted wordings, looks like. Amber "Nothing captured
+lately": the newest stored push (`capture_events`) is more than 3 days old (`STALE_DAYS` in `captureSetup.ts`). Green "Last payment captured",
 with the time, otherwise, and with "N of M unread in the last 7 days" when some pushes were unread. While the read is out the card says only "Checking", and when it fails it shows the error alone, never a claim about the phone. It is information only: there is no banner, reconciliation or notification, so a stopped
 automation is noticed only by the person.
 
@@ -231,6 +247,16 @@ variable is unset the screen asks for the address to be pasted and keeps it in t
 The flag is per browser: `?capture=on` in the address, or Settings, About this app, "Capture screens (beta)". The switch
 exists because an installed Home Screen app has no address bar. It sets the same value in that app's own storage and
 reloads. The screens read the flag when they mount, so nothing changes until the reload.
+
+## Muted pushes and diagnostics
+
+Behind the same flag, Settings, Account has two more cards, each its own lazy chunk. "Muted pushes" reads
+`GET /api/capture-templates?ignored=1` and lists each muted wording by its masked words: numbers, cards, dates and codes
+always shown as what they are, and the merchant only once a second push of the wording has shown where it sits (until
+then the first push's merchant is among the words), with its source, how often it was seen and dismissed, and when it
+was muted; "Suggest again" calls the un-ignore route and reads the list again. "Capture diagnostics" reads the status
+route's `diagnostics` and shows, per source, every count and three shares of the decided recommendations: added as
+shown, edited, and dismissed. A link counts as decided, so the three need not add up to 100. The diagnostics card quotes no push.
 
 ## The capture endpoint
 

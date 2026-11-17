@@ -28,7 +28,7 @@ month, edge days and whether a category or account is still in use are always wo
 | **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`). It points the recommendation at that row and creates nothing |
 
 A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not
-in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the amount is not copied into the euro form),
+in use or never typed for this merchant, a card not mapped to an account (a card is mapped by answering the question below, once), a currency other than euros (the push's own marker sets it, so a `$18.20` push arrives in dollars and shows "Not in euros"; the amount is not copied into the euro form),
 no suggested type or an investment (the user's own money moved), a merchant typed fewer than twice, a typed row that
 looks the same, a budget month that could differ, a push wording the person has never added ("New push wording"), or an
 amount the wording taught the app to read differently ("Amount re-read").

@@ -1,13 +1,13 @@
 # Shapes and slots
 
 For a contributor working on how capture reads a push. It covers the reader in `src/domain/capture` that turns any
-push into a template (its shape) and the numbers in it (its slots), without knowing the bank or the language. The
-Worker still recognises pushes with the kind rules in [CAPTURE-KINDS.md](CAPTURE-KINDS.md).
+push into a template (its shape) and the numbers in it (its slots), without knowing the bank or the language, what the
+Worker makes of each push with it, and what to do when a bank's pushes are read wrong.
 
 ## Why it has no words
 
-The kind rules need a bank's wording written into code, so a new bank, a rewording or another language is a code
-change. The reader holds no bank word and one worded cue, `ending`, inherited from the old reader (`ending 1234` names a card).
+A rule per bank needs that bank's wording written into code, so a new bank, a rewording or another language would be a
+code change. The reader holds no bank word and one worded cue, `ending`, inherited from the old reader (`ending 1234` names a card).
 Everything else it looks at is the form of a token: a number, a card's last four digits, a date, a code. The one thing it knows from outside is the set of currency markers
 ([`currency.ts`](../src/domain/capture/currency.ts)): ISO 4217 codes and a list of symbols (`€`, `$`, `R$`, `kr` and so
 on). A code that is also a word somewhere (`all`, `try`, `top`) counts only in capitals.
@@ -61,9 +61,12 @@ tokens that are not placeholders, and a run may not pass 8 tokens.
 
 ## At receipt
 
-The Worker still decides with the kind rules which pushes to store. For each one it stores,
-[`readPush(title, body)`](../src/domain/capture/readPush.ts) reads the words, the slots and the skeleton in one pass, so
-a position means the same token in all three. The skeleton is not one token per word (a glued `50,00EUR` gives `<N>
+Every push is read the same way, whatever its source word. [`readPush(title, body)`](../src/domain/capture/readPush.ts) reads the words, the slots and the skeleton in one pass, so
+a position means the same token in all three. A push becomes a recommendation only when `currencyAmount` finds its one
+amount with a currency marker ([`store.ts`](../workers/capture/src/store.ts)): the amount is that number's first reading,
+the currency its marker's ISO code, the type `expense`, the card digits the one masked-digits slot when the push shows
+exactly one, and the date the push's own. Anything else is counted as unread and nothing of it is kept
+([CAPTURE-WORKER.md](CAPTURE-WORKER.md) has the reasons). The skeleton is not one token per word (a glued `50,00EUR` gives `<N>
 <C>`), so `readPush` also keeps which word each skeleton token came from, and `spanText` turns a run back into the words
 as the bank wrote them.
 
@@ -89,3 +92,32 @@ unread and as a sighting of the template, and nothing else of it is stored. A te
 merchant still holds the first merchant's words, so a sibling that differs there is another merchant: it is stored as
 usual and teaches the template its run. A push that starts a new template is never muted. What is kept, and for how long, is in [CAPTURE.md](CAPTURE.md),
 "What is stored".
+
+## Source words
+
+A **source word** is a label the person picks for one phone automation, usually their bank app's name: lowercase
+`a-z`, digits and hyphens, 1 to 32 characters (`isSourceWord` in [`source.ts`](../src/domain/capture/source.ts), used by
+the Worker and by the card-link route). Every word is read the same way, and nothing in the app depends on which word
+it is: it keeps one bank's templates and card links apart from another's, and the Settings screens show it as typed. A
+person may have at most 8 different words. A ninth is a 429 with no `Retry-After`, because the cap is permanent until the
+person's `capture_counters` rows are cleared. A word already counted is always admitted.
+
+## How a bank is learned
+
+There is nothing to add for a new bank. Its first push with an amount and a currency marker makes a template and a
+recommendation, typed as an expense and described by the whole push. The person's decisions do the rest
+([CAPTURE.md](CAPTURE.md), "What it learns"): the amount's place and decimal mark, the type and the account come from
+what they save, and the merchant's place from the second push of the same wording at another merchant.
+
+When a bank's pushes are read wrong, the fix is on the phone, not in the code:
+
+- **A wrong amount, type or description**: open Review, correct it and save. The template learns from that save.
+- **A push that should never be suggested** (an offer, a balance alert): Don't add. Three in a row on a wording never
+  added mute it; Settings, Account, "Muted pushes" brings it back.
+- **A push that never shows up**: Settings, Account, "Capture diagnostics" says whether it arrived and was not read.
+  A push with no currency-marked amount is counted and never suggested; that is deliberate, since a one-time code
+  looks the same.
+
+If a bank writes amounts in a way the reader cannot read at all, the change belongs in the reader (`slots.ts`,
+`currency.ts`), tested with an **invented** push in the same form. Never put a real amount, merchant, name, or card or
+account digits in the code, a test or a pull request, and never a bank's or a language's word.
