@@ -3,8 +3,10 @@ import type { CaptureSource } from '../capture/types'
 /** What became of one source's stored pushes over a window: the outcome each decision wrote, and how many are open. */
 export interface SourceOutcomes {
   source: CaptureSource
-  /** Pushes stored, each an event with a recommendation. */
+  /** Pushes stored that made a recommendation. */
   recommended: number
+  /** Pushes stored that joined a recommendation another push of the same movement made. */
+  grouped: number
   addedAsIs: number
   edited: number
   linked: number

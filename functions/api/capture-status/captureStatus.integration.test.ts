@@ -73,7 +73,7 @@ const muted = (owner: string, source: string, id: string, ignoredAt: string | nu
        VALUES (?, ?, ?, 't', 's', '2026-11-01', '2026-11-01', ?)`,
     )
     .run(owner, id, source, ignoredAt)
-const NONE = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const NONE = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 const counter = (owner: string, source: string, day: string, received: number, unrecognised: number) =>
   sqlite
     .prepare('INSERT INTO capture_counters (owner, source, day, received, unrecognised) VALUES (?, ?, ?, ?, ?)')
@@ -175,9 +175,23 @@ describe('GET /api/capture-status', () => {
             source: 'newbank',
             received: 6,
             unrecognised: 1,
-            diagnostics: { received: 8, recommended: 5, unread: 3, addedAsIs: 1, edited: 1, linked: 1, dismissed: 1, open: 1, muted: 1 },
+            diagnostics: { received: 8, recommended: 5, grouped: 0, unread: 3, addedAsIs: 1, edited: 1, linked: 1, dismissed: 1, open: 1, muted: 1 },
           },
         ],
+      })
+    })
+
+    it('count a push that joined another’s recommendation as grouped, and its decision once', async () => {
+      counter(OWNER, 'newbank', '2026-11-13', 3, 0)
+      await stored('k1', 'newbank', '2026-11-13T08:00:00.000Z', 'dismissed', 'dismissed')
+      await stored('k1', 'newbank', '2026-11-13T08:00:05.000Z', 'dismissed', 'dismissed')
+      await stored('k1', 'newbank', '2026-11-13T09:00:00.000Z')
+      await stored('k1', 'newbank', '2026-11-13T09:00:05.000Z')
+      // The second push of each pair joined the first's recommendation.
+      sqlite.prepare("UPDATE capture_events SET rec_id = 'rec' || (CAST(substr(rec_id, 4) AS INTEGER) - 1), grouped = 1 WHERE id IN (?, ?)").run(`e${n - 2}`, `e${n}`)
+
+      expect(await (await get()).json()).toMatchObject({
+        sources: [{ source: 'newbank', diagnostics: { ...NONE, received: 3, recommended: 2, grouped: 2, dismissed: 1, open: 1 } }],
       })
     })
 

@@ -12,7 +12,7 @@ vi.mock('../../data/captureStatusApi')
 
 const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
-const diagnostics = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const diagnostics = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
 
 const LINK = 'https://www.icloud.com/shortcuts/abc123'

@@ -13,9 +13,10 @@ export interface SourceStatus {
 }
 
 export interface SourceDiagnostics {
-  /** Pushes accepted, read or not, and how many were stored as a recommendation or not read. */
+  /** Pushes accepted, read or not, and how many were stored as a recommendation, joined one, or were not read. */
   received: number
   recommended: number
+  grouped: number
   unread: number
   /** What the person did with the recommendations: added as shown, added after an edit, linked, dismissed. */
   addedAsIs: number

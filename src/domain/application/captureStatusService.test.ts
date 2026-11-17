@@ -13,7 +13,7 @@ function repo(over: Partial<Record<'countedSources' | 'readCounters', ReturnType
       { source: 'bank-a', day: '2026-11-06', received: 9, unrecognised: 9 },
       { source: 'bank-b', day: '2026-10-20', received: 3, unrecognised: 0 },
     ]),
-    readSourceOutcomes: vi.fn().mockResolvedValue([{ source: 'bank-b', recommended: 3, addedAsIs: 2, edited: 0, linked: 0, dismissed: 1, open: 0 }]),
+    readSourceOutcomes: vi.fn().mockResolvedValue([{ source: 'bank-b', recommended: 3, grouped: 1, addedAsIs: 2, edited: 0, linked: 0, dismissed: 1, open: 0 }]),
     countMutedTemplates: vi.fn().mockResolvedValue([{ source: 'bank-a', muted: 2 }]),
     lastCaptureAt: vi.fn((_owner: string, source: string) => Promise.resolve(source === 'bank-b' ? '2026-10-20T08:00:00.000Z' : null)),
     ...over,
@@ -36,14 +36,14 @@ describe('captureStatus', () => {
         lastCaptureAt: null,
         received: 6,
         unrecognised: 3,
-        diagnostics: { received: 15, recommended: 0, unread: 12, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 2 },
+        diagnostics: { received: 15, recommended: 0, grouped: 0, unread: 12, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 2 },
       },
       {
         source: 'bank-b',
         lastCaptureAt: '2026-10-20T08:00:00.000Z',
         received: 0,
         unrecognised: 0,
-        diagnostics: { received: 3, recommended: 3, unread: 0, addedAsIs: 2, edited: 0, linked: 0, dismissed: 1, open: 0, muted: 0 },
+        diagnostics: { received: 3, recommended: 3, grouped: 1, unread: 0, addedAsIs: 2, edited: 0, linked: 0, dismissed: 1, open: 0, muted: 0 },
       },
     ])
   })

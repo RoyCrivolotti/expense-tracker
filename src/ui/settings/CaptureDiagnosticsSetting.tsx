@@ -8,6 +8,7 @@ import styles from './CaptureDiagnosticsSetting.module.css'
 const COUNTS: ReadonlyArray<[keyof SourceDiagnostics, string]> = [
   ['received', 'Received'],
   ['recommended', 'Suggested'],
+  ['grouped', 'Same payment as another'],
   ['unread', 'Not read'],
   ['addedAsIs', 'Added as shown'],
   ['edited', 'Edited, then added'],
