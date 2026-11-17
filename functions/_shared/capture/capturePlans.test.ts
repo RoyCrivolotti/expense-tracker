@@ -28,6 +28,7 @@ import {
 } from './captureEventsSql'
 import { EVENT_OF_RECOMMENDATION_SQL, EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL } from './captureLearningSql'
 import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from './captureSuggestionsSql'
+import { COUNTED_SOURCES_SQL, MUTED_TEMPLATES_SQL, SOURCE_OUTCOMES_SQL } from './captureStatusSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
   DROP_MISSING_TEMPLATE_SQL,
@@ -137,6 +138,24 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
     READ_COUNTERS_SQL,
     [OWNER, '2026-02-01'],
     /SEARCH capture_counters USING INDEX sqlite_autoindex_capture_counters_1 \(owner=\?\)/,
+  ],
+  [
+    'the sources a person was counted under',
+    COUNTED_SOURCES_SQL,
+    [OWNER],
+    /SEARCH capture_counters USING COVERING INDEX sqlite_autoindex_capture_counters_1 \(owner=\?\)/,
+  ],
+  [
+    'what became of each source’s pushes',
+    SOURCE_OUTCOMES_SQL,
+    [OWNER, '2026-03-10'],
+    /SEARCH e USING INDEX idx_capture_events_source \(owner=\? AND source=\? AND received_at>\?\)[\s\S]*SEARCH r USING INDEX sqlite_autoindex_recommendations_1 \(id=\?\)/,
+  ],
+  [
+    'the muted templates of each source',
+    MUTED_TEMPLATES_SQL,
+    [OWNER],
+    /SEARCH capture_templates USING INDEX (sqlite_autoindex_capture_templates_1|idx_capture_templates_lookup|idx_capture_templates_seen) \(owner=\?\)/,
   ],
   [
     'list cards',

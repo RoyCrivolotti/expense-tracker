@@ -16,6 +16,7 @@ import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
 import { FIND_TEMPLATES_SQL, LIST_IGNORED_SQL, UNIGNORE_SQL, toIgnored } from '../capture/captureTemplatesSql'
 import type { IgnoredRow, TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
+import { status } from './d1CaptureStatus'
 import { findMatch, withMatches } from './d1CaptureMatches'
 import { merchantRows, withSuggestions } from './d1CaptureSuggestions'
 import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
@@ -187,5 +188,5 @@ function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendatio
 
 export function createD1CaptureRepository(env: Pick<Env, 'DB'>): CaptureRepository {
   const db = env.DB
-  return { ...keys(db), ...events(db), ...cards(db), ...recommendations(db), ...templates(db), ...learning(db) }
+  return { ...keys(db), ...events(db), ...cards(db), ...status(db), ...recommendations(db), ...templates(db), ...learning(db) }
 }

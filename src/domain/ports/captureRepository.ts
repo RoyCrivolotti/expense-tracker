@@ -3,6 +3,7 @@ import type { TemplateFacts } from '../capture/learn'
 import type { MerchantVote } from '../capture/merchants'
 import type { MerchantRow, Suggestion } from '../capture/suggestion'
 import type { CaptureSource, SuggestedType } from '../capture/types'
+import type { CaptureStatusReads } from './captureStatusReads'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
 export const MAX_ACTIVE_CAPTURE_KEYS = 3
@@ -253,7 +254,7 @@ export interface RecommendationCursor {
  * is identified by its key, and the key row names the owner). Times are ISO strings in UTC, passed in so
  * nothing here reads a clock.
  */
-export interface CaptureRepository {
+export interface CaptureRepository extends CaptureStatusReads {
   /** False, and nothing written, when the owner already holds the most keys allowed. Decided inside the insert. */
   createKey(key: NewCaptureKey): Promise<boolean>
   findKey(keyId: string): Promise<CaptureKey | null>
