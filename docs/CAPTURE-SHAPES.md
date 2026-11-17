@@ -81,5 +81,11 @@ So the first push of a new wording is described by its whole body, as before, an
 merchant the description is the merchant. A third merchant joins the same template. One pair cannot tell a merchant
 from a verb, so a purchase and a refund that share a title and differ in one word can put the `<M>` on that word;
 learning a type per template is what settles it. All of it is written in the batch that stores the push, so a failure
-stores none of it and a replay changes no template. What is kept, and for how long, is in [CAPTURE.md](CAPTURE.md),
+stores none of it and a replay changes no template.
+
+A template the person's decisions have muted (three dismissals in a row with no accept ever, [CAPTURE.md](CAPTURE.md),
+"What it learns") is still matched the same way. A push with its exact skeleton, or a sibling at its `<M>`, is counted as
+unread and as a sighting of the template, and nothing else of it is stored. A template muted before it learned its
+merchant still holds the first merchant's words, so a sibling that differs there is another merchant: it is stored as
+usual and teaches the template its run. A push that starts a new template is never muted. What is kept, and for how long, is in [CAPTURE.md](CAPTURE.md),
 "What is stored".
