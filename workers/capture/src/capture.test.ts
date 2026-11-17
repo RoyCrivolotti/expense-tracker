@@ -277,6 +277,49 @@ describe('a body that is not a push', () => {
   })
 })
 
+describe('the source word', () => {
+  const fromApp = { title: PURCHASE.title, body: PURCHASE.body, date: PURCHASE.date }
+  const sourceOf = () => rows('SELECT source FROM capture_events').map((r) => r.source)
+
+  it('is the App name of the notification, folded, when the shortcut sends no source', async () => {
+    expect((await send(request({ body: { ...fromApp, app: 'SampleCards' } }))).status).toBe(200)
+    expect((await send(request({ body: { ...fromApp, app: 'Bank 24 Online', date: '2026-11-03T09:42:07+01:00' } }))).status).toBe(200)
+    expect(sourceOf().sort()).toEqual(['bank-24-online', 'samplecards'])
+  })
+
+  it('is the typed source when there is one, so an older shortcut keeps the word its payments are filed under', async () => {
+    await send(request({ body: { ...PURCHASE, app: 'SampleCards' } }))
+    expect(sourceOf()).toEqual(['iberia'])
+  })
+
+  it('is the App name when the typed source is not a word the app accepts', async () => {
+    await send(request({ body: { ...PURCHASE, source: 'CARD_NAME_HERE', app: 'Example Bank' } }))
+    expect(sourceOf()).toEqual(['example-bank'])
+  })
+
+  it('is one word whether typed or folded from the App name, so one push sent both ways is stored once', async () => {
+    await send(request({ body: { ...PURCHASE, source: 'example-bank' } }))
+    await send(request({ body: { ...fromApp, app: 'Example Bank' } }))
+    expect(count('capture_events')).toBe(1)
+  })
+
+  it.each([
+    ['no App name either', fromApp],
+    ['an empty App name', { ...fromApp, app: '' }],
+    ['an App name of symbols alone', { ...fromApp, app: '!!!' }],
+    ['an App name that is not text', { ...fromApp, app: 5 }],
+    ['an App name over 64 characters', { ...fromApp, app: 'a'.repeat(65) }],
+  ])('answers 400 for %s', async (_name, body) => {
+    expect((await send(request({ body }))).status).toBe(400)
+    expect(count('capture_events')).toBe(0)
+  })
+
+  it('accepts an App name of exactly 64 characters', async () => {
+    expect((await send(request({ body: { ...fromApp, app: 'a'.repeat(64) } }))).status).toBe(200)
+    expect(sourceOf()).toEqual(['a'.repeat(32)])
+  })
+})
+
 describe('a push from any bank, in any words', () => {
   const push = (source: string) => ({ source, title: 'Notice', body: 'invented text', date: PURCHASE.date })
 
