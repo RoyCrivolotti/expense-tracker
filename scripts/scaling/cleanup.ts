@@ -32,6 +32,7 @@ export const OWNER_TABLES: readonly OwnerTable[] = [
   { table: 'capture_events', column: 'owner' },
   { table: 'capture_counters', column: 'owner' },
   { table: 'capture_templates', column: 'owner' },
+  { table: 'capture_merchants', column: 'owner' },
   { table: 'recommendations', column: 'owner' },
   { table: 'accounts', column: 'owner' },
   { table: 'categories', column: 'owner' },

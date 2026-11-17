@@ -26,7 +26,7 @@ const FIRST_BACKFILL = STATEMENTS.findLastIndex((s) => /^CREATE TRIGGER/i.test(s
 const SETUP = STATEMENTS.slice(0, FIRST_BACKFILL)
 const BACKFILLS = STATEMENTS.slice(FIRST_BACKFILL)
 
-const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql']
+const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql']
 
 async function kitFor(seed: number, through?: string) {
   const sqlite = migratedDatabase(through)

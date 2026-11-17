@@ -142,8 +142,7 @@ lists the migrations it went back past as pending and the next deploy applies th
 
 - **Name and number:** `NNNN_lower_snake_case.sql`, numbered upwards with none missing or repeated.
 - **Nothing the running code may still read goes away.** `DROP TABLE`, `DROP COLUMN` and `RENAME` need a `-- lint-allow:
-  destructive <why it is safe>` comment above them. Ship the code that stops using a column first, then drop it in a
-  later release.
+  destructive <why>` comment above them. Ship the code that stops using a column first, then drop it in a later release.
 - **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs `-- lint-allow: unscoped <why every row is
   meant>`.
 - **`IF NOT EXISTS`** on every `CREATE TABLE`, `CREATE INDEX` and `CREATE TRIGGER`.
@@ -201,6 +200,7 @@ have stopped `--file`. It can stop half-applied, so compare the result with `npm
 | `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the written-row allowance ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
 | `0040_capture` | Five tables for bank-push capture: keys (hashed), card map, recognised events, per-day counters of what was dropped, and recommendations. Nothing reads or writes them yet, so applying it changes no response. `npm run check:schema` expects them on every database. |
 | `0041_capture_shapes` | New columns on `capture_events` (shape, template, slots, the cleaned `body`, an `outcome`), a `malformed` counter, and the `capture_templates` table. Additive: `body_excerpt` stays, so the capture Worker that is running keeps working until it is redeployed, which should happen once this is on that database. `npm run check:schema` expects them on every database. |
+| `0042_capture_merchants` | The `capture_merchants` table: what a person calls each merchant their bank pushes name, learned from the payments they add. Additive; nothing outside capture reads it. `npm run check:schema` expects it on every database. |
 
 Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 
