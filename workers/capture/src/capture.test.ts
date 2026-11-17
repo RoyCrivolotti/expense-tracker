@@ -613,12 +613,13 @@ describe('shapes and templates', () => {
   })
 
   it('writes no body, merchant or skeleton to the log', async () => {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => undefined))
     await send(request({ body: at('Example Cafe', 1) }))
     await send(request({ body: at('Sample Books Ltd', 2) }))
-    const logged = JSON.stringify(log.mock.calls)
+    const calls = spies.flatMap((s) => s.mock.calls)
+    const logged = JSON.stringify(calls)
     for (const secret of ['Example', 'Sample', 'pagado', 'tarjeta', '12,50', '4321', '<M>']) expect(logged).not.toContain(secret)
-    expect(log.mock.calls).toHaveLength(2)
-    log.mockRestore()
+    expect(calls).toHaveLength(2)
+    spies.forEach((s) => s.mockRestore())
   })
 })

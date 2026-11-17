@@ -1,11 +1,32 @@
-import { MAX_CAPTURE_TEMPLATES } from '../../../src/domain/ports/captureRepository'
-import type { CaptureCaps, CaptureEvent, NewRecommendation, TemplateDecision } from '../../../src/domain/ports/captureRepository'
-import { RECORD_EVENT_SQL, RECORD_RECOMMENDATION_SQL, eventParams } from '../capture/captureEventsSql'
+import { BODY_KEEP_DAYS, MAX_CAPTURE_TEMPLATES } from '../../../src/domain/ports/captureRepository'
+import type { CaptureCaps, CaptureEvent, CaptureRepository, NewRecommendation, TemplateDecision } from '../../../src/domain/ports/captureRepository'
+import { BLANK_OLD_TEXT_SQL, RECORD_EVENT_SQL, RECORD_RECOMMENDATION_SQL, eventParams } from '../capture/captureEventsSql'
+import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL } from '../capture/captureRecommendationsSql'
 import { templateIdOf, templateStatements } from '../capture/captureTemplatesSql'
 
 /*
  * The capture writes that are one D1 batch each, so what they change together commits together or not at all.
  */
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Text that arrived before this is blanked. */
+function keepTextSince(receivedAt: string): string {
+  return new Date(Date.parse(receivedAt) - BODY_KEEP_DAYS * DAY_MS).toISOString()
+}
+
+export async function decide(
+  db: D1Database,
+  owner: string,
+  id: string,
+  d: Parameters<CaptureRepository['decideRecommendation']>[2],
+): Promise<boolean> {
+  const [decided] = await db.batch([
+    db.prepare(DECIDE_SQL).bind(owner, id, d.state, d.state === 'submitted' ? d.txnId : null, d.at),
+    db.prepare(BLANK_DECIDED_TEXT_SQL).bind(owner, id),
+  ])
+  return (decided?.meta?.changes ?? 0) > 0
+}
 
 export async function recordCapture(
   db: D1Database,
@@ -32,6 +53,7 @@ export async function recordCapture(
         rec.createdAt,
       ),
     ...templateStatements(event.id, template, MAX_CAPTURE_TEMPLATES).map(([sql, params]) => db.prepare(sql).bind(...params)),
+    db.prepare(BLANK_OLD_TEXT_SQL).bind(event.keyId, keepTextSince(event.receivedAt)),
   ])
   return (results[0]?.meta?.changes ?? 0) > 0
 }

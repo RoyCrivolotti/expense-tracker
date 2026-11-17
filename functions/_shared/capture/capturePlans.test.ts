@@ -16,6 +16,7 @@ import {
 } from './captureCardsSql'
 import { migratedDatabase } from '../../../src/testing/sqliteD1'
 import {
+  BLANK_OLD_TEXT_SQL,
   BUMP_COUNTER_SQL,
   EVENTS_SINCE_SQL,
   LAST_CAPTURE_SQL,
@@ -35,6 +36,7 @@ import {
   SEEN_TEMPLATE_SQL,
 } from './captureTemplatesSql'
 import {
+  BLANK_DECIDED_TEXT_SQL,
   CREATE_RECOMMENDATION_SQL,
   DECIDE_SQL,
   GET_RECOMMENDATION_SQL,
@@ -161,6 +163,18 @@ const CASES: Array<[string, string, Array<string | number>, RegExp]> = [
   ['learn a run', LEARN_RUN_SQL, ['e1-1', 't1-1', 'sk', 1, 2], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['count a push', SEEN_TEMPLATE_SQL, ['e1-1', 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['drop a template that is gone', DROP_MISSING_TEMPLATE_SQL, ['e1-1'], /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  [
+    'blank the text of a decided push',
+    BLANK_DECIDED_TEXT_SQL,
+    [OWNER, 'rec1-1'],
+    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+  ],
+  [
+    'blank text older than 30 days',
+    BLANK_OLD_TEXT_SQL,
+    ['k1', '2026-03-10'],
+    /SEARCH capture_events USING INDEX idx_capture_events_text \(owner=\? AND received_at<\?\)/,
+  ],
   [
     'first page of open ones',
     LIST_OPEN_FIRST_SQL,

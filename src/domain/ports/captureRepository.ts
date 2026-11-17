@@ -65,9 +65,15 @@ export interface CaptureEvent {
   templateId?: string | null
   /** The slots the reader found, as JSON, at most 2,000 characters. */
   slots?: string | null
-  /** The cleaned body, only for a push that shows an amount with a currency marker. At most 500 characters. */
+  /**
+   * The cleaned body, only for a push that shows an amount with a currency marker, and blanked when the recommendation
+   * is decided or `BODY_KEEP_DAYS` after it arrived. At most 500 characters.
+   */
   body: string | null
 }
+
+/** Days a push's text is kept when nobody decides its recommendation first. */
+export const BODY_KEEP_DAYS = 30
 
 /** Templates one person may hold. At the cap, the least recently seen one nobody has accepted makes room. */
 export const MAX_CAPTURE_TEMPLATES = 500
@@ -218,8 +224,9 @@ export interface CaptureRepository {
    * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
    * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
    * recommendation takes its owner from the event. The same batch applies the template decision (a new template,
-   * evicting one at the cap, or a learned run, and the count of pushes seen). Returns false, writing nothing, as
-   * `recordEvent` does: a replay changes no template.
+   * evicting one at the cap, or a learned run, and the count of pushes seen) and blanks the owner's push text older
+   * than `BODY_KEEP_DAYS`. Returns false, writing nothing but that blanking, as `recordEvent` does: a replay changes
+   * no template.
    */
   recordCapture(
     event: CaptureEvent,
@@ -266,7 +273,10 @@ export interface CaptureRepository {
   findPossibleMatch(owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null>
   /** How many are open, for the badge. */
   countOpenRecommendations(owner: string): Promise<number>
-  /** Moves an open recommendation to submitted or dismissed. False when it is not open, so a double tap acts once. */
+  /**
+   * Moves an open recommendation to submitted or dismissed, and blanks the text of the push it came from in the same
+   * batch. False when it is not open, so a double tap acts once.
+   */
   decideRecommendation(
     owner: string,
     id: string,

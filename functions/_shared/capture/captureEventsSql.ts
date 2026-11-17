@@ -68,6 +68,19 @@ export function eventParams(
   ]
 }
 
+/** The event's copies of a push's text. The recommendation's description is the person's, and is not among them. */
+export const EVENT_TEXT_SET = 'body = NULL, body_excerpt = NULL, merchant_raw = NULL'
+/** Written exactly as the partial index `idx_capture_events_text` is, so the planner can use it. */
+export const EVENT_HAS_TEXT = '(body IS NOT NULL OR body_excerpt IS NOT NULL OR merchant_raw IS NOT NULL)'
+
+/**
+ * The 30-day rule: blanks the text of the key owner's pushes that arrived before `?2`. It reads only rows that still
+ * hold text, through a partial index. `body_excerpt` is the column an older Worker wrote, blanked by the same rule.
+ */
+export const BLANK_OLD_TEXT_SQL = `UPDATE capture_events SET ${EVENT_TEXT_SET}
+WHERE owner = (SELECT owner FROM capture_keys WHERE key_id = ?1) AND received_at < ?2
+AND ${EVENT_HAS_TEXT}`
+
 export const HAS_EVENT_SQL = `SELECT 1 AS found FROM capture_events e JOIN capture_keys k ON k.owner = e.owner
 WHERE k.key_id = ?1 AND e.source = ?2 AND e.replay_key = ?3`
 

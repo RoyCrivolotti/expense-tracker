@@ -17,7 +17,7 @@ import { FIND_TEMPLATES_SQL } from '../capture/captureTemplatesSql'
 import type { TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
-import { recordCapture } from './d1CaptureWrites'
+import { decide, recordCapture } from './d1CaptureWrites'
 import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
@@ -34,7 +34,6 @@ import type { KeyRow } from '../capture/captureKeysSql'
 import {
   COUNT_OPEN_SQL,
   CREATE_RECOMMENDATION_SQL,
-  DECIDE_SQL,
   GET_RECOMMENDATION_SQL,
   LIST_OPEN_AFTER_SQL,
   LIST_OPEN_FIRST_SQL,
@@ -157,8 +156,7 @@ function recommendations(
     findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
-    decideRecommendation: (owner, id, d) =>
-      changed(db, DECIDE_SQL, owner, id, d.state, d.state === 'submitted' ? d.txnId : null, d.at),
+    decideRecommendation: (owner, id, d) => decide(db, owner, id, d),
   }
 }
 
