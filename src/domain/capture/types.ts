@@ -1,6 +1,7 @@
 /**
- * Where a bank push came from: one phone automation per bank app, each with a source word the person picks. Any word
- * that passes `isSourceWord` is accepted, and nothing in the app depends on which.
+ * Where a bank push came from: one word per bank app, folded from the App name the notification carries, or the word
+ * an older shortcut sends as `source`. Any word that passes `isSourceWord` is accepted, and nothing in the app depends
+ * on which.
  */
 export type CaptureSource = string
 

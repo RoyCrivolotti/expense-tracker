@@ -17,11 +17,12 @@ const MAX_BODY = 500
 const MAX_SLOTS_JSON = 2000
 
 /**
- * What became of a push. `ignored`: it belongs to a template the person has ignored, so it was counted and not
+ * What became of a push. `grouped`: it was stored as another push of an open recommendation of the same movement
+ * (`sameMovement`), which it joined instead of making a second. `ignored`: it belongs to a template the person has ignored, so it was counted and not
  * stored. `no-amount` and `code-like`: it shows no amount with a currency marker, so nothing of it is stored and the
  * caller counts it as unread; `code-like` when all it holds is a code.
  */
-export type StoreResult = 'stored' | 'replay' | 'limited' | 'ignored' | 'no-amount' | 'code-like'
+export type StoreResult = 'stored' | 'grouped' | 'replay' | 'limited' | 'ignored' | 'no-amount' | 'code-like'
 
 /**
  * The slots as JSON, keeping the longest run from the start that fits the column. Each slot is written once and the
@@ -65,6 +66,8 @@ interface Reading {
   shapeId: string
   slots: string
   merchantRaw: string | null
+  /** Whether `merchantRaw` is the merchant the template found rather than the whole body. */
+  merchantIsSpan: boolean
   body: string | null
 }
 
@@ -77,13 +80,15 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
   const templates = await captures.findTemplates(owner, push.source, reading.titleSkeleton)
   const { decision, merchant } = decideTemplate(templates, reading, () => crypto.randomUUID())
   const joined = decision.kind === 'existing' ? templates.find((t) => t.templateId === decision.templateId) : undefined
-  const text = (merchant ? spanText(reading, merchant) : '') || body
+  const span = merchant ? spanText(reading, merchant) : ''
+  const text = span || body
   return {
     decision,
     ignoredTemplate: joined && mutes(joined, reading.skeleton) ? joined.templateId : null,
     shapeId: await shapeId(push.source, reading.skeleton),
     slots: slotsJson(reading.slots),
     merchantRaw: text === '' ? null : text.slice(0, MAX_MERCHANT),
+    merchantIsSpan: span !== '',
     body: body === '' ? null : body.slice(0, MAX_BODY),
   }
 }
@@ -94,7 +99,8 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
  * amount is that number's first reading, the currency its marker's, and the type `expense` until the person's
  * decisions teach the template another. Any other push keeps nothing, so a one-time code never lands. A push of a
  * template the person has ignored is only counted, as an unread push of the day and a sighting of the template, so the
- * setup screen's counts stay true. A push that makes a new template is never ignored.
+ * setup screen's counts stay true. A push that makes a new template is never ignored. A push of the same movement as
+ * an open recommendation joins it rather than making another (`recordCapture`).
  */
 export async function storePush(
   captures: CaptureRepository,
@@ -128,6 +134,7 @@ export async function storePush(
     amountCents: amount.cents,
     currency: amount.currency,
     merchantRaw: read.merchantRaw,
+    merchantIsSpan: read.merchantIsSpan,
     last4: lastFour,
     accountDigits: null,
     occurredAt: new Date(date.instantMs).toISOString(),
@@ -151,6 +158,7 @@ export async function storePush(
     suggestedType: 'expense',
     createdAt: receivedAt,
   }
-  if (await captures.recordCapture(event, recommendation, caps, read.decision)) return 'stored'
+  const recorded = await captures.recordCapture(event, recommendation, caps, read.decision)
+  if (recorded) return recorded === 'grouped' ? 'grouped' : 'stored'
   return (await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited'
 }

@@ -6,7 +6,7 @@ import { CaptureDiagnosticsSetting } from './CaptureDiagnosticsSetting'
 vi.mock('../../data/captureStatusApi')
 afterEach(() => vi.resetAllMocks())
 
-const none = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const none = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 const source = (name: string, diagnostics: statusApi.SourceDiagnostics): statusApi.SourceStatus => ({
   source: name,
   lastCaptureAt: null,
@@ -15,12 +15,12 @@ const source = (name: string, diagnostics: statusApi.SourceDiagnostics): statusA
   diagnostics,
 })
 const answer = (sources: statusApi.SourceStatus[]) =>
-  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources, endpoint: null, shortcutUrl: null })
+  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources, malformed: 0, endpoint: null, shortcutUrl: null })
 
 describe('the capture diagnostics card', () => {
   it('shows every count and the three rates for each source', async () => {
     answer([
-      source('newbank', { received: 14, recommended: 11, unread: 3, addedAsIs: 5, edited: 2, linked: 1, dismissed: 1, open: 2, muted: 1 }),
+      source('newbank', { received: 14, recommended: 11, grouped: 2, unread: 3, addedAsIs: 5, edited: 2, linked: 1, dismissed: 1, open: 2, muted: 1 }),
       source('otherbank', { ...none, received: 2, recommended: 2, open: 2 }),
     ])
     render(<CaptureDiagnosticsSetting />)
@@ -32,6 +32,7 @@ describe('the capture diagnostics card', () => {
     expect(counts).toEqual([
       'Received: 14',
       'Suggested: 11',
+      'Same payment as another: 2',
       'Not read: 3',
       'Added as shown: 5',
       'Edited, then added: 2',

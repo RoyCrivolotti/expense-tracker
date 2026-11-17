@@ -5,6 +5,7 @@ import { rows } from './d1CaptureSupport'
 interface OutcomeRow {
   source: string
   recommended: number
+  grouped: number
   added_as_is: number
   edited: number
   linked: number
@@ -19,6 +20,7 @@ export function status(db: D1Database): Pick<CaptureRepository, 'countedSources'
       (await rows<OutcomeRow>(db, SOURCE_OUTCOMES_SQL, owner, fromDay)).map((r) => ({
         source: r.source,
         recommended: r.recommended,
+        grouped: r.grouped,
         addedAsIs: r.added_as_is,
         edited: r.edited,
         linked: r.linked,

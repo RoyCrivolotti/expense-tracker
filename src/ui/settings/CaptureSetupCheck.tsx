@@ -16,14 +16,28 @@ function lastText(status: SourceStatus | undefined): string {
     : ''
 }
 
+/** Requests the shortcut sent that the app could not read. Counts only: the request itself is never kept. */
+function Unreadable({ count }: { count: number }) {
+  if (count === 0) return null
+  const requests = count === 1 ? '1 request' : `${count} requests`
+  return (
+    <p className={styles.warn}>
+      {requests} from your shortcut in the last 7 days could not be read: check its fields. If your bank app&rsquo;s name
+      has no Latin letters or digits, add a <b>source</b> field with a short name you type, such as <b>mybank</b>.
+    </p>
+  )
+}
+
 function WaitingText({
   state,
   status,
   neverUsed,
+  unreadable,
 }: {
   state: SourceState
   status: SourceStatus | undefined
   neverUsed: boolean
+  unreadable: number
 }) {
   if (state === 'ok') {
     const unread =
@@ -54,6 +68,8 @@ function WaitingText({
       </p>
     )
   }
+  // Requests that could not be read did reach the app, so "nothing has reached it" would be wrong.
+  if (unreadable > 0) return null
   return (
     <p>
       Nothing has reached the app yet. Pay with your card; a small amount will do.
@@ -83,7 +99,8 @@ export function Waiting({
     <li className={`${styles.step} ${styles[state]}`} aria-live="polite">
       <span className={styles.stepTitle}>{WAITING_TITLE[state]}</span>
       <div className={styles.stepBody}>
-        <WaitingText state={state} status={status} neverUsed={neverUsed} />
+        <WaitingText state={state} status={status} neverUsed={neverUsed} unreadable={setup.status.malformed} />
+        <Unreadable count={setup.status.malformed} />
         <button type="button" className={styles.copy} onClick={setup.recheck}>
           Check again
         </button>

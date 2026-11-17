@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { MALFORMED_SOURCE } from '../../../src/domain/capture'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
 import type { CaptureEvent, CaptureRepository, NewRecommendation } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
@@ -160,11 +161,14 @@ describe('capture events', () => {
     await repo.bumpCounter(ALICE, 'iberia', '2026-03-02', 'received')
     await repo.bumpCounter(ALICE, 'iberia', '2026-03-03', 'received')
     await repo.bumpCounter(BOB, 'iberia', '2026-03-02', 'received')
+    await repo.bumpCounter(ALICE, MALFORMED_SOURCE, '2026-03-03', 'malformed')
+    await repo.bumpCounter(ALICE, MALFORMED_SOURCE, '2026-03-03', 'malformed')
     expect(await repo.readCounters(ALICE, '2026-03-02')).toEqual([
-      { source: 'iberia', day: '2026-03-02', received: 1, unrecognised: 2 },
-      { source: 'iberia', day: '2026-03-03', received: 1, unrecognised: 0 },
+      { source: MALFORMED_SOURCE, day: '2026-03-03', received: 0, unrecognised: 0, malformed: 2 },
+      { source: 'iberia', day: '2026-03-02', received: 1, unrecognised: 2, malformed: 0 },
+      { source: 'iberia', day: '2026-03-03', received: 1, unrecognised: 0, malformed: 0 },
     ])
-    expect(await repo.readCounters(ALICE, '2026-03-03')).toHaveLength(1)
+    expect(await repo.readCounters(ALICE, '2026-03-03')).toHaveLength(2)
   })
 })
 
@@ -204,7 +208,7 @@ describe('an event and its recommendation', () => {
   const recFields: Omit<NewRecommendation, 'owner'> = { ...rec(), owner: undefined } as never
 
   it('are stored together, the recommendation under the key’s owner and named by the event', async () => {
-    expect(await repo.recordCapture(event(), recFields)).toBe(true)
+    expect(await repo.recordCapture(event(), recFields)).toBe('created')
     expect(await repo.getRecommendation(ALICE, 'rec-1')).toMatchObject({ state: 'open', amountCents: 1250 })
     expect(await repo.getRecommendation(BOB, 'rec-1')).toBeNull()
   })
@@ -225,7 +229,8 @@ describe('an event and its recommendation', () => {
     await repo.createRecommendation(rec())
     await expect(repo.recordCapture(event(), recFields)).rejects.toThrow()
     expect(await repo.eventsSince('k1', '2026-01-01T00:00:00.000Z')).toBe(0)
-    expect(await repo.recordCapture(event(), { ...recFields, id: 'rec-9' })).toBe(true)
+    // Stored, not a replay: it joins the open recommendation of the same amount that blocked the first try.
+    expect(await repo.recordCapture(event(), { ...recFields, id: 'rec-9' })).toBe('grouped')
   })
 })
 

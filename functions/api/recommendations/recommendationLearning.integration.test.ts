@@ -176,6 +176,21 @@ describe('dismissing', () => {
 })
 
 describe('learning', () => {
+  it('teaches the template of the push that made a recommendation, and gives every push behind it the outcome', async () => {
+    const id = (await push(NO_CARD('Example Cafe')))!
+    // A balance alert of the same amount a minute later joins the recommendation rather than making one.
+    expect(await push('Movimiento de -33,40 EUR en tu cuenta **5512')).toBeNull()
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM capture_events WHERE rec_id = ?').get(id)).toEqual({ n: 2 })
+    await decide(submit, id, row('Coffee'))
+
+    expect(templates()).toEqual([
+      expect.objectContaining({ accepts: 1, amount_slot: 4, type: 'expense', account_id: accountId }),
+      expect.objectContaining({ accepts: 0, amount_slot: null, type: null, account_id: null }),
+    ])
+    const outcomes = sqlite.prepare('SELECT outcome FROM capture_events WHERE rec_id = ? ORDER BY grouped').all(id)
+    expect(outcomes).toEqual([{ outcome: 'edited:account,description,category' }, { outcome: 'edited:account,description,category' }])
+  })
+
   it('writes the outcome and teaches nothing when the template has gone', async () => {
     const id = (await push(WITH_CARD('Example Cafe')))!
     sqlite.prepare('DELETE FROM capture_templates').run()

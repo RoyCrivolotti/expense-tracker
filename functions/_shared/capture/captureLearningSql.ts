@@ -7,14 +7,15 @@ import type { RecommendationEvent } from '../../../src/domain/ports/captureRepos
  */
 
 /**
- * The push a recommendation came from, with what its template has learned so far. Today a recommendation has one push;
- * when several share one, the first received is read, and its template is the one taught. The template's columns are
+ * The push a recommendation came from, with what its template has learned so far. When several pushes of one movement
+ * share it, the one that made it is read (`grouped` is 0 on it alone), and its template is the one taught; the others
+ * get the outcome all the same. The template's columns are
  * null when the push has none or it was evicted, which `known` tells apart from a template with nothing learned.
  */
 export const EVENT_OF_RECOMMENDATION_SQL = `SELECT e.template_id, e.slots, e.last4, t.template_id AS known,
 t.accepts, t.dismissals, t.dismiss_streak, t.amount_slot, t.amount_mark, t.type, t.account_id, t.ignored_at
 FROM capture_events e LEFT JOIN capture_templates t ON t.owner = e.owner AND t.template_id = e.template_id
-WHERE e.owner = ?1 AND e.rec_id = ?2 ORDER BY e.received_at, e.id LIMIT 1`
+WHERE e.owner = ?1 AND e.rec_id = ?2 ORDER BY e.grouped, e.received_at, e.id LIMIT 1`
 
 /**
  * Writes the facts a decision computed, but only while the recommendation's outcome is still empty: run before

@@ -2,10 +2,12 @@ import { MAX_CAPTURE_CARDS } from '../../../src/domain/ports/captureRepository'
 
 /**
  * The events of one card or account, as the recommendations they made: a recommendation's `id` is its event's
- * `rec_id`. An event holds the digits in `last4` for a card and in `account_digits` for an account.
+ * `rec_id`. An event holds the digits in `last4` for a card and in `account_digits` for an account. A recommendation's
+ * card is the one the push that made it showed: a push that joined it later (`grouped`), such as a balance alert naming
+ * the account behind the card, does not change it.
  */
 const EVENTS_OF_THESE_DIGITS = `id IN (SELECT rec_id FROM capture_events WHERE owner = ?1 AND source = ?2
-  AND rec_id IS NOT NULL AND ((?3 = 'card' AND last4 = ?4) OR (?3 = 'account' AND account_digits = ?4)))`
+  AND rec_id IS NOT NULL AND grouped = 0 AND ((?3 = 'card' AND last4 = ?4) OR (?3 = 'account' AND account_digits = ?4)))`
 
 /**
  * Saves the link. The account must be the owner's and the owner must be under the cap, both inside the insert so
@@ -46,10 +48,13 @@ export const ACCOUNT_EXISTS_SQL = 'SELECT 1 AS found FROM accounts WHERE id = ?2
  */
 export const WAITING_CARDS_SQL = `SELECT e.source AS source, e.last4 AS digits, COUNT(*) AS n
 FROM recommendations r JOIN capture_events e ON e.rec_id = r.id AND e.owner = r.owner
-WHERE r.owner = ?1 AND r.state = 'open' AND e.last4 IS NOT NULL
+WHERE r.owner = ?1 AND r.state = 'open' AND e.last4 IS NOT NULL AND e.grouped = 0
 AND (r.account_id IS NULL OR NOT EXISTS (SELECT 1 FROM accounts a WHERE a.id = r.account_id AND a.owner = r.owner))
 GROUP BY e.source, e.last4 ORDER BY e.source, e.last4`
 
-/** The card each of a page of recommendations came from. The ids travel as one JSON value, since a statement binds at most 100. */
+/**
+ * The card each of a page of recommendations came from: the one the push that made it showed. The ids travel as one
+ * JSON value, since a statement binds at most 100.
+ */
 export const CARDS_OF_RECOMMENDATIONS_SQL = `SELECT rec_id, source, last4 FROM capture_events
-WHERE owner = ?1 AND last4 IS NOT NULL AND rec_id IN (SELECT value FROM json_each(?2))`
+WHERE owner = ?1 AND last4 IS NOT NULL AND grouped = 0 AND rec_id IN (SELECT value FROM json_each(?2))`

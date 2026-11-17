@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { MAX_CAPTURE_TEMPLATES, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
-import type { CaptureEvent, CaptureRepository, NewRecommendation, TemplateDecision } from '../../../src/domain/ports/captureRepository'
+import type { CaptureEvent, CaptureRecorded, CaptureRepository, NewRecommendation, TemplateDecision } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'
@@ -23,7 +23,7 @@ beforeEach(async () => {
   }
 })
 
-function store(decision: TemplateDecision, over: Partial<CaptureEvent> = {}): Promise<boolean> {
+function store(decision: TemplateDecision, over: Partial<CaptureEvent> = {}): Promise<CaptureRecorded> {
   n += 1
   const event: CaptureEvent = {
     id: `e${n}`, keyId: 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'push', amountCents: 1250, currency: 'EUR',
@@ -43,7 +43,7 @@ const templateIds = () => rows('SELECT template_id FROM capture_templates ORDER 
 
 describe('a new template', () => {
   it('is stored with the event under the key’s owner, seen once, and named on the event', async () => {
-    expect(await store(fresh('t1'), { shapeId: 'abc', slots: '[{"kind":"code","index":3}]' })).toBe(true)
+    expect(await store(fresh('t1'), { shapeId: 'abc', slots: '[{"kind":"code","index":3}]' })).toBe('created')
     expect(rows('SELECT owner, source, title, skeleton, seen, first_seen, last_seen, merchant_start FROM capture_templates')).toEqual([
       { owner: ALICE, source: 'iberia', title: 'card payment', skeleton: SKELETON, seen: 1, first_seen: T0, last_seen: T0, merchant_start: null },
     ])
@@ -135,7 +135,7 @@ describe('the template cap', () => {
 
   it('stores the event with no template when none can be evicted', async () => {
     await fill()
-    expect(await store(fresh('new'))).toBe(true)
+    expect(await store(fresh('new'))).toBe('created')
     expect(templateIds()).not.toContain('new')
     expect(rows('SELECT template_id FROM capture_events')).toEqual([{ template_id: null }])
     expect(rows('SELECT COUNT(*) AS n FROM recommendations')[0]?.n).toBe(1)
@@ -151,14 +151,14 @@ describe('the template cap', () => {
 
 describe('a push with no template', () => {
   it('writes no template and names none', async () => {
-    expect(await store({ kind: 'none' })).toBe(true)
+    expect(await store({ kind: 'none' })).toBe('created')
     expect(rows('SELECT COUNT(*) AS n FROM capture_templates')[0]?.n).toBe(0)
     expect(rows('SELECT template_id FROM capture_events')).toEqual([{ template_id: null }])
   })
 
   it('is what recordCapture assumes when no decision is passed', async () => {
     const event = { id: 'x', keyId: 'k1', source: 'iberia', replayKey: 'rx', kind: 'push', amountCents: 1250, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 0, receivedAt: T0, body: null } as const
-    expect(await repo.recordCapture(event, { id: 'rx', accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: T0, localDate: '2026-03-02', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 })).toBe(true)
+    expect(await repo.recordCapture(event, { id: 'rx', accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: T0, localDate: '2026-03-02', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 })).toBe('created')
     expect(rows('SELECT template_id, shape_id, slots FROM capture_events')).toEqual([{ template_id: null, shape_id: null, slots: null }])
   })
 })

@@ -12,14 +12,14 @@ vi.mock('../../data/captureStatusApi')
 
 const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
-const diagnostics = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const diagnostics = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
 
 const LINK = 'https://www.icloud.com/shortcuts/abc123'
-const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null) =>
+const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null, malformed = 0) =>
   vi
     .mocked(statusApi.fetchCaptureStatus)
-    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], endpoint, shortcutUrl })
+    .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], malformed, endpoint, shortcutUrl })
 
 beforeEach(() => {
   localStorage.clear()
@@ -116,6 +116,7 @@ describe('the first-payment check', () => {
         { ...none, source: 'bank-b', lastCaptureAt: new Date().toISOString(), received: 2, unrecognised: 1 },
         { ...none, source: 'bank-c', received: 4, unrecognised: 4 },
       ],
+      malformed: 0,
       endpoint: ADDRESS,
       shortcutUrl: null,
     })
@@ -126,10 +127,35 @@ describe('the first-payment check', () => {
   })
 
   it('waits when no source has sent anything yet', async () => {
-    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], endpoint: ADDRESS, shortcutUrl: null })
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 0, endpoint: ADDRESS, shortcutUrl: null })
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
+  })
+
+  it('says how many requests from the shortcut could not be read, rather than that nothing arrived', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 3, endpoint: ADDRESS, shortcutUrl: null })
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText(/^3 requests from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
+    expect(para(/If your bank app’s name has no Latin letters or digits, add a source field with a short name you type, such as mybank\./)).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
+  })
+
+  it('says one request could not be read beside a recent payment', async () => {
+    status({ ...none, lastCaptureAt: new Date().toISOString(), received: 1 }, ADDRESS, null, 1)
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
+    expect(screen.getByText(/^1 request from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
+  })
+
+  it('says nothing of unreadable requests when there were none', async () => {
+    status()
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Waiting for your first payment')
+    expect(screen.queryByText(/could not be read/)).not.toBeInTheDocument()
   })
 
   it('says nothing of unread pushes when none was unread', async () => {
@@ -245,26 +271,28 @@ describe('with the shortcut link available', () => {
       '2. Add the shortcut',
       '3. Choose your bank\u2019s app',
       '4. Paste your key',
-      '5. Name your bank',
+      '5. Check the app field',
       '6. Check the automation is on',
       '7. Make one purchase and watch the line below',
     ])
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
-    expect(para(/replace CARD_NAME_HERE in the source field with a short lowercase name for your bank’s app/)).toBeInTheDocument()
+    expect(para(/Leave no empty row under Headers: an empty header makes the request fail before it reaches the app\./)).toBeInTheDocument()
+    expect(para(/the app field holds the notification’s App variable/)).toBeInTheDocument()
     expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })
 
-  it('says any short name for the bank will do, with examples rather than a list the app reads', async () => {
+  it('asks for nothing typed for the bank, says how to swap an old source placeholder, and keeps a typed source', async () => {
     status(none, null, LINK)
     render(<CaptureSetupSetting />)
     await screen.findByRole('link', { name: 'Add the shortcut' })
 
-    const word = para(/replace CARD_NAME_HERE/).textContent
-    expect(word).toContain('a short lowercase name for your bank\u2019s app (letters, digits or hyphens), such as mybank.')
-    expect(word).not.toMatch(/today|iberia|santander/i)
+    const step = para(/the app field holds/).textContent
+    expect(step).toContain('If your copy has a source field with CARD_NAME_HERE instead, delete it')
+    expect(step).toContain('An older shortcut that sends a source name instead keeps working: leave it.')
+    expect(step).not.toMatch(/lowercase|iberia|santander/i)
   })
 
   it('says the link opens a new window and that the address is in the shortcut, and points the link at that hint', async () => {
@@ -321,7 +349,7 @@ describe('without the shortcut link', () => {
       '6. Set the method',
       '7. Add the key',
       '8. Choose JSON',
-      '9. Add the source field',
+      '9. Add the app field',
       '10. Add the title field',
       '11. Add the body field',
       '12. Add the date field',
@@ -340,6 +368,8 @@ describe('without the shortcut link', () => {
     expect(para(/Change Method from GET to POST/)).toBeInTheDocument()
     expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
     expect(para(/look for a date format called ISO 8601/)).toBeInTheDocument()
-    expect(para(/set the key to source and type a short lowercase name for your bank’s app/)).toBeInTheDocument()
+    expect(para(/followed by your key\. Leave no empty row under Headers/)).toBeInTheDocument()
+    expect(para(/set the key to app\. Tap the value field, choose the notification’s variable, then pick App\. The app files/)).toBeInTheDocument()
+    expect(para(/An older shortcut that sends a source name instead keeps working/)).toBeInTheDocument()
   })
 })

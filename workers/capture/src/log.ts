@@ -29,6 +29,8 @@ export type CaptureReason =
   | 'code-like'
   | 'recommendation-cap'
   | 'stored'
+  /** The push joined an open recommendation of the same movement instead of making another. */
+  | 'grouped'
   | 'replay'
   /** The push belongs to a template the person has ignored: counted as unread, nothing stored. */
   | 'ignored-shape'

@@ -277,6 +277,76 @@ describe('a body that is not a push', () => {
   })
 })
 
+describe('the source word', () => {
+  const fromApp = { title: PURCHASE.title, body: PURCHASE.body, date: PURCHASE.date }
+  const sourceOf = () => rows('SELECT source FROM capture_events').map((r) => r.source)
+
+  it('is the App name of the notification, folded, when the shortcut sends no source', async () => {
+    expect((await send(request({ body: { ...fromApp, app: 'SampleCards' } }))).status).toBe(200)
+    expect((await send(request({ body: { ...fromApp, app: 'Bank 24 Online', date: '2026-11-03T09:42:07+01:00' } }))).status).toBe(200)
+    expect(sourceOf().sort()).toEqual(['bank-24-online', 'samplecards'])
+  })
+
+  it('is the typed source when there is one, so an older shortcut keeps the word its payments are filed under', async () => {
+    await send(request({ body: { ...PURCHASE, app: 'SampleCards' } }))
+    expect(sourceOf()).toEqual(['iberia'])
+  })
+
+  it('is the App name when the typed source is not a word the app accepts', async () => {
+    await send(request({ body: { ...PURCHASE, source: 'CARD_NAME_HERE', app: 'Example Bank' } }))
+    expect(sourceOf()).toEqual(['example-bank'])
+  })
+
+  it('is one word whether typed or folded from the App name, so one push sent both ways is stored once', async () => {
+    await send(request({ body: { ...PURCHASE, source: 'example-bank' } }))
+    await send(request({ body: { ...fromApp, app: 'Example Bank' } }))
+    expect(count('capture_events')).toBe(1)
+  })
+
+  it.each([
+    ['no App name either', fromApp],
+    ['an empty App name', { ...fromApp, app: '' }],
+    ['an App name of symbols alone', { ...fromApp, app: '!!!' }],
+    ['an App name that is not text', { ...fromApp, app: 5 }],
+    ['an App name over 64 characters', { ...fromApp, app: 'a'.repeat(65) }],
+  ])('answers 400 for %s', async (_name, body) => {
+    expect((await send(request({ body }))).status).toBe(400)
+    expect(count('capture_events')).toBe(0)
+  })
+
+  it('accepts an App name of exactly 64 characters', async () => {
+    expect((await send(request({ body: { ...fromApp, app: 'a'.repeat(64) } }))).status).toBe(200)
+    expect(sourceOf()).toEqual(['a'.repeat(32)])
+  })
+})
+
+describe('a body the Worker cannot read', () => {
+  const malformed = () => rows('SELECT owner, source, day, received, unrecognised, malformed FROM capture_counters')
+
+  it('is counted for the key’s owner and the day, under a word no source can be, and still answered 400', async () => {
+    const lines: CaptureLogLine[] = []
+    for (const body of ['{nope', { ...PURCHASE, source: undefined }]) {
+      const res = await handleCapture(request({ body }), env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+      expect(res.status).toBe(400)
+    }
+    expect(malformed()).toEqual([{ owner: ALICE, source: '-', day: '2026-11-03', received: 0, unrecognised: 0, malformed: 2 }])
+    expect(lines.map((l) => l.reason)).toEqual(['bad-body', 'bad-body'])
+    expect(count('capture_events')).toBe(0)
+  })
+
+  it('is counted for nobody when the key is missing or not accepted', async () => {
+    expect((await send(request({ key: null, body: '{nope' }))).status).toBe(401)
+    expect((await send(request({ key: `xpk_${minted.keyId}_${'0'.repeat(64)}`, body: '{nope' }))).status).toBe(401)
+    expect(malformed()).toEqual([])
+  })
+
+  it('is still answered 400 when the count cannot be written', async () => {
+    const captures = { ...repos().captures, bumpCounter: vi.fn().mockRejectedValue(new Error('D1 down')) }
+    const res = await handleCapture(request({ body: '{nope' }), env, { captures, access: repos().access, now: () => NOW })
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('a push from any bank, in any words', () => {
   const push = (source: string) => ({ source, title: 'Notice', body: 'invented text', date: PURCHASE.date })
 
@@ -352,6 +422,13 @@ describe('the distinct-source cap', () => {
   it('is counted per person', async () => {
     for (const word of words) await send(request({ body: push(word) }))
     expect((await send(request({ key: bobKey.key, body: push('bank-new') }))).status).toBe(200)
+  })
+
+  it('gives no place to the word unreadable requests are counted under', async () => {
+    await send(request({ body: '{nope' }))
+    for (const word of words) expect((await send(request({ body: push(word) }))).status).toBe(200)
+    expect((await send(request({ body: push('bank-new') }))).status).toBe(429)
+    expect(count('capture_counters')).toBe(MAX_SOURCES_PER_OWNER + 1)
   })
 
   it('never admits more than the cap when new sources arrive at once', async () => {

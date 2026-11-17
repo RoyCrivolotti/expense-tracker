@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ratesOf } from './captureDiagnostics'
 
-const none = { received: 0, recommended: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
+const none = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
 
 describe('ratesOf', () => {
   it('gives each rate as a whole percentage of the decided recommendations, links counted as decided', () => {

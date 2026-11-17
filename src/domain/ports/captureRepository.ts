@@ -73,11 +73,22 @@ export interface CaptureEvent {
   /** The slots the reader found, as JSON, at most 2,000 characters. */
   slots?: string | null
   /**
+   * True when `merchantRaw` is the merchant the push's template found, not its whole body. Not stored: it lets a push
+   * that joins a recommendation give it the merchant when the push that made it could only give its whole body.
+   */
+  merchantIsSpan?: boolean
+  /**
    * The cleaned body, only for a push that shows an amount with a currency marker, and blanked when the recommendation
    * is decided or `BODY_KEEP_DAYS` after it arrived. At most 500 characters.
    */
   body: string | null
 }
+
+/**
+ * What `recordCapture` did: stored the push with a recommendation of its own (`created`), stored it as another push of
+ * an open recommendation of the same movement (`grouped`), or stored nothing (false).
+ */
+export type CaptureRecorded = 'created' | 'grouped' | false
 
 /** Days a push's text is kept when nobody decides its recommendation first. */
 export const BODY_KEEP_DAYS = 30
@@ -159,6 +170,8 @@ export interface CaptureCounter {
   day: string
   received: number
   unrecognised: number
+  /** Requests from a valid key whose body could not be read, counted under `MALFORMED_SOURCE` alone. */
+  malformed: number
 }
 
 export type CardDigitsKind = 'card' | 'account'
@@ -273,17 +286,19 @@ export interface CaptureRepository extends CaptureStatusReads {
   /**
    * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
    * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
-   * recommendation takes its owner from the event. The same batch applies the template decision (a new template,
-   * evicting one at the cap, or a learned run, and the count of pushes seen) and blanks the owner's push text older
-   * than `BODY_KEEP_DAYS`. Returns false, writing nothing but that blanking, as `recordEvent` does: a replay changes
-   * no template.
+   * recommendation takes its owner from the event. When an open recommendation of the owner is the same movement
+   * (`sameMovement`), the event joins it instead and no recommendation is made; the batch decides that, so pushes that
+   * arrive at once cannot both make one. The same batch applies the template decision (a new template, evicting one at
+   * the cap, or a learned run, and the count of pushes seen) and blanks the owner's push text older than
+   * `BODY_KEEP_DAYS`. Returns false, writing nothing but that blanking, as `recordEvent` does: a replay changes no
+   * template.
    */
   recordCapture(
     event: CaptureEvent,
     recommendation: Omit<NewRecommendation, 'owner'>,
     caps?: CaptureCaps,
     template?: TemplateDecision,
-  ): Promise<boolean>
+  ): Promise<CaptureRecorded>
   /**
    * The owner's templates for this source and masked title, at most `TEMPLATE_LOOKUP_LIMIT`, the most recently seen
    * first.
@@ -312,7 +327,7 @@ export interface CaptureRepository extends CaptureStatusReads {
   admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<'admitted' | 'limited' | 'sources'>
   eventsSince(keyId: string, since: string): Promise<number>
   lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
-  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised'): Promise<void>
+  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised' | 'malformed'): Promise<void>
   readCounters(owner: string, fromDay: string): Promise<CaptureCounter[]>
 
   saveCard(owner: string, card: CaptureCard): Promise<void>
