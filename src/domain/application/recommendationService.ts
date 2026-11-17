@@ -99,9 +99,9 @@ export async function learnAfterDecision(
   try {
     const event = await captures.eventOfRecommendation(owner, rec.id)
     if (!event) return
-    const facts = event.templateId === null ? null : await captures.templateFacts(owner, event.templateId)
+    const { facts, templateId } = event
     const outcome = outcomeOf(rec, decision.kind === 'submitted' ? decision.saved : decision.kind)
-    if (facts === null || event.templateId === null) {
+    if (facts === null || templateId === null) {
       await captures.applyDecisionLearning(owner, rec.id, null, outcome)
       return
     }
@@ -110,7 +110,7 @@ export async function learnAfterDecision(
       decision.kind === 'dismissed'
         ? learnFromDismiss(facts, now.toISOString())
         : learnFromAccept(facts, slots, decision.saved, pushHadDigits(event.last4, slots))
-    await captures.applyDecisionLearning(owner, rec.id, { templateId: event.templateId, facts: learned }, outcome)
+    await captures.applyDecisionLearning(owner, rec.id, { templateId, facts: learned }, outcome)
   } catch (error) {
     console.error('capture: learning failed', error instanceof Error ? error.name : 'unknown')
   }

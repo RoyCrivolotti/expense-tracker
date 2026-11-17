@@ -1,4 +1,5 @@
 import type { Candidate, TemplateFacts } from '../../../src/domain/capture'
+import type { RecommendationEvent } from '../../../src/domain/ports/captureRepository'
 
 /*
  * What a decision on a recommendation teaches the template of the push behind it. Every statement is scoped by owner
@@ -6,14 +7,14 @@ import type { Candidate, TemplateFacts } from '../../../src/domain/capture'
  */
 
 /**
- * The push a recommendation came from. Today a recommendation has one; when several pushes share one, the first
- * received is read, and its template is the one taught.
+ * The push a recommendation came from, with what its template has learned so far. Today a recommendation has one push;
+ * when several share one, the first received is read, and its template is the one taught. The template's columns are
+ * null when the push has none or it was evicted, which `known` tells apart from a template with nothing learned.
  */
-export const EVENT_OF_RECOMMENDATION_SQL = `SELECT template_id, slots, last4 FROM capture_events
-WHERE owner = ?1 AND rec_id = ?2 ORDER BY received_at, id LIMIT 1`
-
-export const TEMPLATE_FACTS_SQL = `SELECT accepts, dismissals, dismiss_streak, amount_slot, amount_mark, type, account_id, ignored_at
-FROM capture_templates WHERE owner = ?1 AND template_id = ?2`
+export const EVENT_OF_RECOMMENDATION_SQL = `SELECT e.template_id, e.slots, e.last4, t.template_id AS known,
+t.accepts, t.dismissals, t.dismiss_streak, t.amount_slot, t.amount_mark, t.type, t.account_id, t.ignored_at
+FROM capture_events e LEFT JOIN capture_templates t ON t.owner = e.owner AND t.template_id = e.template_id
+WHERE e.owner = ?1 AND e.rec_id = ?2 ORDER BY e.received_at, e.id LIMIT 1`
 
 /**
  * Writes the facts a decision computed, but only while the recommendation's outcome is still empty: run before
@@ -37,6 +38,20 @@ export interface FactsRow {
   type: string | null
   account_id: number | null
   ignored_at: string | null
+}
+
+/** One row of `EVENT_OF_RECOMMENDATION_SQL`. */
+export type EventRow = { template_id: string | null; slots: string | null; last4: string | null; known: string | null } & {
+  [K in keyof FactsRow]: FactsRow[K] | null
+}
+
+export function toEvent(row: EventRow): RecommendationEvent {
+  return {
+    templateId: row.template_id,
+    slots: row.slots,
+    last4: row.last4,
+    facts: row.known === null ? null : toFacts(row as FactsRow),
+  }
 }
 
 export function toFacts(row: FactsRow): TemplateFacts {

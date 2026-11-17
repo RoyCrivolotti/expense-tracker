@@ -26,7 +26,7 @@ import {
   RECORD_RECOMMENDATION_SQL,
   SAVE_CARD_SQL,
 } from './captureEventsSql'
-import { EVENT_OF_RECOMMENDATION_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, TEMPLATE_FACTS_SQL } from './captureLearningSql'
+import { EVENT_OF_RECOMMENDATION_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL } from './captureLearningSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
 import {
   DROP_MISSING_TEMPLATE_SQL,
@@ -180,9 +180,8 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
     'the push behind a recommendation',
     EVENT_OF_RECOMMENDATION_SQL,
     [OWNER, 'rec1-1'],
-    /SEARCH capture_events USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)/,
+    /SEARCH e USING INDEX idx_capture_events_rec \(owner=\? AND rec_id=\?\)[\s\S]*SEARCH t USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
   ],
-  ['what a template has learned', TEMPLATE_FACTS_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   [
     'teach a template a decision',
     LEARN_DECISION_SQL,

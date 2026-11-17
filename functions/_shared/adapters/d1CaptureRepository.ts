@@ -18,8 +18,8 @@ import type { IgnoredRow, TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
 import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
-import { EVENT_OF_RECOMMENDATION_SQL, TEMPLATE_FACTS_SQL, toFacts } from '../capture/captureLearningSql'
-import type { FactsRow } from '../capture/captureLearningSql'
+import { EVENT_OF_RECOMMENDATION_SQL, toEvent } from '../capture/captureLearningSql'
+import type { EventRow } from '../capture/captureLearningSql'
 import { changed, rows } from './d1CaptureSupport'
 import {
   CREATE_KEY_SQL,
@@ -172,18 +172,11 @@ function templates(
   }
 }
 
-function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'templateFacts' | 'applyDecisionLearning'> {
+function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning'> {
   return {
     eventOfRecommendation: async (owner, recId) => {
-      const row = await db
-        .prepare(EVENT_OF_RECOMMENDATION_SQL)
-        .bind(owner, recId)
-        .first<{ template_id: string | null; slots: string | null; last4: string | null }>()
-      return row ? { templateId: row.template_id, slots: row.slots, last4: row.last4 } : null
-    },
-    templateFacts: async (owner, templateId) => {
-      const row = await db.prepare(TEMPLATE_FACTS_SQL).bind(owner, templateId).first<FactsRow>()
-      return row ? toFacts(row) : null
+      const row = await db.prepare(EVENT_OF_RECOMMENDATION_SQL).bind(owner, recId).first<EventRow>()
+      return row ? toEvent(row) : null
     },
     applyDecisionLearning: (owner, recId, template, outcome) => applyDecisionLearning(db, owner, recId, template, outcome),
   }

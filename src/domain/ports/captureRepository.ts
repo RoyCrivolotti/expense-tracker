@@ -132,6 +132,8 @@ export interface RecommendationEvent {
   slots: string | null
   /** The card digits the push showed, or null. */
   last4: string | null
+  /** What the template has learned so far. Null when the push has no template or it no longer exists. */
+  facts: TemplateFacts | null
 }
 
 /** What was dropped, by day. The only thing kept about a push the app does not recognise. */
@@ -321,10 +323,11 @@ export interface CaptureRepository {
     decision: { state: 'submitted'; txnId: number; at: string } | { state: 'dismissed'; at: string },
   ): Promise<boolean>
 
-  /** The push a recommendation came from, or null when it came from none (one made before pushes were stored). */
+  /**
+   * The push a recommendation came from, with its template's learned columns, in one read. Null when it came from none
+   * (one made before pushes were stored).
+   */
   eventOfRecommendation(owner: string, recId: string): Promise<RecommendationEvent | null>
-  /** The learned columns of one of the owner's templates, or null when it is not theirs or no longer exists. */
-  templateFacts(owner: string, templateId: string): Promise<TemplateFacts | null>
   /**
    * Writes what a decision taught, in one batch: the template's new facts, when there is a template to teach, and the
    * outcome on the recommendation's events. Both happen only while the outcome is still empty, so a decision learns
