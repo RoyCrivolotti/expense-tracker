@@ -1,4 +1,4 @@
-import { interpretPush, parseCaptureKey } from '../../../src/domain/capture'
+import { parseCaptureKey, parsePushDate, withinClockSkew } from '../../../src/domain/capture'
 import type { AccessRepository } from '../../../src/domain/ports/accessRepository'
 import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { authenticate, bearerKey } from './authenticate'
@@ -11,7 +11,8 @@ import type { CaptureLogLine, CaptureLogger, CaptureReason } from './log'
 import { DAILY_CAPS, MAX_BODY_BYTES, captureCaps } from './limits'
 import { parsePush } from './parsePush'
 import * as reply from './responses'
-import { storeRecognised } from './store'
+import { storePush } from './store'
+import type { StoreResult } from './store'
 
 export interface CaptureDeps {
   captures: CaptureRepository
@@ -118,16 +119,13 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   // Best effort: a missed update only shows an older "last used" time, and must not lose the push.
   await deps.captures.touchKey(key.keyId, now.toISOString()).catch(() => undefined)
 
-  const result = interpretPush(push, now.getTime())
-  if (result.outcome !== 'recommend') {
+  const stored = await receive(push, key, secret, deps.captures, now)
+  if (stored === 'bad-date' || stored === 'clock-skew' || stored === 'no-amount' || stored === 'code-like') {
     await deps.captures.bumpCounter(key.owner, push.source, day, 'unrecognised')
     line.outcome = 'dropped'
-    line.reason = result.outcome === 'dropped' ? 'no-matching-kind' : result.reason
+    line.reason = stored
     return reply.ok()
   }
-  line.kind = result.kind
-  line.amount = result.amountCents === null ? 'none' : 'read'
-  const stored = await storeRecognised(deps.captures, key, push, result, secret, now, captureCaps(now))
   if (stored === 'limited') {
     line.outcome = 'limited'
     line.reason = 'recommendation-cap'
@@ -141,4 +139,12 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   line.outcome = stored === 'replay' ? 'replay' : 'stored'
   line.reason = stored
   return reply.ok()
+}
+
+/** What a push becomes once admitted. One whose Date cannot be trusted is not read at all. */
+async function receive(push: RawPush, key: CaptureKey, secret: string, captures: CaptureRepository, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew'> {
+  const date = parsePushDate(push.date)
+  if (!date) return 'bad-date'
+  if (!withinClockSkew(date.instantMs, now.getTime())) return 'clock-skew'
+  return storePush(captures, key, push, date, secret, now, captureCaps(now))
 }

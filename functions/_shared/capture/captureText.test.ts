@@ -26,7 +26,7 @@ function store(id: string, receivedDay: string, over: Partial<CaptureEvent> = {}
   const receivedAt = at(receivedDay)
   return repo.recordCapture(
     {
-      id, keyId: 'k1', source: 'iberia', replayKey: `r-${id}`, kind: 'card-purchase', amountCents: -1250, currency: 'EUR', merchantRaw: BODY,
+      id, keyId: 'k1', source: 'iberia', replayKey: `r-${id}`, kind: 'push', amountCents: 1250, currency: 'EUR', merchantRaw: BODY,
       last4: null, accountDigits: null, occurredAt: receivedAt, localDate: receivedDay, offsetMinutes: 0, receivedAt, body: BODY, ...over,
     },
     {

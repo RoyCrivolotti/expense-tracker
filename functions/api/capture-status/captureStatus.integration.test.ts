@@ -47,7 +47,7 @@ async function stored(keyId: string, source: 'iberia' | 'santander', receivedAt:
     keyId,
     source,
     replayKey: `r${n}`,
-    kind: 'card-purchase',
+    kind: 'push',
     amountCents: -1250,
     currency: 'EUR',
     merchantRaw: 'CAFE EXAMPLE',

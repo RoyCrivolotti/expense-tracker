@@ -20,9 +20,13 @@ export type CaptureReason =
   | 'bad-body'
   | 'too-many-sources'
   | 'daily-cap'
-  | 'no-matching-kind'
+  /** The push's Date cannot be read, or is more than two days from the server's clock: counted as unread. */
   | 'bad-date'
   | 'clock-skew'
+  /** The push shows no amount with a currency marker: counted as unread, nothing stored. */
+  | 'no-amount'
+  /** The same, and all it holds is a code with no other number, which is what a one-time code looks like. */
+  | 'code-like'
   | 'recommendation-cap'
   | 'stored'
   | 'replay'
@@ -39,10 +43,6 @@ export interface CaptureLogLine {
   status: number
   source?: string
   keyId?: string
-  /** The kind the push matched, when it matched one. */
-  kind?: string
-  /** Whether an amount could be read from the body. Never the amount. */
-  amount?: 'read' | 'none'
   /** Milliseconds from the first check to the answer. */
   ms: number
   /** The class of a thrown error, never its message, which could quote a statement or the push. */
