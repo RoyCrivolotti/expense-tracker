@@ -25,6 +25,36 @@ async function applyTheme(page, theme) {
   }, theme)
 }
 
+// The capture cards in Settings, Account and the Dashboard's review card read their own routes, which the dev server
+// does not have, so the pictures would show "Request failed (404)". These invented answers show a set-up phone instead.
+const CAPTURE_ROUTES = {
+  '/api/recommendations': { recommendations: [], next: null, openCount: 0 },
+  '/api/capture-keys': { keys: [{ keyId: 'k1', label: 'My phone', createdAt: '2026-10-01T09:00:00Z', lastUsedAt: '2026-10-15T08:10:00Z' }] },
+  '/api/capture-cards': { cards: [{ source: 'example-bank', digitsKind: 'card', digits: '1234', accountId: 1 }], waiting: [] },
+  '/api/capture-templates': { templates: [] },
+  '/api/capture-status': {
+    sources: [
+      {
+        source: 'example-bank',
+        lastCaptureAt: '2026-10-15T08:10:00Z',
+        received: 9,
+        unrecognised: 0,
+        diagnostics: { received: 31, recommended: 28, grouped: 1, unread: 2, addedAsIs: 20, edited: 4, linked: 2, dismissed: 1, open: 0, muted: 0 },
+      },
+    ],
+    malformed: 0,
+    endpoint: 'https://capture.example.com/push',
+    shortcutUrl: 'https://www.icloud.com/shortcuts/example',
+  },
+}
+
+async function answerCaptureRoutes(context) {
+  await context.route('**/api/**', (route) => {
+    const body = CAPTURE_ROUTES[new URL(route.request().url()).pathname]
+    return body ? route.fulfill({ json: body }) : route.continue()
+  })
+}
+
 async function waitForServer(ms = 30000) {
   const start = Date.now()
   while (Date.now() - start < ms) {
@@ -70,6 +100,8 @@ async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('tab', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
+  // The capture cards are a lazy chunk that lands after the rest of the view.
+  await page.waitForSelector('text=Set up capture', { timeout: 15000 })
 }
 
 async function waitForAccessAdmin(page) {
@@ -399,7 +431,10 @@ async function capture() {
   // gallery captured on another day came out different. A fixed date, inside the demo
   // data's last month, makes a re-run reproduce the same pictures.
   const captureDate = new Date(process.env.CAPTURE_DATE ?? CAPTURE_DATE)
-  for (const context of [desktopDark, mobileDark, desktopLight]) await context.clock.setFixedTime(captureDate)
+  for (const context of [desktopDark, mobileDark, desktopLight]) {
+    await context.clock.setFixedTime(captureDate)
+    await answerCaptureRoutes(context)
+  }
 
   const d = await desktopDark.newPage()
   await applyTheme(d, 'dark')
