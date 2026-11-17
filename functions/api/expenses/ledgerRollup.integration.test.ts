@@ -26,10 +26,12 @@ const FIRST_BACKFILL = STATEMENTS.findLastIndex((s) => /^CREATE TRIGGER/i.test(s
 const SETUP = STATEMENTS.slice(0, FIRST_BACKFILL)
 const BACKFILLS = STATEMENTS.slice(FIRST_BACKFILL)
 
+const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql']
+
 async function kitFor(seed: number, through?: string) {
   const sqlite = migratedDatabase(through)
   // The walks purge an owner, which deletes from the capture tables; 0039 does not depend on them.
-  if (through !== undefined) applyMigration(sqlite, '0040_capture.sql')
+  if (through !== undefined) for (const file of CAPTURE_MIGRATIONS) applyMigration(sqlite, file)
   return { sqlite, k: await newKit(sqlite, sqliteD1(sqlite, newStats()), seed) }
 }
 

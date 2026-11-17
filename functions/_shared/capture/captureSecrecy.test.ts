@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import { EXPORT_TABLES } from '../../domain/data/exportTables'
 import { exportSql } from '../exportSql'
 
-const CAPTURE_TABLE = /capture_(keys|cards|events|counters)|\brecommendations\b/
+const CAPTURE_TABLE = /capture_\w+|\brecommendations\b/
 
 describe('the user export', () => {
   it.each(EXPORT_TABLES)('does not read a capture table for %s', (table) => {

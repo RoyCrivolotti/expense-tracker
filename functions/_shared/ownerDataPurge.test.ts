@@ -45,6 +45,7 @@ describe('purgeOwnerData', () => {
       'DELETE FROM capture_cards WHERE owner = ?',
       'DELETE FROM capture_events WHERE owner = ?',
       'DELETE FROM capture_counters WHERE owner = ?',
+      'DELETE FROM capture_templates WHERE owner = ?',
       'DELETE FROM recommendations WHERE owner = ?',
       'DELETE FROM accounts WHERE owner = ?',
       'DELETE FROM settings WHERE owner = ?',
@@ -179,7 +180,7 @@ describe('what a purge leaves behind', () => {
     }
   })
 
-  it('removes capture keys, events, counters, card maps and recommendations, and only the revoked owner’s', async () => {
+  it('removes capture keys, events, counters, card maps, templates and recommendations, and only the revoked owner’s', async () => {
     const db = migratedDatabase()
     for (const owner of ['gone@example.com', 'kept@example.com']) {
       db.prepare("INSERT INTO capture_keys (key_id, owner, label, secret_hash, created_at) VALUES (?, ?, 'p', 'h', 't')").run(`k-${owner}`, owner)
@@ -190,11 +191,14 @@ describe('what a purge leaves behind', () => {
          VALUES (?, ?, 'k', 'iberia', 'r', 'card-purchase', 't', 'd', 0, 't')`,
       ).run(`e-${owner}`, owner)
       db.prepare("INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, 't', 'd', 't')").run(`r-${owner}`, owner)
+      db.prepare(
+        "INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen) VALUES (?, 't', 'iberia', 't', 's', 't', 't')",
+      ).run(owner)
     }
 
     await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
 
-    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'recommendations']) {
+    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'capture_templates', 'recommendations']) {
       const left = db.prepare(`SELECT owner FROM ${table}`).all()
       expect(left, table).toEqual([{ owner: 'kept@example.com' }])
     }
