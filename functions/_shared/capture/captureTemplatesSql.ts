@@ -1,6 +1,6 @@
-import type { TemplateDecision } from '../../../src/domain/ports/captureRepository'
+import type { IgnoredTemplate, TemplateDecision } from '../../../src/domain/ports/captureRepository'
 
-export const FIND_TEMPLATES_SQL = `SELECT template_id, skeleton, merchant_start, merchant_end FROM capture_templates
+export const FIND_TEMPLATES_SQL = `SELECT template_id, skeleton, merchant_start, merchant_end, ignored_at FROM capture_templates
 WHERE owner = ?1 AND source = ?2 AND title = ?3 ORDER BY last_seen DESC LIMIT ?4`
 
 export interface TemplateRow {
@@ -8,7 +8,32 @@ export interface TemplateRow {
   skeleton: string
   merchant_start: number | null
   merchant_end: number | null
+  ignored_at: string | null
 }
+
+/** The person's ignored templates, newest ignore first. A person holds at most 500 templates, so the sort is small. */
+export const LIST_IGNORED_SQL = `SELECT template_id, source, skeleton, seen, dismissals, ignored_at FROM capture_templates
+WHERE owner = ?1 AND ignored_at IS NOT NULL ORDER BY ignored_at DESC, template_id LIMIT ?2`
+
+export interface IgnoredRow {
+  template_id: string
+  source: string
+  skeleton: string
+  seen: number
+  dismissals: number
+  ignored_at: string
+}
+
+export function toIgnored(r: IgnoredRow): IgnoredTemplate {
+  return { templateId: r.template_id, source: r.source, skeleton: r.skeleton, seen: r.seen, dismissals: r.dismissals, ignoredAt: r.ignored_at }
+}
+
+/** Changes a row whether or not it was ignored, so a template the person holds always answers true. */
+export const UNIGNORE_SQL = `UPDATE capture_templates SET ignored_at = NULL, dismiss_streak = 0 WHERE owner = ?1 AND template_id = ?2`
+
+/** A push of an ignored template is seen, and nothing else. Only while it is still ignored. */
+export const SEEN_IGNORED_SQL = `UPDATE capture_templates SET seen = seen + 1, last_seen = ?3
+WHERE owner = ?1 AND template_id = ?2 AND ignored_at IS NOT NULL`
 
 /*
  * The statements below run in the batch that stores a push, after its event. Each takes the owner, and the source and

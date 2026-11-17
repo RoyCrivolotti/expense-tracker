@@ -20,6 +20,7 @@ What happens to a push:
 | Listed kind ([`KIND_RULES`](../src/domain/capture/classify.ts)), readable Date | One event and one open recommendation, in one batch. The event keeps the push's shape and slots, and the push joins or starts one of the person's templates in the same batch ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt"). The recommendation's `occurredAt` is the phone's own clock with its offset (`2026-11-03T09:41:07+01:00`), so the app can read the time of day the payment was made. An older row written in UTC (`Z`) has no known offset. Answers `{"ok":true}` |
 | Same push again | Stored once. The same 200 |
 | Any other kind, a source with no rows, or a Date more than two days from the clock | Adds to that day's `unrecognised` counter. Nothing else is kept |
+| A kind it recognises, of a template the person has ignored ([CAPTURE.md](CAPTURE.md), "What it learns") | The same: counted as `unrecognised`, and as seen on the template. Logged as `dropped`, reason `ignored-shape`. It is counted before any replay check, so a phone that retries such a push counts it again; nothing is stored, so nothing else changes |
 | Over a cap | 429 with `Retry-After`, and nothing stored |
 
 Caps, all checked inside the insert that stores the count or the row, so parallel requests cannot pass them together:
@@ -41,7 +42,8 @@ abuse is seen, a Workers Rate Limiting binding is the fix.
 ## Reading what the Worker did
 
 Each request writes one line to Workers Logs (`[observability]` in `workers/capture/wrangler.toml`), whatever its
-outcome: `outcome` (`stored`, `replay`, `dropped`, `refused`, `limited`, `error`), a short `reason`, the `status` the
+outcome: `outcome` (`stored`, `replay`, `dropped`, `refused`, `limited`, `error`), a short `reason` from the fixed list
+in [`log.ts`](../workers/capture/src/log.ts) (`ignored-shape` is a push of an ignored template), the `status` the
 phone got, the `source` word, the public `keyId`, the matched `kind`, whether an `amount` was read, and `ms`. Nothing from
 the push goes in: no title, body, merchant, amount, digits or email, and an error is logged by its class only. A phone
 whose request never shows up here never reached the Worker, which points at the Shortcut rather than the app.

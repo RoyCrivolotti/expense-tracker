@@ -7,7 +7,7 @@ import type { RawPush } from '../../../src/domain/capture'
 import type { CaptureKey } from '../../../src/domain/ports/captureRepository'
 import type { CaptureEnv } from './env'
 import { consoleLogger } from './log'
-import type { CaptureLogLine, CaptureLogger } from './log'
+import type { CaptureLogLine, CaptureLogger, CaptureReason } from './log'
 import { DAILY_CAPS, MAX_BODY_BYTES, captureCaps } from './limits'
 import { parsePush } from './parsePush'
 import * as reply from './responses'
@@ -28,7 +28,7 @@ export const CAPTURE_PATH = '/capture'
  * Refusals that need no database, in the order they are made: the method, the exact path, the key's shape, the
  * declared size and the content type. A request that fails any of them costs no database call.
  */
-function cheapRefusal(request: Request): { response: Response; reason: string } | null {
+function cheapRefusal(request: Request): { response: Response; reason: CaptureReason } | null {
   if (new URL(request.url).pathname !== CAPTURE_PATH) return { response: reply.notFound(), reason: 'wrong-path' }
   if (request.method !== 'POST') return { response: reply.methodNotAllowed(), reason: 'wrong-method' }
   if (bearerKey(request) === null) return { response: reply.unauthorized(), reason: 'no-valid-key-header' }
@@ -132,6 +132,11 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
     line.outcome = 'limited'
     line.reason = 'recommendation-cap'
     return reply.tooManyRequests()
+  }
+  if (stored === 'ignored') {
+    line.outcome = 'dropped'
+    line.reason = 'ignored-shape'
+    return reply.ok()
   }
   line.outcome = stored === 'replay' ? 'replay' : 'stored'
   line.reason = stored

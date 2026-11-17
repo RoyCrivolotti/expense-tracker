@@ -39,8 +39,10 @@ separator, and a fixed length so one pattern refuses anything else before any lo
 | `DELETE /api/capture-cards` | `{ ok: true }`, or 404. The same body names the link, so the digits are never in the address |
 | `GET /api/capture-status` | `{ sources: [{ source, lastCaptureAt, received, unrecognised }], endpoint, shortcutUrl }`, one entry per bank app: `iberia` and `santander` always, then any other source that has been counted. `lastCaptureAt` is when the newest recognised push was stored (null if none). `received` and `unrecognised` are the sums of the last seven UTC days of `capture_counters`. `endpoint` is the Worker's full address, `<CAPTURE_ENDPOINT origin>/capture`, or null when the variable is unset or is not an https address. `shortcutUrl` is the `CAPTURE_SHORTCUT_URL` variable when it is exactly `https://www.icloud.com/shortcuts/<letters and digits>` (no spaces, query, fragment or extra path), otherwise null. Nothing else is ever reflected into a link. Reads only |
 | `GET /api/capture-shortcut` | The generic Shortcut file, the same bytes for everyone signed in: `shortcuts/capture.shortcut` from the app-files bucket (the `APP_FILES` binding) as `application/octet-stream`, `Content-Disposition: attachment; filename="Expense capture.shortcut"`, `nosniff`, `private, no-store`. 404 when it is missing, `APP_FILES` is not bound, or the object is over 256 KB. Reads only |
+| `GET /api/capture-templates?ignored=1` | `{ templates: [{ templateId, source, skeleton, seen, dismissals, ignoredAt }] }`: the person's ignored templates (below, "What it learns"), newest ignore first, at most 100. `skeleton` is the masked wording, never a push's body. Any other query is a 400. Reads only |
+| `POST /api/capture-templates/:id/unignore` | `{ ok: true }`, or 404 for another person's template or an id that is none. Clears the ignore and the dismissal streak, so the next push of that wording is suggested again. Takes no body |
 
-These writes (and card links) leave the owner's dataset revision alone, since they change nothing a
+These writes (and card links and un-ignoring) leave the owner's dataset revision alone, since they change nothing a
 ledger reader sees; the exemption is in [`_middleware.ts`](../functions/api/_middleware.ts).
 
 ## Card links
@@ -81,7 +83,8 @@ the signed-in person's own; another person's recommendation and an id that is no
 Each decision happens once: a second one is a 409. Submitting creates the row first and then marks the recommendation,
 because the two cannot share a D1 batch through the create path. If a second tap decided it in between, or the mark
 failed, the row just created is deleted again. Submit moves the dataset revision like any write that adds an expense.
-Dismiss, link and the list leave it alone, since the ledger a reader sees does not change.
+Dismiss, link and the list leave it alone, since the ledger a reader sees does not change. Once a decision has changed
+the row, the template of the push behind it learns from it (below).
 
 ## What is stored
 
@@ -110,6 +113,24 @@ The recommendation's description (`merchant_raw`) is the merchant when the templ
 cleaned body for the first push of a template, which the person edits once. How the template and the merchant are found
 is in [CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "At receipt".
 
+## What it learns
+
+Each decision teaches that person's template of the push ([`learn.ts`](../src/domain/capture/learn.ts)). An accept is
+a submit or a link, read from the row saved or linked:
+
+- **Amount slot and mark**: the number in the push that holds the saved amount, and the decimal mark that reading
+  assumed, learned from an accept whose amount matches exactly one reading. A tie or no match teaches nothing.
+- **Type**: the saved row's type. The last accept wins.
+- **Account**: the saved row's account, only when the push showed no card digits. A card's account is its link.
+- **Ignoring a wording**: three dismissals in a row on a template nobody has accepted mute it. Its later pushes of the
+  same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak;
+  the Settings list of ignored pushes is still to come. An accepted template is never muted this way.
+
+The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
+account; the description is compared once the server suggests it), `linked` or `dismissed`. Learning runs after the decision, in one batch guarded by that empty
+outcome so a retry counts nothing twice, and a failure there is logged by class while the decision stands. Nothing reads
+these facts yet; suggestions built from them come later.
+
 ## The Dashboard card
 
 Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with
@@ -127,7 +148,7 @@ recent. One tap needs it typed twice and strictly more than any other, else "Des
 | --- | --- |
 | **One tap Add** | Only when nothing is in doubt. It sends the transaction shown, exactly |
 | **Review** | Everything else. It opens the normal add form, filled with only what the push said. With "Add and next (N left)" each save opens the next payment, and the form's "Don't add" moves on without creating anything |
-| **Don't add** | Removes only that suggestion. It creates nothing and teaches the app nothing |
+| **Don't add** | Removes only that suggestion and creates nothing. Three in a row on one wording never added stop it being suggested ("What it learns") |
 | **Link** | Offered when the server names a typed row that looks the same (`possibleMatch`). It points the recommendation at that row and creates nothing |
 
 A payment is reviewed rather than added by one tap when: no merchant text, no amount or an amount of zero, a category not

@@ -83,7 +83,7 @@ describe('an existing template', () => {
     await store({ kind: 'existing', templateId: 't1', learnedRun: learned })
     await store({ kind: 'existing', templateId: 't1', learnedRun: { start: 2, end: 3, skeleton: 'other' } })
     expect(await repo.findTemplates(ALICE, 'iberia', 'card payment')).toEqual([
-      { templateId: 't1', skeleton: learned.skeleton, merchantStart: 8, merchantEnd: 9 },
+      { templateId: 't1', skeleton: learned.skeleton, merchantStart: 8, merchantEnd: 9, ignoredAt: null },
     ])
     expect(rows('SELECT seen FROM capture_templates')[0]?.seen).toBe(3)
   })

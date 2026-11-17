@@ -6,12 +6,35 @@
  * by the app's own access rules, and a bank push is private. `source` is a word the person chose for their own
  * automation, and `keyId` is the public half of a capture key (the secret half is never read here).
  */
+/** Every word `reason` may hold. A word is added here first, so a search for one finds every case. */
+export type CaptureReason =
+  | 'unknown'
+  | 'exception'
+  | 'wrong-path'
+  | 'wrong-method'
+  | 'no-valid-key-header'
+  | 'body-too-large'
+  | 'not-json'
+  | 'not-configured'
+  | 'key-rejected'
+  | 'bad-body'
+  | 'too-many-sources'
+  | 'daily-cap'
+  | 'no-matching-kind'
+  | 'bad-date'
+  | 'clock-skew'
+  | 'recommendation-cap'
+  | 'stored'
+  | 'replay'
+  /** The push belongs to a template the person has ignored: counted as unread, nothing stored. */
+  | 'ignored-shape'
+
 export interface CaptureLogLine {
   event: 'capture'
   /** What became of the request. */
   outcome: 'stored' | 'replay' | 'dropped' | 'refused' | 'limited' | 'error'
   /** Why, in a fixed vocabulary of short words, so a search for one finds every case. */
-  reason: string
+  reason: CaptureReason
   /** The status the phone was given. */
   status: number
   source?: string

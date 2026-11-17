@@ -1,4 +1,5 @@
 import type { PaymentToMatch, PossibleMatch } from '../capture/duplicate'
+import type { TemplateFacts } from '../capture/learn'
 import type { CaptureSource, PushKind, SuggestedType } from '../capture/types'
 
 /** A person may hold this many keys at once. Regenerating is making a new one, then revoking the old. */
@@ -89,6 +90,21 @@ export interface CaptureTemplate {
   /** The `<M>` token's run in `skeleton`, end exclusive. Null until known. */
   merchantStart: number | null
   merchantEnd: number | null
+  /** When the person's dismissals muted it. Its pushes are then counted and never stored. */
+  ignoredAt: string | null
+}
+
+/** The most ignored templates one list returns. A person holds at most `MAX_CAPTURE_TEMPLATES` in all. */
+export const MAX_IGNORED_LISTED = 100
+
+/** A template the person's dismissals muted, as the list of them shows it: its masked words, never a push's body. */
+export interface IgnoredTemplate {
+  templateId: string
+  source: CaptureSource
+  skeleton: string
+  seen: number
+  dismissals: number
+  ignoredAt: string
 }
 
 /** The run a template has just learned from a sibling push, and its skeleton rewritten with the wildcard there. */
@@ -107,6 +123,16 @@ export type TemplateDecision =
   | { kind: 'existing'; templateId: string; learnedRun?: LearnedRun }
   | { kind: 'new'; template: { templateId: string; title: string; skeleton: string } }
   | { kind: 'none' }
+
+/** What a decision on a recommendation learns from the push that made it. Its text is blanked by then, so none is here. */
+export interface RecommendationEvent {
+  /** Null when the push got no template, or its template was evicted before it was stored. */
+  templateId: string | null
+  /** The slots as stored, JSON. */
+  slots: string | null
+  /** The card digits the push showed, or null. */
+  last4: string | null
+}
 
 /** What was dropped, by day. The only thing kept about a push the app does not recognise. */
 export interface CaptureCounter {
@@ -239,6 +265,18 @@ export interface CaptureRepository {
    * first.
    */
   findTemplates(owner: string, source: CaptureSource, title: string): Promise<CaptureTemplate[]>
+  /**
+   * Counts a push of an ignored template, in one batch: as unrecognised on the owner's counter for `day`, and as seen
+   * on the template, which stays ignored. Nothing of the push is stored.
+   */
+  countIgnoredPush(owner: string, source: CaptureSource, day: string, templateId: string, at: string): Promise<void>
+  /** The owner's ignored templates, the most recently ignored first, at most `MAX_IGNORED_LISTED`. */
+  listIgnoredTemplates(owner: string): Promise<IgnoredTemplate[]>
+  /**
+   * Makes the template suggest again: clears its ignore and its dismissal streak, so three more dismissals in a row are
+   * needed to mute it again. False when the owner holds no such template.
+   */
+  unignoreTemplate(owner: string, templateId: string): Promise<boolean>
   /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
   hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
   /**
@@ -282,4 +320,20 @@ export interface CaptureRepository {
     id: string,
     decision: { state: 'submitted'; txnId: number; at: string } | { state: 'dismissed'; at: string },
   ): Promise<boolean>
+
+  /** The push a recommendation came from, or null when it came from none (one made before pushes were stored). */
+  eventOfRecommendation(owner: string, recId: string): Promise<RecommendationEvent | null>
+  /** The learned columns of one of the owner's templates, or null when it is not theirs or no longer exists. */
+  templateFacts(owner: string, templateId: string): Promise<TemplateFacts | null>
+  /**
+   * Writes what a decision taught, in one batch: the template's new facts, when there is a template to teach, and the
+   * outcome on the recommendation's events. Both happen only while the outcome is still empty, so a decision learns
+   * once however often this runs for it.
+   */
+  applyDecisionLearning(
+    owner: string,
+    recId: string,
+    template: { templateId: string; facts: TemplateFacts } | null,
+    outcome: string,
+  ): Promise<void>
 }
