@@ -34,7 +34,9 @@ import {
   FIND_TEMPLATES_SQL,
   INSERT_TEMPLATE_SQL,
   LEARN_RUN_SQL,
+  LIST_IGNORED_SQL,
   SEEN_IGNORED_SQL,
+  UNIGNORE_SQL,
   SEEN_TEMPLATE_SQL,
 } from './captureTemplatesSql'
 import {
@@ -165,6 +167,8 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
   ['learn a run', LEARN_RUN_SQL, ['e1-1', 't1-1', 'sk', 1, 2], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['count a push', SEEN_TEMPLATE_SQL, ['e1-1', 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['count a push of an ignored template', SEEN_IGNORED_SQL, [OWNER, 't1-1', 'x'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  ['the ignored templates', LIST_IGNORED_SQL, [OWNER, 100], /SEARCH capture_templates USING INDEX (sqlite_autoindex_capture_templates_1|idx_capture_templates_seen) \(owner=\?\)/],
+  ['un-ignore a template', UNIGNORE_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   ['drop a template that is gone', DROP_MISSING_TEMPLATE_SQL, ['e1-1'], /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
   [
     'blank the text of a decided push',

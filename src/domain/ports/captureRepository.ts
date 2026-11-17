@@ -94,6 +94,19 @@ export interface CaptureTemplate {
   ignoredAt: string | null
 }
 
+/** The most ignored templates one list returns. A person holds at most `MAX_CAPTURE_TEMPLATES` in all. */
+export const MAX_IGNORED_LISTED = 100
+
+/** A template the person's dismissals muted, as the list of them shows it: its masked words, never a push's body. */
+export interface IgnoredTemplate {
+  templateId: string
+  source: CaptureSource
+  skeleton: string
+  seen: number
+  dismissals: number
+  ignoredAt: string
+}
+
 /** The run a template has just learned from a sibling push, and its skeleton rewritten with the wildcard there. */
 export interface LearnedRun {
   start: number
@@ -257,6 +270,13 @@ export interface CaptureRepository {
    * on the template, which stays ignored. Nothing of the push is stored.
    */
   countIgnoredPush(owner: string, source: CaptureSource, day: string, templateId: string, at: string): Promise<void>
+  /** The owner's ignored templates, the most recently ignored first, at most `MAX_IGNORED_LISTED`. */
+  listIgnoredTemplates(owner: string): Promise<IgnoredTemplate[]>
+  /**
+   * Makes the template suggest again: clears its ignore and its dismissal streak, so three more dismissals in a row are
+   * needed to mute it again. False when the owner holds no such template.
+   */
+  unignoreTemplate(owner: string, templateId: string): Promise<boolean>
   /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
   hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
   /**

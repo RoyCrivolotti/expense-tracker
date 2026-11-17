@@ -1,4 +1,4 @@
-import { TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
+import { MAX_IGNORED_LISTED, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
 import type { CaptureRepository, Recommendation } from '../../../src/domain/ports/captureRepository'
 import type { Env } from '../env'
 import {
@@ -13,8 +13,8 @@ import {
   RECORD_EVENT_SQL,
 } from '../capture/captureEventsSql'
 import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
-import { FIND_TEMPLATES_SQL } from '../capture/captureTemplatesSql'
-import type { TemplateRow } from '../capture/captureTemplatesSql'
+import { FIND_TEMPLATES_SQL, LIST_IGNORED_SQL, UNIGNORE_SQL, toIgnored } from '../capture/captureTemplatesSql'
+import type { IgnoredRow, TemplateRow } from '../capture/captureTemplatesSql'
 import { cards } from './d1CaptureCards'
 import { findMatch, withMatches } from './d1CaptureMatches'
 import { applyDecisionLearning, countIgnoredPush, decide, recordCapture } from './d1CaptureWrites'
@@ -154,8 +154,12 @@ function recommendations(
   }
 }
 
-function templates(db: D1Database): Pick<CaptureRepository, 'findTemplates' | 'countIgnoredPush'> {
+function templates(
+  db: D1Database,
+): Pick<CaptureRepository, 'findTemplates' | 'countIgnoredPush' | 'listIgnoredTemplates' | 'unignoreTemplate'> {
   return {
+    listIgnoredTemplates: async (owner) => (await rows<IgnoredRow>(db, LIST_IGNORED_SQL, owner, MAX_IGNORED_LISTED)).map(toIgnored),
+    unignoreTemplate: (owner, templateId) => changed(db, UNIGNORE_SQL, owner, templateId),
     findTemplates: async (owner, source, title) =>
       (await rows<TemplateRow>(db, FIND_TEMPLATES_SQL, owner, source, title, TEMPLATE_LOOKUP_LIMIT)).map((r) => ({
         templateId: r.template_id,
