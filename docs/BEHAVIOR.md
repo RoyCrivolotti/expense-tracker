@@ -56,8 +56,13 @@ alone. When the date rule lands on the open month (the one today falls in), ever
 statement paid, and the next month already holds a row, it offers the next month, whatever the rollover day. It never
 goes back a month, ignores cancelled rows and cards with no spending in the month, and leaves a back-dated entry in its
 own month. `defaultBudgetMonth` itself is unchanged because Upcoming, Analytics and Goals use it as "the open month".
-`suggestBudgetMonth(model, date)` in `transactionFormState.ts` is the call the form, its date field, the batch form and
-the "+" on a day use.
+`suggestBudgetMonth(model, date)` in `transactionFormState.ts` is the call the form, its date field and the batch form
+use.
+
+The "+" on a day header of the Transactions list uses it only under the date scopes that mix budget months (last 3
+months, all dates, custom). With the list on a budget month, a row added from a day's header files under the month on
+screen, settled or not: the day is listed there because its rows belong to that month, and the owner pressed + inside
+it on purpose (`dayHeaderSeed`). The big + button has no month in view and keeps the rule above.
 
 The cash reconciliation table derives a never-stored `reconciled` flag per month (`actualCashCents !== null &&
 unpaidLiabilityCents === 0`) and shows a ✓ badge; it does not block editing.

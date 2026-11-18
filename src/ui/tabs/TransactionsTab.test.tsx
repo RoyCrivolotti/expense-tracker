@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account, ExpenseDataset } from '../../types'
+import { defaultExpenseSettings } from '../../engine'
 import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
 import { buildLookup } from '../format'
@@ -411,6 +412,30 @@ describe('TransactionsTab — clearing a flag', () => {
     )
 
     expect(screen.queryByText('Work travel')).not.toBeInTheDocument()
+  })
+})
+
+describe('TransactionsTab — the + on a day header', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-12-10T12:00:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('files the new row under the month on screen, even when the date rule would pick another', () => {
+    const actions = makeActions()
+    // A budget that rolls over on the 25th: 1 November belongs to November by the date rule, but the
+    // row is listed under December, where the owner is looking.
+    const dataset = makeDataset({
+      settings: { ...defaultExpenseSettings(), budgetRolloverDay: 25 },
+      transactions: [makeTransaction({ id: 1, date: '2026-11-01', budgetMonth: '2026-12' })],
+    })
+    const model: ExpenseModel = { ...modelFor([]), dataset, lookup: buildLookup(dataset) }
+    render(<TransactionsTab model={model} month="2026-12" actions={actions} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Add transaction on/ }))
+
+    expect(actions.onAdd).toHaveBeenCalledWith({ date: '2026-11-01', budgetMonth: '2026-12' })
   })
 })
 
