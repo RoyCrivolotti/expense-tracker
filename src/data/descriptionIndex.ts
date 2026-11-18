@@ -17,8 +17,13 @@ export interface DescriptionSuggestion {
   template: DescriptionTemplate
 }
 
+/** A match of the browser's index: the newest row of the description, and how many rows the index holds of it. */
+export interface IndexedMatch extends DescriptionMatch {
+  uses: number
+}
+
 export interface DescriptionIndex {
-  search(prefix: string, limit?: number): DescriptionSuggestion[]
+  search(text: string, limit?: number): DescriptionSuggestion[]
   resolve(label: string): DescriptionSuggestion | undefined
   /**
    * A hook for an index that has more to say than its own rows (a window, whose older rows the server holds): the
@@ -30,7 +35,7 @@ export interface DescriptionIndex {
 
 /** What `buildDescriptionIndex` returns: `search`, and the same matches with the row each comes from. */
 export interface DescriptionEntryIndex extends DescriptionIndex {
-  searchEntries(prefix: string, limit?: number): DescriptionMatch[]
+  searchEntries: (text: string, limit?: number) => IndexedMatch[]
 }
 
 /** What the index reads of a row. */
@@ -42,80 +47,72 @@ export type IndexRow = Pick<
 /** Normalize for comparison only; canonical label keeps original spelling. */
 export const normalizeDescriptionKey = normalizeDesc
 
-interface TrieNode {
-  children: Map<string, TrieNode>
-  /** Normalized keys whose full text ends at this node. */
-  keys: string[]
-}
-
 /** Whether `a` is a more recent row than `b`: the later date, then the higher id. */
 export function isNewer(a: DescriptionMatch, b: DescriptionMatch): boolean {
   if (a.date !== b.date) return a.date > b.date
   return a.id > b.id
 }
 
-function insertKey(root: TrieNode, key: string): void {
-  let node = root
-  for (const ch of key) {
-    let next = node.children.get(ch)
-    if (!next) {
-      next = { children: new Map(), keys: [] }
-      node.children.set(ch, next)
-    }
-    node = next
-  }
-  if (!node.keys.includes(key)) node.keys.push(key)
+interface Keyed {
+  key: string
+  entry: IndexedMatch
 }
 
-function collectKeys(node: TrieNode, out: string[]): void {
-  out.push(...node.keys)
-  for (const child of node.children.values()) collectKeys(child, out)
-}
-
-function buildEntries(rows: IndexRow[]): Map<string, DescriptionMatch> {
-  const entries = new Map<string, DescriptionMatch>()
+function buildEntries(rows: readonly IndexRow[]): Map<string, IndexedMatch> {
+  const entries = new Map<string, IndexedMatch>()
   for (const txn of rows) {
     if (txn.cancelled) continue
     const label = txn.description.trim()
     if (!label) continue
     const key = normalizeDescriptionKey(label)
-    const candidate: DescriptionMatch = {
+    const existing = entries.get(key)
+    const candidate: IndexedMatch = {
       label: txn.description,
       template: { type: txn.type, categoryId: txn.categoryId, accountId: txn.accountId },
       date: txn.date,
       id: txn.id,
+      uses: (existing?.uses ?? 0) + 1,
     }
-    const existing = entries.get(key)
-    if (!existing || isNewer(candidate, existing)) entries.set(key, candidate)
+    entries.set(key, !existing || isNewer(candidate, existing) ? candidate : { ...existing, uses: candidate.uses })
   }
   return entries
 }
 
-function buildTrie(keys: string[]): TrieNode {
-  const root: TrieNode = { children: new Map(), keys: [] }
-  for (const key of keys) insertKey(root, key)
-  return root
+/**
+ * The order the list is shown in: descriptions that start with what was typed before those that only contain it,
+ * the most used first among each, and the most recently used first among descriptions used as often. No two
+ * descriptions of one index share a newest row, so the order is total without a collator; the key settles the one
+ * case a merge can bring (a row renamed between the browser's index and the server's answer speaks for two keys).
+ */
+export function compareByUsage(typed: string): (a: { key: string; entry: IndexedMatch }, b: { key: string; entry: IndexedMatch }) => number {
+  return (a, b) => {
+    const aStarts = a.key.startsWith(typed)
+    const bStarts = b.key.startsWith(typed)
+    if (aStarts !== bStarts) return aStarts ? -1 : 1
+    if (a.entry.uses !== b.entry.uses) return b.entry.uses - a.entry.uses
+    if (a.entry.date !== b.entry.date || a.entry.id !== b.entry.id) return isNewer(a.entry, b.entry) ? -1 : 1
+    return a.key < b.key ? -1 : a.key > b.key ? 1 : 0
+  }
 }
 
 export interface DescriptionIndexOptions {
-  /** How letters sort. The runtime's own locale when absent, which is what a browser wants. */
+  /** How letters sort, for the `key` order. The runtime's own locale when absent, which is what a browser wants. */
   locale?: string
   /**
-   * How matches are ordered. `label` (the default, and what the app has always used) sorts by the newest
-   * row's label and leaves descriptions the collator calls equal in the order the rows arrived. `key` sorts
-   * by the normalized text with ties broken by the text (`descriptionSearch.ts`), which is the order the
-   * server's answer for older rows is in and the only one in which the two can be merged exactly. The app
-   * passes `key` once it merges; `label` goes with the change that does.
+   * What a search finds and how it is ordered. `usage` (the default, what the app lists) finds the typed text
+   * anywhere in a description and orders by `compareByUsage`. `key` is the server's contract for older rows
+   * (`GET /descriptions/suggest`): descriptions that start with the text, by the collator over the normalized
+   * text (`descriptionSearch.ts`), so that the parity tests can hold the SQL to the index over the same rows.
    */
-  order?: 'label' | 'key'
+  order?: 'usage' | 'key'
 }
 
 export function buildDescriptionIndex(
-  rows: IndexRow[],
-  { locale, order = 'label' }: DescriptionIndexOptions = {},
+  rows: readonly IndexRow[],
+  { locale, order = 'usage' }: DescriptionIndexOptions = {},
 ): DescriptionEntryIndex {
   const entries = buildEntries(rows)
-  const root = buildTrie([...entries.keys()])
+  const keyed: Keyed[] = [...entries].map(([key, entry]) => ({ key, entry }))
   const collator = descriptionCollator(locale)
 
   const lookup = (key: string): DescriptionSuggestion | undefined => {
@@ -123,54 +120,46 @@ export function buildDescriptionIndex(
     return entry ? { label: entry.label, template: entry.template } : undefined
   }
 
-  const searchEntries = (prefix: string, limit = DEFAULT_SUGGEST_LIMIT): DescriptionMatch[] => {
-    const norm = normalizeDescriptionKey(prefix)
-    if (!norm) return []
-
-    let node: TrieNode = root
-    for (const ch of norm) {
-      const next = node.children.get(ch)
-      if (!next) return []
-      node = next
-    }
-
-    const keys: string[] = []
-    collectKeys(node, keys)
-    const matches = [...new Set(keys)].map((key) => ({ key, entry: entries.get(key)! }))
+  const searchEntries = (text: string, limit = DEFAULT_SUGGEST_LIMIT): IndexedMatch[] => {
+    const typed = normalizeDescriptionKey(text)
+    if (!typed) return []
     const ordered =
-      order === 'key' ? inSuggestionOrder(matches, collator) : [...matches].sort((a, b) => collator.compare(a.entry.label, b.entry.label))
+      order === 'key'
+        ? inSuggestionOrder(keyed.filter((item) => item.key.startsWith(typed)), collator)
+        : keyed.filter((item) => item.key.includes(typed)).sort(compareByUsage(typed))
     return ordered.slice(0, limit).map(({ entry }) => entry)
   }
 
   return {
     resolve: (label) => lookup(normalizeDescriptionKey(label)),
     searchEntries,
-    search: (prefix, limit) =>
-      searchEntries(prefix, limit).map(({ label, template }) => ({ label, template })),
+    search: (text, limit) => searchEntries(text, limit).map(({ label, template }) => ({ label, template })),
   }
 }
 
 /**
- * The first `limit` matches over the browser's own rows and the rows older than them, from the matches
- * each side found for the same prefix. A description found on both sides is spoken for by its newer
- * row. The result is what `buildDescriptionIndex` gives over every row, because a description's place
- * in the order does not depend on which row speaks for it (see `descriptionSearch.ts`), so the first
- * `limit` of the whole are among the first `limit` of one side or the other.
+ * The first `limit` matches over the browser's own rows and the descriptions the server found among the rows older
+ * than them, in the order the list is shown in (`compareByUsage`). A description found on both sides is spoken for
+ * by its newer row and counted by the rows the browser holds; one the server alone found is counted as unused, since
+ * the server does not count rows, so it lists after the browser's own among descriptions that match the same way.
  */
 export function mergeDescriptionMatches(
-  own: DescriptionMatch[],
-  older: DescriptionMatch[],
-  limit = DEFAULT_SUGGEST_LIMIT,
-  locale?: string,
-): DescriptionMatch[] {
-  const newest = new Map<string, DescriptionMatch>()
-  for (const match of [...own, ...older]) {
+  own: readonly IndexedMatch[],
+  older: readonly DescriptionMatch[],
+  { text, limit = DEFAULT_SUGGEST_LIMIT }: { text: string; limit?: number },
+): IndexedMatch[] {
+  const typed = normalizeDescriptionKey(text)
+  const merged = new Map<string, IndexedMatch>()
+  for (const match of [...own.map((m) => ({ ...m })), ...older.map((m) => ({ ...m, uses: 0 }))]) {
     const key = normalizeDescriptionKey(match.label)
-    const held = newest.get(key)
-    if (!held || isNewer(match, held)) newest.set(key, match)
+    const held = merged.get(key)
+    if (!held) merged.set(key, match)
+    else if (isNewer(match, held)) merged.set(key, { ...match, uses: Math.max(match.uses, held.uses) })
+    else merged.set(key, { ...held, uses: Math.max(match.uses, held.uses) })
   }
-  const merged = [...newest].map(([key, entry]) => ({ key, entry }))
-  return inSuggestionOrder(merged, descriptionCollator(locale))
+  return [...merged]
+    .map(([key, entry]) => ({ key, entry }))
+    .sort(compareByUsage(typed))
     .slice(0, limit)
     .map(({ entry }) => entry)
 }
@@ -187,6 +176,6 @@ export function suggestDescriptionsOf(
   const walked = new Set(rows.map((row) => normalizeDescriptionKey(row.description)).filter((key) => key.startsWith(prefix)))
   if (walked.size > MAX_SUGGEST_KEYS) return { items: [], tooBroad: true }
   const eligible = rows.filter((row) => before === undefined || row.budgetMonth < before)
-  const index = buildDescriptionIndex([...eligible], { order: 'key', ...(locale ? { locale } : {}) })
-  return { items: index.searchEntries(prefix, limit), tooBroad: false }
+  const index = buildDescriptionIndex(eligible, { order: 'key', ...(locale ? { locale } : {}) })
+  return { items: index.searchEntries(prefix, limit).map(({ uses: _uses, ...match }) => match), tooBroad: false }
 }

@@ -184,9 +184,9 @@ Descriptions that start with what was typed, among rows booked before a month. C
   for is a 400).
 - Response: `{ items, tooBroad }`. Each item is a description as its newest row speaks for it: `label`, `template`
   (`type`, `categoryId`, `accountId`), `date` and `id`. Cancelled and blank rows are out. Order is the browser index's
-  `key` order. `mergeDescriptionMatches` joins this answer to the client's own matches, and the result equals the index
-  over every row when the client holds every row booked from `before` on, sends its locale, and its ICU sorts text as
-  the Worker's does.
+  `key` order (the collator over the normalized text), not the order the browser lists in: it finds the text anywhere
+  in a description and lists by use, and `mergeDescriptionMatches` joins this answer (the first `limit` of the prefix
+  range, counted as unused) to its own matches in that order, so a client asks with the limit it lists.
 - A prefix that matches more than 500 different descriptions of the owner, whatever their status or month, is a 200 with
   `tooBroad: true` and no items. It is an ordinary answer for a letter or two of typing: keep the local matches and ask
   again when more is typed.

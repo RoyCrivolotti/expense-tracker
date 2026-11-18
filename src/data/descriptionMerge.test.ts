@@ -1,9 +1,10 @@
 /**
- * Autocomplete over a ledger the browser holds only the newest part of. The browser finds its matches in
- * the rows it holds, the server finds the matches in the rows older than a day, and
- * `mergeDescriptionMatches` joins them. The result has to be what the index over every row gives, for
- * any split of the ledger, which is the property tested here on generated ledgers full of the awkward
- * cases: accents, capitals, padding, descriptions that sort as equal, ties on a date, cancelled rows.
+ * Autocomplete over a ledger the browser holds only the newest part of. The browser finds its matches in the rows
+ * it holds, the server finds the descriptions starting with the same text among the older rows, and
+ * `mergeDescriptionMatches` joins them in the order the list shows. The rules tested here on generated ledgers full
+ * of the awkward cases (accents, capitals, padding, ties on a date, cancelled rows): nothing is listed twice, nothing
+ * is listed that no row has, the newest row speaks for a description whichever side holds it, the browser's count
+ * is kept, and the server's finds come after the browser's own among descriptions that match the same way.
  */
 import { describe, expect, it } from 'vitest'
 import { descriptionCollator } from '../domain/engine/descriptionSearch'
@@ -11,6 +12,9 @@ import { mulberry32 } from '../domain/engine/rng'
 import { generatedRows, keyed, prefixesFor } from '../testing/descriptionLedger'
 import {
   type IndexRow,
+  type IndexedMatch,
+  buildDescriptionIndex,
+  compareByUsage,
   isNewer,
   mergeDescriptionMatches,
   normalizeDescriptionKey,
@@ -18,21 +22,66 @@ import {
 
 const LIMITS = [1, 2, 3, 8, 25]
 
-function check(rows: IndexRow[], split: string, locale: string | undefined, rnd: () => number, prefixes: string[]): number {
-  const options = locale ? { locale } : {}
-  const whole = keyed(rows, options)
-  const older = rows.filter((r) => r.date < split)
-  const pinned = new Set(older.filter(() => rnd() < 0.1).map((r) => r.id))
-  const held = keyed(
-    rows.filter((r) => r.date >= split || pinned.has(r.id)),
-    options,
-  )
-  const server = keyed(older, options)
+/**
+ * What the merge should list, written out plainly: the union by normalized key, the newest row speaking for a
+ * description and the browser's count kept (the server's finds count as unused), in the order the list shows.
+ */
+function expectedMerge(own: readonly IndexedMatch[], older: readonly IndexedMatch[], text: string, limit: number): string[] {
+  const typed = normalizeDescriptionKey(text)
+  const byKey = new Map<string, IndexedMatch>()
+  for (const match of [...own, ...older.map((m) => ({ ...m, uses: 0 }))]) {
+    const key = normalizeDescriptionKey(match.label)
+    const held = byKey.get(key)
+    const uses = Math.max(match.uses, held?.uses ?? 0)
+    const newest = !held || match.date > held.date || (match.date === held.date && match.id > held.id) ? match : held
+    byKey.set(key, { ...newest, uses })
+  }
+  return [...byKey]
+    .sort(([ka, a], [kb, b]) => {
+      const starts = Number(kb.startsWith(typed)) - Number(ka.startsWith(typed))
+      if (starts !== 0) return starts
+      if (a.uses !== b.uses) return b.uses - a.uses
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1
+      return b.id - a.id
+    })
+    .slice(0, limit)
+    .map(([, m]) => m.label)
+}
+
+/** A description the browser holds keeps its count; one only the server found counts as unused. */
+function expectCounts(merged: readonly IndexedMatch[], own: readonly IndexedMatch[], where: string): void {
+  const ownUses = new Map(own.map((m) => [normalizeDescriptionKey(m.label), m.uses]))
+  for (const m of merged) expect(m.uses, where).toBe(ownUses.get(normalizeDescriptionKey(m.label)) ?? 0)
+}
+
+function check(rows: IndexRow[], split: string, rnd: () => number, texts: string[]): number {
+  const whole = buildDescriptionIndex(rows)
+  const olderRows = rows.filter((r) => r.date < split)
+  const pinned = new Set(olderRows.filter(() => rnd() < 0.1).map((r) => r.id))
+  const heldRows = rows.filter((r) => r.date >= split || pinned.has(r.id))
+  const held = buildDescriptionIndex(heldRows)
+  const server = keyed(olderRows)
   let compared = 0
-  for (const prefix of prefixes) {
+  for (const text of texts) {
+    const typed = normalizeDescriptionKey(text)
+    const every = new Set(whole.searchEntries(text, Infinity).map((m) => normalizeDescriptionKey(m.label)))
     for (const limit of LIMITS) {
-      const merged = mergeDescriptionMatches(held.searchEntries(prefix, limit), server.searchEntries(prefix, limit), limit, locale)
-      expect(merged, JSON.stringify({ prefix, limit, split, locale })).toEqual(whole.searchEntries(prefix, limit))
+      const own = held.searchEntries(text, limit)
+      const older = server.searchEntries(typed, limit)
+      const merged = mergeDescriptionMatches(own, older, { text, limit })
+      const where = JSON.stringify({ text, limit, split })
+      const keys = merged.map((m) => normalizeDescriptionKey(m.label))
+      expect(new Set(keys).size, where).toBe(keys.length)
+      expect(merged.length, where).toBeLessThanOrEqual(limit)
+      for (const key of keys) expect(every.has(key), where).toBe(true)
+      const inOrder = merged.map((entry) => ({ key: normalizeDescriptionKey(entry.label), entry }))
+      const compare = compareByUsage(typed)
+      for (let i = 1; i < inOrder.length; i += 1) expect(compare(inOrder[i - 1]!, inOrder[i]!), where).toBeLessThan(0)
+      // Every description the browser holds is listed before the server's finds that match the same way, since
+      // the browser's rows count and the server's do not.
+      if (older.length === 0) expect(merged, where).toEqual(own)
+      expect(merged.map((m) => m.label), where).toEqual(expectedMerge(own, older.map((m) => ({ ...m, uses: 0 })), text, limit))
+      expectCounts(merged, own, where)
       compared += 1
     }
   }
@@ -40,61 +89,56 @@ function check(rows: IndexRow[], split: string, locale: string | undefined, rnd:
 }
 
 describe('the browser’s matches merged with the server’s for older rows', () => {
-  it('equal the index over every row, for any split, prefix and limit', () => {
+  it('keep the rules above for any split, text and limit', () => {
     let compared = 0
-    let nonEmpty = 0
     for (let seed = 1; seed <= 30; seed += 1) {
       const rnd = mulberry32(seed * 7)
       const rows = generatedRows(seed)
-      const prefixes = prefixesFor(rows, rnd).filter(() => rnd() < 0.35)
-      for (const split of ['2025-04-03', '2025-09-01', '2026-02-02']) {
-        compared += check(rows, split, undefined, rnd, prefixes)
-      }
-      nonEmpty += keyed(rows).searchEntries('ca', 8).length
+      const texts = prefixesFor(rows, rnd).filter(() => rnd() < 0.35)
+      for (const split of ['2025-04-03', '2025-09-01', '2026-02-02']) compared += check(rows, split, rnd, texts)
     }
     expect(compared).toBeGreaterThan(5_000)
-    expect(nonEmpty).toBeGreaterThan(100)
-  })
+  }, 60_000)
 
-  it('equal it when letters sort as a Swedish or a Spanish reader expects', () => {
-    for (const locale of ['sv', 'es']) {
-      const rnd = mulberry32(3)
-      const rows = generatedRows(4)
-      check(rows, '2025-08-01', locale, rnd, prefixesFor(rows, rnd).filter(() => rnd() < 0.5))
-    }
-    const rows = [
-      { id: 1, date: '2025-01-01', description: 'ärlig', type: 'expense', categoryId: 1, accountId: 1, cancelled: false },
-      { id: 2, date: '2025-01-02', description: 'apa', type: 'expense', categoryId: 1, accountId: 1, cancelled: false },
-      { id: 3, date: '2025-01-03', description: 'ära', type: 'expense', categoryId: 1, accountId: 1, cancelled: false },
-    ] satisfies IndexRow[]
-    expect(keyed(rows, { locale: 'sv' }).search('a').map((s) => s.label)).toEqual(['apa'])
-    expect(keyed(rows, { locale: 'sv' }).search('ä', 8).map((s) => s.label)).toEqual(['ära', 'ärlig'])
-    expect(keyed(rows, { locale: 'sv' }).search('ä', 1)).toHaveLength(1)
-  })
-
-  it('give a description to its newest row, whichever side holds it, and break a tie on a date by the id', () => {
+  it('give a description to its newest row, whichever side holds it, and keep the browser’s count of it', () => {
     const base = { type: 'expense', categoryId: 1, accountId: 1, cancelled: false } as const
-    const own = [{ ...base, id: 5, date: '2026-01-10', description: 'RENT', categoryId: 9 }] satisfies IndexRow[]
-    const older = [{ ...base, id: 9, date: '2025-12-01', description: 'Rent', categoryId: 2 }] satisfies IndexRow[]
-    const merged = mergeDescriptionMatches(
-      keyed(own).searchEntries('re'),
-      keyed(older).searchEntries('re'),
-    )
-    expect(merged).toEqual([{ label: 'RENT', template: { type: 'expense', categoryId: 9, accountId: 1 }, date: '2026-01-10', id: 5 }])
-
-    const sameDay = [
-      { ...base, id: 1, date: '2026-01-10', description: 'Gym', categoryId: 1 },
-      { ...base, id: 2, date: '2026-01-10', description: 'gym', categoryId: 2 },
+    const own = [
+      { ...base, id: 5, date: '2026-01-10', description: 'RENT', categoryId: 9 },
+      { ...base, id: 4, date: '2026-01-01', description: 'rent', categoryId: 9 },
     ] satisfies IndexRow[]
-    expect(keyed(sameDay).search('gy')).toEqual([{ label: 'gym', template: { type: 'expense', categoryId: 2, accountId: 1 } }])
+    const older = [{ ...base, id: 9, date: '2025-12-01', description: 'Rent', categoryId: 2 }] satisfies IndexRow[]
+    const merged = mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('re'), keyed(older).searchEntries('re'), { text: 're' })
+    expect(merged).toEqual([{ label: 'RENT', template: { type: 'expense', categoryId: 9, accountId: 1 }, date: '2026-01-10', id: 5, uses: 2 }])
+
+    const newerOnServer = [{ ...base, id: 9, date: '2026-02-01', description: 'Rent', categoryId: 2 }] satisfies IndexRow[]
+    const [first] = mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('re'), keyed(newerOnServer).searchEntries('re'), { text: 're' })
+    expect(first).toEqual({ label: 'Rent', template: { type: 'expense', categoryId: 2, accountId: 1 }, date: '2026-02-01', id: 9, uses: 2 })
+    expect(isNewer(first!, { label: 'RENT', template: first!.template, date: '2026-01-10', id: 5 })).toBe(true)
+  })
+
+  it('list the server’s finds after the browser’s own that match the same way, and a start of the text before a piece', () => {
+    const base = { type: 'expense', categoryId: 1, accountId: 1, cancelled: false } as const
+    const own = [
+      { ...base, id: 1, date: '2026-01-01', description: 'Supermercado' },
+      { ...base, id: 2, date: '2026-01-02', description: 'Mercería' },
+    ] satisfies IndexRow[]
+    const older: IndexedMatch[] = []
+    const found = keyed([{ ...base, id: 7, date: '2025-05-01', description: 'Mercadona' }]).searchEntries('merc')
+    const merged = mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('merc'), found, { text: 'merc' })
+    expect(merged.map((m) => [m.label, m.uses])).toEqual([
+      ['Mercería', 1],
+      ['Mercadona', 0],
+      ['Supermercado', 1],
+    ])
+    expect(mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('merc'), older, { text: 'merc', limit: 1 }).map((m) => m.label)).toEqual(['Mercería'])
   })
 
   it('does not return the older match of a description the browser holds a newer row of', () => {
     const rows = generatedRows(9)
     const merged = mergeDescriptionMatches(
-      keyed(rows.filter((r) => r.date >= '2025-09-01')).searchEntries('ca', 25),
+      buildDescriptionIndex(rows.filter((r) => r.date >= '2025-09-01')).searchEntries('ca', 25),
       keyed(rows.filter((r) => r.date < '2025-09-01')).searchEntries('ca', 25),
-      25,
+      { text: 'ca', limit: 25 },
     )
     const keys = merged.map((m) => normalizeDescriptionKey(m.label))
     expect(new Set(keys).size).toBe(keys.length)

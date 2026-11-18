@@ -3,7 +3,7 @@
  * accents, capitals, padding, descriptions that sort as equal, an emoji and a few with numbers, with
  * ties on a date and some cancelled rows. Placeholder text only.
  */
-import { type DescriptionIndexOptions, type IndexRow, buildDescriptionIndex, normalizeDescriptionKey } from '../data/descriptionIndex'
+import { type DescriptionIndexOptions, type DescriptionMatch, type IndexRow, buildDescriptionIndex, normalizeDescriptionKey } from '../data/descriptionIndex'
 import { mulberry32 } from '../domain/engine/rng'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { makeDataset } from './factories'
@@ -46,9 +46,18 @@ export function prefixesFor(rows: IndexRow[], rnd: () => number): string[] {
   return [...out]
 }
 
-/** The index in the order the server's answer for older rows is in, which is the one a merge can be exact in. */
-export const keyed = (rows: IndexRow[], options: Omit<DescriptionIndexOptions, 'order'> = {}) =>
-  buildDescriptionIndex(rows, { ...options, order: 'key' })
+/**
+ * The index in the server's order and reach (`order: 'key'`): descriptions that start with the text, by the collator
+ * over the normalized text, as `GET /descriptions/suggest` answers them and without a count, since the server has none.
+ */
+export function keyed(rows: IndexRow[], options: Omit<DescriptionIndexOptions, 'order'> = {}) {
+  const index = buildDescriptionIndex(rows, { ...options, order: 'key' })
+  return {
+    ...index,
+    searchEntries: (text: string, limit?: number): DescriptionMatch[] =>
+      index.searchEntries(text, limit).map(({ uses: _uses, ...match }) => match),
+  }
+}
 
 /** The rows as a dataset a database can be seeded with, newest first as the API serves them. */
 export function descriptionDataset(seed: number, count = 260): ExpenseDataset {
