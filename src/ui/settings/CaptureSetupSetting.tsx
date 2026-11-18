@@ -1,3 +1,4 @@
+import { devicePlatform, isAppleTouch } from '../../config/device'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
 import { Waiting } from './CaptureSetupCheck'
@@ -27,35 +28,48 @@ function Steps({ setup }: { setup: Setup }) {
   )
 }
 
-const IOS_NOTE =
-  'Needs iOS 27 or later (the trigger was seen on iOS 27); older iPhones and Android are not tried. Check your version in Settings, General, About.'
+const REQUIREMENT =
+  'Needs an iPhone or iPad with the Shortcuts app and its notification trigger; proven on iOS 27, untested on older versions. Your version is in Settings, General, About.'
+const ELSEWHERE =
+  'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. Set it up from Settings on that device; what it captures shows here as well.'
 const BY_HAND =
   'A shortcut built by hand from steps like these worked on one phone. It has not been tried on a second phone. We have not seen the iOS 27 screens beyond the trigger, so names here may differ from yours: tell us what does.'
 const FROM_LINK =
   'The shortcut was installed from a shared copy on one phone and worked. It has not been tried on a second phone. The names on these screens come from that file and one phone: tell us what differs.'
 
-/** The steps to get a bank app's notifications into the app, and a live check that the first one arrived. */
+/**
+ * The steps to get a bank app's notifications into the app, and a live check that the first one arrived. Only an iPhone
+ * or iPad can run the shortcut, so anywhere else that is known not to be one gets a pointer instead. An unknown device
+ * gets the steps: a wrong guess must never hide them from a phone that can use them.
+ */
 export function CaptureSetupSetting() {
-  const setup = useCaptureSetup()
+  const platform = devicePlatform()
   return (
     <>
       <SectionTitle>Set up capture</SectionTitle>
       <Card>
-        <div className={tabStyles.settingGroup}>
-          <p className={tabStyles.settingHint}>
-            Capture sends your bank app&rsquo;s notifications from your iPhone to the app. Each one that shows an amount
-            with its currency becomes a payment for you to review; the rest are only counted.
-          </p>
-          <p className={tabStyles.settingHint}>{IOS_NOTE}</p>
-          <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl?.startsWith(SHORTCUT_LINK_PREFIX) ? FROM_LINK : BY_HAND}</p>
-          {setup.error ? (
-            <p className={tabStyles.settingError} role="alert">
-              {setup.error}
-            </p>
-          ) : null}
-          <Steps setup={setup} />
-        </div>
+        {isAppleTouch(platform) || platform === 'unknown' ? <SetupSteps /> : <p className={tabStyles.settingHint}>{ELSEWHERE}</p>}
       </Card>
     </>
+  )
+}
+
+function SetupSteps() {
+  const setup = useCaptureSetup()
+  return (
+    <div className={tabStyles.settingGroup}>
+      <p className={tabStyles.settingHint}>
+        Capture sends your bank app&rsquo;s notifications from your iPhone or iPad to the app. Each one that shows an amount with its
+        currency becomes a payment for you to review; the rest are only counted.
+      </p>
+      <p className={tabStyles.settingHint}>{REQUIREMENT}</p>
+      <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl?.startsWith(SHORTCUT_LINK_PREFIX) ? FROM_LINK : BY_HAND}</p>
+      {setup.error ? (
+        <p className={tabStyles.settingError} role="alert">
+          {setup.error}
+        </p>
+      ) : null}
+      <Steps setup={setup} />
+    </div>
   )
 }

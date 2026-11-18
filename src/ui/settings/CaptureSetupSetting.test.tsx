@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as device from '../../config/device'
 import * as keysApi from '../../data/captureKeysApi'
 import * as statusApi from '../../data/captureStatusApi'
 import { CaptureSetupSetting } from './CaptureSetupSetting'
@@ -9,6 +10,10 @@ vi.mock('../../data/captureKeysApi', async (original) => ({
   fetchCaptureKeys: vi.fn(),
 }))
 vi.mock('../../data/captureStatusApi')
+vi.mock('../../config/device', async (original) => ({
+  ...(await original<typeof device>()),
+  devicePlatform: vi.fn(),
+}))
 
 const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
@@ -23,6 +28,7 @@ const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: s
 
 beforeEach(() => {
   localStorage.clear()
+  vi.mocked(device.devicePlatform).mockReturnValue('iphone')
   vi.mocked(keysApi.fetchCaptureKeys).mockResolvedValue([])
   status()
 })
@@ -183,11 +189,11 @@ describe('the steps', () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('Waiting for your first payment')
 
-    expect(screen.getByText(/Check your version in Settings, General, About/)).toBeInTheDocument()
+    expect(screen.getByText(/Your version is in Settings, General, About/)).toBeInTheDocument()
     expect(screen.getByText(/built by hand from steps like these worked on one phone/)).toBeInTheDocument()
     expect(screen.getByText(/has not been tried on a second phone/)).toBeInTheDocument()
     expect(screen.getByText(/not seen the iOS 27 screens beyond the trigger/)).toBeInTheDocument()
-    expect(screen.getByText(/older iPhones and Android are not tried/)).toBeInTheDocument()
+    expect(screen.getByText(/proven on iOS 27, untested on older versions/)).toBeInTheDocument()
   })
 
   it("shows the server's address with a Copy button", async () => {
@@ -235,6 +241,34 @@ describe('the steps', () => {
     expect(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ })).toBeChecked()
     fireEvent.click(screen.getByRole('checkbox', { name: /1\. Make a key and copy it/ }))
     expect(screen.getByRole('checkbox', { name: /1\. Make a key and copy it/ })).not.toBeChecked()
+  })
+})
+
+describe('on each kind of device', () => {
+  it.each(['iphone', 'ipad', 'unknown'] as const)('shows the steps, the requirement and the check on %s', async (platform) => {
+    vi.mocked(device.devicePlatform).mockReturnValue(platform)
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
+    expect(screen.getByText(/^Needs an iPhone or iPad with the Shortcuts app and its notification trigger/)).toBeInTheDocument()
+    expect(screen.getByText('1. Make a key and copy it')).toBeInTheDocument()
+    expect(screen.queryByText(/Set it up from Settings on that device/)).not.toBeInTheDocument()
+  })
+
+  it.each(['android', 'mac', 'windows', 'linux'] as const)('points to the iPhone instead on %s, and reads nothing', (platform) => {
+    vi.mocked(device.devicePlatform).mockReturnValue(platform)
+    render(<CaptureSetupSetting />)
+
+    expect(screen.getByText('Set up capture')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. Set it up from Settings on that device; what it captures shows here as well.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Needs an iPhone or iPad/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Checking')).not.toBeInTheDocument()
+    expect(statusApi.fetchCaptureStatus).not.toHaveBeenCalled()
   })
 })
 
