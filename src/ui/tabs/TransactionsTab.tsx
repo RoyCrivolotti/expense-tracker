@@ -8,7 +8,6 @@ import { StaleList } from '../StaleList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
-import { suggestBudgetMonth } from '../components/transactionFormState'
 import { ListStats } from './ListStats'
 import { matchAnnouncement } from './matchAnnouncement'
 import { TxnFilters } from './TxnFilters'
@@ -28,6 +27,7 @@ import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
 import { useUpcoming } from './useUpcoming'
+import { dayHeaderSeed } from './dayHeaderSeed'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
@@ -196,8 +196,7 @@ export function TransactionsTab({
           onToggleDate={state.toggleDate}
           {...(actions
             ? {
-                onAddForDate: (date) =>
-                  actions.onAdd({ date, budgetMonth: suggestBudgetMonth(model, date) }),
+                onAddForDate: (date) => actions.onAdd(dayHeaderSeed(model, month, state.dateScope, date)),
                 onDelete: actions.deleteTransaction,
                 onLongPressSelect: state.enterAndSelect,
                 onEditStatementPayment: setEditingStatement,
