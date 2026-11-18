@@ -13,6 +13,7 @@ import { createFlagInPlace } from '../components/quickFlag'
 import { LabelField } from '../components/LabelField'
 import { createLabelInPlace } from '../components/quickLabel'
 import { Modal } from '../components/Modal'
+import { BulkDateField, BulkMonthField } from './BulkEditPickers'
 import {
   buildBulkLabelAdditions,
   buildBulkPatch,
@@ -163,11 +164,7 @@ export function BulkEditSheet({
           enabled={fields.dateEnabled}
           onToggle={(v) => set('dateEnabled', v)}
         >
-          <input
-            type="date"
-            value={fields.date}
-            onChange={(e) => set('date', e.target.value)}
-          />
+          <BulkDateField value={fields.date} onChange={(date) => set('date', date)} onTrapPausedChange={setPopoverOpen} />
         </ToggleField>
 
         <ToggleField
@@ -175,10 +172,10 @@ export function BulkEditSheet({
           enabled={fields.budgetMonthEnabled}
           onToggle={(v) => set('budgetMonthEnabled', v)}
         >
-          <input
-            type="month"
+          <BulkMonthField
             value={fields.budgetMonth}
-            onChange={(e) => set('budgetMonth', e.target.value)}
+            onChange={(budgetMonth) => set('budgetMonth', budgetMonth)}
+            onTrapPausedChange={setPopoverOpen}
           />
         </ToggleField>
         <ToggleField
