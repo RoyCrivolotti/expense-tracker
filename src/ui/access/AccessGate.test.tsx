@@ -59,7 +59,14 @@ beforeEach(() => {
   installFakeMatchMedia()
   setOnline(true)
   statusFor = 'allowed'
-  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(answer(ALICE, statusFor))))
+  // The app reads the payments to review once it opens; none are open here.
+  const nothingToReview = () => Response.json({ recommendations: [], next: null, openCount: 0 })
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve(url.startsWith('/api/recommendations') ? nothingToReview() : answer(ALICE, statusFor)),
+    ),
+  )
 })
 
 afterEach(() => {

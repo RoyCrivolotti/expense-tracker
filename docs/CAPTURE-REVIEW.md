@@ -6,11 +6,12 @@ what is stored are in [CAPTURE.md](CAPTURE.md).
 
 ## The card
 
-Behind the capture flag, the Dashboard opens with a "To review" card: the newest three open recommendations, each with
+The Dashboard opens with a "To review" card: the newest three open recommendations, each with
 all seven fields it would become (type, amount, description, category, account, date, budget month). It is absent when
 nothing is waiting, and the Dashboard tab carries the count (the Settings badge still means pending access requests).
 "See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
-list, the count and the undo window live in the main bundle, so the badge needs no download.
+list, the count and the undo window live in the main bundle, so the badge needs no download. The list is read when the app opens,
+for every approved person; for someone who never made a key it comes back empty and the card's chunk is never fetched.
 
 What each payment becomes is worked out on the device, never stored ([`reviewFields.ts`](../src/ui/capture/reviewFields.ts)).
 It takes the list's `suggestion` (below, "What the list suggests") first: its description, category, type, account and

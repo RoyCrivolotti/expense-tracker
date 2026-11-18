@@ -4,7 +4,8 @@ import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { useReviewCore } from './reviewContext'
 
-// Its own chunk, fetched only when there is a payment to show: most people never turn the capture flag on.
+// Its own chunk, fetched only when there is a payment to show: most visits have none, and the budget check measures it
+// apart from the rest of the app.
 const ReviewCard = lazy(() => import('./ReviewCard'))
 
 /**

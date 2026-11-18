@@ -38,7 +38,7 @@ export interface ReviewCore {
 
 export const ReviewContext = createContext<ReviewCore | null>(null)
 
-/** Null when the capture flag is off or no provider is mounted. */
+/** Null when no provider is mounted. */
 export function useReviewCore(): ReviewCore | null {
   return useContext(ReviewContext)
 }
