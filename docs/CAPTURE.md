@@ -176,8 +176,15 @@ demo data has no capture routes behind it, so the review list read fails silentl
 that is expected, and production and the staging previews have the routes. **A shortcut built by hand
 from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. A second
 phone has not been tried.** We have not seen the iOS 27 screens beyond the trigger, so names below may differ from
-yours; report any that do. The trigger was seen on iOS 27. Older iPhones and Android are untried, and the app cannot tell the phone's version (Safari freezes it in the
-user agent), so the screen says to check Settings, General, About. The steps are the same for every bank app.
+yours; report any that do. The steps are the same for every bank app.
+
+Only an iPhone or iPad runs Shortcuts automations, so the card reads the platform from the browser (`src/config/device.ts`;
+an iPad that calls itself a Mac is told apart by its touch screen). On an iPhone, an iPad or a device it cannot place it
+shows the steps, the check and a line saying the trigger is proven on iOS 27 and untested on older versions. On Android,
+a Mac, Windows or Linux it shows only a note to set capture up from Settings on the iPhone or iPad, with no steps and no
+status read; the key card, the linked cards, muted pushes and diagnostics show everywhere, since a person often reviews
+on a laptop. Nothing is blocked. The OS version is never read from the browser, because Safari freezes it in the user
+agent, so the requirement line points to Settings, General, About instead.
 
 ### With the shortcut link
 
