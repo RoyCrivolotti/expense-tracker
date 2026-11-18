@@ -4,8 +4,12 @@ on:
   # No `branches:` filter on purpose. That filter matches the PR's *base*, so
   # `branches: [main]` silently gave zero CI to every stacked PR — B on top of A
   # ran nothing until A merged, which is exactly when review is too late to help.
-  # Every check in ci.yml is already base-agnostic: both scripts take the PR's own
-  # base.sha, so they measure the PR's own diff whatever it is stacked on.
+  # Every check in ci.yml is already base-agnostic: both scripts diff against the
+  # live tip of the PR's own base branch (origin/<base_ref>), so they measure the
+  # PR's own diff whatever it is stacked on. Not the event's base.sha: that is
+  # frozen when the PR is opened, while the checkout is the PR merged into the base
+  # as it is now, so once another PR merges into the base the stored SHA blames
+  # this PR for that merge's files.
   #
   # `edited` fires on a base change (retargeting a stacked PR to main, where the
   # diff coverage baseline really does move) and on a description edit, which is

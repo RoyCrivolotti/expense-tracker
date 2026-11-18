@@ -66,6 +66,10 @@ jobs:
 
   gate:
     needs: [lint, static, test]
+    env:
+      # The PR's base branch, read by the steps below as "$BASE_REF" rather than interpolated
+      # into the shell text, so a branch name can never become shell syntax.
+      BASE_REF: ${{ github.base_ref }}
     # Without `always()` a failed job above would skip this one, and a skipped job reads as
     # passing to anything that requires it.
     if: always()
@@ -80,9 +84,19 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
-          # `npm run coverage:diff` needs the merge-base with the PR's base branch.
+          # Both PR checks below need the merge-base with the PR's base branch.
           fetch-depth: 0
       - uses: ./.github/actions/setup-node-deps
+
+      # On a pull_request event the checkout is the PR merged into the *current* tip of its
+      # base branch, but `github.event.pull_request.base.sha` is the base tip from when the PR
+      # was opened or last retargeted. Once another PR merges into the base, `<stale>...HEAD`
+      # includes that PR's files too and this PR goes red for changes it did not make (PR 550,
+      # 2026-11-18). The live tip of the base branch has the right merge-base whatever the PR
+      # is stacked on, so both checks diff against that instead.
+      - name: Fetch the PR's base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
 
       - uses: actions/download-artifact@v8
         with:
@@ -97,10 +111,10 @@ jobs:
 
       - name: Diff coverage (this PR's changed lines)
         if: github.event_name == 'pull_request'
-        run: npm run coverage:diff -- --base ${{ github.event.pull_request.base.sha }}
+        run: npm run coverage:diff -- --base "origin/$BASE_REF"
 
       - name: Require screenshots on UI-facing PRs
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run check:pr-screenshots -- --base ${{ github.event.pull_request.base.sha }} --pr ${{ github.event.pull_request.number }}
+        run: npm run check:pr-screenshots -- --base "origin/$BASE_REF" --pr ${{ github.event.pull_request.number }}

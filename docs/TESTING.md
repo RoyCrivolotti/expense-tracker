@@ -104,7 +104,8 @@ Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR
    (`DIFF_COVERAGE_THRESHOLD` env var to override). This is the real
    enforcement: it holds new code to a strict bar without demanding a
    back-fill of the entire pre-existing UI. CI passes `--base
-   ${{ github.event.pull_request.base.sha }}`; run it locally with `--base
+   origin/<base branch>`, the live tip rather than the event's `base.sha`, which goes
+   stale when another PR merges under this one; run it locally with `--base
    origin/main` (or any ref) after `npm run test:coverage` — use `origin/main`, not
    local `main`: every worktree in this repo branches straight off `origin/main` and
    never checks `main` itself out, so the local branch silently goes stale and
