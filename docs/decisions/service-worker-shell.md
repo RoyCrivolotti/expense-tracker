@@ -1,6 +1,6 @@
 # Precache the shell, and serve it only when the network fails
 
-For an engineer changing the service worker or the build that generates it. The invariant is in [ARCHITECTURE.md](../ARCHITECTURE.md).
+For an engineer changing the service worker or the build that bundles it. The invariant is in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 **Context.** The app is a single page behind Cloudflare Access, and it is installed to the home screen. An Access session
 ends, and the installed app on iOS has a cookie jar of its own, so a launch has to reach the network for Access to ask for
@@ -9,10 +9,11 @@ reach its API. The app also has to start with no network at all, which needs the
 worker's precache, from the same build.
 
 **Decision.** `index.html` is precached with a revision, with the assets it names. A navigation goes to the network, and the
-precached shell answers only when the request fails. Two defaults of the generated worker answer from the precache first,
-and both are off: the route that answers every navigation with the shell, and the directory index that answers `/` with
-the precached `index.html`. `/` is the URL the installed app launches at. An API URL, an Access URL and the app's own
-requests for its data are left to the browser, and the worker keeps no response outside its precache.
+precached shell answers only when the request fails. The worker is written from Workbox's pieces (`src/sw/sw.ts`), and
+two of Workbox's defaults that answer from the precache first are not used: the route that answers every navigation
+with the shell, and the directory index that answers `/` with the precached `index.html`. `/` is the URL the installed
+app launches at. An API URL, an Access URL and the app's own requests for its data are left to the browser, and the
+worker keeps no response outside its precache.
 
 **Consequences.**
 - A launch with no network opens the app. The access check cannot answer, so the app opens on the saved copy of the data

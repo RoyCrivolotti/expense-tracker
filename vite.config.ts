@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { docsCaptureMocks } from './vite.docsCapture'
-import { workboxOptions } from './scripts/pwaWorkbox'
 
 function resolveBuildId(): string {
   const sha = process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA
@@ -24,7 +23,12 @@ export default defineConfig({
       // Use the hand-written manifest in public/ rather than generating one.
       manifest: false,
       injectRegister: 'auto',
-      workbox: workboxOptions,
+      // The worker is written in src/sw/sw.ts; the plugin bundles it as one classic script at /sw.js, the URL every
+      // installed copy of the app already has registered, and fills in the precache manifest.
+      strategies: 'injectManifest',
+      srcDir: 'src/sw',
+      filename: 'sw.ts',
+      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'], rollupFormat: 'iife' },
       devOptions: { enabled: false },
     }),
   ],

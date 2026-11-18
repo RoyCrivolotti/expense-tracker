@@ -1,6 +1,5 @@
-import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { isShellNavigation } from './pwaNavigation'
+import { isShellNavigation } from './shellNavigation'
 
 const navigate = (pathname: string) => isShellNavigation({ request: { mode: 'navigate' }, url: { pathname } })
 
@@ -22,12 +21,5 @@ describe('the navigations the service worker answers', () => {
 
   it('leave out only the paths under /api/ and /cdn-cgi/', () => {
     for (const path of ['/apiary', '/cdn-cgix', '/goals/api/x', '/api']) expect(navigate(path), path).toBe(true)
-  })
-
-  it('is written out whole in the worker, which copies the function as text', () => {
-    // A rule that named a variable outside its body would throw in the worker, and only there.
-    const copy = runInNewContext(`(${isShellNavigation.toString()})`) as typeof isShellNavigation
-    expect(copy({ request: { mode: 'navigate' }, url: { pathname: '/api/expenses' } })).toBe(false)
-    expect(copy({ request: { mode: 'navigate' }, url: { pathname: '/goals' } })).toBe(true)
   })
 })

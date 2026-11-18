@@ -202,7 +202,7 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   off downloads ([the switch](./LEDGER-MODE.md#the-switch-and-the-fallback)).
 - **The installed app opens with no network, and a launch with one still reaches Cloudflare Access.** The service worker
   precaches the shell (`index.html`) with the assets it names, answers a navigation from the network, and answers it with
-  the shell only when the network fails ([`pwaWorkbox.ts`](../scripts/pwaWorkbox.ts)). A shell that answered first would
+  the shell only when the network fails ([`src/sw/sw.ts`](../src/sw/sw.ts)). A shell that answered first would
   skip the sign-in Access asks for, and the home-screen app on iOS has a cookie jar of its own. The worker never answers
   an API URL, an Access URL or a request of the app for its data, and keeps no response outside its precache
   ([the choice](./decisions/service-worker-shell.md)).

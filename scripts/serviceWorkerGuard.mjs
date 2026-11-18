@@ -1,6 +1,7 @@
 /**
- * Runs the built service worker (`dist/sw.js` and the Workbox file it loads) in a Node VM with just enough of a worker's
- * globals, hands it fetch events, and reports what it did. No browser is needed, so it can sit in `npm run verify`.
+ * Runs the built service worker (`dist/sw.js`, and any file it loads with `importScripts`) in a Node VM with just
+ * enough of a worker's globals, hands it fetch events, and reports what it did. No browser is needed, so it can sit in
+ * `npm run verify`.
  *
  * A worker that throws while it is evaluated does not fail to install: the browser keeps it, with the routes
  * registered before the throw and none after, and says nothing a person sees. That is how the app came to have no
@@ -33,12 +34,19 @@ class FetchEvent extends ExtendableEvent {
 const SHELL_BODY = 'SHELL'
 const NETWORK_BODY = 'NETWORK'
 
-/** The URLs a worker precaches, from the manifest it passes to `precacheAndRoute`. */
+/**
+ * The URLs a worker precaches, from the manifest it passes to `precacheAndRoute`. A bundler writes each entry's two
+ * keys in either order, quoted or not, so both spellings are read.
+ */
 export function precachedEntries(source) {
-  return [...source.matchAll(/\{url:"([^"]+)",revision:(null|"[^"]+")\}/g)].map((m) => ({
-    url: m[1],
-    revision: m[2] === 'null' ? null : m[2].slice(1, -1),
-  }))
+  const entry = /\{\s*"?(url|revision)"?\s*:\s*("[^"]*"|null)\s*,\s*"?(url|revision)"?\s*:\s*("[^"]*"|null)\s*\}/g
+  const entries = []
+  for (const m of source.matchAll(entry)) {
+    const fields = { [m[1]]: m[2], [m[3]]: m[4] }
+    if (!fields.url || !fields.revision || fields.url === 'null') continue
+    entries.push({ url: JSON.parse(fields.url), revision: fields.revision === 'null' ? null : JSON.parse(fields.revision) })
+  }
+  return entries
 }
 
 /** A worker resolves the relative URL it is given against its own address; Node's `Request` refuses one. */

@@ -5,15 +5,29 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { generateSW, type GenerateSWOptions } from 'workbox-build'
 import { afterAll, describe, expect, it } from 'vitest'
+import { precachedEntries } from './serviceWorkerGuard.mjs'
 import { PREVIOUS_OPTIONS } from './offlineStart/previousWorker.mjs'
-import { isShellNavigation } from './pwaNavigation'
-import { SHELL_URL, workboxOptions } from './pwaWorkbox'
+import { SHELL_URL, isShellNavigation } from '../src/sw/shellNavigation'
 
 // `check-service-worker.mjs` runs the built worker in a VM, and a worker that fails while it loads leaves an unhandled
 // rejection, which vitest would report as a failure of the run. So each worker is checked by the script, as a process.
 const CHECK = join(import.meta.dirname, 'check-service-worker.mjs')
 const run = promisify(execFile)
 const SLOW = 60_000
+
+/**
+ * `generateSW` options that make the worker `src/sw/sw.ts` is: the shell precached with its assets, no directory
+ * index, no fallback route, and the one route that asks the network and falls back to the shell. The guard must pass
+ * it, and each change below is one thing the real worker must never do.
+ */
+const workboxOptions: Partial<GenerateSWOptions> = {
+  globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
+  directoryIndex: null,
+  navigateFallback: null,
+  runtimeCaching: [
+    { urlPattern: isShellNavigation, handler: 'NetworkOnly', options: { precacheFallback: { fallbackURL: SHELL_URL } } },
+  ],
+}
 
 const made: string[] = []
 afterAll(() => {
@@ -49,7 +63,7 @@ async function check(dir: string): Promise<{ failed: boolean; report: string }> 
 }
 
 describe('the check of the built service worker', () => {
-  it('passes the worker the app is built with', async () => {
+  it('passes a worker that does what the app’s does', async () => {
     expect(await check(await site(workboxOptions))).toEqual({ failed: false, report: '' })
   }, SLOW)
 
@@ -114,4 +128,26 @@ describe('the check of the built service worker', () => {
     expect(failed).toBe(true)
     expect(report).toContain('does not exist; run the build first')
   }, SLOW)
+})
+
+describe('reading the precache manifest out of a built worker', () => {
+  it('reads the entries workbox-build writes, url first and unquoted', () => {
+    const source = 'precacheAndRoute([{url:"index.html",revision:"3f2a"},{url:"assets/app.js",revision:null}],{directoryIndex:null})'
+    expect(precachedEntries(source)).toEqual([
+      { url: 'index.html', revision: '3f2a' },
+      { url: 'assets/app.js', revision: null },
+    ])
+  })
+
+  it('reads the entries a bundler writes, revision first and quoted', () => {
+    const source = 'D([{"revision":"3f2a","url":"index.html"},{"revision":null,"url":"assets/app.js"}],{directoryIndex:``})'
+    expect(precachedEntries(source)).toEqual([
+      { url: 'index.html', revision: '3f2a' },
+      { url: 'assets/app.js', revision: null },
+    ])
+  })
+
+  it('passes over Workbox’s own code that names the two keys', () => {
+    expect(precachedEntries('let{revision:n,url:r}=e;const o={revision:n,url:r}')).toEqual([])
+  })
 })
