@@ -6,6 +6,12 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { defaultExpenseSettings } from '../../engine'
 
+// The date and month fields are the form's pickers: a native input on a phone, a trigger
+// button with a popover elsewhere. Most tests type into the native input, which jsdom
+// takes a value in one step.
+const picker = vi.hoisted(() => ({ native: true }))
+vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => picker.native }))
+
 function makeModel(budgetRolloverDay = 1): ExpenseModel {
   return {
     dataset: {
@@ -462,6 +468,38 @@ describe('BulkEditSheet rename', () => {
     await user.click(screen.getByLabelText('Description'))
 
     expect(screen.queryByText(/^Replaces/)).not.toBeInTheDocument()
+  })
+})
+
+describe('BulkEditSheet — the date and month pickers', () => {
+  afterEach(() => {
+    picker.native = true
+  })
+
+  it('opens a popover from a button where there is no native picker, so no bare native input is sized by the browser', async () => {
+    picker.native = false
+    render(
+      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    await userEvent.click(screen.getByLabelText('Date'))
+    await userEvent.click(screen.getByLabelText('Budget month'))
+    expect(document.querySelector('input[type="date"]')).toBeNull()
+    expect(document.querySelector('input[type="month"]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'New date' })).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(screen.getByRole('button', { name: 'New budget month' })).toHaveAttribute('aria-haspopup', 'dialog')
+
+    await userEvent.click(screen.getByRole('button', { name: 'New date' }))
+    expect(screen.getByRole('button', { name: 'New date' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('gives the native inputs their own names, apart from the toggles', async () => {
+    render(
+      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    await userEvent.click(screen.getByLabelText('Date'))
+    await userEvent.click(screen.getByLabelText('Budget month'))
+    expect(screen.getByLabelText('New date')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('New budget month')).toHaveAttribute('type', 'month')
   })
 })
 
