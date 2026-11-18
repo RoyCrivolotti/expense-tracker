@@ -140,12 +140,14 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   read that groups by it first calls `ensureDescriptionNorm`, which fills a bounded chunk and answers 503 until none are
   waiting. `descriptionNormWrites.test.ts` fails for an INSERT or UPDATE that writes a description without it, in
   `functions/`, `scripts/` or a later migration ([decision](./decisions/stored-normalized-description.md)).
-- **Description autocomplete has one order, shared by the browser and the server.**
-  `src/domain/engine/descriptionSearch.ts` holds the collator order and the prefix range, and both
-  `buildDescriptionIndex` and `dbDescriptionSuggest.ts` use it. A description's place in the order must never depend on
-  which of its rows is newest, or `mergeDescriptionMatches` stops being exact, which is why the index's `key` order
-  reads the normalized text and not the label. `dbDescriptionSuggest.parity.test.ts` holds the SQL and the merge to the
-  index over every row.
+- **Description autocomplete lists by use; the server's answer for older rows is a prefix range in one order.**
+  The browser's index (`buildDescriptionIndex`) finds the typed text anywhere in a description and lists those that
+  start with it first, the most used first among them, then the most recently used (`compareByUsage`). The server
+  (`GET /descriptions/suggest`, `dbDescriptionSuggest.ts`) does not count rows and walks no more than a prefix range,
+  so it answers the descriptions that start with the text, in the collator order `src/domain/engine/descriptionSearch.ts`
+  holds, which the index's `key` option reproduces so that `dbDescriptionSuggest.parity.test.ts` can hold the SQL to it.
+  `mergeDescriptionMatches` joins the two for a window, counting the server's finds as unused; both orders read the
+  normalized text and not the label, so a description keeps one key whichever of its rows speaks for it.
 - **Usage counts equal what the server's delete check counts.** `usageFromDataset` in `src/domain/engine/recordUsage.ts`
   is the reference, so a record is deletable exactly when its counts are all zero. A new kind of record that can block a
   delete needs a new count in the reference, the SQL and the Settings lists (`dbUsage.parity.test.ts`).

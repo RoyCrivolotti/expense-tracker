@@ -5,7 +5,7 @@
  * function the index uses.
  */
 import { describe, expect, it } from 'vitest'
-import { mergeDescriptionMatches, normalizeDescriptionKey } from '../../src/data/descriptionIndex'
+import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../src/data/descriptionIndex'
 import { MAX_SUGGEST_KEYS, type DescriptionMatch } from '../../src/domain/data/descriptionSuggest'
 import { mulberry32 } from '../../src/domain/engine/rng'
 import type { ExpenseDataset } from '../../src/domain/types'
@@ -99,7 +99,7 @@ describe('the SQL answers what the browser’s index does over the older rows', 
   })
 })
 
-describe('merged with the browser’s own matches, the SQL’s answer is the index over every row', () => {
+describe('merged with the browser’s own matches, the SQL’s answer joins as the in-memory reference does', () => {
   it('for any month the browser’s rows begin on', async () => {
     let compared = 0
     for (let seed = 1; seed <= 12; seed += 1) {
@@ -107,18 +107,16 @@ describe('merged with the browser’s own matches, the SQL’s answer is the ind
       const { repo } = dbFor(ds)
       const rnd = mulberry32(seed + 100)
       const prefixes = prefixesFor(ds.transactions, rnd).filter(() => rnd() < 0.25)
-      const whole = keyed(ds.transactions)
       for (const split of ['2025-05', '2025-11']) {
-        const own = keyed(ds.transactions.filter((t) => t.budgetMonth >= split))
-        for (const prefix of prefixes) {
-          const typed = normalizeDescriptionKey(prefix)
-          if (typed === '') continue
-          for (const limit of [2, 8]) {
-            const { items: older } = await repo.suggestDescriptions(OWNER, { prefix: typed, limit, before: split })
-            const merged = mergeDescriptionMatches(own.searchEntries(prefix, limit), older, limit)
-            expect(merged, JSON.stringify({ seed, prefix, split, limit })).toEqual(whole.searchEntries(prefix, limit))
-            compared += 1
-          }
+        const own = buildDescriptionIndex(ds.transactions.filter((t) => t.budgetMonth >= split))
+        const cases = prefixes.flatMap((prefix) => [2, 8].map((limit) => ({ prefix, typed: normalizeDescriptionKey(prefix), limit })))
+        for (const { prefix, typed, limit } of cases.filter((c) => c.typed !== '')) {
+          const request = { prefix: typed, limit, before: split }
+          const { items: older } = await repo.suggestDescriptions(OWNER, request)
+          const merged = mergeDescriptionMatches(own.searchEntries(prefix, limit), older, { text: prefix, limit })
+          const expected = mergeDescriptionMatches(own.searchEntries(prefix, limit), suggestDescriptionsOf(ds.transactions, request).items, { text: prefix, limit })
+          expect(merged, JSON.stringify({ seed, prefix, split, limit })).toEqual(expected)
+          compared += 1
         }
       }
     }

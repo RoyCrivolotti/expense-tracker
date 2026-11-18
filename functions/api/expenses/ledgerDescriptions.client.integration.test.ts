@@ -2,14 +2,16 @@
 /**
  * The autocomplete of a window, end to end: the hook that merges the browser's own matches with the server's, reading
  * through `apiLedgerParts`, the real auth middleware, the route and the D1 adapter's SQL on SQLite with the real
- * migrations. What it shows once the typing settles is held to what the index gives over every row of the database.
+ * migrations. What it shows once the typing settles is held to the browser's own matches merged with what the index
+ * gives as the server's answer over every row of the database.
  */
 import { act, renderHook } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { apiLedgerParts } from '../../../src/data/apiLedgerParts'
 import { mulberry32 } from '../../../src/domain/engine/rng'
 import type { ExpenseDataset } from '../../../src/domain/types'
-import { descriptionDataset, keyed, prefixesFor } from '../../../src/testing/descriptionLedger'
+import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
+import { descriptionDataset, prefixesFor } from '../../../src/testing/descriptionLedger'
 import { seedDataset } from '../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { BROWSER_LOCALE, withOlderDescriptions } from '../../../src/ui/ledgerDescriptions'
@@ -49,16 +51,21 @@ afterEach(() => {
 })
 
 describe('what a window suggests once the typing settles', () => {
-  it('is what the index gives over every row, for random prefixes and for windows that start at different months', async () => {
+  it('is the rows held merged with the server’s older finds, for random prefixes and windows that start at different months', async () => {
     vi.stubGlobal('fetch', routeFetch(world))
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const rnd = mulberry32(11)
     const prefixes = prefixesFor(dataset.transactions, rnd).filter(() => rnd() < 0.4)
-    const whole = keyed(dataset.transactions, { locale: BROWSER_LOCALE })
     let compared = 0
     for (const before of ['2025-04', '2026-01']) {
       const held = dataset.transactions.filter((t) => t.budgetMonth >= before)
-      const index = withOlderDescriptions(keyed(held, { locale: BROWSER_LOCALE }), apiLedgerParts, { before, locale: BROWSER_LOCALE })
+      const own = buildDescriptionIndex(held, { locale: BROWSER_LOCALE })
+      const index = withOlderDescriptions(own, apiLedgerParts, { before, locale: BROWSER_LOCALE })
+      const expected = (text: string) => {
+        const request = { prefix: normalizeDescriptionKey(text), limit: 8, before, locale: BROWSER_LOCALE }
+        const older = suggestDescriptionsOf(dataset.transactions, request).items
+        return mergeDescriptionMatches(own.searchEntries(text, 8), older, { text, limit: 8 }).map((m) => m.label)
+      }
       const view = renderHook(({ value }) => index.useSuggestions!(index, value), { initialProps: { value: '' } })
       for (const prefix of prefixes) {
         view.rerender({ value: prefix })
@@ -66,7 +73,7 @@ describe('what a window suggests once the typing settles', () => {
           await vi.advanceTimersByTimeAsync(300)
         })
         await vi.waitFor(() =>
-          expect(view.result.current.map((s) => s.label), JSON.stringify({ before, prefix })).toEqual(whole.search(prefix).map((s) => s.label)),
+          expect(view.result.current.map((s) => s.label), JSON.stringify({ before, prefix })).toEqual(expected(prefix)),
         )
         compared += 1
       }

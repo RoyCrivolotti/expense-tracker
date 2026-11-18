@@ -1,14 +1,14 @@
 /**
- * How autocomplete orders and bounds the descriptions that match a typed prefix, shared by the browser's
- * index (`src/data/descriptionIndex.ts`) and the server's answer for older rows, so that the two cannot
- * drift: the server returns the first `limit` of the order below, and the browser merges those with its own.
+ * How the server bounds and orders the descriptions that start with a typed prefix (`GET /descriptions/suggest`,
+ * `dbDescriptionSuggest.ts`), and the `key` order of the browser's index (`src/data/descriptionIndex.ts`) that the
+ * parity tests hold the SQL to. The browser lists its own matches in another order, by use (`compareByUsage`), and
+ * merges the server's finds into it.
  *
  * The order is on the normalized text, not on the label that happens to be newest. Two labels of one
  * description can differ in case or in surrounding spaces, and an order that read the label would put the
- * same description in a different place depending on which row of it is newest, so a match found in older
- * rows and one found in newer rows could not be merged exactly. On the normalized text a description sits
- * in the same place whichever row speaks for it, and the first `limit` of any subset is always among the
- * first `limit` of the whole.
+ * same description in a different place depending on which row of it is newest, so the same description
+ * could not be matched across the two sides. On the normalized text a description sits in the same place
+ * whichever row speaks for it, and the first `limit` of any subset is always among the first `limit` of the whole.
  */
 
 /** The collator autocomplete sorts with: letters compared as their base letters, so "Cafe" and "café" tie. */

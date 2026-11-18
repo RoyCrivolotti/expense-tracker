@@ -147,11 +147,11 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
   const note = historyNoteOf(windowed && !series, state)
   const model = useMemo<ExpenseModel | undefined>(() => {
     if (!held) return undefined
-    // A window's older descriptions are the server's: its own are in the server's order so that the two can be merged.
+    // A window's older descriptions are the server's, asked for in the browser's locale and merged into its own.
     const older = olderThan(held)
     const descriptions = older
       ? {
-          index: { order: 'key' as const, locale: BROWSER_LOCALE },
+          index: { locale: BROWSER_LOCALE },
           wrap: (index: Parameters<typeof withOlderDescriptions>[0]) =>
             withOlderDescriptions(index, source, { before: older.before, locale: BROWSER_LOCALE }),
         }

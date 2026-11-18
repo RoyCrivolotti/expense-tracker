@@ -9,11 +9,11 @@ import type { DatabaseSync } from 'node:sqlite'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { apiLedgerParts } from '../../../src/data/apiLedgerParts'
 import { LedgerUsage } from '../../../src/data/ledgerUsage'
-import { mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
+import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
 import { MAX_SUGGEST_KEYS } from '../../../src/domain/data/descriptionSuggest'
 import { usageFromDataset } from '../../../src/domain/engine/recordUsage'
 import type { ExpenseDataset } from '../../../src/domain/types'
-import { descriptionDataset, keyed } from '../../../src/testing/descriptionLedger'
+import { descriptionDataset } from '../../../src/testing/descriptionLedger'
 import { makeTransaction } from '../../../src/testing/factories'
 import { randomLedger } from '../../../src/testing/randomLedger'
 import { seedDataset } from '../../../src/testing/seedSqlite'
@@ -136,9 +136,12 @@ describe('the older descriptions a client reads', () => {
     for (const typed of ['c', 'ca', 'r', 'ren', 'p', 'st', 'u', 'z']) {
       const { items } = await apiLedgerParts.readDescriptionSuggest({ prefix: typed, limit: 8, before, locale })
 
-      const merged = mergeDescriptionMatches(keyed(held, { locale }).searchEntries(typed, 8), items, 8, locale)
+      const own = buildDescriptionIndex(held, { locale })
+      const merged = mergeDescriptionMatches(own.searchEntries(typed, 8), items, { text: typed, limit: 8 })
 
-      expect(merged.map((m) => m.label), typed).toEqual(keyed(rows(), { locale }).searchEntries(typed, 8).map((m) => m.label))
+      const reference = suggestDescriptionsOf(rows(), { prefix: typed, limit: 8, before, locale }).items
+      expect(merged, typed).toEqual(mergeDescriptionMatches(own.searchEntries(typed, 8), reference, { text: typed, limit: 8 }))
+      expect(merged.length, typed).toBeGreaterThan(0)
     }
   })
 

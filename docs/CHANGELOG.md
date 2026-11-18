@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Description suggestions by use)
+
+- **The description box suggests what you use most, and finds a word from inside a description.** Typing "merc" used to list every description starting with it in alphabetical order, so a shop you visit weekly could sit under one you went to once. The list now puts the descriptions you have used most first, the most recent first among equals, and also finds the text inside a description ("cado" finds "Supermercado"), listed after those that start with it. On a ledger too large to hold on the phone, older descriptions are still found by their start only and do not count towards the order.
+
 ## November 2026 (Upcoming opens on the month the add form would pick)
 
 - **"+" on an Upcoming row opens on the month a new transaction would.** It filed the charge under the month the series had usually been booked to, so after you changed the day your budget month starts, or once you had moved on from a month, a row could open on a month you had already closed. It now follows the same rule as the add form: the start day for the charge's date, and the next month once the current one is settled. The "For Nov" tag on a row shows when that month is not the one you are looking at. The cost: a charge you always book against its date (a pay on the 28th that you file under the next month) opens on the month its date gives, and you change it by hand.

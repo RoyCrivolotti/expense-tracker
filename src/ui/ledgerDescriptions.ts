@@ -35,11 +35,11 @@ export function olderThan(held: HeldLedger): { before: string | undefined } | nu
 
 /**
  * The description index of a window: the matches among the rows held come at once, and when the browser is online
- * the older matches the server finds for the same prefix are merged in once the typing settles. They are exact
- * (`mergeDescriptionMatches`) because the index is in the server's order. Typing is never held up: a read that is
- * overtaken by more typing is cancelled, one that fails or is refused leaves the matches already shown, and a prefix
- * the server calls too broad keeps the rows held until more is typed. What was read is kept for the index's life, so
- * erasing a letter asks nothing; a new index (the rows held changed) asks again.
+ * the descriptions the server finds starting with the same text among the older rows are merged in once the typing
+ * settles (`mergeDescriptionMatches`: the list's own order, with the server's finds counted as unused). Typing is
+ * never held up: a read that is overtaken by more typing is cancelled, one that fails or is refused leaves the
+ * matches already shown, and a prefix the server calls too broad keeps the rows held until more is typed. What was
+ * read is kept for the index's life, so erasing a letter asks nothing; a new index (the rows held changed) asks again.
  */
 export function withOlderDescriptions(
   index: DescriptionEntryIndex,
@@ -50,7 +50,10 @@ export function withOlderDescriptions(
 
   function useSuggestions(current: DescriptionIndex, value: string): DescriptionSuggestion[] {
     const prefix = normalizeDescriptionKey(value)
-    const own = useMemo(() => (prefix ? index.searchEntries(value) : []), [prefix, value])
+    // The index's own search is a dependency: React keeps the memo by its place, not by the closure, so a combobox
+    // that stays mounted across a rebuild of the index would otherwise keep the old rows' matches and counts.
+    const search = index.searchEntries
+    const own = useMemo(() => (prefix ? search(value) : []), [prefix, value, search])
     const [last, setLast] = useState<{ prefix: string; items: DescriptionMatch[] } | null>(null)
     useEffect(() => {
       if (!prefix || asked.has(prefix) || (typeof navigator !== 'undefined' && !navigator.onLine)) return
@@ -77,9 +80,9 @@ export function withOlderDescriptions(
       asked.get(prefix) ??
       (last && prefix.startsWith(last.prefix) ? last.items.filter((m) => normalizeDescriptionKey(m.label).startsWith(prefix)) : undefined)
     return useMemo(() => {
-      const matches = older && older.length > 0 ? mergeDescriptionMatches(own, older, DEFAULT_SUGGEST_LIMIT, locale) : own
+      const matches = older && older.length > 0 ? mergeDescriptionMatches(own, older, { text: value, limit: DEFAULT_SUGGEST_LIMIT }) : own
       return matches.map(({ label, template }) => ({ label, template }))
-    }, [own, older])
+    }, [own, older, value])
   }
 
   return { search: (prefix, limit) => index.search(prefix, limit), resolve: (label) => index.resolve(label), useSuggestions }

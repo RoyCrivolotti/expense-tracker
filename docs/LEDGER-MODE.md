@@ -185,18 +185,22 @@ to 360 ms slower. Sizes between 4,938 and 9,978 rows were not measured.
 ## What a window cannot work out from its rows
 
 - **A window's autocomplete is its own matches at once and the server's older ones once the typing settles.**
-  `useLedgerData` gives a model that holds a window an index in the server's order (`order: 'key'`) that carries a
-  `useSuggestions` hook, which `DescriptionCombobox` calls in place of `search` when it is there
-  (`withOlderDescriptions`). The rows held are the browser's side and the rows booked before `olderThan(held)` are the
-  server's: the oldest month of the run of months held up to the newest, so a month held beyond a gap is found on both
-  sides and taken once. After `SETTLE_MS` without a keystroke, when the browser is online, `GET /descriptions/suggest` is
-  asked for that prefix with the browser's locale, and `mergeDescriptionMatches` makes the answer equal the index over
-  every row. Typing is never held up: a read that more typing overtook is cancelled, one that fails or is refused keeps the
-  matches shown, a prefix the server calls `tooBroad` keeps the rows held until more is typed, and the matches of the
-  shorter prefix that still fit stay on screen while the next is read. The older matches are merged in key order, so they
-  can move what is listed: the combobox keeps the highlight as the suggestion's label and sends a click to the row that
-  was pressed, so Enter and a tap accept the suggestion that was chosen. What was read lasts as long as the index, which
-  is rebuilt when the rows held change. A model that holds every row has no hook and its `search` is the whole answer.
+  `useLedgerData` gives a model that holds a window an index that carries a `useSuggestions` hook, which
+  `DescriptionCombobox` calls in place of `search` when it is there (`withOlderDescriptions`). The rows held are the
+  browser's side and the rows booked before `olderThan(held)` are the server's: the oldest month of the run of months
+  held up to the newest, so a month held beyond a gap is found on both sides and taken once. After `SETTLE_MS` without
+  a keystroke, when the browser is online, `GET /descriptions/suggest` is asked for the descriptions starting with the
+  text among the older rows, with the browser's locale, and `mergeDescriptionMatches` joins them to the browser's own
+  in the list's order (a start of the text first, then by use, then by recency), with the server's finds counted as
+  unused since the server counts no rows. So a window's list differs from a ledger held in full in two ways: an older
+  description is found only by its start, never from inside, and its older uses do not count, so once the rows held
+  fill the list on their own an older description does not show at all. Typing is never held up:
+  a read that more typing overtook is cancelled, one that fails or is refused keeps the matches shown, a prefix the
+  server calls `tooBroad` keeps the rows held until more is typed, and the matches of the shorter prefix that still fit
+  stay on screen while the next is read. The older matches can move what is listed: the combobox keeps the highlight
+  as the suggestion's label and sends a click to the row that was pressed, so Enter and a tap accept the suggestion
+  that was chosen. What was read lasts as long as the index, which is rebuilt when the rows held change. A model that
+  holds every row has no hook and its `search` is the whole answer.
 - **A window's usage counts are the server's, and a count that is not known is never zero.** Settings reads them through
   `useRecordUsage(model)`: a model that holds every row counts them from its rows, and one that holds a window carries
   `useUsage`, backed by `LedgerUsage` (`src/data/ledgerUsage.ts`). `GET /usage` is read when a screen that shows the
