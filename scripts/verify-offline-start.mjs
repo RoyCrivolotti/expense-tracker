@@ -208,9 +208,50 @@ async function installPrevious(browser, site, dir) {
   return { context, page }
 }
 
-const updated = async (page) => {
-  const paths = await precached(page)
-  return paths.includes('/index.html') && !paths.includes('/assets/app-previous.js')
+/** What a page reading its precache says while it is being replaced by a reload, in either engine. */
+const REPLACED = /Execution context was destroyed|has been closed|navigation/i
+
+/** The paths in the precache, or undefined while a reload is replacing the page, which is not an answer. Anything else throws. */
+async function precachedUnlessReloading(page) {
+  try {
+    return await precached(page)
+  } catch (error) {
+    if (REPLACED.test(String(error))) return undefined
+    throw error
+  }
+}
+
+const isUpdated = (paths) => paths.includes('/index.html') && !paths.includes('/assets/app-previous.js')
+
+/**
+ * Counts the documents the page has loaded. With `registerType: 'autoUpdate'` the app reloads itself once the new
+ * worker has activated, which is after it has filled the precache, so a page that has the new precache is about to be
+ * replaced and anything evaluated in it then fails with "Execution context was destroyed". `load` fires once for each
+ * document, never for pushState, replaceState or a hash change, which `framenavigated` also reports.
+ */
+function countLoads(page) {
+  const loads = { count: 0 }
+  page.on('load', () => {
+    loads.count += 1
+  })
+  return loads
+}
+
+/**
+ * Waits for the update to land: the reload the app makes into the new worker, and then the precache it left. `from` is
+ * the number of loads before the step that started the update and `documents` how many it makes (the reload, and the
+ * visit that comes before it). A marker on the old document would not do for a step that begins with a visit: the
+ * reload can come before the marker is set on the document the visit loaded. The paths are read once, in the page the
+ * reload made, so nothing reads a page that is about to go.
+ */
+async function updateLanded(page, loads, from, documents) {
+  const reloaded = await until(() => loads.count >= from + documents)
+  let paths = []
+  const replaced = await until(async () => {
+    paths = (await precachedUnlessReloading(page)) ?? []
+    return isUpdated(paths)
+  })
+  return { reloaded, replaced, paths }
 }
 
 /** The registered worker is asked to look for a new script, as the browser does on a navigation. */
@@ -220,6 +261,7 @@ async function updateFromDeployed(browser, engine, tmp) {
   const where = `${engine}, the update from the deployed worker`
   const site = await startSite({ root: DIST })
   const { context, page } = await installPrevious(browser, site, join(tmp, `previous-${engine}`))
+  const loads = countLoads(page)
   try {
     check(where, 'the deployed worker precaches no shell', !(await precached(page)).includes('/index.html'), (await precached(page)).join(', '))
     await goOffline(site, context, engine)
@@ -228,9 +270,12 @@ async function updateFromDeployed(browser, engine, tmp) {
     await comeBack(site, context, engine)
 
     site.state.root = DIST
+    const from = loads.count
     await visit(page, site.origin, '/')
     await checkForUpdate(page)
-    check(where, 'the new worker replaces it: shell precached, its own entries gone', await until(() => updated(page)), (await precached(page)).join(', '))
+    const landed = await updateLanded(page, loads, from, 2)
+    check(where, 'the page reloads into the new worker', landed.reloaded, `${loads.count - from} documents loaded`)
+    check(where, 'the new worker replaces it: shell precached, its own entries gone', landed.replaced, landed.paths.join(', '))
     await controlled(page)
     await goOffline(site, context, engine)
     await opensOffline(where, page, site.origin, ['/', '/settings'])
@@ -245,6 +290,7 @@ async function updateThatCannotInstall(browser, engine, tmp) {
   const where = `${engine}, an update that cannot install`
   const site = await startSite({ root: DIST })
   const { context, page } = await installPrevious(browser, site, join(tmp, `previous-fails-${engine}`))
+  const loads = countLoads(page)
   try {
     site.state.root = DIST
     site.state.failing.set('/index.html', 500)
@@ -259,8 +305,11 @@ async function updateThatCannotInstall(browser, engine, tmp) {
     check(where, 'the app still opens while the network works', online.ok && online.status === 200 && online.title === 'Expenses', JSON.stringify(online))
 
     site.state.failing.clear()
+    const from = loads.count
     await checkForUpdate(page)
-    check(where, 'the next deploy installs', await until(() => updated(page)), (await precached(page)).join(', '))
+    const landed = await updateLanded(page, loads, from, 1)
+    check(where, 'the page reloads into the new worker', landed.reloaded, `${loads.count - from} documents loaded`)
+    check(where, 'the next deploy installs', landed.replaced, landed.paths.join(', '))
     await controlled(page)
     await goOffline(site, context, engine)
     await opensOffline(where, page, site.origin, ['/'])
