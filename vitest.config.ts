@@ -8,6 +8,7 @@ const NODE_TESTS = [
   'src/domain/**/*.test.{ts,tsx}',
   'src/data/**/*.test.{ts,tsx}',
   'src/testing/**/*.test.{ts,tsx}',
+  'src/sw/**/*.test.{ts,tsx}',
   'functions/**/*.test.ts',
   'workers/**/*.test.ts',
   'scripts/**/*.test.ts',
@@ -65,6 +66,9 @@ export default defineConfig({
         '**/*.test.{ts,tsx}',
         '**/*.d.ts',
         'src/main.tsx',
+        // The service worker's entry, wiring only: the built worker is run by scripts/check-service-worker.mjs on
+        // every verify and installed in a browser by verify-offline-start.mjs.
+        'src/sw/sw.ts',
         'src/vite-env.d.ts',
         // Dev-only tooling for capturing docs screenshots, not app logic.
         'src/data/docsCapture*.ts',

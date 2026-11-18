@@ -30,5 +30,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The service worker has the worker's globals, not the page's: tsconfig.sw.json.
+  "exclude": ["src/sw"]
 }
