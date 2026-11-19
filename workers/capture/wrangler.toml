@@ -4,6 +4,9 @@
 # Before deploying, someone with the Cloudflare account sets `account_id` and `database_id` (not committed: this
 # repo is public), runs `wrangler secret put CAPTURE_REPLAY_SECRET` and sets `OWNER_EMAIL` as a secret or variable for
 # the environment (without it the owner's own key is refused). See docs/CAPTURE.md.
+#
+# To send web push, also `wrangler secret put` VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY and VAPID_SUBJECT (docs/PUSH.md, "Setting
+# it up"). Without them the Worker captures as before and sends nothing.
 name = "expense-capture"
 main = "src/index.ts"
 compatibility_date = "2024-11-12"
