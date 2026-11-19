@@ -5,7 +5,7 @@ import type {
 import type { CaptureEnv } from "./env";
 import { consolePushLogger } from "./pushLog";
 import type { PushLogLine, PushLogger } from "./pushLog";
-import { sendWebPush } from "./webpush";
+import { PushTimeoutError, sendWebPush } from "./webpush";
 import type { VapidKeys } from "./webpush";
 
 /** A payment stored as a recommendation of its own: what the notification says and where a tap goes. */
@@ -17,6 +17,9 @@ export interface CreatedPayment {
   /** The merchant when the template knows where it sits in the wording, else null: the whole bank text is not shown. */
   merchant: string | null;
 }
+
+/** What sending to a device needs: the rows to prune and note, the network and the clock. */
+export type SendDeps = Pick<NotifyDeps, "push" | "fetcher" | "now">;
 
 export interface NotifyDeps {
   push: PushRepository;
@@ -56,7 +59,7 @@ export function paymentPayload(payment: CreatedPayment, open: number): string {
   });
 }
 
-interface Attempt {
+export interface Attempt {
   outcome: PushLogLine["outcome"];
   reason: PushLogLine["reason"];
   status: number;
@@ -66,10 +69,10 @@ async function sendTo(
   target: PushTarget,
   body: string,
   keys: VapidKeys,
-  payment: CreatedPayment,
-  deps: NotifyDeps,
+  owner: string,
+  topic: string,
+  deps: SendDeps,
 ): Promise<Attempt> {
-  const topic = payment.recommendationId.replace(/-/g, "");
   const now = deps.now();
   let status: number;
   try {
@@ -83,15 +86,19 @@ async function sendTo(
         now.getTime(),
       )
     ).status;
-  } catch {
-    return { outcome: "failed", reason: "network", status: 0 };
+  } catch (error) {
+    return {
+      outcome: "failed",
+      reason: error instanceof PushTimeoutError ? "timeout" : "network",
+      status: 0,
+    };
   }
   if (status === 404 || status === 410) {
-    await deps.push.deleteSubscription(payment.owner, target.id);
+    await deps.push.deleteSubscription(owner, target.id);
     return { outcome: "gone", reason: "expired", status };
   }
   await deps.push.recordSend(
-    payment.owner,
+    owner,
     target.id,
     status,
     now.toISOString(),
@@ -99,6 +106,36 @@ async function sendTo(
   return status >= 200 && status < 300
     ? { outcome: "sent", reason: "ok", status }
     : { outcome: "failed", reason: "push-service-error", status };
+}
+
+/**
+ * Sends one body to each device at once. A failure for one device is its own log line and never stops the others, and
+ * it never throws.
+ */
+export async function deliver(
+  owner: string,
+  targets: PushTarget[],
+  body: string,
+  topic: string,
+  keys: VapidKeys,
+  deps: SendDeps,
+  line: (attempt: Attempt, devices: number) => void,
+): Promise<void> {
+  await Promise.all(
+    targets.map(async (target) => {
+      try {
+        line(
+          await sendTo(target, body, keys, owner, topic, deps),
+          targets.length,
+        );
+      } catch {
+        line(
+          { outcome: "failed", reason: "exception", status: 0 },
+          targets.length,
+        );
+      }
+    }),
+  );
 }
 
 /**
@@ -126,17 +163,14 @@ export async function notifyPayment(
     const targets = await deps.push.listTargets(payment.owner);
     if (targets.length === 0) return skipped("no-devices");
     const body = paymentPayload(payment, await deps.countOpen(payment.owner));
-    await Promise.all(
-      targets.map(async (target) => {
-        try {
-          line(await sendTo(target, body, keys, payment, deps), targets.length);
-        } catch {
-          line(
-            { outcome: "failed", reason: "exception", status: 0 },
-            targets.length,
-          );
-        }
-      }),
+    await deliver(
+      payment.owner,
+      targets,
+      body,
+      payment.recommendationId.replace(/-/g, ""),
+      keys,
+      deps,
+      line,
     );
   } catch {
     line({ outcome: "failed", reason: "exception", status: 0 }, 0);

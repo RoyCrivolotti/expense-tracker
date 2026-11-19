@@ -94,3 +94,33 @@ describe('a person’s choice', () => {
     expect(await repo.getSettings(BOB)).toBeNull()
   })
 })
+
+describe('the summary cron’s reads and its claim', () => {
+  it('lists the people who chose a summary, across owners, and not those who chose a push per payment', async () => {
+    await repo.saveSettings(ALICE, { mode: 'daily', timeZone: 'Europe/Madrid' }, false)
+    await repo.saveSettings(BOB, { mode: 'each', timeZone: 'UTC' }, false)
+    await repo.saveSettings('carol@example.com', { mode: 'weekly', timeZone: 'Asia/Kolkata' }, false)
+    expect(await repo.listSummaryPeople()).toEqual([
+      { owner: ALICE, mode: 'daily', timeZone: 'Europe/Madrid', lastSummaryAt: null },
+      { owner: 'carol@example.com', mode: 'weekly', timeZone: 'Asia/Kolkata', lastSummaryAt: null },
+    ])
+  })
+
+  it('lets exactly one claim win, whether the person was never sent one or was sent one before', async () => {
+    await repo.saveSettings(ALICE, { mode: 'daily', timeZone: 'Europe/Madrid' }, false)
+    expect(await repo.claimSummary(ALICE, null, T0)).toBe(true)
+    expect(await repo.claimSummary(ALICE, null, T0)).toBe(false)
+    expect((await repo.listSummaryPeople())[0]?.lastSummaryAt).toBe(T0)
+    const next = '2026-11-19T20:00:00.000Z'
+    expect(await repo.claimSummary(ALICE, T0, next)).toBe(true)
+    expect(await repo.claimSummary(ALICE, T0, next)).toBe(false)
+    expect((await repo.getSettings(ALICE))?.lastSummaryAt).toBe(next)
+  })
+
+  it('claims nothing for a person who left the summaries or has no choice', async () => {
+    await repo.saveSettings(ALICE, { mode: 'each', timeZone: 'Europe/Madrid' }, false)
+    expect(await repo.claimSummary(ALICE, null, T0)).toBe(false)
+    expect(await repo.claimSummary(BOB, null, T0)).toBe(false)
+  })
+})
+

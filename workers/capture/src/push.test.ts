@@ -11,7 +11,7 @@ import worker from './index'
 import { notifyPayment, paymentPayload, vapidKeysOf } from './notify'
 import type { CreatedPayment } from './notify'
 import type { PushLogLine } from './pushLog'
-import { base64urlEncode } from './webpush'
+import { PushTimeoutError, base64urlEncode } from './webpush'
 
 const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
@@ -193,6 +193,14 @@ describe('notifyPayment', () => {
     expect(lines.map((l) => [l.outcome, l.reason]).sort()).toEqual([['failed', 'network'], ['sent', 'ok']])
   })
 
+  it('logs a push service that does not answer in time as its own reason', async () => {
+    await addDevice(ALICE, ENDPOINT, 'one')
+    await choose('each')
+    answer = () => new PushTimeoutError()
+    await notifyPayment(payment, env, deps())
+    expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['failed', 'timeout']])
+  })
+
   it('never throws: a database failure is one failed line', async () => {
     await notifyPayment(payment, env, { ...deps(), push: { ...repos().push, getSettings: () => Promise.reject(new Error('boom')) } })
     expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['failed', 'exception']])
@@ -208,6 +216,16 @@ describe('notifyPayment', () => {
     await choose('each')
     await notifyPayment(payment, env, { ...deps(), push: { ...repos().push, recordSend: () => Promise.reject(new Error('boom')) } })
     expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['failed', 'exception']])
+  })
+
+  it('still sends to the other device when recording one device\'s result fails', async () => {
+    await addDevice(ALICE, ENDPOINT, 'one')
+    await addDevice(ALICE, ENDPOINT_TWO, 'two')
+    await choose('each')
+    const push = { ...repos().push, recordSend: (owner: string, id: string, status: number, at: string) => (id === 'one' ? Promise.reject(new Error('boom')) : repos().push.recordSend(owner, id, status, at)) }
+    await notifyPayment(payment, env, { ...deps(), push })
+    expect(calls).toHaveLength(2)
+    expect(lines.map((l) => [l.outcome, l.reason]).sort()).toEqual([['failed', 'exception'], ['sent', 'ok']])
   })
 
   it('skips with the keys unset', async () => {

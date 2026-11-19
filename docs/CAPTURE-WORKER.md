@@ -50,7 +50,9 @@ A push that makes a recommendation of its own is announced to the person's devic
 they chose a push per payment ([PUSH.md](PUSH.md), "How the capture Worker sends one"). It runs in `waitUntil` and
 catches everything, so it can neither slow nor fail the capture. It needs three more secrets, `VAPID_PRIVATE_KEY`,
 `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT`; with any unset the Worker captures exactly as before and logs one
-`event: 'push'` line saying `not-configured`. A push that joins an open recommendation and a replay send nothing.
+`event: 'push'` line saying `not-configured`. A push that joins an open recommendation and a replay send nothing. For a
+person who chose a daily or weekly summary the Worker's hourly cron (`scheduled` in `index.ts`) sends it
+([PUSH.md](PUSH.md), "Daily and weekly summaries"); the trigger is in `wrangler.toml` and goes live with a deploy.
 
 ## Reading what the Worker did
 

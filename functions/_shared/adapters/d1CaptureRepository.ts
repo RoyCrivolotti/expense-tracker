@@ -37,6 +37,8 @@ import {
 import type { KeyRow } from '../capture/captureKeysSql'
 import {
   COUNT_OPEN_SQL,
+  SUMMARIZE_OPEN_SQL,
+  toOpenSummary,
   CREATE_RECOMMENDATION_SQL,
   GET_RECOMMENDATION_SQL,
   LIST_OPEN_AFTER_SQL,
@@ -44,7 +46,7 @@ import {
   createParams,
   toRecommendation,
 } from '../capture/captureRecommendationsSql'
-import type { RecommendationRow } from '../capture/captureRecommendationsSql'
+import type { OpenSummaryRow, RecommendationRow } from '../capture/captureRecommendationsSql'
 
 type Statements = Pick<CaptureRepository, 'createKey' | 'findKey' | 'listKeys' | 'revokeKey' | 'touchKey'>
 
@@ -132,7 +134,7 @@ function recommendations(
   db: D1Database,
 ): Pick<
   CaptureRepository,
-  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'decideRecommendation' | 'findPossibleMatch'
+  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'summarizeOpen' | 'decideRecommendation' | 'findPossibleMatch'
 > {
   return {
     createRecommendation: async (rec) => {
@@ -154,6 +156,7 @@ function recommendations(
     findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
+    summarizeOpen: async (owner) => toOpenSummary(await db.prepare(SUMMARIZE_OPEN_SQL).bind(owner).first<OpenSummaryRow>()),
     decideRecommendation: (owner, id, d) => decide(db, owner, id, d),
   }
 }

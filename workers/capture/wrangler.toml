@@ -19,6 +19,11 @@ preview_urls = false
 [observability]
 enabled = true
 
+# Hourly, to send the daily and weekly summaries (docs/PUSH.md, "Daily and weekly summaries"). Cloudflare's cron runs in
+# UTC and knows nothing of a person's evening or of summer time, so every run asks each person what hour it is for them.
+[triggers]
+crons = ["0 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "<database name>"

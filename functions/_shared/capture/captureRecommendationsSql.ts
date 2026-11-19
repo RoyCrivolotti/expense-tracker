@@ -1,5 +1,6 @@
 import type {
   NewRecommendation,
+  OpenSummary,
   Recommendation,
   RecommendationState,
 } from '../../../src/domain/ports/captureRepository'
@@ -24,6 +25,11 @@ WHERE owner = ?1 AND state = 'open' AND (local_date < ?3 OR (local_date = ?3 AND
 ORDER BY local_date DESC, id DESC LIMIT ?2`
 
 export const COUNT_OPEN_SQL = `SELECT COUNT(*) AS n FROM recommendations WHERE owner = ?1 AND state = 'open'`
+
+/** The count, and what is needed to say a total only when it is honest: one currency, every amount known. */
+export const SUMMARIZE_OPEN_SQL = `SELECT COUNT(*) AS n, SUM(amount_cents) AS total, COUNT(DISTINCT currency) AS currencies,
+  SUM(amount_cents IS NULL OR currency IS NULL) AS unknown, MIN(currency) AS currency, MIN(id) AS only_id
+FROM recommendations WHERE owner = ?1 AND state = 'open'`
 
 /** Only an open row moves, so a second tap or a retry finds nothing to change. */
 export const DECIDE_SQL = `UPDATE recommendations SET state = ?3, txn_id = ?4, decided_at = ?5
@@ -85,5 +91,25 @@ export function toRecommendation(row: RecommendationRow): Recommendation {
     txnId: row.txn_id,
     createdAt: row.created_at,
     decidedAt: row.decided_at,
+  }
+}
+
+export interface OpenSummaryRow {
+  n: number
+  total: number | null
+  currencies: number
+  unknown: number
+  currency: string | null
+  only_id: string | null
+}
+
+export function toOpenSummary(row: OpenSummaryRow | null): OpenSummary {
+  const count = row?.n ?? 0
+  const whole = row !== null && count > 0 && row.currencies === 1 && !row.unknown
+  return {
+    count,
+    totalCents: whole ? row.total : null,
+    currency: whole ? row.currency : null,
+    onlyId: count === 1 ? (row?.only_id ?? null) : null,
   }
 }

@@ -107,16 +107,50 @@ keys: it captures exactly as before.
   hour, as Apple asks.
 - **Answers.** 2xx is recorded on the device row (`last_sent_at`, `last_status`, which Settings shows). 404 and 410 mean
   the push service no longer knows the device, so its row is deleted. Anything else, or a failed request, is logged and
-  not retried: the next payment is the retry.
+  not retried: the next payment is the retry. A push service that has not answered in 10 seconds is given up on and
+  logged as `timeout`, so a slow one cannot hold the Worker's background task until the platform ends it.
 - **Log.** One `event: 'push'` line per device, or one for the reason nothing was sent: `outcome` (`sent`, `gone`,
-  `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `not-configured`, `no-devices`,
-  `summary-mode`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
+  `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `timeout`, `not-configured`, `no-devices`,
+  `summary-mode`, `nothing-waiting`, `invalid-zone`, `already-sent`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
 - **A send never fails the capture.** It runs after the response is decided and catches everything.
+
+## Daily and weekly summaries
+
+[`summaries.ts`](../workers/capture/src/summaries.ts) and [`summaryDue.ts`](../workers/capture/src/summaryDue.ts), run by
+the capture Worker's hourly cron (`[triggers]` in `wrangler.toml`, `scheduled` in `index.ts`). Cloudflare's cron is in
+UTC and knows nothing of a person's evening or of summer time, so every run asks each person with a summary mode what
+time it is in their stored zone, which the platform's own `Intl` rules answer.
+
+- **Due.** From 20:00 local to midnight, every day for `daily` and on Monday for `weekly`, until a summary is recorded
+  for that local date. A run an hour or three late still sends that evening, two runs in one evening send once, and a
+  run after midnight sends nothing for the evening it missed. A zone on a half hour (India) is reached at 20:30, the
+  first hourly run past 20:00. A zone the platform does not know, or a blank one, is logged as `invalid-zone` and left
+  alone.
+- **Once.** Before sending, the run claims the person's evening with one statement,
+  `UPDATE push_settings SET last_summary_at = ? WHERE owner = ? AND last_summary_at IS <the value it read>`, so of two
+  runs at once only one gets a changed row and sends; the other logs `already-sent`. The send is not retried if it then
+  fails: the next evening is the retry, as the next payment is for a push per payment.
+- **Nothing is sent, and nothing is claimed,** when the person has nothing open (`nothing-waiting`) or no device
+  (`no-devices`), so iOS never sees a push with nothing to show, and a payment that arrives later the same evening
+  still gets its summary.
+- **Message.** `{ v: 1, kind: "summary", url, count, totalCents, currency, open }`. The total is there only when every
+  open payment has an amount and they share one currency; otherwise the notification gives the count alone. `url` is
+  `/` for several payments and `/?review=<id>` for exactly one, so a tap opens its form as for a push per payment.
+  Headers are the same as for one payment except `Topic: review-summary`, so a phone that was off for days gets the
+  latest summary only.
+- **Log.** The same `event: 'push'` line per device, plus one line per person who was skipped and why. With no VAPID
+  secrets the cron logs `not-configured` once for the run, not once per person. A failure for one person or device
+  stops no one else, and a 404 or 410 deletes that device's row.
+
+Deploying the Worker puts the trigger live (the "Setting it up" steps below); `wrangler deploy` reads it from
+`wrangler.toml`. Until then no summary is sent and a person on `daily`, the default, hears nothing at all.
 
 ## Setting it up
 
 Everything below changes Cloudflare and needs the account owner's say-so. Do staging first, then production, and
-check one real payment on staging before production.
+check one real payment on staging before production. Staging and production each get their own key pair: a saved
+subscription is bound to the public key it was made with, so devices are never shared between them anyway, and a leaked
+staging private key then cannot sign for production.
 
 1. Generate a key pair on your own machine. It prints two lines and sets nothing:
 
@@ -124,22 +158,54 @@ check one real payment on staging before production.
    node scripts/vapid-keys.mjs
    ```
 
-2. On the capture Worker (`expense-capture-stg`, then `expense-capture`), from `workers/capture`, set three secrets. The
-   private key is the `VAPID_PRIVATE_KEY` line and only ever goes here. The subject is the app's URL, so no email
-   address is in any token:
+2. Deploy the capture Worker version that sends. CI deploys the Pages app but never this Worker, so a merge to `main`
+   does not put the sender live: someone deploys it from `main` (or from a merged commit), by hand. The deploy needs
+   `account_id` and `database_id` filled into `workers/capture/wrangler.toml` on your machine; restore the file
+   afterwards (`git checkout workers/capture/wrangler.toml`) and never commit them. From `workers/capture`:
 
    ```bash
-   npx wrangler secret put VAPID_PRIVATE_KEY --name expense-capture-stg
-   npx wrangler secret put VAPID_PUBLIC_KEY --name expense-capture-stg
-   npx wrangler secret put VAPID_SUBJECT --name expense-capture-stg
+   npx wrangler deploy --name <staging-worker>
    ```
 
-3. On each Pages project (staging, then production) set `VAPID_PUBLIC_KEY` to the same public value as a plain variable,
+   This step, and the secrets in the next one, are repeated for each environment, staging first, and each time with that
+   environment's own key pair, its own Worker name and its own database name and id filled into `wrangler.toml`.
+   Deploying production with staging's values in the file would point the production Worker at the staging database.
+
+   A deploy made from a feature branch only makes a preview of the app's pages, so the live staging site shows a change
+   once its branch is merged into `main` and deployed from there.
+3. On the capture Worker (`<staging-worker>`, then the production one), set three secrets. The private key is the
+   `VAPID_PRIVATE_KEY` line and only ever goes here. `VAPID_SUBJECT` is the app's own https origin, such as
+   `https://<staging-app-host>`, with no email address in it, so no token carries one:
+
+   ```bash
+   npx wrangler secret put VAPID_PRIVATE_KEY --name <staging-worker>
+   npx wrangler secret put VAPID_PUBLIC_KEY --name <staging-worker>
+   npx wrangler secret put VAPID_SUBJECT --name <staging-worker>
+   ```
+
+   Each `secret put` makes a new Worker version, so after three there are three more versions than before. When rolling
+   back, name the version you want: a rollback keeps the secrets that version had, which are the ones set before it was
+   made.
+4. On each Pages project (staging, then production) set `VAPID_PUBLIC_KEY` to the same public value as a plain variable,
    so `GET /api/push-config` can hand it to the browser. The Pages deploy must follow it, since variables apply to new
    deployments.
-4. Install the app to the Home Screen on a phone, turn notifications on in Settings, choose "For every payment", and
-   make a purchase. The device row's status in the card turns to 201.
-5. Repeat for production, after migration 0044 is on that database.
+5. Install the app to the Home Screen on a phone, turn notifications on in Settings, choose "For every payment", and
+   send one test payment by hand to the staging Worker, with a capture key of your own from Settings. The values are
+   invented; the body needs `app`, `title`, `body` and an ISO-8601 `date`:
+
+   ```bash
+   curl -sS -X POST https://<staging-worker-host>/capture \
+     -H 'Authorization: Bearer <your-capture-key>' \
+     -H 'Content-Type: application/json' \
+     -d '{"app":"Test bank","title":"Card payment","body":"You paid 4,20 EUR to Example Cafe","date":"2026-01-15T12:00:00+01:00"}'
+   ```
+
+   It answers `{"ok":true}`, the phone shows "Payment to review", and the device row's status in the card turns to 201.
+   Delete the test recommendation and the key afterwards.
+6. Check the hourly trigger. It is part of `wrangler.toml`, so the deploy in step 2 already carries it. The Worker's
+   Triggers page in the dashboard lists one cron, `0 * * * *`. The first run after 20:00 in your zone sends your
+   summary if a payment is waiting, and the Worker's Logs show an `event: 'push'` line for it.
+7. Repeat for production, after migration 0044 is on that database.
 
 The public key given to a browser at subscribe time must be the one the Worker signs with. Replacing the pair later
 leaves every saved subscription unusable (the push service answers 403 or 410), and each device must turn
