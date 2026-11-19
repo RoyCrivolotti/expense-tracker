@@ -74,7 +74,7 @@ export function ledgerOnlyChunks(build) {
 }
 
 /**
- * The chunks only the capture screens load, on demand: the Settings capture cards (fetched when Settings, Account opens), the Dashboard's review card with its queue sheet (fetched when a payment is waiting), the add form's two lazy parts for a captured payment, and what only they import.
+ * The chunks only the capture screens load, on demand: the Settings capture and notification cards (fetched when Settings, Account opens), the Dashboard's review card with its queue sheet (fetched when a payment is waiting), the add form's two lazy parts for a captured payment, and what only they import.
  * A chunk the rest of the app can load is not capture's, so the default path is walked first, through everything the
  * entry loads at once or later but not through the two cards, and what it reaches is taken out.
  * @param {{ files: string[], read: (file: string) => string, indexHtml: string }} build
@@ -82,7 +82,7 @@ export function ledgerOnlyChunks(build) {
  */
 export function captureOnlyChunks(build) {
   const { allEdges, eager, named } = graphOf(build)
-  const roots = named('CaptureKeySetting', 'CaptureCardsSetting', 'CaptureMutedSetting', 'CaptureDiagnosticsSetting', 'ReviewCard', 'CardQuestion', 'DuplicateNotice', 'CaptureSetupSetting')
+  const roots = named('CaptureKeySetting', 'CaptureCardsSetting', 'CaptureMutedSetting', 'CaptureDiagnosticsSetting', 'PushSetting', 'ReviewCard', 'CardQuestion', 'DuplicateNotice', 'CaptureSetupSetting')
   const defaultPath = reach([...eager], allEdges, new Set(roots))
   return [...reach(roots, allEdges, eager)].filter((file) => !defaultPath.has(file)).sort()
 }

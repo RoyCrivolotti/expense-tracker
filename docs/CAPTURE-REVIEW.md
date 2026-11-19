@@ -41,7 +41,7 @@ budget month the payment is reviewed, and the add form shows a note under the da
 between them. The payment's time of day is the phone's own, read from `occurredAt` (the endpoint in [CAPTURE-WORKER.md](CAPTURE-WORKER.md)), so
 the device's zone does not matter; a row without it counts as next to an edge on the days either side of midnight.
 
-One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
+A notification tapped on the phone opens the app at `/?review=<id>` and the card opens that payment's form as Review would ([PUSH.md](PUSH.md)). One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
 a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
 back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.
 

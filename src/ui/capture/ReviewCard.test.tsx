@@ -368,3 +368,37 @@ describe('the slot on the Dashboard', () => {
   })
 })
 
+describe('the payment a notification was tapped for', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
+  it('opens that payment’s form once the list has landed, and takes the id off the URL', () => {
+    window.history.replaceState(null, '', '/?ledger=off&review=' + id(2))
+    const core = makeCore({ items: [rec(1), rec(2)] })
+    show(core)
+
+    expect(core.openForm).toHaveBeenCalledTimes(1)
+    expect(window.location.search).toBe('?ledger=off')
+  })
+
+  it('opens nothing for a payment no longer waiting, or where the app cannot write, and still clears the URL', () => {
+    window.history.replaceState(null, '', '/?review=' + id(9))
+    const gone = makeCore({ items: [rec(1)] })
+    show(gone)
+    expect(gone.openForm).not.toHaveBeenCalled()
+    expect(window.location.search).toBe('')
+
+    window.history.replaceState(null, '', '/?review=' + id(1))
+    const readOnly = makeCore({ items: [rec(1)], canWrite: false })
+    show(readOnly)
+    expect(readOnly.openForm).not.toHaveBeenCalled()
+    expect(window.location.search).toBe('')
+  })
+
+  it('waits for the list to land before deciding', () => {
+    window.history.replaceState(null, '', '/?review=' + id(1))
+    const core = makeCore({ items: [rec(1)], loads: 0 })
+    show(core)
+    expect(core.openForm).not.toHaveBeenCalled()
+    expect(window.location.search).toBe('?review=' + id(1))
+  })
+})

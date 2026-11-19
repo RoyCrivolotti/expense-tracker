@@ -13,6 +13,8 @@ export const OWNER_KEYS = {
   stopped: 'expense:stopped-recurring',
   dismissed: 'expense:dismissed-recurring',
   onboardingSkipped: 'exp-onboarding-skipped',
+  /** The id of this device's push subscription row, so the card knows it is this device's. */
+  pushDevice: 'expense:push-device',
 } as const
 
 /** `base` for `owner`. With no one signed in (the demo, a test) it is `base` itself, as it was for everyone before. */
