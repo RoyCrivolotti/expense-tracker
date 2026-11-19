@@ -26,9 +26,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 const TOTAL_MAX_GZIP = 296_100
 const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 85_900
-// CAPTURE: the Settings capture cards and the Dashboard review card, each loaded only when shown. Kept out of TOTAL so the
-// feature has a line of its own and the default build cannot be blamed for it.
-const CAPTURE_MAX_GZIP = 19_300
+// CAPTURE: the Settings capture and notification cards and the Dashboard review card, each loaded only when shown. Kept
+// out of TOTAL so the feature has a line of its own and the default build cannot be blamed for it.
+const CAPTURE_MAX_GZIP = 22_400
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

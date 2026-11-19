@@ -12,6 +12,7 @@ const CaptureKeySetting = lazy(() => import('./CaptureKeySetting').then((m) => (
 const CaptureCardsSetting = lazy(() => import('./CaptureCardsSetting').then((m) => ({ default: m.CaptureCardsSetting })))
 const CaptureMutedSetting = lazy(() => import('./CaptureMutedSetting').then((m) => ({ default: m.CaptureMutedSetting })))
 const CaptureDiagnosticsSetting = lazy(() => import('./CaptureDiagnosticsSetting').then((m) => ({ default: m.CaptureDiagnosticsSetting })))
+const PushSetting = lazy(() => import('./PushSetting').then((m) => ({ default: m.PushSetting })))
 
 export function AccountView({
   model,
@@ -33,6 +34,7 @@ export function AccountView({
           <CaptureCardsSetting model={model} />
           <CaptureMutedSetting />
           <CaptureDiagnosticsSetting />
+          <PushSetting />
         </Suspense>
       </ChunkBoundary>
       <AppVersionSetting model={model} />
