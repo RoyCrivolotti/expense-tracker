@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Presence } from '../components/Presence'
 import { Card } from '../components/primitives'
 import { EXIT_MS } from '../hooks/motion'
@@ -5,6 +6,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import type { ReviewCore } from './reviewContext'
 import type { ReviewView } from './reviewFields'
 import { SHOWN_PHONE, SHOWN_WIDE, rowsShown } from './reviewFormat'
+import { pendingReviewId, withoutReview } from './reviewLanding'
 import { ReviewRow } from './ReviewRow'
 import { ReviewSheet } from './ReviewSheet'
 import { useReviewApi, type ReviewApi } from './useReviewApi'
@@ -42,9 +44,29 @@ function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (
   )
 }
 
+/**
+ * Opens the payment a notification was tapped for (`?review=<id>` on the URL), once, as soon as the list has landed, and
+ * takes the id off the URL. A payment no longer waiting (decided on another device) opens nothing: the card is there.
+ * The id is looked for in the rows loaded, the newest page, which is where a payment just notified is; with nothing
+ * waiting at all the card never mounts and the parameter stays, harmless, until the next load.
+ */
+function useLanding(review: ReviewApi, loads: number) {
+  const landed = useRef(false)
+  useEffect(() => {
+    if (landed.current || loads === 0) return
+    landed.current = true
+    const id = pendingReviewId(window.location.search)
+    if (id === null) return
+    window.history.replaceState(window.history.state, '', withoutReview(new URL(window.location.href)))
+    const view = review.views.find((v) => v.rec.id === id)
+    if (view && review.canWrite) review.review(view)
+  }, [loads, review])
+}
+
 /** The card at the top of the Dashboard: the payments waiting for a look, the newest few, each with its buttons. */
 export default function ReviewCard({ core, sheet, onSheet }: { core: ReviewCore; sheet: boolean; onSheet: (open: boolean) => void }) {
   const review = useReviewApi(core)
+  useLanding(review, core.loads)
   const open = (view: ReviewView) => {
     onSheet(false)
     review.review(view)
