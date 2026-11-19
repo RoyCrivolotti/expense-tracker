@@ -11,7 +11,7 @@ import worker from './index'
 import { notifyPayment, paymentPayload, vapidKeysOf } from './notify'
 import type { CreatedPayment } from './notify'
 import type { PushLogLine } from './pushLog'
-import { base64urlEncode } from './webpush'
+import { PushTimeoutError, base64urlEncode } from './webpush'
 
 const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
@@ -191,6 +191,14 @@ describe('notifyPayment', () => {
     answer = (url) => (url === ENDPOINT ? new Error('offline') : 201)
     await notifyPayment(payment, env, deps())
     expect(lines.map((l) => [l.outcome, l.reason]).sort()).toEqual([['failed', 'network'], ['sent', 'ok']])
+  })
+
+  it('logs a push service that does not answer in time as its own reason', async () => {
+    await addDevice(ALICE, ENDPOINT, 'one')
+    await choose('each')
+    answer = () => new PushTimeoutError()
+    await notifyPayment(payment, env, deps())
+    expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['failed', 'timeout']])
   })
 
   it('never throws: a database failure is one failed line', async () => {

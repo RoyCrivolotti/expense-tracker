@@ -107,9 +107,10 @@ keys: it captures exactly as before.
   hour, as Apple asks.
 - **Answers.** 2xx is recorded on the device row (`last_sent_at`, `last_status`, which Settings shows). 404 and 410 mean
   the push service no longer knows the device, so its row is deleted. Anything else, or a failed request, is logged and
-  not retried: the next payment is the retry.
+  not retried: the next payment is the retry. A push service that has not answered in 10 seconds is given up on and
+  logged as `timeout`, so a slow one cannot hold the Worker's background task until the platform ends it.
 - **Log.** One `event: 'push'` line per device, or one for the reason nothing was sent: `outcome` (`sent`, `gone`,
-  `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `not-configured`, `no-devices`,
+  `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `timeout`, `not-configured`, `no-devices`,
   `summary-mode`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
 - **A send never fails the capture.** It runs after the response is decided and catches everything.
 

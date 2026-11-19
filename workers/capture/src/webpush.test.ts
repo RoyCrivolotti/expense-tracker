@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { base64urlDecode, base64urlEncode, encryptPayload, sendWebPush, vapidAuthorization } from './webpush'
+import { PushTimeoutError, base64urlDecode, base64urlEncode, encryptPayload, sendWebPush, vapidAuthorization } from './webpush'
 import type { VapidKeys } from './webpush'
 
 // RFC 8291, Appendix A: the one worked example of the message encryption. These are the RFC's published values, copied
@@ -100,5 +100,28 @@ describe('sendWebPush', () => {
     expect(headers).toMatchObject({ TTL: '86400', Urgency: 'high', Topic: 'a'.repeat(32), 'Content-Encoding': 'aes128gcm' })
     expect(headers.Authorization).toMatch(/^vapid t=.+, k=/)
     expect((calls[0]?.init.body as Uint8Array).length).toBeGreaterThan(100)
+  })
+
+  it('gives up on a push service that does not answer, and says so with its own error', async () => {
+    const { keys } = await vapidPair()
+    let signal: AbortSignal | undefined
+    const fetcher = ((_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal
+      return new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+    }) as unknown as typeof fetch
+    const target = { endpoint: 'https://push.example.test/send/abc', p256dh: RFC.uaPoint, auth: RFC.uaAuth }
+    await expect(sendWebPush(target, '{"v":1}', keys, { ttl: 60, topic: 'a'.repeat(32), timeoutMs: 20 }, fetcher, 1_800_000_000_000)).rejects.toBeInstanceOf(PushTimeoutError)
+    expect(signal?.aborted).toBe(true)
+  })
+
+  it('passes another failure on unchanged and does not abort a send that finished', async () => {
+    const { keys } = await vapidPair()
+    const target = { endpoint: 'https://push.example.test/send/abc', p256dh: RFC.uaPoint, auth: RFC.uaAuth }
+    const refused = (() => Promise.reject(new TypeError('offline'))) as unknown as typeof fetch
+    await expect(sendWebPush(target, '{}', keys, { ttl: 60, topic: 't' }, refused, 1_800_000_000_000)).rejects.toThrow('offline')
+    let seen: AbortSignal | undefined
+    const ok = ((_u: string, init: RequestInit) => ((seen = init.signal as AbortSignal), Promise.resolve(new Response(null, { status: 201 })))) as unknown as typeof fetch
+    await sendWebPush(target, '{}', keys, { ttl: 60, topic: 't' }, ok, 1_800_000_000_000)
+    expect(seen?.aborted).toBe(false)
   })
 })

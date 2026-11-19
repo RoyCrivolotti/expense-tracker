@@ -109,6 +109,19 @@ export interface PushOptions {
   ttl: number
   /** Coalesces undelivered messages: at most 32 URL-safe characters. */
   topic: string
+  /** How long to wait for the push service before giving up. Defaults to `PUSH_TIMEOUT_MS`. */
+  timeoutMs?: number
+}
+
+/** A slow push service must not hold the Worker's background task to the platform's own limit. */
+export const PUSH_TIMEOUT_MS = 10_000
+
+/** The push service did not answer within the time allowed. */
+export class PushTimeoutError extends Error {
+  constructor() {
+    super('push service timed out')
+    this.name = 'PushTimeoutError'
+  }
 }
 
 /** Sends one encrypted message and answers the push service's response. `fetcher` is injected so tests need no network. */
@@ -122,16 +135,26 @@ export async function sendWebPush(
 ): Promise<Response> {
   const body = await encryptPayload(payload, base64urlDecode(target.p256dh), base64urlDecode(target.auth))
   const authorization = await vapidAuthorization(keys, new URL(target.endpoint).origin, nowMs)
-  return fetcher(target.endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: authorization,
-      'Content-Encoding': 'aes128gcm',
-      'Content-Type': 'application/octet-stream',
-      TTL: String(options.ttl),
-      Urgency: 'high',
-      Topic: options.topic,
-    },
-    body,
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? PUSH_TIMEOUT_MS)
+  try {
+    return await fetcher(target.endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: authorization,
+        'Content-Encoding': 'aes128gcm',
+        'Content-Type': 'application/octet-stream',
+        TTL: String(options.ttl),
+        Urgency: 'high',
+        Topic: options.topic,
+      },
+      body,
+      signal: controller.signal,
+    })
+  } catch (error) {
+    if (controller.signal.aborted) throw new PushTimeoutError()
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
 }

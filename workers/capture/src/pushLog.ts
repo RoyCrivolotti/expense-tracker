@@ -8,6 +8,8 @@ export type PushReason =
   | "expired"
   | "push-service-error"
   | "network"
+  /** The push service did not answer in time. */
+  | "timeout"
   | "not-configured"
   | "no-devices"
   /** The person asked for a daily or weekly summary rather than a push per payment. */

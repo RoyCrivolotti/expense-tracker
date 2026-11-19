@@ -5,7 +5,7 @@ import type {
 import type { CaptureEnv } from "./env";
 import { consolePushLogger } from "./pushLog";
 import type { PushLogLine, PushLogger } from "./pushLog";
-import { sendWebPush } from "./webpush";
+import { PushTimeoutError, sendWebPush } from "./webpush";
 import type { VapidKeys } from "./webpush";
 
 /** A payment stored as a recommendation of its own: what the notification says and where a tap goes. */
@@ -83,8 +83,12 @@ async function sendTo(
         now.getTime(),
       )
     ).status;
-  } catch {
-    return { outcome: "failed", reason: "network", status: 0 };
+  } catch (error) {
+    return {
+      outcome: "failed",
+      reason: error instanceof PushTimeoutError ? "timeout" : "network",
+      status: 0,
+    };
   }
   if (status === 404 || status === 410) {
     await deps.push.deleteSubscription(payment.owner, target.id);
