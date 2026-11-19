@@ -31,6 +31,14 @@ export interface PushDevice {
   lastStatus: number | null
 }
 
+/** What the sender needs to reach one device. Never leaves the server: the Settings routes do not return it. */
+export interface PushTarget {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
 export interface PushSettings {
   mode: PushMode
   /** A zone name `Intl` accepts, the browser's own when the choice was saved. */
@@ -49,6 +57,10 @@ export interface PushRepository {
   listDevices(owner: string): Promise<PushDevice[]>
   /** False when the id is not this person's. */
   deleteSubscription(owner: string, id: string): Promise<boolean>
+  /** The person's devices with what a send needs, oldest first. */
+  listTargets(owner: string): Promise<PushTarget[]>
+  /** Notes the push service's answer to a send to one of the person's devices. */
+  recordSend(owner: string, id: string, status: number, at: string): Promise<void>
   getSettings(owner: string): Promise<PushSettings | null>
   /** Writes the person's choice. With `onlyIfMissing` an existing row is left as it is, which is how a first device gets the default. */
   saveSettings(owner: string, settings: { mode: PushMode; timeZone: string }, onlyIfMissing: boolean): Promise<void>

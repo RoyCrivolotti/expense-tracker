@@ -44,12 +44,21 @@ There is no per-address rate limit. A caller with no key who sends a well-formed
 per request and cannot write anything. A `workers.dev` address has no zone, so no rate rule can sit in front of it. If
 abuse is seen, a Workers Rate Limiting binding is the fix.
 
+## Telling the person
+
+A push that makes a recommendation of its own is announced to the person's devices once the phone has its answer, when
+they chose a push per payment ([PUSH.md](PUSH.md), "How the capture Worker sends one"). It runs in `waitUntil` and
+catches everything, so it can neither slow nor fail the capture. It needs three more secrets, `VAPID_PRIVATE_KEY`,
+`VAPID_PUBLIC_KEY` and `VAPID_SUBJECT`; with any unset the Worker captures exactly as before and logs one
+`event: 'push'` line saying `not-configured`. A push that joins an open recommendation and a replay send nothing.
+
 ## Reading what the Worker did
 
 Each request writes one line to Workers Logs (`[observability]` in `workers/capture/wrangler.toml`), whatever its
 outcome: `outcome` (`stored`, `replay`, `dropped`, `refused`, `limited`, `error`), a short `reason` from the closed list
 in [`log.ts`](../workers/capture/src/log.ts), the `status` the phone got, the `source` word, the public `keyId`, and
 `ms`. A push that joined an open recommendation says `grouped`, and a body it could not read `bad-body`. A dropped push says why: `no-amount`, `code-like`, `bad-date`, `clock-skew` or `ignored-shape` (a muted wording).
+A second line, `event: 'push'`, says what became of each announcement (`outcome`, `reason`, `status`, `devices`, `ms`).
 Nothing from the push goes in: no title, body, merchant, amount, digits or email, and an error is logged by its class
 only. A phone
 whose request never shows up here never reached the Worker, which points at the Shortcut rather than the app.
@@ -65,8 +74,10 @@ Everything below changes Cloudflare and needs the account owner's say-so, stagin
 4. Set `OWNER_EMAIL` to the same value the app uses, as a secret or variable and never committed. The owner reaches
    the app without an Expenses grant only through it, so without it the owner's own key is refused. Anyone else
    needs a grant either way.
-5. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
+5. To send notifications, set the three VAPID secrets as [PUSH.md](PUSH.md), "Setting it up", describes. Without them
+   the Worker works and tells nobody.
+6. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
    `/api/expenses` 401.
-6. Repeat for production, after migration 0040 is on that database.
-7. Redeploy the Worker for a database only after migrations 0041 and 0043 are on it, since this Worker writes the
-   columns they add. A Worker deployed before either keeps working after it, because both only add.
+7. Repeat for production, after migration 0040 is on that database.
+8. Redeploy the Worker for a database only after migrations 0041 and 0043 are on it, since this Worker writes the
+   columns they add, and only after 0044, which it reads to send. A Worker deployed before either keeps working after it, because both only add.

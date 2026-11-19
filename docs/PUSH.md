@@ -2,7 +2,7 @@
 
 For a contributor changing how the app tells a phone that a captured payment is waiting. It covers what a device's
 subscription is, where it and the person's choice are kept, the routes, the Settings card that turns a device on, and
-what the service worker does with a push and a tap. The payments themselves are in [CAPTURE.md](CAPTURE.md), and the
+how the capture Worker sends one, and what the service worker does with a push and a tap. The payments themselves are in [CAPTURE.md](CAPTURE.md), and the
 card that reviews them in [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
 
 ## What a subscription is
@@ -88,3 +88,59 @@ unsupported.
   forward and sent there, else one is opened. The URL is `/?review=<id>`; the review card, which mounts once there is
   something to review, opens that payment's form as "Review" would, once, and takes the id off the URL. A payment no
   longer waiting opens nothing, and the card is there. A summary's URL is `/`.
+
+## How the capture Worker sends one
+
+[`notify.ts`](../workers/capture/src/notify.ts) and [`webpush.ts`](../workers/capture/src/webpush.ts), on WebCrypto
+alone. When a push from the phone makes a recommendation of its own and its person chose `each`, the Worker answers the
+phone first and then, inside `ctx.waitUntil`, sends one message to each of the person's devices. A push that joins an
+open recommendation, a replay, and a person on `daily` or `weekly` send nothing, and neither does a Worker without its
+keys: it captures exactly as before.
+
+- **Message.** The payload above, encrypted to the device's keys with a fresh salt and sender key each time (RFC 8291,
+  `aes128gcm`), POSTed to the stored endpoint. The test reproduces the RFC's Appendix A message byte for byte, and
+  decrypts what the Worker sends the way a browser does. The merchant is in the payload only when the template knows
+  where it sits in the wording, so the whole bank text never goes.
+- **Headers.** `TTL: 86400`, `Urgency: high`, `Topic` the recommendation id without its dashes (32 characters, so a
+  device that was off gets one notification per payment), `Content-Encoding: aes128gcm`, and
+  `Authorization: vapid t=<jwt>, k=<public key>`. The JWT (ES256, RFC 8292) is minted per push service and reused for an
+  hour, as Apple asks.
+- **Answers.** 2xx is recorded on the device row (`last_sent_at`, `last_status`, which Settings shows). 404 and 410 mean
+  the push service no longer knows the device, so its row is deleted. Anything else, or a failed request, is logged and
+  not retried: the next payment is the retry.
+- **Log.** One `event: 'push'` line per device, or one for the reason nothing was sent: `outcome` (`sent`, `gone`,
+  `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `not-configured`, `no-devices`,
+  `summary-mode`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
+- **A send never fails the capture.** It runs after the response is decided and catches everything.
+
+## Setting it up
+
+Everything below changes Cloudflare and needs the account owner's say-so. Do staging first, then production, and
+check one real payment on staging before production.
+
+1. Generate a key pair on your own machine. It prints two lines and sets nothing:
+
+   ```bash
+   node scripts/vapid-keys.mjs
+   ```
+
+2. On the capture Worker (`expense-capture-stg`, then `expense-capture`), from `workers/capture`, set three secrets. The
+   private key is the `VAPID_PRIVATE_KEY` line and only ever goes here. The subject is the app's URL, so no email
+   address is in any token:
+
+   ```bash
+   npx wrangler secret put VAPID_PRIVATE_KEY --name expense-capture-stg
+   npx wrangler secret put VAPID_PUBLIC_KEY --name expense-capture-stg
+   npx wrangler secret put VAPID_SUBJECT --name expense-capture-stg
+   ```
+
+3. On each Pages project (staging, then production) set `VAPID_PUBLIC_KEY` to the same public value as a plain variable,
+   so `GET /api/push-config` can hand it to the browser. The Pages deploy must follow it, since variables apply to new
+   deployments.
+4. Install the app to the Home Screen on a phone, turn notifications on in Settings, choose "For every payment", and
+   make a purchase. The device row's status in the card turns to 201.
+5. Repeat for production, after migration 0044 is on that database.
+
+The public key given to a browser at subscribe time must be the one the Worker signs with. Replacing the pair later
+leaves every saved subscription unusable (the push service answers 403 or 410), and each device must turn
+notifications off and on again.

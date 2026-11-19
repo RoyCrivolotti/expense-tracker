@@ -552,13 +552,15 @@ describe('a key revoked after it was checked', () => {
   })
 })
 
+const ctx = { waitUntil: () => undefined } as unknown as ExecutionContext
+
 describe('the Worker entry', () => {
   it('fails closed with no database: a malformed key is still 401, a well-formed one a fixed 500', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const none = { ...env, DB: undefined } as unknown as CaptureEnv
-    expect((await worker.fetch(request({ key: 'xpk_nope' }), none)).status).toBe(401)
-    const res = await worker.fetch(request(), none)
+    expect((await worker.fetch(request({ key: 'xpk_nope' }), none, ctx)).status).toBe(401)
+    const res = await worker.fetch(request(), none, ctx)
     expect(res.status).toBe(500)
     expect(await res.text()).toBe('{"error":"server error"}')
     error.mockRestore()
@@ -569,7 +571,7 @@ describe('the Worker entry', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const broken = { ...env, DB: { prepare: () => { throw new Error('boom Shop Example') } } } as unknown as CaptureEnv
-    const res = await worker.fetch(request(), broken)
+    const res = await worker.fetch(request(), broken, ctx)
     expect(res.status).toBe(500)
     expect(await res.text()).toBe('{"error":"server error"}')
     expect(error.mock.calls).toEqual([])
@@ -580,7 +582,7 @@ describe('the Worker entry', () => {
   })
 
   it('serves a push through the real clock and repositories', async () => {
-    const res = await worker.fetch(request({ body: { ...PURCHASE, date: new Date().toISOString() } }), env)
+    const res = await worker.fetch(request({ body: { ...PURCHASE, date: new Date().toISOString() } }), env, ctx)
     expect(res.status).toBe(200)
     expect(count('capture_events')).toBe(1)
   })

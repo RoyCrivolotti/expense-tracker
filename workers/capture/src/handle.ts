@@ -6,6 +6,7 @@ import { readCappedText } from './body'
 import type { RawPush } from '../../../src/domain/capture'
 import type { CaptureKey } from '../../../src/domain/ports/captureRepository'
 import type { CaptureEnv } from './env'
+import type { CreatedPayment } from './notify'
 import { consoleLogger } from './log'
 import type { CaptureLogLine, CaptureLogger, CaptureReason } from './log'
 import { DAILY_CAPS, MAX_BODY_BYTES, captureCaps } from './limits'
@@ -18,6 +19,8 @@ export interface CaptureDeps {
   captures: CaptureRepository
   access: AccessRepository
   now: () => Date
+  /** Told of each payment that made a recommendation of its own, so the caller can announce it after answering. */
+  onCreated?: (payment: CreatedPayment) => void
   /** Where the one line per request goes. The console when absent. */
   log?: CaptureLogger
 }
@@ -123,7 +126,7 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   // Best effort: a missed update only shows an older "last used" time, and must not lose the push.
   await deps.captures.touchKey(key.keyId, now.toISOString()).catch(() => undefined)
 
-  const stored = await receive(push, key, secret, deps.captures, now)
+  const stored = await receive(push, key, secret, deps, now)
   if (stored === 'bad-date' || stored === 'clock-skew' || stored === 'no-amount' || stored === 'code-like') {
     await deps.captures.bumpCounter(key.owner, push.source, day, 'unrecognised')
     line.outcome = 'dropped'
@@ -146,9 +149,9 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
 }
 
 /** What a push becomes once admitted. One whose Date cannot be trusted is not read at all. */
-async function receive(push: RawPush, key: CaptureKey, secret: string, captures: CaptureRepository, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew'> {
+async function receive(push: RawPush, key: CaptureKey, secret: string, deps: CaptureDeps, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew'> {
   const date = parsePushDate(push.date)
   if (!date) return 'bad-date'
   if (!withinClockSkew(date.instantMs, now.getTime())) return 'clock-skew'
-  return storePush(captures, key, push, date, secret, now, captureCaps(now))
+  return storePush(deps.captures, key, push, date, secret, now, captureCaps(now), deps.onCreated)
 }
