@@ -30,6 +30,13 @@ ON CONFLICT(owner) DO UPDATE SET mode = excluded.mode, time_zone = excluded.time
 
 export const SAVE_SETTINGS_IF_MISSING_SQL = 'INSERT OR IGNORE INTO push_settings (owner, mode, time_zone) VALUES (?1, ?2, ?3)'
 
+export const LIST_SUMMARY_PEOPLE_SQL = `SELECT owner, mode, time_zone, last_summary_at FROM push_settings
+WHERE mode IN ('daily', 'weekly') ORDER BY owner`
+
+/** `IS` compares NULL as a value, so a person never sent a summary is claimed by passing null. */
+export const CLAIM_SUMMARY_SQL = `UPDATE push_settings SET last_summary_at = ?3
+WHERE owner = ?1 AND last_summary_at IS ?2 AND mode IN ('daily', 'weekly')`
+
 export function subscriptionParams(s: NewPushSubscription): [string, string, string, string, string, string, string] {
   return [s.id, s.owner, s.endpoint, s.p256dh, s.auth, s.label, s.createdAt]
 }
@@ -57,5 +64,7 @@ export interface SettingsRow {
 }
 
 export const toSettings = (row: SettingsRow): PushSettings => ({ mode: row.mode, timeZone: row.time_zone, lastSummaryAt: row.last_summary_at })
+
+export type SummaryRow = SettingsRow & { owner: string }
 
 export type TargetRow = PushTarget

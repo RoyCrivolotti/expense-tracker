@@ -196,6 +196,17 @@ export interface CaptureCard {
   accountId: number
 }
 
+/**
+ * The open recommendations in one line: how many, and their total when it means something. The total is present only
+ * when every open one has an amount and they all share one currency; `onlyId` only when exactly one is open.
+ */
+export interface OpenSummary {
+  count: number
+  totalCents: number | null
+  currency: string | null
+  onlyId: string | null
+}
+
 export interface NewRecommendation {
   id: string
   owner: string
@@ -350,6 +361,8 @@ export interface CaptureRepository extends CaptureStatusReads {
   findPossibleMatch(owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null>
   /** How many are open, for the badge. */
   countOpenRecommendations(owner: string): Promise<number>
+  /** What a summary notification says about the open ones, from one read. */
+  summarizeOpen(owner: string): Promise<OpenSummary>
   /**
    * Moves an open recommendation to submitted or dismissed, and blanks the text of the push it came from in the same
    * batch. False when it is not open, so a double tap acts once.

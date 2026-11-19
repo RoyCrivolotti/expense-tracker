@@ -285,6 +285,28 @@ describe('recommendations', () => {
     expect(await repo.countOpenRecommendations(BOB)).toBe(0)
   })
 
+  it('summarizes the open ones: a total only when every amount is known and in one currency', async () => {
+    expect(await repo.summarizeOpen(ALICE)).toEqual({ count: 0, totalCents: null, currency: null, onlyId: null })
+    await repo.createRecommendation(rec({ id: 'a', amountCents: 1250 }))
+    expect(await repo.summarizeOpen(ALICE)).toEqual({ count: 1, totalCents: 1250, currency: 'EUR', onlyId: 'a' })
+    await repo.createRecommendation(rec({ id: 'b', amountCents: 3000 }))
+    await repo.createRecommendation(rec({ id: 'x', amountCents: 999 }))
+    await repo.decideRecommendation(ALICE, 'x', { state: 'dismissed', at: T0 })
+    expect(await repo.summarizeOpen(ALICE)).toEqual({ count: 2, totalCents: 4250, currency: 'EUR', onlyId: null })
+    expect(await repo.summarizeOpen(BOB)).toMatchObject({ count: 0 })
+    await repo.createRecommendation(rec({ id: 'c', amountCents: 500, currency: 'USD' }))
+    expect(await repo.summarizeOpen(ALICE)).toEqual({ count: 3, totalCents: null, currency: null, onlyId: null })
+  })
+
+  it('gives no total when an open payment has no amount or no currency', async () => {
+    await repo.createRecommendation(rec({ id: 'a', amountCents: 1250 }))
+    await repo.createRecommendation(rec({ id: 'b', amountCents: null }))
+    expect(await repo.summarizeOpen(ALICE)).toMatchObject({ count: 2, totalCents: null, currency: null })
+    await repo.decideRecommendation(ALICE, 'b', { state: 'dismissed', at: T0 })
+    await repo.createRecommendation(rec({ id: 'c', currency: null }))
+    expect(await repo.summarizeOpen(ALICE)).toMatchObject({ count: 2, totalCents: null, currency: null })
+  })
+
   it('submits once, keeping the transaction, and leaves the open list', async () => {
     await repo.createRecommendation(rec())
     expect(await repo.decideRecommendation(ALICE, 'rec-1', { state: 'submitted', txnId: 42, at: T0 })).toBe(true)

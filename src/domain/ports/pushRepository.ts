@@ -46,6 +46,11 @@ export interface PushSettings {
   lastSummaryAt: string | null
 }
 
+/** A person who chose a daily or weekly summary, with what the cron needs to decide whether theirs is due. */
+export interface SummaryPerson extends PushSettings {
+  owner: string
+}
+
 /** Persistence for web push. Every method is scoped by owner. Times are ISO strings in UTC, passed in. */
 export interface PushRepository {
   /**
@@ -64,4 +69,12 @@ export interface PushRepository {
   getSettings(owner: string): Promise<PushSettings | null>
   /** Writes the person's choice. With `onlyIfMissing` an existing row is left as it is, which is how a first device gets the default. */
   saveSettings(owner: string, settings: { mode: PushMode; timeZone: string }, onlyIfMissing: boolean): Promise<void>
+  /** Everyone whose mode is `daily` or `weekly`. The hourly cron reads this across owners: it has none. */
+  listSummaryPeople(): Promise<SummaryPerson[]>
+  /**
+   * Records that a summary is being sent, only when `last_summary_at` is still `expected`. One statement, so of two
+   * cron runs in the same hour exactly one gets true and sends. False when another run got there first or the person
+   * left the summary modes.
+   */
+  claimSummary(owner: string, expected: string | null, at: string): Promise<boolean>
 }

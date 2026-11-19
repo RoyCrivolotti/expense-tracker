@@ -111,8 +111,39 @@ keys: it captures exactly as before.
   logged as `timeout`, so a slow one cannot hold the Worker's background task until the platform ends it.
 - **Log.** One `event: 'push'` line per device, or one for the reason nothing was sent: `outcome` (`sent`, `gone`,
   `failed`, `skipped`), `reason` (`ok`, `expired`, `push-service-error`, `network`, `timeout`, `not-configured`, `no-devices`,
-  `summary-mode`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
+  `summary-mode`, `nothing-waiting`, `invalid-zone`, `already-sent`, `exception`), `status`, `devices` and `ms`. Never the endpoint, a key, the owner or any payment text.
 - **A send never fails the capture.** It runs after the response is decided and catches everything.
+
+## Daily and weekly summaries
+
+[`summaries.ts`](../workers/capture/src/summaries.ts) and [`summaryDue.ts`](../workers/capture/src/summaryDue.ts), run by
+the capture Worker's hourly cron (`[triggers]` in `wrangler.toml`, `scheduled` in `index.ts`). Cloudflare's cron is in
+UTC and knows nothing of a person's evening or of summer time, so every run asks each person with a summary mode what
+time it is in their stored zone, which the platform's own `Intl` rules answer.
+
+- **Due.** From 20:00 local to midnight, every day for `daily` and on Monday for `weekly`, until a summary is recorded
+  for that local date. A run an hour or three late still sends that evening, two runs in one evening send once, and a
+  run after midnight sends nothing for the evening it missed. A zone on a half hour (India) is reached at 20:30, the
+  first hourly run past 20:00. A zone the platform does not know, or a blank one, is logged as `invalid-zone` and left
+  alone.
+- **Once.** Before sending, the run claims the person's evening with one statement,
+  `UPDATE push_settings SET last_summary_at = ? WHERE owner = ? AND last_summary_at IS <the value it read>`, so of two
+  runs at once only one gets a changed row and sends; the other logs `already-sent`. The send is not retried if it then
+  fails: the next evening is the retry, as the next payment is for a push per payment.
+- **Nothing is sent, and nothing is claimed,** when the person has nothing open (`nothing-waiting`) or no device
+  (`no-devices`), so iOS never sees a push with nothing to show, and a payment that arrives later the same evening
+  still gets its summary.
+- **Message.** `{ v: 1, kind: "summary", url, count, totalCents, currency, open }`. The total is there only when every
+  open payment has an amount and they share one currency; otherwise the notification gives the count alone. `url` is
+  `/` for several payments and `/?review=<id>` for exactly one, so a tap opens its form as for a push per payment.
+  Headers are the same as for one payment except `Topic: review-summary`, so a phone that was off for days gets the
+  latest summary only.
+- **Log.** The same `event: 'push'` line per device, plus one line per person who was skipped and why. With no VAPID
+  secrets the cron logs `not-configured` once for the run, not once per person. A failure for one person or device
+  stops no one else, and a 404 or 410 deletes that device's row.
+
+Deploying the Worker puts the trigger live (the "Setting it up" steps below); `wrangler deploy` reads it from
+`wrangler.toml`. Until then no summary is sent and a person on `daily`, the default, hears nothing at all.
 
 ## Setting it up
 
@@ -171,7 +202,9 @@ staging private key then cannot sign for production.
 
    It answers `{"ok":true}`, the phone shows "Payment to review", and the device row's status in the card turns to 201.
    Delete the test recommendation and the key afterwards.
-6. Deploy the Worker with the hourly trigger once, so the daily and weekly summaries go out (below).
+6. Check the hourly trigger. It is part of `wrangler.toml`, so the deploy in step 2 already carries it. The Worker's
+   Triggers page in the dashboard lists one cron, `0 * * * *`. The first run after 20:00 in your zone sends your
+   summary if a payment is waiting, and the Worker's Logs show an `event: 'push'` line for it.
 7. Repeat for production, after migration 0044 is on that database.
 
 The public key given to a browser at subscribe time must be the one the Worker signs with. Replacing the pair later

@@ -6,6 +6,7 @@ import { handleCapture } from './handle'
 import { notifyPayment } from './notify'
 import type { CreatedPayment } from './notify'
 import { serverError } from './responses'
+import { runSummaries } from './summaries'
 
 /**
  * Accepts a bank push from a person's phone and turns it into a recommendation. It serves this one route and
@@ -36,5 +37,20 @@ export default {
     } catch {
       return serverError()
     }
+  },
+
+  /**
+   * The hourly cron. A daily or weekly summary is due at 20:00 in the person's own zone, which Cloudflare's UTC cron
+   * knows nothing of, so it runs every hour and asks per person (workers/capture/src/summaryDue.ts).
+   */
+  scheduled(controller: ScheduledController, env: CaptureEnv, ctx: ExecutionContext): void {
+    ctx.waitUntil(
+      runSummaries(env, {
+        push: createD1PushRepository(env),
+        captures: createD1CaptureRepository(env),
+        fetcher: fetch,
+        now: () => new Date(controller.scheduledTime),
+      }),
+    )
   },
 }

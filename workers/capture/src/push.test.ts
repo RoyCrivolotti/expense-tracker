@@ -218,6 +218,16 @@ describe('notifyPayment', () => {
     expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['failed', 'exception']])
   })
 
+  it('still sends to the other device when recording one device\'s result fails', async () => {
+    await addDevice(ALICE, ENDPOINT, 'one')
+    await addDevice(ALICE, ENDPOINT_TWO, 'two')
+    await choose('each')
+    const push = { ...repos().push, recordSend: (owner: string, id: string, status: number, at: string) => (id === 'one' ? Promise.reject(new Error('boom')) : repos().push.recordSend(owner, id, status, at)) }
+    await notifyPayment(payment, env, { ...deps(), push })
+    expect(calls).toHaveLength(2)
+    expect(lines.map((l) => [l.outcome, l.reason]).sort()).toEqual([['failed', 'exception'], ['sent', 'ok']])
+  })
+
   it('skips with the keys unset', async () => {
     await addDevice(ALICE, ENDPOINT, 'one')
     await choose('each')

@@ -2,9 +2,11 @@ import type { PushRepository } from '../../../src/domain/ports/pushRepository'
 import type { Env } from '../env'
 import {
   DELETE_SUBSCRIPTION_SQL,
+  CLAIM_SUMMARY_SQL,
   GET_SETTINGS_SQL,
   ID_OF_ENDPOINT_SQL,
   LIST_DEVICES_SQL,
+  LIST_SUMMARY_PEOPLE_SQL,
   LIST_TARGETS_SQL,
   RECORD_SEND_SQL,
   SAVE_SETTINGS_IF_MISSING_SQL,
@@ -15,6 +17,7 @@ import {
   toSettings,
   type DeviceRow,
   type SettingsRow,
+  type SummaryRow,
   type TargetRow,
 } from '../push/pushSql'
 import { changed, rows } from './d1CaptureSupport'
@@ -37,6 +40,8 @@ export function createD1PushRepository(env: Pick<Env, 'DB'>): PushRepository {
       const row = await db.prepare(GET_SETTINGS_SQL).bind(owner).first<SettingsRow>()
       return row ? toSettings(row) : null
     },
+    listSummaryPeople: async () => (await rows<SummaryRow>(db, LIST_SUMMARY_PEOPLE_SQL)).map((r) => ({ owner: r.owner, ...toSettings(r) })),
+    claimSummary: (owner, expected, at) => changed(db, CLAIM_SUMMARY_SQL, owner, expected, at),
     saveSettings: async (owner, settings, onlyIfMissing) => {
       await changed(db, onlyIfMissing ? SAVE_SETTINGS_IF_MISSING_SQL : SAVE_SETTINGS_SQL, owner, settings.mode, settings.timeZone)
     },
