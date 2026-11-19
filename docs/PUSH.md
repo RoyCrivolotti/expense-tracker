@@ -84,10 +84,14 @@ unsupported.
   open payment is in one currency, the total; a payload that cannot be read says "Tap to see it". The tag is the
   recommendation id (or `review-summary`), so a device that was off gets one notification per payment, not one per
   retry. `open` goes on the app icon's badge where the device has one.
+- **Open windows are told.** After the notification is shown, every open window of the app gets one message,
+  `{ type: "review-changed" }`, and the app reads the payments to review again ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md),
+  "Keeping the list current"). The message carries no data and is sent for a push that could not be read too. It is
+  never allowed to fail the push: a window that cannot be reached reads the list when it returns to the foreground.
 - **A tap** opens the payload's URL inside the app and never another origin: an open window of the app is brought
   forward and sent there, else one is opened. The URL is `/?review=<id>`; the review card, which mounts once there is
   something to review, opens that payment's form as "Review" would, once, and takes the id off the URL. A payment no
-  longer waiting opens nothing, and the card is there. A summary's URL is `/`.
+  longer waiting opens nothing, and the card is there. A summary's URL is `/`. The tap itself needs no message: navigating the window reloads the page, which reads the list.
 
 ## How the capture Worker sends one
 

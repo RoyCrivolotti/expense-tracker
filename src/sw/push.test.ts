@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { badgeOf, landingUrl, moneyText, notificationOf, openReview, parsePayload, showPush } from './push'
+import { badgeOf, landingUrl, moneyText, notificationOf, openReview, parsePayload, REVIEW_CHANGED, showPush, tellWindows } from './push'
 
 const SCOPE = 'https://app.example/'
 const payment = { v: 1, kind: 'payment', id: 'rec-1', url: '/?review=rec-1', amountCents: 1250, currency: 'EUR', merchant: 'Shop Example', open: 3 }
@@ -67,6 +67,49 @@ describe('showing a push', () => {
   it('does not let a badge that fails fail the notification', async () => {
     const registration = { showNotification: vi.fn(() => Promise.resolve()) }
     await expect(showPush(JSON.stringify(payment), registration, () => Promise.reject(new Error('no badge')), 'en-GB')).resolves.toBeUndefined()
+  })
+})
+
+describe('telling open windows', () => {
+  const windows = () => [{ postMessage: vi.fn() }, { postMessage: vi.fn() }]
+
+  it('sends every open window one message after the notification is shown', async () => {
+    const open = windows()
+    const clients = { matchAll: vi.fn(() => Promise.resolve(open)) }
+    const order: string[] = []
+    const registration = { showNotification: vi.fn(() => (order.push('shown'), Promise.resolve())) }
+    open[0]?.postMessage.mockImplementation(() => order.push('told'))
+
+    await showPush(JSON.stringify(payment), registration, null, 'en-GB', clients)
+
+    expect(clients.matchAll).toHaveBeenCalledWith({ type: 'window', includeUncontrolled: true })
+    for (const w of open) expect(w.postMessage).toHaveBeenCalledExactlyOnceWith({ type: REVIEW_CHANGED })
+    expect(order).toEqual(['shown', 'told'])
+  })
+
+  it('sets the badge before it reaches for the windows, so a slow list of them cannot delay it', async () => {
+    const order: string[] = []
+    const registration = { showNotification: vi.fn(() => Promise.resolve()) }
+    const badge = vi.fn(() => (order.push('badge'), Promise.resolve()))
+    const clients = { matchAll: vi.fn(() => (order.push('windows'), Promise.resolve([]))) }
+
+    await showPush(JSON.stringify(payment), registration, badge, 'en-GB', clients)
+
+    expect(order).toEqual(['badge', 'windows'])
+  })
+
+  it('tells them for a push it cannot read too, since the list may have changed', async () => {
+    const open = windows()
+    await showPush('garbage', { showNotification: vi.fn(() => Promise.resolve()) }, null, 'en-GB', { matchAll: () => Promise.resolve(open) })
+    expect(open[0]?.postMessage).toHaveBeenCalledOnce()
+  })
+
+  it('never fails the push when the windows cannot be listed', async () => {
+    const registration = { showNotification: vi.fn(() => Promise.resolve()) }
+    const badge = vi.fn(() => Promise.resolve())
+    await expect(tellWindows({ matchAll: () => Promise.reject(new Error('gone')) })).resolves.toBeUndefined()
+    await showPush(JSON.stringify(payment), registration, badge, 'en-GB', { matchAll: () => Promise.reject(new Error('gone')) })
+    expect(badge).toHaveBeenCalledWith(3)
   })
 })
 

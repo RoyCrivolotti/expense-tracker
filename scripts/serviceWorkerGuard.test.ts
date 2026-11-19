@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -119,6 +119,18 @@ describe('the check of the built service worker', () => {
     expect(failed).toBe(true)
     expect(report).toContain('evaluating the worker raised: non-precached-url')
     expect(report).toContain('a navigation to / while the network fails: expected "SHELL", got no answer from the worker')
+  }, SLOW)
+
+  it('fails a worker that shows pushes but does not tell the open windows, and passes one that does', async () => {
+    const silent = await site(workboxOptions)
+    appendFileSync(join(silent, 'sw.js'), "\nself.addEventListener('push', (e) => e.waitUntil(self.registration.showNotification('x')))\n")
+    const silentResult = await check(silent)
+    expect(silentResult.failed).toBe(true)
+    expect(silentResult.report).toContain('a push does not tell the open windows')
+
+    const telling = await site(workboxOptions)
+    appendFileSync(join(telling, 'sw.js'), "\nself.addEventListener('push', (e) => e.waitUntil(self.clients.matchAll().then((all) => all.forEach((w) => w.postMessage({ type: 'review-changed' })))))\n")
+    expect(await check(telling)).toEqual({ failed: false, report: '' })
   }, SLOW)
 
   it('says to build first when there is no worker', async () => {

@@ -94,12 +94,33 @@ export interface ShowsNotifications {
   showNotification(title: string, options?: NotificationOptions): Promise<void>
 }
 
-/** Shows the notification, then puts the open count on the app icon where the device has a badge. */
-export async function showPush(text: string | null, registration: ShowsNotifications, badge: ((count: number) => Promise<void>) | null, locale: string): Promise<void> {
+/** What the worker tells an open window when a push arrived, so the window can read the list again (docs/PUSH.md). */
+export const REVIEW_CHANGED = 'review-changed'
+
+export interface MessagesWindows {
+  matchAll(options: { type: 'window'; includeUncontrolled: boolean }): Promise<readonly { postMessage(message: unknown): void }[]>
+}
+
+/** Tells every open window of the app that a payment to review may have arrived. Never fails the push. */
+export async function tellWindows(clients: MessagesWindows): Promise<void> {
+  try {
+    const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const w of windows) w.postMessage({ type: REVIEW_CHANGED })
+  } catch {
+    /* The notification is what matters; a window that cannot be reached reads the list when it returns. */
+  }
+}
+
+/**
+ * Shows the notification, puts the open count on the app icon where the device has a badge, then tells open windows.
+ * The windows come last, so a slow `clients.matchAll()` never delays what the lock screen and the icon say.
+ */
+export async function showPush(text: string | null, registration: ShowsNotifications, badge: ((count: number) => Promise<void>) | null, locale: string, clients?: MessagesWindows): Promise<void> {
   const payload = parsePayload(text)
   const { title, options } = notificationOf(payload, locale)
   await registration.showNotification(title, options)
   if (badge && payload?.open !== undefined) await badge(payload.open).catch(() => undefined)
+  if (clients) await tellWindows(clients)
 }
 
 /** Where a tap lands: the notification's URL inside the app, else the app itself. Another origin is never opened. */
