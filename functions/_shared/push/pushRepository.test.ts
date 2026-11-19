@@ -63,6 +63,25 @@ describe('a device’s subscription', () => {
   })
 })
 
+describe('what a send needs', () => {
+  it('lists the person’s own devices with their keys, oldest first', async () => {
+    await repo.saveSubscription(sub({ id: 'b', endpoint: 'https://web.push.apple.com/b', createdAt: '2026-11-02T00:00:00.000Z' }))
+    await repo.saveSubscription(sub({ id: 'a', endpoint: 'https://web.push.apple.com/a', createdAt: '2026-11-01T00:00:00.000Z' }))
+    await repo.saveSubscription(sub({ id: 'c', owner: BOB, endpoint: 'https://web.push.apple.com/c' }))
+    const targets = await repo.listTargets(ALICE)
+    expect(targets.map((t) => t.id)).toEqual(['a', 'b'])
+    expect(targets[0]).toEqual({ id: 'a', endpoint: 'https://web.push.apple.com/a', p256dh: sub().p256dh, auth: sub().auth })
+  })
+
+  it('notes the push service’s answer on the person’s own device only', async () => {
+    await repo.saveSubscription(sub())
+    await repo.recordSend(BOB, 'id-1', 500, T0)
+    expect((await repo.listDevices(ALICE))[0]).toMatchObject({ lastSentAt: null, lastStatus: null })
+    await repo.recordSend(ALICE, 'id-1', 201, T0)
+    expect((await repo.listDevices(ALICE))[0]).toMatchObject({ lastSentAt: T0, lastStatus: 201 })
+  })
+})
+
 describe('a person’s choice', () => {
   it('is absent until written, the default is kept out of the way of a choice already made, and a choice replaces it', async () => {
     expect(await repo.getSettings(ALICE)).toBeNull()

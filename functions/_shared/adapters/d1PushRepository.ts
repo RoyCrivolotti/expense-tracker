@@ -5,6 +5,8 @@ import {
   GET_SETTINGS_SQL,
   ID_OF_ENDPOINT_SQL,
   LIST_DEVICES_SQL,
+  LIST_TARGETS_SQL,
+  RECORD_SEND_SQL,
   SAVE_SETTINGS_IF_MISSING_SQL,
   SAVE_SETTINGS_SQL,
   SAVE_SUBSCRIPTION_SQL,
@@ -13,6 +15,7 @@ import {
   toSettings,
   type DeviceRow,
   type SettingsRow,
+  type TargetRow,
 } from '../push/pushSql'
 import { changed, rows } from './d1CaptureSupport'
 
@@ -25,6 +28,10 @@ export function createD1PushRepository(env: Pick<Env, 'DB'>): PushRepository {
       return row?.id ?? null
     },
     listDevices: async (owner) => (await rows<DeviceRow>(db, LIST_DEVICES_SQL, owner)).map(toDevice),
+    listTargets: (owner) => rows<TargetRow>(db, LIST_TARGETS_SQL, owner),
+    recordSend: async (owner, id, status, at) => {
+      await changed(db, RECORD_SEND_SQL, owner, id, at, status)
+    },
     deleteSubscription: (owner, id) => changed(db, DELETE_SUBSCRIPTION_SQL, owner, id),
     getSettings: async (owner) => {
       const row = await db.prepare(GET_SETTINGS_SQL).bind(owner).first<SettingsRow>()

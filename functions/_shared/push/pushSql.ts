@@ -1,4 +1,4 @@
-import { MAX_PUSH_DEVICES, type NewPushSubscription, type PushDevice, type PushSettings } from '../../../src/domain/ports/pushRepository'
+import { MAX_PUSH_DEVICES, type NewPushSubscription, type PushDevice, type PushSettings, type PushTarget } from '../../../src/domain/ports/pushRepository'
 
 /**
  * The cap is checked inside the insert, so two devices saved at once cannot both pass it, and it counts the owner's
@@ -16,6 +16,10 @@ export const ID_OF_ENDPOINT_SQL = 'SELECT id FROM push_subscriptions WHERE endpo
 
 export const LIST_DEVICES_SQL = `SELECT id, label, created_at, last_sent_at, last_status FROM push_subscriptions
 WHERE owner = ?1 ORDER BY created_at DESC, id DESC`
+
+export const LIST_TARGETS_SQL = 'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE owner = ?1 ORDER BY created_at, id'
+
+export const RECORD_SEND_SQL = 'UPDATE push_subscriptions SET last_sent_at = ?3, last_status = ?4 WHERE owner = ?1 AND id = ?2'
 
 export const DELETE_SUBSCRIPTION_SQL = 'DELETE FROM push_subscriptions WHERE owner = ?1 AND id = ?2'
 
@@ -53,3 +57,5 @@ export interface SettingsRow {
 }
 
 export const toSettings = (row: SettingsRow): PushSettings => ({ mode: row.mode, timeZone: row.time_zone, lastSummaryAt: row.last_summary_at })
+
+export type TargetRow = PushTarget
