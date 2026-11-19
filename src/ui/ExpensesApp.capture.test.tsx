@@ -13,6 +13,7 @@ import { ExpensesApp } from './ExpensesApp'
 import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
 import { UNDO_MS } from './capture/usePendingAction'
+import { RETURN_THROTTLE_MS } from './capture/useReloadOnReturn'
 
 vi.mock('../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), fetchCardLinks: vi.fn(), linkCard: vi.fn() }))
 vi.mock('../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
@@ -99,6 +100,56 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh data' }))
 
     expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
+  })
+
+  describe('when the app returns to the foreground', () => {
+    const comeBack = () => {
+      act(() => void vi.advanceTimersByTime(RETURN_THROTTLE_MS))
+      act(() => void document.dispatchEvent(new Event('visibilitychange')))
+    }
+    const reads = () => vi.mocked(api.fetchRecommendations).mock.calls.length
+
+    it('reads the list again', async () => {
+      open()
+      await screen.findByRole('heading', { name: '2 payments to review' })
+      const before = reads()
+
+      comeBack()
+
+      await waitFor(() => expect(reads()).toBe(before + 1))
+    })
+
+    it('waits while the add form is open on a payment, and reads once when it closes', async () => {
+      open()
+      await screen.findByRole('heading', { name: '2 payments to review' })
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+      const dialog = await screen.findByRole('dialog')
+      const before = reads()
+
+      comeBack()
+      await act(async () => void (await vi.advanceTimersByTimeAsync(50)))
+      expect(reads()).toBe(before)
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+
+      await waitFor(() => expect(reads()).toBe(before + 1))
+    })
+
+    it('waits while the queue sheet is open, and reads once when it closes', async () => {
+      const seven = [KNOWN, NEW, ...[3, 4, 5, 6, 7].map((n) => `0b0c0d0e-1111-4222-8333-44445555666${n}`)].map((id) => makeRecommendation({ id, merchantRaw: `PLACE ${id.slice(-1)}` }))
+      vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: seven, next: null, openCount: 7 })
+      open()
+      await screen.findByRole('heading', { name: '7 payments to review' })
+      fireEvent.click(screen.getByRole('button', { name: /See all/ }))
+      const dialog = await screen.findByRole('dialog')
+      const before = reads()
+
+      comeBack()
+      await act(async () => void (await vi.advanceTimersByTimeAsync(50)))
+      expect(reads()).toBe(before)
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+
+      await waitFor(() => expect(reads()).toBe(before + 1))
+    })
   })
 
   it('adds a known merchant with one tap after the undo window, and the count drops', async () => {

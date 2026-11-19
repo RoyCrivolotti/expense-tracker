@@ -413,7 +413,7 @@ function ExpensesAppReady({
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
-    <ReviewProvider model={model} actions={actions}>
+    <ReviewProvider model={model} actions={actions} formOpen={modal !== null}>
       <ExpensesOnboarding
         open={onboardingOpen}
         source={source}

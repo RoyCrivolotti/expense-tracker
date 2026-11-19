@@ -4,6 +4,7 @@ import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { ReviewContext, type ReviewCore } from './reviewContext'
 import { useRecommendationList } from './useRecommendationList'
+import { useHoldReloads, useReloadOnReturn } from './useReloadOnReturn'
 import { useReviewDecisions } from './useReviewDecisions'
 
 /**
@@ -13,13 +14,18 @@ import { useReviewDecisions } from './useReviewDecisions'
 export function ReviewProvider({
   model,
   actions,
+  formOpen = false,
   children,
 }: {
   model: ExpenseModel
   actions: ExpenseActions | undefined
+  /** The add form is open, so the list is not read again until it closes. */
+  formOpen?: boolean
   children: ReactNode
 }) {
   const list = useRecommendationList()
+  useReloadOnReturn()
+  useHoldReloads(formOpen)
   // Matches the server found when a one-tap add was refused, until the next read brings its own.
   const [found, setFound] = useState<ReadonlyMap<string, PossibleMatch>>(new Map())
   const [seenLoads, setSeenLoads] = useState(list.loads)

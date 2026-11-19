@@ -10,7 +10,7 @@ The Dashboard opens with a "To review" card: the newest three open recommendatio
 all seven fields it would become (type, amount, description, category, account, date, budget month). It is absent when
 nothing is waiting, and the Dashboard tab carries the count (the Settings badge still means pending access requests).
 "See all" opens the rest in a sheet. The card and the sheet are one lazy chunk with its own line in the bundle budget; the
-list, the count and the undo window live in the main bundle, so the badge needs no download. The list is read when the app opens,
+list, the count and the undo window live in the main bundle, so the badge needs no download. The list is read when the app opens (and kept current, below),
 for every approved person; for someone who never made a key it comes back empty and the card's chunk is never fetched.
 
 What each payment becomes is worked out on the device, never stored ([`reviewFields.ts`](../src/ui/capture/reviewFields.ts)).
@@ -54,6 +54,24 @@ account.
 Without write access (the offline saved copy, a read-only source) the card shows the rows with no buttons. The phone's
 own merchant history reads the rows the app holds, which in the paged ledger mode are the months in view, so without a
 suggestion a merchant typed only earlier counts as new.
+
+## Keeping the list current
+
+The list is read by its own hook, apart from the expense dataset, so the dataset's refresh does not reach it. Three
+things read it again, all through `reloadRecommendations()` in [`recommendationsApi.ts`](../src/data/recommendationsApi.ts),
+the one call anything around the app (a native shell, say) makes to bring the list up to date:
+
+- **The person refreshes**: the header button and pull-to-refresh read the dataset and the list together.
+- **The app returns to the foreground**: `visibilitychange` to visible, or `pageshow` for a restored page
+  ([`useReloadOnReturn.ts`](../src/ui/capture/useReloadOnReturn.ts)). A return within 30 seconds of the last read is
+  ignored, so a quick switch between apps reads once.
+- **A push arrives while the app is open**: the service worker posts `{ type: "review-changed" }` to open windows
+  ([PUSH.md](PUSH.md)). There is no polling timer.
+
+While the add form or the queue sheet is open the read waits (`holdRecommendationReloads`) and happens once when the
+last of them closes, so a row is never pulled from under the person. A read that fails for one of these reasons keeps
+the rows on screen and shows nothing; Retry shows its failure. A read that was on its way when a payment was decided never
+brings that payment back, since the server may have answered it before it saw the decision.
 
 ## One payment, several pushes
 

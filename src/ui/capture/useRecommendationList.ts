@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { ReadBook } from './readBook'
 import { fetchRecommendations, onRecommendationsChanged, type RecommendationInfo } from '../../data/recommendationsApi'
 
 function messageOf(error: unknown): string {
@@ -26,38 +27,40 @@ export function useRecommendationList() {
   const [next, setNext] = useState<string | null>(null)
   const [openCount, setOpenCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [version, setVersion] = useState(0)
+  // `asked` is true for the first read and for Retry, so only a read the person is waiting on shows its failure; a
+  // refresh or a return to the app keeps the rows on screen, which offline are still the best the app has.
+  const [version, setVersion] = useState({ n: 0, asked: true })
   // How many reads have landed, so a caller can tell the rows are the server's latest.
   const [loads, setLoads] = useState(0)
-  // How many rows were showing, so a read brings back as many rather than only the first page.
-  const shown = useRef(0)
+  const [book] = useState(() => new ReadBook())
 
   useEffect(() => {
     let current = true
-    readLoaded(shown.current).then(
-      ({ rows, next: after, openCount: count }) => {
+    const since = book.begin()
+    readLoaded(book.held).then(
+      (read) => {
         if (!current) return
-        shown.current = rows.length
+        const { rows, next: after, openCount: count } = book.landed(read, since)
         setItems(rows)
         setNext(after)
         setOpenCount(count)
         setError(null)
         setLoads((n) => n + 1)
       },
-      (e: unknown) => current && setError(messageOf(e)),
+      (e: unknown) => current && version.asked && setError(messageOf(e)),
     )
     return () => {
       current = false
     }
-  }, [version])
+  }, [version, book])
 
-  useEffect(() => onRecommendationsChanged(() => setVersion((v) => v + 1)), [])
+  useEffect(() => onRecommendationsChanged(() => setVersion((v) => ({ n: v.n + 1, asked: false }))), [])
 
   const more = useCallback(async () => {
     if (!next) return
     try {
       const page = await fetchRecommendations(next)
-      shown.current += page.recommendations.length
+      book.grew(page)
       setItems((held) => [...(held ?? []), ...page.recommendations])
       setNext(page.next)
       setOpenCount(page.openCount)
@@ -65,13 +68,13 @@ export function useRecommendationList() {
     } catch (e) {
       setError(messageOf(e))
     }
-  }, [next])
+  }, [next, book])
 
   const remove = useCallback((id: string) => {
-    shown.current = Math.max(0, shown.current - 1)
+    book.decided(id)
     setItems((held) => (held ? held.filter((r) => r.id !== id) : held))
     setOpenCount((n) => Math.max(0, n - 1))
-  }, [])
+  }, [book])
 
   return {
     items,
@@ -83,7 +86,7 @@ export function useRecommendationList() {
     remove,
     retry: () => {
       setError(null)
-      setVersion((v) => v + 1)
+      setVersion((v) => ({ n: v.n + 1, asked: true }))
     },
   }
 }
