@@ -13,6 +13,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 | [CAPTURE-REVIEW.md](./CAPTURE-REVIEW.md) | Contributor | The Dashboard card that reviews captured payments: the fields, one tap, the duplicate check |
 | [CAPTURE-WORKER.md](./CAPTURE-WORKER.md) | Contributor | The capture Worker: refusals, what it stores, deploying it, reading its log |
 | [CAPTURE-SHAPES.md](./CAPTURE-SHAPES.md) | Contributor | How any push is read into a template and its numbers, without a bank or language word, source words, and what to do when a bank is read wrong |
+| [PUSH.md](./PUSH.md) | Contributor | Web push for captured payments: a device's subscription, the person's choice of a push per payment or a summary, and the routes |
 | [BEHAVIOR.md](./BEHAVIOR.md) | Contributor | How import, instalment plans, recurring suggestions and budget months behave |
 | [TESTING.md](./TESTING.md) | Contributor | Test layers, coverage gates, local test tooling |
 | [GOALS-MODEL.md](./GOALS-MODEL.md) | Contributor | The Goals projection engine and its assumptions |

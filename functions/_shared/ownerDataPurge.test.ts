@@ -47,6 +47,8 @@ describe('purgeOwnerData', () => {
       'DELETE FROM capture_counters WHERE owner = ?',
       'DELETE FROM capture_templates WHERE owner = ?',
       'DELETE FROM capture_merchants WHERE owner = ?',
+      'DELETE FROM push_subscriptions WHERE owner = ?',
+      'DELETE FROM push_settings WHERE owner = ?',
       'DELETE FROM recommendations WHERE owner = ?',
       'DELETE FROM accounts WHERE owner = ?',
       'DELETE FROM settings WHERE owner = ?',
@@ -198,11 +200,15 @@ describe('what a purge leaves behind', () => {
       db.prepare(
         "INSERT INTO capture_merchants (owner, key, amount_cents, description, votes, last_seen) VALUES (?, 'cafe', -1, 'Cafe', 1, 't')",
       ).run(owner)
+      db.prepare(
+        "INSERT INTO push_subscriptions (id, owner, endpoint, p256dh, auth, label, created_at) VALUES (?, ?, ?, 'k', 'a', 'Phone', 't')",
+      ).run(`p-${owner}`, owner, `https://web.push.apple.com/${owner}`)
+      db.prepare("INSERT INTO push_settings (owner, mode, time_zone) VALUES (?, 'daily', 'UTC')").run(owner)
     }
 
     await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
 
-    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'capture_templates', 'capture_merchants', 'recommendations']) {
+    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'capture_templates', 'capture_merchants', 'recommendations', 'push_subscriptions', 'push_settings']) {
       const left = db.prepare(`SELECT owner FROM ${table}`).all()
       expect(left, table).toEqual([{ owner: 'kept@example.com' }])
     }

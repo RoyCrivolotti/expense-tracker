@@ -34,6 +34,11 @@ export interface Env {
    * Shortcut holds, which is only placeholders and the Worker address. Anything else is treated as unset.
    */
   CAPTURE_SHORTCUT_URL?: string
+  /**
+   * The VAPID public key the app subscribes to web push with, base64url, the pair of the capture Worker's private key.
+   * A plain variable, not a secret: the browser is given it. Unset, the Settings card says notifications are not set up.
+   */
+  VAPID_PUBLIC_KEY?: string
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
