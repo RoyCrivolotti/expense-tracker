@@ -35,12 +35,13 @@ const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 /**
  * Writes that change nothing the dataset's readers see, so they leave its revision alone: replacing the token would
- * make every cached copy of the person's ledger miss for no reason. Capture keys, card links and un-ignoring a capture
- * template are such writes.
+ * make every cached copy of the person's ledger miss for no reason. Capture keys, card links, un-ignoring a capture
+ * template, and a device's push subscription or the person's choice of notifications are such writes.
  * Submitting a recommendation is not one of them, since it adds an expense.
  */
 function leavesDatasetAlone(path: string): boolean {
   if (path === '/api/capture-keys' || path.startsWith('/api/capture-keys/')) return true
+  if (path === '/api/push-subscriptions' || path.startsWith('/api/push-subscriptions/') || path === '/api/push-settings') return true
   if (path === '/api/capture-cards') return true
   if (/^\/api\/capture-templates\/[^/]+\/unignore$/.test(path)) return true
   return /^\/api\/recommendations\/[^/]+\/(dismiss|link)$/.test(path)

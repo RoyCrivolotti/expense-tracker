@@ -1,0 +1,77 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { MAX_PUSH_DEVICES, type NewPushSubscription, type PushRepository } from '../../../src/domain/ports/pushRepository'
+import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
+import { createD1PushRepository } from '../adapters/d1PushRepository'
+
+const ALICE = 'alice@example.com'
+const BOB = 'bob@example.com'
+const T0 = '2026-11-18T20:00:00.000Z'
+
+let repo: PushRepository
+
+beforeEach(() => {
+  repo = createD1PushRepository({ DB: sqliteD1(migratedDatabase()) })
+})
+
+const sub = (over: Partial<NewPushSubscription> = {}): NewPushSubscription => ({
+  id: 'id-1',
+  owner: ALICE,
+  endpoint: 'https://web.push.apple.com/one',
+  p256dh: `B${'A'.repeat(86)}`,
+  auth: 'a'.repeat(22),
+  label: 'iPhone',
+  createdAt: T0,
+  ...over,
+})
+
+describe('a device’s subscription', () => {
+  it('is stored once per endpoint: saving it again keeps the id and takes the new label and keys', async () => {
+    expect(await repo.saveSubscription(sub())).toBe('id-1')
+    expect(await repo.saveSubscription(sub({ id: 'id-2', label: 'My iPhone', auth: 'b'.repeat(22) }))).toBe('id-1')
+    expect(await repo.listDevices(ALICE)).toEqual([{ id: 'id-1', label: 'My iPhone', createdAt: T0, lastSentAt: null, lastStatus: null }])
+  })
+
+  it('moves to whoever is signed in on the device', async () => {
+    await repo.saveSubscription(sub())
+    expect(await repo.saveSubscription(sub({ id: 'id-2', owner: BOB }))).toBe('id-1')
+    expect(await repo.listDevices(ALICE)).toEqual([])
+    expect((await repo.listDevices(BOB)).map((d) => d.id)).toEqual(['id-1'])
+  })
+
+  it('is capped per person inside the insert, and a refresh never counts against the cap', async () => {
+    for (let i = 0; i < MAX_PUSH_DEVICES; i++) {
+      expect(await repo.saveSubscription(sub({ id: `id-${i}`, endpoint: `https://web.push.apple.com/${i}` }))).toBe(`id-${i}`)
+    }
+    expect(await repo.saveSubscription(sub({ id: 'id-x', endpoint: 'https://web.push.apple.com/x' }))).toBeNull()
+    expect(await repo.saveSubscription(sub({ id: 'id-y', endpoint: 'https://web.push.apple.com/3', label: 'Again' }))).toBe('id-3')
+    expect(await repo.saveSubscription(sub({ id: 'id-b', owner: BOB, endpoint: 'https://web.push.apple.com/b' }))).toBe('id-b')
+    expect(await repo.listDevices(ALICE)).toHaveLength(MAX_PUSH_DEVICES)
+  })
+
+  it('is deleted by its owner alone', async () => {
+    await repo.saveSubscription(sub())
+    expect(await repo.deleteSubscription(BOB, 'id-1')).toBe(false)
+    expect(await repo.deleteSubscription(ALICE, 'id-1')).toBe(true)
+    expect(await repo.deleteSubscription(ALICE, 'id-1')).toBe(false)
+    expect(await repo.listDevices(ALICE)).toEqual([])
+  })
+
+  it('lists newest first', async () => {
+    await repo.saveSubscription(sub({ id: 'old', endpoint: 'https://web.push.apple.com/old', createdAt: '2026-11-01T00:00:00.000Z' }))
+    await repo.saveSubscription(sub({ id: 'new', endpoint: 'https://web.push.apple.com/new', createdAt: '2026-11-02T00:00:00.000Z' }))
+    expect((await repo.listDevices(ALICE)).map((d) => d.id)).toEqual(['new', 'old'])
+  })
+})
+
+describe('a person’s choice', () => {
+  it('is absent until written, the default is kept out of the way of a choice already made, and a choice replaces it', async () => {
+    expect(await repo.getSettings(ALICE)).toBeNull()
+    await repo.saveSettings(ALICE, { mode: 'daily', timeZone: 'Europe/Madrid' }, true)
+    expect(await repo.getSettings(ALICE)).toEqual({ mode: 'daily', timeZone: 'Europe/Madrid', lastSummaryAt: null })
+    await repo.saveSettings(ALICE, { mode: 'each', timeZone: 'UTC' }, true)
+    expect(await repo.getSettings(ALICE)).toMatchObject({ mode: 'daily', timeZone: 'Europe/Madrid' })
+    await repo.saveSettings(ALICE, { mode: 'weekly', timeZone: 'America/New_York' }, false)
+    expect(await repo.getSettings(ALICE)).toMatchObject({ mode: 'weekly', timeZone: 'America/New_York' })
+    expect(await repo.getSettings(BOB)).toBeNull()
+  })
+})

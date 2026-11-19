@@ -19,7 +19,8 @@ import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 
 afterEach(() => vi.useRealTimers())
 
-const CAPTURE_MIGRATIONS = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql']
+/** Tables after 0039 that purging an owner deletes from. */
+const LATER_TABLES = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql', '0044_push_subscriptions.sql']
 const MIGRATION = readFileSync(join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'), 'utf8')
 
 /** The migration with one statement changed; throws if the change finds nothing to change, so a mutant cannot be a no-op. */
@@ -51,7 +52,7 @@ function parts(sql: string): { setup: string[]; backfill: string[] } {
 async function backfillIsWrong(sql: string): Promise<boolean> {
   for (const raced of [false, true]) {
     const sqlite = migratedDatabase('0038')
-    for (const file of CAPTURE_MIGRATIONS) applyMigration(sqlite, file) // the walks purge an owner, which deletes from the capture tables
+    for (const file of LATER_TABLES) applyMigration(sqlite, file) // the walks purge an owner, which deletes from those tables
     const k = await newKit(sqlite, sqliteD1(sqlite, newStats()), raced ? 22 : 21)
     await seedRows(k, 20)
     await walk(k, 100, false)
@@ -78,7 +79,7 @@ async function backfillIsWrong(sql: string): Promise<boolean> {
 async function triggersAreWrong(sql: string): Promise<boolean> {
   const kitFor = async (seed: number) => {
     const sqlite = migratedDatabase('0038')
-    for (const file of CAPTURE_MIGRATIONS) applyMigration(sqlite, file) // the walks purge an owner, which deletes from the capture tables
+    for (const file of LATER_TABLES) applyMigration(sqlite, file) // the walks purge an owner, which deletes from those tables
     applyMigrationSql(sqlite, sql)
     return newKit(sqlite, sqliteD1(sqlite, newStats()), seed)
   }
