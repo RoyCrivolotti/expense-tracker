@@ -89,6 +89,18 @@ describe('payments to review on the Dashboard', () => {
     expect(screen.queryByLabelText(/pending access requests/)).not.toBeInTheDocument()
   })
 
+  it('shows a payment that arrived while the app was open when the person refreshes', async () => {
+    vi.mocked(api.fetchRecommendations).mockResolvedValueOnce({ recommendations: [known], next: null, openCount: 1 })
+    open()
+    expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+
+    // A second payment is captured on the server; the app is not restarted.
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known, unknown], next: null, openCount: 2 })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh data' }))
+
+    expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
+  })
+
   it('adds a known merchant with one tap after the undo window, and the count drops', async () => {
     open()
     await screen.findByRole('heading', { name: '2 payments to review' })

@@ -98,3 +98,11 @@ export function onRecommendationsChanged(listener: () => void): () => void {
   changes.addEventListener('changed', listener)
   return () => changes.removeEventListener('changed', listener)
 }
+
+/**
+ * Reads the open list again, for a refresh the person asked for. The one call for any caller that wants the list to
+ * be current, so a shell around the app can make it too.
+ */
+export function reloadRecommendations(): void {
+  announceRecommendationsChanged()
+}
