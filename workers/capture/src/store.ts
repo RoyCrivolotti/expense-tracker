@@ -4,12 +4,14 @@ import type { PushReading, RawPush, Slot } from '../../../src/domain/capture'
 import type {
   CaptureCaps,
   CaptureEvent,
+  CaptureRecorded,
   CaptureKey,
   CaptureRepository,
   NewRecommendation,
   TemplateDecision,
 } from '../../../src/domain/ports/captureRepository'
 import { hmacHex } from './hmac'
+import type { CreatedPayment } from './notify'
 import { decideTemplate, mutes } from './templates'
 
 const MAX_MERCHANT = 200
@@ -93,6 +95,22 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
   }
 }
 
+/** The merchant goes in the notification only when the template knows where it sits: the whole bank text is not shown. */
+function createdPayment(owner: string, recommendationId: string, amount: { cents: number; currency: string }, read: Reading): CreatedPayment {
+  return { owner, recommendationId, amountCents: amount.cents, currency: amount.currency, merchant: read.merchantIsSpan ? read.merchantRaw : null }
+}
+
+/**
+ * What a recorded push became, once `onCreated` has been told of a payment that made a recommendation of its own: only
+ * that push is announced, since one that joins a recommendation tells the person nothing new. Null when nothing was
+ * stored.
+ */
+function announced(recorded: CaptureRecorded, onCreated: ((payment: CreatedPayment) => void) | undefined, payment: CreatedPayment): StoreResult | null {
+  if (!recorded) return null
+  if (recorded === 'created') onCreated?.(payment)
+  return recorded === 'grouped' ? 'grouped' : 'stored'
+}
+
 /**
  * Stores a push and the recommendation it becomes, in one batch, with its shape, its slots and the template it
  * belongs to. Only a push that shows an amount with a currency marker makes one, whatever its bank or words: the
@@ -110,6 +128,7 @@ export async function storePush(
   secret: string,
   now: Date,
   caps: CaptureCaps,
+  onCreated?: (payment: CreatedPayment) => void,
 ): Promise<StoreResult> {
   const body = cleanText(push.body)
   const reading = readPush(push.title, body)
@@ -159,6 +178,6 @@ export async function storePush(
     createdAt: receivedAt,
   }
   const recorded = await captures.recordCapture(event, recommendation, caps, read.decision)
-  if (recorded) return recorded === 'grouped' ? 'grouped' : 'stored'
-  return (await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited'
+  const payment = createdPayment(key.owner, recommendation.id, amount, read)
+  return announced(recorded, onCreated, payment) ?? ((await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited')
 }
