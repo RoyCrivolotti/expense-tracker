@@ -23,7 +23,7 @@ import {
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
-import { drawnValuesOf, steppedPoints } from './steppedPoints'
+import { drawnValuesOf, placeX, placesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
@@ -75,6 +75,12 @@ export interface ChartSeries {
   kind?: 'line' | 'area' | 'scatter' | 'band'
   dashed?: boolean
   width?: number
+  /**
+   * Where each value sits on the x axis, for a line or band that does not start on one of the axis'
+   * places (a scenario that starts part-way along it). Aligned to `values` (and the band's edges),
+   * increasing. Without it value i sits at place i.
+   */
+  xs?: number[]
   /** Paired lower/upper envelope values, and what each reached just before (as `preStep`). Used only when kind === 'band'. */
   band?: { lo: number[]; hi: number[]; loPre?: number[]; hiPre?: number[] }
   /** Sparse check-in actuals. Used only when kind === 'scatter'. */
@@ -156,7 +162,7 @@ function useGeometry(
     const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
     const n = Math.max(
       0,
-      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map((s) => s.values.length),
+      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf),
     )
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
@@ -230,10 +236,7 @@ function tooltipShows(
  * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
  * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
  */
-function tabIndexFor(
-  tooltipMode: 'full' | 'hidden',
-  onActiveIndexChange: Props['onActiveIndexChange'],
-): 0 | -1 {
+function tabIndexFor(tooltipMode: 'full' | 'hidden', onActiveIndexChange: Props['onActiveIndexChange']): 0 | -1 {
   return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
 }
 
@@ -358,7 +361,7 @@ export function LinearChart({
                 hi={s.band.hi}
                 loPre={s.band.loPre}
                 hiPre={s.band.hiPre}
-                xForIndex={geo.xForIndex}
+                xForIndex={placeX(s, geo.xForIndex)}
                 scaleY={geo.scaleY}
                 fillOpacity={0.18}
               />
@@ -374,7 +377,7 @@ export function LinearChart({
         {lineSeries.map((s) => (
           <path
             key={s.id}
-            d={linePath(steppedPoints(s.values, s.preStep, geo.xForIndex, geo.scaleY))}
+            d={linePath(steppedPoints(s.values, s.preStep, placeX(s, geo.xForIndex), geo.scaleY))}
             style={{ stroke: s.color }}
             fill="none"
             strokeWidth={s.width ?? 2}

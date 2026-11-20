@@ -1,6 +1,6 @@
 import { areaPath, linePath, spacedRefLines, type ScatterPoint } from './linearScale'
 import { refLineClass } from './refLineClass'
-import { steppedPoints } from './steppedPoints'
+import { steppedPoints, valueAtPlace } from './steppedPoints'
 import styles from './charts.module.css'
 
 export interface LifeEventMarker {
@@ -22,7 +22,7 @@ export function ChartFocusIndicator({
   yTop: number
   innerH: number
   scaleY: (v: number) => number
-  lineSeries: { id: string; color: string; values: number[] }[]
+  lineSeries: { id: string; color: string; values: number[]; preStep?: number[] | undefined; xs?: number[] | undefined }[]
 }) {
   if (active == null) return null
   return (
@@ -33,8 +33,8 @@ export function ChartFocusIndicator({
         className={styles.crosshair}
       />
       {lineSeries.flatMap((s) => {
-        const value = s.values[active]
-        // A line that has ended has no point at this year, and none is drawn at zero for it.
+        const value = valueAtPlace(s, active)
+        // A line that has ended, or not started, has no point at this year, and none is drawn at zero for it.
         if (value === undefined) return []
         return [
           <circle
