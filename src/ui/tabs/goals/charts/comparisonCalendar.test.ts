@@ -193,6 +193,14 @@ describe('the table agrees with the chart for a path started later', () => {
     })
   }
 
+  it('shows the copy under its source on invested and over it on net worth once it owns the house sooner', () => {
+    const rows = comparisonRows([source, copy], scenarioToDraft(source), EU_MONEY_FORMAT, I, false, 10)
+    // The source buys in January 2034; the copy on its own anniversary before that, in July 2033.
+    expect(rows.map((r) => r.house)).toEqual(['Jan 2034', 'Jul 2033'])
+    expect(rows[1]!.investedCents!).toBeLessThanOrEqual(rows[0]!.investedCents!)
+    expect(rows[1]!.netWorthCents!).toBeGreaterThan(rows[0]!.netWorthCents!)
+  })
+
   it('reads the plan from today on the same calendar, from the day of its check-in', () => {
     const later = { ...copy, id: 3 }
     const fromToday = planFromToday(source, { investedCents: 9_000_000, date: '2027-03-05' }, I)!

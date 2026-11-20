@@ -2,7 +2,7 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import { currencyWord, dateAtYears, type MoneyFormat, type PlanFromToday } from '../../../../engine'
 import { formatCheckinDate } from '../checkinDate'
 import { planMoneyLabel } from '../planMoneyLabel'
-import { monthOf } from './comparisonCalendar'
+import { monthOf, offsetOf } from './comparisonCalendar'
 import type { ComparisonRow } from './comparisonRows'
 
 /** Where net worth and invested are read, for the hint. */
@@ -46,12 +46,21 @@ export function sameDayHint({ rows, scenarios, draft, includeDraft, year, fromTo
   return `Net worth and invested are${readAt(rows, year)}, ${figuresMoney(starts, format)}; FI and the house purchase are counted in years from the plan start; ${monthlyPart(rows)}${restart}`
 }
 
-/** The hint when scenarios start on different days and every row is read on one calendar. */
-export function calendarHint({ rows, year, fromToday, format }: HintInput, origin: string): string {
+/**
+ * The hint when scenarios start on different days and every row is read on one calendar. A path that starts
+ * later buys its house on an anniversary of its own start, which can come months before the same purchase in
+ * the path it was copied from; owning it sooner raises its net worth, so the table says why rather than let it
+ * read as the better plan.
+ */
+export function calendarHint({ rows, scenarios, draft, year, fromToday, format }: HintInput, origin: string): string {
   const atYear = rows[0]?.atYear ?? 0
   const rest = rows[0]?.everyReaches === false ? ', the last year shown' : ', the last year every scenario reaches'
   const when = `${monthOf(dateAtYears(origin, atYear))}${year === null ? rest : ''}`
   const ended = rows.some((r) => r.ended) ? ', or a path’s last figure when it ends sooner' : ''
   const restart = fromToday ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}.` : ''
-  return `Net worth and invested are on the same date for every path, ${when}, in ${planMoneyLabel(origin, format)}${ended}; FI and the house purchase are given as a month; ${monthlyPart(rows)}${restart}`
+  const houseAhead = [...scenarios, draft].some((s) => (s.housePurchaseYear ?? 0) > 0 && offsetOf(s, origin) > 0)
+  const house = houseAhead
+    ? ' A path that starts later buys its house on an anniversary of its own start, so it can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like.'
+    : ''
+  return `Net worth and invested are on the same date for every path, ${when}, in ${planMoneyLabel(origin, format)}${ended}; FI and the house purchase are given as a month; ${monthlyPart(rows)}${restart}${house}`
 }

@@ -204,6 +204,15 @@ describe('ScenarioComparison', () => {
     expect(screen.getAllByText(/\(ended 2032\)$/)).toHaveLength(2)
   })
 
+  it('says why a later path can show more net worth only when one has a house still to buy', () => {
+    const early = makeScenario({ id: 1, name: 'Early', planStartDate: '2024-01-01', housePurchaseYear: 6 })
+    const why = /A path that starts later buys its house on an anniversary of its own start, so it can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./
+    const { rerender } = render(<ScenarioComparison scenarios={[early]} draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 5 }} />)
+    expect(screen.getByText(why)).toBeInTheDocument()
+    rerender(<ScenarioComparison scenarios={[early]} draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 0 }} />)
+    expect(screen.queryByText(why)).not.toBeInTheDocument()
+  })
+
   it('names the check-in of the plan from today on the shared calendar, without counting its years apart', () => {
     const plan = makeScenario({ id: 2, name: 'Path B', planStartDate: '2024-01-01', isActive: true })
     render(
