@@ -1,7 +1,7 @@
 /**
  * A phone sending bank pushes through the real capture Worker into the database a test's routes read, so a test can
  * follow a push from arrival to decision. Each push is a minute after the last on 3 November 2026, so none is taken for
- * a replay, and `now` must be within the Worker's two days of that.
+ * a replay, and `now` must be within the Worker's week of that.
  */
 import { createD1AccessRepository } from '../adapters/d1AccessRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'

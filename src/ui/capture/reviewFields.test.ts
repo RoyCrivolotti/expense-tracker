@@ -217,7 +217,13 @@ describe('seedOf', () => {
   it('leaves out what is not known: no euros from another currency, no type for own money, no description with no merchant', () => {
     const seed = seedOf(view({ merchantRaw: null, currency: 'USD', suggestedType: null, accountId: null }))
 
-    expect(seed).toEqual({ recommendationId: '0b0c0d0e-1111-4222-8333-444455556661', date: '2026-11-10', budgetMonth: '2026-11' })
+    expect(seed).toEqual({ recommendationId: '0b0c0d0e-1111-4222-8333-444455556661', date: '2026-11-10', budgetMonth: '2026-11', categoryId: 0 })
+  })
+
+  it('asks for the category with the empty choice when there is no suggestion, so the form cannot fall back on its first one', () => {
+    expect(seedOf(view({ merchantRaw: 'BRAND NEW PLACE' })).categoryId).toBe(0)
+    expect(seedOf(view({ merchantRaw: 'ARCHIVE SHOP' })).categoryId).toBe(0)
+    expect(seedOf(view()).categoryId).toBe(1)
   })
 
   it('starts a merchant never typed from the bank text without its store number, and a known one from how it was typed', () => {

@@ -285,6 +285,36 @@ async function updateFromDeployed(browser, engine, tmp) {
   }
 }
 
+/**
+ * The browser's own update check finds the new worker before the page's registration has come back, as it does on a
+ * launch when `register()` is slow: the worker installs and takes the page over without the page being told, so the
+ * reload that hangs off Workbox's `activated` event never comes. `register()` is answered late here, in this page only,
+ * to make that order certain instead of a race.
+ */
+async function updateBeforeRegistration(browser, engine, tmp) {
+  const where = `${engine}, an update found before the page registers`
+  const site = await startSite({ root: DIST })
+  const { context, page } = await installPrevious(browser, site, join(tmp, `previous-early-${engine}`))
+  const loads = countLoads(page)
+  try {
+    await context.addInitScript((delay) => {
+      const container = navigator.serviceWorker
+      const register = container.register.bind(container)
+      container.register = (...args) => register(...args).then((registration) => new Promise((resolve) => setTimeout(() => resolve(registration), delay)))
+    }, 1_500)
+    site.state.root = DIST
+    const from = loads.count
+    await visit(page, site.origin, '/')
+    await checkForUpdate(page)
+    const landed = await updateLanded(page, loads, from, 2)
+    check(where, 'the page reloads into the new worker', landed.reloaded, `${loads.count - from} documents loaded`)
+    check(where, 'the new worker replaces it: shell precached, its own entries gone', landed.replaced, landed.paths.join(', '))
+  } finally {
+    await context.close()
+    await site.close()
+  }
+}
+
 /** A deploy whose shell cannot be fetched leaves the worker that is installed in place, and the next deploy installs. */
 async function updateThatCannotInstall(browser, engine, tmp) {
   const where = `${engine}, an update that cannot install`
@@ -370,6 +400,7 @@ try {
       await savedCopyWithNoNetwork(browser, engine, false)
       await savedCopyWithNoNetwork(browser, engine, true)
       await updateFromDeployed(browser, engine, tmp)
+      await updateBeforeRegistration(browser, engine, tmp)
       await updateThatCannotInstall(browser, engine, tmp)
       await behindAccess(browser, engine)
     } finally {

@@ -1124,6 +1124,34 @@ describe('TransactionModal, the account of a card still to be asked about', () =
 })
 
 
+describe('TransactionModal, the category of a payment with none suggested', () => {
+  it('shows Pick a category, not the first category, and the ordinary add form still starts on its default', () => {
+    const asked = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 1, categoryId: 0 } })
+    expect(singleForm(asked.container).getByLabelText('Category')).toHaveDisplayValue('Pick a category')
+    asked.unmount()
+
+    const ordinary = renderModal()
+    expect(singleForm(ordinary.container).getByLabelText('Category')).not.toHaveDisplayValue('Pick a category')
+  })
+
+  it('refuses to add the payment until a category is chosen, then adds it under that one', async () => {
+    const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
+    const { container } = renderModal({ seed: { recommendationId: 'r', amountCents: 100, description: 'Cab', accountId: 1, categoryId: 0, type: 'expense' }, actions: { submitRecommendation } })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    expect(await screen.findByText('Choose a category')).toBeInTheDocument()
+    expect(submitRecommendation).not.toHaveBeenCalled()
+
+    const select = singleForm(container).getByLabelText<HTMLSelectElement>('Category')
+    const chosen = Number(select.options[1]!.value)
+    fireEvent.change(select, { target: { value: String(chosen) } })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    await waitFor(() => expect(submitRecommendation).toHaveBeenCalledTimes(1))
+    expect(submitRecommendation).toHaveBeenCalledWith('r', expect.objectContaining({ categoryId: chosen }), false)
+    expect(chosen).toBeGreaterThan(0)
+  })
+})
+
 describe('TransactionModal, a captured payment a typed row may duplicate', () => {
   const REC = '0b0c0d0e-1111-4222-8333-444455556677'
   const MATCH = { transactionId: 41, description: 'Cafe at the till', date: '2026-11-09' }

@@ -145,7 +145,9 @@ export function seedOf(view: ReviewView, remember?: SeedCard['remember']): Trans
     ...(view.description ? { description: view.description } : {}),
     // 0 is the form's "nothing chosen" sentinel: a card to ask about starts with no account rather than a default.
     ...(view.accountId !== null ? { accountId: view.accountId } : view.askCard && remember ? { accountId: 0 } : {}),
-    ...(view.categoryId !== null ? { categoryId: view.categoryId } : {}),
+    // Same sentinel for the category: without a suggestion the form would open on its first category, and one tap
+    // would file the payment under a category nobody chose.
+    categoryId: view.categoryId ?? 0,
     ...noticeOf(view),
     ...(view.rec.possibleMatch ? { possibleMatch: view.rec.possibleMatch } : {}),
     ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, unanswered: `Choose the account for the card ending ${view.askCard.digits} first`, remember } } : {}),

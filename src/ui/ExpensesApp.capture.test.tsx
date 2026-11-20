@@ -67,6 +67,12 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 
+/** Picks the first real category: a payment with no suggestion opens on "Pick a category". */
+function chooseCategory(form: HTMLElement) {
+  const select = within(form).getByLabelText<HTMLSelectElement>('Category')
+  fireEvent.change(select, { target: { value: select.options[1]!.value } })
+}
+
 describe('payments to review on the Dashboard', () => {
   it('shows no card and no badge when nothing is open', async () => {
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [], next: null, openCount: 0 })
@@ -190,6 +196,8 @@ describe('payments to review on the Dashboard', () => {
     expect(within(form).getByLabelText(/amount/i)).toHaveValue('8,00')
     expect(within(form).getByLabelText(/^description$/i)).toHaveValue('BRAND NEW PLACE')
     fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
+    expect(within(form).getByLabelText('Category')).toHaveDisplayValue('Pick a category')
+    chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' }), false))
@@ -208,6 +216,11 @@ describe('payments to review on the Dashboard', () => {
     let form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByRole('button', { name: 'Add and next (1 left)' })).toBeInTheDocument()
     fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
+    // Nothing was suggested for the category, so nothing is added under one nobody picked.
+    fireEvent.click(within(form).getByRole('button', { name: 'Add and next (1 left)' }))
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Choose a category')
+    expect(api.submitRecommendation).not.toHaveBeenCalled()
+    chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add and next (1 left)' }))
 
     await waitFor(() => expect(within(screen.getByRole('dialog').querySelector('form')!).getByLabelText(/amount/i)).toHaveValue('4,50'))
@@ -229,6 +242,7 @@ describe('payments to review on the Dashboard', () => {
 
     fireEvent.change(await screen.findByLabelText('Account for the card ending 4821'), { target: { value: '2' } })
     expect(await screen.findByRole('option', { name: 'Travel Credit (also card 1234)' })).toBeInTheDocument()
+    chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 }), false))

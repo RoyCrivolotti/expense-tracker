@@ -609,11 +609,23 @@ describe('the log line', () => {
     ['a code and no other number', { body: 'Your code is 482913' }, 'code-like'],
     ['a code beside a number with no marker', { body: 'Code 482913, valid 5 minutes' }, 'no-amount'],
     ['a Date that cannot be read', { date: 'tomorrow' }, 'bad-date'],
-    ['a Date three days from the clock', { date: '2026-11-06T09:41:07+01:00' }, 'clock-skew'],
+    ['a Date three days ahead of the clock', { date: '2026-11-06T09:41:07+01:00' }, 'clock-skew'],
+    ['a Date a week and a second old', { date: '2026-10-27T09:44:59+01:00' }, 'too-old'],
   ])('says a push with %s was dropped, and why', async (_name, over, reason) => {
     await sendLogged(request({ body: { ...PURCHASE, ...over } }))
     expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason, status: 200, source: 'iberia' }))
     expect(count('capture_events')).toBe(0)
+  })
+
+  it('stores a push dated exactly a week before it arrives, and answers 200 to one a second older, storing nothing', async () => {
+    // NOW is 08:45:00Z on 3 November, so a week before is 08:45:00Z on 27 October.
+    await sendLogged(request({ body: { ...PURCHASE, date: '2026-10-27T09:45:00+01:00' } }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'stored', status: 200 }))
+    expect(count('recommendations')).toBe(1)
+
+    await sendLogged(request({ body: { ...PURCHASE, date: '2026-10-27T09:44:59+01:00' } }))
+    expect(last()).toEqual(expect.objectContaining({ outcome: 'dropped', reason: 'too-old', status: 200 }))
+    expect(count('recommendations')).toBe(1)
   })
 
   it('says a replayed push was a replay', async () => {

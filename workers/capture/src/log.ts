@@ -20,9 +20,10 @@ export type CaptureReason =
   | 'bad-body'
   | 'too-many-sources'
   | 'daily-cap'
-  /** The push's Date cannot be read, or is more than two days from the server's clock: counted as unread. */
+  /** The push's Date cannot be read, is more than a week old, or is dated more than two days ahead of the server's clock: counted as unread. */
   | 'bad-date'
   | 'clock-skew'
+  | 'too-old'
   /** The push shows no amount with a currency marker: counted as unread, nothing stored. */
   | 'no-amount'
   /** The same, and all it holds is a code with no other number, which is what a one-time code looks like. */

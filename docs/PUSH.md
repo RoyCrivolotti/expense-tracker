@@ -64,7 +64,9 @@ capture bundle budget). Each device is turned on from that device, and the card 
   browser under the person's own key (`expense:push-device:<owner>`), so the card knows which device is this one.
 - **On**: every device with its name, when it was saved, when something was last sent and whether it was delivered, this
   one marked; "Turn off" unsubscribes this device and forgets its row, or forgets another device's row; and the choice,
-  three radio rows with the zone under them.
+  three radio rows with the zone under them. Turning a device on does not choose "For every payment": a person's first
+  device saves the default, the daily summary at 20:00, so nothing arrives per payment until they pick that row. A line
+  under the rows says what the chosen mode gives and, for the summaries, where to ask for every payment.
 
 When the card opens holding a subscription the server does not know: with no row remembered in the browser (a fresh
 sign-in, cleared storage) it is saved; with a remembered row that is gone it was turned off from another device, so the
@@ -193,7 +195,8 @@ staging private key then cannot sign for production.
 4. On each Pages project (staging, then production) set `VAPID_PUBLIC_KEY` to the same public value as a plain variable,
    so `GET /api/push-config` can hand it to the browser. The Pages deploy must follow it, since variables apply to new
    deployments.
-5. Install the app to the Home Screen on a phone, turn notifications on in Settings, choose "For every payment", and
+5. Install the app to the Home Screen on a phone and turn notifications on in Settings. Choose "For every payment"
+   there: turning on leaves the daily summary at 20:00 chosen, which sends nothing until the evening. Then
    send one test payment by hand to the staging Worker, with a capture key of your own from Settings. The values are
    invented; the body needs `app`, `title`, `body` and an ISO-8601 `date`:
 

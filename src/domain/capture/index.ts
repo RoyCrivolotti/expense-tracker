@@ -1,7 +1,7 @@
 export { CAPTURE_KEY_ID_PATTERN, CAPTURE_KEY_PATTERN, hashSecret, mintCaptureKey, parseCaptureKey, secretMatches } from './captureKey'
 export type { CaptureKeyParts, MintedCaptureKey } from './captureKey'
 export { currencyMarker } from './currency'
-export { MAX_CLOCK_SKEW_MS, isoWithOffset, parsePushDate, withinClockSkew } from './date'
+export { MAX_CLOCK_SKEW_MS, MAX_PUSH_AGE_MS, isoWithOffset, parsePushDate, pushTimeVerdict } from './date'
 export type { PushInstant } from './date'
 export { GROUP_WINDOW_MS, sameMovement } from './grouping'
 export type { GroupablePush } from './grouping'

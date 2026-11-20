@@ -137,6 +137,27 @@ describe('turning this device on', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Turn on for this device' })).not.toBeInTheDocument())
   })
 
+  it('says right after turning on that the person gets the daily summary, and where to ask for every payment', async () => {
+    browser({ permission: 'default', granted: 'granted' })
+    subscribe.mockResolvedValue(new FakeSubscription('https://web.push.apple.com/new'))
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on for this device' }))
+    listed([phone], { mode: 'daily', timeZone: 'Europe/Madrid' })
+    expect(await screen.findByText(/You get one summary a day, at 20:00\. Choose “For every payment”/)).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'For every payment, as it arrives' })).not.toBeChecked()
+  })
+
+  it('describes each mode in the words of the choice', async () => {
+    browser({ permission: 'granted', subscription: new FakeSubscription('https://web.push.apple.com/held') })
+    listed([phone], { mode: 'each', timeZone: 'Europe/Madrid' })
+    const each = show()
+    expect(await screen.findByText('You get a notification for each payment as it arrives.')).toBeInTheDocument()
+    each.unmount()
+    listed([phone], { mode: 'weekly', timeZone: 'Europe/Madrid' })
+    show()
+    expect(await screen.findByText(/You get one summary a week, on Monday at 20:00\./)).toBeInTheDocument()
+  })
+
   it('takes a refusal of the prompt as the device’s answer, and a dismissed prompt as no answer yet', async () => {
     const b = browser({ permission: 'default', granted: 'denied' })
     show()

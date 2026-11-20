@@ -19,7 +19,7 @@ merchant is. Everything else is counted per source and day as unread, and nothin
 - **No amount with a currency marker**, such as a "bills paid" push with no total, or two marked amounts that differ (a
   charge and a balance), which the reader cannot tell apart.
 - **Only a code**: no amount and a 4 to 8 digit number, which is what a one-time code looks like.
-- **A Date it cannot trust**: unreadable, or more than two days from the server's clock.
+- **A Date it cannot trust**: unreadable, more than a week older than the server's clock (a phone can hold a notification back, so a late one is still taken), or more than two days ahead of it.
 - **A muted wording**: three dismissals in a row on a wording never added.
 
 The Worker's log says which of these each push was ([CAPTURE-WORKER.md](CAPTURE-WORKER.md)).
@@ -117,7 +117,7 @@ the row, the template of the push behind it learns from it (below).
 
 A stored push becomes one `capture_events` row and one open recommendation. What it keeps of the push's text follows
 one rule. The cleaned body (`body`, at most 500 characters) is blanked when the person decides the recommendation
-(submit, dismiss or link, in the same batch as the decision) or 30 days after the push arrived, whichever comes first.
+(submit, dismiss or link, in the same batch as the decision) or 30 days after the push arrived (the arrival, not the Date it carries, so a late push keeps its text as long as any other), whichever comes first.
 Only a push with a currency-marked amount is stored at all, so a push that holds nothing but a code keeps no text,
 without the app knowing what a code push says. A push that shows a code beside a currency amount is stored like any
 other, and its body, code included, stays until it is decided or for 30 days. The event's copy of the description (`merchant_raw`, which for a first push of a wording is the whole body)
