@@ -120,6 +120,8 @@ interface Props {
   annotations?: ChartAnnotations | undefined
   /** Where lines that start part-way along the axis begin; see `ChartStartMarks`. */
   startMarks?: StartMark[] | undefined
+  /** How many of the axis' places to show at least, where it runs on past every line drawn. */
+  places?: number | undefined
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
@@ -160,13 +162,14 @@ function useGeometry(
   yDomainMax: number | undefined,
   fitDomain: boolean | undefined,
   padTopProp: number | undefined,
+  places = 0,
 ) {
   return useMemo(() => {
     // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
     // path a negative height and draw nothing, and a negative one pushes the plot off the top.
     const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
     const n = Math.max(
-      0,
+      places,
       ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf),
     )
     const innerH = height - padTop - PAD.bottom
@@ -202,7 +205,7 @@ function useGeometry(
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp])
+  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp, places])
 }
 
 /**
@@ -241,6 +244,7 @@ export function LinearChart({
   refHighlight,
   annotations,
   startMarks,
+  places,
   markerYears = [],
   lifeEventMarkers = [],
   labeledMarkers,
@@ -264,7 +268,7 @@ export function LinearChart({
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
   const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
-  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop)
+  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop, places)
   const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)

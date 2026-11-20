@@ -11,6 +11,8 @@ export interface ScenarioLegendBreakdown {
   label: string
   color: string
   dashed?: boolean
+  /** The money its figures are in, where that is the scenario's own and not the chart's ("2027 euros"). */
+  money?: string
   breakdown: PurchaseYearBreakdown
 }
 
@@ -18,6 +20,7 @@ function BreakdownRows({
   label,
   color,
   dashed,
+  money,
   breakdown,
   format,
 }: ScenarioLegendBreakdown & { format: ReturnType<typeof useMoneyFormat> }) {
@@ -50,7 +53,7 @@ function BreakdownRows({
     <div className={styles.breakdown}>
       <div className={styles.breakdownHeader}>
         <SeriesSwatch color={color} {...(dashed ? { dashed: true } : {})} />
-        <p className={styles.breakdownTitle}>{label}</p>
+        <p className={styles.breakdownTitle}>{money ? `${label}, in ${money}` : label}</p>
       </div>
       <ul className={styles.breakdownList}>
         {rows.map((row) => (

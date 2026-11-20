@@ -15,8 +15,10 @@ export function inflateSeries(
   years: number[],
   inflationRate: number,
 ): ChartSeries[] {
-  const inflate = (values: number[]) => values.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate)))
-  return series.map((s) => ({
+  return series.map((s) => {
+    // A series placed between the axis' places is inflated by the year each value sits at.
+    const inflate = (values: number[]) => values.map((v, i) => Math.round(v * factor(s.xs?.[i] ?? years[i] ?? i, inflationRate)))
+    return {
     ...s,
     values: inflate(s.values),
     ...(s.preStep ? { preStep: inflate(s.preStep) } : {}),
@@ -30,7 +32,8 @@ export function inflateSeries(
           },
         }
       : {}),
-  }))
+    }
+  })
 }
 
 /**

@@ -1,23 +1,25 @@
 import { render, renderHook, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makeActions } from '../../../testing/makeActions'
-import { makeDataset, makeScenario } from '../../../testing/factories'
+import { makeDataset, makeScenario, makeWealthCheckin } from '../../../testing/factories'
 import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 import { PlanHero } from './PlanHero'
 import { NARROW_MQ } from './useGoalsNarrow'
 import { useScenarioEditor } from './useScenarioEditor'
 
 const hero = vi.hoisted(
-  (): { todayIndex: number | undefined; headerAside: unknown; displaySwitch: unknown; footer: unknown } => ({
+  (): { todayIndex: number | undefined; headerAside: unknown; displaySwitch: unknown; footer: unknown; extraSeries: unknown } => ({
     todayIndex: undefined,
     headerAside: undefined,
     displaySwitch: undefined,
     footer: undefined,
+    extraSeries: undefined,
   }),
 )
 vi.mock('./charts/NetWorthChart', () => ({
-  NetWorthChart: (props: { todayIndex?: number; headerAside?: unknown; displaySwitch?: unknown; footer?: unknown }) => {
+  NetWorthChart: (props: { todayIndex?: number; headerAside?: unknown; displaySwitch?: unknown; footer?: unknown; extraSeries?: unknown }) => {
     hero.todayIndex = props.todayIndex
+    hero.extraSeries = props.extraSeries
     hero.headerAside = props.headerAside
     hero.displaySwitch = props.displaySwitch
     hero.footer = props.footer
@@ -155,5 +157,39 @@ describe('PlanHero shortfall note', () => {
     installFakeMatchMedia((q) => q === NARROW_MQ)
     renderFooter()
     expect(screen.getByRole('status').textContent).toContain('The house needs more than the portfolio holds in year 5.')
+  })
+})
+
+describe('PlanHero with a scenario that starts before the loaded one', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    installFakeMatchMedia()
+  })
+
+  function renderWith(mode: 'purchasing-power' | 'nominal', earlierStart: string) {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2028-07-01T12:00:00Z'))
+    const plan = makeScenario({ id: 1, name: 'Later plan', sortOrder: 0, isActive: true, planStartDate: '2027-07-01' })
+    const earlier = makeScenario({ id: 2, name: 'Earlier', sortOrder: 1, planStartDate: earlierStart })
+    const dataset = makeDataset({ goalScenarios: [plan, earlier] })
+    const { result } = renderHook(() => useScenarioEditor(dataset, makeActions(), 0))
+    render(
+      <PlanHero
+        scenarios={[plan, earlier]}
+        editor={result.current}
+        milestones={[]}
+        checkins={[makeWealthCheckin({ checkinDate: '2028-01-01' })]}
+        accounts={[]}
+        fromToday={null}
+        display={{ mode, onModeChange: vi.fn(), assumedInflation: 0, preview: null, onPreview: vi.fn(), onOpenSetting: undefined }}
+      />,
+    )
+    render(<>{hero.footer}</>)
+  }
+
+  it('places today and the check-ins from the earliest start, where the chart\u2019s axis begins', () => {
+    renderWith('purchasing-power', '2026-01-01')
+    expect(hero.todayIndex).toBeCloseTo(2.5, 2)
+    expect((hero.extraSeries as { points: { xIndex: number }[] }[])[0]?.points[0]?.xIndex).toBeCloseTo(2, 2)
   })
 })

@@ -6,13 +6,17 @@ import { onAxis, planFromTodayAt, projectNetWorth, scenarioToParams, type PlanFr
  * start) by the inflation between, so each value is brought back before it is drawn; the Nominal view
  * then inflates it once, from the start, and lands on the euros the account shows on each date. The
  * rate is the one the chart is projected at, which is a previewed one while it is previewed, and the
- * restart is counted at it too, so a preview of 6% draws what a saved 6% draws. A payment or event
+ * restart is counted at it too, so a preview of 6% draws what a saved 6% draws. Where another scenario
+ * starts before the plan the axis starts on that one's day, and the line moves along by the plan's own
+ * place on it and is brought back by the inflation over that too. A payment or event
  * steps the line on its anniversary: up to what the year made, then straight to what it left.
  */
 export function fromTodayPoints(
   fromToday: PlanFromToday,
   inflationRate: number,
+  /** Where the plan itself starts on the chart's axis, when another scenario starts before it. */
+  planOffsetYears = 0,
 ): { xIndex: number; value: number }[] {
   const at = planFromTodayAt(fromToday, inflationRate)
-  return onAxis(projectNetWorth(scenarioToParams(at.scenario, inflationRate)), at.offsetYears, inflationRate)
+  return onAxis(projectNetWorth(scenarioToParams(at.scenario, inflationRate)), planOffsetYears + at.offsetYears, inflationRate)
 }

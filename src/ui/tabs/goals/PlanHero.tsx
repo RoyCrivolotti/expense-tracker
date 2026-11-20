@@ -5,6 +5,7 @@ import type { ChartSeries } from '../../charts/LinearChart'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { todayIso } from '../../components/transactionFormState'
 import { NetWorthChart } from './charts/NetWorthChart'
+import { heroAxis } from './charts/heroSeries'
 import type { HeroLegendStore } from './charts/heroLegendStore'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
@@ -47,6 +48,32 @@ interface PlanHeroProps {
   legendStore?: HeroLegendStore | undefined
 }
 
+/**
+ * Actual invested values from check-ins, as points on the hero chart: placed from the chart's origin,
+ * the earliest start of any scenario, and shown while a scenario with a start is loaded.
+ */
+function useCheckinSeries(
+  activeScenario: GoalScenario | null,
+  origin: string | null,
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+): ChartSeries | null {
+  return useMemo<ChartSeries | null>(() => {
+    if (!activeScenario?.planStartDate || !origin) return null
+    const points = checkins
+      .map((c) => {
+        const offset = yearOffsetFromDate(origin, c.checkinDate)
+        if (offset === null) return null
+        const value = checkinInvestedCents(c, accounts)
+        return { xIndex: offset, value }
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null)
+    if (points.length === 0) return null
+    // Neutral, not a scenario's colour: amber was Path C's, and nothing said what the dots were.
+    return { id: 'actuals-overlay', color: 'var(--color-text)', values: [], kind: 'scatter', points }
+  }, [activeScenario, origin, checkins, accounts])
+}
+
 /** The projection of every scenario, with the draft's narrative and the value display under it. */
 export function PlanHero({
   scenarios,
@@ -59,22 +86,11 @@ export function PlanHero({
   legendStore,
 }: PlanHeroProps) {
   const { activeScenario, deferredDraft } = editor
+  // The chart's axis starts on the earliest start of any scenario, so the check-ins and today are
+  // placed from there: where every scenario starts on one day that is the loaded scenario's start.
+  const origin = useMemo(() => heroAxis(scenarios, deferredDraft).origin, [scenarios, deferredDraft])
 
-  // Scatter points: actual invested values from check-ins plotted on the hero chart.
-  const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
-    if (!activeScenario?.planStartDate) return null
-    const points = checkins
-      .map((c) => {
-        const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
-        if (offset === null) return null
-        const value = checkinInvestedCents(c, accounts)
-        return { xIndex: offset, value }
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null)
-    if (points.length === 0) return null
-    // Neutral, not a scenario's colour: amber was Path C's, and nothing said what the dots were.
-    return { id: 'actuals-overlay', color: 'var(--color-text)', values: [], kind: 'scatter', points }
-  }, [activeScenario, checkins, accounts])
+  const checkinExtraSeries = useCheckinSeries(activeScenario, origin, checkins, accounts)
 
   // A new array or element on every render would make the memoised chart redraw each time the
   // editor's state changes (the discard question, a save in flight), none of which it draws.
@@ -126,10 +142,10 @@ export function PlanHero({
   }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting])
 
   const heroTodayIndex = useMemo(() => {
-    if (!activeScenario?.planStartDate) return undefined
-    const offset = yearOffsetFromDate(activeScenario.planStartDate, todayIso())
+    if (!activeScenario?.planStartDate || !origin) return undefined
+    const offset = yearOffsetFromDate(origin, todayIso())
     return offset !== null && offset >= 0 ? offset : undefined
-  }, [activeScenario])
+  }, [activeScenario, origin])
 
   return (
     <NetWorthChart
