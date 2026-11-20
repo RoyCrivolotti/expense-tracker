@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, type RefObject } from 'react'
 import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
+import { describedBy, tabIndexFor, tooltipShows } from './linearChartKeys'
+import { StepKeysHint } from './StepKeysHint'
 import { useElementSize } from '../hooks/useElementSize'
 import {
   ChartGrid,
@@ -221,38 +223,6 @@ function maxTicksFor(innerH: number): number {
 
 function domainTuple(d: { min: number; max: number }): [number, number] {
   return [d.min, d.max]
-}
-
-/** A tooltip shows only in 'full' mode: 'hidden' tracks focus for a caller's own readout instead. */
-function tooltipShows(
-  tip: { title: string; lines: TooltipLine[] } | null,
-  tooltipMode: 'full' | 'hidden',
-): boolean {
-  return tip != null && tooltipMode === 'full'
-}
-
-/**
- * Arrow keys step a marker, so a chart is only worth a Tab stop when something shows where it
- * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
- * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
- */
-function tabIndexFor(tooltipMode: 'full' | 'hidden', onActiveIndexChange: Props['onActiveIndexChange']): 0 | -1 {
-  return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
-}
-
-/** What names the text that says how to use a chart from the keyboard, for the chart that can be. */
-function describedBy(steppable: boolean, id: string): { 'aria-describedby'?: string } {
-  return steppable ? { 'aria-describedby': id } : {}
-}
-
-/** Said to a screen reader as the description of a chart that takes focus; nothing on the chart says it. */
-function StepKeysHint({ id, show }: { id: string; show: boolean }) {
-  if (!show) return null
-  return (
-    <span id={id} className={styles.srOnly}>
-      Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.
-    </span>
-  )
 }
 
 export function LinearChart({
