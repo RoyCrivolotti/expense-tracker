@@ -9,8 +9,16 @@ export interface PushInstant {
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
 
-/** The server's clock may differ from the phone's; further apart than this is not a real push. */
-export const MAX_CLOCK_SKEW_MS = 2 * 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * How old a push may be when the server receives it. A phone can hold a notification back (offline, an automation that
+ * ran late), so this is a week; older is not a payment the person is still deciding on.
+ */
+export const MAX_PUSH_AGE_MS = 7 * DAY_MS
+
+/** How far ahead of the server's clock a push may be dated. Only a wrong clock does that, so it stays short. */
+export const MAX_CLOCK_SKEW_MS = 2 * DAY_MS
 
 function offsetMinutes(zone: string): number | null {
   if (zone === 'Z') return 0
@@ -49,6 +57,7 @@ export function isoWithOffset(instantMs: number, offsetMinutes: number): string 
 }
 
 /** Whether a push dated at `instantMs` is believable when the server receives it at `receivedMs`. */
-export function withinClockSkew(instantMs: number, receivedMs: number): boolean {
-  return Math.abs(instantMs - receivedMs) <= MAX_CLOCK_SKEW_MS
+export function pushTimeVerdict(instantMs: number, receivedMs: number): 'ok' | 'too-old' | 'clock-skew' {
+  if (receivedMs - instantMs > MAX_PUSH_AGE_MS) return 'too-old'
+  return instantMs - receivedMs > MAX_CLOCK_SKEW_MS ? 'clock-skew' : 'ok'
 }

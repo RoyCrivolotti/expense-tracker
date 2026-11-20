@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_CLOCK_SKEW_MS, isoWithOffset, parsePushDate, withinClockSkew } from './date'
+import { MAX_CLOCK_SKEW_MS, MAX_PUSH_AGE_MS, isoWithOffset, parsePushDate, pushTimeVerdict } from './date'
 
 describe('parsePushDate', () => {
   it('reads the instant and the phone-local day', () => {
@@ -87,14 +87,15 @@ describe('isoWithOffset', () => {
   })
 })
 
-describe('withinClockSkew', () => {
-  const now = Date.UTC(2026, 10, 3, 12)
-  it('accepts a push up to two days either side of the server clock', () => {
-    expect(withinClockSkew(now - MAX_CLOCK_SKEW_MS, now)).toBe(true)
-    expect(withinClockSkew(now + MAX_CLOCK_SKEW_MS, now)).toBe(true)
+describe('pushTimeVerdict', () => {
+  const now = Date.UTC(2026, 10, 10, 12)
+  it('accepts a push up to a week old, and up to two days ahead of the server clock', () => {
+    expect(MAX_PUSH_AGE_MS).toBe(7 * 24 * 60 * 60 * 1000)
+    expect(pushTimeVerdict(now - MAX_PUSH_AGE_MS, now)).toBe('ok')
+    expect(pushTimeVerdict(now + MAX_CLOCK_SKEW_MS, now)).toBe('ok')
   })
-  it('refuses a push further away', () => {
-    expect(withinClockSkew(now - MAX_CLOCK_SKEW_MS - 1, now)).toBe(false)
-    expect(withinClockSkew(now + MAX_CLOCK_SKEW_MS + 1, now)).toBe(false)
+  it('names a push older than a week, and one dated further ahead than two days', () => {
+    expect(pushTimeVerdict(now - MAX_PUSH_AGE_MS - 1, now)).toBe('too-old')
+    expect(pushTimeVerdict(now + MAX_CLOCK_SKEW_MS + 1, now)).toBe('clock-skew')
   })
 })

@@ -1,4 +1,4 @@
-import { MALFORMED_SOURCE, parseCaptureKey, parsePushDate, withinClockSkew } from '../../../src/domain/capture'
+import { MALFORMED_SOURCE, parseCaptureKey, parsePushDate, pushTimeVerdict } from '../../../src/domain/capture'
 import type { AccessRepository } from '../../../src/domain/ports/accessRepository'
 import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { authenticate, bearerKey } from './authenticate'
@@ -127,7 +127,7 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   await deps.captures.touchKey(key.keyId, now.toISOString()).catch(() => undefined)
 
   const stored = await receive(push, key, secret, deps, now)
-  if (stored === 'bad-date' || stored === 'clock-skew' || stored === 'no-amount' || stored === 'code-like') {
+  if (stored === 'bad-date' || stored === 'clock-skew' || stored === 'too-old' || stored === 'no-amount' || stored === 'code-like') {
     await deps.captures.bumpCounter(key.owner, push.source, day, 'unrecognised')
     line.outcome = 'dropped'
     line.reason = stored
@@ -149,9 +149,10 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
 }
 
 /** What a push becomes once admitted. One whose Date cannot be trusted is not read at all. */
-async function receive(push: RawPush, key: CaptureKey, secret: string, deps: CaptureDeps, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew'> {
+async function receive(push: RawPush, key: CaptureKey, secret: string, deps: CaptureDeps, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew' | 'too-old'> {
   const date = parsePushDate(push.date)
   if (!date) return 'bad-date'
-  if (!withinClockSkew(date.instantMs, now.getTime())) return 'clock-skew'
+  const time = pushTimeVerdict(date.instantMs, now.getTime())
+  if (time !== 'ok') return time
   return storePush(deps.captures, key, push, date, secret, now, captureCaps(now), deps.onCreated)
 }

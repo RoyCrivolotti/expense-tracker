@@ -128,6 +128,20 @@ describe('pushes of one movement', () => {
     expect(recs()).toHaveLength(2)
   })
 
+  it('join by the moment each push gives, not the moment each arrived, when both came late', async () => {
+    const sixDays = -6 * 24 * 60 * 60
+    expect((await send(payment(sixDays))).status).toBe(200)
+    expect((await send(alert(sixDays + 8))).status).toBe(200)
+    expect(recs()).toHaveLength(1)
+    expect(events().map((e) => e.grouped)).toEqual([0, 1])
+  })
+
+  it('stay two when a late push is two minutes from the other by arrival but days from it by its own moment', async () => {
+    await send(payment(0))
+    await send(alert(-6 * 24 * 60 * 60))
+    expect(recs()).toHaveLength(2)
+  })
+
   it('join at exactly two minutes', async () => {
     await send(payment(0))
     await send(alert(2 * 60))
