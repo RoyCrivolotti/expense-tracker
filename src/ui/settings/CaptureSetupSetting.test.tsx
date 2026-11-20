@@ -407,3 +407,97 @@ describe('without the shortcut link', () => {
     expect(para(/An older shortcut that sends a source name instead keeps working/)).toBeInTheDocument()
   })
 })
+
+describe('opening and closing the steps', () => {
+  const captured = { ...none, lastCaptureAt: new Date().toISOString(), received: 1 }
+  const toggle = () => screen.getByRole('button', { name: /the steps/ })
+  const fold = () => document.getElementById(toggle().getAttribute('aria-controls') ?? '')
+
+  it('has them open while no payment has been captured, with how many are ticked', async () => {
+    render(<CaptureSetupSetting />)
+    await screen.findByText('Waiting for your first payment')
+
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle()).toHaveTextContent('Hide the steps')
+    expect(toggle()).toHaveTextContent('15 steps, none ticked')
+    expect(fold()).not.toHaveAttribute('inert')
+    expect(fold()).toContainElement(screen.getByText('1. Make a key and copy it'))
+    expect(fold()).toContainElement(screen.getByText(/^Needs an iPhone or iPad/))
+  })
+
+  it('has them closed once a payment has been captured, out of reach but one tap away, with the check still showing', async () => {
+    status(captured, null, LINK)
+    render(<CaptureSetupSetting />)
+    await screen.findByText('Last payment captured')
+
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle()).toHaveTextContent('Show the steps')
+    expect(toggle()).toHaveTextContent('7 steps, none ticked')
+    expect(fold()).toHaveAttribute('inert')
+    expect(fold()?.className).toContain('folded')
+    expect(fold()).not.toContainElement(screen.getByText('Last payment captured'))
+
+    fireEvent.click(toggle())
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+    expect(fold()).not.toHaveAttribute('inert')
+    expect(fold()?.className).not.toContain('folded')
+  })
+
+  it('keeps them open while pushes arrive but none was ever read as a payment', async () => {
+    status({ ...none, received: 4, unrecognised: 4 })
+    render(<CaptureSetupSetting />)
+    await screen.findByText('Arriving, not read as a payment')
+
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('lets the person’s own choice win over the default, on the next visit too, and keeps the focus on the button', async () => {
+    const first = render(<CaptureSetupSetting />)
+    await screen.findByText('Waiting for your first payment')
+    toggle().focus()
+    fireEvent.click(toggle())
+
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle()).toHaveFocus()
+    first.unmount()
+    const second = render(<CaptureSetupSetting />)
+    await screen.findByText('Waiting for your first payment')
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(toggle())
+    second.unmount()
+    status(captured)
+    render(<CaptureSetupSetting />)
+    await screen.findByText('Last payment captured')
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('counts the ticks of the steps on show', async () => {
+    render(<CaptureSetupSetting />)
+    fireEvent.click(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ }))
+    expect(toggle()).toHaveTextContent('15 steps, 1 ticked')
+
+    for (const box of screen.getAllByRole('checkbox')) if (!(box as HTMLInputElement).checked) fireEvent.click(box)
+    expect(toggle()).toHaveTextContent('15 steps, all ticked')
+  })
+
+  it('still opens and closes in a browser that refuses storage', async () => {
+    const refuse = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    render(<CaptureSetupSetting />)
+    await screen.findByText('Waiting for your first payment')
+
+    fireEvent.click(toggle())
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    refuse.mockRestore()
+  })
+
+  it('offers no steps to open until the status has been read', async () => {
+    vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('Checking')
+    expect(screen.queryByRole('button', { name: /the steps/ })).not.toBeInTheDocument()
+  })
+})

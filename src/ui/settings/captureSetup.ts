@@ -54,17 +54,31 @@ export function lastCaptureText(iso: string, now: Date): string {
 
 const STORAGE_KEY = 'expenses-capture-setup'
 
-/** What the person ticked off, and an address they pasted, kept in this browser only. */
+/**
+ * What the person ticked off, an address they pasted, and whether they opened or closed the steps themselves (absent
+ * until they do, so the card can choose for them), kept in this browser only.
+ */
 export interface SetupMemory {
   ticks: string[]
   endpoint: string
+  steps?: 'open' | 'closed'
+}
+
+/**
+ * Whether the steps are open: what the person last chose, else open until a payment has been captured. Someone whose
+ * capture works has no use for the steps on every visit, and someone still setting up needs them in front of them.
+ */
+export function stepsOpen(memory: Pick<SetupMemory, 'steps'>, sources: readonly SourceStatus[] | undefined): boolean {
+  if (memory.steps) return memory.steps === 'open'
+  return !overall(sources ?? [])?.lastCaptureAt
 }
 
 export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null): SetupMemory {
   try {
     const raw = JSON.parse(storage?.getItem(STORAGE_KEY) ?? 'null') as Partial<SetupMemory> | null
     const ticks = Array.isArray(raw?.ticks) ? raw.ticks.filter((t): t is string => typeof t === 'string') : []
-    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '' }
+    const steps = raw?.steps === 'open' || raw?.steps === 'closed' ? { steps: raw.steps } : {}
+    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '', ...steps }
   } catch {
     return { ticks: [], endpoint: '' }
   }

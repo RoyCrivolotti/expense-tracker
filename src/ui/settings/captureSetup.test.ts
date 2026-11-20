@@ -80,6 +80,8 @@ describe('setup memory', () => {
     expect(readSetupMemory({ getItem: () => 'not json' })).toEqual({ ticks: [], endpoint: '' })
     expect(readSetupMemory({ getItem: () => '{"ticks":[1,"a"],"endpoint":5}' })).toEqual({ ticks: ['a'], endpoint: '' })
     expect(readSetupMemory(null)).toEqual({ ticks: [], endpoint: '' })
+    expect(readSetupMemory({ getItem: () => '{"steps":"closed"}' })).toEqual({ ticks: [], endpoint: '', steps: 'closed' })
+    expect(readSetupMemory({ getItem: () => '{"steps":"ajar"}' })).toEqual({ ticks: [], endpoint: '' })
     expect(() => writeSetupMemory(null, { ticks: [], endpoint: '' })).not.toThrow()
     expect(() =>
       writeSetupMemory(

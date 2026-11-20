@@ -186,6 +186,11 @@ status read; the key card, the linked cards, muted pushes and diagnostics show e
 on a laptop. Nothing is blocked. The OS version is never read from the browser, because Safari freezes it in the user
 agent, so the requirement line points to Settings, General, About instead.
 
+The steps fold behind "Show the steps" / "Hide the steps", a row that also says how many are ticked. They start open
+until a payment has been captured from any source and closed after that, so a person whose capture works reaches the
+check and the cards under it without scrolling past the steps. Once the person opens or closes them, that choice is
+kept in the browser with the ticks and wins over the default. The check stays outside the fold.
+
 ### With the shortcut link
 
 With a valid `CAPTURE_SHORTCUT_URL`, `GET /api/capture-status` reports it as `shortcutUrl` and the card shows these

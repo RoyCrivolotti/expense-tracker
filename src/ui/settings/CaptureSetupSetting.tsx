@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { devicePlatform, isAppleTouch } from '../../config/device'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
@@ -9,23 +10,10 @@ import { useCaptureSetup } from './useCaptureSetup'
 
 const SHORTCUT_LINK_PREFIX = 'https://www.icloud.com/shortcuts/'
 
-function Steps({ setup }: { setup: Setup }) {
-  // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
-  const loaded = setup.status !== null || setup.error !== null
+/** The link the steps install from, when the deployment has one. The server already vets it; only an iCloud Shortcuts address is ever used here too. */
+function shortcutLink(setup: Setup): string | null {
   const link = setup.status?.shortcutUrl ?? null
-  // The server already vets the link; only an iCloud Shortcuts address is ever rendered as a button here too.
-  const shortcutUrl = link?.startsWith(SHORTCUT_LINK_PREFIX) ? link : null
-  const steps = !loaded ? [] : shortcutUrl ? fileSteps(setup, shortcutUrl) : manualSteps(setup)
-  return (
-    <ol className={styles.steps}>
-      {steps.map((step, i) => (
-        <Step key={step.id} id={step.id} title={`${i + 1}. ${step.title}`} setup={setup}>
-          {step.body}
-        </Step>
-      ))}
-      <Waiting setup={setup} />
-    </ol>
-  )
+  return link?.startsWith(SHORTCUT_LINK_PREFIX) ? link : null
 }
 
 const REQUIREMENT =
@@ -54,22 +42,58 @@ export function CaptureSetupSetting() {
   )
 }
 
+function tickedText(count: number, ticked: number): string {
+  return `${count} steps, ${ticked === 0 ? 'none ticked' : ticked === count ? 'all ticked' : `${ticked} ticked`}`
+}
+
 function SetupSteps() {
   const setup = useCaptureSetup()
+  const foldId = useId()
+  // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
+  const loaded = setup.status !== null || setup.error !== null
+  const shortcutUrl = shortcutLink(setup)
+  const steps = shortcutUrl ? fileSteps(setup, shortcutUrl) : manualSteps(setup)
+  const open = setup.stepsOpen
   return (
     <div className={tabStyles.settingGroup}>
       <p className={tabStyles.settingHint}>
         Capture sends your bank app&rsquo;s notifications from your iPhone or iPad to the app. Each one that shows an amount with its
         currency becomes a payment for you to review; the rest are only counted.
       </p>
-      <p className={tabStyles.settingHint}>{REQUIREMENT}</p>
-      <p className={tabStyles.settingHint}>{setup.status?.shortcutUrl?.startsWith(SHORTCUT_LINK_PREFIX) ? FROM_LINK : BY_HAND}</p>
       {setup.error ? (
         <p className={tabStyles.settingError} role="alert">
           {setup.error}
         </p>
       ) : null}
-      <Steps setup={setup} />
+      {loaded ? (
+        <div>
+          <button
+            type="button"
+            className={styles.toggle}
+            aria-expanded={open}
+            aria-controls={foldId}
+            onClick={() => setup.showSteps(!open)}
+          >
+            <span>{open ? 'Hide the steps' : 'Show the steps'}</span>
+            <span className={styles.toggleCount}>{tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}</span>
+          </button>
+          {/* Kept in the DOM so it can fold; `inert` keeps touch, focus and screen readers out of what is out of sight. */}
+          <div id={foldId} className={open ? styles.fold : `${styles.fold} ${styles.folded}`} inert={!open}>
+            <div className={styles.foldInner}>
+              <p className={tabStyles.settingHint}>{REQUIREMENT}</p>
+              <p className={tabStyles.settingHint}>{shortcutUrl ? FROM_LINK : BY_HAND}</p>
+              <ol className={styles.steps}>
+                {steps.map((step, i) => (
+                  <Step key={step.id} id={step.id} title={`${i + 1}. ${step.title}`} setup={setup}>
+                    {step.body}
+                  </Step>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <Waiting setup={setup} />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCaptureKeys, onCaptureKeysChanged, type CaptureKeyInfo } from '../../data/captureKeysApi'
 import { fetchCaptureStatus, type CaptureStatus } from '../../data/captureStatusApi'
-import { pastedEndpoint, readSetupMemory, writeSetupMemory, type SetupMemory } from './captureSetup'
+import { pastedEndpoint, readSetupMemory, stepsOpen, writeSetupMemory, type SetupMemory } from './captureSetup'
 
 function browserStorage(): Storage | null {
   try {
@@ -68,5 +68,7 @@ export function useCaptureSetup() {
       remember({ ...memory, ticks: on ? [...new Set([...memory.ticks, id])] : memory.ticks.filter((t) => t !== id) }),
     paste: (text: string) => remember({ ...memory, endpoint: text }),
     recheck: () => setVersion((v) => v + 1),
+    stepsOpen: stepsOpen(memory, status?.sources),
+    showSteps: (open: boolean) => remember({ ...memory, steps: open ? 'open' : 'closed' }),
   }
 }

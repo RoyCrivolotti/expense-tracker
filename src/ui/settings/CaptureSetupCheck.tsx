@@ -87,16 +87,16 @@ export function Waiting({
   if (setup.error) return null
   if (!setup.status) {
     return (
-      <li className={styles.step} aria-live="polite">
+      <div className={styles.step} aria-live="polite">
         <span className={styles.stepTitle}>Checking</span>
-      </li>
+      </div>
     )
   }
   const status = overall(setup.status.sources)
   const state = sourceState(status, new Date())
   const neverUsed = setup.keys !== null && setup.keys.length > 0 && setup.keys.every((k) => !k.lastUsedAt)
   return (
-    <li className={`${styles.step} ${styles[state]}`} aria-live="polite">
+    <div className={`${styles.step} ${styles[state]}`} aria-live="polite">
       <span className={styles.stepTitle}>{WAITING_TITLE[state]}</span>
       <div className={styles.stepBody}>
         <WaitingText state={state} status={status} neverUsed={neverUsed} unreadable={setup.status.malformed} />
@@ -105,6 +105,6 @@ export function Waiting({
           Check again
         </button>
       </div>
-    </li>
+    </div>
   )
 }
