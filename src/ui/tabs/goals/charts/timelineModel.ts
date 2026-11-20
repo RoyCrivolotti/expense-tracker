@@ -1,5 +1,6 @@
 import type { Milestone } from '../../../../types'
-import { beyondText, calendarYear, yearsText, type MilestoneRow } from './milestoneModel'
+import { calendarYear, type MilestoneRow } from './milestoneModel'
+import { atStartText, beyondText, yearsText } from './milestoneText'
 
 /**
  * The sizes the stylesheet gives the timeline, in pixels. The connector line is drawn from them,
@@ -129,9 +130,20 @@ function listOf(parts: string[]): string {
   return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
 }
 
-/** What a dot says when it stands for several milestones that fall in the same year. */
+/**
+ * What a dot says when it stands for several milestones that fall in the same year. Only a path that
+ * starts after today has a dot holding what it has at its start (one that has started has those in the
+ * badge), and since the years to its start are rounded up, that dot can also hold a milestone it reaches
+ * soon after starting: each part is said for what it is.
+ */
 export function describeCluster(row: MilestoneRow, cluster: DotCluster, amounts: string[]): string {
-  return `${row.name} reaches ${listOf(amounts)} in ${yearsText(cluster.years)}, by ${calendarYear(row, cluster.sinceStart)}.`
+  const atStart = amounts.filter((_, k) => row.sinceStart[cluster.indices[k] ?? -1] === 0)
+  const later = amounts.filter((_, k) => row.sinceStart[cluster.indices[k] ?? -1] !== 0)
+  const own = cluster.indices.map((i) => row.sinceStart[i] ?? 0).find((y) => y !== 0) ?? cluster.sinceStart
+  const reaches = `reaches ${listOf(later)} in ${yearsText(cluster.years)}, by ${calendarYear(row, own)}.`
+  if (atStart.length === 0) return `${row.name} ${reaches}`
+  const has = atStartText(row, listOf(atStart))
+  return later.length === 0 ? has : `${has.slice(0, -1)}, and ${reaches}`
 }
 
 /** What the badge at the left edge stands for. `how` says for each milestone why it is already there. */

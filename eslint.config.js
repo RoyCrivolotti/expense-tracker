@@ -56,7 +56,7 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/charts/MilestoneTimeline.tsx': 331,
   'src/ui/tabs/goals/charts/NetWorthChart.tsx': 747,
   'src/ui/tabs/goals/charts/ScenarioSeriesLegend.tsx': 235,
-  'src/ui/tabs/goals/charts/milestoneModel.ts': 285,
+  'src/ui/tabs/goals/charts/milestoneModel.ts': 280,
   'src/ui/tabs/goals/desktop/Lever.tsx': 204,
   'src/ui/tabs/goals/goalControlFields.tsx': 211,
   'src/ui/tabs/goals/goalControlSections.tsx': 423,
