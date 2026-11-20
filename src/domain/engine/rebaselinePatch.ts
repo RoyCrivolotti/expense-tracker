@@ -277,32 +277,37 @@ function carryPurchase(
   return { housePurchaseYear, house }
 }
 
+/**
+ * The scenario restarted on `at.date` from `at.investedCents`. The date is usually the latest check-in,
+ * but nothing here needs it to be one, or in the past: a copy started at a later date is the same
+ * restart (`startLater`). "Already happened" means on or before that date.
+ */
 export function rebaseline(
   scenario: Rebaselinable,
-  latest: { investedCents: number; date: string },
+  at: { investedCents: number; date: string },
   inflationRate: number,
 ): Rebaseline {
   // A start that is not a day on the calendar (only an API could have written one) reads as none.
   const oldStart = scenario.planStartDate && isCalendarDate(scenario.planStartDate) ? scenario.planStartDate : null
-  const moved = yearsMoved(oldStart, latest.date)
+  const moved = yearsMoved(oldStart, at.date)
   // The euros of the new start: what was typed in the euros of the old one, by the inflation between.
   const factor = Math.pow(1 + inflationRate, moved)
   const restate = (cents: number) => Math.round(cents * factor)
-  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, latest.date, restate)
-  const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, latest.date)
+  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, at.date, restate)
+  const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, at.date)
   const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
     scenario,
     oldStart,
-    latest.date,
+    at.date,
   )
-  const { fields: houseFields, priceMoved, owned } = restartHouse(scenario, oldStart, latest.date, inflationRate)
+  const { fields: houseFields, priceMoved, owned } = restartHouse(scenario, oldStart, at.date, inflationRate)
   const spend = restate(scenario.annualSpendCents)
   const rent = restate(scenario.rentMonthlyCents)
   const fees = restate(scenario.transactionCostsCents)
   return {
     patch: {
-      startInvestedCents: latest.investedCents,
-      planStartDate: latest.date,
+      startInvestedCents: at.investedCents,
+      planStartDate: at.date,
       lifeEvents,
       housePurchaseYear,
       monthlyContributionCents,
