@@ -55,13 +55,15 @@ export function lastCaptureText(iso: string, now: Date): string {
 const STORAGE_KEY = 'expenses-capture-setup'
 
 /**
- * What the person ticked off, an address they pasted, and whether they opened or closed the steps themselves (absent
- * until they do, so the card can choose for them), kept in this browser only.
+ * What the person ticked off, an address they pasted, whether they opened or closed the steps themselves (absent
+ * until they do, so the card can choose for them) and whether they build the shortcut by hand, kept in this browser only.
  */
 export interface SetupMemory {
   ticks: string[]
   endpoint: string
   steps?: 'open' | 'closed'
+  /** The person chose to build the shortcut by hand although a shared one is offered. */
+  byHand?: boolean
 }
 
 /**
@@ -73,12 +75,19 @@ export function stepsOpen(memory: Pick<SetupMemory, 'steps'>, sources: readonly 
   return !overall(sources ?? [])?.lastCaptureAt
 }
 
+/** The two choices, each left out unless it was stored as one of its values. */
+function choices(raw: Partial<SetupMemory> | null): Pick<SetupMemory, 'steps' | 'byHand'> {
+  return {
+    ...(raw?.steps === 'open' || raw?.steps === 'closed' ? { steps: raw.steps } : {}),
+    ...(raw?.byHand === true ? { byHand: true } : {}),
+  }
+}
+
 export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null): SetupMemory {
   try {
     const raw = JSON.parse(storage?.getItem(STORAGE_KEY) ?? 'null') as Partial<SetupMemory> | null
     const ticks = Array.isArray(raw?.ticks) ? raw.ticks.filter((t): t is string => typeof t === 'string') : []
-    const steps = raw?.steps === 'open' || raw?.steps === 'closed' ? { steps: raw.steps } : {}
-    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '', ...steps }
+    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '', ...choices(raw) }
   } catch {
     return { ticks: [], endpoint: '' }
   }

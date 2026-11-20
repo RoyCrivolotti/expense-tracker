@@ -314,6 +314,7 @@ describe('with the shortcut link available', () => {
     expect(para(/Leave no empty row under Headers: an empty header makes the request fail before it reaches the app\./)).toBeInTheDocument()
     expect(para(/the app field holds the notification’s App variable/)).toBeInTheDocument()
     expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
+    expect(para(/keep Automation on, set to run without asking you each time \(on iOS 18 that option is called Run Immediately; on your phone it may be worded differently\)\. Turn on/)).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })
@@ -345,7 +346,7 @@ describe('with the shortcut link available', () => {
       status(none, null, url)
       render(<CaptureSetupSetting />)
 
-      expect(await screen.findByText('4. Add the action')).toBeInTheDocument()
+      expect(await screen.findByText('5. Add the action')).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
     },
   )
@@ -363,7 +364,7 @@ describe('with the shortcut link available', () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockRejectedValue(new Error('Request failed (500)'))
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText('4. Add the action')).toBeInTheDocument()
+    expect(await screen.findByText('5. Add the action')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
   })
 })
@@ -371,33 +372,38 @@ describe('with the shortcut link available', () => {
 describe('without the shortcut link', () => {
   it('shows the manual steps, one action each, in order, and no Add the shortcut link', async () => {
     render(<CaptureSetupSetting />)
-    await screen.findByText('4. Add the action')
+    await screen.findByText('5. Add the action')
 
     expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
     expect(screen.getAllByText(/^\d+\. /).map((e) => e.textContent)).toEqual([
       '1. Make a key and copy it',
       '2. Start the automation',
       '3. Choose the bank\u2019s app',
-      '4. Add the action',
-      '5. Type the address',
-      '6. Set the method',
-      '7. Add the key',
-      '8. Choose JSON',
-      '9. Add the app field',
-      '10. Add the title field',
-      '11. Add the body field',
-      '12. Add the date field',
-      '13. Save it',
-      '14. Check the automation is on',
-      '15. Make one purchase and watch the line below',
+      '4. Let it run without asking',
+      '5. Add the action',
+      '6. Enter the address',
+      '7. Set the method',
+      '8. Add the key',
+      '9. Choose JSON',
+      '10. Add the app field',
+      '11. Add the title field',
+      '12. Add the body field',
+      '13. Add the date field',
+      '14. Save it',
+      '15. Check the automation is on',
+      '16. Make one purchase and watch the line below',
     ])
   })
 
   it('says exactly what to tap and type, with the address from the server', async () => {
     render(<CaptureSetupSetting />)
-    await screen.findByText('5. Type the address')
+    await screen.findByText('6. Enter the address')
 
-    expect(para(/Tap the Search bar at the bottom and type Get Contents of URL/)).toBeInTheDocument()
+    expect(para(/choose the option that runs the automation without asking you each time; with the other one, every payment waits for you to tap\. On iOS 18 the two are called Run Immediately and Run After Confirmation; on your phone they may be worded differently\. Then tap Next\./)).toBeInTheDocument()
+    expect(para(/choose New Blank Automation\. Tap the Search bar at the bottom and type Get Contents of URL/)).toBeInTheDocument()
+    expect(para(/Tap Copy here, then in the action tap URL and paste\. The \/capture at the end is part of the address/)).toBeInTheDocument()
+    const check = para(/keep Automation on, still set to run without asking, as you chose when you made it\. Turn on/)
+    expect(check.textContent).not.toMatch(/Run Immediately|Run After Confirmation/)
     expect(screen.getByText(ADDRESS)).toBeInTheDocument()
     expect(para(/Change Method from GET to POST/)).toBeInTheDocument()
     expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
@@ -419,7 +425,7 @@ describe('opening and closing the steps', () => {
 
     expect(toggle()).toHaveAttribute('aria-expanded', 'true')
     expect(toggle()).toHaveTextContent('Hide the steps')
-    expect(toggle()).toHaveTextContent('15 steps, none ticked')
+    expect(toggle()).toHaveTextContent('16 steps, none ticked')
     expect(fold()).not.toHaveAttribute('inert')
     expect(fold()).toContainElement(screen.getByText('1. Make a key and copy it'))
     expect(fold()).toContainElement(screen.getByText(/^Needs an iPhone or iPad/))
@@ -475,10 +481,10 @@ describe('opening and closing the steps', () => {
   it('counts the ticks of the steps on show', async () => {
     render(<CaptureSetupSetting />)
     fireEvent.click(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ }))
-    expect(toggle()).toHaveTextContent('15 steps, 1 ticked')
+    expect(toggle()).toHaveTextContent('16 steps, 1 ticked')
 
     for (const box of screen.getAllByRole('checkbox')) if (!(box as HTMLInputElement).checked) fireEvent.click(box)
-    expect(toggle()).toHaveTextContent('15 steps, all ticked')
+    expect(toggle()).toHaveTextContent('16 steps, all ticked')
   })
 
   it('still opens and closes in a browser that refuses storage', async () => {
@@ -499,5 +505,82 @@ describe('opening and closing the steps', () => {
 
     await screen.findByText('Checking')
     expect(screen.queryByRole('button', { name: /the steps/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('when adding the shared shortcut did not work', () => {
+  const byHand = () => screen.getByRole('button', { name: 'Set it up by hand' })
+  const back = () => screen.getByRole('button', { name: 'Back to the shared shortcut' })
+  const titles = () => screen.getAllByText(/^\d+\. /).map((e) => e.textContent)
+
+  it('offers the manual steps from the Add the shortcut step, and swaps the list for them', async () => {
+    status(none, ADDRESS, LINK)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+    expect(screen.getByText('The shortcut did not install, or the page did not open?')).toBeInTheDocument()
+    expect(screen.getByText('2. Add the shortcut').closest('li')).toContainElement(byHand())
+
+    fireEvent.click(byHand())
+
+    expect(titles()).toHaveLength(16)
+    expect(titles().slice(0, 6)).toEqual([
+      '1. Make a key and copy it',
+      '2. Start the automation',
+      '3. Choose the bank\u2019s app',
+      '4. Let it run without asking',
+      '5. Add the action',
+      '6. Enter the address',
+    ])
+    expect(screen.getByText(ADDRESS)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
+    expect(screen.getByText(/built by hand from steps like these worked on one phone/)).toBeInTheDocument()
+    expect(screen.queryByText(/installed from a shared copy/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /the steps/ })).toHaveTextContent('16 steps, none ticked')
+  })
+
+  it('goes back to the shared shortcut, moving the focus to the button that undoes each swap', async () => {
+    status(none, ADDRESS, LINK)
+    render(<CaptureSetupSetting />)
+    await screen.findByRole('link', { name: 'Add the shortcut' })
+
+    fireEvent.click(byHand())
+    expect(back()).toHaveFocus()
+    fireEvent.click(back())
+
+    expect(screen.getByRole('link', { name: 'Add the shortcut' })).toBeInTheDocument()
+    expect(byHand()).toHaveFocus()
+    expect(titles()).toHaveLength(7)
+  })
+
+  it('keeps the choice and the ticks of the steps both lists share for the next visit', async () => {
+    status(none, ADDRESS, LINK)
+    const first = render(<CaptureSetupSetting />)
+    fireEvent.click(await screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ }))
+    fireEvent.click(byHand())
+    first.unmount()
+    render(<CaptureSetupSetting />)
+
+    expect(await screen.findByText('5. Add the action')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /1\. Make a key and copy it/ })).toBeChecked()
+    expect(back()).not.toHaveFocus()
+  })
+
+  it('offers no way back where there is no shared shortcut to go back to', async () => {
+    localStorage.setItem('expenses-capture-setup', JSON.stringify({ byHand: true }))
+    render(<CaptureSetupSetting />)
+
+    await screen.findByText('5. Add the action')
+    expect(screen.queryByRole('button', { name: 'Back to the shared shortcut' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Set it up by hand' })).not.toBeInTheDocument()
+  })
+
+  it.each(['android', 'mac', 'windows', 'linux'] as const)('shows neither list on %s', (platform) => {
+    vi.mocked(device.devicePlatform).mockReturnValue(platform)
+    localStorage.setItem('expenses-capture-setup', JSON.stringify({ byHand: true }))
+    status(none, ADDRESS, LINK)
+    render(<CaptureSetupSetting />)
+
+    expect(screen.queryByRole('button', { name: /by hand|shared shortcut|the steps/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
   })
 })

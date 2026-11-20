@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { devicePlatform, isAppleTouch } from '../../config/device'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
@@ -46,16 +46,72 @@ function tickedText(count: number, ticked: number): string {
   return `${count} steps, ${ticked === 0 ? 'none ticked' : ticked === count ? 'all ticked' : `${ticked} ticked`}`
 }
 
-function SetupSteps() {
-  const setup = useCaptureSetup()
-  const foldId = useId()
-  // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
-  const loaded = setup.status !== null || setup.error !== null
+/**
+ * Which steps show, and the way between the two lists. The manual steps are also the way out when adding the shared
+ * shortcut did not work, so with a link the person can swap to them and back.
+ */
+function useSteps(setup: Setup) {
   const shortcutUrl = shortcutLink(setup)
-  const steps = shortcutUrl ? fileSteps(setup, shortcutUrl) : manualSteps(setup)
+  const byHand = shortcutUrl === null || setup.byHand
+  const group = useRef<HTMLDivElement>(null)
+  const [switches, setSwitches] = useState(0)
+  const switchTo = (on: boolean) => {
+    setSwitches((n) => n + 1)
+    setup.setByHand(on)
+  }
+  // The button that was tapped leaves with its list, so the focus goes to the one that takes it back.
+  useEffect(() => {
+    if (switches > 0) group.current?.querySelector<HTMLElement>('[data-setup-switch]')?.focus()
+  }, [switches])
+  const steps = shortcutUrl && !byHand ? fileSteps(setup, shortcutUrl, () => switchTo(true)) : manualSteps(setup)
+  return { group, steps, byHand, back: shortcutUrl && byHand ? () => switchTo(false) : null }
+}
+
+/** The numbered steps behind the row that opens and closes them. */
+function StepsFold({ setup, steps, byHand, back }: { setup: Setup } & Omit<ReturnType<typeof useSteps>, 'group'>) {
+  const foldId = useId()
   const open = setup.stepsOpen
   return (
-    <div className={tabStyles.settingGroup}>
+    <div>
+      <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={foldId} onClick={() => setup.showSteps(!open)}>
+        <span>{open ? 'Hide the steps' : 'Show the steps'}</span>
+        <span className={styles.toggleCount}>{tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}</span>
+      </button>
+      {/* Kept in the DOM so it can fold; `inert` keeps touch, focus and screen readers out of what is out of sight. */}
+      <div id={foldId} className={open ? styles.fold : `${styles.fold} ${styles.folded}`} inert={!open}>
+        <div className={styles.foldInner}>
+          <p className={tabStyles.settingHint}>{REQUIREMENT}</p>
+          <p className={tabStyles.settingHint}>{byHand ? BY_HAND : FROM_LINK}</p>
+          {back ? (
+            <div className={styles.switch}>
+              <p className={tabStyles.settingHint}>
+                These steps build the shortcut yourself, in place of adding the shared one. What you ticked is kept.
+              </p>
+              <button type="button" className={styles.copy} data-setup-switch onClick={back}>
+                Back to the shared shortcut
+              </button>
+            </div>
+          ) : null}
+          <ol className={styles.steps}>
+            {steps.map((step, i) => (
+              <Step key={step.id} id={step.id} title={`${i + 1}. ${step.title}`} setup={setup}>
+                {step.body}
+              </Step>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SetupSteps() {
+  const setup = useCaptureSetup()
+  const { group, ...fold } = useSteps(setup)
+  // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
+  const loaded = setup.status !== null || setup.error !== null
+  return (
+    <div ref={group} className={tabStyles.settingGroup}>
       <p className={tabStyles.settingHint}>
         Capture sends your bank app&rsquo;s notifications from your iPhone or iPad to the app. Each one that shows an amount with its
         currency becomes a payment for you to review; the rest are only counted.
@@ -65,34 +121,7 @@ function SetupSteps() {
           {setup.error}
         </p>
       ) : null}
-      {loaded ? (
-        <div>
-          <button
-            type="button"
-            className={styles.toggle}
-            aria-expanded={open}
-            aria-controls={foldId}
-            onClick={() => setup.showSteps(!open)}
-          >
-            <span>{open ? 'Hide the steps' : 'Show the steps'}</span>
-            <span className={styles.toggleCount}>{tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}</span>
-          </button>
-          {/* Kept in the DOM so it can fold; `inert` keeps touch, focus and screen readers out of what is out of sight. */}
-          <div id={foldId} className={open ? styles.fold : `${styles.fold} ${styles.folded}`} inert={!open}>
-            <div className={styles.foldInner}>
-              <p className={tabStyles.settingHint}>{REQUIREMENT}</p>
-              <p className={tabStyles.settingHint}>{shortcutUrl ? FROM_LINK : BY_HAND}</p>
-              <ol className={styles.steps}>
-                {steps.map((step, i) => (
-                  <Step key={step.id} id={step.id} title={`${i + 1}. ${step.title}`} setup={setup}>
-                    {step.body}
-                  </Step>
-                ))}
-              </ol>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {loaded ? <StepsFold setup={setup} {...fold} /> : null}
       <Waiting setup={setup} />
     </div>
   )

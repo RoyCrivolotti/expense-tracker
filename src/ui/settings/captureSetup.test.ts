@@ -82,6 +82,8 @@ describe('setup memory', () => {
     expect(readSetupMemory(null)).toEqual({ ticks: [], endpoint: '' })
     expect(readSetupMemory({ getItem: () => '{"steps":"closed"}' })).toEqual({ ticks: [], endpoint: '', steps: 'closed' })
     expect(readSetupMemory({ getItem: () => '{"steps":"ajar"}' })).toEqual({ ticks: [], endpoint: '' })
+    expect(readSetupMemory({ getItem: () => '{"byHand":true}' })).toEqual({ ticks: [], endpoint: '', byHand: true })
+    expect(readSetupMemory({ getItem: () => '{"byHand":"yes"}' })).toEqual({ ticks: [], endpoint: '' })
     expect(() => writeSetupMemory(null, { ticks: [], endpoint: '' })).not.toThrow()
     expect(() =>
       writeSetupMemory(

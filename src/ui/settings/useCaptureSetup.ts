@@ -69,6 +69,9 @@ export function useCaptureSetup() {
     paste: (text: string) => remember({ ...memory, endpoint: text }),
     recheck: () => setVersion((v) => v + 1),
     stepsOpen: stepsOpen(memory, status?.sources),
+    byHand: memory.byHand === true,
+    /** Leaves the shared shortcut for the manual steps, or goes back. The ticks stay: the steps the two share keep theirs. */
+    setByHand: (on: boolean) => remember({ ...memory, byHand: on }),
     showSteps: (open: boolean) => remember({ ...memory, steps: open ? 'open' : 'closed' }),
   }
 }

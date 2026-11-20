@@ -6,8 +6,10 @@ import styles from './CaptureSetupSetting.module.css'
  * a file download traps the installed Home Screen app in iOS's file preview, and a custom `shortcuts://` address is
  * not opened from it. The sentence under it says what happens, and the link points at it, so a screen reader hears
  * that it opens a new window before the person follows it.
+ *
+ * The way to the manual steps sits here, where an install that failed leaves the person.
  */
-export function AddShortcutLink({ href }: { href: string }) {
+export function AddShortcutLink({ href, onByHand }: { href: string; onByHand: () => void }) {
   const hint = useId()
   return (
     <>
@@ -18,6 +20,10 @@ export function AddShortcutLink({ href }: { href: string }) {
         This opens Shortcuts&rsquo; Add Shortcut page in a new window. Add it there, then come back here. The next three
         steps are edits you make inside it. The address it posts to is already in it.
       </p>
+      <p>The shortcut did not install, or the page did not open?</p>
+      <button type="button" className={styles.copy} data-setup-switch onClick={onByHand}>
+        Set it up by hand
+      </button>
     </>
   )
 }
