@@ -11,7 +11,7 @@ export const NO_EMPTY_HEADER: ReactNode = (
   </>
 )
 
-/** The manual steps that come before the address: the trigger, its app and the action. */
+/** The manual steps that come before the address: the trigger, its app, running unasked and the action. */
 export const BEFORE_ADDRESS: SetupStepSpec[] = [
   {
     id: 'trigger',
@@ -33,11 +33,23 @@ export const BEFORE_ADDRESS: SetupStepSpec[] = [
     ),
   },
   {
+    id: 'run',
+    title: 'Let it run without asking',
+    body: (
+      <p>
+        On the same screen, choose the option that runs the automation without asking you each time; with the other
+        one, every payment waits for you to tap. On iOS 18 the two are called <b>Run Immediately</b> and{' '}
+        <b>Run After Confirmation</b>; on your phone they may be worded differently. Then tap <b>Next</b>.
+      </p>
+    ),
+  },
+  {
     id: 'action',
     title: 'Add the action',
     body: (
       <p>
-        Tap the <b>Search</b> bar at the bottom and type <b>Get Contents of URL</b>. Tap that action to add it.
+        If Shortcuts offers a list of shortcuts, choose <b>New Blank Automation</b>. Tap the <b>Search</b> bar at the
+        bottom and type <b>Get Contents of URL</b>. Tap that action to add it.
       </p>
     ),
   },

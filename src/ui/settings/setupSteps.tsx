@@ -22,13 +22,21 @@ const keyStep = (setup: Setup): SetupStepSpec => ({
   ),
 })
 
+/** Said in the shared list, which has no step of its own for it: the shortcut arrives with the choice already made. */
+const RUNS_UNASKED: ReactNode = (
+  <>
+    set to run without asking you each time (on iOS 18 that option is called <b>Run Immediately</b>; on your phone it
+    may be worded differently)
+  </>
+)
+
 const automationStep = (shared: boolean): SetupStepSpec => ({
   id: 'automation',
   title: 'Check the automation is on',
   body: (
     <p>
       {shared ? 'A shared shortcut may arrive with its automation switched off; that is not tried yet. ' : ''}Open the automation and keep{' '}
-      <b>Automation</b> on. Turn on <b>Allow Running When Locked</b> (info button, Privacy). Notify was off on the
+      <b>Automation</b> on, {shared ? RUNS_UNASKED : 'still set to run without asking, as you chose when you made it'}. Turn on <b>Allow Running When Locked</b> (info button, Privacy). Notify was off on the
       automations that were tried, and whether it matters is not tried yet. The editor can say Automation is turned off while
       it runs, so trust the automation list and your first real payment.
     </p>
@@ -48,10 +56,10 @@ const purchaseStep = (): SetupStepSpec => ({
 })
 
 /** With the shortcut's share link available: add it in Shortcuts, then make the edits it needs by hand. */
-export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
+export function fileSteps(setup: Setup, shortcutUrl: string, onByHand: () => void): SetupStepSpec[] {
   return [
     keyStep(setup),
-    { id: 'add', title: 'Add the shortcut', body: <AddShortcutLink href={shortcutUrl} /> },
+    { id: 'add', title: 'Add the shortcut', body: <AddShortcutLink href={shortcutUrl} onByHand={onByHand} /> },
     {
       id: 'app',
       title: 'Choose your bank’s app',
@@ -89,18 +97,19 @@ export function fileSteps(setup: Setup, shortcutUrl: string): SetupStepSpec[] {
   ]
 }
 
-/** With no shared shortcut: build it, one action at a time. */
+/** With no shared shortcut, or when adding it did not work: build it, one action at a time. */
 export function manualSteps(setup: Setup): SetupStepSpec[] {
   return [
     keyStep(setup),
     ...BEFORE_ADDRESS,
     {
       id: 'url',
-      title: 'Type the address',
+      title: 'Enter the address',
       body: (
         <>
           <p>
-            In the action, tap <b>URL</b> and type this address. The <b>/capture</b> is part of it:
+            Tap <b>Copy</b> here, then in the action tap <b>URL</b> and paste. The <b>/capture</b> at the end is part of
+            the address:
           </p>
           <Address setup={setup} />
         </>

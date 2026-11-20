@@ -19,14 +19,16 @@ import { StoppedSuggestionsSetting } from '../settings/StoppedSuggestionsSetting
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountView } from '../settings/AccountView'
+import { CaptureView } from '../settings/CaptureView'
 import styles from './tabs.module.css'
 
-type SettingsView = 'preferences' | 'setup' | 'account' | 'data'
+type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
 
 const VIEW_OPTIONS: { value: SettingsView; label: string }[] = [
   { value: 'preferences', label: 'Preferences' },
   { value: 'setup', label: 'Setup' },
   { value: 'account', label: 'Account' },
+  { value: 'capture', label: 'Capture' },
   { value: 'data', label: 'Data' },
 ]
 
@@ -269,13 +271,11 @@ export function SettingsTab({
         <PreferencesView model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
       )}
 
-      {view === 'setup' && (
-        <SetupView model={model} actions={actions} onRunSetup={onRunSetup} />
-      )}
+      {view === 'setup' && <SetupView model={model} actions={actions} onRunSetup={onRunSetup} />}
 
-      {view === 'account' && (
-        <AccountView model={model} ownerAccess={ownerAccess} accountEmail={accountEmail} />
-      )}
+      {view === 'account' && <AccountView model={model} ownerAccess={ownerAccess} accountEmail={accountEmail} />}
+
+      {view === 'capture' && <CaptureView model={model} />}
 
       {view === 'data' && <DataView model={model} month={month} actions={actions} />}
     </SectionTabs>

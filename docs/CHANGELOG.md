@@ -2,6 +2,12 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Capture has its own Settings tab)
+
+- **Everything about capture is under Settings, Capture.** The setup steps, the capture key, notifications, linked cards, muted pushes and diagnostics had piled up on the Account tab, which now holds only your sign-in, access requests and the app's version.
+- **The setup steps fold away.** They are open until your first payment is captured and closed after that, behind "Show the steps", so the check and the cards under it are the first thing you see. If you open or close them yourself, the app remembers it on that device.
+- **If adding the shortcut does not work, you can build it by hand.** Under "Add the shortcut" there is now "Set it up by hand", which shows every step to make the automation yourself, and "Back to the shared shortcut" to return. The manual steps now say to choose the option that runs the automation without asking, so a payment does not wait for you to tap.
+
 ## November 2026 (Description suggestions by use)
 
 - **The description box suggests what you use most, and finds a word from inside a description.** Typing "merc" used to list every description starting with it in alphabetical order, so a shop you visit weekly could sit under one you went to once. The list now puts the descriptions you have used most first, the most recent first among equals, and also finds the text inside a description ("cado" finds "Supermercado"), listed after those that start with it. On a ledger too large to hold on the phone, older descriptions are still found by their start only and do not count towards the order.

@@ -25,7 +25,7 @@ async function applyTheme(page, theme) {
   }, theme)
 }
 
-// The capture cards in Settings, Account and the Dashboard's review card read their own routes, which the dev server
+// The capture cards in Settings, Capture and the Dashboard's review card read their own routes, which the dev server
 // does not have, so the pictures would show "Request failed (404)". These invented answers show a set-up phone instead.
 const CAPTURE_ROUTES = {
   '/api/recommendations': { recommendations: [], next: null, openCount: 0 },
@@ -100,8 +100,6 @@ async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('tab', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
-  // The capture cards are a lazy chunk that lands after the rest of the view.
-  await page.waitForSelector('text=Set up capture', { timeout: 15000 })
 }
 
 async function waitForAccessAdmin(page) {

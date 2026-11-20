@@ -3,17 +3,27 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseModel } from '../useExpenseData'
 import { AccountView } from './AccountView'
 
-vi.mock('./CaptureKeySetting', () => ({ CaptureKeySetting: () => <p>capture key card</p> }))
-vi.mock('./CaptureCardsSetting', () => ({ CaptureCardsSetting: () => <p>linked cards</p> }))
+vi.mock('./AccountSetting', () => ({ AccountSetting: ({ email }: { email: string }) => <p>signed in as {email}</p> }))
+vi.mock('./AccessRequestsSetting', () => ({ AccessRequestsSetting: () => <p>access requests</p> }))
 vi.mock('./AppVersionSetting', () => ({ AppVersionSetting: () => <p>version</p> }))
 
-const render_ = () => render(<AccountView model={{} as ExpenseModel} ownerAccess={undefined} accountEmail={undefined} />)
+describe('the Account view', () => {
+  it('holds the sign-in, the access requests and the build, and nothing else', () => {
+    const { container } = render(
+      <AccountView model={{} as ExpenseModel} ownerAccess={{ pendingCount: 1 }} accountEmail="owner@example.com" />,
+    )
 
-describe('the capture cards', () => {
-  it('are on the Account view for every approved person', async () => {
-    render_()
+    expect([...container.querySelectorAll('p')].map((p) => p.textContent)).toEqual([
+      'signed in as owner@example.com',
+      'access requests',
+      'version',
+    ])
+  })
 
-    expect(await screen.findByText('capture key card')).toBeInTheDocument()
-    expect(await screen.findByText('linked cards')).toBeInTheDocument()
+  it('shows only the build to a person with no email known and no access to manage', () => {
+    const { container } = render(<AccountView model={{} as ExpenseModel} ownerAccess={undefined} accountEmail={undefined} />)
+
+    expect(screen.getByText('version')).toBeInTheDocument()
+    expect(container.querySelectorAll('p')).toHaveLength(1)
   })
 })

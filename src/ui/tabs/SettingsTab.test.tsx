@@ -38,11 +38,11 @@ describe('SettingsTab sections', () => {
     )
   }
 
-  it('offers Preferences, Setup, Account and Data as tabs over one panel, opening on Preferences', () => {
+  it('offers Preferences, Setup, Account, Capture and Data as tabs over one panel, opening on Preferences', () => {
     renderSettings()
 
     expect(screen.getByRole('tablist', { name: 'Settings section' })).toBeInTheDocument()
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Preferences', 'Setup', 'Account', 'Data'])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Preferences', 'Setup', 'Account', 'Capture', 'Data'])
     expect(screen.getByRole('tab', { name: 'Preferences' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Preferences')
     expect(screen.getByLabelText('Default account')).toBeInTheDocument()
@@ -55,6 +55,21 @@ describe('SettingsTab sections', () => {
 
     expect(screen.getByText('About this app')).toBeInTheDocument()
     expect(screen.getByText('Reads your data').nextElementSibling).toHaveTextContent('As one dataset (classic)')
+  })
+
+  it('keeps the capture cards on their own tab, off the Account one', async () => {
+    renderSettings()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Account' }))
+    expect(screen.getByText('About this app')).toBeInTheDocument()
+    expect(screen.queryByText('Set up capture')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Capture' }))
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Capture')
+    for (const title of ['Set up capture', 'Capture key', 'Notifications', 'Linked cards', 'Muted pushes', 'Capture diagnostics']) {
+      expect(await screen.findByText(title)).toBeInTheDocument()
+    }
+    expect(screen.queryByText('About this app')).not.toBeInTheDocument()
   })
 
   it('swaps the panel for the section that is tapped', () => {

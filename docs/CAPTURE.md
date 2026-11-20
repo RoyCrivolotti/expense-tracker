@@ -42,7 +42,7 @@ secret, 256 random bits, of which only a SHA-256 is stored. Hex rather than base
 separator, and a fixed length so one pattern refuses anything else before any lookup. The code is in
 [`captureKey.ts`](../src/domain/capture/captureKey.ts).
 
-- **Made in Settings**, Account by the signed-in person. The owner is the verified email and nothing in the body can change it.
+- **Made in Settings**, Capture by the signed-in person. The owner is the verified email and nothing in the body can change it.
 - **Shown once.** The create call returns the whole key and nothing else ever does. The list returns id, name, when it
   was made and when it was last used.
 - **Three at a time** per person, checked inside the insert so two requests made at once cannot make a fourth. A fourth
@@ -160,7 +160,7 @@ a submit or a link, read from the row saved or linked:
   dismissal teaches the merchant nothing. Votes are counted in SQL, so two decisions at once both count.
 - **Ignoring a wording**: three dismissals in a row on a template nobody has accepted mute it. Its later pushes of the
   same wording are counted as unread on the setup screen and make no recommendation. An accept, or the un-ignore route, ends the streak.
-  Settings, Account, "Muted pushes" lists the muted wordings by their masked words, with "Suggest again". An accepted template is never muted this way.
+  Settings, Capture, "Muted pushes" lists the muted wordings by their masked words, with "Suggest again". An accepted template is never muted this way.
 
 The event records what the person did in `outcome`: `added-as-is`, `edited:` and the fields changed (amount, type,
 account, description, category), `linked` or `dismissed`. An add is compared with what the card showed: the list's
@@ -171,7 +171,7 @@ these facts to suggest what each payment becomes ([CAPTURE-REVIEW.md](CAPTURE-RE
 
 ## Setting up a phone
 
-Settings, Account, "Set up capture" lists the steps and checks that the first payment arrived. On `npm run dev` the
+Settings, Capture, "Set up capture" lists the steps and checks that the first payment arrived. On `npm run dev` the
 demo data has no capture routes behind it, so the review list read fails silently and these cards say "Request failed";
 that is expected, and production and the staging previews have the routes. **A shortcut built by hand
 from steps like these worked on one phone, and the shortcut installed from a shared copy worked on one phone. A second
@@ -185,6 +185,11 @@ a Mac, Windows or Linux it shows only a note to set capture up from Settings on 
 status read; the key card, the linked cards, muted pushes and diagnostics show everywhere, since a person often reviews
 on a laptop. Nothing is blocked. The OS version is never read from the browser, because Safari freezes it in the user
 agent, so the requirement line points to Settings, General, About instead.
+
+The steps fold behind "Show the steps" / "Hide the steps", a row that also says how many are ticked. They start open
+until a payment has been captured from any source and closed after that, so a person whose capture works reaches the
+check and the cards under it without scrolling past the steps. Once the person opens or closes them, that choice is
+kept in the browser with the ticks and wins over the default. The check stays outside the fold.
 
 ### With the shortcut link
 
@@ -204,13 +209,18 @@ iPhone from Safari and the installed Home Screen app. A link to the file traps t
    the source word ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md)), so nothing is typed. A copy published before that has a
    `source` field holding `CARD_NAME_HERE` instead: delete it and add `app`. A shortcut that sends a real `source`
    word keeps working, and that word wins over `app`, so its payments and cards stay filed where they were.
-6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on and turn on
+6. **Check the automation is on.** A shared shortcut can arrive with its automation off (untried). Keep **Automation** on,
+   set to run without asking each time (**Run Immediately** on iOS 18; not seen on iOS 27, where the words may differ), and turn on
    **Allow Running When Locked** (info button, Privacy). Notify was off on the automations tried; whether it matters is
    untried. The editor has said "Automation is turned off" while it ran, so trust the automation list and the first payment.
 7. **Make one purchase** and watch the check below. If iOS asks whether the shortcut may send data, allow it and choose
    the option that remembers the answer. If it asks again on every payment an unattended run cannot work yet (untested).
 
 The Worker's address, with `/capture`, is already inside the file (checked), so none is typed.
+
+Step 2 also asks "The shortcut did not install, or the page did not open?" with a **Set it up by hand** button. It swaps
+the list for the steps under "By hand" below, with **Back to the shared shortcut** above them. The choice is kept in the
+browser, and so are the ticks of the steps the two lists share.
 
 ### Publishing the shortcut
 
@@ -233,27 +243,30 @@ committed. Unset or invalid, the status route says `shortcutUrl: null` and the c
 
 ### By hand
 
-With no valid link set, or when the status cannot be read, the card shows these steps, one action each. The address is
+With no valid link set, when the status cannot be read, or after **Set it up by hand**, the card shows these steps, one action each. The address is
 `endpoint` from `GET /api/capture-status` with a Copy button, or a field to paste it.
 
 1. Make a key and copy it, as above.
 2. Open **Shortcuts**, start a new automation and choose the trigger **When I receive a notification from**.
 3. Tap the app name and choose the bank's app. Leave the filters empty.
-4. Tap the **Search** bar at the bottom, type **Get Contents of URL** and tap that action to add it.
-5. In the action, tap **URL** and type the address. The `/capture` is part of it.
-6. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
-7. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the
+4. On the same screen choose the option that runs without asking each time; the other holds every payment for a tap. They are
+   **Run Immediately** and **Run After Confirmation** on iOS 18; not seen on iOS 27, where the words may differ. Tap **Next**.
+5. If Shortcuts offers a list of shortcuts, choose **New Blank Automation**. Tap the **Search** bar at the bottom, type
+   **Get Contents of URL** and tap that action to add it.
+6. Tap **Copy** beside the address in the card, then in the action tap **URL** and paste. The `/capture` is part of it.
+7. Tap the small arrow on the action to show more. Change **Method** from GET to **POST**.
+8. Under **Headers**, tap **Add new header**. Set the key to **Authorization** and the text to `Bearer`, a space, then the
    key. Leave no empty row there, as in step 4 above.
-8. Under **Request Body**, choose **JSON**.
-9. Tap **Add new field**, choose **Text**, set the key to **app** and, from the value field, the notification's variable
-   **App**. Nothing is typed for the bank.
-10. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
-11. Add a field with the key **body** and the variable **Body**.
-12. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
+9. Under **Request Body**, choose **JSON**.
+10. Tap **Add new field**, choose **Text**, set the key to **app** and, from the value field, the notification's variable
+    **App**. Nothing is typed for the bank.
+11. Add a field the same way with the key **title** and, from the value field, the notification's variable **Title**.
+12. Add a field with the key **body** and the variable **Body**.
+13. Add a field with the key **date** and the variable **Date**. Tap the variable once more and look for a date format called
     **ISO 8601**. In saved notes the date arrived that way, such as `2026-11-03T09:41:07+01:00`.
-13. Save the automation. Optional: an If that checks the answer contains `ok`, otherwise shows "Capture failed" (untried: the
+14. Save the automation. Optional: an If that checks the answer contains `ok`, otherwise shows "Capture failed" (untried: the
     action returns the answer rather than failing, so it can catch a refusal but probably not a missing connection).
-14. Check the automation is on, and make one purchase, as steps 6 and 7 above.
+15. Check the automation is on, and make one purchase, as steps 6 and 7 above.
 
 **The check.** The screen reads `GET /api/capture-status` and shows one of four states for every source together: the
 counts added up, and the newest capture with the source it came from. Grey "Waiting for your first payment": nothing has
@@ -273,7 +286,7 @@ variable is unset the screen asks for the address to be pasted and keeps it in t
 
 ## Muted pushes and diagnostics
 
-Settings, Account has two more cards, each its own lazy chunk. "Muted pushes" reads
+Settings, Capture has two more cards, each its own lazy chunk. "Muted pushes" reads
 `GET /api/capture-templates?ignored=1` and lists each muted wording by its masked words: numbers, cards, dates and codes
 always shown as what they are, and the merchant only once a second push of the wording has shown where it sits (until
 then the first push's merchant is among the words), with its source, how often it was seen and dismissed, and when it

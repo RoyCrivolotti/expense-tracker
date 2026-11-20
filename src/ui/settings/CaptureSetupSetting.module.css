@@ -142,3 +142,81 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* The row that opens and closes the steps: what it does on the left, how far the person has got on the right. */
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 0.4rem;
+}
+
+.toggleCount {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-align: right;
+}
+
+/* The steps fold away as the rows of the Upcoming card do: the row track runs between 1fr and 0fr, and they leave
+   sight (and the find-in-page) only once folded. */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-out),
+    visibility 0s;
+}
+
+.folded {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-in),
+    visibility 0s linear var(--motion-fold);
+}
+
+.foldInner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The air between the row and the steps is inside the fold, so a closed card has none left over. */
+.foldInner > :first-child {
+  margin-top: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold,
+  .folded {
+    transition: none;
+  }
+}
+
+.switch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}

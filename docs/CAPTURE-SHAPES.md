@@ -119,8 +119,8 @@ When a bank's pushes are read wrong, the fix is on the phone, not in the code:
 
 - **A wrong amount, type or description**: open Review, correct it and save. The template learns from that save.
 - **A push that should never be suggested** (an offer, a balance alert): Don't add. Three in a row on a wording never
-  added mute it; Settings, Account, "Muted pushes" brings it back.
-- **A push that never shows up**: Settings, Account, "Capture diagnostics" says whether it arrived and was not read.
+  added mute it; Settings, Capture, "Muted pushes" brings it back.
+- **A push that never shows up**: Settings, Capture, "Capture diagnostics" says whether it arrived and was not read.
   A push with no currency-marked amount is counted and never suggested; that is deliberate, since a one-time code
   looks the same.
 

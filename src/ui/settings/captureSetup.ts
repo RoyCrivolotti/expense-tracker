@@ -54,17 +54,40 @@ export function lastCaptureText(iso: string, now: Date): string {
 
 const STORAGE_KEY = 'expenses-capture-setup'
 
-/** What the person ticked off, and an address they pasted, kept in this browser only. */
+/**
+ * What the person ticked off, an address they pasted, whether they opened or closed the steps themselves (absent
+ * until they do, so the card can choose for them) and whether they build the shortcut by hand, kept in this browser only.
+ */
 export interface SetupMemory {
   ticks: string[]
   endpoint: string
+  steps?: 'open' | 'closed'
+  /** The person chose to build the shortcut by hand although a shared one is offered. */
+  byHand?: boolean
+}
+
+/**
+ * Whether the steps are open: what the person last chose, else open until a payment has been captured. Someone whose
+ * capture works has no use for the steps on every visit, and someone still setting up needs them in front of them.
+ */
+export function stepsOpen(memory: Pick<SetupMemory, 'steps'>, sources: readonly SourceStatus[] | undefined): boolean {
+  if (memory.steps) return memory.steps === 'open'
+  return !overall(sources ?? [])?.lastCaptureAt
+}
+
+/** The two choices, each left out unless it was stored as one of its values. */
+function choices(raw: Partial<SetupMemory> | null): Pick<SetupMemory, 'steps' | 'byHand'> {
+  return {
+    ...(raw?.steps === 'open' || raw?.steps === 'closed' ? { steps: raw.steps } : {}),
+    ...(raw?.byHand === true ? { byHand: true } : {}),
+  }
 }
 
 export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null): SetupMemory {
   try {
     const raw = JSON.parse(storage?.getItem(STORAGE_KEY) ?? 'null') as Partial<SetupMemory> | null
     const ticks = Array.isArray(raw?.ticks) ? raw.ticks.filter((t): t is string => typeof t === 'string') : []
-    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '' }
+    return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '', ...choices(raw) }
   } catch {
     return { ticks: [], endpoint: '' }
   }

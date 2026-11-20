@@ -51,7 +51,7 @@ pointed at an address that is not a push service.
 
 ## Turning a device on
 
-Settings, Account, "Notifications" ([`PushSetting.tsx`](../src/ui/settings/PushSetting.tsx), its own lazy chunk in the
+Settings, Capture, "Notifications" ([`PushSetting.tsx`](../src/ui/settings/PushSetting.tsx), its own lazy chunk in the
 capture bundle budget). Each device is turned on from that device, and the card says where this one stands:
 
 - **Not installed** (an iPhone or iPad outside the Home Screen app, read from `navigator.standalone`): add the app to the
