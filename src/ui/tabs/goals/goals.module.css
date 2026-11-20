@@ -2761,3 +2761,15 @@
     min-height: 2.75rem;
   }
 }
+
+/* Under the hero chart while the scenario being edited starts after the chart's axis: the chart and
+   the figures under it are in two moneys, and this says which is which. */
+.twoMoneys {
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}

@@ -192,4 +192,21 @@ describe('PlanHero with a scenario that starts before the loaded one', () => {
     expect(hero.todayIndex).toBeCloseTo(2.5, 2)
     expect((hero.extraSeries as { points: { xIndex: number }[] }[])[0]?.points[0]?.xIndex).toBeCloseTo(2, 2)
   })
+
+  it('says the chart and the figures under it are in two moneys', () => {
+    renderWith('purchasing-power', '2026-01-01')
+    expect(
+      screen.getByText('The chart is in 2026 euros so the scenarios can be compared. The figures below are in 2027 euros, the year this scenario starts.'),
+    ).toBeInTheDocument()
+  })
+
+  it('names the two by month when they start in one year', () => {
+    renderWith('purchasing-power', '2027-01-01')
+    expect(screen.getByText(/The chart is in euros of Jan 2027 so the scenarios can be compared\. The figures below are in euros of Jul 2027, the month this scenario starts\./)).toBeInTheDocument()
+  })
+
+  it('says nothing of it in the Nominal view, where the chart is in the euros of each year', () => {
+    renderWith('nominal', '2026-01-01')
+    expect(screen.queryByText(/so the scenarios can be compared/)).not.toBeInTheDocument()
+  })
 })

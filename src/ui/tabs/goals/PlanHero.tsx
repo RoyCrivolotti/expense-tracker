@@ -6,6 +6,7 @@ import { SegmentedControl } from '../../components/SegmentedControl'
 import { todayIso } from '../../components/transactionFormState'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { heroAxis } from './charts/heroSeries'
+import { TwoMoneys } from './TwoMoneys'
 import type { HeroLegendStore } from './charts/heroLegendStore'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
@@ -123,8 +124,10 @@ export function PlanHero({
           planStartDate={deferredDraft.planStartDate}
         />
       ) : null
+    const twoMoneys = mode === 'nominal' ? null : <TwoMoneys chartStart={origin} draftStart={deferredDraft.planStartDate} />
     return narrow ? (
       <div>
+        {twoMoneys}
         <PortfolioShortfallNote draft={deferredDraft} />
         <div>
           <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
@@ -134,12 +137,13 @@ export function PlanHero({
       </div>
     ) : (
       <>
+        {twoMoneys}
         <PortfolioShortfallNote draft={deferredDraft} />
         <PlanStrip draft={deferredDraft} milestones={milestones} />
         {nominalPreview}
       </>
     )
-  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting])
+  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting, origin])
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate || !origin) return undefined
