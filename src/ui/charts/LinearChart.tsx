@@ -25,6 +25,7 @@ import {
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
+import { ChartStartMarks, type StartMark } from './ChartStartMarks'
 import { drawnValuesOf, placeX, placesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
@@ -117,6 +118,8 @@ interface Props {
   refHighlight?: RefHighlight
   /** Marks on the picked line: where each path reaches it, and a note at its right end. */
   annotations?: ChartAnnotations | undefined
+  /** Where lines that start part-way along the axis begin; see `ChartStartMarks`. */
+  startMarks?: StartMark[] | undefined
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
@@ -237,6 +240,7 @@ export function LinearChart({
   refCurves,
   refHighlight,
   annotations,
+  startMarks,
   markerYears = [],
   lifeEventMarkers = [],
   labeledMarkers,
@@ -374,6 +378,7 @@ export function LinearChart({
           minGap={REF_LINE_MIN_GAP}
           highlight={refHighlight}
         />
+        <ChartStartMarks marks={startMarks} geo={geo} left={PAD.left} right={width - PAD.right} active={active} annotations={annotations} />
         <ChartAnnotationLayer
           annotations={annotations}
           xForIndex={geo.xForIndex}
