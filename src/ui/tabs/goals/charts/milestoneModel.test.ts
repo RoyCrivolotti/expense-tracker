@@ -129,7 +129,7 @@ describe('cellFromOffset', () => {
 
   it('keeps already there as 0, and a path that reached it before today is there too', () => {
     expect(cellFromOffset(0, 3.2)).toBe(0)
-    expect(cellFromOffset(0, -1.5)).toBe(0)
+    expect(cellFromOffset(0, 0)).toBe(0)
     expect(cellFromOffset(3, 3.2)).toBe(0)
     expect(cellFromOffset(3, 3)).toBe(0)
     expect(cellFromOffset(3, 40)).toBe(0)
@@ -137,6 +137,14 @@ describe('cellFromOffset', () => {
 
   it('keeps not within the horizon as null', () => {
     expect(cellFromOffset(null, 3.2)).toBeNull()
+  })
+
+  it('counts what a path that starts later has at its start from its start, not as already there', () => {
+    // A path 1,6 years from its start has nothing yet: it has its starting balance in 2 years, rounded up once.
+    expect(cellFromOffset(0, -1.6)).toBe(2)
+    expect(cellFromOffset(0, -1.5)).toBe(2)
+    expect(cellFromOffset(0, -2)).toBe(2)
+    expect(cellFromOffset(0, -0.01)).toBe(1)
   })
 })
 
@@ -243,6 +251,14 @@ describe('describeCell', () => {
   it("says the years from today, and the calendar year of the path's own step", () => {
     const old = row({ cells: [3], sinceStart: [5], startDate: '2024-05-01', elapsedYears: 2.4 })
     expect(describeCell({ ...base, row: old })).toBe('Path B reaches 750k € in 3 years, by 2029.')
+  })
+
+  it('says a path that starts later has it when it starts, not that it already has it', () => {
+    const later = row({ cells: [2], sinceStart: [0], offsets: [0], startDate: '2028-07-01', elapsedYears: -1.6 })
+    expect(describeCell({ ...base, row: later })).toBe("Path B has 750k € when it starts, in Jul '28.")
+    expect(describeCell({ ...base, row: later, reachedOn: '2026-05-01' })).toBe(
+      "Path B has 750k € when it starts, in Jul '28. Your check-ins reached it by May '26.",
+    )
   })
 
   it('says a path already has it, or does not get there within its horizon', () => {
@@ -397,6 +413,25 @@ describe('buildRows', () => {
     expect(row?.sinceStart[0]).toBeGreaterThan(0)
     expect(row?.sinceStart[0]).toBeLessThanOrEqual(11)
     expect(row?.cells).toEqual([0])
+  })
+
+  it('counts a path that starts 1,6 years from today from its start, and leaves a path that has started as it was', () => {
+    const money = { startInvestedCents: 15_000_000, monthlyContributionCents: 100_000 }
+    const started = makeScenario({ id: 1, planStartDate: '2026-01-01', ...money })
+    const later = makeScenario({ id: 2, planStartDate: '2028-05-10', ...money })
+    const ladder = [{ amountCents: 10_000_000, label: '' }, { amountCents: 15_000_000, label: '' }, { amountCents: 30_000_000, label: '' }]
+    const [first, second] = buildRows([started, later], draft, ladder, 0, false, null, '2026-10-03')
+
+    expect(second!.elapsedYears).toBeCloseTo(-1.6, 1)
+    // 100k and 150k are in its starting balance: it has them the day it starts, two years from now rounded up.
+    expect(second!.cells.slice(0, 2)).toEqual([2, 2])
+    expect(second!.cells[2]).toBe(Math.ceil(second!.offsets[2]! - second!.elapsedYears))
+    expect(cellText(second!, 0, 'years')).toBe('2y')
+    expect(cellText(second!, 0, 'calendar')).toBe('2028')
+    // The path that started already has both, and its cells are what they always were.
+    expect(first!.cells.slice(0, 2)).toEqual([0, 0])
+    expect(first!.cells[2]).toBe(cellFromOffset(first!.offsets[2]!, first!.elapsedYears))
+    expect(cellText(first!, 0, 'years')).toBe('✓')
   })
 
   it('leaves the draft out when it is a loaded scenario with no edits', () => {

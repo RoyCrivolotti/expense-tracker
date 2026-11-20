@@ -5,7 +5,7 @@ import { crossingYears, scenarioToParams, shortMonthYearLabel, wholeYearsToAmoun
 
 export { yearsBetween }
 import { tableName } from '../scenarioNames'
-import { beyondText, yearsText } from './milestoneText'
+import { atStartText, beyondText, yearsText } from './milestoneText'
 
 export type RowKind = 'plan' | 'saved' | 'fromToday' | 'draft'
 
@@ -104,11 +104,13 @@ const SAME_DAY = 1e-9
  * on purpose, so "within N years" is the claim that is safe to make. Rounded once for every row: a
  * path restarted on its own line reaches the amount on the same day as before, so it gets the same
  * cell, which two roundings (to a yearly step from its start, and again from today) did not give it.
- * 0 is already there: the path had it at its start, or reached it before today.
+ * 0 is already there: the path had it at its start, or reached it before today. A path that starts
+ * after today has nothing before its start, so what it has at its start it has on that day, the
+ * years to which are its cell.
  */
 export function cellFromOffset(offset: number | null, elapsedYears: number): number | null {
   if (offset === null) return null
-  if (offset <= SAME_DAY) return 0
+  if (offset <= SAME_DAY && elapsedYears >= 0) return 0
   return Math.max(0, Math.ceil(offset - elapsedYears - SAME_DAY))
 }
 
@@ -236,7 +238,7 @@ function headline(row: MilestoneRow, index: number, amount: string): string {
   const years = row.cells[index] ?? null
   if (years === null) return beyondText(row, amount)
   const own = row.sinceStart[index] ?? 0
-  if (own === 0) return `${row.name} already has ${amount} at its start.`
+  if (own === 0) return atStartText(row, amount)
   if (years === 0) return `${row.name} reached ${amount} before today, in ${calendarYear(row, own)}.`
   return `${row.name} reaches ${amount} in ${yearsText(years)}, by ${calendarYear(row, own)}.`
 }
