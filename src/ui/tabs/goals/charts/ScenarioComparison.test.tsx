@@ -180,9 +180,41 @@ describe('ScenarioComparison', () => {
     expect(screen.getByText(/Net worth and invested are .*, in 2026 euros; FI and the house purchase/)).toBeInTheDocument()
   })
 
-  it('says each plan is in the euros of its own start when the rows start in different years', () => {
+  it('reads every row on one date, in the euros of the earliest start, when the rows start on different days', () => {
     render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]} draft={{ ...draft, planStartDate: '2026-01-01' }} />)
-    expect(screen.getByText(/, each in the euros of its own start date; FI and the house purchase/)).toBeInTheDocument()
+    expect(screen.getByText(/^Net worth and invested are on the same date for every path, Jan 2054, the last year every scenario reaches, in 2024 euros; FI and the house purchase are given as a month;/)).toBeInTheDocument()
+    expect(screen.queryByText(/each in the euros of its own start date/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
+    expect(screen.getByText(/on the same date for every path, Jan 2034, in 2024 euros;/)).toBeInTheDocument()
+  })
+
+  it('says the date is the last year shown when one path ends before another starts', () => {
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2026-01-01', horizonYears: 5 })]} draft={{ ...draft, planStartDate: '2032-01-01', horizonYears: 10 }} />)
+    expect(screen.getByText(/^Net worth and invested are on the same date for every path, Jan 2042, the last year shown, in 2026 euros, or a path’s last figure when it ends sooner;/)).toBeInTheDocument()
+    expect(screen.getAllByText(/\(ended 2031\)$/)).toHaveLength(2)
+  })
+
+  it('offers the windows a later start reaches into', () => {
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01', horizonYears: 8 })]} draft={{ ...draft, planStartDate: '2029-01-01', horizonYears: 8 }} />)
+    expect(screen.getByRole('radiogroup', { name: 'Comparison year' })).toHaveTextContent('5Y10YHorizon')
+    fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
+    // The first path ended in 2032; the second has not ended by 2034.
+    expect(screen.getByText(/, or a path’s last figure when it ends sooner;/)).toBeInTheDocument()
+    expect(screen.getAllByText(/\(ended 2032\)$/)).toHaveLength(2)
+  })
+
+  it('names the check-in of the plan from today on the shared calendar, without counting its years apart', () => {
+    const plan = makeScenario({ id: 2, name: 'Path B', planStartDate: '2024-01-01', isActive: true })
+    render(
+      <ScenarioComparison
+        scenarios={[plan, makeScenario({ id: 3, name: 'Path C', planStartDate: '2025-01-01' })]}
+        draft={{ ...draft, planStartDate: '2024-01-01' }}
+        includeDraft={false}
+        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
+      />,
+    )
+    expect(screen.getByText(/"From today" is your plan restarted from the balance in your latest check-in, Jan 1, 2026\.$/)).toBeInTheDocument()
   })
 
   it('names only the saved plans\' euros when the draft has a row of its own no more', () => {
