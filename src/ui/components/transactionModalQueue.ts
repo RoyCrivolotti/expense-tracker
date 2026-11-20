@@ -45,6 +45,8 @@ export function useQueueAdvance(
       const card = seed?.card
       // A card is asked about so that the account is never a guess: nothing is saved until it is answered.
       if (id == null) refuseUnanswered(card, input)
+      // 0 is "nothing chosen": a payment with no suggested category opens that way, and is never filed under a guess.
+      if (id == null && input.categoryId === 0) throw new Error('Choose a category')
       let saved: Transaction | null
       try {
         saved = await saveTransaction(actions, input, id, intent, seed?.recommendationId, dup.takeAllow())

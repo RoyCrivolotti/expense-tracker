@@ -124,7 +124,7 @@ function CategoryAccountRow({
   investmentCategoryId: number | null
 }) {
   const lockedCategoryId = form.type === 'investment' ? investmentCategoryId : null
-  const categories = selectableOptions(model.dataset.categories, form.categoryId)
+  const categories = selectableOptions(model.dataset.categories, form.categoryId, 'Pick a category')
   const accounts = selectableOptions(model.dataset.accounts, form.accountId, 'Pick an account')
   const selectedCategory = model.dataset.categories.find((c) => c.id === form.categoryId)
   const categoryInactive = selectedCategory != null && !selectedCategory.active
