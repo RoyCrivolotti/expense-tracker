@@ -6,7 +6,7 @@
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
  * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
- * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
+ * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`) and with a path that starts after today (`ONLY=w3`),
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
@@ -3128,6 +3128,147 @@ async function checkFromTodayTimeline(browser, engine) {
   await context.close()
 }
 
+/**
+ * A path that starts after today (check group w3). The demo's paths have all started, so the editing
+ * path is given a start date twenty months ahead and a starting balance over the first two
+ * milestones: it has them on the day it starts, which is a number of years away, not a tick. The
+ * paths that have started keep their ticks, the calendar year is the year it starts, vs plan counts
+ * the difference of what is shown, and the phone's By goal reads the same cell.
+ */
+const LATER_MONTHS = 20
+
+async function setLaterStart(page, monthsAhead = LATER_MONTHS) {
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const target = await page.evaluate((months) => {
+    const d = new Date()
+    d.setDate(1)
+    d.setMonth(d.getMonth() + months)
+    return { year: d.getFullYear(), month: d.getMonth() }
+  }, monthsAhead)
+  await page.getByRole('button', { name: 'Plan start date' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Choose a date' })
+  for (let i = 0; i < 80; i += 1) {
+    const [, month, year] = /^([A-Za-z]+) (\d{4})/.exec((await dialog.textContent()) ?? '') ?? []
+    const ahead = (target.year - Number(year)) * 12 + target.month - MONTHS.indexOf(month)
+    if (ahead === 0) break
+    await dialog.getByRole('button', { name: ahead > 0 ? 'Next month' : 'Previous month' }).click()
+  }
+  await dialog.getByRole('button', { name: new RegExp(`^15 ${MONTHS[target.month]} ${target.year}`) }).click()
+  await page.waitForTimeout(500)
+  // Whole years from today to the start, rounded up: what the path's first cells should say.
+  return page.evaluate(({ year, month }) => {
+    const start = new Date(year, month, 15, 12)
+    return { year, years: Math.ceil((start.getTime() - Date.now()) / (365.25 * 86_400_000)) }
+  }, target)
+}
+
+async function checkLaterStartMilestones(browser, engine) {
+  const where = `${engine} 1280x800`
+  const { page, context } = await openPlan(browser, SCREENS[1])
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  const balance = page.getByLabel('Starting invested', { exact: true }).last()
+  await balance.fill('250000')
+  await balance.press('Enter')
+  const start = await setLaterStart(page)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
+
+  const rows = await readRows(page)
+  const draftAt = rows.findIndex((r) => r.name.endsWith('(editing)'))
+  const draft = rows[draftAt]
+  const first = draft?.cells.slice(0, 2).map((c) => c.shown)
+  check(where, `(w3) a path that starts in ${start.years} years has what is in its starting balance then, not already`, JSON.stringify(first) === JSON.stringify([`${start.years}y`, `${start.years}y`]), JSON.stringify(draft))
+  const sentence = await page.locator('[role="grid"] tbody tr').nth(draftAt).locator('td[role="gridcell"]').first().getAttribute('aria-label')
+  check(where, '(w3) and its sentence says it has it when it starts', /has 100k € when it starts, in [A-Z][a-z]{2} '\d\d\./.test(sentence ?? ''), sentence)
+  const started = rows.filter((r, i) => i !== draftAt)
+  check(where, '(w3) the paths that have started keep their ticks', started.length > 0 && started.every((r) => r.cells[0].shown === '✓'), JSON.stringify(started.map((r) => r.cells[0])))
+
+  await page.getByRole('radio', { name: 'Calendar year' }).click()
+  const calendar = (await readRows(page))[draftAt]
+  check(where, '(w3) in calendar years it has them in the year it starts', calendar.cells[0].shown === String(start.year), JSON.stringify(calendar.cells[0]))
+  await page.getByRole('radio', { name: 'Years from now' }).click()
+
+  await page.getByRole('button', { name: 'vs plan' }).click()
+  await page.waitForTimeout(200)
+  const against = await readRows(page)
+  const plan = against.find((r) => r.plan)
+  const gap = against[draftAt].cells[0]
+  check(where, '(w3) vs plan is the difference of the cells shown', plan !== undefined && gap.gap === expectedGap(cellYears(gap.shown), cellYears(plan.cells[0].shown)), JSON.stringify({ gap, plan: plan?.cells[0] }))
+  await page.getByRole('button', { name: 'vs plan' }).click()
+
+  // The same page at a phone's width keeps the edit; By goal reads the same cell.
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.waitForTimeout(600)
+  // A phone shows the detail cards one at a time, picked by name.
+  await page.getByRole('radio', { name: 'Milestones' }).click()
+  await page.waitForTimeout(400)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  await matrixCard(page).getByRole('radio', { name: 'By goal' }).click()
+  await page.waitForTimeout(300)
+  const byGoal = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="byGoalRow"]')].map((li) => ({
+      name: li.querySelector('[class*="byGoalName"]')?.textContent ?? '',
+      value: li.querySelector('[class*="byGoalValue"]')?.textContent ?? '',
+    })),
+  )
+  const editing = byGoal.find((r) => r.name.endsWith('(editing)'))
+  check(`${engine} 375`, '(w3) By goal on a phone gives the path that starts later the same years', editing?.value === `${start.years}y`, JSON.stringify(byGoal))
+  const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
+  check(`${engine} 375`, '(w3) and the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
+  await context.close()
+}
+
+/**
+ * The timeline for the same kind of path (w3 too). Started fourteen months ahead with 480.000 €, it has
+ * 100k to 400k in its starting balance and reaches 500k within its first year, and the years to its start
+ * round up so both land in one dot. The dot's sentence must say "has" only of what is in the starting
+ * balance, and the calendar year it gives for the rest must be the table's.
+ */
+const parseAmount = (text) => {
+  const [, n, unit] = /^([\d,]+)([kM])/.exec(text) ?? []
+  return n ? Number(n.replace(',', '.')) * (unit === 'M' ? 1_000_000 : 1000) : NaN
+}
+
+async function checkLaterStartTimeline(browser, engine) {
+  const where = `${engine} 1280x800`
+  const { page, context } = await openPlan(browser, SCREENS[1])
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  const balance = page.getByLabel('Starting invested', { exact: true }).last()
+  await balance.fill('480000')
+  await balance.press('Enter')
+  await setLaterStart(page, 14)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  await page.getByRole('radio', { name: 'Calendar year' }).click()
+  const rows = await readRows(page)
+  const draftAt = rows.findIndex((r) => r.name.endsWith('(editing)'))
+  const heads = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] thead th')].slice(1).map((th) => th.querySelector('[class*="milestoneHeadAmount"]')?.textContent ?? ''))
+  const yearOf = new Map(heads.map((h, i) => [parseAmount(h), rows[draftAt].cells[i]?.shown]))
+  await page.getByRole('radio', { name: 'Years from now' }).click()
+  const fromNow = (await readRows(page))[draftAt].cells
+  // Whether 500k is in the same year from today as the start: it is, unless today falls so the start rounds down a year.
+  const shared = fromNow[heads.findIndex((h) => parseAmount(h) === 500_000)]?.shown === fromNow[0]?.shown
+  await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
+  await page.waitForTimeout(300)
+  const labels = await page.evaluate((at) => [...document.querySelectorAll('[class*="tlRow"]')[at].querySelectorAll('button[class*="tlDot"]')].map((d) => d.getAttribute('aria-label') ?? ''), draftAt)
+  const wrong = []
+  let mixed = 0
+  for (const label of labels) {
+    const [, has] = / has (.*) when it starts/.exec(label) ?? []
+    const [, reaches, by] = / reaches (.*) in \d+ years?, by (\d{4})/.exec(label) ?? []
+    const hasAmounts = has ? has.split(/, | and /).map(parseAmount) : []
+    const laterAmounts = reaches ? reaches.split(/, | and /).map(parseAmount) : []
+    if (hasAmounts.some((a) => !(a <= 480_000))) wrong.push({ label, why: 'has more than it starts with' })
+    if (laterAmounts.some((a) => !(a > 480_000))) wrong.push({ label, why: 'reaches what it starts with' })
+    if (laterAmounts.some((a) => yearOf.get(a) !== by)) wrong.push({ label, why: 'a year other than the table', table: laterAmounts.map((a) => yearOf.get(a)) })
+    if (has && reaches) mixed += 1
+  }
+  check(where, '(w3) the timeline says a path that starts later has only what is in its starting balance, and the table\'s year for the rest', labels.length > 0 && wrong.length === 0, JSON.stringify({ wrong, labels }))
+  check(where, '(w3) including a dot that holds both, when they share a year', mixed === (shared ? 1 : 0), JSON.stringify({ shared, labels }))
+  await context.close()
+}
+
 /** A touch device on the Goals chart tab, where the hero chart is. */
 async function openChartTab(browser, size) {
   const context = await browser.newContext({
@@ -3731,6 +3872,8 @@ const SECTIONS = [
   { name: 'Timeline', weight: 22, run: checkTimeline },
   { name: 'FromTodayMilestones', weight: 23, run: checkFromTodayMilestones },
   { name: 'FromTodayTimeline', weight: 4, run: checkFromTodayTimeline },
+  { name: 'LaterStartMilestones', weight: 6, run: checkLaterStartMilestones },
+  { name: 'LaterStartTimeline', weight: 4, run: checkLaterStartTimeline },
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
@@ -3822,6 +3965,11 @@ async function main() {
         }
         if (process.env.ONLY === 'x2') {
           await checkFromTodayTimeline(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'w3') {
+          await checkLaterStartMilestones(browser, engine)
+          await checkLaterStartTimeline(browser, engine)
           continue
         }
         for (const section of SHARD ? pickShard(SECTIONS, SHARD) : SECTIONS) {
