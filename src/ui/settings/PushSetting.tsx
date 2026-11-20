@@ -12,6 +12,13 @@ const MODE_LABELS: Record<PushMode, string> = {
   weekly: 'Once a week, Monday at 20:00',
 }
 
+/** What the chosen mode means for the person, so turning notifications on does not leave them waiting for a push that is not coming. */
+const MODE_EXPLAINED: Record<PushMode, string> = {
+  each: 'You get a notification for each payment as it arrives.',
+  daily: 'You get one summary a day, at 20:00. Choose “For every payment” to hear about each one as it arrives.',
+  weekly: 'You get one summary a week, on Monday at 20:00. Choose “For every payment” to hear about each one as it arrives.',
+}
+
 const NOT_INSTALLED = 'Add the app to your Home Screen first (Share, then Add to Home Screen), then turn this on from the installed app.'
 const UNSUPPORTED = 'This browser cannot receive notifications. Turn them on from the app installed on your phone.'
 const NOT_CONFIGURED = 'Notifications are not set up on this server.'
@@ -62,6 +69,7 @@ function Choice({ push }: { push: PushDevice }) {
           {MODE_LABELS[mode]}
         </label>
       ))}
+      <span className={tabStyles.settingHint}>{MODE_EXPLAINED[settings.mode]}</span>
       <span className={styles.meta}>{settings.timeZone.replace(/_/g, ' ')} time</span>
     </fieldset>
   )
