@@ -1,4 +1,4 @@
-import { planFromTodayAt, projectNetWorth, scenarioToParams, type PlanFromToday } from '../../../../engine'
+import { onAxis, planFromTodayAt, projectNetWorth, scenarioToParams, type PlanFromToday } from '../../../../engine'
 
 /**
  * The points of the plan-from-today line, for the plan's own axis. The restarted plan is in the euros
@@ -14,13 +14,5 @@ export function fromTodayPoints(
   inflationRate: number,
 ): { xIndex: number; value: number }[] {
   const at = planFromTodayAt(fromToday, inflationRate)
-  const back = Math.pow(1 + inflationRate, at.offsetYears)
-  return projectNetWorth(scenarioToParams(at.scenario, inflationRate)).flatMap((p) => {
-    const xIndex = at.offsetYears + p.year
-    const step =
-      p.preEventInvestedCents !== p.investedCents
-        ? [{ xIndex, value: Math.round(p.preEventInvestedCents / back) }]
-        : []
-    return [...step, { xIndex, value: Math.round(p.investedCents / back) }]
-  })
+  return onAxis(projectNetWorth(scenarioToParams(at.scenario, inflationRate)), at.offsetYears, inflationRate)
 }
