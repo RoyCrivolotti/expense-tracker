@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from './money'
-import { rebaseline, rebaselineSummary } from './rebaselinePatch'
+import { rebaseline } from './rebaselinePatch'
+import { rebaselineSummary } from './rebaselineSummary'
 
 const events = [
   { year: 1, amountCents: 5_000_00, label: 'Bonus' },

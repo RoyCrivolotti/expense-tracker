@@ -23,7 +23,6 @@ const FILE_LINE_CAPS = {
   'src/domain/application/transactionService.ts': 224,
   'src/domain/engine/money.ts': 230,
   'src/domain/engine/projection.ts': 217,
-  'src/domain/engine/rebaselinePatch.ts': 314,
   'src/testing/inMemoryExpenseRepository.ts': 1011,
   'src/testing/transactionQueryKit.ts': 236,
   'src/ui/ExpensesApp.tsx': 469,
