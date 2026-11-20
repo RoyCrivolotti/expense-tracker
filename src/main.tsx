@@ -6,6 +6,7 @@ import './ui/theme.css'
 import { initExpenseTheme } from './ui/hooks/expenseThemeInit'
 import { ToastProvider } from './ui/hooks/ToastProvider'
 import { PwaUpdatePrompt } from './ui/hooks/PwaUpdatePrompt'
+import { reloadWhenWorkerReplaced } from './ui/hooks/reloadWhenWorkerReplaced'
 import { resolveSource } from './data/resolveSource'
 import { ExpensesApp } from './ui/ExpensesApp'
 import { AccessGate } from './ui/access/AccessGate'
@@ -19,6 +20,9 @@ if (!container) throw new Error('Root element #root not found')
 const root = createRoot(container)
 
 initExpenseTheme()
+// Only a production build has a worker. Listening from the first line of the app, not from a component, so a worker that
+// takes over while the page is still starting is not missed.
+if (import.meta.env.PROD) reloadWhenWorkerReplaced(navigator.serviceWorker, () => window.location.reload())
 
 function renderApp(node: ReactNode) {
   root.render(
