@@ -17,13 +17,19 @@ export function anniversary(iso: string, years: number): string {
  * Plan year `year` of the old start, as a plan year of the new one: the first anniversary
  * of the new start on or after the old date, never below one. Null when that date is on
  * or before the check-in, which is what "already happened" means here.
+ *
+ * `early` takes the last anniversary on or before the date instead, for a cost in a copy started
+ * later: paid on the next anniversary it would sit in the copy's balance, earning, for months its
+ * source has already spent it, and the copy would read above its source from then to the end. Paid
+ * early it reads under. One that would land on the start itself is behind it (null).
  */
-export function carriedYear(year: number, oldStart: string, newStart: string, checkin: string): number | null {
+export function carriedYear(year: number, oldStart: string, newStart: string, checkin: string, early = false): number | null {
   const date = anniversary(oldStart, year)
   if (date <= checkin) return null
   let k = 1
   while (anniversary(newStart, k) < date) k += 1
-  return k
+  if (!early || anniversary(newStart, k) === date) return k
+  return k - 1 === 0 ? null : k - 1
 }
 
 /** The life events on their calendar dates, in the euros of the new start, and what dropped out and moved. */
@@ -32,8 +38,11 @@ export function carryEvents(
   oldStart: string | null,
   date: string,
   restate: (cents: number) => number,
+  costsEarly = false,
 ): { lifeEvents: LifeEvent[]; droppedLifeEvents: LifeEvent[]; carried: CarriedEvent[] } {
-  const years = events.map((event) => (oldStart ? carriedYear(event.year, oldStart, date, date) : event.year))
+  const years = events.map((event) =>
+    oldStart ? carriedYear(event.year, oldStart, date, date, costsEarly && event.amountCents < 0) : event.year,
+  )
   const lifeEvents: LifeEvent[] = []
   const droppedLifeEvents: LifeEvent[] = []
   events.forEach((event, i) => {
@@ -59,9 +68,10 @@ export function carryPurchase(
   purchase: number | null,
   oldStart: string | null,
   date: string,
+  early = false,
 ): { housePurchaseYear: number | null; house: Rebaseline['house'] } {
   const housePurchaseYear =
-    purchase === null || purchase === 0 || !oldStart ? purchase : (carriedYear(purchase, oldStart, date, date) ?? 0)
+    purchase === null || purchase === 0 || !oldStart ? purchase : (carriedYear(purchase, oldStart, date, date, early) ?? 0)
   const house =
     oldStart && purchase !== null && purchase > 0 && housePurchaseYear !== null
       ? {

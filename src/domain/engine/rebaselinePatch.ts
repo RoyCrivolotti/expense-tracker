@@ -160,6 +160,7 @@ function restartHouse(
   oldStart: string | null,
   newDate: string,
   inflationRate: number,
+  early: boolean,
 ): { fields: HouseFields; priceMoved: Rebaseline['housePrice']; owned: OwnedHouse | null } {
   const typed: HouseFields = {
     housePriceCents: scenario.housePriceCents,
@@ -170,7 +171,7 @@ function restartHouse(
   if (!oldStart || moved === 0 || !(scenario.housePriceCents > 0)) return { fields: typed, priceMoved: null, owned: null }
   const value = Math.round(scenario.housePriceCents * Math.pow(1 + scenario.houseAppreciationRate, moved))
   const purchase = scenario.housePurchaseYear
-  const bought = purchase === 0 || (purchase !== null && carriedYear(purchase, oldStart, newDate, newDate) === null)
+  const bought = purchase === 0 || (purchase !== null && carriedYear(purchase, oldStart, newDate, newDate, early) === null)
   if (!bought) {
     const priceMoved = value === scenario.housePriceCents ? null : { from: scenario.housePriceCents, to: value, appreciation: scenario.houseAppreciationRate }
     return { fields: { ...typed, housePriceCents: value }, priceMoved, owned: null }
@@ -214,12 +215,16 @@ function ownedHouse(
 /**
  * The scenario restarted on `at.date` from `at.investedCents`. The date is usually the latest check-in,
  * but nothing here needs it to be one, or in the past: a copy started at a later date is the same
- * restart (`startLater`). "Already happened" means on or before that date.
+ * restart (`startLater`). "Already happened" means on or before that date. `costsEarly` puts a cost
+ * (a negative event, the house purchase) on the anniversary on or before its date rather than after,
+ * which a copy started later needs to stay cautious (`carriedYear`); a re-baseline at a check-in keeps
+ * the next anniversary.
  */
 export function rebaseline(
   scenario: Rebaselinable,
   at: { investedCents: number; date: string },
   inflationRate: number,
+  { costsEarly = false }: { costsEarly?: boolean } = {},
 ): Rebaseline {
   // A start that is not a day on the calendar (only an API could have written one) reads as none.
   const oldStart = scenario.planStartDate && isCalendarDate(scenario.planStartDate) ? scenario.planStartDate : null
@@ -227,14 +232,14 @@ export function rebaseline(
   // The euros of the new start: what was typed in the euros of the old one, by the inflation between.
   const factor = Math.pow(1 + inflationRate, moved)
   const restate = (cents: number) => Math.round(cents * factor)
-  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, at.date, restate)
-  const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, at.date)
+  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, at.date, restate, costsEarly)
+  const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, at.date, costsEarly)
   const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
     scenario,
     oldStart,
     at.date,
   )
-  const { fields: houseFields, priceMoved, owned } = restartHouse(scenario, oldStart, at.date, inflationRate)
+  const { fields: houseFields, priceMoved, owned } = restartHouse(scenario, oldStart, at.date, inflationRate, costsEarly)
   const spend = restate(scenario.annualSpendCents)
   const rent = restate(scenario.rentMonthlyCents)
   const fees = restate(scenario.transactionCostsCents)
