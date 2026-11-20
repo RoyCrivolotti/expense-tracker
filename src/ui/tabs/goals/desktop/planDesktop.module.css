@@ -335,6 +335,30 @@
   font-weight: 600;
 }
 
+/* A later scenario's chip: its name, and under it when it starts. */
+.chipNameStack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chipNote {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* In place of a figure: a scenario that has not started, or has ended, at the year read. */
+.chipStatus {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 .chipEye {
   position: relative;
   display: grid;
