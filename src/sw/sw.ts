@@ -30,7 +30,7 @@ registerRoute(isShellNavigation, new NetworkOnly({ plugins: [{ handlerDidError: 
 // A push shows a notification whatever it holds, and puts the open count on the app icon where the device has a badge.
 // The worker's globals are read inside the handler, so that evaluating the worker touches nothing a sandbox lacks.
 self.addEventListener('push', (event) => {
-  event.waitUntil(showPush(event.data?.text() ?? null, self.registration, badgeOf(self.navigator), self.navigator.language))
+  event.waitUntil(showPush(event.data?.text() ?? null, self.registration, badgeOf(self.navigator), self.navigator.language, self.clients))
 })
 
 // A tap lands on the payment: an open window of the app is sent there, else one is opened.

@@ -3,6 +3,7 @@ import { ChunkBoundary } from '../components/ChunkBoundary'
 import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { useReviewCore } from './reviewContext'
+import { useHoldReloads } from './useReloadOnReturn'
 
 // Its own chunk, fetched only when there is a payment to show: most visits have none, and the budget check measures it
 // apart from the rest of the app.
@@ -16,6 +17,7 @@ const ReviewCard = lazy(() => import('./ReviewCard'))
 export function ReviewCardSlot() {
   const core = useReviewCore()
   const [sheet, setSheet] = useState(false)
+  useHoldReloads(sheet)
   if (!core) return null
   return (
     <Presence show={core.items.length > 0 || sheet} exitMs={EXIT_MS.sheet}>

@@ -32,6 +32,7 @@ import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
+import { useRefreshAll } from './hooks/useRefreshAll'
 import { useRefreshToast } from './hooks/useRefreshToast'
 import { useToast } from './hooks/useToast'
 import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
@@ -335,8 +336,9 @@ function ExpensesAppReady({
   const online = useConnectivity()
   const { readOnly, snapshotAt } = useConnectivityState()
   const contentRef = useRef<HTMLElement>(null)
+  const refresh = useRefreshAll(reload)
   const { pullPx, isPulling } = usePullToRefresh({
-    onRefresh: reload,
+    onRefresh: refresh,
     enabled: online && !refreshing,
     refreshing,
   })
@@ -411,7 +413,7 @@ function ExpensesAppReady({
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
-    <ReviewProvider model={model} actions={actions}>
+    <ReviewProvider model={model} actions={actions} formOpen={modal !== null}>
       <ExpensesOnboarding
         open={onboardingOpen}
         source={source}
@@ -452,7 +454,7 @@ function ExpensesAppReady({
             pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
             onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
             online={online}
-            refreshing={refreshing} onRefresh={reload} savedMonths={model.savedMonths}
+            refreshing={refreshing} onRefresh={refresh} savedMonths={model.savedMonths}
           />
         }
       >

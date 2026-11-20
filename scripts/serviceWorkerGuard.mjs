@@ -31,6 +31,18 @@ class FetchEvent extends ExtendableEvent {
     this.responded = promise
   }
 }
+/** A push the worker is handed: its payload, and the promise it asked to be kept alive for. */
+class PushEvent extends ExtendableEvent {
+  constructor(text) {
+    super()
+    this.data = { text: () => text }
+    this.kept = Promise.resolve()
+  }
+
+  waitUntil(promise) {
+    this.kept = Promise.resolve(promise)
+  }
+}
 const SHELL_BODY = 'SHELL'
 const NETWORK_BODY = 'NETWORK'
 
@@ -73,6 +85,7 @@ function subresource(pathname) {
  */
 function load(dist, entries, network) {
   const listeners = {}
+  const posted = []
   const store = new Map()
   for (const { url, revision } of entries) {
     const absolute = new URL(url, `${ORIGIN}/`).href
@@ -87,16 +100,17 @@ function load(dist, entries, network) {
   }
   const sandbox = {
     console, setTimeout, clearTimeout, URL, Request: WorkerRequest, Response, Headers, ExtendableEvent, FetchEvent,
+    navigator: { language: 'en-GB' },
     fetch: async () => {
       if (!network.up) throw new TypeError('Failed to fetch')
       return new Response(NETWORK_BODY)
     },
     caches: { open: async () => cache, keys: async () => [], match: (key) => cache.match(key), delete: async () => true },
     location: new URL(`${ORIGIN}/sw.js`),
-    registration: { scope: `${ORIGIN}/` },
+    registration: { scope: `${ORIGIN}/`, showNotification: async () => {} },
     addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn) },
     skipWaiting: () => Promise.resolve(),
-    clients: { claim: () => Promise.resolve() },
+    clients: { claim: () => Promise.resolve(), matchAll: async () => [{ postMessage: (message) => posted.push(JSON.stringify(message)) }], openWindow: async () => {} },
   }
   sandbox.self = sandbox
   const context = vm.createContext(sandbox)
@@ -112,7 +126,7 @@ function load(dist, entries, network) {
   }
   process.on('unhandledRejection', onRejection)
   vm.runInContext(readFileSync(join(dist, 'sw.js'), 'utf8'), context)
-  return { listeners, errors, loaded: () => { phase.loading = false }, stop: () => process.off('unhandledRejection', onRejection) }
+  return { listeners, posted, errors, loaded: () => { phase.loading = false }, stop: () => process.off('unhandledRejection', onRejection) }
 }
 
 /** What the worker does with a request: the body of its answer, or null when it leaves the request to the browser. */
@@ -166,6 +180,16 @@ export async function problemsOfWorker(dist) {
     network.up = networkUp
     const got = await answer(worker, request())
     if (got !== expected) problems.push(`${what}: expected ${expected === null ? 'no answer from the worker' : `"${expected}"`}, got ${got === null ? 'no answer from the worker' : `"${got}"`}`)
+  }
+  // A worker that shows pushes must also tell the open windows, or a payment that arrives with the app in front waits
+  // for a refresh. The windows are reached through `clients`, which only the push handler can pass on.
+  if (worker.listeners.push?.length) {
+    const push = new PushEvent(JSON.stringify({ v: 1, kind: 'payment', id: 'p1', url: '/?review=p1' }))
+    for (const listener of worker.listeners.push) listener(push)
+    await push.kept.catch(() => {})
+    if (!worker.posted.includes(JSON.stringify({ type: 'review-changed' }))) {
+      problems.push('a push does not tell the open windows (a message of type "review-changed"), so the payment waits for a refresh')
+    }
   }
   worker.stop()
   return problems

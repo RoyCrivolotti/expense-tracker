@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   announceRecommendationsChanged,
   fetchRecommendations,
+  holdRecommendationReloads,
   onRecommendationsChanged,
   PossibleDuplicateError,
+  reloadRecommendations,
   submitRecommendation,
 } from './recommendationsApi'
 
@@ -109,5 +111,45 @@ describe('change announcements', () => {
     announceRecommendationsChanged()
 
     expect(listener).toHaveBeenCalledOnce()
+  })
+})
+
+describe('reloading the list', () => {
+  it('tells a listener at once when nothing is held', () => {
+    const listener = vi.fn()
+    const off = onRecommendationsChanged(listener)
+    reloadRecommendations()
+    expect(listener).toHaveBeenCalledOnce()
+    off()
+  })
+
+  it('waits while a form or sheet holds it, then tells once when the last one lets go', () => {
+    const listener = vi.fn()
+    const off = onRecommendationsChanged(listener)
+    const first = holdRecommendationReloads()
+    const second = holdRecommendationReloads()
+
+    reloadRecommendations()
+    reloadRecommendations()
+    first()
+    first()
+    expect(listener).not.toHaveBeenCalled()
+    second()
+
+    expect(listener).toHaveBeenCalledOnce()
+    off()
+  })
+
+  it('has nothing to say on release when no reload was asked for, and a decision still announces at once while held', () => {
+    const listener = vi.fn()
+    const off = onRecommendationsChanged(listener)
+    const release = holdRecommendationReloads()
+
+    announceRecommendationsChanged()
+    expect(listener).toHaveBeenCalledOnce()
+    release()
+
+    expect(listener).toHaveBeenCalledOnce()
+    off()
   })
 })

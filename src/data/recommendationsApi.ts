@@ -98,3 +98,32 @@ export function onRecommendationsChanged(listener: () => void): () => void {
   changes.addEventListener('changed', listener)
   return () => changes.removeEventListener('changed', listener)
 }
+
+let holds = 0
+let owed = false
+
+/**
+ * Reads the open list again, for a refresh the person asked for or a sign that something new arrived. The one call for
+ * any caller that wants the list to be current, so a shell around the app can make it too. While a form or sheet is
+ * open on a payment (`holdRecommendationReloads`) the read waits and happens once when the last of them closes, so a
+ * row is never pulled from under the person.
+ */
+export function reloadRecommendations(): void {
+  if (holds > 0) owed = true
+  else announceRecommendationsChanged()
+}
+
+/** Postpones `reloadRecommendations` until the returned release is called. Holds stack. */
+export function holdRecommendationReloads(): () => void {
+  holds += 1
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    holds -= 1
+    if (holds === 0 && owed) {
+      owed = false
+      announceRecommendationsChanged()
+    }
+  }
+}
