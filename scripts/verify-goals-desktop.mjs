@@ -7,6 +7,7 @@
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
  * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`) and with a path that starts after today (`ONLY=w3`),
+ * the hero chart with a saved scenario that starts later, wide and on a phone, full screen included (`ONLY=later-chart`),
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
@@ -3933,6 +3934,132 @@ async function checkComparisonTable(browser, engine) {
   await context.close()
 }
 
+/**
+ * The hero chart with a scenario that starts later (check group later-chart). The demo's scenarios all
+ * start on one day, so Path B is copied with a start twenty months ahead and saved as its own scenario,
+ * then the plan is opened beside it. Everything is relative to today, so it does not age.
+ */
+const LATER_COPY = 'Later copy'
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** The copy's start ("Jul 2028"), and its years from the demo's start (the first of the month six months back). */
+function laterStartOf(page, monthsAhead) {
+  return page.evaluate((m) => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth() + m, 15, 12)
+    const origin = new Date(now.getFullYear(), now.getMonth() - 6, 1, 12)
+    return { year: start.getFullYear(), month: start.getMonth(), offset: (start - origin) / (365.25 * 86_400_000) }
+  }, monthsAhead)
+}
+
+async function saveLaterCopy(page, { phone }) {
+  if (phone) {
+    await page.locator('button:not([aria-label])', { hasText: 'Path B: House now' }).first().click()
+    await page.getByRole('tab', { name: 'Scenarios', exact: true }).click()
+    const section = page.getByRole('button', { name: 'Start date', exact: true })
+    if (await section.count()) await section.first().click()
+  } else {
+    await page.getByRole('tab', { name: /^Path B/ }).click()
+    await page.getByRole('button', { name: 'All inputs' }).click()
+  }
+  await page.waitForTimeout(300)
+  await setLaterStart(page, LATER_MONTHS)
+  if (!phone) {
+    await page.getByRole('button', { name: 'All inputs' }).click()
+    await page.getByRole('button', { name: 'Scenario options' }).click()
+  }
+  await page.getByRole('button', { name: 'Save as new scenario…' }).click()
+  await page.getByLabel('Name for new scenario').fill(LATER_COPY)
+  await page.getByRole('button', { name: /^Save as new$/ }).last().click()
+  await page.waitForTimeout(600)
+  if (phone) {
+    await page.getByRole('tab', { name: 'Chart', exact: true }).click()
+    await page.locator('button:not([aria-label])', { hasText: 'Path A: Invest only' }).first().click()
+  } else {
+    await page.getByRole('tab', { name: /^Path A/ }).click()
+  }
+  await page.waitForTimeout(500)
+}
+
+const heroSvg = (page) => page.locator('[class*="heroChart"] svg[role="img"]').first()
+
+async function pointAtYear(page, svg, year) {
+  await svg.focus()
+  await page.keyboard.press('Home')
+  for (let i = 0; i < year; i += 1) await page.keyboard.press('ArrowRight')
+  await page.waitForTimeout(150)
+}
+
+async function checkLaterChartWide(browser, engine) {
+  const where = `${engine} 1280x800`
+  const { page, context } = await openPlan(browser, SCREENS[1])
+  await saveLaterCopy(page, { phone: false })
+  const start = await laterStartOf(page, LATER_MONTHS)
+  const starts = `${MONTH_NAMES[start.month]} ${start.year}`
+  const svg = heroSvg(page)
+  const drawn = await svg.evaluate((el) => ({
+    width: el.viewBox.baseVal.width,
+    years: [...el.querySelectorAll('text')].map((t) => t.textContent).filter((t) => /^\d+$/.test(t ?? '')),
+    dots: [...el.querySelectorAll('circle[class*="annotationDot"]')].map((c) => Number(c.getAttribute('cx'))),
+    label: [...el.querySelectorAll('text')].find((t) => /^starts /.test(t.textContent ?? ''))?.textContent ?? null,
+  }))
+  check(where, '(later-chart) the bottom axis names calendar years', drawn.years.length >= 3 && drawn.years.every((y) => /^20\d\d$/.test(y)), JSON.stringify(drawn.years))
+  // The axis runs to the last whole year a line reaches: the copy's 30 years from its start, rounded up.
+  const last = Math.ceil(start.offset + 30)
+  const expected = 56 + (start.offset / last) * (drawn.width - 72)
+  check(where, '(later-chart) the copy’s line starts at its date, right of the axis’ start', drawn.dots.some((x) => near(x, expected, 2)), JSON.stringify({ dots: drawn.dots, expected }))
+  check(where, '(later-chart) and says when it starts there', drawn.label === `starts ${starts}`, drawn.label)
+  const chip = page.getByRole('tab', { name: new RegExp(`^${LATER_COPY}`) }).locator('..')
+  check(where, '(later-chart) its chip carries when it starts', (await chip.textContent())?.includes(`from ${starts}`) === true, await chip.textContent())
+  const hint = await page.getByText(/The values in the chips above are for \d{4}, the last year every scenario reaches/).count()
+  check(where, '(later-chart) the hint names the year the chips are for', hint === 1, String(hint))
+  await pointAtYear(page, svg, 1)
+  const before = (await chip.textContent()) ?? ''
+  check(where, '(later-chart) a year before it starts reads when it does in its chip', before.includes(`starts ${starts}`) && !/\d €/.test(before.replace(`from ${starts}`, '')), before)
+  await pointAtYear(page, svg, 10)
+  const inside = (await chip.textContent()) ?? ''
+  check(where, '(later-chart) a year after it starts reads its figure', /\d €/.test(inside), inside)
+  await context.close()
+}
+
+async function checkLaterChartPhone(browser, engine) {
+  const where = `${engine} 375`
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: 'Goals', exact: true }).last().click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  await saveLaterCopy(page, { phone: true })
+  const start = await laterStartOf(page, LATER_MONTHS)
+  const rest = await page.getByText(/The values are for \d{4}, the last year every scenario reaches\./).count()
+  check(where, '(later-chart) the rows show the resting year’s figures and say which year', rest === 1, String(rest))
+  const row = page.locator('[class*="heroChart"] li', { hasText: LATER_COPY }).first()
+  check(where, '(later-chart) its row carries when it starts', ((await row.textContent()) ?? '').includes(`from ${MONTH_NAMES[start.month]} ${start.year}`), await row.textContent())
+  const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
+  check(where, '(later-chart) the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
+  await pointAtYear(page, heroSvg(page), 10)
+  const card = ((await row.textContent()) ?? '').match(/[\d.,]+[kM]? €/)?.[0] ?? null
+  await page.locator('[class*="heroChart"]').first().scrollIntoViewIfNeeded()
+  await page.setViewportSize({ width: 812, height: 375 })
+  await page.waitForTimeout(500)
+  await page.getByRole('button', { name: 'Open the chart full screen' }).click()
+  const dialog = page.getByRole('dialog', { name: /full screen/ })
+  await dialog.waitFor()
+  await page.waitForTimeout(400)
+  await pointAtYear(page, dialog.locator('svg[role="img"]').first(), 10)
+  const sheetRow = ((await dialog.locator('li', { hasText: LATER_COPY }).first().textContent()) ?? '').match(/[\d.,]+[kM]? €/)?.[0] ?? null
+  check(where, '(later-chart) full screen reads the copy’s figure the card reads, at the same year', card !== null && card === sheetRow, JSON.stringify({ card, sheetRow }))
+  await context.close()
+}
+
+async function checkLaterChart(browser, engine) {
+  await checkLaterChartWide(browser, engine)
+  await checkLaterChartPhone(browser, engine)
+}
+
 const SECTIONS = [
   ...SCREENS.map((screen) => ({
     name: `screen ${screen.name}`,
@@ -3962,6 +4089,7 @@ const SECTIONS = [
   { name: 'LaterStartMilestones', weight: 6, run: checkLaterStartMilestones },
   { name: 'LaterStartTimeline', weight: 4, run: checkLaterStartTimeline },
   { name: 'ComparisonTable', weight: 6, run: checkComparisonTable },
+  { name: 'LaterChart', weight: 6, run: checkLaterChart },
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
@@ -4057,6 +4185,10 @@ async function main() {
         }
         if (process.env.ONLY === 'compare-table') {
           await checkComparisonTable(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'later-chart') {
+          await checkLaterChart(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w3') {
