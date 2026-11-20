@@ -1,5 +1,6 @@
 import type { Milestone } from '../../../../types'
-import { beyondText, calendarYear, yearsText, type MilestoneRow } from './milestoneModel'
+import { calendarYear, type MilestoneRow } from './milestoneModel'
+import { beyondText, yearsText } from './milestoneText'
 
 /**
  * The sizes the stylesheet gives the timeline, in pixels. The connector line is drawn from them,

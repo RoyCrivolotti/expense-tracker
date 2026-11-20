@@ -5,6 +5,7 @@ import { crossingYears, scenarioToParams, shortMonthYearLabel, wholeYearsToAmoun
 
 export { yearsBetween }
 import { tableName } from '../scenarioNames'
+import { beyondText, yearsText } from './milestoneText'
 
 export type RowKind = 'plan' | 'saved' | 'fromToday' | 'draft'
 
@@ -212,11 +213,6 @@ export function gapIsSooner(gap: Gap): boolean {
   return gap.kind === 'sooner' || (gap.kind === 'years' && gap.years < 0)
 }
 
-/** "1 year" or "6 years". */
-export function yearsText(n: number): string {
-  return n === 1 ? '1 year' : `${n} years`
-}
-
 function gapSentence(gap: Gap, planName: string): string {
   switch (gap.kind) {
     case 'same':
@@ -234,11 +230,6 @@ function gapSentence(gap: Gap, planName: string): string {
 
 function reachedSentence(reachedOn: string | undefined): string {
   return reachedOn ? ` Your check-ins reached it by ${shortMonthYearLabel(reachedOn)}.` : ''
-}
-
-/** What a path does not reach: the end of its horizon is `horizonFromNow` years away. */
-export function beyondText(row: MilestoneRow, amounts: string): string {
-  return `${row.name} does not reach ${amounts} within its horizon (the next ${row.horizonFromNow} years).`
 }
 
 function headline(row: MilestoneRow, index: number, amount: string): string {
