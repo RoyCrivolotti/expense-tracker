@@ -14,6 +14,8 @@ interface Props {
   actionLabel?: string
   /** Pressing the button runs this first, for a card whose button also does something (it is put away either way). */
   onAction?: () => void
+  /** Shows only while this holds. The card stays mounted, so it folds open when the data arrives. */
+  when?: boolean
   children: ReactNode
 }
 
@@ -25,7 +27,7 @@ interface Props {
  * animate in; one that comes back after being hidden, while the page is open, folds open.
  */
 export function TipCard(props: Props) {
-  const shown = useTips().isShown(props.id)
+  const shown = useTips().isShown(props.id) && (props.when ?? true)
   // True once the card has been absent at any point since the page drew it, which is what makes its next showing an arrival.
   const [wasAbsent, setWasAbsent] = useState(!shown)
   if (!shown && !wasAbsent) setWasAbsent(true)

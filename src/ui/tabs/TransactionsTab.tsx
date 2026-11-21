@@ -14,6 +14,7 @@ import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
+import { TransactionsTips } from '../tips/TransactionsTips'
 import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
@@ -74,6 +75,7 @@ export function TransactionsTab({
     <div className={`${styles.stack} ${styles.txnStack}`}>
       {actions && (
         <>
+          <TransactionsTips model={model} phone={state.isMobile} />
           <FlaggedCard
             model={model}
             onFilterByFlag={(flagId) => {
