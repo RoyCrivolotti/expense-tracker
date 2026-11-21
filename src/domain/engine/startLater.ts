@@ -26,7 +26,8 @@ export interface SuggestedStart {
   /**
    * What the copy takes as already paid by its start, in the euros of the date: a cost (a negative
    * event, the house purchase) dated in its first year, which it cannot place before its first
-   * anniversary and so counts as behind it (see `startLater`). Already taken off `cents`; 0 when none.
+   * anniversary and so counts as behind it (see `startLater`), and one dated by the start that the
+   * line it was read from still pays after it (`aheadOnLine`). Already taken off `cents`; 0 when none.
    */
   paidAtStartCents: number
   /**
@@ -78,9 +79,11 @@ export function suggestedStart(
   const onTheLine = valueOn(line, since, date, inflationRate)
   if (onTheLine === null) return null
   const points = projectNetWorth(scenarioToParams(line, inflationRate))
-  const net = onTheLine - paidAtStartCents
-  const cents = neverAbove({ source, points, since, date, inflationRate }, net)
-  return settle({ cents, lowerByCents: net - cents, paidAtStartCents, from: checkin ? 'plan-from-checkin' : 'own-line' })
+  const ahead = checkin ? aheadOnLine(source, checkin, date, inflationRate) : NOTHING_AHEAD
+  const net = onTheLine - paidAtStartCents - ahead.costCents + ahead.inflowCents
+  const cents = neverAbove({ source, points, since, date, inflationRate, inflows: ahead.inflows }, net)
+  const paid = paidAtStartCents + ahead.costCents
+  return settle({ cents, lowerByCents: net - cents, paidAtStartCents: paid, from: checkin ? 'plan-from-checkin' : 'own-line' })
 }
 
 /** A balance that would be below nothing is none, with what it is short by said rather than dropped. */
@@ -103,6 +106,40 @@ function paidAtStart(source: Startable, date: string, inflationRate: number): nu
   return Math.round(events + house)
 }
 
+interface Ahead {
+  /** Costs, in the euros of the date. */
+  costCents: number
+  /** Inflows, in the euros of the date. */
+  inflowCents: number
+  /** Each inflow as the line holds it: its amount in the line's euros, and the line year it is paid on. */
+  inflows: { until: number; cents: number }[]
+}
+
+const NOTHING_AHEAD: Ahead = { costCents: 0, inflowCents: 0, inflows: [] }
+
+/**
+ * What the source carried on from a check-in still has to pay or receive after `date` though it is dated on or
+ * before it. That restart puts what was ahead of the check-in on the check-in's next anniversary, which can fall
+ * after the date, while the copy counts anything dated by its start as in its balance. Left in the line's value,
+ * a cost would come off later as the "never above" lowering (the right figure for the wrong reason) and an inflow
+ * would be taken back off by it, since the copy would hold it months before the line does.
+ */
+function aheadOnLine(source: Startable, checkin: { investedCents: number; date: string }, date: string, inflationRate: number): Ahead {
+  const r = rebaseline(source, checkin, inflationRate)
+  const toDate = Math.pow(1 + inflationRate, yearsBetween(source.planStartDate!, date))
+  const toLine = Math.pow(1 + inflationRate, yearsBetween(source.planStartDate!, checkin.date))
+  const ahead = (c: { from: string; to: string | null }) => c.from <= date && c.to !== null && c.to > date
+  const events = r.carried.filter(ahead)
+  const costs = events.filter((c) => c.event.amountCents < 0).reduce((sum, c) => sum - c.event.amountCents, 0)
+  const house = r.house && ahead(r.house) ? purchaseWithdrawalCents(scenarioToParams(source, inflationRate)) : 0
+  const inflows = events.filter((c) => c.event.amountCents > 0)
+  return {
+    costCents: Math.round((costs + house) * toDate),
+    inflowCents: Math.round(inflows.reduce((sum, c) => sum + c.event.amountCents, 0) * toDate),
+    inflows: inflows.map((c) => ({ until: yearsBetween(checkin.date, c.to!), cents: c.event.amountCents * toLine })),
+  }
+}
+
 /** A line's value on a date, in the euros of that date. */
 function valueOn(line: Startable, since: string, date: string, inflationRate: number): number | null {
   const value = planValueAt(planLineOf(projectNetWorth(scenarioToParams(line, inflationRate))), yearsBetween(since, date))
@@ -116,6 +153,8 @@ interface Reading {
   since: string
   date: string
   inflationRate: number
+  /** Inflows the copy holds from its start that the line is still to receive (`aheadOnLine`). */
+  inflows: { until: number; cents: number }[]
 }
 
 /** The copy's invested points from a starting balance, as `startLater` makes it. */
@@ -145,7 +184,8 @@ function highest(r: Reading, cents: number): { excess: number; at: number } {
   const times = corners(r, copy).flatMap((t) => (t - JUST_BEFORE > offset ? [t, t - JUST_BEFORE] : [t]))
   return times.reduce(
     (most, t) => {
-      const excess = valueOnAxisAt(copy, offset, r.inflationRate, t)! - valueOnAxisAt(r.points, 0, r.inflationRate, t)!
+      const due = r.inflows.reduce((sum, i) => (t < i.until ? sum + i.cents : sum), 0)
+      const excess = valueOnAxisAt(copy, offset, r.inflationRate, t)! - valueOnAxisAt(r.points, 0, r.inflationRate, t)! - due
       return excess > most.excess ? { excess, at: t } : most
     },
     { excess: 0, at: offset },
