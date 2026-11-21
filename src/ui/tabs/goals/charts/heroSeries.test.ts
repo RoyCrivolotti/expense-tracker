@@ -170,7 +170,7 @@ describe('a scenario that ends before another starts', () => {
     const { axis, lines } = linesOf([a, b], a, [], rate)
     const built = buildSeries(lines, rate)
     const readings = lineReadings(lines, built.points, built.series, built.years, rate, false)
-    const rest = restYear(axisSpans(lines, [a, b], axis.origin!), built.years.length - 1)
+    const rest = restYear(axisSpans(lines, [a, b], axis.origin), built.years.length - 1)
     expect(rest).toEqual({ index: 16, everyReaches: false })
     const at = (id: number | null) => lines.findIndex((l) => l.scenarioId === id)
     const draft = at(null)
@@ -187,7 +187,7 @@ describe('a scenario that ends before another starts', () => {
     expect(table).toEqual({ year: 16, everyReaches: false })
     for (const hidden of [[], [b.id]]) {
       const { axis, lines } = linesOf([a, b], a, hidden, rate)
-      const spans = axisSpans(lines, [a, b], axis.origin!)
+      const spans = axisSpans(lines, [a, b], axis.origin)
       const built = buildSeries(lines, rate, spans.ends)
       const chart = restYear(spans, built.years.length - 1)
       expect({ year: chart.index, everyReaches: chart.everyReaches }).toEqual(table)

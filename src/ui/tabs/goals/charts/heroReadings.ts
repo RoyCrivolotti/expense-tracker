@@ -31,7 +31,7 @@ interface Input {
  * Every figure the hero chart states, read in one place: the legend's rows, the chips above the chart,
  * the tooltip and what the full-screen readout is handed. On a calendar the resting year (with nothing
  * pointed at) is the last year every scenario reaches, hidden ones included; where every scenario starts on one day the chips rest
- * on the last year drawn and the rows show nothing, as they always have.
+ * on the last year a drawn line reaches and the rows show nothing, as they always have.
  */
 export function useHeroReadings(input: Input) {
   const { lines, points, displaySeries, names, years, inflationRate, nominalMode, scenarios, hiddenIds, calendarOrigin } = input
@@ -51,7 +51,10 @@ export function useHeroReadings(input: Input) {
   // The rows under the chart show the resting year's figures where the chips above do not.
   const legendRest = input.legendStore === undefined ? (rest?.index ?? null) : null
   const legend = useChartLegendState(legendInput, input.activeIndex, legendRest)
-  usePublishHeroLegend(input.legendStore, legendInput, input.activeIndex, rest?.index ?? years.length - 1)
+  // With one start day the axis runs to the longest scenario, hidden ones included, so the chips rest on
+  // the last year a line that is drawn reaches, not on the axis' end where a hidden line's years are empty.
+  const drawnEnd = useMemo(() => Math.min(years.length - 1, Math.max(0, ...lines.map((l) => l.params.horizonYears))), [lines, years])
+  usePublishHeroLegend(input.legendStore, legendInput, input.activeIndex, rest?.index ?? drawnEnd)
   const tooltip = useHeroTooltip(legendInput, input.fromTodayLine, input.fromTodayLabel)
   const { legendItems, readYear } = legend
   const legendWithFromToday = useMemo(

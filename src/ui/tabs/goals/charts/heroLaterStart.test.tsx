@@ -250,10 +250,18 @@ describe('the axis with a scenario hidden', () => {
     expect(lastYearShown({ ...props, hiddenIds: new Set([long.id]) })).toMatch(/^2058/)
   })
 
-  it('still fits the lines drawn where every scenario starts on one day, as it always has', () => {
+  it('stays where it was when a line is hidden where every scenario starts on one day', () => {
     const longer = { ...plan, id: 3, name: 'Longer', sortOrder: 2, isActive: false, horizonYears: 40 }
     const props = { scenarios: [plan, longer], draft: plan, activeId: plan.id }
     expect(lastYearShown(props)).toMatch(/^Year 40/)
-    expect(lastYearShown({ ...props, hiddenIds: new Set([longer.id]) })).toMatch(/^Year 30/)
+    expect(lastYearShown({ ...props, hiddenIds: new Set([longer.id]) })).toMatch(/^Year 40/)
+  })
+
+  it('still rests the chips on the last year a drawn line reaches with the longest hidden on one start day', () => {
+    const longer = { ...plan, id: 3, name: 'Longer', sortOrder: 2, isActive: false, horizonYears: 40 }
+    const store = createHeroLegendStore()
+    render(<Chart legendStore={store} scenarios={[plan, longer]} draft={plan} activeId={plan.id} hiddenIds={new Set([longer.id])} />)
+    // The axis runs to 40; the plan ends at 30 and its chip reads there rather than in blank years.
+    expect(store.get().find((i) => i.label.startsWith('Plan'))?.valueCents).not.toBeNull()
   })
 })

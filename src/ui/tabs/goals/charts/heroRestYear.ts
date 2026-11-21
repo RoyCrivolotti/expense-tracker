@@ -25,7 +25,7 @@ export interface AxisSpans {
  * and rests on the last year all of them reach, so counting only the lines drawn would let hiding one
  * move the chart's year off the table's.
  */
-export function axisSpans(lines: readonly ScenarioLine[], scenarios: readonly GoalScenario[], origin: string): AxisSpans {
+export function axisSpans(lines: readonly ScenarioLine[], scenarios: readonly GoalScenario[], origin: string | null): AxisSpans {
   const drawn = new Set(lines.map((line) => line.scenarioId))
   const undrawn = scenarios
     .filter((s) => !drawn.has(s.id))
