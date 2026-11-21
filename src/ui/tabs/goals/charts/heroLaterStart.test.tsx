@@ -205,8 +205,8 @@ describe('a milestone picked on a calendar axis', () => {
   it('dots a later scenario where its own years put it, at that day’s worth', () => {
     const lines = [{ id: 'l', name: 'Later', color: '#000', params: scenarioToParams(later, RATE), planStartDate: LATER_START, offsetYears: offset }]
     const years = Array.from({ length: 33 }, (_, y) => y)
-    const { dots } = pickCrossings({ lines, amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20', locale: 'en-GB' })
-    const atOrigin = pickCrossings({ lines: [{ ...lines[0]!, offsetYears: 0 }], amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20', locale: 'en-GB' })
+    const { dots } = pickCrossings({ lines, amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20' })
+    const atOrigin = pickCrossings({ lines: [{ ...lines[0]!, offsetYears: 0 }], amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20' })
     expect(dots[0]!.index).toBeCloseTo(atOrigin.dots[0]!.index + offset, 9)
     expect(dots[0]!.value).toBeCloseTo(50_000_000 / Math.pow(1 + RATE, dots[0]!.index), 3)
   })

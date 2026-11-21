@@ -469,7 +469,7 @@ describe('WealthSummaryCard', () => {
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const line = screen.getByText(/Your portfolio returned/)
-    expect(line).toHaveTextContent(/4,0\s?% a year since Jan 1, 2025, about 2,0\s?% once 2,0\s?% inflation is taken off/)
+    expect(line).toHaveTextContent(/4,0\s?% a year since 1 Jan 2025, about 2,0\s?% once 2,0\s?% inflation is taken off/)
     expect(line).toHaveTextContent(/against the 7,0\s?% a year, after inflation, that Path A assumes/)
   })
 
@@ -547,7 +547,7 @@ describe('the return when money may have moved in without being recorded', () =>
     // 18% a year with nothing recorded is 18.000 euros moved in, not 18.000 euros earned.
     render(<WealthSummaryCard checkins={year(118_000_00)} accounts={accounts} plan={plan} transactions={[]} />)
     const hint = screen.getByText(/no investments are recorded/i)
-    expect(hint).toHaveTextContent(/Path A expects 1\.000,00 € a month, but no investments are recorded since Jan 1, 2025/)
+    expect(hint).toHaveTextContent(/Path A expects 1\.000,00 € a month, but no investments are recorded since 1 Jan 2025/)
     expect(hint).toHaveTextContent(/Add what you moved in as Investment transactions to see the return/)
     expect(screen.queryByText(/% a year/)).not.toBeInTheDocument()
   })

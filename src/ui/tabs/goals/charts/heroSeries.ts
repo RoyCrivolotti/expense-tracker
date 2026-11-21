@@ -46,6 +46,13 @@ export function monthYear(date: string): string {
   return MONTH_YEAR.format(new Date(`${date}T00:00:00Z`))
 }
 
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+/** "11 Sept 2026": a day, in the app's English whatever the browser's language. */
+export function dayMonthYear(date: string): string {
+  return DAY_MONTH_YEAR.format(new Date(`${date}T00:00:00Z`))
+}
+
 /** The calendar year a scenario's last year ends in: its start's year (the axis' if it has none) and its horizon. */
 function endYear(start: string | null | undefined, origin: string, horizonYears: number): string {
   return String(Number((start ?? origin).slice(0, 4)) + horizonYears)

@@ -6,7 +6,8 @@ import { createHeroLegendStore } from './heroLegendStore'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
-import { planFromToday, projectNetWorth, scenarioToParams } from '../../../../engine'
+import { planFromToday, projectNetWorth, resolveMoneyFormat, scenarioToParams } from '../../../../engine'
+import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -1277,6 +1278,17 @@ describe('NetWorthChart: picking a milestone', () => {
     fireEvent.click(chips()[2]!)
     expect(container.querySelector(`.${chartStyles.refLineOn}`)).toBeNull()
     expect(screen.queryByRole('list', { name: /When each path reaches/ })).not.toBeInTheDocument()
+  })
+
+  it('writes the month of a row in English even when the money format is Spanish, and keeps the figures in the money format', () => {
+    render(
+      <MoneyFormatContext.Provider value={resolveMoneyFormat('EUR', 'es-ES')}>{hero()}</MoneyFormatContext.Provider>,
+    )
+    fireEvent.click(chips()[2]!)
+    const row = within(screen.getByRole('list', { name: /When each path reaches/ })).getAllByRole('listitem')[0]!
+    expect(row.textContent).toMatch(/[A-Z][a-z]{2} \d{4}, in /)
+    expect(row.textContent).not.toMatch(/\b(ene|abr|ago|dic|sept?)\b/i)
+    expect(chips()[2]!.textContent).toMatch(/€/)
   })
 
   it('moves one at a time: picking another takes the first away', () => {

@@ -1,9 +1,7 @@
-/** "11 Sep 2026" for a YYYY-MM-DD check-in date, in the viewer's locale. */
-export function formatCheckinDate(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  const date = new Date(Number(y), Number(m) - 1, Number(d))
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
+import { dayMonthYear } from './charts/heroSeries'
+
+/** "11 Sept 2026" for a YYYY-MM-DD check-in date, in the app's English (the browser's language is not the app's). */
+export const formatCheckinDate = dayMonthYear
 
 /** What the Plan view needs from the latest check-in: the invested total and its date. */
 export interface InvestedSnapshot {

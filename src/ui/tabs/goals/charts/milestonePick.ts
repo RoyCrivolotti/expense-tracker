@@ -2,6 +2,7 @@ import type { AnnotationDot, ChartAnnotations } from '../../../charts/LinearChar
 import { crossingYears, currencyWord, dateAtYears, type MoneyFormat, type ProjectionParams } from '../../../../engine'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
+import { monthYear } from './heroSeries'
 
 /** A path of the chart, as far as this needs to know it. */
 export interface PickLine {
@@ -69,7 +70,6 @@ interface PickInput {
   years: readonly number[]
   /** Today, to count the years from now. */
   today: string
-  locale: string
 }
 
 /**
@@ -77,7 +77,7 @@ interface PickInput {
  * own line, in the chart's money (the amount itself in Nominal, the amount less the inflation so far in Purchasing
  * power), labelled with the calendar year it reaches it in. Its row says the month and how long from today.
  */
-export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, years, today, locale }: PickInput): MilestonePick {
+export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, years, today }: PickInput): MilestonePick {
   const dots: AnnotationDot[] = []
   const rows: PickRow[] = []
   for (const line of lines) {
@@ -95,9 +95,7 @@ export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, 
       const value = nominalMode ? amountCents : amountCents / Math.pow(1 + inflationRate, place)
       dots.push({ index, value, color: line.color, label })
     }
-    const month = date
-      ? new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { month: 'short', year: 'numeric', timeZone: 'UTC' })
-      : label
+    const month = date ? monthYear(date) : label
     rows.push({ id: line.id, name: line.name, color: line.color, text: date ? `${month}, ${inText(monthsBetween(today, date))}` : month })
   }
   return { dots, rows }

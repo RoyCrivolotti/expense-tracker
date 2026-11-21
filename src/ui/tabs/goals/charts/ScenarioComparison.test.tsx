@@ -118,7 +118,7 @@ describe('comparisonRows', () => {
     )
     expect(screen.getByText('Path B, from today')).toBeInTheDocument()
     // Its money restarts too: the saved plan is in the euros of 2024, this row in those of 2026.
-    expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years and its euros from there \(2026 euros\)/)).toBeInTheDocument()
+    expect(screen.getByText(/restarted from the balance in your latest check-in, 1 Jan 2026, and counts its years and its euros from there \(2026 euros\)/)).toBeInTheDocument()
     expect(screen.getByText(/Net worth and invested are .*, in 2024 euros/)).toBeInTheDocument()
     // The two counts of years start on different days, so FI is given as a month for both.
     expect(screen.getByText(/FI is given as a month for the plan and its restart/)).toBeInTheDocument()
@@ -223,7 +223,7 @@ describe('ScenarioComparison', () => {
         fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
-    expect(screen.getByText(/"From today" is your plan restarted from the balance in your latest check-in, Jan 1, 2026\.$/)).toBeInTheDocument()
+    expect(screen.getByText(/"From today" is your plan restarted from the balance in your latest check-in, 1 Jan 2026\.$/)).toBeInTheDocument()
   })
 
   it('names only the saved plans\' euros when the draft has a row of its own no more', () => {

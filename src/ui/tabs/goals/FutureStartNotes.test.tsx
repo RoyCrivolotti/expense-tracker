@@ -43,7 +43,7 @@ describe('the plan start section', () => {
 
   it('says what a start after today’s balance is, how far it is from the plan, and offers the plan’s figure', () => {
     const onChange = renderFields({ planStartDate: '2028-07-01', housePurchaseYear: null, startInvestedCents: 5_000_000 })
-    expect(screen.getByText(/The balance you expect to have invested on (1 Jul 2028|Jul 1, 2028), in 2028 euros\./)).toBeInTheDocument()
+    expect(screen.getByText(/The balance you expect to have invested on 1 Jul 2028, in 2028 euros\./)).toBeInTheDocument()
     const figure = planOn('2028-07-01')
     expect(screen.getByText(/Your plan, carried on from your latest check-in, has about/)).toHaveTextContent(/this starts from\s+50\.000 €, [\d.]+ € less\./)
     fireEvent.click(screen.getByRole('button', { name: /^Use / }))

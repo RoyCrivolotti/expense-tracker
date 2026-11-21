@@ -28,7 +28,7 @@ describe('inText', () => {
 })
 
 describe('pickCrossings', () => {
-  const base = { amountCents: AMOUNT, inflationRate: I, years, today: '2026-10-11', locale: 'en' }
+  const base = { amountCents: AMOUNT, inflationRate: I, years, today: '2026-10-11' }
 
   it('dots a path on the milestone line in Purchasing power, at the amount less the inflation so far, labelled with the calendar year', () => {
     const t = crossingYears(params, AMOUNT, I)!
