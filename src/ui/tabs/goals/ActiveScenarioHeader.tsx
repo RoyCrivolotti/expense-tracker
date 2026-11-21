@@ -10,6 +10,8 @@ import { EXIT_MS } from '../../hooks/motion'
 import { deleteMessage } from './deleteMessage'
 import { readOnlyScenarioNote } from './readOnlyCopy'
 import { SaveButton } from './SaveButton'
+import { StartLaterButton } from './StartLaterHost'
+import type { StartLater } from './StartLaterSheet'
 import styles from './goals.module.css'
 
 interface ActiveScenarioHeaderProps {
@@ -30,6 +32,8 @@ interface ActiveScenarioHeaderProps {
   onActivate: () => void
   onSaveDraft: (name: string) => void
   onDuplicate: () => void
+  /** What "Start a copy later…" copies; absent where nothing can be saved. */
+  startLater?: StartLater | undefined
 }
 
 /** Save for a draft with no scenario behind it, which says why it is off when it has no name. */
@@ -44,6 +48,45 @@ function DraftSave({ name, onSave }: { name: string; onSave: (name: string) => v
         Save scenario
       </SaveButton>
     </div>
+  )
+}
+
+/** "Save as new scenario…", and once pressed, the name for the copy and the button that saves it. */
+function SaveAsNewRow({ name, onSaveDraft }: { name: string; onSaveDraft: (name: string) => void }) {
+  const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
+  const [copyName, setCopyName] = useState(saveAsNewName(name))
+  const openSaveAsNew = () => {
+    setCopyName(`${name} copy`)
+    setSaveAsNewOpen(true)
+  }
+  return (
+    <>
+      {!saveAsNewOpen ? (
+        <button type="button" className={styles.btnText} onClick={openSaveAsNew}>
+          Save as new scenario…
+        </button>
+      ) : (
+        <div className={styles.saveRow}>
+          <input
+            className={styles.renameInput}
+            value={copyName}
+            aria-label="Name for new scenario"
+            maxLength={SCENARIO_NAME_MAX_LENGTH}
+            onChange={(e) => setCopyName(e.target.value)}
+          />
+          <SaveButton
+            className={styles.btn}
+            unnamed={copyName.trim().length === 0}
+            onSave={() => onSaveDraft(copyName.trim())}
+          >
+            Save as new
+          </SaveButton>
+          <button type="button" className={styles.btnText} onClick={() => setSaveAsNewOpen(false)}>
+            Cancel
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -62,9 +105,8 @@ export function ActiveScenarioHeader({
   onActivate,
   onSaveDraft,
   onDuplicate,
+  startLater,
 }: ActiveScenarioHeaderProps) {
-  const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
-  const [copyName, setCopyName] = useState(saveAsNewName(draft.name))
   const [deleteOpen, setDeleteOpen] = useState(false)
   const unnamed = draft.name.trim().length === 0
 
@@ -74,11 +116,6 @@ export function ActiveScenarioHeader({
         {readOnlyScenarioNote(hasEdits)}
       </p>
     )
-  }
-
-  const openSaveAsNew = () => {
-    setCopyName(`${draft.name} copy`)
-    setSaveAsNewOpen(true)
   }
 
   return (
@@ -152,31 +189,8 @@ export function ActiveScenarioHeader({
               </>
             ) : null}
           </div>
-          {!saveAsNewOpen ? (
-            <button type="button" className={styles.btnText} onClick={openSaveAsNew}>
-              Save as new scenario…
-            </button>
-          ) : (
-            <div className={styles.saveRow}>
-              <input
-                className={styles.renameInput}
-                value={copyName}
-                aria-label="Name for new scenario"
-                maxLength={SCENARIO_NAME_MAX_LENGTH}
-                onChange={(e) => setCopyName(e.target.value)}
-              />
-              <SaveButton
-                className={styles.btn}
-                unnamed={copyName.trim().length === 0}
-                onSave={() => onSaveDraft(copyName.trim())}
-              >
-                Save as new
-              </SaveButton>
-              <button type="button" className={styles.btnText} onClick={() => setSaveAsNewOpen(false)}>
-                Cancel
-              </button>
-            </div>
-          )}
+          {startLater ? <StartLaterButton startLater={startLater} disabled={creating} className={styles.btnText} /> : null}
+          <SaveAsNewRow name={draft.name} onSaveDraft={onSaveDraft} />
         </>
       ) : (
         <DraftSave name={draft.name} onSave={onSaveDraft} />

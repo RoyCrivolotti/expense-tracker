@@ -4,6 +4,7 @@ import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
 import { ActiveScenarioHeader } from './ActiveScenarioHeader'
 import { ScenarioChips } from './ScenarioChips'
+import type { StartLater } from './StartLaterSheet'
 import styles from './goals.module.css'
 
 interface ScenarioManagerProps {
@@ -26,6 +27,7 @@ interface ScenarioManagerProps {
   onDiscard: () => void
   onActivate: () => void
   onDuplicate: () => void
+  startLater?: StartLater | undefined
 }
 
 export function ScenarioManager(props: ScenarioManagerProps) {
@@ -69,6 +71,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         onActivate={props.onActivate}
         onSaveDraft={props.onSaveDraft}
         onDuplicate={props.onDuplicate}
+        startLater={actions ? props.startLater : undefined}
       />
     </Card>
   )

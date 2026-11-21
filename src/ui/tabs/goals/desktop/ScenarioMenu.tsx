@@ -19,6 +19,8 @@ export interface ScenarioMenuActions {
   onPatch: (patch: Partial<NewGoalScenario>) => void
   onActivate: () => void
   onDuplicate: () => void
+  /** Opens the "Start a copy later…" sheet. */
+  onStartLater: () => void
   onDelete: () => void
   /** Saves the draft as a new scenario with this name. */
   onSaveAsNew: (name: string) => void
@@ -61,6 +63,16 @@ function SaveAsNew({ name, onSave, onCancel }: { name: string; onSave: (name: st
         Save as new
       </SaveButton>
     </div>
+  )
+}
+
+function MenuItem({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <li>
+      <button type="button" className={styles.menuItem} onClick={onClick}>
+        {children}
+      </button>
+    </li>
   )
 }
 
@@ -137,18 +149,9 @@ function MenuPopover(props: PopoverProps) {
               </button>
             )}
           </li>
-          <li>
-            <button type="button" className={styles.menuItem} onClick={then(props.onDuplicate)}>
-              Duplicate
-            </button>
-          </li>
-          {dirty ? (
-            <li>
-              <button type="button" className={styles.menuItem} onClick={then(props.onKeepAsDraft)}>
-                Keep these edits as a draft
-              </button>
-            </li>
-          ) : null}
+          <MenuItem onClick={then(props.onDuplicate)}>Duplicate</MenuItem>
+          <MenuItem onClick={then(props.onStartLater)}>Start a copy later…</MenuItem>
+          {dirty ? <MenuItem onClick={then(props.onKeepAsDraft)}>Keep these edits as a draft</MenuItem> : null}
           <li>
             {saveAsNew ? (
               <SaveAsNew
