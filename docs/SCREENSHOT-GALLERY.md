@@ -155,7 +155,13 @@ Scenarios opens at its first section. The draft's chart and the section chips st
 | --- | --- |
 | ![Settings desktop](./screenshots/gallery/settings-desktop.png) | ![Settings mobile](./screenshots/gallery/settings-mobile.png) |
 
-**Card statements** section: one tap-to-edit row per account per month, each showing its charge amount — same row and editor used on Dashboard and Transactions.
+On the **Setup** tab, the **Card statements** section: one tap-to-edit row per account per month, each showing its charge amount — same row and editor used on Dashboard and Transactions.
+
+The **Capture** tab holds the setup steps, the capture key, notifications, linked cards, muted pushes and capture diagnostics:
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Settings Capture desktop](./screenshots/gallery/settings-capture-desktop.png) | ![Settings Capture mobile](./screenshots/gallery/settings-capture-mobile.png) |
 
 ## Access admin
 
