@@ -40,6 +40,12 @@ describe('buildOnboardingSettingsPatch', () => {
     expect(patch).toEqual({})
   })
 
+  it('writes the empty tip list on a first run, and leaves the list alone on a re-run', () => {
+    const input = { money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 }, currentSettings }
+    expect(buildOnboardingSettingsPatch({ ...input, firstRun: true }, null)).toEqual({ tipsSeen: [] })
+    expect(buildOnboardingSettingsPatch({ ...input, firstRun: false }, null)).toEqual({})
+  })
+
   it('includes only the fields that changed', () => {
     const patch = buildOnboardingSettingsPatch(
       {

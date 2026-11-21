@@ -28,6 +28,11 @@ export interface OnboardingSetupInput {
    * otherwise start back at 0 and interleave with (or precede) existing ones.
    */
   existingCategories: Category[]
+  /**
+   * True for a person's first run, who has not seen any tip yet: the settings patch then writes an empty tip list, which
+   * is what tells a new person from one who was here before tips existed. A re-run leaves the list alone.
+   */
+  firstRun?: boolean
 }
 
 /**
@@ -39,7 +44,7 @@ export interface OnboardingSetupInput {
  * An empty result means the caller should skip the update entirely.
  */
 export function buildOnboardingSettingsPatch(
-  input: Pick<OnboardingSetupInput, 'money' | 'currentSettings'>,
+  input: Pick<OnboardingSetupInput, 'money' | 'currentSettings' | 'firstRun'>,
   newDebitId: number | null,
 ): Partial<ExpenseSettings> {
   const { money, currentSettings } = input
@@ -52,6 +57,7 @@ export function buildOnboardingSettingsPatch(
   if (newDebitId != null && currentSettings.defaultAccountId == null) {
     patch.defaultAccountId = newDebitId
   }
+  if (input.firstRun) patch.tipsSeen = []
   return patch
 }
 

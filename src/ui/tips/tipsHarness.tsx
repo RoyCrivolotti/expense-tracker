@@ -25,7 +25,11 @@ beforeAll(() => {
 /** Shared by the tests that open the whole app on a source whose settings one account keeps, as every device of theirs reads them. */
 
 // These test the whole-dataset app, which a browser asks for with `?ledger=off`.
-beforeEach(() => localStorage.setItem(LEDGER_MODE_KEY, 'off'))
+beforeEach(() => {
+  // What a person skipped on this browser must not leak into the next test.
+  localStorage.clear()
+  localStorage.setItem(LEDGER_MODE_KEY, 'off')
+})
 
 export const SET_UP = {
   categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
@@ -75,3 +79,15 @@ export async function settingsHelp() {
   fireEvent.click(await screen.findByRole('tab', { name: 'Setup' }))
 }
 
+/** An account with nothing in it yet, whose first run opens setup. */
+export const emptySource = (store: Store): ExpenseDataSource => {
+  const base = sourceFor(store, [])
+  const source: ExpenseDataSource = {
+    ...base,
+    load: () => Promise.resolve(makeDataset({ settings: store.settings })),
+    createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }),
+    createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
+  }
+  written.set(source, writesOf(base))
+  return source
+}
