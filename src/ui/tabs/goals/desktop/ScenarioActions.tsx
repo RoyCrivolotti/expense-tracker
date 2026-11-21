@@ -5,6 +5,7 @@ import { Presence } from '../../../components/Presence'
 import { EXIT_MS } from '../../../hooks/motion'
 import { deleteMessage } from '../deleteMessage'
 import { SaveButton } from '../SaveButton'
+import { StartLaterHost } from '../StartLaterHost'
 import { UnsavedGroup } from '../UnsavedGroup'
 import type { ScenarioEditor } from '../useScenarioEditor'
 import goalStyles from '../goals.module.css'
@@ -38,6 +39,7 @@ interface ScenarioActionsProps {
  */
 export function ScenarioActions({ editor, actions }: ScenarioActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [startLaterOpen, setStartLaterOpen] = useState(false)
   const { activeScenario, draft, dirty, saving, creating } = editor
   // A button that goes (Save when the write lands, Discard) hands focus to the page; this puts
   // it back on the chip of the scenario being edited. The chips are elsewhere on the page, so
@@ -74,10 +76,12 @@ export function ScenarioActions({ editor, actions }: ScenarioActionsProps) {
         onPatch={editor.patchDraft}
         onActivate={editor.onActivate}
         onDuplicate={editor.onDuplicate}
+        onStartLater={() => setStartLaterOpen(true)}
         onDelete={() => setDeleteOpen(true)}
         onSaveAsNew={editor.onSaveDraft}
         onKeepAsDraft={editor.onSelectEditing}
       />
+      <StartLaterHost open={startLaterOpen} startLater={editor.startLater} onClose={() => setStartLaterOpen(false)} />
       <Presence show={deleteOpen} exitMs={EXIT_MS.sheet}>
         {activeScenario ? (
           <ConfirmSheet

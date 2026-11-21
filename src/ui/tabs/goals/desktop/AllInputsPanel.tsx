@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { LeverKey } from '../../../../engine'
+import type { LeverKey, PlanFromToday } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import goalStyles from '../goals.module.css'
 import { Presence } from '../../../components/Presence'
@@ -15,8 +15,8 @@ import {
   HousingFields,
   PortfolioFields,
   ReturnNote,
-  TrackingFields,
 } from '../goalControlSections'
+import { TrackingFields } from '../TrackingFields'
 import { SECTION_KEYS } from '../leverFields'
 import type { StarredLevers } from '../useStarredLevers'
 import { STAR_HOME_ATTR } from './starFocus'
@@ -28,6 +28,8 @@ interface PanelProps {
   draft: NewGoalScenario
   /** The latest check-in, for re-baselining; null before the first one. */
   latest: InvestedSnapshot | null
+  /** The plan carried on from the latest check-in, when the plan is another scenario than this one. */
+  otherPlan?: PlanFromToday | null
   onChange: (patch: Partial<NewGoalScenario>) => void
   /** The inputs in the levers bar, so they are not here a second time, and the stars that move them. */
   starred: StarredLevers
@@ -52,14 +54,14 @@ function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): bool
  * them, since they set where the starting balance is from. With every input in the bar it is the
  * plan start's column alone, which still carries the note on what return to expect.
  */
-function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
+function PortfolioColumn({ draft, latest, otherPlan, onChange, omit, wrap }: ColumnProps) {
   const labels = ADJUST_LABELS
   const inputs = hasInputs(SECTION_KEYS.portfolio, omit)
   return (
     <Column title={inputs ? labels.portfolio.title : labels.tracking.title}>
       {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : <ReturnNote />}
       {inputs ? <h3 className={styles.columnTitle}>{labels.tracking.title}</h3> : null}
-      <TrackingFields draft={draft} latest={latest} onChange={onChange} />
+      <TrackingFields draft={draft} latest={latest} otherPlan={otherPlan} onChange={onChange} />
     </Column>
   )
 }
@@ -83,6 +85,7 @@ function OverTimeColumn({ draft, onChange, omit }: Pick<ColumnProps, 'draft' | '
 interface ColumnProps {
   draft: NewGoalScenario
   latest: InvestedSnapshot | null
+  otherPlan: PlanFromToday | null
   onChange: (patch: Partial<NewGoalScenario>) => void
   omit: ReadonlySet<LeverKey>
   wrap: (key: LeverKey, field: ReactNode) => ReactNode
@@ -105,7 +108,7 @@ function StarNote({ starred }: { starred: StarredLevers }) {
   )
 }
 
-function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
+function PanelBody({ id, draft, latest, otherPlan = null, onChange, starred }: PanelProps) {
   const { leaving, exitMs } = useExit()
   const labels = ADJUST_LABELS
   const omit = useMemo<ReadonlySet<LeverKey>>(() => new Set(starred.keys), [starred.keys])
@@ -128,7 +131,7 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
         <Card>
           <StarNote starred={starred} />
           <div className={styles.columns}>
-            <PortfolioColumn draft={draft} latest={latest} onChange={onChange} omit={omit} wrap={wrap} />
+            <PortfolioColumn draft={draft} latest={latest} otherPlan={otherPlan} onChange={onChange} omit={omit} wrap={wrap} />
             {hasInputs(SECTION_KEYS.housing, omit) ? (
               <Column title={labels.housing.title}>
                 <HousingFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />

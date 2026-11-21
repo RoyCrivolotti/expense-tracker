@@ -15,6 +15,7 @@ import { PlanHero, type ValueDisplay } from './PlanHero'
 import { ScenarioManager } from './ScenarioManager'
 import { SecondaryCharts } from './SecondaryCharts'
 import { useGoalsNarrow } from './useGoalsNarrow'
+import { otherPlanOf } from './otherPlan'
 import type { ScenarioEditor } from './useScenarioEditor'
 import type { StarredLevers } from './useStarredLevers'
 import styles from './goals.module.css'
@@ -25,10 +26,11 @@ interface PlanSidebarProps {
   editor: ScenarioEditor
   actions: ExpenseActions | undefined
   latest: InvestedSnapshot | null
+  otherPlan: PlanFromToday | null
 }
 
 /** The phone's scenarios, the controls and, on its Scenarios half, the pinned chart over them. */
-function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarProps) {
+function PlanSidebar({ half, scenarios, editor, actions, latest, otherPlan }: PlanSidebarProps) {
   const { draft, dirty, saving, onSaveChanges, onDiscard } = editor
   return (
     <div className={styles.areaSidebar}>
@@ -53,6 +55,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           onDiscard={onDiscard}
           onActivate={editor.onActivate}
           onDuplicate={editor.onDuplicate}
+          startLater={editor.startLater}
         />
         <DiscardSheet {...editor.discardPrompt} />
       </div>
@@ -69,7 +72,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
       ) : null}
       <div className={styles.areaControls}>
         <Card>
-          <GoalControls draft={draft} latest={latest} onChange={editor.patchDraft} />
+          <GoalControls draft={draft} latest={latest} otherPlan={otherPlan} onChange={editor.patchDraft} />
         </Card>
       </div>
     </div>
@@ -111,7 +114,15 @@ function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
   const { deferredDraft, activeId, dirty } = editor
   return {
     sidebar: (
-      <PlanSidebar key="sidebar" half={half} scenarios={scenarios} editor={editor} actions={actions} latest={latest} />
+      <PlanSidebar
+        key="sidebar"
+        half={half}
+        scenarios={scenarios}
+        editor={editor}
+        actions={actions}
+        latest={latest}
+        otherPlan={otherPlanOf(props.fromToday, editor.activeId)}
+      />
     ),
     hero: (
       <div key="hero" className={`${styles.heroBlock} ${styles.areaHero}`}>
