@@ -257,6 +257,97 @@ describe('a copy started part way through a year never reads above its source', 
     expect(onTheDay).toEqual({ cents: 25_000_000 - paid, lowerByCents: 0, paidAtStartCents: paid, shortByCents: 0, from: 'checkin' })
   })
 
+  it('counts what is dated by the start but still ahead on the check-in’s line as paid, not as the line being lowered', () => {
+    // The check-in's restart pays the car (1 Jan 2028) on its own next anniversary, 1 Jul 2028, after the copy's start.
+    const checkin = { investedCents: 5_500_000, date: '2026-07-01' }
+    const date = '2028-03-01'
+    for (const rate of TEST_INFLATION_RATES) {
+      const factor = (1 + rate) ** yearsBetween('2026-01-01', date)
+      const bare = suggestedStart(samplePlan({ housePurchaseYear: null }), checkin, date, rate)!
+      const car = suggestedStart(samplePlan({ housePurchaseYear: null, lifeEvents: [{ year: 2, amountCents: -2_000_000, label: 'Car' }] }), checkin, date, rate)!
+      expect(car.paidAtStartCents).toBe(Math.round(2_000_000 * factor))
+      // The lowering is what the corners need, a few hundred euros here; before, it also took the car's 20.000 €.
+      expect(car.lowerByCents).toBeLessThanOrEqual(bare.lowerByCents + 100)
+      expect(Math.abs(bare.cents - car.cents - car.paidAtStartCents)).toBeLessThanOrEqual(bare.lowerByCents + 100)
+      // An inflow that is ahead on the line the same way is in the copy's balance too, so it starts higher, less
+      // what the gift earns in the copy in the four months before the line receives it (at most 5% of a year's 7%).
+      const gift = suggestedStart(samplePlan({ housePurchaseYear: null, lifeEvents: [{ year: 2, amountCents: 1_000_000, label: 'Gift' }] }), checkin, date, rate)!
+      expect(gift.paidAtStartCents).toBe(0)
+      const added = gift.cents - bare.cents
+      expect(added).toBeGreaterThan(Math.round(1_000_000 * factor) * 0.97 - bare.lowerByCents)
+      expect(added).toBeLessThanOrEqual(Math.round(1_000_000 * factor) + 100)
+    }
+  })
+
+  it('counts a cost dated on the start itself as paid there, and none on the day the check-in’s line pays it', () => {
+    const plan = samplePlan({ housePurchaseYear: null, lifeEvents: [{ year: 2, amountCents: -2_000_000, label: 'Car' }] })
+    const checkin = { investedCents: 5_500_000, date: '2026-07-01' }
+    for (const rate of TEST_INFLATION_RATES) {
+      // On 1 Jan 2028 itself: the copy holds it as paid, the line pays it on 1 Jul 2028.
+      const onTheDay = suggestedStart(plan, checkin, '2028-01-01', rate)!
+      expect(onTheDay.paidAtStartCents).toBe(Math.round(2_000_000 * (1 + rate) ** 2))
+      // On 1 Jul 2028, the check-in's anniversary: the line has paid it that morning, so it is in the line's value.
+      const paidByLine = suggestedStart(plan, checkin, '2028-07-01', rate)!
+      expect(paidByLine.paidAtStartCents).toBe(0)
+      expect(paidByLine.lowerByCents).toBeLessThan(50_000)
+    }
+  })
+
+  it('lets a copy hold an inflow the check-in’s line receives later only until it does, then never reads above that line', () => {
+    // The gift (1 Jan 2028) is in the copy's balance from 1 Mar 2028; the line receives it on 1 Jul 2028.
+    const plan = samplePlan({ housePurchaseYear: null, lifeEvents: [{ year: 2, amountCents: 5_000_000, label: 'Gift' }] })
+    const checkin = { investedCents: 5_500_000, date: '2026-07-01' }
+    const date = '2028-03-01'
+    for (const rate of TEST_INFLATION_RATES) {
+      const s = suggestedStart(plan, checkin, date, rate)!
+      const copy = project({ ...plan, ...startLater(plan, { date, investedCents: s.cents }, rate)!.patch }, rate)
+      const line = project({ ...plan, ...rebaseline(plan, checkin, rate).patch }, rate)
+      const offset = yearsBetween(checkin.date, date)
+      // From the line's receiving it on, on its anniversaries and the copy's, and the moment before each.
+      const times = [2, 3, 4, 5, 10, offset + 1, offset + 2, offset + 5].flatMap((t) => [t, t - 1e-6]).filter((t) => t >= 2)
+      for (const t of times) {
+        expect(valueOnAxisAt(copy, offset, rate, t)! - valueOnAxisAt(line, 0, rate, t)!).toBeLessThanOrEqual(70)
+      }
+    }
+  })
+
+  it('never reads above the check-in’s line once that line has received an inflow the copy started with', () => {
+    // A heavy saver, so a copy started part way through a year needs its corner lowering, with the check-in two and a
+    // half years after the source's start. The lowering is set just before the line receives the gift, where the copy
+    // is ahead by what the gift has earned in it; after that the copy stays under the line.
+    const plan = samplePlan({
+      planStartDate: '2024-01-01',
+      housePurchaseYear: null,
+      startInvestedCents: 100_000,
+      monthlyContributionCents: 500_000,
+      lifeEvents: [{ year: 4, amountCents: 1_000_000, label: 'Gift' }],
+    })
+    const checkin = { investedCents: 16_000_000, date: '2026-07-01' }
+    const date = '2028-03-01'
+    for (const rate of TEST_INFLATION_RATES) {
+      const s = suggestedStart(plan, checkin, date, rate)!
+      const copy = project({ ...plan, ...startLater(plan, { date, investedCents: s.cents }, rate)!.patch }, rate)
+      const line = project({ ...plan, ...rebaseline(plan, checkin, rate).patch }, rate)
+      const offset = yearsBetween(checkin.date, date)
+      // From 1 Jul 2028 on, when the line has the gift too (until then the copy is ahead by it, as it should be).
+      const corners = [2, 3, 4, 5, 6, 7].concat([1, 2, 3, 4, 5].map((k) => offset + k))
+      for (const t of corners.flatMap((c) => [c, c - 1e-6]).filter((t) => t >= 2)) {
+        expect(valueOnAxisAt(copy, offset, rate, t)! - valueOnAxisAt(line, 0, rate, t)!).toBeLessThanOrEqual(70)
+      }
+    }
+  })
+
+  it('does the same for a house dated by the start that the check-in’s line buys after it', () => {
+    const plan = samplePlan({ housePurchaseYear: 2, startInvestedCents: 20_000_000 })
+    const checkin = { investedCents: 21_000_000, date: '2026-07-01' }
+    const date = '2028-03-01'
+    const factor = 1.02 ** yearsBetween('2026-01-01', date)
+    const s = suggestedStart(plan, checkin, date, I)!
+    expect(s.paidAtStartCents).toBe(Math.round(purchaseWithdrawalCents(scenarioToParams(plan, I)) * factor))
+    expect(s.lowerByCents).toBeLessThan(100_000)
+    expect(startLater(plan, { date, investedCents: s.cents }, I)!.patch.housePurchaseYear).toBe(0)
+  })
+
   it('says by how much a balance cannot pay for a house in the copy’s first year, and suggests nothing below nothing', () => {
     // The sample plan with its house a year in has about 57.000 € on 3 July 2026 and owes 67.253 € for it.
     const s = suggestedStart(samplePlan({ housePurchaseYear: 1 }), null, '2026-07-03', I)!
