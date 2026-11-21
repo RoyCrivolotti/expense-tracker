@@ -22,18 +22,18 @@ function renderStep(overrides: Partial<Parameters<typeof OnboardingAccountsStep>
 describe('OnboardingAccountsStep', () => {
   it('first run: always shows the debit name field, no opt-in checkbox', () => {
     renderStep({ hasExistingAccounts: false })
-    expect(screen.getByLabelText('Main debit account')).toBeTruthy()
+    expect(screen.getByLabelText('Main account')).toBeTruthy()
     expect(screen.queryByText('Add another debit account')).toBeNull()
   })
 
   it('re-entry with the checkbox off: hides the debit name field', () => {
     renderStep({ hasExistingAccounts: true, addDebit: false })
     expect(screen.getByText('Add another debit account')).toBeTruthy()
-    expect(screen.queryByLabelText('Main debit account')).toBeNull()
+    expect(screen.queryByLabelText('Main account')).toBeNull()
   })
 
   it('re-entry with the checkbox on: shows the debit name field', () => {
     renderStep({ hasExistingAccounts: true, addDebit: true })
-    expect(screen.getByLabelText('Main debit account')).toBeTruthy()
+    expect(screen.getByLabelText('Main account')).toBeTruthy()
   })
 })

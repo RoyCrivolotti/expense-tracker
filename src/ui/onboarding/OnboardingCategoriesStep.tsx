@@ -19,7 +19,7 @@ export function OnboardingCategoriesStep({
   return (
     <div className={styles.stepBody}>
       <p className={styles.lead}>
-        Pick categories to track. Budgets are monthly — adjust anytime in Settings.
+        Untick what you don't need. The amount is a monthly limit you can change any time.
       </p>
       <ul className={styles.categoryList}>
         {drafts.map((draft, index) => {

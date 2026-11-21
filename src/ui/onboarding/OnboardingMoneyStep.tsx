@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatCents, resolveMoneyFormat } from '../../engine'
 import { CURRENCIES, CURRENCY_DISPLAY_ONLY_HINT, NUMBER_STYLES } from '../settings/moneyOptions'
 import styles from './OnboardingWizard.module.css'
@@ -8,21 +9,52 @@ export interface MoneyDraft {
   budgetRolloverDay: number
 }
 
+/** What amounts will look like, with the number format kept behind "Change": almost nobody needs it. */
+function NumberFormatPreview({ money, onChange }: { money: MoneyDraft; onChange: (patch: Partial<MoneyDraft>) => void }) {
+  const [changing, setChanging] = useState(false)
+  const preview = formatCents(123456, resolveMoneyFormat(money.currencyCode, money.numberLocale))
+  return (
+    <>
+      <div className={styles.preview}>
+        <span>Amounts will look like</span>
+        <strong>{preview}</strong>
+        {changing ? null : (
+          <button type="button" className={styles.changeLink} onClick={() => setChanging(true)}>
+            Change
+          </button>
+        )}
+      </div>
+      {changing ? (
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Number format</span>
+          <select value={money.numberLocale} onChange={(e) => onChange({ numberLocale: e.target.value })}>
+            {NUMBER_STYLES.map((n) => (
+              <option key={n.locale} value={n.locale}>
+                {n.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+    </>
+  )
+}
+
 export function OnboardingMoneyStep({
+  firstRun,
   money,
   onChange,
 }: {
+  firstRun: boolean
   money: MoneyDraft
   onChange: (patch: Partial<MoneyDraft>) => void
 }) {
-  const format = resolveMoneyFormat(money.currencyCode, money.numberLocale)
-  const preview = formatCents(1234567, format)
-
   return (
     <div className={styles.stepBody}>
       <p className={styles.lead}>
-        How should money look, and when does your budget month start? You can change all of this
-        later in Settings.
+        {firstRun
+          ? 'This is your own ledger. Nobody else who uses the app can see it. Three short choices, then you add your first payment.'
+          : 'Change your currency or when your month starts. You can change all of this later in Settings.'}
       </p>
 
       <label className={styles.field}>
@@ -38,29 +70,12 @@ export function OnboardingMoneyStep({
           ))}
         </select>
       </label>
-
-      <label className={styles.field}>
-        <span className={styles.fieldLabel}>Number format</span>
-        <select
-          value={money.numberLocale}
-          onChange={(e) => onChange({ numberLocale: e.target.value })}
-        >
-          {NUMBER_STYLES.map((n) => (
-            <option key={n.locale} value={n.locale}>
-              {n.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className={styles.preview}>
-        <span>Preview</span>
-        <strong>{preview}</strong>
-      </div>
       <p className={styles.hint}>{CURRENCY_DISPLAY_ONLY_HINT}</p>
 
+      <NumberFormatPreview money={money} onChange={onChange} />
+
       <label className={`${styles.field} ${styles.fieldGroupDivider}`}>
-        <span className={styles.fieldLabel}>Budget month starts on day</span>
+        <span className={styles.fieldLabel}>My month starts on day</span>
         <input
           type="number"
           min={1}
@@ -73,8 +88,7 @@ export function OnboardingMoneyStep({
         />
       </label>
       <p className={styles.hint}>
-        Day of the month new spending starts counting toward the next budget month. Leave at 1 for
-        plain calendar months.
+        Leave 1 for calendar months. Pick your payday if you budget from one pay to the next.
       </p>
     </div>
   )

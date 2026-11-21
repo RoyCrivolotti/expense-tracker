@@ -37,7 +37,7 @@ full stop. No code in this repo infers a bank's payment date.
 
 Three per-owner `settings` columns (nullable, migration `0011`) generalise the tracker beyond a single currency and
 calendar-month convention: `currency_code`, `number_locale`, and `budget_rollover_day`. `NULL` on any of them falls back
-to built-in defaults (EUR, `de-DE` grouping, rollover day 1). They are set during onboarding (the "Money & months" step)
+to built-in defaults (EUR, `de-DE` grouping, rollover day 1). They are set during onboarding (the first step of setup)
 and editable under Settings → Money & months.
 
 Display is driven by a resolved `MoneyFormat` (`resolveMoneyFormat(currencyCode, numberLocale)`) provided app-wide via

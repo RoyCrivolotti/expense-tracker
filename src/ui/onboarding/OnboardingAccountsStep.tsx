@@ -26,7 +26,7 @@ export function OnboardingAccountsStep({
       <p className={styles.lead}>
         {hasExistingAccounts
           ? 'Add another account you pay from, or skip if your existing accounts already cover it.'
-          : 'Add the accounts you pay from. You can rename them later.'}
+          : 'You can rename these and add more later in Settings.'}
       </p>
       {hasExistingAccounts ? (
         <label className={styles.checkRow}>
@@ -36,12 +36,12 @@ export function OnboardingAccountsStep({
       ) : null}
       {!hasExistingAccounts || addDebit ? (
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Main debit account</span>
+          <span className={styles.fieldLabel}>Main account</span>
           <input
             type="text"
             value={debitName}
             onChange={(e) => onDebitName(e.target.value)}
-            placeholder="Main debit"
+            placeholder="Main account"
             autoComplete="off"
           />
         </label>
@@ -52,7 +52,7 @@ export function OnboardingAccountsStep({
           checked={addCredit}
           onChange={(e) => onAddCredit(e.target.checked)}
         />
-        <span>Add a credit card (deferred settlement)</span>
+        <span>I also pay with a credit card that is charged once a month</span>
       </label>
       {addCredit ? (
         <label className={styles.field}>

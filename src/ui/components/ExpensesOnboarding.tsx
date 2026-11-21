@@ -38,6 +38,7 @@ export function ExpensesOnboarding({
         source={source}
         dataset={dataset}
         applyPatch={applyPatch}
+        firstRun={firstRun}
         onDone={() => {
           onClose()
           if (firstRun) onAdd()

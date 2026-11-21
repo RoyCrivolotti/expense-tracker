@@ -58,12 +58,12 @@ function sourceThatSucceeds(dataset: ExpenseDataset): ExpenseDataSource {
   }
 }
 
-async function finishWizard() {
-  fireEvent.click(screen.getByText('Continue')) // welcome -> money
-  fireEvent.click(screen.getByText('Continue')) // money -> categories
+async function finishWizard(confirm: boolean) {
+  fireEvent.click(await screen.findByText('Continue')) // money -> categories
   fireEvent.click(screen.getByText('Continue')) // categories -> accounts
   fireEvent.click(screen.getByText('Finish setup'))
-  fireEvent.click(screen.getByText('Apply'))
+  // Only a re-run asks first; a first run has nothing to protect.
+  if (confirm) fireEvent.click(await screen.findByText('Apply'))
   await waitFor(() => expect(screen.queryByText('Apply these changes?')).toBeNull())
 }
 
@@ -75,8 +75,8 @@ describe('ExpensesApp onboarding wiring', () => {
     const source = sourceThatSucceeds(datasetWith())
     render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} />)
 
-    await screen.findByText('Welcome to Expenses')
-    await finishWizard()
+    await screen.findByRole('heading', { name: 'Welcome' })
+    await finishWizard(false)
 
     await waitFor(() => expect(screen.getByText('New transaction')).toBeTruthy())
   })
@@ -90,13 +90,13 @@ describe('ExpensesApp onboarding wiring', () => {
     render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} />)
 
     // Tenant already has categories/accounts, so the wizard should not auto-open.
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
     fireEvent.click(await screen.findByRole('tab', { name: 'Setup' }))
     fireEvent.click(await screen.findByText('Run setup wizard'))
-    await screen.findByText('Welcome to Expenses')
-    await finishWizard()
+    await screen.findByRole('heading', { name: 'Setup' })
+    await finishWizard(true)
 
     expect(screen.queryByText('New transaction')).toBeNull()
   })
@@ -105,7 +105,7 @@ describe('ExpensesApp onboarding wiring', () => {
     const source = sourceThatSucceeds(datasetWith())
     render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} accountEmail="test@example.com" />)
 
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
     fireEvent.click(await screen.findByRole('tab', { name: 'Account' }))
@@ -123,11 +123,11 @@ describe('ExpensesApp settings kept for a person', () => {
     localStorage.setItem('exp-onboarding-skipped:alice@example.com', '1')
     const alice = render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
     await screen.findAllByRole('button', { name: 'Settings' })
-    expect(screen.queryByText('Welcome to Expenses')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull()
     alice.unmount()
 
     render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="bob@example.com" />)
-    expect(await screen.findByText('Welcome to Expenses')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome' })).toBeInTheDocument()
   })
 
   it('remembers a skipped setup for the person who skipped it', async () => {
@@ -197,7 +197,7 @@ describe('ExpensesApp tab wiring', () => {
       wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })],
     })
     render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
 
     fireEvent.click(await screen.findByRole('button', { name: 'Log check-in' }))
 
@@ -213,7 +213,7 @@ describe('ExpensesApp tab wiring', () => {
       goalScenarios: [makeScenario({ id: 1, name: 'Path A', isActive: true })],
     })
     render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
     // Both navs are in the page; the first is the rail, the last the bottom bar.
     const nav = (name: string, which: 'first' | 'last') => {
       const all = screen.getAllByRole('button', { name })
@@ -302,7 +302,7 @@ describe('ExpensesApp Analytics handoffs', () => {
 
   it('opens Transactions on the month and filters a Spending row stands for', async () => {
     render(<ExpensesApp source={sourceThatSucceeds(dataset())} hubGrants={allGroupsGranted()} />)
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
 
     fireEvent.click(nav('Analytics'))
     // Analytics is a lazy chunk, and CI takes longer than the default second to load it.
@@ -317,7 +317,7 @@ describe('ExpensesApp Analytics handoffs', () => {
 
   it('opens Goals with the measured spend waiting as an unsaved edit', async () => {
     render(<ExpensesApp source={sourceThatSucceeds(dataset())} hubGrants={allGroupsGranted()} />)
-    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
 
     fireEvent.click(nav('Analytics'))
     fireEvent.click(await screen.findByRole('button', { name: 'Use in Goals' }, { timeout: 15_000 }))

@@ -49,7 +49,7 @@ export function buildSelectedPresets(
  * opt-in) — symmetric with `addCredit`.
  */
 export function useAccountsDraft(hasExistingAccounts: boolean) {
-  const [debitName, setDebitName] = useState('Main debit')
+  const [debitName, setDebitName] = useState('Main account')
   const [creditName, setCreditName] = useState('Credit card')
   const [addCredit, setAddCredit] = useState(false)
   const [addDebit, setAddDebit] = useState(!hasExistingAccounts)
