@@ -1041,8 +1041,8 @@ async function checkLeverFocus(browser, engine) {
     await context.close()
   }
 
-  // The bar is not held on a 768px screen (it needs 800): it stays in the page, 797px down, and
-  // someone scrolls to it. Once it is on screen the same holds as above: a click on a figure or
+  // The bar is not held on a 768px screen (it needs 800): it stays in the page, well below the
+  // fold, and someone scrolls to it. Once it is on screen the same holds as above: a click on a figure or
   // its unit and typing leave the page where it is, with the legend clear of the bar.
   const short = { width: 1366, height: 768 }
   const { page, context } = await openPlan(browser, short)
@@ -1050,7 +1050,16 @@ async function checkLeverFocus(browser, engine) {
   const m = await measure(page)
   check(`${engine} 1366x768`, '(z1) on a 768px screen the bar is not held to the bottom edge, and the legend is clear of it', m.barBottom === 'auto' && m.bar.top >= m.legendBottom, `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
   for (const how of ['digits', 'unit']) {
-    const at = await scrollTo(page, 200)
+    // Scrolled so the whole bar is on screen, with some air under it. A fixed offset did not
+    // do that: how far down the bar sits depends on the font (a few dozen pixels between Linux
+    // and macOS) and on what is above it, and with the field half under the bottom edge the
+    // browser scrolls a few pixels to bring the caret into view as the figure is typed over,
+    // which is what it is meant to do and not a fault of the page.
+    const barTop = await page.evaluate(() => {
+      const r = document.querySelector('[data-levers-bar]').getBoundingClientRect()
+      return { top: r.top + window.scrollY, height: r.height }
+    })
+    const at = await scrollTo(page, Math.max(0, Math.round(barTop.top + barTop.height + 48 - short.height)))
     const field = page.getByRole('textbox', { name: 'Monthly investing', exact: true })
     const spot = await field.evaluate((el, target) => {
       const box = target === 'unit' ? el.parentElement.querySelector('[class*="leverUnit"]') : el
