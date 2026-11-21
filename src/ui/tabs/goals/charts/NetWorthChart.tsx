@@ -332,9 +332,8 @@ function useMilestonePick({
             nominalMode,
             years,
             today: todayIso(),
-            locale: format.locale,
           }),
-    [picked, lines, scenarios, draft, inflationRate, nominalMode, years, format.locale],
+    [picked, lines, scenarios, draft, inflationRate, nominalMode, years],
   )
   // Marks only on a picked line that is drawn: dots where each path reaches it, and a note at its right end.
   const annotations = useMemo(
