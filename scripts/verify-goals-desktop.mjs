@@ -12,6 +12,7 @@
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
  * its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`),
  * the spread card, across the page under the columns and with a table that fits at 200% text on a phone (`ONLY=spread-card`),
+ * the comparison table with one start day and with a path that starts later (`ONLY=compare-table`),
  * and four layout faults of the later cards (`ONLY=layout-faults`).
  *
  * What it measures:
@@ -3846,6 +3847,92 @@ async function checkLayoutFaults(browser, engine) {
  * does not run in CI. `weight` is roughly the seconds the section takes on a CI runner; it only
  * balances the shards (see shardUnits.mjs).
  */
+/**
+ * The comparison table, "Scenarios side by side" (check group compare-table). The demo's paths all start on
+ * one day, and there the table reads each at its own plan year: after N years, FI and the house in plan
+ * years, nothing marked as not started or ended. `TABLE_DUMP=<file>` writes every window's text, so a run
+ * on main and on a branch can be compared word for word. Path C (a house in year 5) is then given a start
+ * six years after today, six and a half after the others: at 5Y its row says when it starts, the hint names one date and the earliest
+ * start's euros, its house is the month it is bought in, the hint says why it can show more net worth, and
+ * the phone at 375px and 320px shows the same cells with nothing cut off and no sideways page scroll.
+ */
+const COMPARE_LATER_MONTHS = 72
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function readCompare(page) {
+  return page.evaluate(() => {
+    const region = document.querySelector('[role="region"][aria-label="Scenarios side by side"]')
+    if (!region) return null
+    let shell = region.parentElement
+    while (shell && !shell.querySelector('p')) shell = shell.parentElement
+    const rows = [...region.querySelectorAll('tr')].map((tr) => [...tr.querySelectorAll('th, td')].map((c) => c.textContent))
+    const clipped = [...region.querySelectorAll('th, td')].filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => c.textContent)
+    return { hint: shell?.querySelector('p')?.textContent ?? '', rows, clipped }
+  })
+}
+
+async function compareWindows(page) {
+  const group = page.getByRole('radiogroup', { name: 'Comparison year' })
+  await group.scrollIntoViewIfNeeded()
+  const labels = await group.getByRole('radio').evaluateAll((radios) => radios.map((r) => r.textContent))
+  const read = {}
+  for (const label of labels) {
+    await group.getByRole('radio', { name: label }).click()
+    await page.waitForTimeout(150)
+    read[label] = await readCompare(page)
+  }
+  return read
+}
+
+/** The month that is `years` whole years and `months` months from the first of the current month, as the table writes it. */
+function monthFromNow(months, years = 0) {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + months + years * 12)
+  return `${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`
+}
+
+async function checkComparisonTable(browser, engine) {
+  const where = `${engine} 1280x800`
+  const { page, context } = await openPlan(browser, SCREENS[1])
+  const same = await compareWindows(page)
+  if (process.env.TABLE_DUMP) (await import('node:fs')).writeFileSync(`${process.env.TABLE_DUMP}.${engine}.json`, JSON.stringify(same, null, 2))
+  const cells = Object.values(same).flatMap((t) => t.rows.slice(1).flatMap((r) => r.slice(1)))
+  check(where, '(compare-table) with one start day every window reads after N years or at the horizon', Object.values(same).every((t) => /^Net worth and invested are (after \d+ years|at each path’s horizon)/.test(t.hint)), JSON.stringify(Object.values(same).map((t) => t.hint)))
+  check(where, '(compare-table) and no cell says a path starts or ended, or gives a month for the house', cells.length > 0 && !cells.some((c) => /starts|ended|^[A-Z][a-z]{2} \d{4}$/.test(c)), JSON.stringify(cells))
+
+  await page.getByRole('tablist', { name: 'Scenarios' }).getByRole('tab', { name: /Path C/ }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  await setLaterStart(page, COMPARE_LATER_MONTHS)
+  const later = await compareWindows(page)
+  const origin = -6
+  const startsAt = monthFromNow(COMPARE_LATER_MONTHS)
+  const draftRow = (t) => t.rows.find((r) => r[0].endsWith('(editing)'))
+  const at5 = later['5Y']
+  check(where, '(compare-table) a path that has not started by the date says when it starts', JSON.stringify(draftRow(at5)?.slice(2, 4)) === JSON.stringify([`starts ${startsAt}`, `starts ${startsAt}`]), JSON.stringify(draftRow(at5)))
+  check(where, '(compare-table) the hint names the one date and the earliest start\'s euros', at5.hint.startsWith(`Net worth and invested are on the same date for every path, ${monthFromNow(origin, 5)}, in ${monthFromNow(origin).slice(4)} euros;`), at5.hint)
+  check(where, '(compare-table) with no window, the last year every path reaches', later.Horizon.hint.includes(`${monthFromNow(origin, 30)}, the last year every scenario reaches`), later.Horizon.hint)
+  check(where, '(compare-table) the later path buys its house in a month of its own calendar', draftRow(later.Horizon)?.[4] === monthFromNow(COMPARE_LATER_MONTHS, 5), JSON.stringify(draftRow(later.Horizon)))
+  check(where, '(compare-table) every figure on the date is a figure', draftRow(later.Horizon)?.slice(2, 4).every((c) => /€$/.test(c)), JSON.stringify(draftRow(later.Horizon)))
+  check(where, '(compare-table) and the hint says why it can show more net worth', /can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./.test(later.Horizon.hint), later.Horizon.hint)
+
+  for (const width of [375, 320]) {
+    await page.setViewportSize({ width, height: 812 })
+    await page.waitForTimeout(600)
+    await page.getByRole('radio', { name: 'Compare' }).click()
+    await page.waitForTimeout(400)
+    const phone = await compareWindows(page)
+    const here = `${engine} ${width}`
+    check(here, '(compare-table) the phone shows the desktop\'s cells at every window', Object.keys(later).every((k) => JSON.stringify(phone[k]?.rows) === JSON.stringify(later[k].rows)), JSON.stringify({ phone: phone['5Y']?.rows, desk: at5.rows }))
+    check(here, '(compare-table) no cell is cut off', Object.values(phone).every((t) => t.clipped.length === 0), JSON.stringify(Object.values(phone).map((t) => t.clipped)))
+    const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
+    check(here, '(compare-table) and the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
+  }
+  await context.close()
+}
+
 const SECTIONS = [
   ...SCREENS.map((screen) => ({
     name: `screen ${screen.name}`,
@@ -3874,6 +3961,7 @@ const SECTIONS = [
   { name: 'FromTodayTimeline', weight: 4, run: checkFromTodayTimeline },
   { name: 'LaterStartMilestones', weight: 6, run: checkLaterStartMilestones },
   { name: 'LaterStartTimeline', weight: 4, run: checkLaterStartTimeline },
+  { name: 'ComparisonTable', weight: 6, run: checkComparisonTable },
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
@@ -3965,6 +4053,10 @@ async function main() {
         }
         if (process.env.ONLY === 'x2') {
           await checkFromTodayTimeline(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'compare-table') {
+          await checkComparisonTable(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w3') {

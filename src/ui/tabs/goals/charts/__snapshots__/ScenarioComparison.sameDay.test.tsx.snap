@@ -1,0 +1,147 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: embedded, as on a phone 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 127k € | 127k € | year 8 | 1.000,00 €",
+  "Path C | not in horizon | 132k € | 132k € | never | 1.000,00 €then 1.500,00 €",
+  "[10Y] Net worth and invested are after 10 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 236k € | 141k € | year 8 | 1.000,00 €",
+  "Path C | not in horizon | 255k € | 255k € | never | 1.000,00 €then 1.500,00 €",
+  "[20Y] Net worth and invested are after 20 years, or at a path’s horizon when it is shorter, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 583k € (20y) | 343k € (20y) | year 8 | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+  "[Horizon] Net worth and invested are at each path’s horizon, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 1,0M € (30y) | 652k € (30y) | year 8 | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+]
+`;
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: no start dates at all 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, in today's euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Undated | year 15 | 206k € | 206k € | never | 1.000,00 €",
+  "Undated house | now | 206k € | -614k € | year 5 | 1.000,00 €",
+  "Draft (editing) | year 15 | 206k € | 206k € | never | 1.000,00 €",
+  "[10Y] Net worth and invested are after 10 years, in today's euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Undated | year 15 | 349k € | 349k € | never | 1.000,00 €",
+  "Undated house | now | 759k € | -801k € | year 5 | 1.000,00 €",
+  "Draft (editing) | year 15 | 349k € | 349k € | never | 1.000,00 €",
+  "[20Y] Net worth and invested are after 20 years, in today's euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Undated | year 15 | 811k € | 811k € | never | 1.000,00 €",
+  "Undated house | now | 1,5M € | -1,5M € | year 5 | 1.000,00 €",
+  "Draft (editing) | year 15 | 811k € | 811k € | never | 1.000,00 €",
+  "[Horizon] Net worth and invested are at each path’s horizon, in today's euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Undated | year 15 | 1,2M € (25y) | 1,2M € (25y) | never | 1.000,00 €",
+  "Undated house | now | 1,4M € (30y) | -2,8M € (30y) | year 5 | 1.000,00 €",
+  "Draft (editing) | year 15 | 1,2M € (25y) | 1,2M € (25y) | never | 1.000,00 €",
+]
+`;
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: one undated beside dated ones 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, each in the euros of its own start date; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 127k € | 127k € | year 8 | 1.000,00 €",
+  "Undated | year 15 | 206k € | 206k € | never | 1.000,00 €",
+  "[10Y] Net worth and invested are after 10 years, each in the euros of its own start date; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 236k € | 141k € | year 8 | 1.000,00 €",
+  "Undated | year 15 | 349k € | 349k € | never | 1.000,00 €",
+  "[20Y] Net worth and invested are after 20 years, each in the euros of its own start date; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 583k € | 343k € | year 8 | 1.000,00 €",
+  "Undated | year 15 | 811k € | 811k € | never | 1.000,00 €",
+  "[Horizon] Net worth and invested are at each path’s horizon, each in the euros of its own start date; FI and the house purchase are counted in years from the plan start; monthly is what each path invests.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 1,0M € (30y) | 652k € (30y) | year 8 | 1.000,00 €",
+  "Undated | year 15 | 1,2M € (25y) | 1,2M € (25y) | never | 1.000,00 €",
+]
+`;
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: the same with an edited draft 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 127k € | 127k € | year 8 | 1.000,00 €",
+  "Path B | year 14 | 256k € | 127k € | owned | 1.000,00 €",
+  "Path C | not in horizon | 132k € | 132k € | never | 1.000,00 €then 1.500,00 €",
+  "Path A (editing) | year 30 | 140k € | 140k € | year 8 | 1.200,00 €",
+  "[10Y] Net worth and invested are after 10 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 236k € | 141k € | year 8 | 1.000,00 €",
+  "Path B | year 14 | 415k € | 219k € | owned | 1.000,00 €",
+  "Path C | not in horizon | 255k € | 255k € | never | 1.000,00 €then 1.500,00 €",
+  "Path A (editing) | year 30 | 264k € | 169k € | year 8 | 1.200,00 €",
+  "[20Y] Net worth and invested are after 20 years, or at a path’s horizon when it is shorter, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 583k € (20y) | 343k € (20y) | year 8 | 1.000,00 €",
+  "Path B | year 14 | 793k € (20y) | 471k € (20y) | owned | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+  "Path A (editing) | year 30 | 650k € (20y) | 411k € (20y) | year 8 | 1.200,00 €",
+  "[Horizon] Net worth and invested are at each path’s horizon, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 1,0M € (30y) | 652k € (30y) | year 8 | 1.000,00 €",
+  "Path B | year 14 | 1,3M € (30y) | 860k € (30y) | owned | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+  "Path A (editing) | year 30 | 1,2M € (30y) | 781k € (30y) | year 8 | 1.200,00 €",
+]
+`;
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: three dated paths, unequal horizons, a loaded plan 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 127k € | 127k € | year 8 | 1.000,00 €",
+  "Path B | year 14 | 256k € | 127k € | owned | 1.000,00 €",
+  "Path C | not in horizon | 132k € | 132k € | never | 1.000,00 €then 1.500,00 €",
+  "[10Y] Net worth and invested are after 10 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 236k € | 141k € | year 8 | 1.000,00 €",
+  "Path B | year 14 | 415k € | 219k € | owned | 1.000,00 €",
+  "Path C | not in horizon | 255k € | 255k € | never | 1.000,00 €then 1.500,00 €",
+  "[20Y] Net worth and invested are after 20 years, or at a path’s horizon when it is shorter, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 583k € (20y) | 343k € (20y) | year 8 | 1.000,00 €",
+  "Path B | year 14 | 793k € (20y) | 471k € (20y) | owned | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+  "[Horizon] Net worth and invested are at each path’s horizon, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests, and what a change to it comes to.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 1,0M € (30y) | 652k € (30y) | year 8 | 1.000,00 €",
+  "Path B | year 14 | 1,3M € (30y) | 860k € (30y) | owned | 1.000,00 €",
+  "Path C | not in horizon | 310k € (12y) | 310k € (12y) | never | 1.000,00 €then 1.500,00 €",
+]
+`;
+
+exports[`the comparison table when every scenario starts on one day > shows what it always has: with the plan from today 1`] = `
+[
+  "[5Y] Net worth and invested are after 5 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests. "From today" is your plan restarted from the balance in your latest check-in, Mar 5, 2027, and counts its years and its euros from there (2027 euros). FI is given as a month for the plan and its restart, since their years are counted from different days.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 127k € | 127k € | year 8 | 1.000,00 €",
+  "Path A, from today | around Mar 2056 | 178k € | 178k € | year 7 | 1.000,00 €",
+  "Path B | year 14 | 256k € | 127k € | owned | 1.000,00 €",
+  "[10Y] Net worth and invested are after 10 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests. "From today" is your plan restarted from the balance in your latest check-in, Mar 5, 2027, and counts its years and its euros from there (2027 euros). FI is given as a month for the plan and its restart, since their years are counted from different days.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 236k € | 141k € | year 8 | 1.000,00 €",
+  "Path A, from today | around Mar 2056 | 313k € | 201k € | year 7 | 1.000,00 €",
+  "Path B | year 14 | 415k € | 219k € | owned | 1.000,00 €",
+  "[20Y] Net worth and invested are after 20 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests. "From today" is your plan restarted from the balance in your latest check-in, Mar 5, 2027, and counts its years and its euros from there (2027 euros). FI is given as a month for the plan and its restart, since their years are counted from different days.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 583k € | 343k € | year 8 | 1.000,00 €",
+  "Path A, from today | around Mar 2056 | 700k € | 440k € | year 7 | 1.000,00 €",
+  "Path B | year 14 | 793k € | 471k € | owned | 1.000,00 €",
+  "[Horizon] Net worth and invested are after 30 years, in 2026 euros; FI and the house purchase are counted in years from the plan start; monthly is what each path invests. "From today" is your plan restarted from the balance in your latest check-in, Mar 5, 2027, and counts its years and its euros from there (2027 euros). FI is given as a month for the plan and its restart, since their years are counted from different days.",
+  "Scenario | FI | Net worth | Invested | House | Monthly",
+  "Path A | not in horizon | 1,0M € | 652k € | year 8 | 1.000,00 €",
+  "Path A, from today | around Mar 2056 | 1,2M € | 809k € | year 7 | 1.000,00 €",
+  "Path B | year 14 | 1,3M € | 860k € | owned | 1.000,00 €",
+]
+`;

@@ -1,12 +1,12 @@
 import { memo, useMemo, useState } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { currencyWord, type MoneyFormat, type PlanFromToday } from '../../../../engine'
-import { formatCheckinDate } from '../checkinDate'
-import { planMoneyLabel } from '../planMoneyLabel'
+import type { PlanFromToday } from '../../../../engine'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { ChartShell } from './ChartShell'
 import { comparisonRows, type ComparisonRow } from './comparisonRows'
+import { comparisonOrigin, offsetOf } from './comparisonCalendar'
+import { calendarHint, sameDayHint } from './comparisonHint'
 import { HERO_WINDOWS, type HeroWindowKey } from './heroWindow'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -15,7 +15,7 @@ import { scenarioInk } from '../scenarioInk'
 import styles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
-type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears' | 'atYear' | 'monthlyLater'>
+type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears' | 'atYear' | 'monthlyLater' | 'netWorthCents' | 'investedCents' | 'ended' | 'everyReaches'>
 
 /**
  * The same years the hero chart offers, so the table can be read at the window the chart
@@ -44,23 +44,6 @@ function cell(row: ComparisonRow, key: Column, sharedYear: boolean): string {
   return `${value} (${row.atYear}y)`
 }
 
-/** Where net worth and invested are read, for the hint. */
-function readAt(rows: ComparisonRow[], year: number | null): string {
-  const shared = rows.every((r) => r.atYear === rows[0]?.atYear)
-  if (shared && rows[0]) return ` after ${rows[0].atYear} years`
-  return year === null ? ' at each path’s horizon' : ` after ${year} years, or at a path’s horizon when it is shorter`
-}
-
-/**
- * The euros the figures are in: the plan's when every row starts in the same year, and the euros of each plan's
- * own start when they do not, as each plan counts in its own.
- */
-function figuresMoney(starts: readonly (string | null)[], format: MoneyFormat): string {
-  const labels = new Set(starts.map((start) => planMoneyLabel(start, format)))
-  const [only] = labels
-  return labels.size === 1 && only !== undefined ? `in ${only}` : `each in the ${currencyWord(format)} of its own start date`
-}
-
 function ScenarioComparisonImpl({
   scenarios,
   draft,
@@ -79,7 +62,10 @@ function ScenarioComparisonImpl({
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const [window, setWindow] = useState<HeroWindowKey>('all')
-  const maxHorizon = Math.max(draft.horizonYears, ...scenarios.map((s) => s.horizonYears))
+  const origin = comparisonOrigin(scenarios, draft)
+  // On a shared calendar a window is years from the earliest start, so it may reach as far as the latest end.
+  const reach = (s: NewGoalScenario) => s.horizonYears + (origin === null ? 0 : offsetOf(s, origin))
+  const maxHorizon = Math.max(reach(draft), ...scenarios.map(reach))
   const options = yearOptions(maxHorizon)
   // A window the horizons no longer reach falls back to the horizon, as the hero chart does.
   const chosen = options.some((o) => o.value === window) ? window : 'all'
@@ -89,6 +75,7 @@ function ScenarioComparisonImpl({
     [scenarios, draft, format, inflationRate, includeDraft, year, fromToday],
   )
   const sharedYear = rows.every((r) => r.atYear === rows[0]?.atYear)
+  const hint = { rows, scenarios, draft, includeDraft, year, fromToday, format }
 
   return (
     <ChartShell embedded={embedded}>
@@ -103,12 +90,7 @@ function ScenarioComparisonImpl({
         />
       </div>
       <p className={styles.chartHint}>
-        Net worth and invested are{readAt(rows, year)}, {figuresMoney([...scenarios.map((s) => s.planStartDate), ...(includeDraft ? [draft.planStartDate] : [])], format)}; FI and the house purchase are
-        counted in years from the plan start; monthly is what each path invests
-        {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
-        {fromToday
-          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its ${currencyWord(format)} from there (${planMoneyLabel(fromToday.scenario.planStartDate, format)}). FI is given as a month for the plan and its restart, since their years are counted from different days.`
-          : ''}
+        {origin === null ? sameDayHint(hint) : calendarHint(hint, origin)}
       </p>
       <ScrollRegion label="Scenarios side by side">
         <table className={styles.milestoneTable}>
