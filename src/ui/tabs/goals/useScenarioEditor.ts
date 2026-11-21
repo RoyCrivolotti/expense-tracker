@@ -7,6 +7,8 @@ import { bootstrapEditor, differsFrom, hasUnsavedEdits, rebaseDraft, scenarioToD
 import { useBlankDraft } from './useBlankDraft'
 import { useHiddenLines } from './useHiddenLines'
 import { useScenarioSave } from './useScenarioSave'
+import { useStartLater } from './useStartLater'
+import type { StartLater } from './StartLaterSheet'
 
 /**
  * The question asked before loading another scenario over unsaved edits. `pending` is held
@@ -58,6 +60,8 @@ export interface ScenarioEditor {
   /** Saves a copy of the draft as a new scenario, and opens it. */
   onDuplicate: () => void
   onDiscard: () => void
+  /** What "Start a copy later…" copies and how it saves the copy, through the same create path as Duplicate. */
+  startLater: StartLater
 }
 
 /**
@@ -197,22 +201,15 @@ export function useScenarioEditor(
     [actions, selectScenario],
   )
 
-  const saveDraftAs = useCallback(
+  const onSaveDraft = useCallback(
     (name: string) => {
       const used = dataset.goalScenarios.map((s) => s.color)
       // The draft's own colour when no scenario has it; saved from another scenario's draft it is
       // that scenario's, and two lines of one colour cannot be told apart.
       const color = used.includes(draft.color) ? pickScenarioColor(used) : draft.color
-      return createAndOpen({ ...draft, name, color, sortOrder: dataset.goalScenarios.length })
+      void createAndOpen({ ...draft, name, color, sortOrder: dataset.goalScenarios.length })
     },
     [createAndOpen, draft, dataset.goalScenarios],
-  )
-
-  const onSaveDraft = useCallback(
-    (name: string) => {
-      void saveDraftAs(name)
-    },
-    [saveDraftAs],
   )
 
   const onDuplicate = useCallback(() => {
@@ -257,5 +254,6 @@ export function useScenarioEditor(
     onSaveDraft,
     onDuplicate,
     onDiscard,
+    startLater: useStartLater(dataset, draft, createAndOpen),
   }
 }

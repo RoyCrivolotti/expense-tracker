@@ -1,0 +1,63 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* The reason a date cannot be used is what to read next, so it is the text colour, not the muted one. */
+.refusal {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lines {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* "Start date" beside a date button that takes the rest of the row stays on one line. */
+.label {
+  white-space: nowrap;
+}
+
+/* What the rules below add up to, read first. */
+.outcome {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* A scenario's name inside a sentence: bold, after a dot in its colour, kept on one line with its dot. */
+.name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin: 0 0.3em 0 0.1em;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}

@@ -53,6 +53,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           onDiscard={onDiscard}
           onActivate={editor.onActivate}
           onDuplicate={editor.onDuplicate}
+          startLater={editor.startLater}
         />
         <DiscardSheet {...editor.discardPrompt} />
       </div>
