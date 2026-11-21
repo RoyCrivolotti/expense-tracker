@@ -5,17 +5,24 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const updateServiceWorker = vi.fn()
 let needRefresh = false
 
+let registerOptions: { onNeedReload?: () => void } | undefined
+
 vi.mock('virtual:pwa-register/react', () => ({
-  useRegisterSW: () => ({
-    needRefresh: [needRefresh, vi.fn()],
-    offlineReady: [false, vi.fn()],
-    updateServiceWorker,
-  }),
+  useRegisterSW: (options?: { onNeedReload?: () => void }) => {
+    registerOptions = options
+    return {
+      needRefresh: [needRefresh, vi.fn()],
+      offlineReady: [false, vi.fn()],
+      updateServiceWorker,
+    }
+  },
 }))
 
 import { PwaUpdatePrompt } from './PwaUpdatePrompt'
+import { holdUpdateReload, resetUpdateReloadHoldForTests } from './updateReloadHold'
 
 afterEach(() => {
+  resetUpdateReloadHoldForTests()
   vi.unstubAllEnvs()
   updateServiceWorker.mockClear()
   needRefresh = false
@@ -63,5 +70,21 @@ describe('PwaUpdatePrompt', () => {
 
     const banner = screen.getByRole('status')
     expect(banner).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('sends the update reload through the hold, so an open form is not reloaded away', () => {
+    const reload = vi.fn()
+    const location = window.location
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...location, reload } })
+    try {
+      renderInProd(false)
+      const release = holdUpdateReload()
+      registerOptions?.onNeedReload?.()
+      expect(reload).not.toHaveBeenCalled()
+      release()
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: location })
+    }
   })
 })

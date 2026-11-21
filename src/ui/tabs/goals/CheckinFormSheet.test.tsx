@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
 import { CheckinFormSheet } from './CheckinFormSheet'
+import { reloadWhenNothingOpen, resetUpdateReloadHoldForTests } from '../../hooks/updateReloadHold'
 import { makeWealthCheckin } from '../../../testing/factories'
 import { todayIso } from '../../components/transactionFormState'
 import type { ExpenseActions } from '../../actions'
@@ -272,5 +273,16 @@ describe('CheckinFormSheet east of UTC', () => {
 
     expect(dateInput.value).toBe('2026-09-16')
     expect(dateInput.max).toBe('2026-09-16')
+  })
+
+  it('holds an app update while it is open, and lets it run once it closes', () => {
+    const reload = vi.fn()
+    const { unmount } = render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
+    reloadWhenNothingOpen(reload)
+    expect(reload).not.toHaveBeenCalled()
+
+    unmount()
+    expect(reload).toHaveBeenCalledTimes(1)
+    resetUpdateReloadHoldForTests()
   })
 })

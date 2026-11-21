@@ -1,9 +1,10 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { reloadPageWhenNothingOpen } from './reloadPage'
 import styles from './PwaUpdatePrompt.module.css'
 
 /** Prompt to reload when a new service worker is waiting (production PWA only). */
 export function PwaUpdatePrompt() {
-  const { needRefresh, updateServiceWorker } = useRegisterSW()
+  const { needRefresh, updateServiceWorker } = useRegisterSW({ onNeedReload: reloadPageWhenNothingOpen })
   const [showRefresh] = needRefresh
 
   if (!import.meta.env.PROD || !showRefresh) return null
