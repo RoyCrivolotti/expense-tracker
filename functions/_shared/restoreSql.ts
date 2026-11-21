@@ -105,6 +105,8 @@ const MAPPERS: Record<ExportTable, Mapper> = {
       claimant_name: orNull(r.claimantName), cash_reserve_months: orNull(r.cashReserveMonths),
       assumed_inflation: orNull(r.assumedInflation), market_volatility: orNull(r.marketVolatility),
       goal_levers: r.goalLevers == null ? null : JSON.stringify(r.goalLevers),
+      // Left out when there is no list, which is what NULL means: a restore into a database from before 0045 then still works.
+      ...(r.tipsSeen == null ? {} : { tips_seen: JSON.stringify(r.tipsSeen) }),
     }),
   ],
   goalScenarios: (owner, r) => [

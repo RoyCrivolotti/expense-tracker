@@ -248,6 +248,7 @@ describe('planning data that is stored as JSON', () => {
           { amountCents: 5_000_000, label: '' },
         ],
         goalLevers: ['horizonYears', 'startInvestedCents'],
+        tipsSeen: ['getting-started'],
         cashReserveMonths: 3,
         claimantName: "O'Neil, Pat",
         currencyCode: 'USD',
@@ -273,6 +274,7 @@ describe('planning data that is stored as JSON', () => {
     expect(scenario.status).toBe(201)
     const dataset = await loadDataset(world.env, WORLD_OWNER)
     expect(dataset.settings.milestones).toHaveLength(2)
+    expect(dataset.settings.tipsSeen).toEqual(['getting-started'])
     expect(dataset.goalScenarios.some((g) => g.lifeEvents.length === 1 && g.contributionSchedule.length === 2)).toBe(true)
     const rich: Source = { name: 'rich', env: world.env, sqlite, owner: WORLD_OWNER, repo: createD1ExpenseRepository(world.env), queries: { count: 0 }, dataset }
     const store = memoryBackupStore()

@@ -26,6 +26,18 @@ describe('docsCaptureDataSource.updateSettings', () => {
   })
 })
 
+describe('docsCaptureDataSource tips', () => {
+  it('starts as an established account, so the gallery pictures carry no tip, and keeps a list written to it', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    expect(dataset.settings).not.toHaveProperty('tipsSeen')
+
+    const updated = await docsCaptureDataSource.updateSettings!({ tipsSeen: [] })
+
+    expect(updated.tipsSeen).toEqual([])
+    expect(updated.cashReserveMonths).toBe(dataset.settings.cashReserveMonths)
+  })
+})
+
 describe('docsCaptureDataSource.updateTransaction', () => {
   it('keeps the edited row’s id and merges the patch onto it, unlike a fresh stub', async () => {
     const dataset = await docsCaptureDataSource.load()

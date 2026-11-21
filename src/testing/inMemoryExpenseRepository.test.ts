@@ -95,6 +95,24 @@ describe('inMemoryExpenseRepository settings goalLevers', () => {
   })
 })
 
+describe('inMemoryExpenseRepository settings tipsSeen', () => {
+  it('has no list until one is written, keeps an empty one, and keeps each owner\'s apart', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    expect((await repo.loadDataset(OWNER)).settings).not.toHaveProperty('tipsSeen')
+    expect((await repo.updateSettings(OWNER, { tipsSeen: [] })).tipsSeen).toEqual([])
+    await repo.updateSettings(OWNER, { tipsSeen: ['getting-started'] })
+    expect((await repo.loadDataset(OWNER)).settings.tipsSeen).toEqual(['getting-started'])
+    expect((await repo.loadDataset('someone-else@example.com')).settings).not.toHaveProperty('tipsSeen')
+  })
+
+  it('refuses a list the API refuses', () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    for (const bad of ['getting-started', [3], ['Not A Tip']] as unknown as [][]) {
+      expect(() => repo.updateSettings(OWNER, { tipsSeen: bad })).toThrow(RepoHttpError)
+    }
+  })
+})
+
 /**
  * Mirrors dbFlags.test.ts/dbWrite.test.ts's coverage of the D1 adapter, but against
  * the double the rest of the application layer actually runs its own tests
