@@ -633,8 +633,8 @@ function NetWorthChartImpl({
     [scenarios, draft, activeId, dirty, projectionRate, axis, format, hiddenIds],
   )
   const full = useMemo(
-    () => buildSeries(lines, projectionRate, calendarOrigin ? axisSpans(lines, scenarios, calendarOrigin).ends : []),
-    [lines, projectionRate, calendarOrigin, scenarios],
+    () => buildSeries(lines, projectionRate, axisSpans(lines, scenarios, axis.origin).ends),
+    [lines, projectionRate, axis.origin, scenarios],
   )
   // The windows on offer follow how far the chart actually runs, which is the longest
   // drawn horizon, not only the draft's.

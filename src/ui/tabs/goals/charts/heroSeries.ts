@@ -137,7 +137,7 @@ export interface HeroSeries {
 }
 
 /**
- * `ends` (from `axisSpans`, on a calendar) carries the axis on to where every scenario ends, hidden ones
+ * `ends` (from `axisSpans`) carries the axis on to where every scenario ends, hidden ones
  * included, so the last year shown is the one the comparison table rests on and hiding a line does not
  * move it. A hidden line is still not drawn: the axis runs on with years nothing is drawn in.
  */
