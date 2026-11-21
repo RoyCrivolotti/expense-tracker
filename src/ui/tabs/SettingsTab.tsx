@@ -22,7 +22,7 @@ import { AccountView } from '../settings/AccountView'
 import { CaptureView } from '../settings/CaptureView'
 import styles from './tabs.module.css'
 
-type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
+export type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
 
 const VIEW_OPTIONS: { value: SettingsView; label: string }[] = [
   { value: 'preferences', label: 'Preferences' },
@@ -41,6 +41,7 @@ interface SettingsTabProps {
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
   onRunSetup?: (() => void) | undefined
+  entry?: SettingsView | null | undefined
 }
 
 function Definitions({ model }: { model: ExpenseModel }) {
@@ -255,9 +256,9 @@ export function SettingsTab({
   onThemeChange,
   ownerAccess,
   accountEmail,
-  onRunSetup,
+  onRunSetup, entry,
 }: SettingsTabProps) {
-  const [view, setView] = useState<SettingsView>('preferences')
+  const [view, setView] = useState<SettingsView>(entry ?? 'preferences')
 
   return (
     <SectionTabs

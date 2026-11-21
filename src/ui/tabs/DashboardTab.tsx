@@ -13,6 +13,7 @@ import { BudgetBar } from '../components/BudgetBar'
 import { GoalsCard } from '../components/GoalsCard'
 import { CardStatementsCard } from '../components/CardStatementsCard'
 import { DashboardRecentActivity } from './DashboardRecentActivity'
+import { DashboardGettingStarted } from '../tips/GettingStartedCard'
 import { ReviewCardSlot } from '../capture/ReviewCardSlot'
 import styles from './tabs.module.css'
 
@@ -25,6 +26,8 @@ interface DashboardTabProps {
   onNavigate?: (tab: TabId) => void
   /** Opens Goals on Progress with the check-in form up. */
   onLogCheckin?: () => void
+  /** Opens Settings on Data, from the Getting started card. */
+  onOpenImport?: () => void
 }
 
 type BudgetSort = 'size' | 'order' | 'overbudget'
@@ -96,7 +99,7 @@ function BudgetsSection({
   )
 }
 
-export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }: DashboardTabProps) {
+export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin, onOpenImport }: DashboardTabProps) {
   const { dataset } = model
   const sums = sumsOf(model)
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
@@ -121,6 +124,7 @@ export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }
   return (
     <div className={styles.stack}>
       <ReviewCardSlot />
+      <DashboardGettingStarted model={model} actions={actions} onOpenImport={onOpenImport} />
       <Card className={styles.kpiGrid}>
         <Kpi label="Income" cents={totals?.incomeCents ?? 0} type="income" />
         <Kpi label="Expenses" cents={totals?.expensesCents ?? 0} type="expense" />
