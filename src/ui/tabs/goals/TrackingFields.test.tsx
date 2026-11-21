@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
 import { samplePlan } from '../../../testing/samplePlan'
-import { TrackingFields } from './goalControlSections'
+import { TrackingFields } from './TrackingFields'
 
 function draftWith(over: Parameters<typeof samplePlan>[0]) {
   const { id, ...draft } = samplePlan(over)

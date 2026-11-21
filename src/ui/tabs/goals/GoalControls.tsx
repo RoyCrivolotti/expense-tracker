@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { InvestedSnapshot } from './checkinDate'
 import { ADJUST_LABELS, adjustSectionId, type AdjustSection } from './adjustSections'
-import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields, TrackingFields } from './goalControlSections'
+import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { TrackingFields } from './TrackingFields'
 import styles from './goals.module.css'
 
 interface GoalControlsProps {

@@ -58,7 +58,7 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/charts/milestoneModel.ts': 280,
   'src/ui/tabs/goals/desktop/Lever.tsx': 204,
   'src/ui/tabs/goals/goalControlFields.tsx': 211,
-  'src/ui/tabs/goals/goalControlSections.tsx': 423,
+  'src/ui/tabs/goals/goalControlSections.tsx': 346,
   'src/ui/tabs/useTransactionsTabState.ts': 253,
   'src/ui/useExpenseActions.ts': 243,
 }
@@ -168,7 +168,7 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/desktop/Lever.tsx': 113,
   'src/ui/tabs/goals/desktop/ScenarioMenu.tsx': 101,
   'src/ui/tabs/goals/goalControlFields.tsx': 61,
-  'src/ui/tabs/goals/goalControlSections.tsx': 65,
+  'src/ui/tabs/goals/TrackingFields.tsx': 65,
   'src/ui/tabs/goals/useScenarioEditor.ts': 153,
   'src/ui/tabs/goals/useStarredLevers.ts': 98,
   'src/ui/tabs/useTransactionSelection.ts': 133,

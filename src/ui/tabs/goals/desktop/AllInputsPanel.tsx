@@ -15,8 +15,8 @@ import {
   HousingFields,
   PortfolioFields,
   ReturnNote,
-  TrackingFields,
 } from '../goalControlSections'
+import { TrackingFields } from '../TrackingFields'
 import { SECTION_KEYS } from '../leverFields'
 import type { StarredLevers } from '../useStarredLevers'
 import { STAR_HOME_ATTR } from './starFocus'
