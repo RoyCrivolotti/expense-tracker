@@ -30,3 +30,17 @@ export function isWithdrawal(form: Pick<FormFields, 'type' | 'outflow'>): boolea
 export function typeChoice(form: Pick<FormFields, 'type' | 'outflow'>): TypeChoice {
   return form.type === 'investment' && form.outflow ? 'withdraw' : form.type
 }
+
+const TYPE_HINTS = {
+  withdraw:
+    'Money taken out of your investments and into this account: a sale moved to cash, a dividend paid out. Moving money between investment accounts is not a withdrawal.',
+  investment:
+    'Money you put into your investments: shares, funds, a deposit to a broker. It counts as invested, not as spending.',
+  refund: 'Money paid back for something you bought: a returned item, a reimbursement. It comes off the spending of the category you pick.',
+} as const
+
+/** The word under the type chips for the types that need one; Expense and Income say it themselves. */
+export function typeHint(form: Pick<FormFields, 'type' | 'outflow'>): string | null {
+  const choice = typeChoice(form)
+  return choice === 'withdraw' || choice === 'investment' || choice === 'refund' ? TYPE_HINTS[choice] : null
+}

@@ -20,7 +20,8 @@ import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
 import { SeedAddons } from './SeedAddons'
 import { dateChanger, type FormFields, type Setter } from './transactionFormState'
-import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
+import { FORM_TYPES, typeChoice, typeHint, type TypeChoice } from './transactionTypes'
+import { BudgetMonthLine, DescriptionLine, FirstPaymentLine, TypeHintLine } from '../tips/FormLines'
 import styles from './TransactionForm.module.css'
 
 export function Field({
@@ -77,8 +78,8 @@ export function TypeSelector<T extends TypeChoice>({
 }
 
 /**
- * The type chips, and under them the one type that needs a word: Withdraw, which is an
- * investment with the money going the other way and is easy to take for something else.
+ * The type chips, and under them a line for the types that need a word: Withdraw, which is an investment with the
+ * money going the other way and is easy to take for something else, and Invest and Refund. It stays while the type is picked.
  */
 function TypeChips({
   form,
@@ -101,12 +102,7 @@ function TypeChips({
           if (investment && investmentCategoryId !== null) set('categoryId', investmentCategoryId)
         }}
       />
-      {form.type === 'investment' && form.outflow ? (
-        <p className={styles.fieldHint} role="note">
-          Money taken out of your investments and into this account: a sale moved to cash, a
-          dividend paid out. Moving money between investment accounts is not a withdrawal.
-        </p>
-      ) : null}
+      <TypeHintLine hint={typeHint(form)} />
     </>
   )
 }
@@ -281,6 +277,7 @@ export function Fields({
 
   return (
     <>
+      <FirstPaymentLine model={model} editing={editing !== null} />
       <TypeChips form={form} set={set} investmentCategoryId={investmentCategoryId} />
       <Field label={`Amount (${format.symbol})`}>
         <input
@@ -305,8 +302,10 @@ export function Fields({
           <ClearableDescription seed={seed} value={form.description} index={model.descriptionIndex} onChange={(v) => set('description', v)} onAccept={onAcceptSuggestion} />
         )}
       </Field>
+      <DescriptionLine model={model} editing={editing !== null} />
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
+      <BudgetMonthLine model={model} form={form} editing={editing !== null} />
       <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} duplicate={duplicate} />
 
       {actions ? (
