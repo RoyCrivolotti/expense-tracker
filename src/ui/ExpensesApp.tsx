@@ -15,6 +15,7 @@ import { PullToRefreshIndicator } from './components/PullToRefreshIndicator'
 import { ExpensesOfflineBanner } from './components/ExpensesOfflineBanner'
 import { AppHeaderActions } from './components/AppHeaderActions'
 import { ExpensesOnboarding } from './components/ExpensesOnboarding'
+import { prefetchOnboardingWizard } from './components/onboardingChunk'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import { PresenceValue } from './components/Presence'
 import { ActiveTransactionModal } from './ActiveTransactionModal'
@@ -192,6 +193,11 @@ export interface ExpensesAppProps {
  */
 export function ExpensesApp(props: ExpensesAppProps) {
   const [mode] = useState(currentLedgerMode)
+  const { canWrite } = props.source
+  const { accountEmail } = props
+  useEffect(() => {
+    if (canWrite && !isOnboardingSkipped(accountEmail)) prefetchOnboardingWizard()
+  }, [canWrite, accountEmail])
   if (mode === 'off') return <DatasetApp {...props} />
   return (
     <Suspense fallback={<AppLoadingSkeleton label="Loading expenses" />}>

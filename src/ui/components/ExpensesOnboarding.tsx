@@ -1,10 +1,11 @@
+import { Suspense } from 'react'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseDataset } from '../../types'
 import { useAccountOwner } from '../hooks/accountOwner'
 import { EXIT_MS } from '../hooks/motion'
-import { OnboardingWizard } from '../onboarding/OnboardingWizard'
 import { skipOnboarding } from '../onboarding/onboardingStorage'
 import { Presence } from './Presence'
+import { ChunkedOnboardingWizard } from './onboardingChunk'
 
 interface Props {
   open: boolean
@@ -34,20 +35,23 @@ export function ExpensesOnboarding({
   const owner = useAccountOwner()
   return (
     <Presence show={open} exitMs={EXIT_MS.sheet}>
-      <OnboardingWizard
-        source={source}
-        dataset={dataset}
-        applyPatch={applyPatch}
-        firstRun={firstRun}
-        onDone={() => {
-          onClose()
-          if (firstRun) onAdd()
-        }}
-        onSkip={() => {
-          skipOnboarding(owner)
-          onClose()
-        }}
-      />
+      {/* No fallback: the box (and its scrim) mounts when the chunk arrives, so it still enters with its own motion. */}
+      <Suspense fallback={null}>
+        <ChunkedOnboardingWizard
+          source={source}
+          dataset={dataset}
+          applyPatch={applyPatch}
+          firstRun={firstRun}
+          onDone={() => {
+            onClose()
+            if (firstRun) onAdd()
+          }}
+          onSkip={() => {
+            skipOnboarding(owner)
+            onClose()
+          }}
+        />
+      </Suspense>
     </Presence>
   )
 }
