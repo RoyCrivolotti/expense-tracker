@@ -81,7 +81,7 @@ describe('ExpensesApp onboarding wiring', () => {
     await waitFor(() => expect(screen.getByText('New transaction')).toBeTruthy())
   })
 
-  it('re-entry via Settings > Run setup wizard does not open "add a transaction" on finish', async () => {
+  it('re-entry via Settings > Help > Run setup again does not open "add a transaction" on finish', async () => {
     const dataset = datasetWith({
       categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
       accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
@@ -94,7 +94,7 @@ describe('ExpensesApp onboarding wiring', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
     fireEvent.click(await screen.findByRole('tab', { name: 'Setup' }))
-    fireEvent.click(await screen.findByText('Run setup wizard'))
+    fireEvent.click(await screen.findByText('Run setup again'))
     await screen.findByRole('heading', { name: 'Setup' })
     await finishWizard(true)
 
