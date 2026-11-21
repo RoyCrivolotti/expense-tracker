@@ -339,3 +339,28 @@ describe('TransactionList collapsible date groups', () => {
     expect(screen.getByText('Degiro')).not.toBeVisible()
   })
 })
+
+describe('TransactionList with nothing to list', () => {
+  it('says there are no transactions yet when the account has none, with no filter to clear', () => {
+    render(<TransactionList rows={[]} lookup={lookup} accountEmpty canAdd onClearFilters={vi.fn()} />)
+    expect(screen.getByText('No transactions yet. Tap + to add one.')).toBeInTheDocument()
+    expect(screen.queryByText(/match these filters/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('says Loading rather than that the account is empty while the rows are on their way', () => {
+    render(<TransactionList rows={[]} lookup={lookup} accountEmpty canAdd loading />)
+    expect(screen.getByText('Loading…')).toBeInTheDocument()
+  })
+
+  it('says only that there are none yet when the viewer has no + to tap', () => {
+    render(<TransactionList rows={[]} lookup={lookup} accountEmpty />)
+    expect(screen.getByText('No transactions yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/Tap \+/)).toBeNull()
+  })
+
+  it('blames the filters when the account has transactions', () => {
+    render(<TransactionList rows={[]} lookup={lookup} />)
+    expect(screen.getByText('No transactions match these filters.')).toBeInTheDocument()
+  })
+})

@@ -186,6 +186,7 @@ export function TransactionsTab({
           rows={state.listRows}
           loading={state.loading}
           emptyState={state.failed}
+          accountEmpty={model.months.length === 0} canAdd={Boolean(actions)}
           lookup={model.lookup}
           selectMode={state.selectMode}
           selectedIds={state.selected}

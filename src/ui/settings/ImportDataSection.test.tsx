@@ -43,6 +43,13 @@ const sizes = (mock: ReturnType<typeof vi.fn>): number[] => mock.mock.calls.map(
 const descriptions = (mock: ReturnType<typeof vi.fn>): string[] => mock.mock.calls.flatMap(([inputs]) => (inputs as NewTransaction[]).map((row) => row.description))
 const confirm = () => fireEvent.click(screen.getByRole('button', { name: /Confirm import|Importing/ }))
 
+describe('ImportDataSection, the words above the buttons', () => {
+  it('says categories and accounts must be set up first, since the file uses their names', () => {
+    renderSection(() => Promise.resolve())
+    expect(screen.getByText(/Set up your categories and accounts first: the file must use their names\./)).toBeInTheDocument()
+  })
+})
+
 describe('ImportDataSection, a file of more rows than a request takes', () => {
   it('sends it in requests of a hundred rows and says how many it imported', async () => {
     const { container, createTransactions } = renderSection(() => Promise.resolve())

@@ -19,6 +19,10 @@ interface TransactionListProps {
   loading?: boolean | undefined
   /** Drawn instead of the usual words when there are no rows, for a list whose rows could not be read. */
   emptyState?: ReactNode
+  /** The account has no transactions at all, so the empty list says what to do instead of blaming a filter. */
+  accountEmpty?: boolean | undefined
+  /** There is a + to tap, so the empty words may point at it; a read-only viewer has none. */
+  canAdd?: boolean | undefined
   lookup: Lookup
   flat?: boolean | undefined
   showDate?: boolean | undefined
@@ -79,21 +83,27 @@ function renderRow(
   )
 }
 
-export function TransactionList({ rows, loading, emptyState, lookup, flat = false, ...props }: TransactionListProps) {
+function EmptyList({
+  emptyState,
+  accountEmpty,
+  canAdd,
+  loading,
+  onClearFilters,
+}: Pick<TransactionListProps, 'emptyState' | 'accountEmpty' | 'canAdd' | 'loading'> & { onClearFilters: (() => void) | undefined }) {
+  if (emptyState) return <>{emptyState}</>
+  if (accountEmpty && !loading) return <EmptyState>{canAdd ? 'No transactions yet. Tap + to add one.' : 'No transactions yet.'}</EmptyState>
+  return (
+    <EmptyState actionLabel={onClearFilters && !loading ? 'Clear filters' : undefined} onAction={onClearFilters}>
+      {loading ? 'Loading…' : 'No transactions match these filters.'}
+    </EmptyState>
+  )
+}
+
+export function TransactionList({ rows, loading, emptyState, accountEmpty, canAdd, lookup, flat = false, ...props }: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
   const groups = useMemo(() => (flat ? [] : groupListRowsByDay(rows)), [rows, flat])
 
-  if (rows.length === 0) {
-    if (emptyState) return <>{emptyState}</>
-    return (
-      <EmptyState
-        actionLabel={props.onClearFilters && !loading ? 'Clear filters' : undefined}
-        onAction={props.onClearFilters}
-      >
-        {loading ? 'Loading…' : 'No transactions match these filters.'}
-      </EmptyState>
-    )
-  }
+  if (rows.length === 0) return <EmptyList {...{ emptyState, accountEmpty, canAdd, loading }} onClearFilters={props.onClearFilters} />
 
   const renderListRow = (row: TransactionListRow) => renderRow(row, lookup, props)
   if (flat) return <div className={styles.list}>{rows.map(renderListRow)}</div>

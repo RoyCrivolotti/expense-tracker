@@ -139,7 +139,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
           >
             {dataset.goalScenarios.length > 0
               ? 'Pick one of your scenarios as your plan under Goals, and this card will track it.'
-              : 'Model multi-scenario wealth projections: house purchase timing, FIRE milestones, and net worth over time.'}
+              : 'A long-range plan: what you invest each month and where that leads in 10, 20 or 30 years.'}
           </EmptyState>
         </Card>
       </>
