@@ -8,6 +8,7 @@
  * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`) and with a path that starts after today (`ONLY=w3`),
  * the hero chart with a saved scenario that starts later, wide and on a phone, full screen included (`ONLY=later-chart`),
+ * the "Start a copy later…" sheet and the copy it makes, wide and on a phone (`ONLY=start-later`),
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
@@ -4060,6 +4061,127 @@ async function checkLaterChart(browser, engine) {
   await checkLaterChartPhone(browser, engine)
 }
 
+/**
+ * "Start a copy later…" (check group start-later): the sheet opened from the menu on a wide screen and from the
+ * scenario card on a phone, a date two years ahead, the suggestion and what it says, and the copy made from it on
+ * the chart and in the table. Path B owns its house from day one, which is the year-0 house: the demo's check-in is
+ * money from a life without one, and the sheet must say so and offer Path B's own line. Path C copied after its
+ * purchase holds the house as owned and its balance is after buying. Dates are relative to today.
+ */
+const SHEET_MONTHS = 24
+
+/** Picks the sheet's start date `monthsAhead` from today, on the 15th: the popover where there is one, else the native field. */
+async function pickSheetDate(page, sheet, monthsAhead) {
+  const target = await page.evaluate((months) => {
+    const d = new Date()
+    d.setDate(1)
+    d.setMonth(d.getMonth() + months)
+    return { year: d.getFullYear(), month: d.getMonth() }
+  }, monthsAhead)
+  const native = sheet.locator('input[type="date"][aria-label="Start date"]')
+  if (await native.count()) {
+    await native.fill(`${target.year}-${String(target.month + 1).padStart(2, '0')}-15`)
+  } else {
+    const LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    await sheet.getByRole('button', { name: 'Start date', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Choose a date' })
+    for (let i = 0; i < 120; i += 1) {
+      const [, month, year] = /^([A-Za-z]+) (\d{4})/.exec((await dialog.textContent()) ?? '') ?? []
+      const ahead = (target.year - Number(year)) * 12 + target.month - LONG.indexOf(month)
+      if (ahead === 0) break
+      await dialog.getByRole('button', { name: ahead > 0 ? 'Next month' : 'Previous month' }).click()
+    }
+    await dialog.getByRole('button', { name: new RegExp(`^15 ${LONG[target.month]} ${target.year}`) }).click()
+  }
+  await page.waitForTimeout(400)
+  return `${MONTH_NAMES[target.month]} ${target.year}`
+}
+
+async function openStartLaterWide(page, source) {
+  await page.getByRole('tab', { name: source }).click()
+  await page.waitForTimeout(300)
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByRole('button', { name: 'Start a copy later…' }).click()
+  const sheet = page.getByRole('dialog', { name: /^Start a copy of / })
+  await sheet.waitFor()
+  return sheet
+}
+
+async function checkStartLaterWide(browser, engine) {
+  const where = `${engine} 1280x800`
+  const { page, context } = await openPlan(browser, SCREENS[1])
+  let sheet = await openStartLaterWide(page, /^Path B/)
+  check(where, '(start-later) the sheet opens on the latest check-in and says so', ((await sheet.textContent()) ?? '').includes('Your investments in your check-in of'), await sheet.textContent())
+  const starts = await pickSheetDate(page, sheet, SHEET_MONTHS)
+  let text = (await sheet.textContent()) ?? ''
+  check(where, '(start-later) two years ahead the check-in is carried on to the date', /carried on from your check-in of .+ has about [\d.]+ € on that date/.test(text), text)
+  check(where, '(start-later) a house owned from day one is said, with its own line offered (year-0 house)', text.includes('This counts your check-in as after buying the house'), text)
+  const before = await sheet.getByRole('textbox', { name: 'Starting balance' }).inputValue()
+  await sheet.getByRole('button', { name: /^Use / }).last().click()
+  const own = await sheet.getByRole('textbox', { name: 'Starting balance' }).inputValue()
+  check(where, '(start-later) Use puts the own line’s figure in, which is less than the check-in’s', own !== before, JSON.stringify({ before, own }))
+  check(where, '(start-later) and offers the check-in’s back', (await sheet.getByRole('button', { name: /^Use / }).count()) >= 1, String(await sheet.getByRole('button', { name: /^Use / }).count()))
+  check(where, '(start-later) it says what the copy comes to', /In short: /.test(text), text)
+  await sheet.getByRole('button', { name: 'Create scenario' }).click()
+  await page.waitForTimeout(800)
+  const chips = (await page.locator('[role="tablist"][aria-label="Scenarios"]').textContent()) ?? ''
+  check(where, '(start-later) the copy is made, its chip saying when it starts', chips.includes(`from ${starts}`), chips)
+  check(where, '(start-later) and Path B is still there under its own name', chips.includes('Path B: House now'), chips)
+  const table = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Monthly' }) })
+  const rows = await table.getByRole('row', { name: /Path B: House now, from/ }).count()
+  check(where, '(start-later) the table has the copy’s row', rows === 1, String(rows))
+  // Path C copied after its purchase: the house is behind the start, owned, and the balance is after buying it.
+  sheet = await openStartLaterWide(page, /^Path C/)
+  await pickSheetDate(page, sheet, 72)
+  text = (await sheet.textContent()) ?? ''
+  check(where, '(start-later) a house behind the start makes the balance after buying it', text.includes('euros, after buying the house') && text.includes('is behind the new start, so the plan holds the house as owned'), text)
+  await sheet.getByRole('button', { name: 'Create scenario' }).click()
+  await page.waitForTimeout(800)
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  const notes = (await page.locator('[role="region"][aria-label="All inputs"]').textContent()) ?? ''
+  check(where, '(start-later) the editor says what a future start’s balance is', /The balance you expect to have invested on .+ euros\./.test(notes), notes)
+  check(where, '(start-later) and offers no figure from a plan without a house (year-0 house)', !notes.includes('Your plan, carried on'), notes)
+  const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
+  check(where, '(start-later) the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
+  await context.close()
+}
+
+async function checkStartLaterPhone(browser, engine) {
+  const where = `${engine} 375`
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: 'Goals', exact: true }).last().click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  await page.locator('button:not([aria-label])', { hasText: 'Path C: Buy in year 5' }).first().click()
+  await page.getByRole('tab', { name: 'Scenarios', exact: true }).click()
+  await page.getByRole('button', { name: 'Start a copy later…' }).click()
+  const sheet = page.getByRole('dialog', { name: /^Start a copy of / })
+  await sheet.waitFor()
+  await page.waitForTimeout(400)
+  const starts = await pickSheetDate(page, sheet, SHEET_MONTHS)
+  const box = await sheet.boundingBox()
+  check(where, '(start-later) the sheet fits the screen’s width', box !== null && box.x >= 0 && box.x + box.width <= 375.5, JSON.stringify(box))
+  const text = (await sheet.textContent()) ?? ''
+  check(where, '(start-later) it says the house is bought sooner, with both dates', /House \(.+\) is bought on .+ earlier, because the copy counts its years from its own start\./.test(text), text)
+  await sheet.getByRole('button', { name: 'Create scenario' }).click()
+  await page.waitForTimeout(800)
+  await page.getByRole('tab', { name: 'Chart', exact: true }).click()
+  await page.waitForTimeout(400)
+  const legend = (await page.locator('[class*="heroChart"]').first().textContent()) ?? ''
+  check(where, '(start-later) the copy is on the chart, from its date', legend.includes(`from ${starts}`), legend)
+  await context.close()
+}
+
+async function checkStartLater(browser, engine) {
+  await checkStartLaterWide(browser, engine)
+  await checkStartLaterPhone(browser, engine)
+}
+
 const SECTIONS = [
   ...SCREENS.map((screen) => ({
     name: `screen ${screen.name}`,
@@ -4090,6 +4212,7 @@ const SECTIONS = [
   { name: 'LaterStartTimeline', weight: 4, run: checkLaterStartTimeline },
   { name: 'ComparisonTable', weight: 6, run: checkComparisonTable },
   { name: 'LaterChart', weight: 6, run: checkLaterChart },
+  { name: 'StartLater', weight: 6, run: checkStartLater },
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
@@ -4185,6 +4308,10 @@ async function main() {
         }
         if (process.env.ONLY === 'compare-table') {
           await checkComparisonTable(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'start-later') {
+          await checkStartLater(browser, engine)
           continue
         }
         if (process.env.ONLY === 'later-chart') {

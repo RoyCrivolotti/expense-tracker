@@ -1,14 +1,18 @@
 import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
+import type { PlanFromToday } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
 import { ADJUST_LABELS, adjustSectionId, type AdjustSection } from './adjustSections'
-import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields, TrackingFields } from './goalControlSections'
+import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { TrackingFields } from './TrackingFields'
 import styles from './goals.module.css'
 
 interface GoalControlsProps {
   draft: NewGoalScenario
   /** The latest check-in, for re-baselining; null before the first one. */
   latest?: InvestedSnapshot | null
+  /** The plan carried on from the latest check-in, when the plan is another scenario than this one. */
+  otherPlan?: PlanFromToday | null
   onChange: (patch: Partial<NewGoalScenario>) => void
 }
 
@@ -30,7 +34,7 @@ function ControlSection({
 }
 
 /** The phone's controls: each section collapsible. A wide screen lays the same sections out itself. */
-export function GoalControls({ draft, latest = null, onChange }: GoalControlsProps) {
+export function GoalControls({ draft, latest = null, otherPlan = null, onChange }: GoalControlsProps) {
   return (
     <div className={styles.controlsStack}>
       <ControlSection section="portfolio">
@@ -43,7 +47,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <FireFields draft={draft} onChange={onChange} />
       </ControlSection>
       <ControlSection section="tracking" defaultOpen={false}>
-        <TrackingFields draft={draft} latest={latest} onChange={onChange} />
+        <TrackingFields draft={draft} latest={latest} otherPlan={otherPlan} onChange={onChange} />
       </ControlSection>
       <ControlSection section="changes" defaultOpen={false}>
         <ChangesFields draft={draft} onChange={onChange} />
