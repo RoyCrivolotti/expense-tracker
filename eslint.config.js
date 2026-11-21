@@ -168,7 +168,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/desktop/Lever.tsx': 113,
   'src/ui/tabs/goals/desktop/ScenarioMenu.tsx': 92,
   'src/ui/tabs/goals/goalControlFields.tsx': 61,
-  'src/ui/tabs/goals/TrackingFields.tsx': 65,
   'src/ui/tabs/goals/useScenarioEditor.ts': 148,
   'src/ui/tabs/goals/useStarredLevers.ts': 98,
   'src/ui/tabs/useTransactionSelection.ts': 133,

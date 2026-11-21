@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { foldChangesAtOrBefore, formatCents, rebaseline, rebaselineSummary } from '../../../engine'
+import { foldChangesAtOrBefore, formatCents, rebaseline, rebaselineSummary, type PlanFromToday } from '../../../engine'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import { DateField } from './goalControlFields'
+import { FutureStartNotes } from './FutureStartNotes'
 import styles from './goals.module.css'
 
 interface TrackingProps {
   draft: NewGoalScenario
   /** The latest check-in, for re-baselining; null before the first one. */
   latest: InvestedSnapshot | null
+  /** The plan carried on from the latest check-in, when the plan is another scenario than the one being edited. */
+  otherPlan?: PlanFromToday | null
   onChange: (patch: Partial<NewGoalScenario>) => void
 }
 
@@ -26,7 +29,8 @@ function planStartPatch(draft: NewGoalScenario, date: string | null): Partial<Ne
   return folded.length === 0 ? { planStartDate: date } : { planStartDate: date, monthlyContributionCents, contributionSchedule }
 }
 
-export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
+/** Re-baselining from the latest check-in, and what the last one changed. */
+function RebaselineField({ draft, latest, onChange }: TrackingProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
@@ -49,6 +53,46 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
     ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind starts again from zero at that date, so it shows what you invest and how markets do from there. It is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
   return (
+    <div className={styles.field}>
+      <button
+        type="button"
+        className={styles.btn}
+        disabled={!latest}
+        onClick={() => {
+          if (!latest) return
+          const next = rebaseline(draft, latest, inflationRate)
+          onChange(next.patch)
+          const lines = rebaselineSummary(next, format, formatCheckinDate)
+          setRebaselined(
+            lines.length > 0
+              ? {
+                  lines,
+                  planStartDate: next.patch.planStartDate,
+                  lifeEvents: JSON.stringify(next.patch.lifeEvents),
+                  schedule: JSON.stringify(next.patch.contributionSchedule),
+                }
+              : null,
+          )
+        }}
+      >
+        Re-baseline from latest check-in
+      </button>
+      <p className={styles.fieldHint}>{rebaselineHint}</p>
+      {note ? (
+        <div role="status">
+          {note.map((line) => (
+            <p key={line} className={styles.fieldHint}>
+              {line}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function TrackingFields({ draft, latest, otherPlan = null, onChange }: TrackingProps) {
+  return (
     <>
       <DateField
         label="Plan start date"
@@ -56,41 +100,12 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
         hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind. Changes to the monthly amount count from it too, and one that has begun by it becomes the amount you start with."
         onChange={(v) => onChange(planStartPatch(draft, v))}
       />
-      <div className={styles.field}>
-        <button
-          type="button"
-          className={styles.btn}
-          disabled={!latest}
-          onClick={() => {
-            if (!latest) return
-            const next = rebaseline(draft, latest, inflationRate)
-            onChange(next.patch)
-            const lines = rebaselineSummary(next, format, formatCheckinDate)
-            setRebaselined(
-              lines.length > 0
-                ? {
-                    lines,
-                    planStartDate: next.patch.planStartDate,
-                    lifeEvents: JSON.stringify(next.patch.lifeEvents),
-                    schedule: JSON.stringify(next.patch.contributionSchedule),
-                  }
-                : null,
-            )
-          }}
-        >
-          Re-baseline from latest check-in
-        </button>
-        <p className={styles.fieldHint}>{rebaselineHint}</p>
-        {note ? (
-          <div role="status">
-            {note.map((line) => (
-              <p key={line} className={styles.fieldHint}>
-                {line}
-              </p>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <p className={styles.fieldHint}>
+        Moving the date here keeps every amount as typed. To start later with the amounts restated for inflation, use Start a
+        copy later.
+      </p>
+      <FutureStartNotes draft={draft} otherPlan={otherPlan} onChange={onChange} />
+      <RebaselineField draft={draft} latest={latest} onChange={onChange} />
     </>
   )
 }

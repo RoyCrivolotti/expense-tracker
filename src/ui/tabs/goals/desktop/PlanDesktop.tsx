@@ -15,6 +15,7 @@ import { LeversBar } from './LeversBar'
 import { revealPanel } from './revealPanel'
 import { ScenarioBar } from './ScenarioBar'
 import { useKeyboardStarToggle } from './useKeyboardStarToggle'
+import { otherPlanOf } from '../otherPlan'
 import styles from './planDesktop.module.css'
 
 const PANEL_ID = 'goals-all-inputs'
@@ -84,6 +85,7 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         open={inputsOpen}
         draft={draft}
         latest={latest}
+        otherPlan={otherPlanOf(fromToday, editor.activeId)}
         onChange={editor.patchDraft}
         starred={starred}
       />
