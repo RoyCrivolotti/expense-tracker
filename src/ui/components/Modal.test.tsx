@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { isBodyScrollLocked } from '../hooks/useBodyScrollLock'
 import { EASE_THROWN, exitDurationMs } from '../hooks/useSheetExit'
+import { reloadWhenNothingOpen, resetUpdateReloadHoldForTests } from '../hooks/updateReloadHold'
 import { Modal } from './Modal'
 import { Presence } from './Presence'
 
@@ -348,5 +349,23 @@ describe('Modal leaving', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull()
     vi.unstubAllGlobals()
+  })
+})
+
+describe('Modal and an app update', () => {
+  afterEach(resetUpdateReloadHoldForTests)
+
+  it('holds a reload while it is open and lets it run once it has closed', () => {
+    const reload = vi.fn()
+    const { unmount } = render(
+      <Modal title="New transaction" onClose={vi.fn()}>
+        <input aria-label="Amount" />
+      </Modal>,
+    )
+    reloadWhenNothingOpen(reload)
+    expect(reload).not.toHaveBeenCalled()
+
+    unmount()
+    expect(reload).toHaveBeenCalledTimes(1)
   })
 })

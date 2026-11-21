@@ -6,6 +6,7 @@ import { DateInput } from '../../components/DateInput'
 import { todayIso } from '../../components/transactionFormState'
 import { formatMoneyInput, tryParseMoneyToCents } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { useHoldUpdateReload } from '../../hooks/updateReloadHold'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -23,7 +24,13 @@ interface Props {
 
 type EntryDraft = { accountId: number; valueCents: number }
 
-export function CheckinFormSheet({ accounts, previous = null, actions, onDone }: Props) {
+/** Inline rather than a dialog, so no focus trap marks it as open: it holds an app update back itself. */
+export function CheckinFormSheet(props: Props) {
+  useHoldUpdateReload()
+  return <CheckinForm {...props} />
+}
+
+function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
   const format = useMoneyFormat()
   // Local date, not UTC. East of UTC these differ for part of every day, and a UTC
   // "today" would default the field to yesterday and cap it there — leaving the user's

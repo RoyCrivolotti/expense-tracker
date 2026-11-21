@@ -1,4 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
+import { useHoldUpdateReload } from './updateReloadHold'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -35,6 +36,9 @@ export function useFocusTrap(
   // field on every transaction form), capturing that instead of the real trigger. The
   // lazy initializer runs exactly once, at mount, before anything here can steal focus.
   const [previouslyFocused] = useState(() => document.activeElement as HTMLElement | null)
+  // Every sheet and popover that can hold typing traps focus, so a trap is the one place that marks "something is open":
+  // an app update waits for the last one to unmount. It holds through `paused`, which only means a dialog is stacked above.
+  useHoldUpdateReload()
 
   useEffect(() => {
     const container = ref.current
