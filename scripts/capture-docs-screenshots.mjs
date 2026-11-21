@@ -100,6 +100,30 @@ async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('tab', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
+  await settleSettings(page)
+}
+
+/** Shoots only once the tab pill and the bottom bar have finished moving, so no picture catches them mid-slide. */
+async function settleSettings(page) {
+  await page.getByRole('tab', { selected: true }).first().waitFor()
+  await page.waitForTimeout(500)
+}
+
+/** A screenshot tall enough for the whole Capture tab, then the window goes back to its size. */
+async function shootTall(page, path, height) {
+  const size = page.viewportSize()
+  await page.setViewportSize({ width: size.width, height })
+  await settleSettings(page)
+  await page.screenshot({ path })
+  await page.setViewportSize(size)
+}
+
+/** The Capture tab: setup steps, key, notifications and the cards read later. Its cards answer from CAPTURE_ROUTES. */
+async function openCaptureSettings(page) {
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('tab', { name: 'Capture', exact: true }).click()
+  await page.waitForSelector('text=Capture diagnostics', { timeout: 15000 })
+  await settleSettings(page)
 }
 
 async function waitForAccessAdmin(page) {
@@ -451,6 +475,8 @@ async function capture() {
   await openAccountSettings(d)
   await d.waitForTimeout(300)
   await d.screenshot({ path: join(OUT, 'settings-desktop.png') })
+  await openCaptureSettings(d)
+  await shootTall(d, join(OUT, 'settings-capture-desktop.png'), 1700)
 
   await d.goto(`${BASE}/access/admin`)
   await waitForAccessAdmin(d)
@@ -489,6 +515,8 @@ async function capture() {
 
   await openAccountSettings(m)
   await m.screenshot({ path: join(OUT, 'settings-mobile.png') })
+  await openCaptureSettings(m)
+  await shootTall(m, join(OUT, 'settings-capture-mobile.png'), 2600)
 
   await m.goto(`${BASE}/access/admin`)
   await waitForAccessAdmin(m)
