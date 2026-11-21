@@ -1,0 +1,546 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has full screen on a phone 1`] = `
+{
+  "last": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Rent-Longer1,1M €HiddenPlan (editing)-Plan, from today-",
+    "chips": null,
+    "drawing": "9cdfb5de73331e1e",
+    "tooltip": null,
+  },
+  "purchase": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 8Rent180k €Longer180k €HiddenPlan (editing)85k €Plan, from today152k €Plan (editing)Start of year139k €Return this year+7k €Contributions+10k €Down payment + fees−71k €End invested85k €Step vs prior year−54k €",
+    "chips": null,
+    "drawing": "baa9f97e42db2fa5",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Touch the chart to read a year. Tap a scenario to hide or show its line.RentLongerHiddenPlan (editing)Plan, from today",
+    "chips": null,
+    "drawing": "77d119b45028d2f1",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has in the 10-year window 1`] = `
+{
+  "last": {
+    "axis": "0,00 € | 50k € | 100k € | 150k € | 200k € | 0 | 5 | 10 | FI 750k € | 219k € | 115k € | 110k € | 8,0% · 153k € | 2,0% · 84k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €50k €100k €150k €200k €0510Car (year 4)The FI target, 750k €, is above the top of this chart.FI 750k €219k €115k €110k €8,0% · 153k €2,0% · 84k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today110k €Check-in (what was really there)Life event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 21946249",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11452578",
+    ],
+    "drawing": "9bbe1059cc4d018f",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 50k € | 100k € | 150k € | 200k € | 0 | 5 | 10 | FI 750k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €50k €100k €150k €200k €0510Car (year 4)The FI target, 750k €, is above the top of this chart.FI 750k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 21946249",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11452578",
+    ],
+    "drawing": "19485908a198abfb",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has with a milestone picked 1`] = `
+{
+  "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 2042 | 2042 | 2046 | 500k € on account | = 250k € in 2026 euros | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+  "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €204220422046500k € on account= 250k € in 2026 euros05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €RentMärz 2042, in 15 yearsLongerMärz 2042, in 15 yearsPlan (editing)Sept. 2046, in 19 years 6 monthsDashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+  "chips": [
+    "Rent: -",
+    "Longer: 113202311",
+    "Hidden:  (hidden)",
+    "Plan (editing): -",
+  ],
+  "drawing": "8fb80e8e582f26b9",
+  "tooltip": null,
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: no start dates at all 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 127k € | 106k € | 8,0% · 119k € | 2,0% · 94k €",
+    "card": "Invested portfolio projectionin today's euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)127k €106k €8,0% · 119k €2,0% · 94k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 12706658",
+      "Longer: 12706658",
+      "Hidden:  (hidden)",
+      "Plan (editing): 10606658",
+    ],
+    "drawing": "015a7175f5f6906f",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin today's euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)50k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Rent: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Plan (editing): 5000000",
+    ],
+    "drawing": "bc6b91524db98310",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 1,13M €",
+    "card": "Invested portfolio projectionin today's euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)1,13M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "f7c35c85bc33ca1b",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin today's euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "4f015faa88ea3444",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 219k € | 115k € | 8,0% · 153k € | 2,0% · 84k €",
+    "card": "Invested portfolio projectionin today's euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)219k €115k €8,0% · 153k €2,0% · 84k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 21946249",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11452578",
+    ],
+    "drawing": "9c96bcca1b79f1ba",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: phone, Nominal 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn euros on your account in each year. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Rent140k €Longer140k €HiddenPlan (editing)117k €Plan, from today113k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "b51d9912da98daa1",
+    "tooltip": "Year 5Rent140k €Longer140k €Plan (editing)117k €Plan, from today113k €",
+  },
+  "first year": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn euros on your account in each year. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Rent50k €Longer50k €HiddenPlan (editing)50k €Plan, from today-House already owned: the down payment is already out of the starting invested balance.Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "db97e723ca9fad91",
+    "tooltip": "Year 0Rent50k €Longer50k €Plan (editing)50k €",
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn euros on your account in each year. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Rent-Longer2,3M €HiddenPlan (editing)-Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "df3cf5a7c19fe1f5",
+    "tooltip": "Year 35Longer2,3M €",
+  },
+  "rest": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn euros on your account in each year. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.RentLongerHiddenPlan (editing)Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "088fb229cec6f5cc",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn euros on your account in each year. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Rent268k €Longer268k €HiddenPlan (editing)140k €Plan, from today135k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "7af1310ae6d91896",
+    "tooltip": "Year 10Rent268k €Longer268k €Plan (editing)140k €Plan, from today135k €",
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: phone, the plan open 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn 2026 euros. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Rent127k €Longer127k €HiddenPlan (editing)106k €Plan, from today102k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "a3a37f4ad4643296",
+    "tooltip": "Year 5Rent127k €Longer127k €Plan (editing)106k €Plan, from today102k €",
+  },
+  "first year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn 2026 euros. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Rent50k €Longer50k €HiddenPlan (editing)50k €Plan, from today-House already owned: the down payment is already out of the starting invested balance.Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "d608e1254532eaec",
+    "tooltip": "Year 0Rent50k €Longer50k €Plan (editing)50k €",
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn 2026 euros. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Rent-Longer1,1M €HiddenPlan (editing)-Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "4afb079488920729",
+    "tooltip": "Year 35Longer1,1M €",
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn 2026 euros. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.RentLongerHiddenPlan (editing)Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "7baf48d5945d79bb",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projection5Y10Y20YAllIn 2026 euros. At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Rent219k €Longer219k €HiddenPlan (editing)115k €Plan, from today110k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €",
+    "chips": null,
+    "drawing": "44876a1e4c68fe0c",
+    "tooltip": "Year 10Rent219k €Longer219k €Plan (editing)115k €Plan, from today110k €",
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: wide, Nominal 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 140k € | 117k € | 113k € | 8,0% · 131k € | 2,0% · 104k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)140k €117k €113k €8,0% · 131k €2,0% · 104k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Plan, from today113k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 14029177",
+      "Longer: 14029177",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11710607",
+    ],
+    "drawing": "9ad03e4003329f62",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)50k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Rent: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Plan (editing): 5000000",
+    ],
+    "drawing": "f87283166f8686e9",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 2,26M €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)2,26M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 226392119",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "8167699f3300bc0a",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 226392119",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "e534b384e35ad2d0",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 500k € | 1,0M € | 1,5M € | 2,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 268k € | 140k € | 135k € | 8,0% · 187k € | 2,0% · 103k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €500k €1,0M €1,5M €2,0M €05101520253035Car (year 4)Gift (year 12)268k €140k €135k €8,0% · 187k €2,0% · 103k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today135k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 26752355",
+      "Longer: 26752355",
+      "Hidden:  (hidden)",
+      "Plan (editing): 13960629",
+    ],
+    "drawing": "f9c25df150c35ada",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: wide, Nominal at a previewed rate 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 1,0M € | 2,0M € | 3,0M € | 4,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 151k € | 126k € | 119k € | 8,0% · 141k € | 2,0% · 111k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €1,0M €2,0M €3,0M €4,0M €05101520253035Car (year 4)Gift (year 12)151k €126k €119k €8,0% · 141k €2,0% · 111k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Plan, from today119k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 15117549",
+      "Longer: 15117549",
+      "Hidden:  (hidden)",
+      "Plan (editing): 12562578",
+    ],
+    "drawing": "2c6a6ae26be0372e",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 1,0M € | 2,0M € | 3,0M € | 4,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €1,0M €2,0M €3,0M €4,0M €05101520253035Car (year 4)Gift (year 12)50k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Rent: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Plan (editing): 5000000",
+    ],
+    "drawing": "a4269b7d9116a57f",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 1,0M € | 2,0M € | 3,0M € | 4,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 3,85M €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €1,0M €2,0M €3,0M €4,0M €05101520253035Car (year 4)Gift (year 12)3,85M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 385085227",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "6d9c5039fa1f9b74",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 1,0M € | 2,0M € | 3,0M € | 4,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €1,0M €2,0M €3,0M €4,0M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 385085227",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "f5ba0093b2ecee25",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 1,0M € | 2,0M € | 3,0M € | 4,0M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 308k € | 168k € | 159k € | 8,0% · 225k € | 2,0% · 124k €",
+    "card": "Invested portfolio projectionin euros on your account in each year5Y10Y20YAll0,00 €1,0M €2,0M €3,0M €4,0M €05101520253035Car (year 4)Gift (year 12)308k €168k €159k €8,0% · 225k €2,0% · 124k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today159k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan’s euros, so it rises with prices.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 30827992",
+      "Longer: 30827992",
+      "Hidden:  (hidden)",
+      "Plan (editing): 16818009",
+    ],
+    "drawing": "51722ec6310fd061",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: wide, another scenario open 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 106k € | 127k € | 102k € | 8,0% · 141k € | 2,0% · 115k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035106k €127k €102k €8,0% · 141k €2,0% · 115k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Plan, from today102k €Check-in (what was really there)Grey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: 10606658",
+      "Longer: 12706658",
+      "Hidden:  (hidden)",
+      "Rent (editing): 12706658",
+    ],
+    "drawing": "399f28d020426ef9",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €0510152025303550k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Plan, from today-Check-in (what was really there)Grey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Plan: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Rent (editing): 5000000",
+    ],
+    "drawing": "6e43f166025d1816",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 1,13M €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €051015202530351,13M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Plan, from today-Check-in (what was really there)Grey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Rent (editing): -",
+    ],
+    "drawing": "e3cba0f081f33a8c",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Grey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Rent (editing): -",
+    ],
+    "drawing": "5bcc3133384a0703",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 115k € | 219k € | 110k € | 8,0% · 268k € | 2,0% · 181k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035115k €219k €110k €8,0% · 268k €2,0% · 181k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today110k €Check-in (what was really there)Grey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: 11452578",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Rent (editing): 21946249",
+    ],
+    "drawing": "ebe86462dd7a980d",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: wide, the plan edited 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 106k € | 127k € | 119k € | 102k € | 8,0% · 133k € | 2,0% · 106k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)106k €127k €119k €102k €8,0% · 133k €2,0% · 106k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Plan, from today102k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: 10606658",
+      "Rent: 12706658",
+      "Longer: 12706658",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11871710",
+    ],
+    "drawing": "01b5eeff1d0139f4",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)50k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Plan: 5000000",
+      "Rent: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Plan (editing): 5000000",
+    ],
+    "drawing": "94b1618962dcb8a2",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 1,13M €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)1,13M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: -",
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "516949e6cacbf555",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: -",
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "2456ea79184457cb",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 115k € | 219k € | 142k € | 110k € | 8,0% · 185k € | 2,0% · 108k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)115k €219k €142k €110k €8,0% · 185k €2,0% · 108k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today110k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Plan: 11452578",
+      "Rent: 21946249",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Plan (editing): 14212935",
+    ],
+    "drawing": "d2906e8df7465009",
+    "tooltip": null,
+  },
+}
+`;
+
+exports[`the hero chart when every scenario starts on one day > draws and says what it always has: wide, the plan open 1`] = `
+{
+  "a year with a step": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 127k € | 106k € | 102k € | 8,0% · 119k € | 2,0% · 94k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)127k €106k €102k €8,0% · 119k €2,0% · 94k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 5Plan, from today102k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 12706658",
+      "Longer: 12706658",
+      "Hidden:  (hidden)",
+      "Plan (editing): 10606658",
+    ],
+    "drawing": "0c96685cb4a96dcb",
+    "tooltip": null,
+  },
+  "first year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 50k € | 8,0% · 50k € | 2,0% · 50k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)50k €8,0% · 50k €2,0% · 50k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 0Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €House already owned: the down payment is already out of the starting invested balance.",
+    "chips": [
+      "Rent: 5000000",
+      "Longer: 5000000",
+      "Hidden:  (hidden)",
+      "Plan (editing): 5000000",
+    ],
+    "drawing": "75bd2e7c451dd0f8",
+    "tooltip": null,
+  },
+  "past the shorter scenario": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 1,13M €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)1,13M €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 35Plan, from today-Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "28b54c8e268a0a3e",
+    "tooltip": null,
+  },
+  "rest": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.The values in the chips above are for the last year, or for the year you point at.Plan, from todayCheck-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: -",
+      "Longer: 113202311",
+      "Hidden:  (hidden)",
+      "Plan (editing): -",
+    ],
+    "drawing": "ab8321acc2ae197f",
+    "tooltip": null,
+  },
+  "the purchase year": {
+    "axis": "0,00 € | 200k € | 400k € | 600k € | 800k € | 1,0M € | 1,2M € | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 219k € | 115k € | 110k € | 8,0% · 153k € | 2,0% · 84k €",
+    "card": "Invested portfolio projectionin 2026 euros5Y10Y20YAll0,00 €200k €400k €600k €800k €1,0M €1,2M €05101520253035Car (year 4)Gift (year 12)219k €115k €110k €8,0% · 153k €2,0% · 84k €Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.Year 10Plan, from today110k €Check-in (what was really there)Life event, money inLife event, money outGrey dotted lines are your milestones. They are amounts on your account, so in the plan’s euros they slope down: where a line crosses one, your account reaches it. Pick one to see when.Milestones100k €250k €500k €1,0M €Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes out. The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.",
+    "chips": [
+      "Rent: 21946249",
+      "Longer: 21946249",
+      "Hidden:  (hidden)",
+      "Plan (editing): 11452578",
+    ],
+    "drawing": "edf8da9e6a74eb0d",
+    "tooltip": null,
+  },
+}
+`;

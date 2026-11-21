@@ -678,3 +678,45 @@ describe('LinearChart', () => {
     expect(tooltips[0]).toHaveTextContent('Normal')
   })
 })
+
+describe('a line and band that start part-way along the axis', () => {
+  // 0..4 across 360px less the margins (56 left, 16 right): 72px a place.
+  const at = (place: number) => 56 + place * 72
+  const later: ChartSeries = { id: 'later', color: '#f59e0b', values: [20, 30, 25], preStep: [20, 35, 28], xs: [1.5, 2.5, 3.5] }
+  const band: ChartSeries = {
+    id: 'band',
+    color: '#f59e0b',
+    values: [],
+    kind: 'band',
+    xs: [1.5, 2.5, 3.5],
+    band: { lo: [20, 26, 22], hi: [20, 34, 30] },
+  }
+  const props = { ...defaultProps, xLabels: ['0', '1', '2', '3', '4'], series: [makeLine('first', [10, 12, 14, 16, 18]), later, band] }
+
+  it('draws the line from its own first x, with nothing before it, and the band beside it', () => {
+    const { container } = render(<LinearChart {...props} />)
+    const path = [...container.querySelectorAll('path')].find((p) => p.getAttribute('style')?.includes('245, 158, 11') && p.getAttribute('fill') === 'none')!
+    const xs = (path.getAttribute('d') ?? '').match(/[ML]\s?([\d.]+)/g)!.map((m) => Number(m.replace(/[ML]\s?/, '')))
+    expect(xs[0]).toBeCloseTo(at(1.5), 1)
+    expect(Math.min(...xs)).toBeCloseTo(at(1.5), 1)
+    expect(Math.max(...xs)).toBeCloseTo(at(3.5), 1)
+    const area = container.querySelector('path[aria-hidden]')!.getAttribute('d') ?? ''
+    expect(Number(area.match(/M\s?([\d.]+)/)![1])).toBeCloseTo(at(1.5), 1)
+  })
+
+  it('marks the year pointed at on the line only where the line is, and tags it there', () => {
+    const { container } = render(
+      <LinearChart {...props} valueTags={{ format: (v) => `v${Math.round(v)}`, textOn: () => '#000' }} />,
+    )
+    const svg = container.querySelector('svg')!
+    const dots = () => container.querySelectorAll('circle').length
+    fireEvent.keyDown(svg, { key: 'Home' })
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    // Place 1: only the first line has started.
+    expect(dots()).toBe(1)
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    // Place 2: both, the later one halfway from 20 to the 35 it reached before its step.
+    expect(dots()).toBe(2)
+    expect(screen.getByText('v28')).toBeInTheDocument()
+  })
+})

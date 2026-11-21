@@ -1,12 +1,14 @@
 import { areaPath, linePath, spacedRefLines, type ScatterPoint } from './linearScale'
 import { refLineClass } from './refLineClass'
-import { steppedPoints } from './steppedPoints'
+import { steppedPoints, valueAtPlace } from './steppedPoints'
 import styles from './charts.module.css'
 
 export interface LifeEventMarker {
   yearIndex: number
   label: string
   amountCents: number
+  /** The year of its own plan it falls in, where that is not its place on the axis (a plan that starts part-way along it). */
+  year?: number
 }
 
 export function ChartFocusIndicator({
@@ -22,7 +24,7 @@ export function ChartFocusIndicator({
   yTop: number
   innerH: number
   scaleY: (v: number) => number
-  lineSeries: { id: string; color: string; values: number[] }[]
+  lineSeries: { id: string; color: string; values: number[]; preStep?: number[] | undefined; xs?: number[] | undefined }[]
 }) {
   if (active == null) return null
   return (
@@ -33,8 +35,8 @@ export function ChartFocusIndicator({
         className={styles.crosshair}
       />
       {lineSeries.flatMap((s) => {
-        const value = s.values[active]
-        // A line that has ended has no point at this year, and none is drawn at zero for it.
+        const value = valueAtPlace(s, active)
+        // A line that has ended, or not started, has no point at this year, and none is drawn at zero for it.
         if (value === undefined) return []
         return [
           <circle
@@ -89,13 +91,13 @@ export function ChartLifeEventMarkers({
 }) {
   return (
     <>
-      {markers.map(({ yearIndex, label, amountCents }) => {
+      {markers.map(({ yearIndex, label, amountCents, year = yearIndex }) => {
         const x = xForIndex(yearIndex)
         const cy = yTop + 8
         const inflow = amountCents >= 0
         return (
           <g key={`le-${yearIndex}-${label}`} aria-label={label}>
-            <title>{`${label} (year ${yearIndex})`}</title>
+            <title>{`${label} (year ${year})`}</title>
             <polygon
               points={`${x},${cy - 6} ${x + 5},${cy} ${x},${cy + 6} ${x - 5},${cy}`}
               className={inflow ? styles.lifeEventInflow : styles.lifeEventOutflow}

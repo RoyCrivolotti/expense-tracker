@@ -11,6 +11,8 @@ export interface PickLine {
   params: ProjectionParams
   /** The date its plan starts on, which dates the year it reaches the milestone in. */
   planStartDate: string | null
+  /** Where it starts on the chart's axis: 0 for a path that starts on the axis' first day. */
+  offsetYears?: number
 }
 
 /** One path's row under the chart: when it reaches the picked milestone. */
@@ -86,9 +88,11 @@ export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, 
     }
     const date = line.planStartDate ? dateAtYears(line.planStartDate, t) : null
     const label = date ? date.slice(0, 4) : `year ${Math.round(t * 10) / 10}`
-    const index = indexOfYear(years, t)
+    // The amount is on the account on a day of the calendar, so it is dotted at that day's place on the axis.
+    const place = (line.offsetYears ?? 0) + t
+    const index = indexOfYear(years, place)
     if (index !== null) {
-      const value = nominalMode ? amountCents : amountCents / Math.pow(1 + inflationRate, t)
+      const value = nominalMode ? amountCents : amountCents / Math.pow(1 + inflationRate, place)
       dots.push({ index, value, color: line.color, label })
     }
     const month = date

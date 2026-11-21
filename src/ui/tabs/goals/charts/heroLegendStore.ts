@@ -1,7 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import type { GoalScenario } from '../../../../types'
-import type { ChartSeries } from '../../../charts/LinearChart'
-import { NO_HIDDEN, useChartLegendState, type ScenarioLine } from './heroLegendState'
+import { useChartLegendState, type LegendInput } from './heroLegendState'
 import type { ScenarioLegendItem } from './ScenarioSeriesLegend'
 
 /**
@@ -42,19 +40,16 @@ export function useHeroLegend(store: HeroLegendStore): ScenarioLegendItem[] {
 
 /**
  * Publishes the chart's lines to the chips above it, with their values at the year being pointed
- * at, or at the last year drawn while nothing is. Takes the line back when the chart goes.
+ * at, or at `restIndex` while nothing is (the last year drawn, or on a calendar the last year every
+ * line reaches). Takes the line back when the chart goes.
  */
 export function usePublishHeroLegend(
   store: HeroLegendStore | undefined,
-  lines: ScenarioLine[],
-  series: ChartSeries[],
-  names: string[],
-  years: number[],
+  input: LegendInput,
   activeIndex: number | null,
-  scenarios: GoalScenario[],
-  hiddenIds: ReadonlySet<number> = NO_HIDDEN,
+  restIndex: number,
 ): void {
-  const { legendItems } = useChartLegendState(lines, series, names, years, activeIndex ?? years.length - 1, scenarios, hiddenIds)
+  const { legendItems } = useChartLegendState(input, activeIndex ?? restIndex)
   useEffect(() => {
     store?.set(legendItems)
   }, [store, legendItems])

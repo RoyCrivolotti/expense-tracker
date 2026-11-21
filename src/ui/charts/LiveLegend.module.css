@@ -84,6 +84,16 @@
   color: var(--color-text);
 }
 
+/* "(ended 2035)" goes under an ended line's figure: beside it, it took the name's room in a narrow
+   column and left one letter to a line. */
+.ended {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-align: right;
+  color: var(--color-text-muted);
+}
+
 .valueNone {
   font-weight: 400;
   color: var(--color-text-muted);
@@ -181,4 +191,21 @@
   .chips .rowItem {
     pointer-events: auto;
   }
+}
+
+/* A name with a note under it ("from Jul 2027"): the note is smaller and takes the name's column. */
+.labelStack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.note {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--color-text-muted);
+}
+
+.chips .note {
+  white-space: nowrap;
 }

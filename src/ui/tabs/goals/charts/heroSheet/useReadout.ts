@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useMoneyFormat } from '../../../../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../../chartTheme'
 import { useChartLegendState, withFromToday } from '../heroLegendState'
+import { yearLabel } from '../../yearLabel'
 import { readoutSentence } from './heroReadout'
 import type { HeroSheetModel } from './heroSheetModel'
 
@@ -9,26 +10,21 @@ import type { HeroSheetModel } from './heroSheetModel'
 export function useReadout(model: HeroSheetModel, active: number | null) {
   const format = useMoneyFormat()
   const { legend } = model
-  const { activeYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(
-    legend.lines,
-    legend.displaySeries,
-    legend.names,
-    legend.years,
-    active,
-    legend.scenarios,
-    legend.hiddenIds,
-  )
+  const { activeYear, readYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(legend, active, legend.restIndex)
   const items = useMemo(
-    () => withFromToday(legendItems, legend.fromTodayLine, legend.fromTodayLabel, activeYear),
-    [legendItems, legend.fromTodayLine, legend.fromTodayLabel, activeYear],
+    () => withFromToday(legendItems, legend.fromTodayLine, legend.fromTodayLabel, readYear),
+    [legendItems, legend.fromTodayLine, legend.fromTodayLabel, readYear],
   )
-  const sentence = readoutSentence(activeYear, items, breakdowns.length > 0, (cents) => formatMoneyShort(cents, format))
+  const origin = legend.calendarOrigin
+  const sentence = readoutSentence(activeYear !== null && origin ? yearLabel(activeYear, origin) : activeYear, items, breakdowns.length > 0, (cents) => formatMoneyShort(cents, format))
   return {
     items,
     activeYear,
     breakdowns,
     yearZeroHint,
     sentence,
+    calendarOrigin: legend.calendarOrigin,
+    restNote: legend.restNote,
     nominalMode: legend.nominalMode,
     onToggle: legend.onToggleVisible,
   }

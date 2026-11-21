@@ -1,21 +1,15 @@
 import type { ReactNode, Ref } from 'react'
-import { currencyWord, type PurchaseYearBreakdown } from '../../../../engine'
-import { LiveLegend, SeriesSwatch, type LiveLegendItem } from '../../../charts/LiveLegend'
-import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
+import { LiveLegend, type LiveLegendItem } from '../../../charts/LiveLegend'
+import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { yearLabel } from '../yearLabel'
+import { BreakdownExtras, type ScenarioLegendBreakdown } from './purchaseBreakdown'
 import styles from './ScenarioSeriesLegend.module.css'
+
+export { BreakdownExtras, BreakdownSlot, type ScenarioLegendBreakdown } from './purchaseBreakdown'
 
 /** The row shape is generic; kept as its own name here since this is the scenario projection's legend. */
 export type ScenarioLegendItem = LiveLegendItem
-
-export interface ScenarioLegendBreakdown {
-  /** Scenario id, or 'draft'; two scenarios can share a name. */
-  id: string
-  label: string
-  color: string
-  dashed?: boolean
-  breakdown: PurchaseYearBreakdown
-}
 
 interface ScenarioSeriesLegendProps {
   items: ScenarioLegendItem[]
@@ -37,6 +31,10 @@ interface ScenarioSeriesLegendProps {
   floatSide?: 'start' | 'end' | undefined
   /** What it says before a year is pointed at, where "below" is not where the rows are. */
   hint?: string | undefined
+  /** Said after the hint where the rows show figures before a year is pointed at: which year they are for. */
+  restNote?: string | undefined
+  /** The axis' first day, where it counts calendar years: the year pointed at is named by the calendar. */
+  calendarOrigin?: string | null | undefined
   /**
    * The scenarios are in chips above the chart: `items` is only what has none, and the legend is
    * still there, without them, for the year being pointed at and the breakdown that floats up
@@ -50,131 +48,9 @@ interface ScenarioSeriesLegendProps {
   extrasBeside?: boolean | undefined
 }
 
-function BreakdownRows({
-  label,
-  color,
-  dashed,
-  breakdown,
-  format,
-}: ScenarioLegendBreakdown & { format: ReturnType<typeof useMoneyFormat> }) {
-  const rows: { label: string; value: string; tone?: 'income' | 'expense' | 'neutral' }[] = [
-    { label: 'Start of year', value: formatMoneyShort(breakdown.startInvestedCents, format) },
-    {
-      label: 'Return this year',
-      value: formatSignedMoneyShort(breakdown.growthCents, format),
-      tone: breakdown.growthCents >= 0 ? 'income' : 'expense',
-    },
-    {
-      label: 'Contributions',
-      value: formatSignedMoneyShort(breakdown.contributionCents, format),
-      tone: breakdown.contributionCents >= 0 ? 'income' : 'expense',
-    },
-    {
-      label: 'Down payment + fees',
-      value: formatSignedMoneyShort(-breakdown.totalWithdrawalCents, format),
-      tone: 'expense',
-    },
-    { label: 'End invested', value: formatMoneyShort(breakdown.endInvestedCents, format) },
-    {
-      label: 'Step vs prior year',
-      value: formatSignedMoneyShort(breakdown.netChangeCents, format),
-      tone: breakdown.netChangeCents >= 0 ? 'income' : 'expense',
-    },
-  ]
-
-  return (
-    <div className={styles.breakdown}>
-      <div className={styles.breakdownHeader}>
-        <SeriesSwatch color={color} {...(dashed ? { dashed: true } : {})} />
-        <p className={styles.breakdownTitle}>{label}</p>
-      </div>
-      <ul className={styles.breakdownList}>
-        {rows.map((row) => (
-          <li key={row.label} className={styles.breakdownRow}>
-            <span className={styles.breakdownLabel}>{row.label}</span>
-            <span className={row.tone ? styles[`tone_${row.tone}`] : styles.breakdownValue}>
-              {row.value}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-export function BreakdownExtras({
-  breakdowns,
-  breakdownInTodaysMoney,
-  yearZeroHint,
-  format,
-}: {
-  breakdowns: ScenarioLegendBreakdown[]
-  breakdownInTodaysMoney: boolean
-  yearZeroHint: boolean
-  format: ReturnType<typeof useMoneyFormat>
-}) {
-  return (
-    <>
-      {breakdowns.length > 0 ? (
-        <div className={styles.breakdownStack}>
-          {breakdownInTodaysMoney ? (
-            <p className={styles.breakdownNote}>The purchase breakdown is in the plan's {currencyWord(format)}, not in the Nominal values above.</p>
-          ) : null}
-          {breakdowns.map((entry) => (
-            <BreakdownRows key={entry.id} {...entry} format={format} />
-          ))}
-        </div>
-      ) : null}
-      {yearZeroHint ? (
-        <p className={styles.yearZeroHint}>
-          House already owned: the down payment is already out of the starting invested balance.
-        </p>
-      ) : null}
-    </>
-  )
-}
-
-interface BreakdownSlotProps {
-  breakdowns: ScenarioLegendBreakdown[]
-  yearZeroHint: boolean
-  breakdownInTodaysMoney: boolean
-  /** Some line buys in a year, so the room for its breakdown is kept whether or not it is showing. */
-  reserve: boolean
-  /** What is there while no breakdown is: the chart's note. */
-  children: ReactNode
-}
-
-function slotClass(reserve: boolean, withNote: boolean): string {
-  if (!reserve) return styles.slot ?? ''
-  return `${styles.slot} ${withNote ? styles.slotReservedNote : styles.slotReserved}`
-}
-
-/**
- * A place under the chart that is the chart's note until a purchase year is pointed at, and that
- * year's breakdown while it is. Nothing is covered, and nothing moves when it changes, because the
- * room is kept when a line has a purchase.
- */
-export function BreakdownSlot({ breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, children }: BreakdownSlotProps) {
-  const format = useMoneyFormat()
-  const showing = breakdowns.length > 0 || yearZeroHint
-  return (
-    <div className={slotClass(reserve, breakdownInTodaysMoney)}>
-      {showing ? (
-        <BreakdownExtras
-          breakdowns={breakdowns}
-          breakdownInTodaysMoney={breakdownInTodaysMoney}
-          yearZeroHint={yearZeroHint}
-          format={format}
-        />
-      ) : (
-        children
-      )}
-    </div>
-  )
-}
-
-/** What the legend says before a year is pointed at: what it is told to, else how to use it. */
-function legendHint(override: string | undefined, togglable: boolean): string {
+/** What the legend says before a year is pointed at: what it is told to, else how to use it, and which year the rows are for. */
+function legendHint(override: string | undefined, togglable: boolean, restNote: string | undefined): string {
+  if (restNote !== undefined) return `${legendHint(override, togglable, undefined)} ${restNote}`
   if (override !== undefined) return override
   return togglable
     ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
@@ -201,14 +77,15 @@ interface LegendMainProps {
   layout: ScenarioSeriesLegendProps['layout']
   /** The scenarios' chips are above the chart, and its own are to two decimals in millions, so this key is too. */
   chipsAbove: boolean
+  calendarOrigin: string | null | undefined
 }
 
 /** The year pointed at, or how to point at one, and the rows; no rows where the chips above have them. */
-function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout, chipsAbove }: LegendMainProps) {
+function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout, chipsAbove, calendarOrigin }: LegendMainProps) {
   return (
     <>
       {activeYear != null ? (
-        <p className={styles.yearHeader}>Year {activeYear}</p>
+        <p className={styles.yearHeader}>{calendarOrigin ? yearLabel(activeYear, calendarOrigin) : <>Year {activeYear}</>}</p>
       ) : (
         <p className={styles.hint}>{hint}</p>
       )}
@@ -241,12 +118,14 @@ export function ScenarioSeriesLegend({
   layout,
   floatSide = 'end',
   hint: hintOverride,
+  restNote,
+  calendarOrigin,
   chipsAbove = false,
   extrasBeside,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0 && !chipsAbove) return null
-  const hint = legendHint(hintOverride, onToggle !== undefined)
+  const hint = legendHint(hintOverride, onToggle !== undefined, restNote)
 
   // Side by side the chips leave no room for a block that comes and goes with the pointer: in the
   // flow it pushed the cards below it down by 144px, and the legend under the bar held at the
@@ -271,6 +150,7 @@ export function ScenarioSeriesLegend({
       listRef={listRef}
       layout={layout}
       chipsAbove={chipsAbove}
+      calendarOrigin={calendarOrigin}
     />
   )
   if (extrasBeside) return <Beside main={main} extras={extras} />

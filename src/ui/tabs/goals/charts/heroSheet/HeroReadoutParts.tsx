@@ -23,6 +23,8 @@ export function ReadoutLegend({ readout, beside }: { readout: Readout; beside?: 
       onToggle={readout.onToggle}
       layout="rows"
       hint={HINT}
+      restNote={readout.restNote}
+      calendarOrigin={readout.calendarOrigin}
       extrasBeside={beside}
     />
   )

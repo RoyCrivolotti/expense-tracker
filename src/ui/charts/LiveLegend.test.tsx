@@ -79,3 +79,22 @@ describe('LiveLegend', () => {
     expect(button).toHaveAttribute('aria-pressed', 'false')
   })
 })
+
+describe('LiveLegend rows with something to say instead of a figure', () => {
+  it('puts the note under the name and says the status in place of the dash', () => {
+    render(
+      <LiveLegend
+        items={[{ label: 'Later', color: '#000', valueCents: null, outOfRun: true, status: 'starts Jul 2027', note: 'from Jul 2027' }]}
+        formatValue={formatValue}
+      />,
+    )
+    expect(screen.getByText('from Jul 2027')).toBeInTheDocument()
+    expect(screen.getByText('starts Jul 2027')).toBeInTheDocument()
+    expect(screen.queryByText('-')).not.toBeInTheDocument()
+  })
+
+  it('gives an ended line’s last figure followed by the year it ended', () => {
+    render(<LiveLegend items={[{ label: 'Short', color: '#000', valueCents: 120_000, outOfRun: true, endedIn: '2035' }]} formatValue={formatValue} />)
+    expect(screen.getByText('Short').closest('li')).toHaveTextContent(`${formatValue(120_000)} (ended 2035)`)
+  })
+})

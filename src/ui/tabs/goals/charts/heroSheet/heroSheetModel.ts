@@ -1,7 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
-import type { GoalScenario } from '../../../../../types'
 import type { ChartSeries, LinearChart } from '../../../../charts/LinearChart'
-import type { ScenarioLine } from '../heroLegendState'
+import type { LegendInput } from '../heroLegendState'
 
 type ChartProps = ComponentProps<typeof LinearChart>
 
@@ -20,6 +19,7 @@ export interface HeroSheetModel {
     | 'refCurves'
     | 'refHighlight'
     | 'annotations'
+    | 'startMarks'
     | 'markerYears'
     | 'lifeEventMarkers'
     | 'todayIndex'
@@ -30,13 +30,11 @@ export interface HeroSheetModel {
     | 'tooltip'
   >
   /** What the readout beside the chart lists for the year pointed at. */
-  legend: {
-    lines: ScenarioLine[]
-    displaySeries: ChartSeries[]
-    names: string[]
-    years: number[]
-    scenarios: GoalScenario[]
-    hiddenIds: ReadonlySet<number> | undefined
+  legend: LegendInput & {
+    /** The year the readout's figures are for while none is pointed at; null for none. */
+    restIndex: number | null
+    /** Which year that is, said under the readout's hint. */
+    restNote: string | undefined
     fromTodayLine: ChartSeries | null
     fromTodayLabel: string
     nominalMode: boolean

@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, type RefObject } from 'react'
 import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
+import { describedBy, tabIndexFor, tooltipShows } from './linearChartKeys'
+import { StepKeysHint } from './StepKeysHint'
 import { useElementSize } from '../hooks/useElementSize'
 import {
   ChartGrid,
@@ -23,7 +25,8 @@ import {
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
-import { drawnValuesOf, steppedPoints } from './steppedPoints'
+import { ChartStartMarks, type StartMark } from './ChartStartMarks'
+import { drawnValuesOf, placeX, placesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
@@ -75,6 +78,12 @@ export interface ChartSeries {
   kind?: 'line' | 'area' | 'scatter' | 'band'
   dashed?: boolean
   width?: number
+  /**
+   * Where each value sits on the x axis, for a line or band that does not start on one of the axis'
+   * places (a scenario that starts part-way along it). Aligned to `values` (and the band's edges),
+   * increasing. Without it value i sits at place i.
+   */
+  xs?: number[]
   /** Paired lower/upper envelope values, and what each reached just before (as `preStep`). Used only when kind === 'band'. */
   band?: { lo: number[]; hi: number[]; loPre?: number[]; hiPre?: number[] }
   /** Sparse check-in actuals. Used only when kind === 'scatter'. */
@@ -109,6 +118,10 @@ interface Props {
   refHighlight?: RefHighlight
   /** Marks on the picked line: where each path reaches it, and a note at its right end. */
   annotations?: ChartAnnotations | undefined
+  /** Where lines that start part-way along the axis begin; see `ChartStartMarks`. */
+  startMarks?: StartMark[] | undefined
+  /** How many of the axis' places to show at least, where it runs on past every line drawn. */
+  places?: number | undefined
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
@@ -149,14 +162,15 @@ function useGeometry(
   yDomainMax: number | undefined,
   fitDomain: boolean | undefined,
   padTopProp: number | undefined,
+  places = 0,
 ) {
   return useMemo(() => {
     // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
     // path a negative height and draw nothing, and a negative one pushes the plot off the top.
     const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
     const n = Math.max(
-      0,
-      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map((s) => s.values.length),
+      places,
+      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf),
     )
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
@@ -191,7 +205,7 @@ function useGeometry(
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp])
+  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp, places])
 }
 
 /**
@@ -217,41 +231,6 @@ function domainTuple(d: { min: number; max: number }): [number, number] {
   return [d.min, d.max]
 }
 
-/** A tooltip shows only in 'full' mode: 'hidden' tracks focus for a caller's own readout instead. */
-function tooltipShows(
-  tip: { title: string; lines: TooltipLine[] } | null,
-  tooltipMode: 'full' | 'hidden',
-): boolean {
-  return tip != null && tooltipMode === 'full'
-}
-
-/**
- * Arrow keys step a marker, so a chart is only worth a Tab stop when something shows where it
- * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
- * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
- */
-function tabIndexFor(
-  tooltipMode: 'full' | 'hidden',
-  onActiveIndexChange: Props['onActiveIndexChange'],
-): 0 | -1 {
-  return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
-}
-
-/** What names the text that says how to use a chart from the keyboard, for the chart that can be. */
-function describedBy(steppable: boolean, id: string): { 'aria-describedby'?: string } {
-  return steppable ? { 'aria-describedby': id } : {}
-}
-
-/** Said to a screen reader as the description of a chart that takes focus; nothing on the chart says it. */
-function StepKeysHint({ id, show }: { id: string; show: boolean }) {
-  if (!show) return null
-  return (
-    <span id={id} className={styles.srOnly}>
-      Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.
-    </span>
-  )
-}
-
 export function LinearChart({
   height,
   padTop,
@@ -264,6 +243,8 @@ export function LinearChart({
   refCurves,
   refHighlight,
   annotations,
+  startMarks,
+  places,
   markerYears = [],
   lifeEventMarkers = [],
   labeledMarkers,
@@ -287,7 +268,7 @@ export function LinearChart({
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
   const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
-  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop)
+  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop, places)
   const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
@@ -358,7 +339,7 @@ export function LinearChart({
                 hi={s.band.hi}
                 loPre={s.band.loPre}
                 hiPre={s.band.hiPre}
-                xForIndex={geo.xForIndex}
+                xForIndex={placeX(s, geo.xForIndex)}
                 scaleY={geo.scaleY}
                 fillOpacity={0.18}
               />
@@ -374,7 +355,7 @@ export function LinearChart({
         {lineSeries.map((s) => (
           <path
             key={s.id}
-            d={linePath(steppedPoints(s.values, s.preStep, geo.xForIndex, geo.scaleY))}
+            d={linePath(steppedPoints(s.values, s.preStep, placeX(s, geo.xForIndex), geo.scaleY))}
             style={{ stroke: s.color }}
             fill="none"
             strokeWidth={s.width ?? 2}
@@ -401,6 +382,7 @@ export function LinearChart({
           minGap={REF_LINE_MIN_GAP}
           highlight={refHighlight}
         />
+        <ChartStartMarks marks={startMarks} geo={geo} left={PAD.left} right={width - PAD.right} active={active} annotations={annotations} />
         <ChartAnnotationLayer
           annotations={annotations}
           xForIndex={geo.xForIndex}

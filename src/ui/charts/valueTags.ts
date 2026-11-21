@@ -1,4 +1,5 @@
 import { pointSeriesValueAt } from './linearScale'
+import { valueAtPlace } from './steppedPoints'
 
 /** What a value tag says and where its line is, before the tags are laid out against each other. */
 export interface ValueTag {
@@ -112,6 +113,8 @@ interface TaggedLine {
   id: string
   color: string
   values: number[]
+  preStep?: number[] | undefined
+  xs?: number[] | undefined
 }
 
 interface TaggedPoints {
@@ -122,7 +125,8 @@ interface TaggedPoints {
 
 interface TaggedBand {
   color: string
-  band?: { lo: number[]; hi: number[] } | undefined
+  band?: { lo: number[]; hi: number[]; loPre?: number[] | undefined; hiPre?: number[] | undefined } | undefined
+  xs?: number[] | undefined
 }
 
 /** The tags for the year `active`: one per line that has a value there, and the band's two edges. */
@@ -136,8 +140,8 @@ export function buildTags(
 ): ValueTag[] {
   const tags: ValueTag[] = []
   for (const line of lines) {
-    const value = line.values[active]
-    // A line that has ended has no point at this year, and so no tag.
+    const value = valueAtPlace(line, active)
+    // A line that has ended, or not started, has no point at this year, and so no tag.
     if (value === undefined) continue
     tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false, dotted: false })
   }
@@ -150,8 +154,9 @@ export function buildTags(
   const labels = spec.bandLabels
   if (labels) {
     for (const [k, band] of bands.entries()) {
-      const lo = band.band?.lo[active]
-      const hi = band.band?.hi[active]
+      const edges = band.band
+      const lo = edges ? valueAtPlace({ values: edges.lo, preStep: edges.loPre, xs: band.xs }, active) : undefined
+      const hi = edges ? valueAtPlace({ values: edges.hi, preStep: edges.hiPre, xs: band.xs }, active) : undefined
       if (lo === undefined || hi === undefined) continue
       tags.push({ id: `band-hi-${k}`, color: band.color, colors: [band.color], y: scaleY(hi), text: `${labels.hi} · ${spec.format(hi)}`, band: true, dotted: false })
       tags.push({ id: `band-lo-${k}`, color: band.color, colors: [band.color], y: scaleY(lo), text: `${labels.lo} · ${spec.format(lo)}`, band: true, dotted: false })

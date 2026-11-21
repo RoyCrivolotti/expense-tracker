@@ -9,6 +9,15 @@ export interface LiveLegendItem {
   dotted?: boolean
   /** The line does not reach the focused point: the row shows a dash, not a blank. */
   outOfRun?: boolean
+  /** What the row says instead of the dash where there is something to say ("starts Jul 2027"). */
+  status?: string
+  /**
+   * The year a line that has ended by the focused point ended in. The row then shows its last figure,
+   * followed by that year, so the figure is not taken for one on the year pointed at.
+   */
+  endedIn?: string
+  /** A second line under the label ("from Jul 2027"). */
+  note?: string
   valueCents: number | null
   /** The series behind the row, when it can be toggled; a row with none cannot be hidden. */
   scenarioId?: number
@@ -28,6 +37,35 @@ interface LiveLegendProps {
   layout?: 'rows' | 'chips' | undefined
 }
 
+/** The name, and under it the row's note where it has one. */
+function RowLabel({ item }: { item: LiveLegendItem }) {
+  if (!item.note) {
+    return (
+      <span className={styles.label} title={item.label}>
+        {item.label}
+      </span>
+    )
+  }
+  return (
+    <span className={styles.labelStack}>
+      <span className={styles.label} title={item.label}>
+        {item.label}
+      </span>
+      <span className={styles.note}>{item.note}</span>
+    </span>
+  )
+}
+
+/** The figure, with the year an ended line ended in under it; a dash or a status where there is no figure. */
+function RowValue({ item, formatValue }: { item: LiveLegendItem; formatValue: LiveLegendProps['formatValue'] }) {
+  return (
+    <span className={item.outOfRun ? `${styles.value} ${styles.valueNone}` : styles.value}>
+      {item.valueCents != null ? formatValue(item.valueCents) : item.outOfRun ? (item.status ?? '-') : ''}
+      {item.valueCents != null && item.endedIn ? <span className={styles.ended}> (ended {item.endedIn})</span> : null}
+    </span>
+  )
+}
+
 /** One legend row; a button when the row can hide or show its series. */
 function LegendRow({
   item,
@@ -41,10 +79,8 @@ function LegendRow({
   const body = (
     <>
       <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} {...(item.dotted ? { dotted: true } : {})} />
-      <span className={styles.label} title={item.label}>{item.label}</span>
-      <span className={item.outOfRun ? `${styles.value} ${styles.valueNone}` : styles.value}>
-        {item.valueCents != null ? formatValue(item.valueCents) : item.outOfRun ? '-' : ''}
-      </span>
+      <RowLabel item={item} />
+      <RowValue item={item} formatValue={formatValue} />
     </>
   )
   if (onToggle && item.scenarioId !== undefined) {

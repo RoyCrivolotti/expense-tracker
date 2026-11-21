@@ -3,6 +3,7 @@ import type { GoalScenario } from '../../../../types'
 import { useRadioGroupKeys } from '../../../hooks/useRadioGroupKeys'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { formatCentsCompact } from '../../../../engine'
+import { withEnded } from '../../../charts/withEnded'
 import { useHeroLegend, type HeroLegendStore } from '../charts/heroLegendStore'
 import type { ScenarioLegendItem } from '../charts/ScenarioSeriesLegend'
 import { scenarioInk } from '../scenarioInk'
@@ -58,6 +59,36 @@ function ChipSpeech({ plan, edited }: { plan: boolean; edited: boolean }) {
   )
 }
 
+/** The whole name, on two lines at most (the tooltip has it for the rare one that is longer), and when a later scenario starts. */
+function ChipName({ label, note }: { label: string; note: string | undefined }) {
+  const name = (
+    <span className={styles.chipName} title={label}>
+      {label}
+    </span>
+  )
+  if (!note) return name
+  return (
+    <span className={styles.chipNameStack}>
+      {name}
+      <span className={styles.chipNote}>{note}</span>
+    </span>
+  )
+}
+
+/**
+ * The figure at the year read; for a scenario that has ended, its last figure and the year it ended in;
+ * for one that has not started, when it does ("starts Jul 2027"). Nothing for a hidden line.
+ */
+function ChipValue({ line }: { line: ScenarioLegendItem | undefined }) {
+  const format = useMoneyFormat()
+  if (!line || line.hidden) return <span className={styles.chipValue}></span>
+  if (line.valueCents == null && line.status) return <span className={`${styles.chipValue} ${styles.chipStatus}`}>{line.status}</span>
+  if (line.valueCents == null) return <span className={styles.chipValue}></span>
+  const figure = formatCentsCompact(line.valueCents, format)
+  if (!line.endedIn) return <span className={styles.chipValue}>{figure}</span>
+  return <span className={`${styles.chipValue} ${styles.chipStatus}`}>{withEnded(figure, line.endedIn)}</span>
+}
+
 interface ChipProps {
   /** The saved scenario the chip opens; null for the unsaved draft. */
   scenario: GoalScenario | null
@@ -83,10 +114,8 @@ function chipClass(active: boolean, hidden: boolean): string {
  * own beside the chip's, not inside it, since a button cannot hold one.
  */
 function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggle }: ChipProps) {
-  const format = useMoneyFormat()
   const hidden = line?.hidden === true
   const plan = scenario?.isActive === true
-  const value = !hidden && line?.valueCents != null ? formatCentsCompact(line.valueCents, format) : ''
   return (
     <div className={chipClass(active, hidden)}>
       <button
@@ -99,13 +128,10 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
         onClick={onOpen}
       >
         <span className={styles.tabDot} style={{ background: scenario ? scenarioInk(scenario.color) : 'var(--color-text-muted)' }} aria-hidden />
-        {/* The whole name, on two lines at most; the tooltip has it for the rare one that is longer. */}
-        <span className={styles.chipName} title={label}>
-          {label}
-        </span>
+        <ChipName label={label} note={line?.note} />
         <ChipSpeech plan={plan} edited={edited} />
         <span className={styles.chipSide} aria-hidden>
-          <span className={styles.chipValue}>{value}</span>
+          <ChipValue line={line} />
           <ChipTags plan={plan} edited={edited} />
         </span>
       </button>

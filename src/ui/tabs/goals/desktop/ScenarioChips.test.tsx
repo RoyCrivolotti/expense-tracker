@@ -105,3 +105,21 @@ describe('ScenarioChips', () => {
     expect(chipOf(/^Path A/)).toHaveTextContent('8.200.000')
   })
 })
+
+describe('ScenarioChips for a scenario that starts later', () => {
+  it('says when it starts under its name, and in place of a figure for a year before it', () => {
+    setup({}, [draftLine, { ...lineOfB, valueCents: null, outOfRun: true, status: 'starts Jul 2027', note: 'from Jul 2027' }])
+    expect(within(chipOf(/^Path B/)).getByText('from Jul 2027')).toBeInTheDocument()
+    expect(within(chipOf(/^Path B/)).getByText('starts Jul 2027')).toBeInTheDocument()
+  })
+
+  it('gives a scenario that has ended its last figure followed by the year it ended', () => {
+    setup({}, [draftLine, { ...lineOfB, valueCents: 8_200_000, outOfRun: true, endedIn: '2035' }])
+    expect(within(chipOf(/^Path B/)).getByText(/ \(ended 2035\)$/)).toBeInTheDocument()
+  })
+
+  it('says nothing in place of a figure for a hidden line', () => {
+    setup({}, [draftLine, { ...lineOfB, valueCents: null, hidden: true, status: 'starts Jul 2027' }])
+    expect(within(chipOf(/Path B/)).queryByText('starts Jul 2027')).not.toBeInTheDocument()
+  })
+})
