@@ -572,6 +572,50 @@ describe('LeversBar', () => {
     }
   })
 
+  it("sets the page's inline overflow-anchor to none only while focus is inside a stuck bar (what that does to scrolling is checked in a browser, scripts/verify-goals-desktop.mjs)", async () => {
+    // Safari's engine scrolled the page by the padding that a click in a lever lifts.
+    const root = document.documentElement
+    const anchor = () => root.style.getPropertyValue('overflow-anchor')
+    root.style.setProperty('overflow-anchor', 'auto')
+    const stuck = document.createElement('style')
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; }'
+    document.head.append(stuck)
+    const draft = makeDraft()
+    const page = (
+      <>
+        <button type="button">Outside</button>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />
+      </>
+    )
+    try {
+      const first = render(page)
+      expect(anchor()).toBe('auto')
+      await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
+      expect(anchor()).toBe('none')
+      // From one control of the bar to another it stays off.
+      await userEvent.tab()
+      expect(anchor()).toBe('none')
+      screen.getByRole('button', { name: 'Outside' }).focus()
+      expect(anchor()).toBe('auto')
+
+      // Taken away with focus still inside, it gives back what the page had.
+      await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
+      expect(anchor()).toBe('none')
+      first.unmount()
+      expect(anchor()).toBe('auto')
+
+      // Where the bar goes by with the page nothing is lifted, so anchoring is left alone.
+      stuck.textContent = ''
+      const second = render(page)
+      await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
+      expect(anchor()).toBe('auto')
+      second.unmount()
+    } finally {
+      stuck.remove()
+      root.style.removeProperty('overflow-anchor')
+    }
+  })
+
   it('lifts the padding while focus is inside the bar, and puts it back as focus leaves it', async () => {
     // Safari scrolled the page by the bar's height for each control focused in the bar, as if the
     // padding kept it clear of itself.
