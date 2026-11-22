@@ -212,7 +212,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/useExpenseActions.ts': 248,
   'src/ui/useExpenseData.ts': 97,
   'src/ui/useLedgerData.ts': 119,
-  'workers/capture/src/store.ts': 63,
 }
 
 export default defineConfig([
