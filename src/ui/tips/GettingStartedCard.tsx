@@ -3,6 +3,7 @@ import { TIP_IDS } from '../../domain/onboarding/tips'
 import { needsOnboarding } from '../../domain/onboarding/needsOnboarding'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
+import { useGuide } from '../guide/guideContext'
 import { homeScreenAdvice } from './homeScreen'
 import { TipCard } from './TipCard'
 import { useTips } from './tipsContext'
@@ -48,12 +49,24 @@ function Line({ done, children }: { done: boolean; children: ReactNode }) {
 export function GettingStartedCard({ setUp, hasPayment, imported, onAddPayment, onImport }: Props) {
   const homeScreen = homeScreenAdvice()
   const { isShown, dismiss } = useTips()
+  const guide = useGuide()
   const finished = setUp && hasPayment && imported && !homeScreen
   useEffect(() => {
     if (finished && isShown(TIP_IDS.gettingStarted)) dismiss(TIP_IDS.gettingStarted)
   }, [finished, isShown, dismiss])
   return (
-    <TipCard id={TIP_IDS.gettingStarted} title="Getting started" actionLabel="Hide">
+    <TipCard
+      id={TIP_IDS.gettingStarted}
+      title="Getting started"
+      actionLabel="Hide"
+      secondary={
+        guide ? (
+          <button type="button" className={styles.guideLink} onClick={guide.open}>
+            Read the guide
+          </button>
+        ) : undefined
+      }
+    >
       <ul className={styles.list}>
         <Line done={setUp}>Set up your categories and accounts</Line>
         <Line done={hasPayment}>
