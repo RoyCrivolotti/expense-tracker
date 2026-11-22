@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as device from '../../config/device'
 import * as keysApi from '../../data/captureKeysApi'
@@ -97,11 +97,13 @@ describe('the first-payment check', () => {
     await waitFor(() => expect(calls()).toBe(4))
   })
 
-  it('says only Checking while the read is out, and claims nothing about the phone', async () => {
+  it('draws nothing while the read is out, not even its heading (the card above would push it down), and claims nothing about the phone', async () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText('Checking')).toBeInTheDocument()
+    await act(() => Promise.resolve())
+    expect(screen.queryByText('Set up capture')).not.toBeInTheDocument()
+    expect(screen.queryByText('Checking')).not.toBeInTheDocument()
     expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
     expect(screen.queryByText('Waiting for your first payment')).not.toBeInTheDocument()
   })
@@ -252,7 +254,7 @@ describe('on each kind of device', () => {
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
     expect(screen.getByText(/^Needs an iPhone or iPad with the Shortcuts app and its notification trigger/)).toBeInTheDocument()
     expect(screen.getByText('1. Make a key and copy it')).toBeInTheDocument()
-    expect(screen.queryByText(/Set it up from Settings on that device/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist on Android or on a computer/)).not.toBeInTheDocument()
   })
 
   it.each(['android', 'mac', 'windows', 'linux'] as const)('points to the iPhone instead on %s, and reads nothing', (platform) => {
@@ -262,7 +264,7 @@ describe('on each kind of device', () => {
     expect(screen.getByText('Set up capture')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. Set it up from Settings on that device; what it captures shows here as well.',
+        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. It does not exist on Android or on a computer. Set it up from Settings on that iPhone or iPad; what it captures shows here as well.',
       ),
     ).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
@@ -355,7 +357,7 @@ describe('with the shortcut link available', () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    await screen.findByText('Checking')
+    await act(() => Promise.resolve())
     expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
   })
@@ -503,7 +505,7 @@ describe('opening and closing the steps', () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    await screen.findByText('Checking')
+    await act(() => Promise.resolve())
     expect(screen.queryByRole('button', { name: /the steps/ })).not.toBeInTheDocument()
   })
 })
