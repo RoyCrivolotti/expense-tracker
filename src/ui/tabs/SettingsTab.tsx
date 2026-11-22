@@ -14,6 +14,7 @@ import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
 import { ReportNameSetting } from '../settings/ReportNameSetting'
 import { ReceiptStorageSetting } from '../settings/ReceiptStorageSetting'
+import { HelpSetting } from '../settings/HelpSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { StoppedSuggestionsSetting } from '../settings/StoppedSuggestionsSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
@@ -22,7 +23,7 @@ import { AccountView } from '../settings/AccountView'
 import { CaptureView } from '../settings/CaptureView'
 import styles from './tabs.module.css'
 
-type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
+export type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
 
 const VIEW_OPTIONS: { value: SettingsView; label: string }[] = [
   { value: 'preferences', label: 'Preferences' },
@@ -41,6 +42,8 @@ interface SettingsTabProps {
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
   onRunSetup?: (() => void) | undefined
+  /** The section to open on, when something sent the person here for it. */
+  entry?: SettingsView | null | undefined
 }
 
 function Definitions({ model }: { model: ExpenseModel }) {
@@ -98,21 +101,6 @@ function Definitions({ model }: { model: ExpenseModel }) {
           <span>Investments (1 Jan)</span>
           <Money cents={dataset.settings.openingInvestmentCents} />
         </div>
-      </Card>
-    </>
-  )
-}
-
-function SetupWizardEntry({ firstRun, onRunSetup }: { firstRun: boolean; onRunSetup: () => void }) {
-  return (
-    <>
-      <SectionTitle>{firstRun ? 'Get started' : 'Setup wizard'}</SectionTitle>
-      <Card>
-        <EmptyState actionLabel="Run setup wizard" onAction={onRunSetup}>
-          {firstRun
-            ? 'Add your categories and accounts to start tracking spending.'
-            : 'Revisit currency, budget-month start, categories, and accounts.'}
-        </EmptyState>
       </Card>
     </>
   )
@@ -181,7 +169,7 @@ function SetupView({
   return (
     <>
       {actions && onRunSetup && (
-        <SetupWizardEntry firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
+        <HelpSetting firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
       )}
 
       {actions ? (
@@ -256,8 +244,9 @@ export function SettingsTab({
   ownerAccess,
   accountEmail,
   onRunSetup,
+  entry,
 }: SettingsTabProps) {
-  const [view, setView] = useState<SettingsView>('preferences')
+  const [view, setView] = useState<SettingsView>(entry ?? 'preferences')
 
   return (
     <SectionTabs

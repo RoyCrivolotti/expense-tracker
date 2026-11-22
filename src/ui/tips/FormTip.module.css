@@ -1,0 +1,8 @@
+.line {
+  composes: tinted from './TipCard.module.css';
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}

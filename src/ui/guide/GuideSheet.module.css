@@ -1,0 +1,29 @@
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.guide p,
+.guide ol,
+.guide ul {
+  margin: 0;
+}
+.guide ol,
+.guide ul {
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}

@@ -79,6 +79,17 @@ describe('the saved copy in the store', () => {
     expect(await loadOfflineSnapshot(OWNER)).toBeNull()
   })
 
+  it('keeps the tips put away, and reads a copy from before they existed as having no list, with no version bump', async () => {
+    const withTips = dataset()
+    withTips.settings = { ...withTips.settings, tipsSeen: ['getting-started'] }
+    await saveOfflineSnapshot(OWNER, withTips)
+    expect((await loadOfflineSnapshot(OWNER))?.dataset.settings.tipsSeen).toEqual(['getting-started'])
+
+    // `tipsSeen` is optional on purpose: a copy written by the last build has no such key and must still open.
+    await saveOfflineSnapshot(OWNER, dataset())
+    expect((await loadOfflineSnapshot(OWNER))?.dataset.settings).not.toHaveProperty('tipsSeen')
+  })
+
   it('is removed on request, and asking to remove what is not there is no error', async () => {
     await saveOfflineSnapshot(OWNER, dataset())
 

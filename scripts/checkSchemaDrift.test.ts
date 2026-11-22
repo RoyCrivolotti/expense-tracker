@@ -32,6 +32,7 @@ describe('the schema the migrations produce', () => {
     expect(columns.has('goal_scenarios.home_carry_rate')).toBe(true)
     expect(columns.has('goal_scenarios.retirement_years')).toBe(true)
     expect(columns.has('settings.market_volatility')).toBe(true)
+    expect(columns.has('settings.tips_seen')).toBe(true)
     expect(columns.has('transactions.description')).toBe(true)
   })
 
@@ -91,6 +92,7 @@ describe('migrationAdding', () => {
     expect(migrationAdding('goal_scenarios.home_carry_rate', files())).toBe('0032_home_carry_rate.sql')
     expect(migrationAdding('goal_scenarios.retirement_years', files())).toBe('0033_retirement_years.sql')
     expect(migrationAdding('settings.market_volatility', files())).toBe('0034_market_volatility.sql')
+    expect(migrationAdding('settings.tips_seen', files())).toBe('0045_tips_seen.sql')
   })
 
   it('names the file that created an index', () => {
@@ -152,5 +154,20 @@ describe('wranglerSaid', () => {
     expect(wranglerSaid({ stdout: '', stderr: '' })).toBe('')
     expect(wranglerSaid(null)).toBe('')
     expect(wranglerSaid('a string')).toBe('')
+  })
+})
+
+describe('migration 0045, the tips an owner has put away', () => {
+  it('adds a column that is empty on an owner who already has a settings row, so nobody is backfilled', () => {
+    const db = new DatabaseSync(':memory:')
+    const all = files()
+    const before = all.filter((file) => file.name < '0045')
+    for (const { sql } of before) db.exec(sql)
+    db.exec("INSERT INTO settings (owner) VALUES ('someone@example.com')")
+
+    db.exec(all.find((file) => file.name.startsWith('0045'))!.sql)
+
+    const row = db.prepare('SELECT tips_seen FROM settings').get() as { tips_seen: string | null }
+    expect(row.tips_seen).toBeNull()
   })
 })

@@ -3,6 +3,7 @@ import type { ExpenseActions } from '../actions'
 import type { TransactionsEntry } from './transactionsEntry'
 import { EmptyState, SectionTitle } from '../components/primitives'
 import { AnalyticsShell } from '../analytics/AnalyticsShell'
+import { AnalyticsIntro } from '../analytics/AnalyticsIntro'
 import styles from './tabs.module.css'
 
 export function AnalyticsTab({
@@ -35,14 +36,17 @@ export function AnalyticsTab({
   }
 
   return (
-    <AnalyticsShell
-      model={model}
-      month={month}
-      onMonthChange={onMonthChange}
-      actions={actions}
-      onOpenTransactions={onOpenTransactions}
-      onUseBaselineInGoals={onUseBaselineInGoals}
-    />
+    <div className={styles.stack}>
+      <AnalyticsIntro />
+      <AnalyticsShell
+        model={model}
+        month={month}
+        onMonthChange={onMonthChange}
+        actions={actions}
+        onOpenTransactions={onOpenTransactions}
+        onUseBaselineInGoals={onUseBaselineInGoals}
+      />
+    </div>
   )
 }
 

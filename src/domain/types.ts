@@ -376,6 +376,12 @@ export interface ExpenseSettings {
    * deliberate choice, not a missing value.
    */
   goalLevers: LeverKey[]
+  /**
+   * The first-visit tips this person has put away (`domain/onboarding/tips.ts`). Absent when setup never wrote a list:
+   * an account with transactions then counts as established, and one without as new. An empty list is a new person.
+   * Optional so a copy saved offline by an older build still reads.
+   */
+  tipsSeen?: string[]
 }
 
 /**

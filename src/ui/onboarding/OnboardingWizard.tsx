@@ -144,6 +144,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, firstRun, onDone
         money,
         currentSettings: dataset.settings,
         existingCategories: dataset.categories,
+        firstRun,
       })
       onDone()
     } catch (err: unknown) {

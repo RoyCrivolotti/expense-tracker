@@ -1,0 +1,103 @@
+/*
+ * The card takes its own height in and out of the page, so what is under it eases up and down instead of jumping. The grid
+ * technique of a folding date group: one row going between 0fr and 1fr animates to and from the content's natural height.
+ * Only opacity and height move, never scale.
+ *
+ * The page's stack puts a gap between its children (`--tip-gap`, 1rem unless a form with a smaller one sets it). The card carries its own air as padding inside the fold and cancels
+ * the gap with a negative margin, so the space it takes is the same whether it is folding, folded or gone.
+ */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-bottom: calc(-1 * var(--tip-gap, 1rem));
+  opacity: 1;
+}
+.arriving {
+  animation: tipIn var(--motion-fold) var(--motion-ease-out);
+}
+.leaving {
+  animation: tipOut var(--exit-ms, 180ms) var(--motion-ease-in) forwards;
+}
+.foldInner {
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: var(--tip-gap, 1rem);
+}
+
+@keyframes tipIn {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+@keyframes tipOut {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arriving,
+  .leaving {
+    animation: none;
+  }
+}
+
+/* The tint every piece of advice shares: the card here, and the line in the transaction form (it composes this). */
+.tinted {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  color: var(--color-text);
+}
+.card {
+  composes: tinted;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 1rem;
+}
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.body p {
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.action {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

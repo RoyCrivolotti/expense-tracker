@@ -23,7 +23,9 @@ import { ReviewProvider } from './capture/ReviewProvider'
 import { EXIT_MS } from './hooks/motion'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
-import { SettingsTab } from './tabs/SettingsTab'
+import { SettingsTab, type SettingsView } from './tabs/SettingsTab'
+import { useTabNavigation } from './useTabNavigation'
+import { ModelTips } from './tips/ModelTips'
 import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { AccountOwnerContext, forgetUnownedSettings } from './hooks/accountOwner'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
@@ -93,6 +95,8 @@ function TabView({
   accountEmail,
   onNavigate,
   onLogCheckin,
+  onOpenImport,
+  settingsEntry,
   goalsEntry,
   txnEntry,
   onOpenTransactions,
@@ -113,6 +117,8 @@ function TabView({
   onNavigate: (tab: TabId) => void
   /** Opens Goals on Progress with the check-in form up, from the dashboard's nudge. */
   onLogCheckin: () => void
+  onOpenImport: () => void
+  settingsEntry: SettingsView | null
   goalsEntry: GoalsEntry
   txnEntry: TransactionsEntry | null
   onOpenTransactions: (preset: TransactionsEntry) => void
@@ -163,6 +169,7 @@ function TabView({
           ownerAccess={ownerAccess}
           accountEmail={accountEmail}
           onRunSetup={onRunSetup}
+          entry={settingsEntry}
         />
       )
     default:
@@ -173,6 +180,7 @@ function TabView({
           actions={actions}
           onNavigate={onNavigate}
           onLogCheckin={onLogCheckin}
+          onOpenImport={onOpenImport}
         />
       )
   }
@@ -352,26 +360,7 @@ function ExpensesAppReady({
   const { showToast } = useToast()
 
   const [theme, setTheme] = useExpenseTheme()
-  const [tab, setTab] = useState<TabId>('dashboard')
-  // Where Goals should open when the dashboard sends the user there for a check-in. Cleared
-  // by every ordinary tab change, so a later visit to Goals opens on Plan as usual.
-  const [goalsEntry, setGoalsEntry] = useState<GoalsEntry>(null)
-  // Same idea for Transactions: the filter preset an Analytics drill-down hands over.
-  const [txnEntry, setTxnEntry] = useState<TransactionsEntry | null>(null)
   const guardLeave = useGuardLeave()
-  const moveTo = (next: TabId, entry: GoalsEntry) => {
-    setGoalsEntry(entry)
-    setTxnEntry(null)
-    setTab(next)
-  }
-  // Every route out of a tab goes through the guard, which asks first if the tab holds unsaved
-  // edits. Pressing the tab already open leaves nothing, so it never asks.
-  const goTo = (next: TabId, entry: GoalsEntry) => {
-    if (next === tab) moveTo(next, entry)
-    else guardLeave(() => moveTo(next, entry))
-  }
-  const selectTab = (next: TabId) => goTo(next, null)
-  const logCheckin = () => goTo('goals', 'checkin')
   const [month, setMonth] = useState<string | null>(null)
   // The header's month picker belongs to the shell, but on Transactions it drives the
   // list, and a selection there must not have the list changed under it. This is the
@@ -387,18 +376,8 @@ function ExpensesAppReady({
     setMonth(next)
     setMonthNavigation((n) => n + 1)
   }
-  // The Analytics drill-down: land on Transactions with the row's filters applied,
-  // on the month the row described. Goes through the same leave guard as any tab change.
-  const openTransactions = (preset: TransactionsEntry) => {
-    guardLeave(() => {
-      setGoalsEntry(null)
-      setTxnEntry(preset)
-      if (preset.month) navigateMonth(preset.month)
-      setTab('transactions')
-    })
-  }
-  // The baseline handoff: open Goals with the measured spend prefilled as an unsaved draft.
-  const useBaselineInGoals = (monthlyCents: number) => goTo('goals', { kind: 'baseline', monthlyCents })
+  const nav = useTabNavigation(guardLeave, navigateMonth)
+  const { tab, goalsEntry, txnEntry, settingsEntry } = nav
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(accountEmail),
@@ -419,90 +398,94 @@ function ExpensesAppReady({
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
-    <ReviewProvider model={model} actions={actions} formOpen={modal !== null}>
-      <ExpensesOnboarding
-        open={onboardingOpen}
-        source={source}
-        dataset={model.dataset}
-        firstRun={onboardingFirstRun}
-        applyPatch={applyPatch}
-        onAdd={() => actions?.onAdd()}
-        onClose={() => setOnboardingOpen(false)}
-      />
-      <AppShell
-        activeId={tab}
-        onSelect={selectTab}
-        title="Expenses"
-        settingsBadge={settingsBadge}
-        hubGrants={hubGrants}
-        compactFooter={COMPACT_FOOTER_TABS.has(tab)}
-        wide={tab === 'goals' || tab === 'analytics'}
-        contentRef={contentRef}
-        pullIndicator={
-          <PullToRefreshIndicator
-            pullPx={pullPx}
-            isPulling={isPulling}
-            refreshing={refreshing}
-          />
-        }
-        banner={
-          <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
-        }
-        // Hidden while rows are selected: the selection bar sits in the same corner and
-        // there is nothing to add a transaction for mid-batch-action anyway.
-        {...(actions && tab !== 'goals' && selectionMonth === null ? { onAdd: actions.onAdd } : {})}
-        headerRight={
-          <AppHeaderActions
-            months={model.months}
-            activeMonth={activeMonth}
-            onMonthChange={navigateMonth}
-            showPicker={showPicker}
-            pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
-            onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
-            online={online}
-            refreshing={refreshing} onRefresh={refresh} savedMonths={model.savedMonths}
-          />
-        }
-      >
-        <TabPane key={tab} hydrating={hydrating} month={activeMonth}>
-          <TabView
-            tab={tab}
-            model={model}
-            month={activeMonth}
-            onMonthChange={navigateMonth}
-            actions={actions}
-            theme={theme}
-            onThemeChange={setTheme}
-            ownerAccess={ownerAccess}
-            accountEmail={accountEmail}
-            onNavigate={selectTab}
-            onLogCheckin={logCheckin}
-            goalsEntry={goalsEntry}
-            txnEntry={txnEntry}
-            onOpenTransactions={openTransactions}
-            onUseBaselineInGoals={useBaselineInGoals}
-            onTxnSelectModeChange={holdMonthForSelection}
-            monthNavigation={monthNavigation}
-            onRunSetup={() => {
-              clearOnboardingSkip(accountEmail)
-              setOnboardingFirstRun(false)
-              setOnboardingOpen(true)
-            }}
-          />
-        </TabPane>
-      </AppShell>
-      <PresenceValue value={actions ? modal : null} exitMs={EXIT_MS.sheet}>
-        {(shown) =>
-          actions && (
-            <ActiveTransactionModal
-              modal={shown}
-              actions={actions}
-              model={model}
-              onClose={() => setModal(null)}
+    <ModelTips key={accountEmail ?? ''} model={model} actions={actions}>
+      <ReviewProvider model={model} actions={actions} formOpen={modal !== null}>
+        <ExpensesOnboarding
+          open={onboardingOpen}
+          source={source}
+          dataset={model.dataset}
+          firstRun={onboardingFirstRun}
+          applyPatch={applyPatch}
+          onAdd={() => actions?.onAdd()}
+          onClose={() => setOnboardingOpen(false)}
+        />
+        <AppShell
+          activeId={tab}
+          onSelect={nav.selectTab}
+          title="Expenses"
+          settingsBadge={settingsBadge}
+          hubGrants={hubGrants}
+          compactFooter={COMPACT_FOOTER_TABS.has(tab)}
+          wide={tab === 'goals' || tab === 'analytics'}
+          contentRef={contentRef}
+          pullIndicator={
+            <PullToRefreshIndicator
+              pullPx={pullPx}
+              isPulling={isPulling}
+              refreshing={refreshing}
             />
-          )
-        }
-      </PresenceValue>
-    </ReviewProvider>
+          }
+          banner={
+            <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
+          }
+          // Hidden while rows are selected: the selection bar sits in the same corner and
+          // there is nothing to add a transaction for mid-batch-action anyway.
+          {...(actions && tab !== 'goals' && selectionMonth === null ? { onAdd: actions.onAdd } : {})}
+          headerRight={
+            <AppHeaderActions
+              months={model.months}
+              activeMonth={activeMonth}
+              onMonthChange={navigateMonth}
+              showPicker={showPicker}
+              pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
+              onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
+              online={online}
+              refreshing={refreshing} onRefresh={refresh} savedMonths={model.savedMonths}
+            />
+          }
+        >
+          <TabPane key={tab} hydrating={hydrating} month={activeMonth}>
+            <TabView
+              tab={tab}
+              model={model}
+              month={activeMonth}
+              onMonthChange={navigateMonth}
+              actions={actions}
+              theme={theme}
+              onThemeChange={setTheme}
+              ownerAccess={ownerAccess}
+              accountEmail={accountEmail}
+              onNavigate={nav.selectTab}
+              onLogCheckin={nav.logCheckin}
+              onOpenImport={nav.openImport}
+              settingsEntry={settingsEntry}
+              goalsEntry={goalsEntry}
+              txnEntry={txnEntry}
+              onOpenTransactions={nav.openTransactions}
+              onUseBaselineInGoals={nav.useBaselineInGoals}
+              onTxnSelectModeChange={holdMonthForSelection}
+              monthNavigation={monthNavigation}
+              onRunSetup={() => {
+                clearOnboardingSkip(accountEmail)
+                setOnboardingFirstRun(false)
+                setOnboardingOpen(true)
+              }}
+            />
+          </TabPane>
+        </AppShell>
+        <PresenceValue value={actions ? modal : null} exitMs={EXIT_MS.sheet}>
+          {(shown) =>
+            actions && (
+              <ActiveTransactionModal
+                modal={shown}
+                actions={actions}
+                model={model}
+                onClose={() => setModal(null)}
+              />
+            )
+          }
+        </PresenceValue>
+      </ReviewProvider>
+    </ModelTips>
   )
 }

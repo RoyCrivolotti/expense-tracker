@@ -4,6 +4,7 @@ For anyone looking for a doc: each is written for one audience, named in its fir
 
 | Doc | Audience | Holds |
 | --- | --- | --- |
+| [GETTING-STARTED.md](./GETTING-STARTED.md) | User | How a person starts: signing in, setup, the first month, older payments, the phone, Capture, Goals. Generated from the text the app shows |
 | [CHANGELOG.md](./CHANGELOG.md) | User | What changed in the product |
 | [SCREENSHOT-GALLERY.md](./SCREENSHOT-GALLERY.md) | User | The UI, screen by screen |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Contributor | Layers, and the rules the code must keep obeying |
