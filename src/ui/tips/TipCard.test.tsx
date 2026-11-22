@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import type { ExpenseSettings } from '../../types'
 import { TipCard } from './TipCard'
+import { TipLink } from './TipLink'
 import { TipsProvider } from './TipsProvider'
 import { useTips } from './tipsContext'
 
@@ -176,5 +177,31 @@ describe('TipCard motion', () => {
     rerender(<Page saved={[]} save={write} />)
 
     expect(foldOf('First').className).toContain('arriving')
+  })
+})
+
+describe('TipCard with a second way out', () => {
+  beforeEach(() => setMotionDisabledForTests(true))
+
+  it('puts the card away on the link without doing what the button does, and hands the focus on', () => {
+    const save = vi.fn<Save>().mockResolvedValue()
+    const action = vi.fn()
+    render(
+      <TipsProvider saved={[]} hasTransactions save={save}>
+        <TipCard id="one" title="One" actionLabel="Do it" onAction={action} secondary={<TipLink>Not now</TipLink>}>
+          Said once.
+        </TipCard>
+        <button type="button">after</button>
+      </TipsProvider>,
+    )
+    const link = screen.getByRole('button', { name: 'Not now' })
+    link.focus()
+
+    fireEvent.click(link)
+
+    expect(region('One')).toBeNull()
+    expect(action).not.toHaveBeenCalled()
+    expect(save).toHaveBeenCalledWith({ tipsSeen: ['one'] })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'after' }))
   })
 })

@@ -14,6 +14,7 @@ import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
+import { TransactionsTips } from '../tips/TransactionsTips'
 import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
@@ -29,21 +30,8 @@ import { usePastReports } from './usePastReports'
 import { useUpcoming } from './useUpcoming'
 import { dayHeaderSeed } from './dayHeaderSeed'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
+import { itemCountLabel, livePaidOn } from './transactionsTabHelpers'
 import styles from './tabs.module.css'
-
-/** "1 item", "0 items", "2 items", for the cards that count what they hold. */
-function itemCountLabel(count: number): string {
-  return `${count} item${count === 1 ? '' : 's'}`
-}
-
-/** The tapped row is a snapshot, so a date edit made in the sheet would never reach it.
- * The statement itself is current, and a filter cannot hide it while the sheet is open. */
-function livePaidOn(model: ExpenseModel, row: StatementPaymentRow): string {
-  const statement = model.dataset.accountStatements.find(
-    (s) => s.accountId === row.cardAccountId && s.yearMonth === row.budgetMonth,
-  )
-  return statement?.paidOn ?? row.date
-}
 
 interface TransactionsTabProps {
   model: ExpenseModel
@@ -87,6 +75,7 @@ export function TransactionsTab({
     <div className={`${styles.stack} ${styles.txnStack}`}>
       {actions && (
         <>
+          <TransactionsTips model={model} phone={state.isMobile} />
           <FlaggedCard
             model={model}
             onFilterByFlag={(flagId) => {

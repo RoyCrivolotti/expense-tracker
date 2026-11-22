@@ -67,7 +67,8 @@ describe('SettingsTab sections', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Capture' }))
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Capture')
     for (const title of ['Set up capture', 'Capture key', 'Notifications', 'Linked cards', 'Muted pushes', 'Capture diagnostics']) {
-      expect(await screen.findByText(title)).toBeInTheDocument()
+      // The setup steps name the key as well, once they are drawn, so a title may be on the page more than once.
+      expect((await screen.findAllByText(title)).length).toBeGreaterThan(0)
     }
     expect(screen.queryByText('About this app')).not.toBeInTheDocument()
   })

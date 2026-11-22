@@ -51,8 +51,8 @@ export const storeWith = (settings: Partial<ExpenseSettings> = {}, failWrites = 
 export const written = new WeakMap<ExpenseDataSource, ReturnType<typeof vi.fn<(patch: Partial<ExpenseSettings>) => Promise<ExpenseSettings>>>>()
 export const writesOf = (source: ExpenseDataSource) => written.get(source)!
 
-export function sourceFor(store: Store, transactions = [makeTransaction()], canWrite = true): ExpenseDataSource {
-  const dataset = (): ExpenseDataset => makeDataset({ ...SET_UP, transactions, settings: store.settings })
+export function sourceFor(store: Store, transactions = [makeTransaction()], canWrite = true, flags: ExpenseDataset['flags'] = []): ExpenseDataSource {
+  const dataset = (): ExpenseDataset => makeDataset({ ...SET_UP, transactions, flags, settings: store.settings })
   const update = vi.fn((patch: Partial<ExpenseSettings>) => {
     if (store.failWrites) return Promise.reject(new Error('offline'))
     store.settings = { ...store.settings, ...patch }

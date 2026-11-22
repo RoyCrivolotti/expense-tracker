@@ -30,6 +30,7 @@ import {
   type ScenarioLegendItem,
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
+import { ChartHint, type HintText } from './ChartHint'
 import { computeChartDisplayData } from './nominalTransform'
 import { inkOn, scenarioInk } from '../scenarioInk'
 import { chartMoneyLabel } from '../planMoneyLabel'
@@ -434,8 +435,9 @@ function ChartFooter({ footer, bare }: { footer: ReactNode; bare: boolean }) {
  * legend instead (HeroNote), so the chart starts two lines higher and the page does not move
  * when a year is hovered.
  */
-function chartHint(isHero: boolean, narrow: boolean, money: string, expectedRealReturn: number): string | null {
-  const said = (hint: string) => `${money.charAt(0).toUpperCase()}${money.slice(1)}. ${hint}`
+function chartHint(isHero: boolean, narrow: boolean, money: string, expectedRealReturn: number): HintText | null {
+  // What the chart's euros are leads, apart from the rest, so it can stay in view when the rest is folded.
+  const said = (rest: string) => ({ lead: `${money.charAt(0).toUpperCase()}${money.slice(1)}.`, rest })
   if (!isHero) return said(DEFAULT_HINT)
   return narrow ? said(heroHint(expectedRealReturn)) : null
 }
@@ -770,7 +772,7 @@ function NetWorthChartImpl({
         onChange={setHeroWindow}
         onOpenSheet={onOpenSheet}
       />
-      {hint ? <p className={styles.chartHint}>{hint}</p> : null}
+      <ChartHint hint={hint} isHero={isHero} savedScenarios={scenarios.length} />
       <LinearChart
         {...heroVariantProps}
         aboveTop={fiChartMarker}
