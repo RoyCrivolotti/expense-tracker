@@ -4,6 +4,7 @@ import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
 import { PACE_NOTES } from '../analyticsCopy'
 import { HowCalculated } from '../shared/HowCalculated'
+import { NeedsCard } from '../shared/NeedsLine'
 import styles from './overview.module.css'
 
 function fillClass(pace: SpendingPace): string {
@@ -30,9 +31,8 @@ function clamp01(v: number): number {
  * Flexible spending against the pace the budget implies. Fixed costs are counted
  * but stay out of the clock: rent on the 1st is not "ahead of pace".
  */
-export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }) {
+function PaceMeter({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }) {
   const format = useMoneyFormat()
-  if (pace.flexibleBudgetCents <= 0) return null
   const pct = clamp01(pace.flexibleSpentCents / pace.flexibleBudgetCents)
   const tickPct = clamp01(pace.shouldBeTodayCents / pace.flexibleBudgetCents)
   const ghostPct =
@@ -90,4 +90,17 @@ export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boo
       <HowCalculated notes={PACE_NOTES} />
     </Card>
   )
+}
+
+export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }) {
+  if (pace.flexibleBudgetCents <= 0) {
+    return (
+      <NeedsCard title="Flexible spending pace">
+        {pace.totalBudgetCents <= 0
+          ? 'Shows once your categories have monthly budgets.'
+          : 'Your fixed costs already use up your monthly budget.'}
+      </NeedsCard>
+    )
+  }
+  return <PaceMeter pace={pace} isFuture={isFuture} />
 }

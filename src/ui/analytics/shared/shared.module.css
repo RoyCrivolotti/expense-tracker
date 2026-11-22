@@ -62,3 +62,15 @@
 .howBody p {
   margin: 0;
 }
+
+.needs {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.needsTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
