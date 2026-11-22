@@ -1,5 +1,5 @@
 import { createAccessDeps } from '../../_shared/access/createAccessDeps'
-import { getGroupGrantsForUser } from '../../_shared/access/accessService'
+import { getGroupGrantsForUser } from '../../_shared/access/accessGroupService'
 import type { Env, ExpensesData } from '../../_shared/env'
 import { json } from '../../_shared/http'
 

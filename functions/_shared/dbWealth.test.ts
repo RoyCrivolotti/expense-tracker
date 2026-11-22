@@ -1,12 +1,6 @@
 import { describe, expect, it, vi, type Mock } from 'vitest'
-import {
-  createWealthAccount,
-  createWealthCheckin,
-  deleteWealthAccount,
-  deleteWealthCheckin,
-  updateWealthAccount,
-  updateWealthCheckin,
-} from './dbWealth'
+import { createWealthAccount, deleteWealthAccount, updateWealthAccount } from './dbWealth'
+import { createWealthCheckin, deleteWealthCheckin, updateWealthCheckin } from './dbWealthCheckins'
 import type { Env } from './env'
 
 const OWNER = 'owner@example.com'

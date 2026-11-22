@@ -101,6 +101,29 @@ async function readForStore(
   }
 }
 
+/** The recommendation a stored push becomes: an expense of its amount, on the card's account when the card is linked. */
+function newRecommendation(
+  amount: { cents: number; currency: string },
+  date: PushInstant,
+  read: Reading,
+  accountId: number | null,
+  receivedAt: string,
+): Omit<NewRecommendation, 'owner'> {
+  return {
+    id: crypto.randomUUID(),
+    accountId,
+    amountCents: amount.cents,
+    currency: amount.currency,
+    // The recommendation keeps the phone's own clock, so the app can tell the time of day the payment was made.
+    occurredAt: isoWithOffset(date.instantMs, date.offsetMinutes),
+    localDate: date.localDate,
+    merchantRaw: read.merchantRaw,
+    descriptionSuggested: null,
+    suggestedType: 'expense',
+    createdAt: receivedAt,
+  }
+}
+
 /** The merchant goes in the notification only when the template knows where it sits: the whole bank text is not shown. */
 function createdPayment(
   owner: string,
@@ -185,19 +208,7 @@ export async function storePush(
     slots: read.slots,
     body: read.body,
   }
-  const recommendation: Omit<NewRecommendation, 'owner'> = {
-    id: crypto.randomUUID(),
-    accountId: card?.accountId ?? null,
-    amountCents: amount.cents,
-    currency: amount.currency,
-    // The recommendation keeps the phone's own clock, so the app can tell the time of day the payment was made.
-    occurredAt: isoWithOffset(date.instantMs, date.offsetMinutes),
-    localDate: date.localDate,
-    merchantRaw: read.merchantRaw,
-    descriptionSuggested: null,
-    suggestedType: 'expense',
-    createdAt: receivedAt,
-  }
+  const recommendation = newRecommendation(amount, date, read, card?.accountId ?? null, receivedAt)
   const recorded = await captures.recordCapture(event, recommendation, caps, read.decision)
   const payment = createdPayment(key.owner, recommendation.id, amount, read)
   return (

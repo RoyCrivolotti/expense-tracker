@@ -16,13 +16,9 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 // file may not grow past its entry and keeps the other limit. Do not add a file: split it. Lower an entry when its file
 // shrinks, and take the file off the list when it fits.
 const FILE_LINE_CAPS = {
-  'functions/_shared/access/accessDb.ts': 203,
-  'functions/_shared/access/accessService.ts': 245,
-  'functions/_shared/adapters/d1CaptureRepository.ts': 283,
-  'functions/_shared/adapters/d1ExpenseRepository.ts': 294,
+  'functions/_shared/adapters/d1ExpenseRepository.ts': 288,
   'functions/_shared/chunkedBackup.ts': 286,
   'functions/_shared/dbConfig.ts': 572,
-  'functions/_shared/dbWealth.ts': 219,
   'functions/_shared/dbWrite.ts': 521,
   'functions/_shared/measure/routeMatrix.ts': 313,
   'functions/_shared/restoreSql.ts': 299,
@@ -100,7 +96,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'functions/_shared/adapters/d1CaptureRepository.ts': 82,
   'functions/_shared/adapters/d1ExpenseRepository.ts': 240,
   'scripts/scaling/seedSql.ts': 108,
   'src/data/inMemoryLedgerParts.ts': 68,
@@ -217,7 +212,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/useExpenseActions.ts': 248,
   'src/ui/useExpenseData.ts': 97,
   'src/ui/useLedgerData.ts': 119,
-  'workers/capture/src/store.ts': 63,
 }
 
 export default defineConfig([

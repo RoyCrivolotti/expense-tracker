@@ -24,7 +24,8 @@ const sources = import.meta.glob<string>(
 
 /** The uses of `meta.changes` per file, and why each is safe. */
 const LISTED: Record<string, { uses: number; why: string }> = {
-  '/functions/_shared/access/accessDb.ts': { uses: 2, why: 'access tables, tested for > 0' },
+  '/functions/_shared/access/accessDb.ts': { uses: 1, why: 'access tables, tested for > 0' },
+  '/functions/_shared/access/accessGroupsDb.ts': { uses: 1, why: 'access tables, tested for > 0' },
   '/functions/_shared/adapters/d1CaptureCards.ts': {
     uses: 2,
     why: 'capture_cards carries no trigger; tested for > 0 to say a link was saved or removed',
@@ -44,7 +45,8 @@ const LISTED: Record<string, { uses: number; why: string }> = {
   },
   '/functions/_shared/dbInstallments.ts': { uses: 1, why: 'the plan delete, tested for 0 to answer 404' },
   '/functions/_shared/dbLabels.ts': { uses: 1, why: 'label links deleted: transaction_labels has no trigger' },
-  '/functions/_shared/dbWealth.ts': { uses: 2, why: 'wealth rows, tested for 0 to answer 404' },
+  '/functions/_shared/dbWealth.ts': { uses: 1, why: 'wealth rows, tested for 0 to answer 404' },
+  '/functions/_shared/dbWealthCheckins.ts': { uses: 1, why: 'wealth rows, tested for 0 to answer 404' },
   '/functions/_shared/descriptionNormBackfill.ts': {
     uses: 1,
     why: 'sets description_norm only, which no trigger watches',

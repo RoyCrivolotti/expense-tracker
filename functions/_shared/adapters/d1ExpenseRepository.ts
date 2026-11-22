@@ -44,14 +44,8 @@ import {
   listAttachments,
   transactionExists,
 } from '../dbAttachments'
-import {
-  createWealthAccount,
-  createWealthCheckin,
-  deleteWealthAccount,
-  deleteWealthCheckin,
-  updateWealthAccount,
-  updateWealthCheckin,
-} from '../dbWealth'
+import { createWealthAccount, deleteWealthAccount, updateWealthAccount } from '../dbWealth'
+import { createWealthCheckin, deleteWealthCheckin, updateWealthCheckin } from '../dbWealthCheckins'
 
 /** Cloudflare D1 adapter for {@link ExpenseRepository}. */
 export function createD1ExpenseRepository(env: Env): ExpenseRepository {

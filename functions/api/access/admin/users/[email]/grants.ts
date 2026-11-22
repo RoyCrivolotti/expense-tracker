@@ -1,5 +1,5 @@
 import { createAccessDeps } from '../../../../../_shared/access/createAccessDeps'
-import { updateUserGroupGrants } from '../../../../../_shared/access/accessService'
+import { updateUserGroupGrants } from '../../../../../_shared/access/accessGroupService'
 import type { Env, ExpensesData } from '../../../../../_shared/env'
 import { HttpError, json, readJson } from '../../../../../_shared/http'
 import type { AccessGroupId } from '../../../../../domain/accessGroups'

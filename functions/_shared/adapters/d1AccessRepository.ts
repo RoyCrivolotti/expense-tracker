@@ -17,11 +17,8 @@ import {
   revokeAllowedUserRow,
   touchLastSeenRow,
   upsertAllowedUser,
-  listGroupGrantIds,
-  grantGroupRow,
-  revokeGroupRow,
-  revokeAllGroupRows,
 } from '../access/accessDb'
+import { grantGroupRow, listGroupGrantIds, revokeAllGroupRows, revokeGroupRow } from '../access/accessGroupsDb'
 
 export function createD1AccessRepository(env: Env): AccessRepository {
   const db = env.DB
