@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { Presence } from '../components/Presence'
 import { EXIT_MS, exitVars } from '../hooks/motion'
 import { useExit } from '../hooks/usePresence'
+import { moveFocusPast } from './moveFocusPast'
 import { useTips } from './tipsContext'
 import styles from './TipCard.module.css'
 
@@ -38,17 +39,19 @@ export function TipCard(props: Props) {
 function TipCardBody({ id, title, actionLabel = 'Got it', onAction, children, arriving }: Props & { arriving: boolean }) {
   const { dismiss } = useTips()
   const { leaving, exitMs } = useExit()
+  const card = useRef<HTMLElement>(null)
   const classes = [styles.fold, arriving ? styles.arriving : '', leaving ? styles.leaving : ''].filter(Boolean).join(' ')
   return (
     <div className={classes} style={exitVars(leaving, exitMs)} inert={leaving}>
       <div className={styles.foldInner}>
-        <section className={styles.card} aria-label={title}>
+        <section ref={card} className={styles.card} aria-label={title}>
           <h2 className={styles.title}>{title}</h2>
           <div className={styles.body}>{children}</div>
           <button
             type="button"
             className={styles.action}
             onClick={() => {
+              moveFocusPast(card.current)
               onAction?.()
               dismiss(id)
             }}

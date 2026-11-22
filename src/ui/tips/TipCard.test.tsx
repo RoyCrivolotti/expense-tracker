@@ -47,6 +47,49 @@ describe('TipCard', () => {
     expect(save.mock.calls.map(([patch]) => patch.tipsSeen)).toEqual([['first-tip'], ['first-tip', 'second-tip']])
   })
 
+  it('hands the keyboard focus to the next control when the card that has it goes, so the person is not sent to the top of the page', () => {
+    const save = vi.fn<Save>().mockResolvedValue()
+    render(<Page saved={[]} save={save} />)
+    const first = screen.getByRole('button', { name: 'Got it' })
+    first.focus()
+    expect(document.activeElement).toBe(first)
+
+    fireEvent.click(first)
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Understood' }))
+  })
+
+  it('skips a next control that cannot be reached (hidden or inert) and lands on one that can', () => {
+    const save = vi.fn<Save>().mockResolvedValue()
+    render(
+      <div>
+        <Page saved={[]} save={save} />
+        <button type="button" hidden>
+          hidden
+        </button>
+      </div>,
+    )
+    // The second card's own button comes first in the page; take it away so the hidden one would be next.
+    fireEvent.click(screen.getByRole('button', { name: 'Understood' }))
+    const first = screen.getByRole('button', { name: 'Got it' })
+    first.focus()
+
+    fireEvent.click(first)
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'again' }))
+  })
+
+  it('leaves the focus alone when it was not in the card', () => {
+    const save = vi.fn<Save>().mockResolvedValue()
+    render(<Page saved={[]} save={save} />)
+    const again = screen.getByRole('button', { name: 'again' })
+    again.focus()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(document.activeElement).toBe(again)
+  })
+
   it('runs the button\'s own action as well as putting the card away', () => {
     const onAction = vi.fn()
     render(
