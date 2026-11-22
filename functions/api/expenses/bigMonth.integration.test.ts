@@ -14,7 +14,7 @@ import { OWNER, createExpenseWorld } from '../../_shared/testing/expenseWorld'
 import { onRequestGet as getDataset } from './index'
 import { onRequestGet as getMonths } from './transactions/months'
 
-async function serve() {
+function serve() {
   const source = syntheticLedger({ months: 1, perMonth: MAX_ROWS_PER_REQUEST + 100 })
   const sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
@@ -27,14 +27,14 @@ async function serve() {
 
 describe('a month of more rows than one request carries', () => {
   it('is served whole by the dataset route, which has no row bound', async () => {
-    const { world, inMonth } = await serve()
+    const { world, inMonth } = serve()
     expect(inMonth).toBeGreaterThan(MAX_ROWS_PER_REQUEST)
-    const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
+    const dataset = await (await world.call(getDataset)).json<ExpenseDataset>()
     expect(dataset.transactions.length).toBeGreaterThanOrEqual(inMonth)
   })
 
   it('is refused by the route that reads a month as rows', async () => {
-    const { world, month } = await serve()
+    const { world, month } = serve()
     const response = await world.call(getMonths, { path: `/transactions/months?from=${month}&to=${month}` })
     expect(response.status).toBe(400)
   })

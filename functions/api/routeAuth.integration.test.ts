@@ -68,7 +68,10 @@ const paramsByUrl = new Map<string, Record<string, string>>()
 for (const [file, exports] of Object.entries(modules)) {
   const url = `https://expenses.test${routePath(file)}`
   paramsByUrl.set(url, paramsOf(file))
-  const handlers = [['', exports.onRequest], ...METHODS.map((m) => [m, exports[`onRequest${m}`]] as const)]
+  const handlers: (readonly [string, unknown])[] = [
+    ['', exports.onRequest],
+    ...METHODS.map((m) => [m, exports[`onRequest${m}`]] as const),
+  ]
   for (const [method, handler] of handlers) {
     if (typeof handler !== 'function') continue
     routes.push({

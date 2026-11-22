@@ -22,10 +22,7 @@ function envRejectingForeignCategory(): Env {
     DB: {
       prepare: (sql: string) => ({
         bind: () => ({
-          first: vi.fn().mockImplementation(async () => {
-            if (sql.includes('categories')) return null
-            return { ok: 1 }
-          }),
+          first: vi.fn().mockImplementation(() => Promise.resolve(sql.includes('categories') ? null : { ok: 1 })),
           run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
         }),
       }),

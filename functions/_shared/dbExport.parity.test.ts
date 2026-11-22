@@ -60,10 +60,9 @@ function expectedRows(
 ): unknown[] {
   if (table === 'settings') return [dataset.settings]
   const rows = dataset[table] as unknown as Array<Record<string, unknown>>
+  const yearMonthOf = (row: Record<string, unknown>): string => (typeof row.yearMonth === 'string' ? row.yearMonth : '')
   const byKey = [...rows].sort(
-    (a, b) =>
-      Number(a.id ?? a.accountId) - Number(b.id ?? b.accountId) ||
-      String(a.yearMonth ?? '').localeCompare(String(b.yearMonth ?? '')),
+    (a, b) => Number(a.id ?? a.accountId) - Number(b.id ?? b.accountId) || yearMonthOf(a).localeCompare(yearMonthOf(b)),
   )
   return json(settled(table, byKey))
 }

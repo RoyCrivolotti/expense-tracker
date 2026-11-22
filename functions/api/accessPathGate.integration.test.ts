@@ -75,7 +75,7 @@ describe('the admin routes', () => {
     try {
       expect((await as(OWNER, '/admin/pending')).status).toBe(503)
     } finally {
-      world.env.OWNER_EMAIL = owner
+      if (owner !== undefined) world.env.OWNER_EMAIL = owner
     }
   })
 })

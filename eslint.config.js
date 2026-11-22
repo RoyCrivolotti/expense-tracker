@@ -1,9 +1,16 @@
+import { readFileSync } from 'node:fs'
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+
+// The test files the backend tests project leaves out; the lint block for them skips the same ones, so the list is read
+// from the project and kept in one place. A bare directory means everything under it.
+const NOT_IN_TESTS_PROJECT = JSON.parse(
+  readFileSync(new URL('./tsconfig.functions-tests.json', import.meta.url), 'utf8'),
+).exclude.map((entry) => (entry.endsWith('.ts') ? entry : `${entry}/**`))
 
 // Files that were over a size limit before the limits were switched back on, each with the size it had then. A listed
 // file may not grow past its entry and keeps the other limit. Do not add a file: split it. Lower an entry when its file
@@ -260,6 +267,27 @@ export default defineConfig([
       'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
       complexity: ['error', 12],
       'max-depth': ['error', 3],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
+    // Backend and Worker tests are type-checked by tsconfig.functions-tests.json, and the ones it excludes are skipped
+    // here too. The `*.client.*` tests drive the browser's data layer against the real routes, and two more import UI
+    // code; they need both the DOM and the Worker globals, which one project cannot hold (the two define Response
+    // differently), so they stay with the basic block below.
+    files: ['functions/**/*.test.ts', 'workers/**/*.test.ts'],
+    ignores: NOT_IN_TESTS_PROJECT,
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',

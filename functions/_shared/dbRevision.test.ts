@@ -9,7 +9,7 @@ function batching(
   const statement = { bind: () => statement }
   return {
     prepare: () => statement,
-    batch: async () => [{ results: read }, { results: replaced }],
+    batch: () => Promise.resolve([{ results: read }, { results: replaced }]),
   } as unknown as D1Database
 }
 

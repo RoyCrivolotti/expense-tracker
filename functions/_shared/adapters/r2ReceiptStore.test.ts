@@ -4,8 +4,9 @@ import { createR2ReceiptStore } from './r2ReceiptStore'
 function bucketSpy() {
   const calls: string[][] = []
   const bucket = {
-    delete: vi.fn(async (keys: string[]) => {
+    delete: vi.fn((keys: string[]) => {
       calls.push(keys)
+      return Promise.resolve()
     }),
   } as unknown as R2Bucket
   return { bucket, calls }

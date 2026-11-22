@@ -54,7 +54,7 @@ async function look(
 ): Promise<Looked> {
   const response = await world.call(getSummary, { path: `/transactions/summary?${query}`, email })
   expect(response.status).toBe(200)
-  return (await response.json()) as Looked
+  return await response.json<Looked>()
 }
 
 const patch = (
@@ -67,7 +67,7 @@ const label = (
   email = OWNER,
 ) => world.call(postLabels, { method: 'POST', path: '/transactions/bulk/labels', body, email })
 
-const message = async (response: Response): Promise<string> => ((await response.json()) as { error: string }).error
+const message = async (response: Response): Promise<string> => (await response.json<{ error: string }>()).error
 
 const rows = (
   owner: string,
@@ -284,7 +284,7 @@ describe('PATCH /transactions/bulk with a filter', () => {
     const response = await patch({ ids, patch: { description: 'By ids' } })
 
     expect(response.status).toBe(200)
-    expect(((await response.json()) as { updated: number }).updated).toBe(3)
+    expect((await response.json<{ updated: number }>()).updated).toBe(3)
   })
 })
 
@@ -400,9 +400,9 @@ describe('the cap and the count the summary shows', () => {
 
   it('lets a filter be edited exactly when the summary can count it, and refuses one it can only say is over', async () => {
     fill(MAX_FILTER_EDIT_ROWS)
-    const exact = (await (
+    const exact = await (
       await world.call(getSummary, { path: '/transactions/summary?month=2030-01' })
-    ).json()) as Looked & { capped: boolean }
+    ).json<Looked & { capped: boolean }>()
     expect(exact).toMatchObject({ count: MAX_FILTER_EDIT_ROWS, capped: false })
 
     const edited = await patch({
@@ -415,9 +415,9 @@ describe('the cap and the count the summary shows', () => {
     expect(await edited.json()).toEqual({ updated: MAX_FILTER_EDIT_ROWS })
 
     fill(1)
-    const over = (await (
+    const over = await (
       await world.call(getSummary, { path: '/transactions/summary?month=2030-01' })
-    ).json()) as Looked & { capped: boolean }
+    ).json<Looked & { capped: boolean }>()
     expect(over).toMatchObject({ count: MAX_FILTER_EDIT_ROWS, capped: true })
     const refused = await patch({
       filter: { month: '2030-01' },
@@ -471,7 +471,7 @@ describe('POST /transactions/bulk/labels', () => {
     expect(response.status).toBe(200)
     expect(labelsOf(first)).toEqual([...new Set([...had, a])].sort((x, y) => x - y))
     expect(labelsOf(second)).toContain(a)
-    const body = (await response.json()) as { matched: number; added: number }
+    const body = await response.json<{ matched: number; added: number }>()
     expect(body.matched).toBe(2)
   })
 
@@ -488,7 +488,7 @@ describe('POST /transactions/bulk/labels', () => {
     })
 
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { matched: number; added: number }
+    const body = await response.json<{ matched: number; added: number }>()
     expect(body.matched).toBe(looked.count)
     for (const id of idsIn(month)) expect(labelsOf(id)).toContain(a)
 

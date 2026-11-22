@@ -27,7 +27,7 @@ function envWithRaceBeforeBatch(): Env {
       return inner.batch(statements)
     },
   }
-  return { DB: wrapped as unknown as D1Database } as Env
+  return { DB: wrapped as unknown as D1Database }
 }
 
 const settledBy = (id: number): number | null =>

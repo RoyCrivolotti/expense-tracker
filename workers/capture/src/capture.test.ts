@@ -81,6 +81,16 @@ const pushAt = (minute: number) => ({
   date: `2026-11-03T09:${String(minute % 60).padStart(2, '0')}:${String(Math.floor(minute / 60)).padStart(2, '0')}+01:00`,
 })
 
+/** The env with one optional binding absent, as a Worker that was never given it sees it. */
+function without(
+  base: CaptureEnv,
+  key: Exclude<keyof CaptureEnv, 'DB'>,
+): CaptureEnv {
+  const copy = { ...base }
+  delete copy[key]
+  return copy
+}
+
 describe('a valid push', () => {
   it('stores the event and an open recommendation under the key owner', async () => {
     const res = await send(request())
@@ -260,7 +270,7 @@ describe('the key', () => {
   it('gets one generic 401, byte for byte, whatever is wrong with it', async () => {
     const answers = await Promise.all((await causes()).map(async ([, req]) => shape(await send(req))))
     expect(new Set(answers).size).toBe(1)
-    expect(JSON.parse(answers[0] as string)[0]).toBe(401)
+    expect((JSON.parse(answers[0] as string) as unknown[])[0]).toBe(401)
     expect(count('capture_events')).toBe(0)
   })
 
@@ -291,7 +301,7 @@ describe('the key', () => {
 
   it('does not come back for an owner who is purged and approved again', async () => {
     const { purgeOwnerData } = await import('../../../functions/_shared/ownerDataPurge')
-    await purgeOwnerData(env as never, BOB)
+    await purgeOwnerData(env, BOB)
     await repos().access.grantAccess(BOB, ALICE)
     await repos().access.grantGroup(BOB, 'expenses', ALICE)
     expect((await send(request({ key: bobKey.key }))).status).toBe(401)
@@ -781,7 +791,7 @@ describe('the log line', () => {
     ['a wrong content type', { headers: { 'content-type': 'text/plain' } }, 415, 'not-json'],
     ['a body that is not JSON', { body: 'not json' }, 400, 'bad-body'],
   ])('says %s was refused as %s', async (_name, over, status, reason) => {
-    await sendLogged(request(over as Parameters<typeof request>[0]))
+    await sendLogged(request(over))
     expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason, status }))
   })
 
@@ -795,7 +805,7 @@ describe('the log line', () => {
   })
 
   it('says a refusal because the Worker has no replay secret', async () => {
-    env = { ...env, CAPTURE_REPLAY_SECRET: undefined }
+    env = without(env, 'CAPTURE_REPLAY_SECRET')
     await sendLogged(request())
     expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason: 'not-configured', status: 503 }))
   })

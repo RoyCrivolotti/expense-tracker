@@ -26,7 +26,7 @@ beforeEach(() => {
     `INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
      VALUES (?,7,'2026-09-10','2026-09','Lunch',1,1,'expense',1000,0)`,
   ).run(OWNER)
-  env = { DB: sqliteD1(db) as unknown as D1Database } as Env
+  env = { DB: sqliteD1(db) }
 })
 
 const photo = (objectKey: string) => ({

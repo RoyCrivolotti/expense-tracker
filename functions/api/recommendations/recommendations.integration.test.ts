@@ -34,7 +34,7 @@ beforeEach(async () => {
     handler: Handler,
     path: string,
     body: unknown,
-  ) => ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
+  ) => (await (await world.call(handler, { method: 'POST', path, body })).json<{ id: number }>()).id
   accountId = await seeded(postAccount, '/accounts', {
     name: 'Debit',
     kind: 'debit',
@@ -111,13 +111,13 @@ const state = (n: number) =>
   }
 const typedRow = async (over: Record<string, unknown> = {}) =>
   (
-    (await (
+    await (
       await world.call(postTransaction, {
         method: 'POST',
         path: '/transactions',
         body: { ...expense(), amountCents: 1250, ...over },
       })
-    ).json()) as { id: number }
+    ).json<{ id: number }>()
   ).id
 const transactions = () => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 
@@ -125,27 +125,33 @@ describe('GET /api/recommendations', () => {
   it('lists the signed-in person open ones with the open count, and no one else', async () => {
     await seed(1)
     await seed(2, {}, OTHER)
-    const body = (await (await call(list)).json()) as {
+    const body = await (
+      await call(list)
+    ).json<{
       recommendations: Array<{ id: string }>
       next: null
       openCount: number
-    }
+    }>()
     expect(body.recommendations.map((r) => r.id)).toEqual([idOf(1)])
     expect(body).toMatchObject({ next: null, openCount: 1 })
   })
 
   it('pages with a cursor and has no next after the last page', async () => {
     for (const n of [1, 2, 3]) await seed(n, { localDate: `2026-03-0${n}` })
-    const first = (await (await call(list, { query: '?limit=2' })).json()) as {
+    const first = await (
+      await call(list, { query: '?limit=2' })
+    ).json<{
       recommendations: Array<{ id: string }>
       next: string
-    }
+    }>()
     expect(first.recommendations.map((r) => r.id)).toEqual([idOf(3), idOf(2)])
-    const second = (await (await call(list, { query: `?limit=2&after=${first.next}` })).json()) as {
+    const second = await (
+      await call(list, { query: `?limit=2&after=${first.next}` })
+    ).json<{
       recommendations: Array<{ id: string }>
       next: null
       openCount: number
-    }
+    }>()
     expect(second.recommendations.map((r) => r.id)).toEqual([idOf(1)])
     expect(second).toMatchObject({ next: null, openCount: 3 })
   })
@@ -171,7 +177,7 @@ describe('GET /api/recommendations, the typed row a payment may duplicate', () =
       possibleMatch: { transactionId: number; description: string; date: string } | null
     }>
   }
-  const listed = async (email = OWNER) => ((await (await call(list, { email })).json()) as Listed).recommendations
+  const listed = async (email = OWNER) => (await (await call(list, { email })).json<Listed>()).recommendations
 
   it('names the row the person typed for the same price on the same day, as transactionId, description and date', async () => {
     await seed(1)
@@ -229,7 +235,7 @@ describe('POST /api/recommendations/:id/submit', () => {
   it('creates the expense from what the person sent and marks the recommendation submitted', async () => {
     await seed(1)
     const response = await call(submit, { n: 1, body: expense() })
-    const created = (await response.json()) as { id: number; amountCents: number }
+    const created = await response.json<{ id: number; amountCents: number }>()
     expect(response.status).toBe(201)
     expect(created.amountCents).toBe(1300)
     expect(state(1)).toEqual({ state: 'submitted', txn_id: created.id })
@@ -246,7 +252,7 @@ describe('POST /api/recommendations/:id/submit', () => {
 
       expect(response.status).toBe(409)
       expect(await response.json()).toEqual({
-        error: expect.any(String),
+        error: expect.any(String) as unknown,
         code: 'possible-duplicate',
         possibleMatch: { transactionId: row, description: 'Cafe at the till', date: '2026-03-02' },
       })
@@ -395,9 +401,9 @@ describe('the dataset revision', () => {
     await seed(2)
     await seed(3)
     const typedId = (
-      (await (
+      await (
         await world.call(postTransaction, { method: 'POST', path: '/transactions', body: expense() })
-      ).json()) as { id: number }
+      ).json<{ id: number }>()
     ).id
     const before = world.token()
     await call(list)
@@ -428,7 +434,7 @@ describe('POST /api/recommendations/:id/dismiss', () => {
 describe('POST /api/recommendations/:id/link', () => {
   async function typed(): Promise<number> {
     const response = await world.call(postTransaction, { method: 'POST', path: '/transactions', body: expense() })
-    return ((await response.json()) as { id: number }).id
+    return (await response.json<{ id: number }>()).id
   }
 
   it('marks it as answered by a row the person typed', async () => {
@@ -445,7 +451,7 @@ describe('POST /api/recommendations/:id/link', () => {
       handler: Handler,
       path: string,
       body: unknown,
-    ) => ((await (await world.call(handler, { method: 'POST', path, body, email: OTHER })).json()) as { id: number }).id
+    ) => (await (await world.call(handler, { method: 'POST', path, body, email: OTHER })).json<{ id: number }>()).id
     const account = await theirs(postAccount, '/accounts', {
       name: 'Debit',
       kind: 'debit',
@@ -464,7 +470,7 @@ describe('POST /api/recommendations/:id/link', () => {
       body: { ...expense(), accountId: account, categoryId: category },
       email: OTHER,
     })
-    const id = ((await foreign.json()) as { id: number }).id
+    const id = (await foreign.json<{ id: number }>()).id
     expect((await call(link, { n: 1, body: { transactionId: id } })).status).toBe(404)
     expect(state(1)).toEqual({ state: 'open', txn_id: null })
   })

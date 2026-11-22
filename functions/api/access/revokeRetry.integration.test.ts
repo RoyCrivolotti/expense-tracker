@@ -20,13 +20,13 @@ beforeEach(async () => {
   sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   await seedLedger(world)
-  const asOther = {
+  const asOther: World = {
     ...world,
     call: (
       h,
       o = {},
     ) => world.call(h, { ...o, email: OTHER }),
-  } as World
+  }
   await seedLedger(asOther)
 })
 

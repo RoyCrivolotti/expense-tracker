@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 import type { AccessRepository } from '../../domain/ports/accessRepository'
 import {
   approveAccessRequestById,
@@ -12,8 +12,12 @@ import {
 } from './accessService'
 import type { AccessServiceDeps } from './accessService'
 import { HttpError } from '../http'
+import type { AccessGroupId } from '../../../src/domain/accessGroups'
 
-function deps(overrides: Partial<AccessRepository> = {}): AccessServiceDeps {
+/** The same repository seen as its mocks, so an assertion reads the mock and not an unbound method. */
+type RepoMocks = Record<keyof AccessRepository, Mock>
+
+function deps(overrides: Partial<AccessRepository> = {}): AccessServiceDeps & { mocks: RepoMocks } {
   const repo: AccessRepository = {
     countActiveUsers: vi.fn().mockResolvedValue(1),
     isAllowed: vi.fn().mockResolvedValue(false),
@@ -45,6 +49,7 @@ function deps(overrides: Partial<AccessRepository> = {}): AccessServiceDeps {
   }
   return {
     repo,
+    mocks: repo as unknown as RepoMocks,
     env: { DB: {} as D1Database, OWNER_EMAIL: 'owner@example.com' },
   }
 }
@@ -102,8 +107,8 @@ describe('accessService', () => {
     const serviceDeps = deps()
     const result = await submitAccessRequest(serviceDeps, 'new@example.com')
     expect(result).toEqual({ status: 'pending' })
-    expect(serviceDeps.repo.createRequest).toHaveBeenCalledWith({
-      id: expect.any(String),
+    expect(serviceDeps.mocks.createRequest).toHaveBeenCalledWith({
+      id: expect.any(String) as string,
       email: 'new@example.com',
     })
   })
@@ -114,10 +119,10 @@ describe('accessService', () => {
     })
     const result = await approveAccessRequestById(serviceDeps, 'req-1', 'owner@example.com')
     expect(result.email).toBe('new@example.com')
-    expect(serviceDeps.repo.grantAccess).toHaveBeenCalledWith('new@example.com', 'owner@example.com')
-    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledWith('new@example.com', 'expenses', 'owner@example.com')
-    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledTimes(1)
-    expect(serviceDeps.repo.markRequestApproved).toHaveBeenCalledWith('req-1')
+    expect(serviceDeps.mocks.grantAccess).toHaveBeenCalledWith('new@example.com', 'owner@example.com')
+    expect(serviceDeps.mocks.grantGroup).toHaveBeenCalledWith('new@example.com', 'expenses', 'owner@example.com')
+    expect(serviceDeps.mocks.grantGroup).toHaveBeenCalledTimes(1)
+    expect(serviceDeps.mocks.markRequestApproved).toHaveBeenCalledWith('req-1')
   })
 
   it('rejects a pending request by id for the owner', async () => {
@@ -126,7 +131,7 @@ describe('accessService', () => {
     })
     const result = await rejectAccessRequestById(serviceDeps, 'req-1', 'owner@example.com')
     expect(result.email).toBe('new@example.com')
-    expect(serviceDeps.repo.markRequestRejected).toHaveBeenCalledWith('req-1')
+    expect(serviceDeps.mocks.markRequestRejected).toHaveBeenCalledWith('req-1')
   })
 
   it('lists active users with owner flag and groups', async () => {
@@ -147,8 +152,8 @@ describe('accessService', () => {
           lastSeenAt: null,
         },
       ]),
-      listGroupGrants: vi.fn(async (email: string) =>
-        email === 'guest@example.com' ? ['expenses'] : ['expenses', 'finance'],
+      listGroupGrants: vi.fn((email: string) =>
+        Promise.resolve<AccessGroupId[]>(email === 'guest@example.com' ? ['expenses'] : ['expenses', 'finance']),
       ),
     })
     const users = await listActiveAccessUsers(serviceDeps, 'owner@example.com')
@@ -170,8 +175,8 @@ describe('accessService', () => {
 
     const result = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
     expect(result).toEqual({ email: 'guest@example.com', dataPurged: true })
-    expect(serviceDeps.repo.revokeAccess).toHaveBeenCalledWith('guest@example.com')
-    expect(serviceDeps.repo.revokeAllGroups).toHaveBeenCalledWith('guest@example.com')
+    expect(serviceDeps.mocks.revokeAccess).toHaveBeenCalledWith('guest@example.com')
+    expect(serviceDeps.mocks.revokeAllGroups).toHaveBeenCalledWith('guest@example.com')
     expect(batch).toHaveBeenCalledOnce()
   })
 
@@ -201,7 +206,7 @@ describe('accessService', () => {
 
       expect(retry).toEqual({ email: 'guest@example.com', dataPurged: true })
       expect(batch).toHaveBeenCalledTimes(2)
-      expect(serviceDeps.repo.revokeAllGroups).toHaveBeenCalledTimes(2)
+      expect(serviceDeps.mocks.revokeAllGroups).toHaveBeenCalledTimes(2)
     })
 
     it('is still a 404 for an email that never had access, and purges nothing', async () => {
@@ -216,7 +221,7 @@ describe('accessService', () => {
         status: 404,
       })
       expect(batch).not.toHaveBeenCalled()
-      expect(serviceDeps.repo.revokeAllGroups).not.toHaveBeenCalled()
+      expect(serviceDeps.mocks.revokeAllGroups).not.toHaveBeenCalled()
     })
 
     it('does not purge a user who is active but whose revoke did not take', async () => {
@@ -251,7 +256,7 @@ describe('accessService', () => {
     serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
 
     await updateUserGroupGrants(serviceDeps, 'guest@example.com', 'owner@example.com', { expenses: false })
-    expect(serviceDeps.repo.revokeGroup).toHaveBeenCalledWith('guest@example.com', 'expenses')
+    expect(serviceDeps.mocks.revokeGroup).toHaveBeenCalledWith('guest@example.com', 'expenses')
     expect(batch).toHaveBeenCalledOnce()
   })
 

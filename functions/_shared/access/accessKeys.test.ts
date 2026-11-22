@@ -131,7 +131,7 @@ describe('the keys of the team', () => {
     const certsOf = async () => [{ ...(await idp.certs()).keys[0], kid: 'broken' }, ...(await idp.certs()).keys]
     const served = { fetch: (async () => new Response(JSON.stringify({ keys: await certsOf() }))) as typeof fetch }
     vi.spyOn(crypto.subtle, 'importKey').mockImplementationOnce(() => Promise.reject(new Error('bad key')))
-    vi.spyOn(crypto.subtle, 'importKey').mockImplementation(real as typeof crypto.subtle.importKey)
+    vi.spyOn(crypto.subtle, 'importKey').mockImplementation(real)
 
     const keyFor = createAccessKeyCache({ ...served, now: () => clock })
 
@@ -140,7 +140,7 @@ describe('the keys of the team', () => {
   })
 
   it('are a 503 when the document holds no usable key', async () => {
-    const empty = { fetch: (async () => new Response(JSON.stringify({ keys: [] }))) as typeof fetch }
+    const empty = { fetch: (() => Promise.resolve(new Response(JSON.stringify({ keys: [] })))) as typeof fetch }
 
     await expect(createAccessKeyCache({ ...empty, now: () => clock })(TEAM, 'key-1')).rejects.toMatchObject({
       status: 503,

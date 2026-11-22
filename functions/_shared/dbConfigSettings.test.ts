@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { updateSettings } from './dbConfig'
 import { HttpError } from './http'
-import type { ExpenseSettings } from '../domain/types'
 import type { Env } from './env'
 import type { SettingsRow } from './rows'
 
@@ -106,7 +105,7 @@ describe('updateSettings with marketVolatility', () => {
     })
     const { market_volatility: omitted, ...before } = makeRow()
     void omitted
-    const { env: oldEnv } = stubEnv(before as SettingsRow)
+    const { env: oldEnv } = stubEnv(before)
     await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
       marketVolatility: 0.15,
     })
@@ -289,7 +288,7 @@ describe('updateSettings with the opening balances', () => {
     ['openingCashCents', 0.5],
   ])('refuses %s of %s with a 400', async (key, value) => {
     const { env } = stubEnv(makeRow())
-    await expect(updateSettings(env, OWNER, { [key]: value } as Partial<ExpenseSettings>)).rejects.toMatchObject({
+    await expect(updateSettings(env, OWNER, { [key]: value })).rejects.toMatchObject({
       status: 400,
     })
   })

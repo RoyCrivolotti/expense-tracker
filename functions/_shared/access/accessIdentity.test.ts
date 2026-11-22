@@ -35,7 +35,7 @@ const LOCAL = ['http://localhost:8788', 'http://localhost', 'http://127.0.0.1:87
 
 const outcome = (
   r: Request,
-  env = ON,
+  env: Parameters<typeof accessCheck>[0] = ON,
 ) =>
   resolveVerifiedEmail(r, env, keyFor).then(
     (email) => email,
@@ -85,7 +85,7 @@ describe('accessCheck', () => {
     const check = accessCheck({ ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: AUD })
 
     expect(check.state).toBe('misconfigured')
-    expect(check).toMatchObject({ problem: expect.stringContaining('ACCESS_TEAM_DOMAIN must be a hostname') })
+    expect(check).toMatchObject({ problem: expect.stringContaining('ACCESS_TEAM_DOMAIN must be a hostname') as string })
   })
 
   it('never repeats a value in what it says', () => {

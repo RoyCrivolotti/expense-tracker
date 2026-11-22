@@ -74,7 +74,7 @@ describe('the daily snapshot, with the second of three owners failing', () => {
   it('alerts with the owner, the day and the reason, and then fails the run naming them', async () => {
     const { spy, deps } = setup()
 
-    const error = await runAllBackups(deps).catch((e: unknown) => e as Error)
+    const error = (await runAllBackups(deps).catch((e: unknown) => e)) as Error
 
     expect(spy.onBackupFailed).toHaveBeenCalledOnce()
     expect(spy.onBackupFailed).toHaveBeenCalledWith({ owner: B, dateKey: TODAY, reason: 'D1 hiccup' })

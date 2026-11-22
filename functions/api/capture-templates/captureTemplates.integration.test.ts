@@ -73,7 +73,7 @@ type Listed = {
   }>
 }
 const listed = async (email = OWNER) =>
-  ((await (await call(list, { query: '?ignored=1', email })).json()) as Listed).templates
+  (await (await call(list, { query: '?ignored=1', email })).json<Listed>()).templates
 const ignoredAt = (n: number) =>
   sqlite.prepare('SELECT ignored_at, dismiss_streak FROM capture_templates WHERE template_id = ?').get(idOf(n)) as {
     ignored_at: string | null

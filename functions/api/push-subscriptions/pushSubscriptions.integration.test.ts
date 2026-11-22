@@ -77,7 +77,7 @@ describe('saving a device', () => {
     const before = world.token()
     const res = await saveDevice()
     expect(res.status).toBe(200)
-    const { id } = (await res.json()) as { id: string }
+    const { id } = await res.json<{ id: string }>()
     expect(id).toMatch(UUID)
     expect(rows()).toEqual([
       { id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'iPhone', last_status: null },
@@ -87,7 +87,7 @@ describe('saving a device', () => {
   })
 
   it('refreshes a device saved again, keeping its id, and leaves a choice already made alone', async () => {
-    const { id } = (await (await saveDevice()).json()) as { id: string }
+    const { id } = await (await saveDevice()).json<{ id: string }>()
     sqlite.prepare('UPDATE push_subscriptions SET last_status = 410').run()
     await call(saveSettings, { path: '/api/push-settings', method: 'PUT', body: { mode: 'each', timeZone: 'UTC' } })
     const again = await saveDevice(
@@ -102,7 +102,7 @@ describe('saving a device', () => {
     await saveDevice()
     expect((await saveDevice(device(), OTHER)).status).toBe(200)
     expect(rows().map((r) => r.owner)).toEqual([OTHER])
-    expect(((await (await devices()).json()) as { devices: unknown[] }).devices).toEqual([])
+    expect((await (await devices()).json<{ devices: unknown[] }>()).devices).toEqual([])
   })
 
   it('refuses the eleventh device with 409 and stores nothing', async () => {
@@ -114,7 +114,7 @@ describe('saving a device', () => {
   })
 
   it('keeps a device as the sender will address it, and takes the browser’s padded keys', async () => {
-    const { id } = (await (
+    const { id } = await (
       await saveDevice(
         device({
           endpoint: ` ${APPLE.replace('web.push', 'WEB.PUSH')} `,
@@ -122,7 +122,7 @@ describe('saving a device', () => {
           label: '',
         }),
       )
-    ).json()) as { id: string }
+    ).json<{ id: string }>()
     expect(rows()).toEqual([
       { id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'Device', last_status: null },
     ])
@@ -173,11 +173,11 @@ describe('saving a device', () => {
 
 describe('listing and forgetting devices', () => {
   it('lists the person’s own devices without their endpoints or keys, with their choice', async () => {
-    const { id } = (await (await saveDevice()).json()) as { id: string }
+    const { id } = await (await saveDevice()).json<{ id: string }>()
     await saveDevice(device({ endpoint: `${APPLE}-other` }), OTHER)
-    const body = (await (await devices()).json()) as { devices: Array<Record<string, unknown>>; settings: unknown }
+    const body = await (await devices()).json<{ devices: Array<Record<string, unknown>>; settings: unknown }>()
     expect(body.devices).toEqual([
-      { id, label: 'iPhone', createdAt: expect.any(String), lastSentAt: null, lastStatus: null },
+      { id, label: 'iPhone', createdAt: expect.any(String) as unknown, lastSentAt: null, lastStatus: null },
     ])
     expect(body.settings).toEqual({ mode: 'daily', timeZone: 'Europe/Madrid' })
     expect(JSON.stringify(body)).not.toContain(APPLE)
@@ -189,7 +189,7 @@ describe('listing and forgetting devices', () => {
   })
 
   it('forgets a device for its owner alone, and leaves the revision alone', async () => {
-    const { id } = (await (await saveDevice()).json()) as { id: string }
+    const { id } = await (await saveDevice()).json<{ id: string }>()
     const before = world.token()
     expect((await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id, email: OTHER })).status).toBe(
       404,
@@ -216,7 +216,7 @@ describe('the choice', () => {
     expect(await (await choose({ mode: 'weekly', timeZone: 'America/New_York' })).json()).toEqual({ ok: true })
     expect(settingsRow()).toEqual({ mode: 'weekly', time_zone: 'America/New_York' })
     expect(settingsRow(OTHER)).toBeUndefined()
-    expect(((await (await devices()).json()) as { settings: unknown }).settings).toEqual({
+    expect((await (await devices()).json<{ settings: unknown }>()).settings).toEqual({
       mode: 'weekly',
       timeZone: 'America/New_York',
     })

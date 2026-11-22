@@ -10,7 +10,7 @@ const labelCount = (): number => (db.prepare('SELECT COUNT(*) AS n FROM labels')
 
 beforeEach(() => {
   db = migratedDatabase()
-  d1 = sqliteD1(db) as unknown as D1Database
+  d1 = sqliteD1(db)
 })
 
 const insertLabel = (name: string) =>
@@ -63,7 +63,7 @@ describe('isGuardFailure', () => {
   })
 
   it('does not take any other failure of a batch for a guard, whatever it is', async () => {
-    d1 = sqliteD1(db, undefined, { maxBoundParameters: 2 }) as unknown as D1Database
+    d1 = sqliteD1(db, undefined, { maxBoundParameters: 2 })
     db.prepare("INSERT INTO owner_revision (owner, token) VALUES ('dup', 'x')").run()
     const failures: Array<[string, () => D1PreparedStatement[]]> = [
       ['a unique constraint', () => [d1.prepare("INSERT INTO owner_revision (owner, token) VALUES ('dup', 'y')")]],

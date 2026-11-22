@@ -30,8 +30,8 @@ function stubEnv(opts: {
     bind: (...args: unknown[]) => ({
       sql,
       args,
-      first: vi.fn().mockImplementation(async () => first(sql, args)),
-      run: vi.fn().mockImplementation(async () => run(sql, args)),
+      first: vi.fn().mockImplementation(() => Promise.resolve(first(sql, args))),
+      run: vi.fn().mockImplementation(() => Promise.resolve(run(sql, args))),
     }),
   }))
   return { env: { DB: { prepare, batch } } as unknown as Env, prepare, batch, run }
@@ -123,7 +123,7 @@ describe('createFlag', () => {
     const { env } = stubEnv({ first: () => null })
 
     await expect(
-      createFlag(env, OWNER, { name: 'Work', color: '#6366f1', sortOrder: 0, active: true }),
+      createFlag(env, OWNER, { name: 'Work', color: '#6366f1', reimbursable: false, sortOrder: 0, active: true }),
     ).rejects.toMatchObject({ status: 500, message: 'Flag insert failed' })
   })
 

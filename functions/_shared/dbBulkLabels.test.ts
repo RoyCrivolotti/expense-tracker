@@ -20,7 +20,6 @@ import {
 } from '../../src/testing/smallLedgerDb'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { loadDataset } from './db'
-import type { Env } from './env'
 
 /**
  * Adding labels to many rows in one request: a union with the labels the rows have, one atomic batch, the
@@ -34,7 +33,7 @@ let ledger: SmallLedger
 let repo: ExpenseRepository
 
 function useDatabase(d1: D1Database): void {
-  repo = createD1ExpenseRepository({ DB: d1 } as Env)
+  repo = createD1ExpenseRepository({ DB: d1 })
 }
 
 beforeEach(() => {
@@ -217,7 +216,7 @@ describe('adding labels by filter', () => {
 
 describe('the in-memory repository does the same', () => {
   async function inMemory(): Promise<ExpenseRepository> {
-    const env = { DB: ledger.d1 } as Env
+    const env = { DB: ledger.d1 }
     const served = await loadDataset(env, OWNER)
     return inMemoryExpenseRepository(served, OWNER)
   }
@@ -238,7 +237,7 @@ describe('the in-memory repository does the same', () => {
       )
     }
 
-    const sql = (await loadDataset({ DB: ledger.d1 } as Env, OWNER)).transactions
+    const sql = (await loadDataset({ DB: ledger.d1 }, OWNER)).transactions
     const mem = (await memory.loadDataset(OWNER)).transactions
     const labelsOf = (rows: typeof sql) => rows.map((t) => [t.id, [...(t.labelIds ?? [])].sort()])
     expect(labelsOf(mem)).toEqual(labelsOf(sql))

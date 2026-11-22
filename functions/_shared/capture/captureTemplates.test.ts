@@ -169,7 +169,7 @@ describe('a push that is not stored', () => {
 })
 
 describe('the template cap', () => {
-  async function fill(): Promise<void> {
+  function fill(): void {
     db.exec('BEGIN')
     const insert = db.prepare(
       `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen, accepts, ignored_at)
@@ -184,7 +184,7 @@ describe('the template cap', () => {
   const markOldest = (sql: string) => db.prepare(`UPDATE capture_templates SET ${sql} WHERE template_id = ?`)
 
   it('evicts the least recently seen template nobody has accepted, never an ignored one', async () => {
-    await fill()
+    fill()
     db.prepare('UPDATE capture_templates SET accepts = 0 WHERE template_id IN (?, ?, ?)').run(
       'old001',
       'old002',
@@ -201,7 +201,7 @@ describe('the template cap', () => {
   })
 
   it('stores the event with no template when none can be evicted', async () => {
-    await fill()
+    fill()
     expect(await store(fresh('new'))).toBe('created')
     expect(templateIds()).not.toContain('new')
     expect(rows('SELECT template_id FROM capture_events')).toEqual([{ template_id: null }])
@@ -209,7 +209,7 @@ describe('the template cap', () => {
   })
 
   it('counts each person’s templates on their own', async () => {
-    await fill()
+    fill()
     db.prepare('UPDATE capture_templates SET accepts = 0').run()
     await store(fresh('bobs'), { keyId: 'kb' })
     expect(templateIds()).toHaveLength(MAX_CAPTURE_TEMPLATES + 1)

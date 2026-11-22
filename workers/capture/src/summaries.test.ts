@@ -91,8 +91,11 @@ const outcomes = () => lines.map((l) => [l.outcome, l.reason])
 
 beforeEach(async () => {
   db = migratedDatabase()
-  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
-  const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair
+  const jwk = (await crypto.subtle.exportKey('jwk', pair.privateKey)) as JsonWebKey
   const publicKey = base64urlEncode(
     new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer),
   )
@@ -109,6 +112,16 @@ beforeEach(async () => {
 })
 
 afterEach(() => undefined)
+
+/** The env with one optional binding absent, as a Worker that was never given it sees it. */
+function without(
+  base: CaptureEnv,
+  key: Exclude<keyof CaptureEnv, 'DB'>,
+): CaptureEnv {
+  const copy = { ...base }
+  delete copy[key]
+  return copy
+}
 
 describe('the summary payload', () => {
   it('names the count and the total when there is one, and opens the list', () => {
@@ -131,9 +144,10 @@ describe('the summary payload', () => {
       count: 2,
       open: 2,
     })
-    expect(JSON.parse(summaryPayload({ count: 1, totalCents: 1250, currency: 'EUR', onlyId: 'rec-1' })).url).toBe(
-      '/?review=rec-1',
-    )
+    expect(
+      (JSON.parse(summaryPayload({ count: 1, totalCents: 1250, currency: 'EUR', onlyId: 'rec-1' })) as { url: string })
+        .url,
+    ).toBe('/?review=rec-1')
   })
 })
 
@@ -316,7 +330,7 @@ describe('runSummaries', () => {
     await choose('daily', 'Europe/Madrid', BOB)
     await addDevice(ALICE, ENDPOINT, 'one')
     await repos().captures.createRecommendation(rec('a'))
-    await runSummaries({ ...env, VAPID_PUBLIC_KEY: undefined }, deps())
+    await runSummaries(without(env, 'VAPID_PUBLIC_KEY'), deps())
     expect(outcomes()).toEqual([['skipped', 'not-configured']])
     expect(calls).toHaveLength(0)
     expect((await repos().push.getSettings(ALICE))?.lastSummaryAt).toBeNull()
@@ -372,7 +386,7 @@ describe('the Worker’s scheduled handler', () => {
       Promise.resolve(new Response(null, { status: 201 }))
     )) as unknown as typeof fetch
     try {
-      await worker.scheduled(
+      worker.scheduled(
         { scheduledTime: EVENING.getTime(), cron: '0 * * * *' } as unknown as ScheduledController,
         env,
         ctx,

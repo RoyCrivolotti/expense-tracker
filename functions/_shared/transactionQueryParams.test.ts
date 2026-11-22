@@ -87,7 +87,7 @@ function queryStringOf(f: TxnFilter): string {
   const query = new URLSearchParams()
   const set = (
     key: string,
-    value: unknown,
+    value: string | number | undefined,
   ) => value !== undefined && query.set(key, String(value))
   for (const key of ['month', 'dateFrom', 'dateTo', 'type', 'status', 'query'] as const) set(key, f[key])
   for (const key of ['categoryId', 'accountId', 'flagId', 'amountMinCents', 'amountMaxCents'] as const) set(key, f[key])

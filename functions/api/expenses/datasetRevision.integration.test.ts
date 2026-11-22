@@ -740,7 +740,7 @@ describe('GET /api/expenses', () => {
 
     expect(response.status).toBe(200)
     expect(etag).not.toBe(stale)
-    expect(JSON.parse(text).settings.openingCashCents).toBe(777_700)
+    expect((JSON.parse(text) as { settings: { openingCashCents: number } }).settings.openingCashCents).toBe(777_700)
   })
 
   it('never matches a tag the other owner holds, even with the same data and the same clock', async () => {
@@ -786,7 +786,9 @@ describe('the budget month is part of the tag', () => {
     expect(november.response.status).toBe(200)
     expect(november.etag).not.toBe(october)
     expect(november.etag).toContain('-2026-11-')
-    const sofa = JSON.parse(november.text).transactions.filter((t: { planId?: number }) => t.planId === ids.plan)
+    const sofa = (JSON.parse(november.text) as { transactions: { planId?: number }[] }).transactions.filter(
+      (t) => t.planId === ids.plan,
+    )
     expect(sofa).toHaveLength(1)
   })
 
@@ -842,7 +844,9 @@ describe('the installment backfill, the one write that happens on a read', () =>
 
     const { text } = await getDataset(world)
 
-    const sofa = JSON.parse(text).transactions.filter((t: { planId?: number }) => t.planId === ids.plan)
+    const sofa = (JSON.parse(text) as { transactions: { planId?: number }[] }).transactions.filter(
+      (t) => t.planId === ids.plan,
+    )
     expect(sofa).toHaveLength(3)
     expect(bumps).toBe(1)
     expect(world.token()).not.toBe(before)

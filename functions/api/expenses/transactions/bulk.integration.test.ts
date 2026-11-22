@@ -81,6 +81,7 @@ describe('PATCH /api/expenses/transactions/bulk renaming descriptions', () => {
       accountId: 1,
       categoryId: 1,
       type: 'expense' as const,
+      status: 'posted' as const,
       amountCents: 1_299,
       cancelled: false,
     }
@@ -121,7 +122,7 @@ describe('PATCH /api/expenses/transactions/bulk renaming descriptions', () => {
     const response = await rename(env, repo, { description: '  Netflix ' })
 
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { updated: number }
+    const body = await response.json<{ updated: number }>()
     expect(body.updated).toBe(2)
     const stored = (await repo.loadDataset(OWNER)).transactions
     expect(stored.map((t) => t.description)).toEqual(['Netflix', 'Netflix', 'Rent'])

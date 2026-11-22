@@ -55,7 +55,7 @@ function seeded() {
 }
 
 async function body<T>(response: Response): Promise<T> {
-  return (await response.json()) as T
+  return await response.json<T>()
 }
 
 async function makeLabel(

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AccessRepository } from '../../domain/ports/accessRepository'
 import { isEmailAllowed } from './accessAuthorizer'
-import type { Env } from './env'
+import type { Env } from '../env'
 
 function repo(
   activeCount: number,
@@ -53,8 +53,9 @@ describe('isEmailAllowed', () => {
 
   it('uses D1 when active users exist', async () => {
     const env: Env = { DB: {} as D1Database, ALLOWED_EMAILS: 'roy@example.com' }
-    const d1 = repo(2, true)
+    const isAllowed = vi.fn().mockResolvedValue(true)
+    const d1: AccessRepository = { ...repo(2), isAllowed }
     await expect(isEmailAllowed(d1, env, 'partner@example.com')).resolves.toBe(true)
-    expect(d1.isAllowed).toHaveBeenCalledWith('partner@example.com')
+    expect(isAllowed).toHaveBeenCalledWith('partner@example.com')
   })
 })

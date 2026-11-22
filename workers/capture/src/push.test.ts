@@ -69,7 +69,7 @@ async function decrypt(
   const senderPublic = body.slice(21, 21 + body[20]!)
   const sealed = body.slice(21 + body[20]!)
   const senderKey = await crypto.subtle.importKey('raw', senderPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
-  const algorithm = { name: 'ECDH', public: senderKey } as unknown as EcdhKeyDeriveParams
+  const algorithm = { name: 'ECDH', public: senderKey }
   const shared = new Uint8Array(await crypto.subtle.deriveBits(algorithm, device.privateKey, 256))
   const info = new Uint8Array([...text.encode('WebPush: info\0'), ...device.publicRaw, ...senderPublic])
   const ikm = await hkdf(shared, device.authRaw, info, 32)
@@ -108,8 +108,11 @@ async function addDevice(
 beforeEach(async () => {
   pending.length = 0
   db = migratedDatabase()
-  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
-  const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair
+  const jwk = (await crypto.subtle.exportKey('jwk', pair.privateKey)) as JsonWebKey
   const publicKey = base64urlEncode(
     new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer),
   )
@@ -137,6 +140,16 @@ const payment: CreatedPayment = {
   merchant: 'Shop Example',
 }
 
+/** The env with one optional binding absent, as a Worker that was never given it sees it. */
+function without(
+  base: CaptureEnv,
+  key: Exclude<keyof CaptureEnv, 'DB'>,
+): CaptureEnv {
+  const copy = { ...base }
+  delete copy[key]
+  return copy
+}
+
 describe('the payload', () => {
   it('is what the service worker reads, with the tap going to the payment', () => {
     expect(JSON.parse(paymentPayload(payment, 3))).toEqual({
@@ -157,7 +170,7 @@ describe('the payload', () => {
       publicKey: vapid.VAPID_PUBLIC_KEY,
       subject: vapid.VAPID_SUBJECT,
     })
-    expect(vapidKeysOf({ ...env, VAPID_SUBJECT: undefined })).toBeNull()
+    expect(vapidKeysOf(without(env, 'VAPID_SUBJECT'))).toBeNull()
     expect(vapidKeysOf({ ...env, VAPID_PRIVATE_KEY: '' })).toBeNull()
   })
 })
@@ -338,7 +351,7 @@ describe('notifyPayment', () => {
   it('skips with the keys unset', async () => {
     await addDevice(ALICE, ENDPOINT, 'one')
     await choose('each')
-    await notifyPayment(payment, { ...env, VAPID_PRIVATE_KEY: undefined }, deps())
+    await notifyPayment(payment, without(env, 'VAPID_PRIVATE_KEY'), deps())
     expect(lines.map((l) => [l.outcome, l.reason])).toEqual([['skipped', 'not-configured']])
     expect(calls).toEqual([])
   })

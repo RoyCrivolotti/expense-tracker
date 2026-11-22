@@ -68,7 +68,7 @@ describe('the series the SQL serves equal the engine’s', () => {
     expect(series.find((s) => s.label.trim().toLowerCase() === 'rent')?.newestDates).toHaveLength(4)
   })
 
-  it('and would not if the SQL grouped on lower(trim(description)): the same ledger groups differently', async () => {
+  it('and would not if the SQL grouped on lower(trim(description)): the same ledger groups differently', () => {
     const dataset = unicodeLedger()
     const kit = queryDb(dataset)
     const rows = kit.sqlite

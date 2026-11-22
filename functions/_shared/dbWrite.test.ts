@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 import { insertTransaction, updateTransaction, bulkUpdateTransactions, bulkInsertTransactions } from './dbWrite'
 import type { Env } from './env'
 import { AMOUNT_SIGN_MESSAGE } from '../domain/data/amountSign'
@@ -14,6 +14,11 @@ function envWith(first: unknown): Env {
       }),
     },
   } as unknown as Env
+}
+
+/** The `batch` spy on the stub Env a helper below built. Read as a property of a looser type so it is not a method reference. */
+function batchSpy(env: Env): Mock<(statements: unknown[]) => unknown> {
+  return (env.DB as unknown as { batch: Mock<(statements: unknown[]) => unknown> }).batch
 }
 
 function envForBulkUpdate(opts: {
@@ -161,16 +166,16 @@ function envForSettleGuard(opts: {
     DB: {
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
-          first: vi.fn().mockImplementation(async () => {
+          first: vi.fn().mockImplementation(() => {
             if (sql.startsWith('UPDATE transactions')) {
-              return updateMatches ? txnRow : null
+              return Promise.resolve(updateMatches ? txnRow : null)
             }
             if (sql === 'SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?') {
               const [checkedId] = args
-              if (checkedId === settledById) return { ok: 1 }
-              return targetExists ? { ok: 1 } : null
+              if (checkedId === settledById) return Promise.resolve({ ok: 1 })
+              return Promise.resolve(targetExists ? { ok: 1 } : null)
             }
-            return null
+            return Promise.resolve(null)
           }),
           // deriveOne's labelIds lookup; no test here cares about labels.
           all: vi.fn().mockResolvedValue({ results: [] }),
@@ -211,12 +216,12 @@ function envForSignCheck(
         bind: () => {
           prepared.push(sql)
           return {
-            first: vi.fn().mockImplementation(async () => {
+            first: vi.fn().mockImplementation(() => {
               if (sql.startsWith('SELECT type, amount_cents')) {
-                return txnRow && { type: txnRow.type, amount_cents: txnRow.amount_cents }
+                return Promise.resolve(txnRow && { type: txnRow.type, amount_cents: txnRow.amount_cents })
               }
-              if (sql.startsWith('UPDATE transactions')) return txnRow
-              return null
+              if (sql.startsWith('UPDATE transactions')) return Promise.resolve(txnRow)
+              return Promise.resolve(null)
             }),
             // deriveOne's labelIds lookup; no test here cares about labels.
             all: vi.fn().mockResolvedValue({ results: [] }),
@@ -251,9 +256,9 @@ describe('owner-scoped writes', () => {
       DB: {
         prepare: (sql: string) => ({
           bind: () => ({
-            first: vi.fn().mockImplementation(async () => {
-              if (sql.includes('categories')) return null
-              return { ok: 1 }
+            first: vi.fn().mockImplementation(() => {
+              if (sql.includes('categories')) return Promise.resolve(null)
+              return Promise.resolve({ ok: 1 })
             }),
           }),
         }),
@@ -313,7 +318,7 @@ describe('bulkUpdateTransactions', () => {
   it('sends the stamp and the settled check in the same batch as the settle, so none lands alone', async () => {
     const env = envForBulkUpdate({})
     await bulkUpdateTransactions(env, 'a@b.com', [1], { settledBy: 7 })
-    const batch = env.DB.batch as unknown as ReturnType<typeof vi.fn>
+    const batch = batchSpy(env)
     expect(batch).toHaveBeenCalledOnce()
     expect(batch.mock.calls[0]![0]).toHaveLength(3)
   })
@@ -323,7 +328,7 @@ describe('bulkUpdateTransactions', () => {
     const env = envForBulkUpdate({ prepared })
     await bulkUpdateTransactions(env, 'a@b.com', [1], { categoryId: 2 })
     expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(false)
-    const batch = env.DB.batch as unknown as ReturnType<typeof vi.fn>
+    const batch = batchSpy(env)
     expect(batch.mock.calls[0]![0]).toHaveLength(1)
   })
 })
@@ -695,15 +700,15 @@ function envForAutoLabel(opts: { row: Record<string, unknown>; recorded: Recorde
           return {
             sql,
             args,
-            first: vi.fn().mockImplementation(async () => {
-              if (sql.startsWith('INSERT INTO transactions')) return row
-              if (sql.startsWith('UPDATE transactions')) return row
+            first: vi.fn().mockImplementation(() => {
+              if (sql.startsWith('INSERT INTO transactions')) return Promise.resolve(row)
+              if (sql.startsWith('UPDATE transactions')) return Promise.resolve(row)
               // Every ownership pre-check (account/category/flag) only needs truthy.
-              return { ok: 1 }
+              return Promise.resolve({ ok: 1 })
             }),
-            all: vi.fn().mockImplementation(async () => {
-              if (sql.includes('transaction_labels')) return { results: [] }
-              return { results: [] }
+            all: vi.fn().mockImplementation(() => {
+              if (sql.includes('transaction_labels')) return Promise.resolve({ results: [] })
+              return Promise.resolve({ results: [] })
             }),
             run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
             meta: { changes: 1 },
@@ -829,15 +834,15 @@ describe('deriveOne — labelIds', () => {
       DB: {
         prepare: (sql: string) => ({
           bind: () => ({
-            first: vi.fn().mockImplementation(async () => {
-              if (sql.startsWith('UPDATE transactions')) return txnRow
-              return null
+            first: vi.fn().mockImplementation(() => {
+              if (sql.startsWith('UPDATE transactions')) return Promise.resolve(txnRow)
+              return Promise.resolve(null)
             }),
-            all: vi.fn().mockImplementation(async () => {
+            all: vi.fn().mockImplementation(() => {
               if (sql.includes('transaction_labels')) {
-                return { results: labelIds.map((label_id) => ({ label_id })) }
+                return Promise.resolve({ results: labelIds.map((label_id) => ({ label_id })) })
               }
-              return { results: [] }
+              return Promise.resolve({ results: [] })
             }),
           }),
         }),
@@ -925,7 +930,7 @@ describe('flag auto-label fan-out', () => {
   it('bulkUpdateTransactions labels every affected row with one statement, however many', async () => {
     const recorded: Recorded[] = []
     const env = envForAutoLabel({ row: autoLabelTxnRow, recorded })
-    const batch = env.DB.batch as ReturnType<typeof vi.fn>
+    const batch = batchSpy(env)
 
     await bulkUpdateTransactions(env, 'a@b.com', [5, 6, 7], { flagId: 9 })
 

@@ -69,7 +69,7 @@ const rows = () =>
 describe('POST /api/capture-keys', () => {
   it('makes a key for the signed-in person and shows the whole key once', async () => {
     const response = await makeKey('My phone')
-    const body = (await response.json()) as { key: string; keyId: string; label: string; lastUsedAt: null }
+    const body = await response.json<{ key: string; keyId: string; label: string; lastUsedAt: null }>()
 
     expect(response.status).toBe(201)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
@@ -81,7 +81,7 @@ describe('POST /api/capture-keys', () => {
   })
 
   it('stores a hash that the secret matches, and not the secret', async () => {
-    const { key } = (await (await makeKey()).json()) as { key: string }
+    const { key } = await (await makeKey()).json<{ key: string }>()
     const secret = parseCaptureKey(key)?.secret ?? ''
 
     const [stored] = rows()
@@ -116,7 +116,7 @@ describe('POST /api/capture-keys', () => {
       method: 'POST',
       body: { label: 'x', owner: OTHER, keyId: '0000000000000000', secretHash: 'h' },
     })
-    const { keyId } = (await response.json()) as { keyId: string }
+    const { keyId } = await response.json<{ keyId: string }>()
 
     expect(rows()).toMatchObject([{ owner: OWNER, key_id: keyId }])
     expect(keyId).not.toBe('0000000000000000')
@@ -124,7 +124,7 @@ describe('POST /api/capture-keys', () => {
 
   it('refuses a fourth key with a 409, and a person who is revoked-down can make one again', async () => {
     const made = []
-    for (let i = 0; i < 3; i++) made.push((await (await makeKey(`k${i}`)).json()) as { keyId: string })
+    for (let i = 0; i < 3; i++) made.push(await (await makeKey(`k${i}`)).json<{ keyId: string }>())
 
     const fourth = await makeKey('k3')
     expect(fourth.status).toBe(409)
@@ -183,9 +183,9 @@ describe('POST /api/capture-keys', () => {
 
 describe('GET /api/capture-keys', () => {
   it('lists the person’s live keys, newest first, with no secret and no hash', async () => {
-    const first = (await (await makeKey('first')).json()) as { keyId: string; key: string }
+    const first = await (await makeKey('first')).json<{ keyId: string; key: string }>()
     await new Promise((resolve) => setTimeout(resolve, 5))
-    const second = (await (await makeKey('second')).json()) as { keyId: string; key: string }
+    const second = await (await makeKey('second')).json<{ keyId: string; key: string }>()
 
     const response = await call(list)
     const text = await response.text()
@@ -199,12 +199,12 @@ describe('GET /api/capture-keys', () => {
   })
 
   it('does not list another person’s keys, or a revoked one', async () => {
-    const mine = (await (await makeKey('mine')).json()) as { keyId: string }
+    const mine = await (await makeKey('mine')).json<{ keyId: string }>()
     await makeKey('theirs', OTHER)
-    const gone = (await (await makeKey('gone')).json()) as { keyId: string }
+    const gone = await (await makeKey('gone')).json<{ keyId: string }>()
     await call(revoke, { method: 'DELETE', id: gone.keyId })
 
-    const body = (await (await call(list)).json()) as { keys: Array<{ keyId: string }> }
+    const body = await (await call(list)).json<{ keys: Array<{ keyId: string }> }>()
 
     expect(body.keys.map((k) => k.keyId)).toEqual([mine.keyId])
   })
@@ -212,7 +212,7 @@ describe('GET /api/capture-keys', () => {
 
 describe('DELETE /api/capture-keys/:id', () => {
   it('revokes the person’s own key, once', async () => {
-    const { keyId } = (await (await makeKey()).json()) as { keyId: string }
+    const { keyId } = await (await makeKey()).json<{ keyId: string }>()
 
     const first = await call(revoke, { method: 'DELETE', id: keyId })
     const again = await call(revoke, { method: 'DELETE', id: keyId })
@@ -223,7 +223,7 @@ describe('DELETE /api/capture-keys/:id', () => {
   })
 
   it('answers 404, and changes nothing, for another person’s key', async () => {
-    const { keyId } = (await (await makeKey('theirs', OTHER)).json()) as { keyId: string }
+    const { keyId } = await (await makeKey('theirs', OTHER)).json<{ keyId: string }>()
 
     const response = await call(revoke, { method: 'DELETE', id: keyId })
 
@@ -238,7 +238,7 @@ describe('DELETE /api/capture-keys/:id', () => {
 
 describe('who may call', () => {
   it('refuses a request with no sign-in, a stranger, and a bearer key, on every method', async () => {
-    const { key, keyId } = (await (await makeKey()).json()) as { key: string; keyId: string }
+    const { key, keyId } = await (await makeKey()).json<{ key: string; keyId: string }>()
     const attempts = [
       (
         email: string | false,

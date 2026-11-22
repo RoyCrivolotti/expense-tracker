@@ -64,7 +64,7 @@ async function pagesOf(
   for (let i = 0; i < 100; i += 1) {
     const response = await list(`${query}&limit=25${cursor ? `&cursor=${cursor}` : ''}`, email)
     expect(response.status).toBe(200)
-    const body = (await response.json()) as ListBody
+    const body = await response.json<ListBody>()
     out.push(...body.items)
     cursor = body.nextCursor
     if (cursor === null) return out
@@ -87,10 +87,10 @@ describe('GET /transactions/list', () => {
   })
 
   it('answers with items and a cursor, and a null cursor on the last page', async () => {
-    const first = (await (await list('limit=10')).json()) as ListBody
+    const first = await (await list('limit=10')).json<ListBody>()
     expect(first.items).toHaveLength(10)
     expect(typeof first.nextCursor).toBe('string')
-    const all = (await (await list(`limit=${MAX_PAGE_LIMIT}`)).json()) as ListBody
+    const all = await (await list(`limit=${MAX_PAGE_LIMIT}`)).json<ListBody>()
     expect(all.items.length).toBe(mine.length)
     expect(all.nextCursor).toBeNull()
     expect(first.items[0]).toEqual(all.items[0])
@@ -128,15 +128,15 @@ describe('GET /transactions/list', () => {
   it.each(refused)('answers 400 to %s', async (_label, query, message) => {
     const response = await list(query)
     expect(response.status).toBe(400)
-    expect(((await response.json()) as { error: string }).error).toContain(message)
+    expect((await response.json<{ error: string }>()).error).toContain(message)
   })
 
   it('answers 400 to a cursor made for another filter, and to a cursor with its bytes changed', async () => {
-    const first = (await (await list('month=2026-08&limit=3')).json()) as ListBody
+    const first = await (await list('month=2026-08&limit=3')).json<ListBody>()
     const cursor = first.nextCursor as string
     const other = await list(`month=2026-07&limit=3&cursor=${cursor}`)
     expect(other.status).toBe(400)
-    expect(((await other.json()) as { error: string }).error).toContain('different filter')
+    expect((await other.json<{ error: string }>()).error).toContain('different filter')
     const mangled = `${cursor.slice(0, 8)}${cursor[8] === 'A' ? 'B' : 'A'}${cursor.slice(9)}`
     expect((await list(`month=2026-08&limit=3&cursor=${mangled}`)).status).toBe(400)
     expect((await list(`month=2026-08&limit=3&cursor=${cursor}`)).status).toBe(200)
@@ -159,7 +159,7 @@ describe('GET /transactions/summary', () => {
       const response = await summary(query)
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({
-        revision: expect.any(String),
+        revision: expect.any(String) as unknown,
         count: matching.length,
         capped: false,
         netSpendCents: netSpendCents(matching),
@@ -168,7 +168,7 @@ describe('GET /transactions/summary', () => {
   })
 
   it('starts with the owner’s revision, which only a write changes', async () => {
-    const read = async () => ((await (await summary('')).json()) as { revision: string }).revision
+    const read = async () => (await (await summary('')).json<{ revision: string }>()).revision
     const first = await read()
 
     expect(await read()).toBe(first)
@@ -194,7 +194,7 @@ describe('GET /transactions/:id', () => {
     for (const row of [mine[0], mine[17], mine.at(-1)] as Transaction[]) {
       const response = await one(String(row.id))
       expect(response.status).toBe(200)
-      const body = (await response.json()) as Transaction
+      const body = await response.json<Transaction>()
       expect(body).toEqual({ ...row, labelIds: [...(row.labelIds ?? [])].sort((a, b) => a - b) })
     }
   })
@@ -222,32 +222,34 @@ describe('one owner never sees another’s rows', () => {
   })
 
   it('on the list: a cursor from one owner’s session, or a filter naming their ids, reaches nothing of theirs', async () => {
-    const first = (await (await list('limit=5')).json()) as ListBody
+    const first = await (await list('limit=5')).json<ListBody>()
     const borrowed = await list(`limit=100&cursor=${first.nextCursor}`, OTHER_OWNER)
     expect(borrowed.status).toBe(200)
-    expect(((await borrowed.json()) as ListBody).items.every((t) => theirIds.has(t.id))).toBe(true)
+    expect((await borrowed.json<ListBody>()).items.every((t) => theirIds.has(t.id))).toBe(true)
     const aCategory = mine[0]?.categoryId ?? 0
     for (const query of [`categoryId=${aCategory}`, `accountId=${mine[0]?.accountId ?? 0}`, 'flagId=2', 'labelIds=2']) {
-      const body = (await (await list(`${query}&limit=200`, OTHER_OWNER)).json()) as ListBody
+      const body = await (await list(`${query}&limit=200`, OTHER_OWNER)).json<ListBody>()
       expect(
         body.items.every((t) => theirIds.has(t.id)),
         query,
       ).toBe(true)
     }
-    const nothing = (await (await list(`categoryId=${aCategory}`, OTHER_OWNER)).json()) as ListBody
+    const nothing = await (await list(`categoryId=${aCategory}`, OTHER_OWNER)).json<ListBody>()
     expect(nothing.items).toEqual([])
   })
 
   it('on the summary: each owner’s totals are their own', async () => {
-    const a = (await (await summary('')).json()) as { count: number; netSpendCents: number }
-    const b = (await (await summary('', OTHER_OWNER)).json()) as { count: number; netSpendCents: number }
+    const a = await (await summary('')).json<{ count: number; netSpendCents: number }>()
+    const b = await (await summary('', OTHER_OWNER)).json<{ count: number; netSpendCents: number }>()
     expect(a.count).toBe(mine.length)
     expect(b.count).toBe(theirs.length)
     expect(a.netSpendCents).toBe(netSpendCents(mine))
     expect(b.netSpendCents).toBe(netSpendCents(theirs))
-    const foreignCategory = (await (await summary(`categoryId=${mine[0]?.categoryId}`, OTHER_OWNER)).json()) as {
+    const foreignCategory = await (
+      await summary(`categoryId=${mine[0]?.categoryId}`, OTHER_OWNER)
+    ).json<{
       count: number
-    }
+    }>()
     expect(foreignCategory.count).toBe(0)
   })
 

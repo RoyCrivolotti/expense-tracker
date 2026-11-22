@@ -140,7 +140,7 @@ describe('delete against reassign', () => {
       for (const record of sample) {
         const { repo } = await served(ledger)
         const attempt =
-          record.kind === 'category' ? repo.deleteCategory!(OWNER, record.id) : repo.deleteAccount!(OWNER, record.id)
+          record.kind === 'category' ? repo.deleteCategory(OWNER, record.id) : repo.deleteAccount(OWNER, record.id)
         if (record.used) {
           await expect(attempt).rejects.toMatchObject({ status: 409 })
           checked = { ...checked, used: checked.used + 1 }

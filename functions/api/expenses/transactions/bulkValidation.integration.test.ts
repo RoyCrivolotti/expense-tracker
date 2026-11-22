@@ -75,10 +75,10 @@ describe('a filter that names a member every object has', () => {
   ]
   it.each(filters)('is a 400 as the filter of an edit: %s', async (_name, filter) => {
     const summary = await world.call(getSummary, { path: '/transactions/summary' })
-    const { count: expectedCount, revision: expectedRevision } = (await summary.json()) as {
+    const { count: expectedCount, revision: expectedRevision } = await summary.json<{
       count: number
       revision: string
-    }
+    }>()
 
     const response = await send(patchBulk, 'PATCH', '/transactions/bulk', {
       filter,
