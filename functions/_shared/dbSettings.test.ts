@@ -27,12 +27,11 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
 
 describe('updateSettings with investmentCategoryId', () => {
   it("checks the category is the owner's before saving it", async () => {
-    const { env, bind } = stubEnv(makeRow({ investment_category_id: 4 }))
-    await expect(updateSettings(env, OWNER, { investmentCategoryId: 4 })).resolves.toMatchObject({
+    const stub = stubEnv(makeRow({ investment_category_id: 4 }))
+    await expect(updateSettings(stub.env, OWNER, { investmentCategoryId: 4 })).resolves.toMatchObject({
       investmentCategoryId: 4,
     })
-    // The ownership check binds the category id with the owner before the UPDATE.
-    expect(bind.mock.calls.some((args) => args[0] === 4 && args[1] === OWNER)).toBe(true)
+    expect(ownershipBind(stub, 'categories')).toEqual([4, OWNER])
   })
 
   it('clears the choice with null', async () => {
@@ -206,8 +205,17 @@ function stubEnv(returnRow: SettingsRow) {
     first,
     run,
   }))
-  const prepare = vi.fn(() => ({ bind }))
-  return { env: { DB: { prepare } } as unknown as Env, bind, first }
+  const prepare = vi.fn((_sql: string) => ({ bind }))
+  return { env: { DB: { prepare } } as unknown as Env, bind, first, prepare }
+}
+
+/** What the ownership SELECT on `table` was bound with; each prepare gets exactly one bind, in order. */
+function ownershipBind(
+  { prepare, bind }: Pick<ReturnType<typeof stubEnv>, 'prepare' | 'bind'>,
+  table: string,
+): unknown[] | undefined {
+  const index = prepare.mock.calls.findIndex(([sql]) => sql.includes(`FROM ${table} WHERE id = ? AND owner = ?`))
+  return index === -1 ? undefined : bind.mock.calls[index]
 }
 
 /** The bound value for the UPDATE statement's single milestones column. */
@@ -291,5 +299,35 @@ describe('updateSettings with the opening balances', () => {
     await expect(updateSettings(env, OWNER, { [key]: value })).rejects.toMatchObject({
       status: 400,
     })
+  })
+})
+
+describe('updateSettings with defaultAccountId', () => {
+  it("checks the account is the owner's before saving it", async () => {
+    const stub = stubEnv(makeRow({ default_account_id: 3 }))
+    await expect(updateSettings(stub.env, OWNER, { defaultAccountId: 3 })).resolves.toMatchObject({
+      defaultAccountId: 3,
+    })
+    expect(ownershipBind(stub, 'accounts')).toEqual([3, OWNER])
+  })
+
+  it('refuses an account the owner does not have with a 400', async () => {
+    const { env, first } = stubEnv(makeRow())
+    first.mockResolvedValueOnce(null)
+    await expect(updateSettings(env, OWNER, { defaultAccountId: 99 })).rejects.toMatchObject({ status: 400 })
+  })
+})
+
+describe('updateSettings with budgetRolloverDay', () => {
+  it('takes a day from 1 to 28', async () => {
+    const { env } = stubEnv(makeRow({ budget_rollover_day: 28 }))
+    await expect(updateSettings(env, OWNER, { budgetRolloverDay: 28 })).resolves.toMatchObject({
+      budgetRolloverDay: 28,
+    })
+  })
+
+  it.each([0, 29, 1.5])('refuses %s with a 400', async (day) => {
+    const { env } = stubEnv(makeRow())
+    await expect(updateSettings(env, OWNER, { budgetRolloverDay: day })).rejects.toMatchObject({ status: 400 })
   })
 })
