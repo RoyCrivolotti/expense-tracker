@@ -2,8 +2,8 @@
  * How many records point at each category, account, flag and label, from a whole dataset: the reference
  * for what `GET /api/expenses/usage` answers. The Settings lists show these counts and ask for a
  * reassignment before deleting a record that has any, which is what the server checks too
- * (`countCategoryUsage` and `countAccountUsage` in `dbConfig.ts`): a record is in use when a transaction of
- * any status, an instalment plan or (for an account) a month statement names it.
+ * (`countCategoryUsage` in `dbCategories.ts` and `countAccountUsage` in `dbAccounts.ts`): a record is in use when
+ * a transaction of any status, an instalment plan or (for an account) a month statement names it.
  */
 import type { Usage } from '../data/usage'
 import type { ExpenseDataset } from '../types'

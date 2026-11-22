@@ -38,13 +38,12 @@ const LISTED: Record<string, { uses: number; why: string }> = {
     uses: 2,
     why: 'capture tables carry no trigger; tested for > 0 to say a guarded write took effect',
   },
+  '/functions/_shared/dbAccounts.ts': { uses: 2, why: 'a deleted account, tested for 0 to answer 404' },
   '/functions/_shared/dbBulkEdit.ts': { uses: 1, why: 'label links inserted: transaction_labels has no trigger' },
-  '/functions/_shared/dbConfig.ts': {
-    uses: 5,
-    why: 'a deleted category, account, scenario: tested for 0 to answer 404',
-  },
+  '/functions/_shared/dbCategories.ts': { uses: 2, why: 'a deleted category, tested for 0 to answer 404' },
   '/functions/_shared/dbInstallments.ts': { uses: 1, why: 'the plan delete, tested for 0 to answer 404' },
   '/functions/_shared/dbLabels.ts': { uses: 1, why: 'label links deleted: transaction_labels has no trigger' },
+  '/functions/_shared/dbScenarios.ts': { uses: 1, why: 'a deleted scenario, tested for 0 to answer 404' },
   '/functions/_shared/dbWealth.ts': { uses: 1, why: 'wealth rows, tested for 0 to answer 404' },
   '/functions/_shared/dbWealthCheckins.ts': { uses: 1, why: 'wealth rows, tested for 0 to answer 404' },
   '/functions/_shared/descriptionNormBackfill.ts': {

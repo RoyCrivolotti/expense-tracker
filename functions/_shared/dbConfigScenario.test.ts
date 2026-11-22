@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { updateScenario } from './dbConfig'
+import { updateScenario } from './dbScenarios'
 import type { Env } from './env'
 import type { GoalScenarioRow } from './rows'
 

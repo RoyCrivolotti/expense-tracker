@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { updateSettings } from './dbConfig'
+import { updateSettings } from './dbSettings'
 import { HttpError } from './http'
 import type { Env } from './env'
 import type { SettingsRow } from './rows'
