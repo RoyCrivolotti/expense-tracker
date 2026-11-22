@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as device from '../../config/device'
 import * as keysApi from '../../data/captureKeysApi'
@@ -97,11 +97,13 @@ describe('the first-payment check', () => {
     await waitFor(() => expect(calls()).toBe(4))
   })
 
-  it('says only Checking while the read is out, and claims nothing about the phone', async () => {
+  it('draws nothing while the read is out, not even its heading (the card above would push it down), and claims nothing about the phone', async () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText('Checking')).toBeInTheDocument()
+    await act(() => Promise.resolve())
+    expect(screen.queryByText('Set up capture')).not.toBeInTheDocument()
+    expect(screen.queryByText('Checking')).not.toBeInTheDocument()
     expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
     expect(screen.queryByText('Waiting for your first payment')).not.toBeInTheDocument()
   })
@@ -355,7 +357,7 @@ describe('with the shortcut link available', () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    await screen.findByText('Checking')
+    await act(() => Promise.resolve())
     expect(screen.queryByRole('link', { name: 'Add the shortcut' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
   })
@@ -503,7 +505,7 @@ describe('opening and closing the steps', () => {
     vi.mocked(statusApi.fetchCaptureStatus).mockReturnValue(new Promise(() => undefined))
     render(<CaptureSetupSetting />)
 
-    await screen.findByText('Checking')
+    await act(() => Promise.resolve())
     expect(screen.queryByRole('button', { name: /the steps/ })).not.toBeInTheDocument()
   })
 })

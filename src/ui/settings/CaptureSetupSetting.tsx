@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type Ref } from 'react'
 import { devicePlatform, isAppleTouch } from '../../config/device'
 import { Card, SectionTitle } from '../components/primitives'
 import tabStyles from '../tabs/tabs.module.css'
@@ -6,6 +6,7 @@ import { Waiting } from './CaptureSetupCheck'
 import styles from './CaptureSetupSetting.module.css'
 import { Step, type Setup } from './SetupStep'
 import { fileSteps, manualSteps } from './setupSteps'
+import { CaptureIntro } from './CaptureIntro'
 import { useCaptureSetup } from './useCaptureSetup'
 
 const SHORTCUT_LINK_PREFIX = 'https://www.icloud.com/shortcuts/'
@@ -32,11 +33,38 @@ const FROM_LINK =
  */
 export function CaptureSetupSetting() {
   const platform = devicePlatform()
+  if (!isAppleTouch(platform) && platform !== 'unknown') {
+    return (
+      <>
+        <SectionTitle>Set up capture</SectionTitle>
+        <Card>
+          <p className={tabStyles.settingHint}>{ELSEWHERE}</p>
+        </Card>
+      </>
+    )
+  }
+  return <SetupOnThisDevice />
+}
+
+/** Where capture can run: the card that says what it is, then the steps. The setup is read here, once, for both. */
+function SetupOnThisDevice() {
+  const setup = useCaptureSetup()
+  const toggle = useRef<HTMLButtonElement>(null)
+  // Opens the steps if they were closed and takes the focus to their toggle. The browser scrolls it into view clear of the
+  // sticky tab bar, which the page's scroll padding allows for.
+  const startSetup = () => {
+    setup.showSteps(true)
+    toggle.current?.focus()
+  }
+  // Until the status has been read nobody knows which way the setup goes, and drawing its heading and box first would
+  // push them down when the card above folds in.
+  if (setup.status === null && setup.error === null) return null
   return (
     <>
+      <CaptureIntro setup={setup} onStart={startSetup} />
       <SectionTitle>Set up capture</SectionTitle>
       <Card>
-        {isAppleTouch(platform) || platform === 'unknown' ? <SetupSteps /> : <p className={tabStyles.settingHint}>{ELSEWHERE}</p>}
+        <SetupSteps setup={setup} toggle={toggle} />
       </Card>
     </>
   )
@@ -68,12 +96,12 @@ function useSteps(setup: Setup) {
 }
 
 /** The numbered steps behind the row that opens and closes them. */
-function StepsFold({ setup, steps, byHand, back }: { setup: Setup } & Omit<ReturnType<typeof useSteps>, 'group'>) {
+function StepsFold({ setup, steps, byHand, back, toggle }: { setup: Setup; toggle: Ref<HTMLButtonElement> } & Omit<ReturnType<typeof useSteps>, 'group'>) {
   const foldId = useId()
   const open = setup.stepsOpen
   return (
     <div>
-      <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={foldId} onClick={() => setup.showSteps(!open)}>
+      <button ref={toggle} type="button" className={styles.toggle} aria-expanded={open} aria-controls={foldId} onClick={() => setup.showSteps(!open)}>
         <span>{open ? 'Hide the steps' : 'Show the steps'}</span>
         <span className={styles.toggleCount}>{tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}</span>
       </button>
@@ -105,23 +133,19 @@ function StepsFold({ setup, steps, byHand, back }: { setup: Setup } & Omit<Retur
   )
 }
 
-function SetupSteps() {
-  const setup = useCaptureSetup()
+function SetupSteps({ setup, toggle }: { setup: Setup; toggle: Ref<HTMLButtonElement> }) {
   const { group, ...fold } = useSteps(setup)
-  // Until the status has been read nobody knows which way the card goes, so the steps wait for it.
-  const loaded = setup.status !== null || setup.error !== null
   return (
     <div ref={group} className={tabStyles.settingGroup}>
       <p className={tabStyles.settingHint}>
-        Capture sends your bank app&rsquo;s notifications from your iPhone or iPad to the app. Each one that shows an amount with its
-        currency becomes a payment for you to review; the rest are only counted.
+        Each notification that shows an amount with its currency becomes a payment for you to review; the rest are only counted.
       </p>
       {setup.error ? (
         <p className={tabStyles.settingError} role="alert">
           {setup.error}
         </p>
       ) : null}
-      {loaded ? <StepsFold setup={setup} {...fold} /> : null}
+      <StepsFold setup={setup} toggle={toggle} {...fold} />
       <Waiting setup={setup} />
     </div>
   )

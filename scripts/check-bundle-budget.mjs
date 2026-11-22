@@ -30,7 +30,7 @@ const LEDGER_MAX_GZIP = 17_700
 const GOALS_MAX_GZIP = 96_700
 // CAPTURE: the Settings capture and notification cards and the Dashboard review card, each loaded only when shown. Kept
 // out of TOTAL so the feature has a line of its own and the default build cannot be blamed for it.
-const CAPTURE_MAX_GZIP = 23_000
+const CAPTURE_MAX_GZIP = 23_800
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
