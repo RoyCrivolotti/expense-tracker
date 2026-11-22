@@ -41,7 +41,8 @@
  * leaves vertical swipes to the page on a touch screen, and that Progress and Assumptions keep their narrower page.
  * At 1200, 1280 and 1440 by 800 (and 1366x768, where the bar is left in the page) a click on a lever's figure or its
  * unit, typing, filling, the sliders, Tab and a star pressed from the keyboard leave the page where it is, a
- * 15-character net worth leaves the held bar one row high, and the legend stays clear of the bar throughout
+ * 15-character net worth leaves the held bar one row high, the legend stays clear of the bar throughout, and a click
+ * in a lever of the bar stuck under the header, and focus leaving it, leave the page where it is too
  * (`ONLY=lever-focus` runs just that group).
  *
  * The toast after a star takes an input out of the bar (and the other messages on the page) is in the side rail,
@@ -1038,6 +1039,39 @@ async function checkLeverFocus(browser, engine) {
     await page.waitForTimeout(500)
     const starred = await leverState(page)
     check(where, '(z1) pressing a star with the keyboard does not move the page', near(starred.y, 0, 1) && clear(starred), detail(starred))
+    await resetLevers(page)
+
+    // The bar stuck under the header, which is where it is for most of the page (the star above
+    // took Monthly investing out of it, so the next lever is the one clicked). A click in a
+    // lever lifts the page's scroll padding, and Safari's engine moved the page by what was lifted
+    // (123px) to keep its scroll anchor the same distance under the padded edge.
+    const down = await scrollTo(page, 900)
+    const stuckField = page.getByRole('textbox', { name: 'Horizon (years)', exact: true })
+    const stuckBox = await stuckField.boundingBox()
+    const stuck = await leverState(page)
+    await page.mouse.click(stuckBox.x + stuckBox.width / 2, stuckBox.y + stuckBox.height / 2)
+    await page.waitForTimeout(350)
+    const clicked = await leverState(page)
+    check(
+      where,
+      '(z1) a click in a lever of the bar stuck under the header does not move the page',
+      stuck.barTop < 100 && clicked.active === 'Horizon (years)' && near(clicked.y, down, 1) && near(clicked.barTop, stuck.barTop, 1),
+      `bar ${px(stuck.barTop)}, page ${down} to ${clicked.y}px, focus on ${clicked.active}`,
+    )
+    // The page only gives up the browser's scroll anchoring while focus is in the bar: the rest
+    // of the time it is what keeps the place in the page, on a window resize for one.
+    const anchoring = () => page.evaluate(() => getComputedStyle(document.documentElement).overflowAnchor)
+    const during = await anchoring()
+    await page.evaluate(() => document.activeElement?.blur())
+    await page.waitForTimeout(350)
+    const left = await leverState(page)
+    const afterwards = await anchoring()
+    check(
+      where,
+      '(z1) focus leaving the stuck bar gives the page its scroll anchoring back and does not move it',
+      during === 'none' && afterwards === 'auto' && near(left.y, down, 1) && near(left.barTop, stuck.barTop, 1),
+      `anchoring ${during} with focus in the bar and ${afterwards} after, page ${down} to ${left.y}px`,
+    )
     await context.close()
   }
 

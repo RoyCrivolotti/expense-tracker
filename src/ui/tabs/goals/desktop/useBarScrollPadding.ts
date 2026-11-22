@@ -19,6 +19,42 @@ const BOTTOM_PADDING_VAR = '--scroll-pad-bottom'
  */
 const HELD_BAR_VAR = '--exp-selection-bar'
 
+/** The property that says whether the browser may move the page to keep what is on screen in place. */
+const ANCHOR = 'overflow-anchor'
+
+/**
+ * Turns the browser's scroll anchoring off for the page and back to what it was. Called with the
+ * same answer twice it does nothing, so what the page had is only read on the way out.
+ */
+function anchoringSwitch(root: HTMLElement): (off: boolean) => void {
+  let before: string | null = null
+  return (off) => {
+    if (off && before === null) {
+      before = root.style.getPropertyValue(ANCHOR)
+      root.style.setProperty(ANCHOR, 'none')
+    } else if (!off && before !== null) {
+      if (before) root.style.setProperty(ANCHOR, before)
+      else root.style.removeProperty(ANCHOR)
+      before = null
+    }
+  }
+}
+
+/** Says when focus comes into an element from outside it and when it leaves it altogether. */
+function watchFocusInside(element: HTMLElement | null, onChange: (inside: boolean) => void): () => void {
+  const enter = () => onChange(true)
+  const leave = (event: FocusEvent) => {
+    if (event.relatedTarget instanceof Node && element?.contains(event.relatedTarget)) return
+    onChange(false)
+  }
+  element?.addEventListener('focusin', enter)
+  element?.addEventListener('focusout', leave)
+  return () => {
+    element?.removeEventListener('focusin', enter)
+    element?.removeEventListener('focusout', leave)
+  }
+}
+
 /** Whether the stylesheet has the bar stuck under the header (it does from 75rem wide). */
 function isSticky(bar: HTMLElement | null): bar is HTMLElement {
   return bar !== null && getComputedStyle(bar).position === 'sticky'
@@ -40,6 +76,13 @@ function isSticky(bar: HTMLElement | null): bar is HTMLElement {
  * and scrolled the page by the bar's height to uncover it (it does not honour a negative
  * scroll-margin on the control instead). It is put back as focus leaves, before the next control
  * is scrolled to.
+ *
+ * The page gives up the browser's scroll anchoring for as long as the padding is lifted. Safari's
+ * engine keeps its anchor a fixed distance below the padded top edge, so lifting the padding on a
+ * click in a lever scrolled the page by what was lifted (the bar's height and its air) behind a
+ * bar that stayed where it was. Anchoring goes before the padding does and comes back after it,
+ * so the padding never changes with anchoring on. The rest of the time it is the browser's, which
+ * is what keeps the place in the page when the window is resized.
  */
 export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -59,7 +102,10 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
     }
     const root = document.documentElement
     const before = root.style.scrollPaddingBottom
+    const anchoringOff = anchoringSwitch(root)
     const apply = () => {
+      const lifted = focusInside && isSticky(bar.current)
+      if (lifted) anchoringOff(true)
       syncTop()
       const el = bar.current
       const heldHeight = el !== null && getComputedStyle(el).bottom !== 'auto' ? el.offsetHeight : null
@@ -72,32 +118,25 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
         root.style.removeProperty(BOTTOM_PADDING_VAR)
         root.style.removeProperty(HELD_BAR_VAR)
       }
+      if (!lifted) anchoringOff(false)
     }
     apply()
-    const element = bar.current
-    const enter = () => {
-      focusInside = true
+    const stopFocus = watchFocusInside(bar.current, (inside) => {
+      focusInside = inside
       apply()
-    }
-    const leave = (event: FocusEvent) => {
-      if (event.relatedTarget instanceof Node && element?.contains(event.relatedTarget)) return
-      focusInside = false
-      apply()
-    }
-    element?.addEventListener('focusin', enter)
-    element?.addEventListener('focusout', leave)
+    })
     window.addEventListener('resize', apply)
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(apply) : null
     if (bar.current) observer?.observe(bar.current)
     return () => {
       stopTop?.()
-      element?.removeEventListener('focusin', enter)
-      element?.removeEventListener('focusout', leave)
+      stopFocus()
       window.removeEventListener('resize', apply)
       observer?.disconnect()
       root.style.scrollPaddingBottom = before
       root.style.removeProperty(BOTTOM_PADDING_VAR)
       root.style.removeProperty(HELD_BAR_VAR)
+      anchoringOff(false)
     }
   }, [bar])
 }
