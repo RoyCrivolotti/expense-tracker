@@ -107,6 +107,7 @@ describe('computeSpendingPace', () => {
     expect(pace.flexibleSpentCents).toBe(9000)
     // Budgets of active categories (140.000) minus the recurring rent (100.000).
     expect(pace.flexibleBudgetCents).toBe(40000)
+    expect(pace.totalBudgetCents).toBe(140000)
     expect(pace.shouldBeTodayCents).toBe(Math.round(40000 * (10 / 31)))
     expect(pace.projectedCents).toBe(Math.round(9000 / (10 / 31)))
     expect(pace.lastMonthSameDayCents).toBe(6000)
@@ -170,6 +171,8 @@ describe('computeSpendingPace', () => {
       prevMonth: null,
     })
     expect(pace.flexibleBudgetCents).toBe(0)
+    // The budget is there; the fixed charges use it up.
+    expect(pace.totalBudgetCents).toBe(50000)
     expect(pace.lastMonthSameDayCents).toBeNull()
   })
 })

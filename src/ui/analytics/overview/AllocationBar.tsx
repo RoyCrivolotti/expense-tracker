@@ -4,6 +4,7 @@ import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
 import { ALLOCATION_NOTES } from '../analyticsCopy'
 import { HowCalculated } from '../shared/HowCalculated'
+import { NeedsCard } from '../shared/NeedsLine'
 import styles from './overview.module.css'
 
 interface Segment {
@@ -32,7 +33,11 @@ export function AllocationBar({
   throughDay: number | null
 }) {
   const format = useMoneyFormat()
-  if (allocation.incomeCents <= 0) return null
+  if (allocation.incomeCents <= 0) {
+    return (
+      <NeedsCard title="Where the income went">Shows once this month has income.</NeedsCard>
+    )
+  }
   const segments = segmentsOf(allocation)
   const pct = (cents: number) => (cents / allocation.incomeCents) * 100
 

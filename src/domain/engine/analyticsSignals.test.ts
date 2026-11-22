@@ -12,6 +12,7 @@ function pace(partial: Partial<SpendingPace> = {}): SpendingPace {
     flexibleSpentCents: 20000,
     fixedSpentCents: 100000,
     flexibleBudgetCents: 45000,
+    totalBudgetCents: 145000,
     shouldBeTodayCents: 15000,
     projectedCents: 60000,
     lastMonthSameDayCents: 18000,

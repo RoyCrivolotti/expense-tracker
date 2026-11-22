@@ -101,10 +101,10 @@ export function OverviewView({
       )}
       <div className={styles.grid2}>
         <AllocationBar allocation={data.allocation} throughDay={data.kpis.openDayLimit} />
-        <MoversCard movers={data.movers} />
+        <MoversCard movers={data.movers} hasEarlierMonth={model.months.some((m) => m < month)} />
       </div>
       <FixedCostsCard items={data.fixedCosts} />
-      {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
+      <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />
     </div>
   )
 }

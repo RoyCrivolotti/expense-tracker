@@ -5,6 +5,7 @@ import { Card } from '../../components/primitives'
 import { BASELINE_NOTES } from '../analyticsCopy'
 import { HowCalculated } from '../shared/HowCalculated'
 import { ChangeChip } from '../shared/ChangeChip'
+import { NeedsCard } from '../shared/NeedsLine'
 import styles from './overview.module.css'
 
 function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -28,10 +29,16 @@ export function BaselineCard({
   baseline,
   onUseInGoals,
 }: {
-  baseline: SpendingBaseline
+  /** Null until a month before the one viewed has closed with spending. */
+  baseline: SpendingBaseline | null
   onUseInGoals?: ((monthlyCents: number) => void) | undefined
 }) {
   const format = useMoneyFormat()
+  if (!baseline) {
+    return (
+      <NeedsCard title="Spending baseline">Shows once a month before this one has closed with spending.</NeedsCard>
+    )
+  }
   const compact = (cents: number) => formatCentsCompact(cents, format)
   return (
     <Card>

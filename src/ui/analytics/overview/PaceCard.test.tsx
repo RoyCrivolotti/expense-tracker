@@ -11,6 +11,7 @@ function pace(partial: Partial<SpendingPace> = {}): SpendingPace {
     flexibleSpentCents: 20000,
     fixedSpentCents: 100000,
     flexibleBudgetCents: 40000,
+    totalBudgetCents: 140000,
     shouldBeTodayCents: 13000,
     projectedCents: 62000,
     lastMonthSameDayCents: 18000,
@@ -19,6 +20,17 @@ function pace(partial: Partial<SpendingPace> = {}): SpendingPace {
 }
 
 describe('PaceCard', () => {
+  it('says budgets are missing when no category has one', () => {
+    render(<PaceCard pace={pace({ flexibleBudgetCents: 0, totalBudgetCents: 0 })} isFuture={false} />)
+    expect(screen.getByText('Shows once your categories have monthly budgets.')).toBeInTheDocument()
+  })
+
+  it('says the fixed costs use the budget up when there is a budget but nothing left of it', () => {
+    render(<PaceCard pace={pace({ flexibleBudgetCents: 0, totalBudgetCents: 3000 })} isFuture={false} />)
+    expect(screen.getByText('Your fixed costs already use up your monthly budget.')).toBeInTheDocument()
+    expect(screen.queryByText(/categories have monthly budgets/)).not.toBeInTheDocument()
+  })
+
   it('tells a closed month from one that has not started', () => {
     const { rerender } = render(<PaceCard pace={pace({ open: false })} isFuture={false} />)
     expect(screen.getByText(/Closed month/)).toBeInTheDocument()

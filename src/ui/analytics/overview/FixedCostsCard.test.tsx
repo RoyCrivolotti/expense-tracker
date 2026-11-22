@@ -33,8 +33,8 @@ describe('FixedCostsCard', () => {
     expect(screen.getByText(/has not repeated 3 times at a regular rhythm yet/)).toBeInTheDocument()
   })
 
-  it('shows nothing when no fixed cost has been detected', () => {
-    const { container } = render(<FixedCostsCard items={[]} />)
-    expect(container).toBeEmptyDOMElement()
+  it('says what it needs when no fixed cost has been detected', () => {
+    render(<FixedCostsCard items={[]} />)
+    expect(screen.getByText('Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.')).toBeInTheDocument()
   })
 })

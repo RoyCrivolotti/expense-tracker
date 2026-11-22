@@ -2,6 +2,7 @@ import type { FixedCostItem } from '../../../engine'
 import { formatCentsCompact, shortMonthYearLabel } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
+import { NeedsCard } from '../shared/NeedsLine'
 import styles from './overview.module.css'
 
 const RHYTHM = { monthly: 'monthly', quarterly: 'every 3 months', yearly: 'yearly' } as const
@@ -19,7 +20,11 @@ function detailOf(item: FixedCostItem): string {
  */
 export function FixedCostsCard({ items }: { items: FixedCostItem[] }) {
   const format = useMoneyFormat()
-  if (items.length === 0) return null
+  if (items.length === 0) {
+    return (
+      <NeedsCard title="Detected fixed costs">Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.</NeedsCard>
+    )
+  }
   return (
     <Card>
       <details className={styles.fixedDetails}>
