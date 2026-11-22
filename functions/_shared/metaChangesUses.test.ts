@@ -24,7 +24,8 @@ const sources = import.meta.glob<string>(
 
 /** The uses of `meta.changes` per file, and why each is safe. */
 const LISTED: Record<string, { uses: number; why: string }> = {
-  '/functions/_shared/access/accessDb.ts': { uses: 2, why: 'access tables, tested for > 0' },
+  '/functions/_shared/access/accessDb.ts': { uses: 1, why: 'access tables, tested for > 0' },
+  '/functions/_shared/access/accessGroupsDb.ts': { uses: 1, why: 'access tables, tested for > 0' },
   '/functions/_shared/adapters/d1CaptureCards.ts': {
     uses: 2,
     why: 'capture_cards carries no trigger; tested for > 0 to say a link was saved or removed',
