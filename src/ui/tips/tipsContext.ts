@@ -19,3 +19,6 @@ export const NO_TIPS: Tips = {
 export const TipsContext = createContext<Tips>(NO_TIPS)
 
 export const useTips = (): Tips => useContext(TipsContext)
+
+/** What puts the card around it away on the account, after handing on any focus it holds. Provided by `TipCard`, used by `TipLink`. */
+export const PutAwayContext = createContext<() => void>(() => undefined)

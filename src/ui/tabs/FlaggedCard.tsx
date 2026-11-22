@@ -6,6 +6,7 @@ import {
   type FlagGroup,
 } from '../../domain/engine/flagGroups'
 import { Card, SectionTitle } from '../components/primitives'
+import { FlaggedTip } from '../tips/TransactionsTips'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
 import { FlagGlyph } from '../components/FlagGlyph'
@@ -171,12 +172,14 @@ export function FlaggedCard({
   onClearGroup,
 }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
-  if (groups.length === 0) return null
+  // The line is mounted before there is anything flagged, in the same place, so it folds open when the first flag is used.
+  if (groups.length === 0) return <>{null}<FlaggedTip present={false} /></>
   const total = summarizeFlagGroups(groups)
 
   return (
     <>
       <SectionTitle>Flagged</SectionTitle>
+      <FlaggedTip present />
       <Card className={styles.card}>
         {/*
           Collapsed by default: this card sits above the month's transactions on

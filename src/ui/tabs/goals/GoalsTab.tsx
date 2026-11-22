@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import { sumsOf } from '../../modelSums'
 import type { ExpenseActions } from '../../actions'
@@ -6,7 +6,6 @@ import {
   averageMonthlyCents,
   checkinInvestedCents,
   computeMonthlyTotals,
-  formatCents,
   latestCheckin,
   milestonesReached,
   monthlyFlows,
@@ -22,8 +21,7 @@ import {
   type MobilePlanView,
   type TabView,
 } from './goalsView'
-import { useToast } from '../../hooks/useToast'
-import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { useBaselineToast } from './useBaselineToast'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
@@ -34,6 +32,7 @@ import { useGoalsUnsavedWork } from './useGoalsUnsavedWork'
 import { useStarredLevers } from './useStarredLevers'
 import { GoalsTitleRow } from './GoalsTitleRow'
 import { PlanView } from './PlanView'
+import { GoalsTips } from './GoalsTips'
 import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
 import styles from './goals.module.css'
@@ -149,16 +148,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setBaselineApplied(true)
     editor.patchDraft(baselinePatch)
   }
-  // Said out loud as well: a measured spend equal to the plan's changes nothing on screen.
-  const { showToast } = useToast()
-  const moneyFormat = useMoneyFormat()
-  const baselineAnnualCents = baselinePatch?.annualSpendCents ?? null
-  useEffect(() => {
-    if (baselineAnnualCents === null) return
-    showToast(
-      `Annual spend at FI set to ${formatCents(baselineAnnualCents, moneyFormat)} from your measured spending. Save to keep it.`,
-    )
-  }, [baselineAnnualCents, moneyFormat, showToast])
+  useBaselineToast(baselinePatch?.annualSpendCents ?? null)
   useGoalsUnsavedWork(editor, actions != null)
   // Kept here, not in Plan, so a choice still being saved survives a visit to another view.
   const levers = useStarredLevers(dataset.settings.goalLevers, actions?.updateSettings)
@@ -177,6 +167,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   return (
     <div className={styles.stack}>
       <GoalsTitleRow narrow={narrow} viewSwitch={viewSwitch} showActions={view === 'plan'} editor={editor} actions={actions} />
+
+      <GoalsTips view={view} narrow={narrow} half={mobilePlanView} editor={editor} noScenarios={dataset.goalScenarios.length === 0} />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}

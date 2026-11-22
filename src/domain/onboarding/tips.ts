@@ -17,6 +17,14 @@ const TIP_ID_PATTERN = /^[a-z][a-z0-9-]*$/
 /** The tips that exist. Each card names its own; later ones are added here. */
 export const TIP_IDS = {
   gettingStarted: 'getting-started',
+  transactions: 'transactions',
+  flagged: 'flagged',
+  analytics: 'analytics',
+  goals: 'goals',
+  goalsProgress: 'goals-progress',
+  capture: 'capture',
+  /** Not a card: the gate for the lines in the transaction form, which are never put away one by one. */
+  formLines: 'form-lines',
 } as const
 
 export type TipId = (typeof TIP_IDS)[keyof typeof TIP_IDS]
