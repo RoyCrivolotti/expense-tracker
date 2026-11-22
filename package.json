@@ -14,7 +14,7 @@
     "generate-icons": "node scripts/generate-icons.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "docs:getting-started": "tsx scripts/gen-getting-started.ts",
