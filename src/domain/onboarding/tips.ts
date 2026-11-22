@@ -20,6 +20,9 @@ export const TIP_IDS = {
   transactions: 'transactions',
   flagged: 'flagged',
   analytics: 'analytics',
+  goals: 'goals',
+  goalsProgress: 'goals-progress',
+  capture: 'capture',
   /** Not a card: the gate for the lines in the transaction form, which are never put away one by one. */
   formLines: 'form-lines',
 } as const

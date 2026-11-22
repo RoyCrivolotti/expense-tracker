@@ -3,7 +3,7 @@ import { Presence } from '../components/Presence'
 import { EXIT_MS, exitVars } from '../hooks/motion'
 import { useExit } from '../hooks/usePresence'
 import { moveFocusPast } from './moveFocusPast'
-import { useTips } from './tipsContext'
+import { PutAwayContext, useTips } from './tipsContext'
 import styles from './TipCard.module.css'
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
   onAction?: () => void
   /** Shows only while this holds. The card stays mounted, so it folds open when the data arrives. */
   when?: boolean
+  /** Beside the button, for a second way out that puts the card away without doing what the button does (a `TipLink`). */
+  secondary?: ReactNode
   children: ReactNode
 }
 
@@ -38,28 +40,37 @@ export function TipCard(props: Props) {
   )
 }
 
-function TipCardBody({ id, title, actionLabel = 'Got it', onAction, children, arriving }: Props & { arriving: boolean }) {
+function TipCardBody({ id, title, actionLabel = 'Got it', onAction, secondary, children, arriving }: Props & { arriving: boolean }) {
   const { dismiss } = useTips()
   const { leaving, exitMs } = useExit()
   const card = useRef<HTMLElement>(null)
+  /** Puts the card away on the account, after handing the keyboard focus it may hold to the next control. */
+  const putAway = () => {
+    moveFocusPast(card.current)
+    dismiss(id)
+  }
   const classes = [styles.fold, arriving ? styles.arriving : '', leaving ? styles.leaving : ''].filter(Boolean).join(' ')
   return (
     <div className={classes} style={exitVars(leaving, exitMs)} inert={leaving}>
       <div className={styles.foldInner}>
         <section ref={card} className={styles.card} aria-label={title}>
           <h2 className={styles.title}>{title}</h2>
-          <div className={styles.body}>{children}</div>
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => {
-              moveFocusPast(card.current)
-              onAction?.()
-              dismiss(id)
-            }}
-          >
-            {actionLabel}
-          </button>
+          <PutAwayContext value={putAway}>
+            <div className={styles.body}>{children}</div>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.action}
+                onClick={() => {
+                  onAction?.()
+                  putAway()
+                }}
+              >
+                {actionLabel}
+              </button>
+              {secondary}
+            </div>
+          </PutAwayContext>
         </section>
       </div>
     </div>
