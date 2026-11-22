@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "docs:getting-started": "tsx scripts/gen-getting-started.ts",
     "coverage:diff": "node scripts/check-diff-coverage.mjs",
     "check:pr-screenshots": "node scripts/check-pr-screenshots.mjs",
     "update:pr-staging-url": "node scripts/update-pr-staging-url.mjs",
