@@ -70,6 +70,11 @@ function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }
   const total = cats.reduce((s, c) => s + c.monthlyBudgetCents, 0)
   return (
     <Card>
+      {cats.length === 0 && (
+        <p className={`${styles.deleteNote} ${styles.emptyNote}`}>
+          No categories yet. They group your spending and carry a monthly budget. Add one below.
+        </p>
+      )}
       {cats.map((c) => (
         <DefRow
           key={c.id}
@@ -98,6 +103,11 @@ function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }
 function AccountList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }) {
   return (
     <Card>
+      {model.dataset.accounts.length === 0 && (
+        <p className={`${styles.deleteNote} ${styles.emptyNote}`}>
+          No accounts yet. They are the cards and bank accounts you pay from. Add one below.
+        </p>
+      )}
       {model.dataset.accounts.map((a) => (
         <DefRow
           key={a.id}
