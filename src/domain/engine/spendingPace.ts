@@ -21,6 +21,8 @@ export interface SpendingPace {
   flexibleSpentCents: number
   fixedSpentCents: number
   flexibleBudgetCents: number
+  /** The active categories' monthly budgets added up, before the fixed charges are taken off. */
+  totalBudgetCents: number
   /** Where the flexible spend should sit today at an even pace. */
   shouldBeTodayCents: number
   /** Where this pace lands at month end (the spend itself once the month closes). */
@@ -146,6 +148,7 @@ export function computeSpendingPace(
     flexibleSpentCents: split.flexibleCents,
     fixedSpentCents: split.fixedCents,
     flexibleBudgetCents,
+    totalBudgetCents: totalBudget,
     shouldBeTodayCents: Math.round(flexibleBudgetCents * frac),
     projectedCents,
     lastMonthSameDayCents,
