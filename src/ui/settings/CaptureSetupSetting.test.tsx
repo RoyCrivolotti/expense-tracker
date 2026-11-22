@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as device from '../../config/device'
 import * as keysApi from '../../data/captureKeysApi'
 import * as statusApi from '../../data/captureStatusApi'
+import { AccountOwnerContext } from '../hooks/accountOwner'
 import { CaptureSetupSetting } from './CaptureSetupSetting'
 
 vi.mock('../../data/captureKeysApi', async (original) => ({
@@ -584,5 +585,41 @@ describe('when adding the shared shortcut did not work', () => {
 
     expect(screen.queryByRole('button', { name: /by hand|shared shortcut|the steps/ })).not.toBeInTheDocument()
     expect(screen.queryByText(/Get Contents of URL/)).not.toBeInTheDocument()
+  })
+})
+
+describe('ticks per person', () => {
+  const asOwner = (owner: string) => (
+    <AccountOwnerContext value={owner}>
+      <CaptureSetupSetting />
+    </AccountOwnerContext>
+  )
+  const keyTick = () => screen.findByRole('checkbox', { name: /1\. Make a key and copy it/ })
+
+  it('carries the old shared ticks to whoever opens the card first, and keeps them from the next person', async () => {
+    localStorage.setItem('expenses-capture-setup', JSON.stringify({ ticks: ['key'] }))
+    const first = render(asOwner('a@example.com'))
+    expect(await keyTick()).toBeChecked()
+    expect(localStorage.getItem('expenses-capture-setup')).toBeNull()
+    first.unmount()
+
+    render(asOwner('b@example.com'))
+    expect(await keyTick()).not.toBeChecked()
+  })
+
+  it('writes a tick under the signed-in person only', async () => {
+    render(asOwner('a@example.com'))
+    fireEvent.click(await keyTick())
+    expect(localStorage.getItem('expenses-capture-setup:a@example.com')).toContain('"ticks"')
+    expect(localStorage.getItem('expenses-capture-setup')).toBeNull()
+  })
+
+  it('reads the ticks again when the signed-in person changes without a reload', async () => {
+    localStorage.setItem('expenses-capture-setup:a@example.com', JSON.stringify({ ticks: ['key'] }))
+    const view = render(asOwner('a@example.com'))
+    expect(await keyTick()).toBeChecked()
+
+    view.rerender(asOwner('b@example.com'))
+    expect(await keyTick()).not.toBeChecked()
   })
 })
