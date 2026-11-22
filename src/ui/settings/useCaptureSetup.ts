@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCaptureKeys, onCaptureKeysChanged, type CaptureKeyInfo } from '../../data/captureKeysApi'
 import { fetchCaptureStatus, type CaptureStatus } from '../../data/captureStatusApi'
-import { pastedEndpoint, readSetupMemory, stepsOpen, writeSetupMemory, type SetupMemory } from './captureSetup'
+import { useAccountOwner } from '../hooks/accountOwner'
+import { adoptUnownedSetup, pastedEndpoint, readSetupMemory, stepsOpen, writeSetupMemory, type SetupMemory } from './captureSetup'
 
 function browserStorage(): Storage | null {
   try {
@@ -21,7 +22,11 @@ export function useCaptureSetup() {
   const [keys, setKeys] = useState<CaptureKeyInfo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
-  const [memory, setMemory] = useState<SetupMemory>(() => readSetupMemory(browserStorage()))
+  const owner = useAccountOwner()
+  const [memory, setMemory] = useState<SetupMemory>(() => {
+    adoptUnownedSetup(browserStorage(), owner)
+    return readSetupMemory(browserStorage(), owner)
+  })
 
   useEffect(() => {
     let current = true
@@ -52,8 +57,8 @@ export function useCaptureSetup() {
 
   const remember = useCallback((next: SetupMemory) => {
     setMemory(next)
-    writeSetupMemory(browserStorage(), next)
-  }, [])
+    writeSetupMemory(browserStorage(), next, owner)
+  }, [owner])
 
   return {
     status,

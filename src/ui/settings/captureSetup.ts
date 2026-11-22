@@ -1,5 +1,6 @@
 import type { SourceStatus } from '../../data/captureStatusApi'
 import { shortDayLabel } from '../format'
+import { ownerKey } from '../hooks/accountOwner'
 
 /**
  * Where a bank app stands: nothing has reached the app (waiting), pushes arrive but none of the last week's was read as a
@@ -55,6 +56,32 @@ export function lastCaptureText(iso: string, now: Date): string {
 const STORAGE_KEY = 'expenses-capture-setup'
 
 /**
+ * One person's key. Not in `OWNER_KEYS`: `forgetUnownedSettings` deletes those bare keys at start-up, and this one is
+ * handed to whoever is signed in first instead (see `adoptUnownedSetup`). With no one signed in (the demo, a test) it
+ * is the bare key, as for the other owner-keyed settings.
+ */
+const keyFor = (owner: string | undefined): string => ownerKey(STORAGE_KEY, owner)
+
+/**
+ * Earlier builds kept one copy for the browser. The first person to open the card afterwards takes it over, so nobody
+ * loses ticks they already made, and it is removed so a second person on the same browser starts clean.
+ */
+export function adoptUnownedSetup(
+  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null,
+  owner: string | undefined,
+): void {
+  if (!storage || !owner) return
+  try {
+    const old = storage.getItem(STORAGE_KEY)
+    if (old === null) return
+    if (storage.getItem(keyFor(owner)) === null) storage.setItem(keyFor(owner), old)
+    storage.removeItem(STORAGE_KEY)
+  } catch {
+    // Storage that refuses leaves the old copy where it is, to be tried again.
+  }
+}
+
+/**
  * What the person ticked off, an address they pasted, whether they opened or closed the steps themselves (absent
  * until they do, so the card can choose for them) and whether they build the shortcut by hand, kept in this browser only.
  */
@@ -83,9 +110,9 @@ function choices(raw: Partial<SetupMemory> | null): Pick<SetupMemory, 'steps' | 
   }
 }
 
-export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null): SetupMemory {
+export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null, owner?: string): SetupMemory {
   try {
-    const raw = JSON.parse(storage?.getItem(STORAGE_KEY) ?? 'null') as Partial<SetupMemory> | null
+    const raw = JSON.parse(storage?.getItem(keyFor(owner)) ?? 'null') as Partial<SetupMemory> | null
     const ticks = Array.isArray(raw?.ticks) ? raw.ticks.filter((t): t is string => typeof t === 'string') : []
     return { ticks, endpoint: typeof raw?.endpoint === 'string' ? raw.endpoint : '', ...choices(raw) }
   } catch {
@@ -93,9 +120,9 @@ export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null): Setup
   }
 }
 
-export function writeSetupMemory(storage: Pick<Storage, 'setItem'> | null, memory: SetupMemory): void {
+export function writeSetupMemory(storage: Pick<Storage, 'setItem'> | null, memory: SetupMemory, owner?: string): void {
   try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify(memory))
+    storage?.setItem(keyFor(owner), JSON.stringify(memory))
   } catch {
     // A browser that refuses storage keeps the ticks for this visit only.
   }

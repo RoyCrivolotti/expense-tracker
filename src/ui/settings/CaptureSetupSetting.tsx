@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type Ref } from 'react'
 import { devicePlatform, isAppleTouch } from '../../config/device'
 import { Card, SectionTitle } from '../components/primitives'
+import { useAccountOwner } from '../hooks/accountOwner'
 import tabStyles from '../tabs/tabs.module.css'
 import { Waiting } from './CaptureSetupCheck'
 import styles from './CaptureSetupSetting.module.css'
@@ -32,6 +33,7 @@ const FROM_LINK =
  * gets the steps: a wrong guess must never hide them from a phone that can use them.
  */
 export function CaptureSetupSetting() {
+  const owner = useAccountOwner()
   const platform = devicePlatform()
   if (!isAppleTouch(platform) && platform !== 'unknown') {
     return (
@@ -43,7 +45,8 @@ export function CaptureSetupSetting() {
       </>
     )
   }
-  return <SetupOnThisDevice />
+  // Keyed by person, so the ticks are read again when someone else signs in without the page reloading.
+  return <SetupOnThisDevice key={owner ?? ''} />
 }
 
 /** Where capture can run: the card that says what it is, then the steps. The setup is read here, once, for both. */

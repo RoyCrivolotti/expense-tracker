@@ -3,6 +3,7 @@ import {
   STALE_DAYS,
   lastCaptureText,
   pastedEndpoint,
+  adoptUnownedSetup,
   readSetupMemory,
   sourceState,
   writeSetupMemory,
@@ -95,5 +96,71 @@ describe('setup memory', () => {
         { ticks: [], endpoint: '' },
       ),
     ).not.toThrow()
+  })
+})
+
+describe('setup memory per person', () => {
+  const make = (init: Record<string, string> = {}) => {
+    const store = new Map(Object.entries(init))
+    return {
+      store,
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    }
+  }
+
+  it("keeps each person's ticks apart", () => {
+    const storage = make()
+    writeSetupMemory(storage, { ticks: ['ios'], endpoint: '' }, 'a@example.com')
+    expect(readSetupMemory(storage, 'a@example.com').ticks).toEqual(['ios'])
+    expect(readSetupMemory(storage, 'b@example.com').ticks).toEqual([])
+    expect(readSetupMemory(storage).ticks).toEqual([])
+  })
+
+  it('hands the old shared copy to the first person, once, and removes it', () => {
+    const storage = make({ 'expenses-capture-setup': '{"ticks":["ios"],"endpoint":""}' })
+    adoptUnownedSetup(storage, 'a@example.com')
+    expect(readSetupMemory(storage, 'a@example.com').ticks).toEqual(['ios'])
+    expect(storage.store.has('expenses-capture-setup')).toBe(false)
+    adoptUnownedSetup(storage, 'b@example.com')
+    expect(readSetupMemory(storage, 'b@example.com').ticks).toEqual([])
+  })
+
+  it("does not overwrite a person's own copy with the old one", () => {
+    const storage = make({
+      'expenses-capture-setup': '{"ticks":["old"],"endpoint":""}',
+      'expenses-capture-setup:a@example.com': '{"ticks":["mine"],"endpoint":""}',
+    })
+    adoptUnownedSetup(storage, 'a@example.com')
+    expect(readSetupMemory(storage, 'a@example.com').ticks).toEqual(['mine'])
+    expect(storage.store.has('expenses-capture-setup')).toBe(false)
+  })
+
+  it('leaves the old copy alone when no one is signed in or the browser refuses', () => {
+    const storage = make({ 'expenses-capture-setup': '{"ticks":["ios"],"endpoint":""}' })
+    adoptUnownedSetup(storage, undefined)
+    expect(storage.store.has('expenses-capture-setup')).toBe(true)
+    expect(() => adoptUnownedSetup(null, 'a@example.com')).not.toThrow()
+    const refusing = {
+      ...storage,
+      getItem: () => {
+        throw new Error('no')
+      },
+    }
+    expect(() => adoptUnownedSetup(refusing, 'a@example.com')).not.toThrow()
+    expect(storage.store.has('expenses-capture-setup')).toBe(true)
+  })
+
+  it('keeps the old copy when it cannot be written to the person, so a later visit can try again', () => {
+    const storage = make({ 'expenses-capture-setup': '{"ticks":["ios"],"endpoint":""}' })
+    const full = {
+      ...storage,
+      setItem: () => {
+        throw new Error('full')
+      },
+    }
+    adoptUnownedSetup(full, 'a@example.com')
+    expect(storage.store.get('expenses-capture-setup')).toBe('{"ticks":["ios"],"endpoint":""}')
   })
 })
