@@ -102,6 +102,11 @@
   text-align: center;
 }
 
+/* After .deleteNote: it sets the margin shorthand, which would otherwise win. */
+.emptyNote {
+  margin-bottom: 0.85rem;
+}
+
 .deleteError {
   margin: 0.5rem 0 0;
   font-size: 0.82rem;

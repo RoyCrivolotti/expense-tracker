@@ -117,3 +117,40 @@ describe('SettingsTab stopped suggestions', () => {
     expect(screen.queryByText('Suggestions you stopped')).not.toBeInTheDocument()
   })
 })
+
+describe('SettingsTab setup lists, read-only', () => {
+  const view = (dataset: Parameters<typeof buildExpenseModel>[0]) =>
+    render(
+      <SettingsTab
+        model={buildExpenseModel(dataset)}
+        month="2026-09"
+        actions={undefined}
+        entry="setup"
+        theme="dark"
+        onThemeChange={vi.fn()}
+      />,
+    )
+
+  it('says the lists are empty without telling a viewer to add anything', () => {
+    view(makeDataset({ categories: [], accounts: [] }))
+    expect(screen.getByText('No categories yet.')).toBeInTheDocument()
+    expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/Add/)).not.toBeInTheDocument()
+  })
+
+  it('says no categories when the only ones have no budget, since the list shows none', () => {
+    view(makeDataset({ categories: [{ id: 1, name: 'Misc', monthlyBudgetCents: 0, sortOrder: 0, active: true }] }))
+    expect(screen.getByText('No categories yet.')).toBeInTheDocument()
+  })
+
+  it('lists a category that has a budget, with no empty line', () => {
+    view(makeDataset({ categories: [{ id: 1, name: 'Dining', monthlyBudgetCents: 30_000, sortOrder: 0, active: true }] }))
+    expect(screen.getByText('Dining')).toBeInTheDocument()
+    expect(screen.queryByText('No categories yet.')).not.toBeInTheDocument()
+  })
+
+  it('shows no empty line when there are accounts', () => {
+    view(makeDataset({ accounts: [{ id: 10, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }] }))
+    expect(screen.queryByText('No accounts yet.')).not.toBeInTheDocument()
+  })
+})

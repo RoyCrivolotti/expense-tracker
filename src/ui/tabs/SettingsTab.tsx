@@ -22,6 +22,7 @@ import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountView } from '../settings/AccountView'
 import { CaptureView } from '../settings/CaptureView'
 import styles from './tabs.module.css'
+import defStyles from '../definitions/definitions.module.css'
 
 export type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
 
@@ -46,21 +47,26 @@ interface SettingsTabProps {
   entry?: SettingsView | null | undefined
 }
 
+/** The same muted line the editable lists show when empty, so the section looks alike for every reader. */
+function EmptyLine({ children }: { children: string }) {
+  return <p className={`${defStyles.deleteNote} ${defStyles.emptyNote}`}>{children}</p>
+}
+
 function Definitions({ model }: { model: ExpenseModel }) {
   const { dataset } = model
   const budgetTotal = dataset.categories.reduce((s, c) => s + c.monthlyBudgetCents, 0)
+  const budgeted = dataset.categories.filter((c) => c.monthlyBudgetCents > 0)
   return (
     <>
       <SectionTitle>Categories</SectionTitle>
       <Card>
-        {dataset.categories
-          .filter((c) => c.monthlyBudgetCents > 0)
-          .map((c) => (
-            <div key={c.id} className={styles.defRow}>
-              <span>{c.name}</span>
-              <Money cents={c.monthlyBudgetCents} />
-            </div>
-          ))}
+        {budgeted.length === 0 && <EmptyLine>No categories yet.</EmptyLine>}
+        {budgeted.map((c) => (
+          <div key={c.id} className={styles.defRow}>
+            <span>{c.name}</span>
+            <Money cents={c.monthlyBudgetCents} />
+          </div>
+        ))}
         <div className={`${styles.defRow} ${styles.defTotal}`}>
           <span>Total monthly budget</span>
           <Money cents={budgetTotal} />
@@ -69,6 +75,7 @@ function Definitions({ model }: { model: ExpenseModel }) {
 
       <SectionTitle>Accounts</SectionTitle>
       <Card>
+        {dataset.accounts.length === 0 && <EmptyLine>No accounts yet.</EmptyLine>}
         {dataset.accounts.map((a) => (
           <div key={a.id} className={styles.defRow}>
             <span>{a.name}</span>

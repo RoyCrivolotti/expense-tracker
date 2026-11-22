@@ -89,4 +89,19 @@ describe('DefinitionsEditor leaving', () => {
     void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
+
+  it('says what an empty categories and accounts list is for, and how to add one', () => {
+    const model = buildExpenseModel(makeDataset({ categories: [], accounts: [] }))
+    render(<DefinitionsEditor model={model} actions={makeActions()} />)
+    expect(screen.getByText(/No categories yet\. They group your spending/)).toBeInTheDocument()
+    expect(screen.getByText(/No accounts yet\. They are the cards and bank accounts you pay from\. Add one below\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+ Add category' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+ Add account' })).toBeInTheDocument()
+  })
+
+  it('shows no empty line once the lists have a record', () => {
+    renderEditor()
+    expect(screen.queryByText(/No categories yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/No accounts yet/)).not.toBeInTheDocument()
+  })
 })
