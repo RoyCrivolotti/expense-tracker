@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import { MAX_CAPTURE_CARDS, type CaptureCard, type CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import {
+  MAX_CAPTURE_CARDS,
+  type CaptureCard,
+  type CaptureRepository,
+} from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'
@@ -10,8 +14,15 @@ const T0 = '2026-03-02T09:00:00.000Z'
 let sqlite: ReturnType<typeof migratedDatabase>
 let repo: CaptureRepository
 
-const account = (id: number, owner = ALICE) =>
-  sqlite.prepare("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (?, ?, 'Account', 'debit', 'immediate', 1)").run(id, owner)
+const account = (
+  id: number,
+  owner = ALICE,
+) =>
+  sqlite
+    .prepare(
+      "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (?, ?, 'Account', 'debit', 'immediate', 1)",
+    )
+    .run(id, owner)
 
 beforeEach(async () => {
   sqlite = migratedDatabase()
@@ -23,11 +34,19 @@ beforeEach(async () => {
   account(9, BOB)
 })
 
-const card = (over: Partial<CaptureCard> = {}): CaptureCard => ({ source: 'iberia', digitsKind: 'card', digits: '4821', accountId: 1, ...over })
+const card = (over: Partial<CaptureCard> = {}): CaptureCard => ({
+  source: 'iberia',
+  digitsKind: 'card',
+  digits: '4821',
+  accountId: 1,
+  ...over,
+})
 
 let n = 0
 /** A push from a card, left as an open recommendation under its key's owner. Invented digits only. */
-async function push(opts: { digits?: string | null; key?: string; source?: 'iberia' | 'santander'; accountId?: number | null } = {}) {
+async function push(
+  opts: { digits?: string | null; key?: string; source?: 'iberia' | 'santander'; accountId?: number | null } = {},
+) {
   n += 1
   const key = opts.key ?? 'k1'
   const ok = await repo.recordCapture(
@@ -69,7 +88,10 @@ async function push(opts: { digits?: string | null; key?: string; source?: 'iber
   return `rec${n}`
 }
 
-const accountOf = async (owner: string, id: string) => (await repo.getRecommendation(owner, id))?.accountId
+const accountOf = async (
+  owner: string,
+  id: string,
+) => (await repo.getRecommendation(owner, id))?.accountId
 
 describe('linking a card', () => {
   it('stores the link for an account of the owner', async () => {
@@ -108,7 +130,10 @@ describe('linking a card', () => {
     await repo.linkCard(ALICE, card({ digits: '4821' }))
     await repo.linkCard(ALICE, card({ digits: '5533' }))
 
-    expect((await repo.listCards(ALICE)).map((c) => [c.digits, c.accountId])).toEqual([['4821', 1], ['5533', 1]])
+    expect((await repo.listCards(ALICE)).map((c) => [c.digits, c.accountId])).toEqual([
+      ['4821', 1],
+      ['5533', 1],
+    ])
   })
 
   it('moves digits to another account when they are linked again', async () => {
@@ -128,7 +153,8 @@ describe('linking a card', () => {
   })
 
   it('stops at the cap, and a link that exists can still be saved at the cap', async () => {
-    for (let i = 0; i < MAX_CAPTURE_CARDS; i++) expect(await repo.linkCard(ALICE, card({ digits: String(1000 + i) }))).toBe('linked')
+    for (let i = 0; i < MAX_CAPTURE_CARDS; i++)
+      expect(await repo.linkCard(ALICE, card({ digits: String(1000 + i) }))).toBe('linked')
 
     expect(await repo.linkCard(ALICE, card({ digits: '9999' }))).toBe('limit')
     expect(await repo.linkCard(ALICE, card({ digits: '1000', accountId: 2 }))).toBe('linked')
@@ -211,7 +237,10 @@ describe('open recommendations after a link', () => {
 
     const listed = await repo.listOpenRecommendations(ALICE, 10)
 
-    expect(listed.map((r) => r.card).sort((a, b) => String(a?.digits).localeCompare(String(b?.digits)))).toEqual([{ source: 'iberia', digits: '4821' }, null])
+    expect(listed.map((r) => r.card).sort((a, b) => String(a?.digits).localeCompare(String(b?.digits)))).toEqual([
+      { source: 'iberia', digits: '4821' },
+      null,
+    ])
   })
 })
 

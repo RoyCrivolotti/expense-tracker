@@ -63,7 +63,7 @@ describe('the switch between the table and the timeline', () => {
     installFakeMatchMedia().setMatching(() => false)
   })
 
-  it('is in the card\'s header on the wide page, with the table showing', () => {
+  it("is in the card's header on the wide page, with the table showing", () => {
     renderMatrix()
 
     const group = screen.getByRole('radiogroup', { name: 'Show years to milestone as' })
@@ -73,7 +73,7 @@ describe('the switch between the table and the timeline', () => {
     expect(screen.queryByRole('group', { name: /Follow one milestone/ })).toBeNull()
   })
 
-  it('swaps the table for the timeline and back, and keeps the table\'s toggles while away', async () => {
+  it("swaps the table for the timeline and back, and keeps the table's toggles while away", async () => {
     renderMatrix()
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
 
@@ -120,7 +120,9 @@ describe('the timeline', () => {
     renderMatrix()
     await openTimeline()
 
-    const dot = screen.getByRole('button', { name: /^Path A reaches House deposit \(200k €\) in \d+ years, by 20\d\d\.$/ })
+    const dot = screen.getByRole('button', {
+      name: /^Path A reaches House deposit \(200k €\) in \d+ years, by 20\d\d\.$/,
+    })
     expect(dot).toBeInTheDocument()
   })
 
@@ -130,7 +132,9 @@ describe('the timeline', () => {
 
     expect(screen.getByRole('button', { name: "Path A already has 100k € (reached by May '26)." })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: "Path B already has 100k € (reached by May '26)." })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Path B does not reach 2,0M € within its horizon (the next 30 years).' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Path B does not reach 2,0M € within its horizon (the next 30 years).' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Path A does not reach/ })).toBeNull()
   })
 
@@ -146,7 +150,10 @@ describe('the timeline', () => {
     await openTimeline()
     const dot = screen.getByRole('button', { name: /^Path A reaches House deposit/ })
 
-    expect(screen.getByText(/Point at or focus a dot or a badge to read it as a sentence/)).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByText(/Point at or focus a dot or a badge to read it as a sentence/)).toHaveAttribute(
+      'aria-live',
+      'polite',
+    )
     await userEvent.hover(dot)
     expect(screen.getByText(dot.getAttribute('aria-label')!, { selector: 'p[aria-live]' })).toBeInTheDocument()
 
@@ -162,7 +169,9 @@ describe('the timeline', () => {
     const dots = names.filter((n) => /^Path [AB] (reaches|already|does not)/.test(n))
 
     // Path A's badge, dots and then Path B's, never Path B before Path A.
-    expect(dots.findIndex((n) => n.startsWith('Path B'))).toBeGreaterThan(dots.map((n) => n.startsWith('Path A')).lastIndexOf(true))
+    expect(dots.findIndex((n) => n.startsWith('Path B'))).toBeGreaterThan(
+      dots.map((n) => n.startsWith('Path A')).lastIndexOf(true),
+    )
 
     const first = screen.getByRole('button', { name: /^Path A reaches House deposit/ })
     act(() => first.focus())
@@ -175,7 +184,15 @@ describe('the timeline', () => {
   })
 
   it('joins milestones that fall in the same year in one dot, with their number, and names them all', async () => {
-    const same = makeScenario({ ...plan, id: 3, name: 'Path C', isActive: false, startInvestedCents: 5_000_000, monthlyContributionCents: 1_000_000, planStartDate: '2026-01-01' })
+    const same = makeScenario({
+      ...plan,
+      id: 3,
+      name: 'Path C',
+      isActive: false,
+      startInvestedCents: 5_000_000,
+      monthlyContributionCents: 1_000_000,
+      planStartDate: '2026-01-01',
+    })
     renderMatrix({
       scenarios: [plan, same],
       milestones: [
@@ -197,10 +214,12 @@ describe('the timeline', () => {
     await openTimeline()
 
     expect(document.querySelectorAll('[class*="tlHatch"]')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Path D does not reach 2,0M € within its horizon (the next 20 years).' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Path D does not reach 2,0M € within its horizon (the next 20 years).' }),
+    ).toBeInTheDocument()
   })
 
-  it('draws the editing path\'s dots with a dashed ring, and says so in the key', async () => {
+  it("draws the editing path's dots with a dashed ring, and says so in the key", async () => {
     renderMatrix({ includeDraft: true })
     await openTimeline()
 
@@ -213,7 +232,9 @@ describe('the timeline', () => {
     renderMatrix()
     await openTimeline()
 
-    expect(screen.getByText(/milestones already there: reached by a check-in, or met by the path before today/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/milestones already there: reached by a check-in, or met by the path before today/),
+    ).toBeInTheDocument()
     expect(screen.getByText(/milestones not within the path's horizon/)).toBeInTheDocument()
     expect(screen.getByText(/A shorter horizon ends in hatching/)).toBeInTheDocument()
     expect(screen.getByText(/A number in a dot: milestones that fall in the same year/)).toBeInTheDocument()
@@ -225,8 +246,10 @@ describe('the timeline counted from today', () => {
   const older = makeScenario({ ...plan, id: 5, name: 'Path E', isActive: false, planStartDate: '2024-01-01' })
   const house = [{ amountCents: 20_000_000, label: 'House deposit' }]
 
-  const tableYears = (row: number) => Number(document.querySelectorAll('tr')[row + 1]?.querySelectorAll('td')[0]?.textContent?.replace('y', ''))
-  const dotAt = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name} reaches House deposit`) }).style.getPropertyValue('--t')
+  const tableYears = (row: number) =>
+    Number(document.querySelectorAll('tr')[row + 1]?.querySelectorAll('td')[0]?.textContent?.replace('y', ''))
+  const dotAt = (name: string) =>
+    screen.getByRole('button', { name: new RegExp(`^${name} reaches House deposit`) }).style.getPropertyValue('--t')
 
   it('puts a path that started earlier at the years from today, with its line starting at now', async () => {
     renderMatrix({ scenarios: [plan, older], milestones: house, reached: new Map() })
@@ -241,12 +264,14 @@ describe('the timeline counted from today', () => {
     for (const line of document.querySelectorAll<HTMLElement>('[class*="tlLine"]')) {
       expect(line.style.getPropertyValue('--from')).toBe('0')
     }
-    const ends = [...document.querySelectorAll<HTMLElement>('[class*="tlLine"]')].map((l) => Number(l.style.getPropertyValue('--to')))
+    const ends = [...document.querySelectorAll<HTMLElement>('[class*="tlLine"]')].map((l) =>
+      Number(l.style.getPropertyValue('--to')),
+    )
     expect(ends[0]).toBeCloseTo(1, 5)
     expect(ends[1]).toBeCloseTo(28 / 30, 5)
   })
 
-  it('says the same number of years as the table, and the calendar year of the path\'s own step', async () => {
+  it("says the same number of years as the table, and the calendar year of the path's own step", async () => {
     renderMatrix({ scenarios: [plan, older], milestones: house, reached: new Map() })
     const olderYears = tableYears(1)
     await openTimeline()
@@ -272,17 +297,31 @@ describe('the timeline counted from today', () => {
     await openTimeline()
     await userEvent.click(screen.getByRole('button', { name: '200k' }))
 
-    const [a, b] = document.querySelector('svg polyline')!.getAttribute('points')!.split(' ').map((p) => Number(p.split(',')[0]))
+    const [a, b] = document
+      .querySelector('svg polyline')!
+      .getAttribute('points')!
+      .split(' ')
+      .map((p) => Number(p.split(',')[0]))
     expect(a).toBeCloseTo((tableYears(0) / 30) * 1000, 3)
     expect(b).toBeCloseTo((tableYears(1) / 30) * 1000, 3)
   })
 
   it('says a milestone the path passed before today was reached before today, not at its start', async () => {
-    const long = makeScenario({ ...plan, id: 6, name: 'Path F', isActive: false, planStartDate: '2000-01-01', startInvestedCents: 1_000_000, monthlyContributionCents: 300_000 })
+    const long = makeScenario({
+      ...plan,
+      id: 6,
+      name: 'Path F',
+      isActive: false,
+      planStartDate: '2000-01-01',
+      startInvestedCents: 1_000_000,
+      monthlyContributionCents: 300_000,
+    })
     renderMatrix({ scenarios: [plan, long], milestones: house, reached: new Map() })
     await openTimeline()
 
-    expect(screen.getByRole('button', { name: 'Path F already has House deposit (200k €) (reached before today).' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Path F already has House deposit (200k €) (reached before today).' }),
+    ).toBeInTheDocument()
   })
 })
 

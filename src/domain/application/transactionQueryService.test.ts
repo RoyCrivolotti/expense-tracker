@@ -133,7 +133,8 @@ describe('cursors', () => {
     await expect(decodeCursor(cursor, validateTxnFilter({ month: '2026-05' }))).rejects.toThrow(ValidationError)
   })
 
-  const encode = (value: unknown) => btoa(JSON.stringify(value)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+  const encode = (value: unknown) =>
+    btoa(JSON.stringify(value)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 
   it('refuse anything that is not a cursor this code wrote', async () => {
     const good = await encodeCursor({ date: '2026-05-04', id: 17 }, filter)

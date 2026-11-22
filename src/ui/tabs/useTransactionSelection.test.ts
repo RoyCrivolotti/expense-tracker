@@ -168,9 +168,7 @@ describe('useTransactionSelection — bulk edit', () => {
       { id: 5, labelIds: [1] },
       { id: 6, labelIds: [] },
     ]
-    const { result } = renderHook(() =>
-      useTransactionSelection(actions, undefined, undefined, undefined, transactions),
-    )
+    const { result } = renderHook(() => useTransactionSelection(actions, undefined, undefined, undefined, transactions))
     act(() => result.current.toggleSelectMode())
     act(() => result.current.toggleSelected(5))
     act(() => result.current.toggleSelected(6))
@@ -188,9 +186,7 @@ describe('useTransactionSelection — bulk edit', () => {
     const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
     const actions = mockActions({ setTransactionLabels })
     const transactions = [{ id: 5, labelIds: [2] }]
-    const { result } = renderHook(() =>
-      useTransactionSelection(actions, undefined, undefined, undefined, transactions),
-    )
+    const { result } = renderHook(() => useTransactionSelection(actions, undefined, undefined, undefined, transactions))
     act(() => result.current.toggleSelectMode())
     act(() => result.current.toggleSelected(5))
 
@@ -345,8 +341,7 @@ describe('useTransactionSelection — Escape key', () => {
     }
     document.addEventListener('keydown', close)
     return {
-      pressEscape: () =>
-        dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })),
+      pressEscape: () => dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })),
       unmount: () => {
         document.removeEventListener('keydown', close)
         dialog.remove()
@@ -447,11 +442,14 @@ describe('useTransactionSelection — while a bulk action runs', () => {
 
 describe('useTransactionSelection — rows a filter hides', () => {
   /** Render with a visible list the test can change, as a filter would. */
-  function renderWith(visible: number[], existing = [1, 2, 3, 4, 5], actions = mockActions()) {
-    return renderHook(
-      ({ v, e }: { v: number[]; e: number[] }) => useTransactionSelection(actions, v, e),
-      { initialProps: { v: visible, e: existing } },
-    )
+  function renderWith(
+    visible: number[],
+    existing = [1, 2, 3, 4, 5],
+    actions = mockActions(),
+  ) {
+    return renderHook(({ v, e }: { v: number[]; e: number[] }) => useTransactionSelection(actions, v, e), {
+      initialProps: { v: visible, e: existing },
+    })
   }
 
   it('counts only the chosen rows that are on screen', () => {

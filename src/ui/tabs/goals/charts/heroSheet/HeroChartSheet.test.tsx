@@ -89,7 +89,7 @@ describe('the full-screen hero chart', () => {
     expect(within(dialog()).getByText('in euros on your account in each year')).toBeInTheDocument()
   })
 
-  it('opens as a dialog with the card\'s window buttons, the display switch, the chart and the readout', async () => {
+  it("opens as a dialog with the card's window buttons, the display switch, the chart and the readout", async () => {
     phone()
     render(<Hero />)
     await userEvent.click(screen.getByRole('button', OPEN))
@@ -142,7 +142,7 @@ describe('the full-screen hero chart', () => {
     expect(within(dialog()).getByText('Year 30')).toBeInTheDocument()
   })
 
-  it('opens on the last year the card had pointed at, though the tap that opens it clears the card\'s', async () => {
+  it("opens on the last year the card had pointed at, though the tap that opens it clears the card's", async () => {
     phone()
     const { container } = render(<Hero />)
     fireEvent.keyDown(chartIn(container), { key: 'End' })
@@ -206,7 +206,7 @@ describe('the full-screen hero chart', () => {
 })
 
 describe('the full-screen hero chart drawn a quarter turn', () => {
-  it('reads the year from the pointer\'s height, as the chart runs down the screen', async () => {
+  it("reads the year from the pointer's height, as the chart runs down the screen", async () => {
     phone({ upright: true })
     render(<Hero />)
     await userEvent.click(screen.getByRole('button', OPEN))
@@ -300,7 +300,7 @@ describe('the readout floated over the chart', () => {
     expect(within(dialog()).getByRole('button', FLOAT)).toHaveFocus()
   })
 
-  it('does not take the focus when the sheet opens, which the sheet\'s own trap has', async () => {
+  it("does not take the focus when the sheet opens, which the sheet's own trap has", async () => {
     await open()
     expect(within(dialog()).getByRole('button', FLOAT)).not.toHaveFocus()
   })
@@ -382,7 +382,7 @@ describe('the readout floated over the chart', () => {
     expect(scaleOf()).toBe('scale(1.1)')
   })
 
-  it('shows a purchase year\'s breakdown in a column beside the rows, so the card is wider and not taller', async () => {
+  it("shows a purchase year's breakdown in a column beside the rows, so the card is wider and not taller", async () => {
     phone()
     render(<Hero draft={{ ...draft, housePurchaseYear: 5 }} />)
     await userEvent.click(screen.getByRole('button', OPEN))

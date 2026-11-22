@@ -17,7 +17,12 @@ const CURRENCY_PLACEHOLDER = '<C>'
 /** Any other token with a digit in it: a time, a reference, a percentage. */
 const OTHER_NUMBER_PLACEHOLDER = '<X>'
 export const WILDCARD = '<M>'
-const PLACEHOLDERS: ReadonlySet<string> = new Set([...Object.values(PLACEHOLDER), CURRENCY_PLACEHOLDER, OTHER_NUMBER_PLACEHOLDER, WILDCARD])
+const PLACEHOLDERS: ReadonlySet<string> = new Set([
+  ...Object.values(PLACEHOLDER),
+  CURRENCY_PLACEHOLDER,
+  OTHER_NUMBER_PLACEHOLDER,
+  WILDCARD,
+])
 
 /** A number with its marker glued on is written as the marker and the number apart, as `50 EUR` is, so the spelling does not change the shape. */
 function numberPlaceholder(token: string): string[] {
@@ -28,7 +33,10 @@ function numberPlaceholder(token: string): string[] {
 }
 
 /** What one token of a push becomes in the skeleton: usually one token, two for a number with a glued marker, none for a token that folds to nothing. */
-function pieceOf(token: string, kind: Slot['kind'] | undefined): string[] {
+function pieceOf(
+  token: string,
+  kind: Slot['kind'] | undefined,
+): string[] {
   if (kind === 'number') return numberPlaceholder(token)
   if (kind) return [PLACEHOLDER[kind]]
   if (isMarkerToken(token)) return [CURRENCY_PLACEHOLDER]
@@ -38,7 +46,10 @@ function pieceOf(token: string, kind: Slot['kind'] | undefined): string[] {
 }
 
 /** The skeleton of each token in turn, so a caller can tell which token of the push each skeleton token came from. */
-export function skeletonPieces(tokens: readonly string[], slots: readonly Slot[]): string[][] {
+export function skeletonPieces(
+  tokens: readonly string[],
+  slots: readonly Slot[],
+): string[][] {
   const byIndex = new Map(slots.map((slot) => [slot.index, slot.kind]))
   return tokens.map((token, index) => pieceOf(token, byIndex.get(index)))
 }
@@ -50,8 +61,14 @@ export function skeletonPieces(tokens: readonly string[], slots: readonly Slot[]
  * whatever the amounts, cards, dates, currencies, spacing of the marker and any other number.
  * `slots` must come from `readPushSlots(title, body)`, so their positions match the tokens used here.
  */
-export function skeletonOf(title: string, body: string, slots: readonly Slot[]): string {
-  return skeletonPieces([...tokenise(title), ...tokenise(body)], slots).flat().join(' ')
+export function skeletonOf(
+  title: string,
+  body: string,
+  slots: readonly Slot[],
+): string {
+  return skeletonPieces([...tokenise(title), ...tokenise(body)], slots)
+    .flat()
+    .join(' ')
 }
 
 /**
@@ -59,7 +76,10 @@ export function skeletonOf(title: string, body: string, slots: readonly Slot[]):
  * can move from one to the other. The source is part of it because two banks can write the same words and
  * mean different things.
  */
-export async function shapeId(source: string, skeleton: string): Promise<string> {
+export async function shapeId(
+  source: string,
+  skeleton: string,
+): Promise<string> {
   const joined = [source, skeleton].map((part) => `${part.length}:${part}`).join('|')
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(joined))
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -91,7 +111,10 @@ export const MIN_SHARED_WORDS = 3
  * cover half of the shorter one, hold at least `MIN_SHARED_WORDS` tokens that are not placeholders (two
  * pushes of `<N> <C>` and one word are not a template), and neither middle may pass `MAX_SIBLING_RUN`.
  */
-export function siblingSlot(a: readonly string[], b: readonly string[]): SiblingRuns | null {
+export function siblingSlot(
+  a: readonly string[],
+  b: readonly string[],
+): SiblingRuns | null {
   const shorter = Math.min(a.length, b.length)
   let prefix = 0
   while (prefix < shorter && a[prefix] === b[prefix]) prefix++
@@ -106,6 +129,9 @@ export function siblingSlot(a: readonly string[], b: readonly string[]): Sibling
 }
 
 /** The tokens with `run` replaced by one wildcard, so the template no longer holds what varied. */
-export function withWildcard(tokens: readonly string[], run: TokenRun): string[] {
+export function withWildcard(
+  tokens: readonly string[],
+  run: TokenRun,
+): string[] {
   return [...tokens.slice(0, run.start), WILDCARD, ...tokens.slice(run.end)]
 }

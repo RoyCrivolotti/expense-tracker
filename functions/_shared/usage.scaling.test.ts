@@ -20,7 +20,10 @@ const OWNER = 'owner@example.com'
 const MONTHS = 120
 const SIZES = (process.env.SCALING_ROWS ?? '5000,20000,50000,100000,250000').split(',').map(Number)
 
-const fixed = (n: number, digits = 1): number => Number(n.toFixed(digits))
+const fixed = (
+  n: number,
+  digits = 1,
+): number => Number(n.toFixed(digits))
 
 async function measure(rows: number): Promise<Record<string, number>> {
   const ledger = syntheticLedger({ months: MONTHS, perMonth: Math.max(0, Math.round(rows / MONTHS) - 7) })

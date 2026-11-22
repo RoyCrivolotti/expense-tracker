@@ -14,10 +14,17 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-  keyFor = (_team, id) => Promise.resolve(id === 'key-1' ? idp.keyPair.publicKey : null)
+  keyFor = (
+    _team,
+    id,
+  ) => Promise.resolve(id === 'key-1' ? idp.keyPair.publicKey : null)
 })
 
-function request(email: string | null, token: string | null, origin = 'https://expenses.test'): Request {
+function request(
+  email: string | null,
+  token: string | null,
+  origin = 'https://expenses.test',
+): Request {
   const headers = new Headers()
   if (email !== null) headers.set('Cf-Access-Authenticated-User-Email', email)
   if (token !== null) headers.set('Cf-Access-Jwt-Assertion', token)
@@ -26,7 +33,14 @@ function request(email: string | null, token: string | null, origin = 'https://e
 
 const LOCAL = ['http://localhost:8788', 'http://localhost', 'http://127.0.0.1:8788', 'http://[::1]:8788']
 
-const outcome = (r: Request, env = ON) => resolveVerifiedEmail(r, env, keyFor).then((email) => email, (e: { status: number }) => e.status)
+const outcome = (
+  r: Request,
+  env = ON,
+) =>
+  resolveVerifiedEmail(r, env, keyFor).then(
+    (email) => email,
+    (e: { status: number }) => e.status,
+  )
 
 describe('accessCheck', () => {
   it('is off with neither setting, blank or not given', () => {
@@ -44,22 +58,35 @@ describe('accessCheck', () => {
 
   it.each([
     ['only the team domain', { ACCESS_TEAM_DOMAIN: TEAM }, 'ACCESS_TEAM_DOMAIN is set but ACCESS_AUD is not'],
-    ['the team domain and a blank tag', { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: '  ' }, 'ACCESS_TEAM_DOMAIN is set but ACCESS_AUD is not'],
+    [
+      'the team domain and a blank tag',
+      { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: '  ' },
+      'ACCESS_TEAM_DOMAIN is set but ACCESS_AUD is not',
+    ],
     ['only the tag', { ACCESS_AUD: AUD }, 'ACCESS_AUD is set but ACCESS_TEAM_DOMAIN is not'],
-    ['a blank team domain and a tag', { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: AUD }, 'ACCESS_AUD is set but ACCESS_TEAM_DOMAIN is not'],
+    [
+      'a blank team domain and a tag',
+      { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: AUD },
+      'ACCESS_AUD is set but ACCESS_TEAM_DOMAIN is not',
+    ],
   ])('is misconfigured with %s', (_name, env, problem) => {
     expect(accessCheck(env)).toEqual({ state: 'misconfigured', problem })
   })
 
-  it.each(['acme', 'acme.cloudflareaccess.com/path', 'acme.cloudflareaccess.com:8443', 'http://acme.cloudflareaccess.com', 'a b.com', 'user@example.com', '.com'])(
-    'is misconfigured with the team domain %j, which is not a hostname',
-    (team) => {
-      const check = accessCheck({ ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: AUD })
+  it.each([
+    'acme',
+    'acme.cloudflareaccess.com/path',
+    'acme.cloudflareaccess.com:8443',
+    'http://acme.cloudflareaccess.com',
+    'a b.com',
+    'user@example.com',
+    '.com',
+  ])('is misconfigured with the team domain %j, which is not a hostname', (team) => {
+    const check = accessCheck({ ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: AUD })
 
-      expect(check.state).toBe('misconfigured')
-      expect(check).toMatchObject({ problem: expect.stringContaining('ACCESS_TEAM_DOMAIN must be a hostname') })
-    },
-  )
+    expect(check.state).toBe('misconfigured')
+    expect(check).toMatchObject({ problem: expect.stringContaining('ACCESS_TEAM_DOMAIN must be a hostname') })
+  })
 
   it('never repeats a value in what it says', () => {
     const check = accessCheck({ ACCESS_TEAM_DOMAIN: 'http://secret-team.example', ACCESS_AUD: AUD })
@@ -77,7 +104,9 @@ describe('the person making a request, with the settings off, on a local develop
   it('does not look at a token, good or bad', async () => {
     const [origin] = LOCAL
     expect(await outcome(request('roy@example.com', 'garbage', origin), {})).toBe('roy@example.com')
-    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('someone@example.net')), origin), {})).toBe('roy@example.com')
+    expect(
+      await outcome(request('roy@example.com', await idp.sign(claimsFor('someone@example.net')), origin), {}),
+    ).toBe('roy@example.com')
   })
 
   it('is a 401 with no header', async () => {
@@ -85,7 +114,9 @@ describe('the person making a request, with the settings off, on a local develop
   })
 
   it('also with both settings blank', async () => {
-    expect(await outcome(request('roy@example.com', null, LOCAL[0]), { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: '' })).toBe('roy@example.com')
+    expect(await outcome(request('roy@example.com', null, LOCAL[0]), { ACCESS_TEAM_DOMAIN: ' ', ACCESS_AUD: '' })).toBe(
+      'roy@example.com',
+    )
   })
 })
 
@@ -134,7 +165,9 @@ describe('the person making a request, with the settings off, anywhere else', ()
 
 describe('the person making a request, with the settings on', () => {
   it('is the person the header names when the signed token names the same one', async () => {
-    expect(await outcome(request('Roy@Example.com', await idp.sign(claimsFor('roy@example.com'))))).toBe('roy@example.com')
+    expect(await outcome(request('Roy@Example.com', await idp.sign(claimsFor('roy@example.com'))))).toBe(
+      'roy@example.com',
+    )
   })
 
   it('is a 401 with no token', async () => {
@@ -151,13 +184,23 @@ describe('the person making a request, with the settings on', () => {
   })
 
   it('is a 401 for a token for another application, an expired one and one signed by another key', async () => {
-    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com', { aud: ['x'] }))))).toBe(401)
-    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com', { exp: Date.now() / 1000 - 600 }))))).toBe(401)
-    expect(await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com'), { kid: 'key-2' })))).toBe(401)
+    expect(
+      await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com', { aud: ['x'] })))),
+    ).toBe(401)
+    expect(
+      await outcome(
+        request('roy@example.com', await idp.sign(claimsFor('roy@example.com', { exp: Date.now() / 1000 - 600 }))),
+      ),
+    ).toBe(401)
+    expect(
+      await outcome(request('roy@example.com', await idp.sign(claimsFor('roy@example.com'), { kid: 'key-2' }))),
+    ).toBe(401)
   })
 
   it('trims the token, as a proxy may leave a space', async () => {
-    expect(await outcome(request('roy@example.com', ` ${await idp.sign(claimsFor('roy@example.com'))} `))).toBe('roy@example.com')
+    expect(await outcome(request('roy@example.com', ` ${await idp.sign(claimsFor('roy@example.com'))} `))).toBe(
+      'roy@example.com',
+    )
   })
 })
 

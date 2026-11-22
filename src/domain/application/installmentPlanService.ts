@@ -34,7 +34,10 @@ function validateAmountCents(amountCents: number): void {
 }
 
 /** `totalCount` is the upper bound when the caller supplies one. */
-function validateStartIndex(start: number, totalCount?: number): void {
+function validateStartIndex(
+  start: number,
+  totalCount?: number,
+): void {
   if (!Number.isInteger(start) || start < 1) {
     throw new ValidationError('startInstallmentIndex must be between 1 and totalCount')
   }

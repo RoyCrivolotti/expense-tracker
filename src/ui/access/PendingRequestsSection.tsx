@@ -1,9 +1,5 @@
 import { useState } from 'react'
-import {
-  approveAccessRequest,
-  rejectAccessRequest,
-  type PendingAccessRequest,
-} from '../../data/accessApi'
+import { approveAccessRequest, rejectAccessRequest, type PendingAccessRequest } from '../../data/accessApi'
 import { Card, Pill } from '../components/primitives'
 import { useToast } from '../hooks/useToast'
 import { formatDateTime, formatRelativeTime } from './formatRelativeTime'

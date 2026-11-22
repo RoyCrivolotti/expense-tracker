@@ -22,11 +22,15 @@ const categories: Category[] = [{ id: 1, name: 'Home', monthlyBudgetCents: 50_00
 /** Placeholder rows: a monthly gym fee, a quarterly insurance, a weekly market, and noise that is not a series. */
 function ledger(): Transaction[] {
   let id = 1
-  const gym = monthlyDates(2025, 1, 5, 14).map((date) => makeTxn({ id: id++, date, description: 'Gym', amountCents: 3_000 + id }))
+  const gym = monthlyDates(2025, 1, 5, 14).map((date) =>
+    makeTxn({ id: id++, date, description: 'Gym', amountCents: 3_000 + id }),
+  )
   const insurance = ['2025-01-20', '2025-04-19', '2025-07-21', '2025-10-20', '2026-01-19'].map((date) =>
     makeTxn({ id: id++, date, description: 'Insurance', amountCents: 9_000, budgetMonth: date.slice(0, 7) }),
   )
-  const market = Array.from({ length: 12 }, (_, i) => makeTxn({ id: id++, date: `2026-02-${String(i + 1).padStart(2, '0')}`, description: 'Market' }))
+  const market = Array.from({ length: 12 }, (_, i) =>
+    makeTxn({ id: id++, date: `2026-02-${String(i + 1).padStart(2, '0')}`, description: 'Market' }),
+  )
   return [
     ...gym,
     ...insurance,
@@ -84,7 +88,9 @@ describe('seriesFromTransactions', () => {
   it('stores older gaps by size, so two orders of the same gaps give the same series', () => {
     // Chronological gaps before the newest five dates are 3, 1 and 10 (the last bridges into the tail).
     const days = [1, 4, 5, 15, 16, 17, 18, 19]
-    const rows = days.map((d, i) => makeTxn({ id: i + 1, date: `2026-01-${String(d).padStart(2, '0')}`, description: 'A' }))
+    const rows = days.map((d, i) =>
+      makeTxn({ id: i + 1, date: `2026-01-${String(d).padStart(2, '0')}`, description: 'A' }),
+    )
     const gaps = (r: typeof rows) => seriesFromTransactions(r)[0]!.olderGaps
     expect(gaps(rows)).toEqual([1, 3, 10])
     expect(gaps([...rows].reverse())).toEqual([1, 3, 10])
@@ -129,7 +135,9 @@ describe('a series read back as the group the detectors take', () => {
 
   it('classifies the rhythm the same way, from the gaps or from the group', () => {
     for (const label of ['Gym', 'Insurance', 'Market']) {
-      expect(fixedRhythmFromGaps(gapsOfSeries(series.find((s) => s.label === label)!))).toBe(fixedRhythm(engineGroup(label)))
+      expect(fixedRhythmFromGaps(gapsOfSeries(series.find((s) => s.label === label)!))).toBe(
+        fixedRhythm(engineGroup(label)),
+      )
     }
     expect(fixedRhythmFromGaps([])).toBeNull()
     expect(fixedRhythmFromGaps([30, 31, 30, 120, 31])).toBe(fixedRhythmFromGaps([120, 31, 30, 31, 30]))
@@ -155,8 +163,12 @@ describe('the detectors given the series of all the history and none of the rows
 
   it('give the same fixed costs and pace envelope', () => {
     for (const month of ['2025-06', '2025-12', '2026-02', '2026-09']) {
-      expect(detectedFixedCosts([], [], categories, month, groups)).toEqual(detectedFixedCosts(rows, [], categories, month))
-      expect(expectedFixedCents([], [], categories, month, groups)).toBe(expectedFixedCents(rows, [], categories, month))
+      expect(detectedFixedCosts([], [], categories, month, groups)).toEqual(
+        detectedFixedCosts(rows, [], categories, month),
+      )
+      expect(expectedFixedCents([], [], categories, month, groups)).toBe(
+        expectedFixedCents(rows, [], categories, month),
+      )
     }
   })
 

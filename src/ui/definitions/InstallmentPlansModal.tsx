@@ -63,8 +63,8 @@ function PlanRow({
       </div>
       <span className={styles.stats}>
         {paidCount}/{plan.totalCount} paid
-        {forecastCount > 0 ? ` · ${forecastCount} forecast` : ''} · {progress.remaining} remaining ·
-        Last payment {shortMonthFullYearLabel(progress.finalBudgetMonth)}
+        {forecastCount > 0 ? ` · ${forecastCount} forecast` : ''} · {progress.remaining} remaining · Last payment{' '}
+        {shortMonthFullYearLabel(progress.finalBudgetMonth)}
       </span>
     </div>
   )
@@ -101,13 +101,7 @@ export function InstallmentPlansModal({ model, actions, onClose }: Props) {
         <EmptyState>No installment plans yet.</EmptyState>
       ) : (
         plans.map((plan) => (
-          <PlanRow
-            key={plan.id}
-            plan={plan}
-            model={model}
-            actions={actions}
-            onEdit={() => setEditing(plan)}
-          />
+          <PlanRow key={plan.id} plan={plan} model={model} actions={actions} onEdit={() => setEditing(plan)} />
         ))
       )}
     </Modal>

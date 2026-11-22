@@ -17,7 +17,10 @@ const PORT = process.env.CAPTURE_PORT ?? '5173'
 const BASE = `http://127.0.0.1:${PORT}`
 const CAPTURE_DATE = '2026-10-15T12:00:00'
 
-async function applyTheme(page, theme) {
+async function applyTheme(
+  page,
+  theme,
+) {
   await page.addInitScript((selected) => {
     localStorage.setItem('exp-theme', selected)
     if (selected === 'system') document.documentElement.removeAttribute('data-exp-theme')
@@ -29,8 +32,13 @@ async function applyTheme(page, theme) {
 // does not have, so the pictures would show "Request failed (404)". These invented answers show a set-up phone instead.
 const CAPTURE_ROUTES = {
   '/api/recommendations': { recommendations: [], next: null, openCount: 0 },
-  '/api/capture-keys': { keys: [{ keyId: 'k1', label: 'My phone', createdAt: '2026-10-01T09:00:00Z', lastUsedAt: '2026-10-15T08:10:00Z' }] },
-  '/api/capture-cards': { cards: [{ source: 'example-bank', digitsKind: 'card', digits: '1234', accountId: 1 }], waiting: [] },
+  '/api/capture-keys': {
+    keys: [{ keyId: 'k1', label: 'My phone', createdAt: '2026-10-01T09:00:00Z', lastUsedAt: '2026-10-15T08:10:00Z' }],
+  },
+  '/api/capture-cards': {
+    cards: [{ source: 'example-bank', digitsKind: 'card', digits: '1234', accountId: 1 }],
+    waiting: [],
+  },
   '/api/capture-templates': { templates: [] },
   '/api/capture-status': {
     sources: [
@@ -39,7 +47,18 @@ const CAPTURE_ROUTES = {
         lastCaptureAt: '2026-10-15T08:10:00Z',
         received: 9,
         unrecognised: 0,
-        diagnostics: { received: 31, recommended: 28, grouped: 1, unread: 2, addedAsIs: 20, edited: 4, linked: 2, dismissed: 1, open: 0, muted: 0 },
+        diagnostics: {
+          received: 31,
+          recommended: 28,
+          grouped: 1,
+          unread: 2,
+          addedAsIs: 20,
+          edited: 4,
+          linked: 2,
+          dismissed: 1,
+          open: 0,
+          muted: 0,
+        },
       },
     ],
     malformed: 0,
@@ -110,7 +129,11 @@ async function settleSettings(page) {
 }
 
 /** A screenshot tall enough for the whole Capture tab, then the window goes back to its size. */
-async function shootTall(page, path, height) {
+async function shootTall(
+  page,
+  path,
+  height,
+) {
   const size = page.viewportSize()
   await page.setViewportSize({ width: size.width, height })
   await settleSettings(page)
@@ -162,7 +185,10 @@ function filtersSheet(page) {
  * moment the sheet starts to leave, while the dialog outlives that for its exit, so the
  * wait is on the dialog rather than on the attribute.
  */
-async function setFiltersExpanded(page, open) {
+async function setFiltersExpanded(
+  page,
+  open,
+) {
   const sheet = filtersSheet(page)
   if ((await filtersExpanded(page)) !== String(open)) {
     if (open) await page.getByRole('button', { name: /Filters/ }).click()
@@ -172,7 +198,10 @@ async function setFiltersExpanded(page, open) {
   await page.waitForTimeout(200)
 }
 
-async function setMonthLabel(page, monthName) {
+async function setMonthLabel(
+  page,
+  monthName,
+) {
   const pattern = new RegExp(`${monthName} 2026`)
   const headerMonth = page.getByRole('banner').getByText(pattern)
   for (let i = 0; i < 12; i++) {
@@ -183,7 +212,10 @@ async function setMonthLabel(page, monthName) {
   throw new Error(`Could not navigate to month: ${monthName}`)
 }
 
-async function captureTransactionsDefault(page, filename) {
+async function captureTransactionsDefault(
+  page,
+  filename,
+) {
   await page.goto(`${BASE}/`)
   await page.waitForSelector('text=Recent activity', { timeout: 15000 })
   await goToTransactions(page)
@@ -223,7 +255,10 @@ async function closeOverlay(page) {
   throw new Error('No Back/Close control found on the open overlay')
 }
 
-async function captureFlagsAndReports(page, suffix) {
+async function captureFlagsAndReports(
+  page,
+  suffix,
+) {
   await goToTransactions(page)
   await page.waitForSelector('text=Flagged', { timeout: 15000 })
   await expandDetails(page)
@@ -359,7 +394,11 @@ async function captureGoalsDesktop(page) {
 }
 
 /** The Progress and Assumptions views; `fullPage` for desktop, the top of the view on a phone. */
-async function captureGoalsProgressAndAssumptions(page, suffix, fullPage) {
+async function captureGoalsProgressAndAssumptions(
+  page,
+  suffix,
+  fullPage,
+) {
   await page.getByRole('tab', { name: 'Progress', exact: true }).click()
   await page.waitForSelector('text=Net worth over time', { timeout: 15000 })
   await page.waitForTimeout(400)
@@ -429,9 +468,7 @@ async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
   // CHROMIUM_PATH: use a preinstalled browser where Playwright's own download is unavailable.
-  const browser = await chromium.launch(
-    process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
-  )
+  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {})
   const desktopDark = await browser.newContext({
     viewport: { width: 1280, height: 800 },
     colorScheme: 'dark',

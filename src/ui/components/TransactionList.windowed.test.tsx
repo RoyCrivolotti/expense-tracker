@@ -20,7 +20,10 @@ function day(offset: number): string {
 }
 
 /** `count` rows, newest first, `perDay` to a day. Row n is described as "Txn n". */
-function ledger(count: number, perDay = 10): TransactionListRow[] {
+function ledger(
+  count: number,
+  perDay = 10,
+): TransactionListRow[] {
   return Array.from({ length: count }, (_, i): TransactionListRow => {
     const date = day(Math.floor(i / perDay))
     const txn: Transaction = {

@@ -54,8 +54,7 @@ describe('Modal', () => {
 })
 
 describe('Modal — staying inside the visible area', () => {
-  const setViewport = (value: unknown) =>
-    Object.defineProperty(window, 'visualViewport', { configurable: true, value })
+  const setViewport = (value: unknown) => Object.defineProperty(window, 'visualViewport', { configurable: true, value })
 
   afterEach(() => setViewport(undefined))
 
@@ -98,7 +97,10 @@ describe('Modal — staying inside the visible area', () => {
 })
 
 /** jsdom has no TouchEvent constructor; the hook only reads `touches[0]`. */
-function touch(type: string, clientY: number): Event {
+function touch(
+  type: string,
+  clientY: number,
+): Event {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'touches', { value: [{ clientY }] })
   return event
@@ -109,7 +111,10 @@ function measure(sheet: HTMLElement) {
   Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
 }
 
-function drag(sheet: HTMLElement, distance: number) {
+function drag(
+  sheet: HTMLElement,
+  distance: number,
+) {
   let now = 0
   const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
   act(() => {
@@ -304,8 +309,14 @@ describe('Modal leaving', () => {
     const vv = {
       offsetTop: 0,
       height: 812,
-      addEventListener: (type: 'resize' | 'scroll', fn: () => void) => listeners[type].push(fn),
-      removeEventListener: (type: 'resize' | 'scroll', fn: () => void) => {
+      addEventListener: (
+        type: 'resize' | 'scroll',
+        fn: () => void,
+      ) => listeners[type].push(fn),
+      removeEventListener: (
+        type: 'resize' | 'scroll',
+        fn: () => void,
+      ) => {
         listeners[type] = listeners[type].filter((l) => l !== fn)
       },
     }

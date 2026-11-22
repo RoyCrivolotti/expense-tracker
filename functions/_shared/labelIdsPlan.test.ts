@@ -31,7 +31,10 @@ const OLD_LABEL_IDS_SQL = `(SELECT json_group_array(tl.label_id)
       FROM transaction_labels tl JOIN labels l ON l.id = tl.label_id AND l.owner = t.owner
       WHERE tl.transaction_id = t.id)`
 
-function labelled(labelCount: number, seed: number) {
+function labelled(
+  labelCount: number,
+  seed: number,
+) {
   const base = syntheticLedger({ months: 6, perMonth: 40, seed })
   const rnd = mulberry32(seed)
   const labels: Label[] = Array.from({ length: labelCount }, (_, i) => ({
@@ -50,73 +53,112 @@ function labelled(labelCount: number, seed: number) {
       labelIds:
         rnd() < 0.4
           ? []
-          : [...new Set(Array.from({ length: 1 + Math.floor(rnd() * 3) }, () => 1 + Math.floor(rnd() * (labelCount + 2))))],
+          : [
+              ...new Set(
+                Array.from({ length: 1 + Math.floor(rnd() * 3) }, () => 1 + Math.floor(rnd() * (labelCount + 2))),
+              ),
+            ],
     })),
   }
 }
 
-describe.each([{ stats: false }, { stats: true }])('label ids in the transaction reads (table statistics: $stats)', ({ stats }) => {
-  let kit: QueryDb
-  let repo: ExpenseRepository
+describe.each([{ stats: false }, { stats: true }])(
+  'label ids in the transaction reads (table statistics: $stats)',
+  ({ stats }) => {
+    let kit: QueryDb
+    let repo: ExpenseRepository
 
-  beforeAll(() => {
-    const others = Array.from({ length: 4 }, (_, i) => ({ owner: `other${i}@example.com`, dataset: labelled(20, 90 + i) }))
-    kit = queryDb(labelled(20, 7), others)
-    if (stats) kit.sqlite.exec('ANALYZE')
-    repo = createD1ExpenseRepository({ DB: kit.d1 })
-  })
+    beforeAll(() => {
+      const others = Array.from({ length: 4 }, (_, i) => ({
+        owner: `other${i}@example.com`,
+        dataset: labelled(20, 90 + i),
+      }))
+      kit = queryDb(labelled(20, 7), others)
+      if (stats) kit.sqlite.exec('ANALYZE')
+      repo = createD1ExpenseRepository({ DB: kit.d1 })
+    })
 
-  /** What each read ran, as the repository ran it. */
-  const READS: Array<[string, (r: ExpenseRepository) => Promise<unknown>]> = [
-    ['the list', (r) => r.queryTransactions(OWNER, {}, { limit: 100 })],
-    ['the list on a label', (r) => r.queryTransactions(OWNER, { labelIds: [1, 5] }, { limit: 100 })],
-    ['one row', (r) => r.getTransaction(OWNER, 10)],
-    ['the months', (r) => r.readMonthRows(OWNER, { from: '2026-01', to: '2026-06' }, 5_000)],
-    ['the pinned rows and the payments', (r) => r.readLedgerReference(OWNER)],
-    ['the export', (r) => r.readExportChunk(OWNER, { table: 'transactions', limit: 500 })],
-    [
-      'the rows an edit by ids answers with',
-      (r) => {
-        const ids = (kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id LIMIT 100').all(OWNER) as Array<{ id: number }>).map((row) => row.id)
-        return r.bulkUpdateTransactions(OWNER, ids, { description: 'Edited' })
-      },
-    ],
-  ]
+    /** What each read ran, as the repository ran it. */
+    const READS: Array<[string, (r: ExpenseRepository) => Promise<unknown>]> = [
+      ['the list', (r) => r.queryTransactions(OWNER, {}, { limit: 100 })],
+      ['the list on a label', (r) => r.queryTransactions(OWNER, { labelIds: [1, 5] }, { limit: 100 })],
+      ['one row', (r) => r.getTransaction(OWNER, 10)],
+      ['the months', (r) => r.readMonthRows(OWNER, { from: '2026-01', to: '2026-06' }, 5_000)],
+      ['the pinned rows and the payments', (r) => r.readLedgerReference(OWNER)],
+      ['the export', (r) => r.readExportChunk(OWNER, { table: 'transactions', limit: 500 })],
+      [
+        'the rows an edit by ids answers with',
+        (r) => {
+          const ids = (
+            kit.sqlite
+              .prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id LIMIT 100')
+              .all(OWNER) as Array<{ id: number }>
+          ).map((row) => row.id)
+          return r.bulkUpdateTransactions(OWNER, ids, { description: 'Edited' })
+        },
+      ],
+    ]
 
-  it.each(READS)('%s reads the links of a row first and checks each label by key', async (_name, read) => {
-    kit.statements.length = 0
-    await read(repo)
-    const withLabels = kit.statements.filter((s) => s.sql.includes('json_group_array'))
-    expect(withLabels.length).toBeGreaterThan(0)
-    for (const statement of withLabels) {
-      const text = planOf(kit.sqlite, statement).join('\n')
-      expect(text, `walks the owner's labels:\n${text}`).not.toMatch(/SEARCH l USING (COVERING )?INDEX idx_labels_owner \(owner=\?\)/)
-      expect(text, `scans labels:\n${text}`).not.toMatch(/^\s*SCAN l\b/m)
-      expect(text, `does not look a label up by key:\n${text}`).toMatch(/SEARCH l USING (INTEGER PRIMARY KEY \(rowid=\?\)|COVERING INDEX idx_labels_owner \(owner=\? AND rowid=\?\))/)
-      expect(text, `does not read the links by transaction:\n${text}`).toMatch(/SEARCH tl USING (COVERING )?INDEX \w+ \(transaction_id=\?/)
-    }
-  })
-})
+    it.each(READS)('%s reads the links of a row first and checks each label by key', async (_name, read) => {
+      kit.statements.length = 0
+      await read(repo)
+      const withLabels = kit.statements.filter((s) => s.sql.includes('json_group_array'))
+      expect(withLabels.length).toBeGreaterThan(0)
+      for (const statement of withLabels) {
+        const text = planOf(kit.sqlite, statement).join('\n')
+        expect(text, `walks the owner's labels:\n${text}`).not.toMatch(
+          /SEARCH l USING (COVERING )?INDEX idx_labels_owner \(owner=\?\)/,
+        )
+        expect(text, `scans labels:\n${text}`).not.toMatch(/^\s*SCAN l\b/m)
+        expect(text, `does not look a label up by key:\n${text}`).toMatch(
+          /SEARCH l USING (INTEGER PRIMARY KEY \(rowid=\?\)|COVERING INDEX idx_labels_owner \(owner=\? AND rowid=\?\))/,
+        )
+        expect(text, `does not read the links by transaction:\n${text}`).toMatch(
+          /SEARCH tl USING (COVERING )?INDEX \w+ \(transaction_id=\?/,
+        )
+      }
+    })
+  },
+)
 
 describe('the subquery answers as it did', () => {
-  const rows = (kit: QueryDb, sql: string): Array<{ id: number; ids: number[] }> =>
-    (kit.sqlite.prepare(`SELECT t.id AS id, ${sql} AS ids FROM transactions t ORDER BY t.id`).all() as Array<{ id: number; ids: string }>).map(
-      (r) => ({ id: r.id, ids: (JSON.parse(r.ids) as number[]).sort((a, b) => a - b) }),
-    )
+  const rows = (
+    kit: QueryDb,
+    sql: string,
+  ): Array<{ id: number; ids: number[] }> =>
+    (
+      kit.sqlite.prepare(`SELECT t.id AS id, ${sql} AS ids FROM transactions t ORDER BY t.id`).all() as Array<{
+        id: number
+        ids: string
+      }>
+    ).map((r) => ({ id: r.id, ids: (JSON.parse(r.ids) as number[]).sort((a, b) => a - b) }))
 
   const ledgers: Array<[string, () => QueryDb]> = [
-    ['several labels, some rows with none', () => queryDb(labelled(20, 3), [{ owner: OTHER_OWNER, dataset: labelled(8, 4) }])],
+    [
+      'several labels, some rows with none',
+      () => queryDb(labelled(20, 3), [{ owner: OTHER_OWNER, dataset: labelled(8, 4) }]),
+    ],
     ['three labels', () => queryDb(labelled(3, 5), [{ owner: OTHER_OWNER, dataset: labelled(3, 6) }])],
     ['forty labels', () => queryDb(labelled(40, 8))],
-    ...[1, 2, 3, 4, 5, 6, 7, 8].map((seed): [string, () => QueryDb] => [`random ledger ${seed}`, () => queryDb(randomLedger(seed), [{ owner: OTHER_OWNER, dataset: randomLedger(seed + 100) }])]),
+    ...[1, 2, 3, 4, 5, 6, 7, 8].map((seed): [string, () => QueryDb] => [
+      `random ledger ${seed}`,
+      () => queryDb(randomLedger(seed), [{ owner: OTHER_OWNER, dataset: randomLedger(seed + 100) }]),
+    ]),
   ]
 
   it.each(ledgers)('%s', (_name, build) => {
     const kit = build()
     // A link to a label that belongs to another owner must be dropped, as a link to one that is gone is.
-    const foreign = kit.sqlite.prepare('SELECT id FROM labels WHERE owner <> ? LIMIT 1').get(OWNER) as { id: number } | undefined
-    const mine = kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? LIMIT 3').all(OWNER) as Array<{ id: number }>
-    if (foreign) for (const { id } of mine) kit.sqlite.prepare('INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)').run(id, foreign.id)
+    const foreign = kit.sqlite.prepare('SELECT id FROM labels WHERE owner <> ? LIMIT 1').get(OWNER) as
+      { id: number } | undefined
+    const mine = kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? LIMIT 3').all(OWNER) as Array<{
+      id: number
+    }>
+    if (foreign)
+      for (const { id } of mine)
+        kit.sqlite
+          .prepare('INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)')
+          .run(id, foreign.id)
 
     const was = rows(kit, OLD_LABEL_IDS_SQL)
     const now = rows(kit, LABEL_IDS_SQL)

@@ -41,8 +41,11 @@ function fake(over: Partial<Fake> & { day: number }): Fake {
   }
 }
 
-const many = (n: number, environment: Fake['environment'], startDay = 0) =>
-  Array.from({ length: n }, (_, i) => fake({ day: startDay + i, environment }))
+const many = (
+  n: number,
+  environment: Fake['environment'],
+  startDay = 0,
+) => Array.from({ length: n }, (_, i) => fake({ day: startDay + i, environment }))
 
 interface Call {
   method: string
@@ -51,7 +54,11 @@ interface Call {
 }
 
 type Query = Record<string, unknown>
-type Api = (method: string, path: string, query?: Query) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+type Api = (
+  method: string,
+  path: string,
+  query?: Query,
+) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
 
 interface FakeOptions {
   canonical?: string | null
@@ -61,11 +68,17 @@ interface FakeOptions {
 }
 
 /** The three endpoints the script uses, with Cloudflare's paging and its refusal to delete an aliased deployment. */
-function fakeApi(deployments: Fake[], { canonical, domains = [], pageSize = 25, refuse = false }: FakeOptions = {}) {
+function fakeApi(
+  deployments: Fake[],
+  { canonical, domains = [], pageSize = 25, refuse = false }: FakeOptions = {},
+) {
   const calls: Call[] = []
   const live = [...deployments]
 
-  const remove = (path: string, query: Query) => {
+  const remove = (
+    path: string,
+    query: Query,
+  ) => {
     const found = live.find((d) => d.id === path.split('/').pop())
     if (!found) throw new Error('DELETE: HTTP 404 (8000007: not found)')
     if (refuse && found.aliases?.length && query.force !== 'true') throw new Error('DELETE: HTTP 400 (aliased)')
@@ -79,20 +92,34 @@ function fakeApi(deployments: Fake[], { canonical, domains = [], pageSize = 25, 
     return {
       success: true,
       result: newestFirst.slice((number - 1) * size, number * size),
-      result_info: { page: number, per_page: size, total_count: live.length, total_pages: Math.ceil(live.length / size) },
+      result_info: {
+        page: number,
+        per_page: size,
+        total_count: live.length,
+        total_pages: Math.ceil(live.length / size),
+      },
     }
   }
   const project = () => {
-    const id = canonical === undefined ? deployments.filter((d) => d.environment === 'production').at(-1)?.id : canonical
+    const id =
+      canonical === undefined ? deployments.filter((d) => d.environment === 'production').at(-1)?.id : canonical
     return { success: true, result: { canonical_deployment: id ? { id } : null } }
   }
-  const answer = (method: string, path: string, query: Query) => {
+  const answer = (
+    method: string,
+    path: string,
+    query: Query,
+  ) => {
     if (method === 'DELETE') return remove(path, query)
     if (path.endsWith('/domains')) return { success: true, result: domains.map((name) => ({ name })) }
     return path.endsWith('/deployments') ? page(query) : project()
   }
 
-  const api: Api = (method, path, query = {}) => {
+  const api: Api = (
+    method,
+    path,
+    query = {},
+  ) => {
     calls.push({ method, path, query })
     return new Promise((resolve) => resolve(answer(method, path, query)))
   }
@@ -100,13 +127,21 @@ function fakeApi(deployments: Fake[], { canonical, domains = [], pageSize = 25, 
 }
 
 const deletes = (calls: Call[]) => calls.filter((c) => c.method === 'DELETE')
-const kept = (plan: ReturnType<typeof planPrune>) => new Set(plan.keep.map((k: { deployment: { id: string } }) => k.deployment.id))
-const removed = (plan: ReturnType<typeof planPrune>) => new Set(plan.remove.map((r: { deployment: { id: string } }) => r.deployment.id))
+const kept = (plan: ReturnType<typeof planPrune>) =>
+  new Set(plan.keep.map((k: { deployment: { id: string } }) => k.deployment.id))
+const removed = (plan: ReturnType<typeof planPrune>) =>
+  new Set(plan.remove.map((r: { deployment: { id: string } }) => r.deployment.id))
 
-async function planOf(deployments: Fake[], options: { canonical?: string | null; domains?: string[] } = {}) {
+async function planOf(
+  deployments: Fake[],
+  options: { canonical?: string | null; domains?: string[] } = {},
+) {
   const { api } = fakeApi(deployments, options)
   const listed = await listDeployments(api, 'proj')
-  const canonicalId = options.canonical === undefined ? deployments.filter((d) => d.environment === 'production').at(-1)?.id ?? null : options.canonical
+  const canonicalId =
+    options.canonical === undefined
+      ? (deployments.filter((d) => d.environment === 'production').at(-1)?.id ?? null)
+      : options.canonical
   return { listed, plan: planPrune({ deployments: listed, canonicalId, domains: options.domains ?? [] }) }
 }
 
@@ -131,12 +166,19 @@ describe('planPrune', () => {
     const { plan } = await planOf([...many(3, 'production'), ...many(40, 'preview', 10)])
 
     expect(plan.remove).toHaveLength(35)
-    expect(plan.remove.every((r: { deployment: { environment: string } }) => r.deployment.environment === 'preview')).toBe(true)
+    expect(
+      plan.remove.every((r: { deployment: { environment: string } }) => r.deployment.environment === 'preview'),
+    ).toBe(true)
   })
 
   it('honours other numbers when asked', async () => {
     const { listed } = await planOf(many(6, 'production'))
-    const plan = planPrune({ deployments: listed, canonicalId: (listed[0] as { id: string }).id, keepProduction: 2, keepPreview: 0 })
+    const plan = planPrune({
+      deployments: listed,
+      canonicalId: (listed[0] as { id: string }).id,
+      keepProduction: 2,
+      keepPreview: 0,
+    })
 
     expect(plan.keep).toHaveLength(2)
     expect(plan.remove).toHaveLength(4)
@@ -147,7 +189,9 @@ describe('planPrune', () => {
     const { plan } = await planOf([old, ...many(30, 'production', 10)], { canonical: old.id })
 
     expect(kept(plan).has(old.id)).toBe(true)
-    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === old.id)!.reasons).toContain('current production')
+    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === old.id)!.reasons).toContain(
+      'current production',
+    )
   })
 
   it('never deletes the latest successful deployment of an environment, when newer ones failed', async () => {
@@ -156,13 +200,17 @@ describe('planPrune', () => {
     const { plan } = await planOf([good, ...failed], { canonical: failed.at(-1)!.id })
 
     expect(kept(plan).has(good.id)).toBe(true)
-    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === good.id)!.reasons).toEqual(['latest successful'])
+    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === good.id)!.reasons).toEqual([
+      'latest successful',
+    ])
   })
 
   it('keeps a deployment a custom domain points at, by listing or by host', async () => {
     const live = fake({ day: 0, environment: 'preview', aliases: ['https://stg.example.com'] })
     const named = fake({ day: 1, environment: 'preview', aliases: ['staging.example.org'] })
-    const { plan } = await planOf([live, named, ...many(20, 'preview', 10), ...many(1, 'production', 50)], { domains: ['staging.example.org'] })
+    const { plan } = await planOf([live, named, ...many(20, 'preview', 10), ...many(1, 'production', 50)], {
+      domains: ['staging.example.org'],
+    })
 
     expect(kept(plan).has(live.id)).toBe(true)
     expect(kept(plan).has(named.id)).toBe(true)
@@ -173,7 +221,9 @@ describe('planPrune', () => {
     const plain = fake({ day: 1, environment: 'preview' })
     const { plan } = await planOf([aliased, plain, ...many(5, 'preview', 10), ...many(1, 'production', 50)])
 
-    const byId = new Map(plan.remove.map((r: { deployment: { id: string }; force: boolean }) => [r.deployment.id, r.force]))
+    const byId = new Map(
+      plan.remove.map((r: { deployment: { id: string }; force: boolean }) => [r.deployment.id, r.force]),
+    )
     expect(byId.get(aliased.id)).toBe(true)
     expect(byId.get(plain.id)).toBe(false)
   })
@@ -182,14 +232,26 @@ describe('planPrune', () => {
     const building = fake({ day: 0, environment: 'preview', latest_stage: { name: 'build', status: 'active' } })
     const { plan } = await planOf([building, ...many(20, 'preview', 10), ...many(1, 'production', 50)])
 
-    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === building.id)!.reasons).toEqual(['still building'])
+    expect(plan.keep.find((k: { deployment: { id: string } }) => k.deployment.id === building.id)!.reasons).toEqual([
+      'still building',
+    ])
   })
 
   it('breaks a tie in creation date the same way every time', async () => {
     const a = fake({ day: 5 })
     const b = fake({ day: 5 })
-    const first = planPrune({ deployments: (await planOf([a, b])).listed, canonicalId: b.id, keepProduction: 1, keepPreview: 0 })
-    const second = planPrune({ deployments: (await planOf([b, a])).listed, canonicalId: b.id, keepProduction: 1, keepPreview: 0 })
+    const first = planPrune({
+      deployments: (await planOf([a, b])).listed,
+      canonicalId: b.id,
+      keepProduction: 1,
+      keepPreview: 0,
+    })
+    const second = planPrune({
+      deployments: (await planOf([b, a])).listed,
+      canonicalId: b.id,
+      keepProduction: 1,
+      keepPreview: 0,
+    })
 
     expect(removed(first)).toEqual(removed(second))
   })
@@ -221,11 +283,18 @@ describe('listDeployments', () => {
 
   it.each([
     ['no total_pages', ({ total_pages: _pages, ...rest }: Record<string, unknown>) => rest],
-    ['no total_pages and no page size', ({ total_pages: _pages, per_page: _size, ...rest }: Record<string, unknown>) => rest],
+    [
+      'no total_pages and no page size',
+      ({ total_pages: _pages, per_page: _size, ...rest }: Record<string, unknown>) => rest,
+    ],
     ['null for both', (info: Record<string, unknown>) => ({ ...info, total_pages: null, per_page: null })],
   ])('works out the page count when Cloudflare sends %s', async (_name, strip) => {
     const { api, calls } = fakeApi(many(60, 'production'), { pageSize: 25 })
-    const bare: Api = (method, path, query = {}) =>
+    const bare: Api = (
+      method,
+      path,
+      query = {},
+    ) =>
       api(method, path, query).then((body: { result_info?: Record<string, unknown> }) =>
         body.result_info ? { ...body, result_info: strip(body.result_info) } : body,
       )
@@ -236,7 +305,11 @@ describe('listDeployments', () => {
 
   it('still throws when the derived pages do not add up to the total', async () => {
     const { api } = fakeApi(many(60, 'production'), { pageSize: 25 })
-    const lying: Api = (method, path, query = {}) =>
+    const lying: Api = (
+      method,
+      path,
+      query = {},
+    ) =>
       api(method, path, query).then((body: { result_info?: Record<string, unknown> }) =>
         body.result_info ? { ...body, result_info: { total_count: 90, per_page: 25 } } : body,
       )
@@ -247,15 +320,22 @@ describe('listDeployments', () => {
   it('throws when the pages hold fewer than the total', async () => {
     const all = many(30, 'production')
     const { api } = fakeApi(all)
-    const short: Api = (method, path, query = {}) =>
-      api(method, path, query).then((body: object) => (query.page === 2 ? { ...body, result: [] } : body))
+    const short: Api = (
+      method,
+      path,
+      query = {},
+    ) => api(method, path, query).then((body: object) => (query.page === 2 ? { ...body, result: [] } : body))
 
     await expect(listDeployments(short, 'proj')).rejects.toThrow(/incomplete: read 25 of 30/)
   })
 
   it('throws when a page repeats a deployment', async () => {
     const { api } = fakeApi(many(30, 'production'))
-    const repeating: Api = (method, path, query = {}) => api(method, path, { ...query, page: 1 })
+    const repeating: Api = (
+      method,
+      path,
+      query = {},
+    ) => api(method, path, { ...query, page: 1 })
 
     await expect(listDeployments(repeating, 'proj')).rejects.toThrow(/repeated a deployment/)
   })
@@ -264,16 +344,25 @@ describe('listDeployments', () => {
     ['no result_info', { success: true, result: [] }],
     ['a result that is not a list', { success: true, result: {}, result_info: { total_count: 0, total_pages: 0 } }],
     ['a count that is not a number', { success: true, result: [], result_info: { total_count: '0', total_pages: 0 } }],
-    ['a page total that is not a number', { success: true, result: [], result_info: { total_count: 0, total_pages: 'many' } }],
+    [
+      'a page total that is not a number',
+      { success: true, result: [], result_info: { total_count: 0, total_pages: 'many' } },
+    ],
     ['a page size that is not usable', { success: true, result: [], result_info: { total_count: 0, per_page: 0 } }],
   ])('throws on %s', async (_name, body) => {
-    await expect(listDeployments(() => Promise.resolve(body), 'proj')).rejects.toThrow(/shape this script does not know/)
+    await expect(listDeployments(() => Promise.resolve(body), 'proj')).rejects.toThrow(
+      /shape this script does not know/,
+    )
   })
 
   it.each([
     ['no id', { environment: 'preview', created_on: '2026-01-01T00:00:00Z' }, /no id/],
     ['a bad date', { id: 'x', environment: 'preview', created_on: 'soon' }, /creation date/],
-    ['an unknown environment', { id: 'x', environment: 'canary', created_on: '2026-01-01T00:00:00Z' }, /unknown environment/],
+    [
+      'an unknown environment',
+      { id: 'x', environment: 'canary', created_on: '2026-01-01T00:00:00Z' },
+      /unknown environment/,
+    ],
     ['odd aliases', { id: 'x', environment: 'preview', created_on: '2026-01-01T00:00:00Z', aliases: [1] }, /aliases/],
     ['a non-object entry', 'x', /no id/],
   ])('throws on a deployment with %s', async (_name, entry, message) => {
@@ -329,17 +418,27 @@ describe('pruneProject', () => {
 
   it('does not delete when the listing cannot be read to the end', async () => {
     const { api, calls } = fakeApi(many(30, 'production'))
-    const failing: Api = (method, path, query = {}) =>
-      method === 'GET' && query.page === 2 ? Promise.reject(new Error('GET: HTTP 500 (boom)')) : api(method, path, query)
+    const failing: Api = (
+      method,
+      path,
+      query = {},
+    ) =>
+      method === 'GET' && query.page === 2
+        ? Promise.reject(new Error('GET: HTTP 500 (boom)'))
+        : api(method, path, query)
 
-    await expect(pruneProject({ api: failing, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(/HTTP 500/)
+    await expect(pruneProject({ api: failing, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(
+      /HTTP 500/,
+    )
     expect(deletes(calls)).toHaveLength(0)
   })
 
   it('does not delete when the current production deployment is missing from the listing', async () => {
     const { api, calls } = fakeApi(many(30, 'production'), { canonical: 'someone-elses-id' })
 
-    await expect(pruneProject({ api, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(/not in the listing/)
+    await expect(pruneProject({ api, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(
+      /not in the listing/,
+    )
     expect(deletes(calls)).toHaveLength(0)
   })
 
@@ -347,7 +446,11 @@ describe('pruneProject', () => {
     const all = many(20, 'production')
     const { api } = fakeApi(all)
     let n = 0
-    const flaky: Api = (method, path, query = {}) =>
+    const flaky: Api = (
+      method,
+      path,
+      query = {},
+    ) =>
       method === 'DELETE' && ++n === 3 ? Promise.reject(new Error('DELETE: HTTP 500 (boom)')) : api(method, path, query)
 
     const error = await pruneProject({ api: flaky, project: 'proj', apply: true, log: () => {} }).catch((e: Error) => e)
@@ -370,9 +473,13 @@ describe('pruneProject', () => {
   it('deletes nothing when the plan is over the limit, and says how far over', async () => {
     const { api, calls } = fakeApi(many(80, 'production'))
 
-    const error = await pruneProject({ api, project: 'proj', apply: true, maxDelete: 69, log: () => {} }).catch((e: Error) => e)
+    const error = await pruneProject({ api, project: 'proj', apply: true, maxDelete: 69, log: () => {} }).catch(
+      (e: Error) => e,
+    )
 
-    expect((error as Error).message).toContain('70 deployments would be deleted, over the limit of 69. Nothing was deleted.')
+    expect((error as Error).message).toContain(
+      '70 deployments would be deleted, over the limit of 69. Nothing was deleted.',
+    )
     expect(deletes(calls)).toHaveLength(0)
   })
 
@@ -388,7 +495,9 @@ describe('pruneProject', () => {
     expect(MAX_DELETE).toBe(300)
     const { api, calls } = fakeApi(many(MAX_DELETE + KEEP_PRODUCTION + 1, 'production'))
 
-    await expect(pruneProject({ api, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(/over the limit of 300/)
+    await expect(pruneProject({ api, project: 'proj', apply: true, log: () => {} })).rejects.toThrow(
+      /over the limit of 300/,
+    )
     expect(deletes(calls)).toHaveLength(0)
   })
 
@@ -416,9 +525,16 @@ describe('pruneProject', () => {
     ['a project in an unknown shape', { success: true, result: null }, { success: true, result: [] }],
     ['custom domains in an unknown shape', { success: true, result: {} }, { success: true, result: {} }],
     ['a domain without a name', { success: true, result: {} }, { success: true, result: [{}] }],
-    ['a production deployment id that is not text', { success: true, result: { canonical_deployment: { id: 7 } } }, { success: true, result: [] }],
+    [
+      'a production deployment id that is not text',
+      { success: true, result: { canonical_deployment: { id: 7 } } },
+      { success: true, result: [] },
+    ],
   ])('refuses %s', async (_name, project, domains) => {
-    const api: Api = (_m, path) => Promise.resolve(path.endsWith('/domains') ? domains : project)
+    const api: Api = (
+      _m,
+      path,
+    ) => Promise.resolve(path.endsWith('/domains') ? domains : project)
 
     await expect(pruneProject({ api, project: 'proj', apply: false, log: () => {} })).rejects.toThrow(/does not know/)
   })
@@ -431,12 +547,18 @@ describe('summarize', () => {
 })
 
 describe('cloudflareApi', () => {
-  const respond = (status: number, body: unknown) =>
+  const respond = (
+    status: number,
+    body: unknown,
+  ) =>
     (() => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) })) as unknown as typeof fetch
 
   it('sends the token, the method and the query', async () => {
     let seen: { url: URL; init: RequestInit } | undefined
-    const fetchImpl = ((url: URL, init: RequestInit) => {
+    const fetchImpl = ((
+      url: URL,
+      init: RequestInit,
+    ) => {
       seen = { url, init }
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ success: true, result: [] }) })
     }) as unknown as typeof fetch
@@ -449,11 +571,18 @@ describe('cloudflareApi', () => {
   })
 
   it('reports an error with its status and Cloudflare message, and leaves out ids and the token', async () => {
-    const api = cloudflareApi('tkn-secret', respond(400, { success: false, errors: [{ code: 8000035, message: 'aliased' }] }))
+    const api = cloudflareApi(
+      'tkn-secret',
+      respond(400, { success: false, errors: [{ code: 8000035, message: 'aliased' }] }),
+    )
 
-    const error = await api('DELETE', '/accounts/acct-secret/pages/projects/p/deployments/dep-secret').catch((e: Error) => e)
+    const error = await api('DELETE', '/accounts/acct-secret/pages/projects/p/deployments/dep-secret').catch(
+      (e: Error) => e,
+    )
 
-    expect((error as Error).message).toBe('DELETE /accounts/:account/pages/projects/p/deployments/:id: HTTP 400 (8000035: aliased)')
+    expect((error as Error).message).toBe(
+      'DELETE /accounts/:account/pages/projects/p/deployments/:id: HTTP 400 (8000035: aliased)',
+    )
   })
 
   it('reports an error with no detail', async () => {
@@ -470,21 +599,32 @@ describe('cloudflareApi', () => {
 
   it('reports a response that is not JSON', async () => {
     const fetchImpl = (() =>
-      Promise.resolve({ ok: false, status: 502, json: () => Promise.reject(new SyntaxError('x')) })) as unknown as typeof fetch
+      Promise.resolve({
+        ok: false,
+        status: 502,
+        json: () => Promise.reject(new SyntaxError('x')),
+      })) as unknown as typeof fetch
 
-    await expect(cloudflareApi('t', fetchImpl)('GET', '/x')).rejects.toThrow('GET /x: HTTP 502, and the response was not JSON')
+    await expect(cloudflareApi('t', fetchImpl)('GET', '/x')).rejects.toThrow(
+      'GET /x: HTTP 502, and the response was not JSON',
+    )
   })
 })
 
 describe('the command line', () => {
   it('reads the project and the delete flag', () => {
     expect(parseArgs(['--project', PROJECT])).toEqual({ project: PROJECT, apply: false, maxDelete: MAX_DELETE })
-    expect(parseArgs(['--delete', '--project', PROJECT])).toEqual({ project: PROJECT, apply: true, maxDelete: MAX_DELETE })
+    expect(parseArgs(['--delete', '--project', PROJECT])).toEqual({
+      project: PROJECT,
+      apply: true,
+      maxDelete: MAX_DELETE,
+    })
   })
 
   it('reads the limit, and only as a whole number', () => {
     expect(parseArgs(['--project', PROJECT, '--max-delete', '1000']).maxDelete).toBe(1000)
-    for (const bad of ['-1', '1.5', 'many', '']) expect(() => parseArgs(['--project', PROJECT, '--max-delete', bad])).toThrow(/whole number/)
+    for (const bad of ['-1', '1.5', 'many', ''])
+      expect(() => parseArgs(['--project', PROJECT, '--max-delete', bad])).toThrow(/whole number/)
     expect(() => parseArgs(['--project', PROJECT, '--max-delete'])).toThrow(/whole number/)
   })
 
@@ -493,22 +633,35 @@ describe('the command line', () => {
   })
 
   it('refuses a project that is not listed, however well formed', () => {
-    for (const other of ['roy-private', 'expense-tracker-3hq', 'expense', 'Expense-Tracker', 'expense-tracker ', '../expense-tracker']) {
+    for (const other of [
+      'roy-private',
+      'expense-tracker-3hq',
+      'expense',
+      'Expense-Tracker',
+      'expense-tracker ',
+      '../expense-tracker',
+    ]) {
       expect(() => parseArgs(['--project', other, '--delete'])).toThrow(/Usage/)
     }
   })
 
-  it.each([[[]], [['--project']], [['--project', 'Bad Name']], [['--project', PROJECT, '--force']], [['--project', '../x']]])(
-    'rejects %j',
-    (argv) => {
-      expect(() => parseArgs(argv)).toThrow()
-    },
-  )
+  it.each([
+    [[]],
+    [['--project']],
+    [['--project', 'Bad Name']],
+    [['--project', PROJECT, '--force']],
+    [['--project', '../x']],
+  ])('rejects %j', (argv) => {
+    expect(() => parseArgs(argv)).toThrow()
+  })
 
   it('runs a dry run end to end through fetch, and sends no DELETE', async () => {
     const all = many(14, 'production')
     const { api, calls } = fakeApi(all)
-    const fetchImpl = (async (url: URL, init: RequestInit) => {
+    const fetchImpl = (async (
+      url: URL,
+      init: RequestInit,
+    ) => {
       const query = Object.fromEntries(url.searchParams)
       const body = (await api(init.method!, url.pathname.replace('/client/v4', ''), query)) as unknown
       return { ok: true, status: 200, json: () => Promise.resolve(body) }

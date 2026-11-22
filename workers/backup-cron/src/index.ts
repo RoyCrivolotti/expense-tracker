@@ -2,7 +2,11 @@ import { createBackupDeps, runScheduledBackup } from '../../../functions/_shared
 import type { Env } from '../../../functions/_shared/env'
 
 export default {
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    _ctx: ExecutionContext,
+  ) {
     const deps = createBackupDeps(env)
     if (!deps.store) {
       console.warn('backup: BACKUPS binding not configured — skipping')

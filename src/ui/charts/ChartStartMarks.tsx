@@ -28,7 +28,10 @@ interface Box {
   bottom: number
 }
 
-function overlaps(a: Box, b: Box): boolean {
+function overlaps(
+  a: Box,
+  b: Box,
+): boolean {
   return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
 }
 
@@ -40,9 +43,21 @@ const DOT_ROOM = 7
  * room. A label that would run into one already placed, or over another mark's dot, is left off rather
  * than drawn over it.
  */
-function place(marks: StartMark[], xForIndex: (i: number) => number, scaleY: (v: number) => number, left: number, right: number, top: number): Placed[] {
+function place(
+  marks: StartMark[],
+  xForIndex: (i: number) => number,
+  scaleY: (v: number) => number,
+  left: number,
+  right: number,
+  top: number,
+): Placed[] {
   const placed: Placed[] = []
-  const dots = marks.map((m) => ({ left: xForIndex(m.index) - DOT_ROOM, right: xForIndex(m.index) + DOT_ROOM, top: scaleY(m.value) - DOT_ROOM, bottom: scaleY(m.value) + DOT_ROOM }))
+  const dots = marks.map((m) => ({
+    left: xForIndex(m.index) - DOT_ROOM,
+    right: xForIndex(m.index) + DOT_ROOM,
+    top: scaleY(m.value) - DOT_ROOM,
+    bottom: scaleY(m.value) + DOT_ROOM,
+  }))
   for (const mark of [...marks].sort((a, b) => a.index - b.index)) {
     const x = xForIndex(mark.index)
     const y = scaleY(mark.value)

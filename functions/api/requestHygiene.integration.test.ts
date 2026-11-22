@@ -29,27 +29,41 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const NEW_TRANSACTION = { date: '2026-10-03', budgetMonth: '2026-10', description: 'Coffee', accountId: 0, categoryId: 0, type: 'expense', amountCents: 350 }
+const NEW_TRANSACTION = {
+  date: '2026-10-03',
+  budgetMonth: '2026-10',
+  description: 'Coffee',
+  accountId: 0,
+  categoryId: 0,
+  type: 'expense',
+  amountCents: 350,
+}
 const count = (): number => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 const body = () => JSON.stringify({ ...NEW_TRANSACTION, accountId: ids.debit, categoryId: ids.groceries })
 
-const post = (handler: Handler, headers: Record<string, string>, rawBody?: BodyInit) =>
+const post = (
+  handler: Handler,
+  headers: Record<string, string>,
+  rawBody?: BodyInit,
+) =>
   world.call(handler, { method: 'POST', path: '/transactions', headers, ...(rawBody !== undefined ? { rawBody } : {}) })
 
 describe('a write that could have come from another site', () => {
-  it.each(['text/plain', 'text/plain;charset=UTF-8', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x'])(
-    'is refused with a 415 as %s, and writes nothing',
-    async (type) => {
-      const before = count()
-      const token = world.token()
+  it.each([
+    'text/plain',
+    'text/plain;charset=UTF-8',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data; boundary=x',
+  ])('is refused with a 415 as %s, and writes nothing', async (type) => {
+    const before = count()
+    const token = world.token()
 
-      const response = await post(postTransaction, { 'content-type': type }, body())
+    const response = await post(postTransaction, { 'content-type': type }, body())
 
-      expect(response.status).toBe(415)
-      expect(count()).toBe(before)
-      expect(world.token()).toBe(token)
-    },
-  )
+    expect(response.status).toBe(415)
+    expect(count()).toBe(before)
+    expect(world.token()).toBe(token)
+  })
 
   it('is refused with a 415 when it sends a JSON body without saying so', async () => {
     const response = await post(postTransaction, {}, body())
@@ -60,7 +74,11 @@ describe('a write that could have come from another site', () => {
   it('is refused with a 403 when the browser says it is same-site, which a sibling subdomain is', async () => {
     const before = count()
 
-    const response = await post(postTransaction, { 'content-type': 'application/json', 'sec-fetch-site': 'same-site' }, body())
+    const response = await post(
+      postTransaction,
+      { 'content-type': 'application/json', 'sec-fetch-site': 'same-site' },
+      body(),
+    )
 
     expect(response.status).toBe(403)
     expect(count()).toBe(before)
@@ -70,7 +88,11 @@ describe('a write that could have come from another site', () => {
     const before = count()
     const token = world.token()
 
-    const response = await post(postTransaction, { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' }, body())
+    const response = await post(
+      postTransaction,
+      { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' },
+      body(),
+    )
 
     expect(response.status).toBe(403)
     expect(await response.json()).toEqual({ error: 'Requests from another origin are refused' })
@@ -79,7 +101,12 @@ describe('a write that could have come from another site', () => {
   })
 
   it('is refused before the person is known, so a cross-site request learns nothing about access', async () => {
-    const anonymous = await world.call(postBulk, { method: 'POST', path: '/transactions/bulk', headers: { 'sec-fetch-site': 'cross-site' }, email: '' })
+    const anonymous = await world.call(postBulk, {
+      method: 'POST',
+      path: '/transactions/bulk',
+      headers: { 'sec-fetch-site': 'cross-site' },
+      email: '',
+    })
 
     expect(anonymous.status).toBe(403)
   })
@@ -93,7 +120,9 @@ describe('a write that could have come from another site', () => {
     })
 
     expect(response.status).toBe(403)
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({
+      n: 1,
+    })
   })
 
   it('is refused on the access routes too', async () => {
@@ -107,7 +136,15 @@ describe('a write the app sends', () => {
   it('is let through as JSON, from the same origin or with no Sec-Fetch-Site', async () => {
     const before = count()
 
-    expect((await post(postTransaction, { 'content-type': 'application/json; charset=utf-8', 'sec-fetch-site': 'same-origin' }, body())).status).toBe(201)
+    expect(
+      (
+        await post(
+          postTransaction,
+          { 'content-type': 'application/json; charset=utf-8', 'sec-fetch-site': 'same-origin' },
+          body(),
+        )
+      ).status,
+    ).toBe(201)
     expect((await post(postTransaction, { 'content-type': 'application/json' }, body())).status).toBe(201)
 
     expect(count()).toBe(before + 2)
@@ -125,7 +162,12 @@ describe('a write the app sends', () => {
   })
 
   it('is let through as the multipart receipt upload', async () => {
-    const response = await world.call(upload, { method: 'POST', path: '/attachments', rawBody: uploadForm(ids.transactions[1]!), headers: { 'sec-fetch-site': 'same-origin' } })
+    const response = await world.call(upload, {
+      method: 'POST',
+      path: '/attachments',
+      rawBody: uploadForm(ids.transactions[1]!),
+      headers: { 'sec-fetch-site': 'same-origin' },
+    })
 
     expect(response.status).toBe(201)
   })
@@ -133,7 +175,11 @@ describe('a write the app sends', () => {
   it('is let through as a request for access, which has no body: as workerd delivers it, a zero-length body', async () => {
     // A bare `POST /api/access/request` arrives with a body object of zero length and Content-Length: 0, and it is the
     // one write that runs before the allow-list, so a person who is not yet approved depends on it.
-    const response = await post(requestAccess, { 'sec-fetch-site': 'same-origin', 'content-length': '0' }, new Uint8Array(0))
+    const response = await post(
+      requestAccess,
+      { 'sec-fetch-site': 'same-origin', 'content-length': '0' },
+      new Uint8Array(0),
+    )
 
     expect(response.status).not.toBe(403)
     expect(response.status).not.toBe(415)
@@ -160,7 +206,11 @@ describe('a write the app sends', () => {
 
 describe('a read from another site', () => {
   it('is not refused', async () => {
-    const response = await world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, headers: { 'sec-fetch-site': 'cross-site' } })
+    const response = await world.call(getOne, {
+      path: `/transactions/${ids.transactions[0]}`,
+      params: { id: String(ids.transactions[0]) },
+      headers: { 'sec-fetch-site': 'cross-site' },
+    })
 
     expect(response.status).toBe(200)
   })

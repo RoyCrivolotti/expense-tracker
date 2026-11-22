@@ -5,12 +5,19 @@ const HEADER = 5
 const GAP = 2
 const ROW = 10
 
-function layoutOf(sizes: number[], collapsed: boolean[] = sizes.map(() => false), rowHeight = ROW): Layout {
+function layoutOf(
+  sizes: number[],
+  collapsed: boolean[] = sizes.map(() => false),
+  rowHeight = ROW,
+): Layout {
   return buildLayout({ groupSizes: sizes, collapsed, rowHeight: () => rowHeight, headerHeight: HEADER, gap: GAP })
 }
 
 /** The height the plan would give the page: what it renders plus the padding standing in for the rest. */
-function renderedHeight(layout: Layout, plan: Plan): number {
+function renderedHeight(
+  layout: Layout,
+  plan: Plan,
+): number {
   let height = plan.top + plan.bottom
   plan.groups.forEach(({ group, slice }, i) => {
     const rows = layout.collapsed[group] ? 0 : layout.groupBottom[group]! - layout.groupTop[group]! - HEADER

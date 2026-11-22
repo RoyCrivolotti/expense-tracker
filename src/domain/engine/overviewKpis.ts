@@ -64,8 +64,7 @@ export function totalsForMonths(
   const t = emptyTotals()
   for (const txn of transactions) {
     if (!wanted.has(txn.budgetMonth)) continue
-    if ((cutOnly === undefined || txn.budgetMonth === cutOnly) && !withinCut(txn.date, txn.budgetMonth, cut))
-      continue
+    if ((cutOnly === undefined || txn.budgetMonth === cutOnly) && !withinCut(txn.date, txn.budgetMonth, cut)) continue
     if (txn.status === 'cancelled') continue
     if (!opts.includeForecast && txn.status === 'forecast') continue
     if (txn.type === 'income') t.incomeCents += txn.amountCents

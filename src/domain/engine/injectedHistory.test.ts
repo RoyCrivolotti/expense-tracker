@@ -52,7 +52,10 @@ describe('a classifier built from all the history', () => {
   })
 
   it('is optional for the group detail, and lets the last two months match the whole history', () => {
-    const detail = (transactions: Transaction[], classifier?: ReturnType<typeof classifyFixedSpend>) =>
+    const detail = (
+      transactions: Transaction[],
+      classifier?: ReturnType<typeof classifyFixedSpend>,
+    ) =>
       computeSpendingGroupDetail(
         { transactions, categories, ...(classifier ? { classifier } : {}) },
         { ...options, groupBy: 'fixedFlexible', key: 'fixed' },
@@ -91,7 +94,10 @@ describe('the recurring series of all the history', () => {
   })
 
   it('reaches the spending pace through its options', () => {
-    const pace = (transactions: Transaction[], fixedGroups?: typeof series) =>
+    const pace = (
+      transactions: Transaction[],
+      fixedGroups?: typeof series,
+    ) =>
       computeSpendingPace(transactions, categories, plans, whole, {
         month: '2026-06',
         today: '2026-09-01',

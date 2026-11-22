@@ -7,7 +7,12 @@ export interface ToastApi {
    * `holdMs` sets how long it stays, for a message that is only true for that long, and `key` names it so
    * `dismissToast` can take down this toast and no other. A new line (`\n`) in a message starts a new line.
    */
-  showToast: (message: string, tone?: ToastTone, action?: ToastAction, options?: ToastOptions) => void
+  showToast: (
+    message: string,
+    tone?: ToastTone,
+    action?: ToastAction,
+    options?: ToastOptions,
+  ) => void
   /** Takes down the toast named `key` if it is still the one showing. A later toast is left alone. */
   dismissToast?: (key: string) => void
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../domain/engine/rng'
 import { ledgerReferenceOf } from '../domain/ledger/partsOfDataset'
-import { HYDRATED_DATA_MONTHS, type HydrationPolicy, assembleRows, buildLedger, partitionPinned } from '../domain/ledger'
+import {
+  HYDRATED_DATA_MONTHS,
+  type HydrationPolicy,
+  assembleRows,
+  buildLedger,
+  partitionPinned,
+} from '../domain/ledger'
 import type { Ledger } from '../domain/ledger'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { sortedMonths } from '../domain/engine/dates'
@@ -30,12 +36,20 @@ function listsOf(ledger: Ledger) {
   return { real: comparable(real), linear: comparable(linear) }
 }
 
-async function hold(dataset: ExpenseDataset, viewed: string, policy?: HydrationPolicy): Promise<HeldLedger> {
+async function hold(
+  dataset: ExpenseDataset,
+  viewed: string,
+  policy?: HydrationPolicy,
+): Promise<HeldLedger> {
   return holdParts(await readLedgerParts(memorySource(dataset), { viewed, ...(policy ? { policy } : {}) }))
 }
 
 /** Reads the sums of the stale months from the truth, as the caller reads them from the server. */
-async function refetch(held: HeldLedger, stale: string[], truth: ExpenseDataset): Promise<HeldLedger> {
+async function refetch(
+  held: HeldLedger,
+  stale: string[],
+  truth: ExpenseDataset,
+): Promise<HeldLedger> {
   const source = inMemoryLedgerParts(() => ({ dataset: truth, revision: 't' }))
   const parts = await Promise.all(stale.map((month) => source.readCubePart({ from: month, to: month })))
   return holdCells(held, parts)
@@ -45,7 +59,10 @@ async function refetch(held: HeldLedger, stale: string[], truth: ExpenseDataset)
  * The invariant: patching what is held and then reading the stale months again leaves exactly what a
  * client that had read the patched ledger afresh would hold, for the months it holds as rows.
  */
-async function expectTruth(next: HeldLedger, truth: ExpenseDataset) {
+async function expectTruth(
+  next: HeldLedger,
+  truth: ExpenseDataset,
+) {
   const reference = ledgerReferenceOf(truth)
   expect(next.months).toEqual(reference.months)
   expect(next.rowsPerMonth).toEqual(reference.rowsPerMonth)
@@ -56,17 +73,26 @@ async function expectTruth(next: HeldLedger, truth: ExpenseDataset) {
   expect(listsOf(ledgerOfHeld(next))).toEqual(listsOf(buildLedger(truth, held)))
 }
 
-async function apply(held: HeldLedger, truth: ExpenseDataset, patch: (d: ExpenseDataset) => ExpenseDataset, viewed: string) {
+async function apply(
+  held: HeldLedger,
+  truth: ExpenseDataset,
+  patch: (d: ExpenseDataset) => ExpenseDataset,
+  viewed: string,
+) {
   const before = datasetOfHeld(held)
   const after = patch(before)
   const reconciled = reconcileHeld(held, before, after, viewed)
   const patchedTruth = patch(truth)
-  const next = reconciled.held.cells === null ? reconciled.held : await refetch(reconciled.held, reconciled.stale, patchedTruth)
+  const next =
+    reconciled.held.cells === null ? reconciled.held : await refetch(reconciled.held, reconciled.stale, patchedTruth)
   return { ...reconciled, next, truth: patchedTruth }
 }
 
-const row = (id: number, month: string, over: Partial<Transaction> = {}) =>
-  makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}`, ...over })
+const row = (
+  id: number,
+  month: string,
+  over: Partial<Transaction> = {},
+) => makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}`, ...over })
 
 describe('reconcileHeld, for one change at a time', () => {
   const dataset = adversarialLedger()
@@ -85,7 +111,12 @@ describe('reconcileHeld, for one change at a time', () => {
   it('patches a row in a held month at once and leaves the sums alone', async () => {
     const held = await hold(dataset, newest, WINDOWED)
     const target = held.rows.get(newest)!.find((t) => !partitionPinned([t]).pinned.length)!
-    const { next, stale, truth } = await apply(held, dataset, (d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' }), newest)
+    const { next, stale, truth } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' }),
+      newest,
+    )
     expect(stale).toEqual([])
     expect(next.revision).toBeNull()
     await expectTruth(next, truth)
@@ -94,14 +125,24 @@ describe('reconcileHeld, for one change at a time', () => {
   it('marks the month of an unpinned row whose amount changed as stale, even when it is held', async () => {
     const held = await hold(dataset, newest, WINDOWED)
     const target = held.rows.get(newest)!.find((t) => !partitionPinned([t]).pinned.length && t.amountCents !== 0)!
-    const { stale, next, truth } = await apply(held, dataset, (d) => patchAfterTransactionUpdate(d, { ...target, amountCents: target.amountCents + 100 }), newest)
+    const { stale, next, truth } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionUpdate(d, { ...target, amountCents: target.amountCents + 100 }),
+      newest,
+    )
     expect(stale).toEqual([newest])
     await expectTruth(next, truth)
   })
 
   it('adds a row to a held month and counts it', async () => {
     const held = await hold(dataset, newest, WINDOWED)
-    const { next, truth } = await apply(held, dataset, (d) => patchAfterTransactionCreate(d, row(900_001, newest)), newest)
+    const { next, truth } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionCreate(d, row(900_001, newest)),
+      newest,
+    )
     expect(next.rowCount).toBe(held.rowCount + 1)
     expect(next.rowsPerMonth[newest]).toBe((held.rowsPerMonth[newest] ?? 0) + 1)
     await expectTruth(next, truth)
@@ -109,7 +150,12 @@ describe('reconcileHeld, for one change at a time', () => {
 
   it('holds a month that did not exist, as the newest window now includes it', async () => {
     const held = await hold(dataset, newest, WINDOWED)
-    const { next, truth, stale } = await apply(held, dataset, (d) => patchAfterTransactionCreate(d, row(900_002, '2031-02')), newest)
+    const { next, truth, stale } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionCreate(d, row(900_002, '2031-02')),
+      newest,
+    )
     expect(next.rows.has('2031-02')).toBe(true)
     expect(next.months.at(-1)).toBe('2031-02')
     expect(stale).toEqual(['2031-02'])
@@ -119,7 +165,12 @@ describe('reconcileHeld, for one change at a time', () => {
   it('drops a row added to a month that is not held and reads that month’s sums again', async () => {
     const held = await hold(dataset, newest, WINDOWED)
     const old = months[3]!
-    const { next, stale, truth } = await apply(held, dataset, (d) => patchAfterTransactionCreate(d, row(900_003, old)), newest)
+    const { next, stale, truth } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionCreate(d, row(900_003, old)),
+      newest,
+    )
     expect(stale).toEqual([old])
     expect(next.rows.has(old)).toBe(false)
     expect(next.rowsPerMonth[old]).toBe((held.rowsPerMonth[old] ?? 0) + 1)
@@ -139,7 +190,12 @@ describe('reconcileHeld, for one change at a time', () => {
     const held = await hold(dataset, newest, WINDOWED)
     const target = held.rows.get(newest)!.find((t) => !partitionPinned([t]).pinned.length)!
     const to = months.at(-2)!
-    const { next, truth, stale } = await apply(held, dataset, (d) => patchAfterTransactionUpdate(d, { ...target, budgetMonth: to, date: `${to}-10` }), newest)
+    const { next, truth, stale } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterTransactionUpdate(d, { ...target, budgetMonth: to, date: `${to}-10` }),
+      newest,
+    )
     expect(stale.sort()).toEqual([to, newest].sort())
     await expectTruth(next, truth)
   })
@@ -148,7 +204,12 @@ describe('reconcileHeld, for one change at a time', () => {
     const held = await hold(dataset, newest, WINDOWED)
     const flaggedOld = held.pinned.find((t) => t.flagId != null && !held.rows.has(t.budgetMonth))
     expect(flaggedOld).toBeDefined()
-    const { next, stale, truth } = await apply(held, dataset, (d) => patchAfterFlagDelete(d, flaggedOld!.flagId!), newest)
+    const { next, stale, truth } = await apply(
+      held,
+      dataset,
+      (d) => patchAfterFlagDelete(d, flaggedOld!.flagId!),
+      newest,
+    )
     expect(stale).toContain(flaggedOld!.budgetMonth)
     await expectTruth(next, truth)
   })
@@ -168,7 +229,12 @@ describe('reconcileHeld, for one change at a time', () => {
     const small = syntheticLedger({ months: 12, perMonth: 10, seed: 1 })
     const viewed = sortedMonths(small.transactions.map((t) => t.budgetMonth)).at(-1)!
     const held = await hold(small, viewed)
-    const { next, stale, truth } = await apply(held, small, (d) => patchAfterTransactionCreate(d, row(900_005, '2020-01')), viewed)
+    const { next, stale, truth } = await apply(
+      held,
+      small,
+      (d) => patchAfterTransactionCreate(d, row(900_005, '2020-01')),
+      viewed,
+    )
     expect(stale).toEqual([])
     expect(next.rows.has('2020-01')).toBe(true)
     await expectTruth(next, truth)
@@ -192,7 +258,8 @@ describe('reconcileHeld, for sequences of changes', () => {
         const current = datasetOfHeld(held).transactions
         const target = current[Math.floor(rnd() * current.length)]
         const patch = (d: ExpenseDataset): ExpenseDataset => {
-          if (kind === 0 || !target) return patchAfterTransactionCreate(d, row(nextId, month, { amountCents: 100 + step }))
+          if (kind === 0 || !target)
+            return patchAfterTransactionCreate(d, row(nextId, month, { amountCents: 100 + step }))
           if (kind === 1) return patchAfterTransactionUpdate(d, { ...target, amountCents: target.amountCents + 7 })
           if (kind === 2) return patchAfterTransactionDelete(d, target.id)
           return patchAfterTransactionUpdate(d, { ...target, budgetMonth: month, date: `${month}-09` })
@@ -210,7 +277,11 @@ describe('reconcileHeld, for sequences of changes', () => {
 describe('reconcileHeld, receipts', () => {
   const withReceipts: ExpenseDataset = makeDataset({
     transactions: [row(1, '2026-01'), row(2, '2026-01'), row(3, '2026-02')],
-    attachments: [makeAttachment({ id: 1, transactionId: 1 }), makeAttachment({ id: 2, transactionId: 1 }), makeAttachment({ id: 3, transactionId: 2 })],
+    attachments: [
+      makeAttachment({ id: 1, transactionId: 1 }),
+      makeAttachment({ id: 2, transactionId: 1 }),
+      makeAttachment({ id: 3, transactionId: 2 }),
+    ],
   })
 
   async function loaded(read: number[]) {
@@ -225,7 +296,12 @@ describe('reconcileHeld, receipts', () => {
   it('holds a receipt added to a transaction whose list was read, and counts it', async () => {
     const held = await loaded([1])
     const added = makeAttachment({ id: 9, transactionId: 1 })
-    const done = reconcileHeld(held, datasetOfHeld(held), patchAfterAttachmentAdd(datasetOfHeld(held), added), '2026-02')
+    const done = reconcileHeld(
+      held,
+      datasetOfHeld(held),
+      patchAfterAttachmentAdd(datasetOfHeld(held), added),
+      '2026-02',
+    )
     expect(done.changed.receipts).toBe(true)
     expect(done.held.receipts.get(1)!.map((a) => a.id)).toEqual([1, 2, 9])
     expect(done.held.attachmentCounts[1]).toBe(3)
@@ -235,7 +311,12 @@ describe('reconcileHeld, receipts', () => {
   it('says the list is partial when a receipt is added before the transaction’s list was read', async () => {
     const held = await loaded([])
     const added = makeAttachment({ id: 9, transactionId: 1 })
-    const done = reconcileHeld(held, datasetOfHeld(held), patchAfterAttachmentAdd(datasetOfHeld(held), added), '2026-02')
+    const done = reconcileHeld(
+      held,
+      datasetOfHeld(held),
+      patchAfterAttachmentAdd(datasetOfHeld(held), added),
+      '2026-02',
+    )
     expect(done.partialReceipts).toEqual([1])
     expect(done.held.receipts.get(1)!.map((a) => a.id)).toEqual([9])
   })
@@ -246,7 +327,12 @@ describe('reconcileHeld, receipts', () => {
     const once = reconcileHeld(held, before, patchAfterAttachmentDelete(before, 3), '2026-02')
     expect(once.held.receipts.get(2)).toEqual([])
     expect(once.held.attachmentCounts[2]).toBeUndefined()
-    const twice = reconcileHeld(once.held, datasetOfHeld(once.held), patchAfterAttachmentDelete(datasetOfHeld(once.held), 1), '2026-02')
+    const twice = reconcileHeld(
+      once.held,
+      datasetOfHeld(once.held),
+      patchAfterAttachmentDelete(datasetOfHeld(once.held), 1),
+      '2026-02',
+    )
     expect(twice.held.attachmentCounts[1]).toBe(1)
   })
 

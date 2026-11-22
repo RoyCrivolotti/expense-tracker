@@ -41,8 +41,7 @@ const diffedFiles = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`
   .filter(Boolean)
 // A file that only a formatting commit (one listed in .git-blame-ignore-revs) changed is not a change to what the file shows.
 const formattingCommits = ignoredRevisions(base)
-const changedFiles =
-  formattingCommits.length > 0 ? filesTouchedByPr(base, diffedFiles, formattingCommits) : diffedFiles
+const changedFiles = formattingCommits.length > 0 ? filesTouchedByPr(base, diffedFiles, formattingCommits) : diffedFiles
 
 const visualFiles = changedFiles.filter((f) => VISUAL_FILE_RE.test(f) && !TEST_FILE_RE.test(f))
 if (visualFiles.length === 0) {

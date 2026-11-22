@@ -69,7 +69,12 @@ export function HeroFloatingReadout({
           >
             <GripIcon aria-hidden="true" />
           </button>
-          <button type="button" className={styles.dock} aria-label="Put the values back beside the chart" onClick={onDock}>
+          <button
+            type="button"
+            className={styles.dock}
+            aria-label="Put the values back beside the chart"
+            onClick={onDock}
+          >
             <CloseIcon aria-hidden="true" />
           </button>
         </div>

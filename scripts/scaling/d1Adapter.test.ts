@@ -7,22 +7,39 @@ import { BudgetExceeded } from './spend'
 import { sqliteTransport } from './sqliteTransport'
 import { databaseWithAnotherOwner, ledgerOf } from './testKit'
 
-function adapter(writesEnabled: boolean, limits = {}, shouldStop?: () => boolean) {
+function adapter(
+  writesEnabled: boolean,
+  limits = {},
+  shouldStop?: () => boolean,
+) {
   const db = databaseWithAnotherOwner()
   const transport = sqliteTransport(db)
   const ledger = ledgerOf(limits)
-  return { ...measuredDb({ transport, ledger, writesEnabled, ...(shouldStop ? { shouldStop } : {}) }), ledger, sqlite: db, transport }
+  return {
+    ...measuredDb({ transport, ledger, writesEnabled, ...(shouldStop ? { shouldStop } : {}) }),
+    ledger,
+    sqlite: db,
+    transport,
+  }
 }
 
 describe('the measured database', () => {
   it('answers first, all and run like D1 and notes each statement', async () => {
     const { db, recorder } = adapter(false)
-    const count = await db.prepare('SELECT count(*) AS n FROM categories WHERE owner = ?').bind('alex@example.com').first<{ n: number }>()
+    const count = await db
+      .prepare('SELECT count(*) AS n FROM categories WHERE owner = ?')
+      .bind('alex@example.com')
+      .first<{ n: number }>()
     expect(count?.n).toBeGreaterThan(0)
-    const column = await db.prepare('SELECT count(*) AS n FROM categories WHERE owner = ?').bind('alex@example.com').first<number>('n')
+    const column = await db
+      .prepare('SELECT count(*) AS n FROM categories WHERE owner = ?')
+      .bind('alex@example.com')
+      .first<number>('n')
     expect(column).toBe(count?.n)
     expect(await db.prepare('SELECT * FROM categories WHERE owner = ?').bind('nobody@example.com').first()).toBeNull()
-    expect(await db.prepare('SELECT name FROM categories WHERE owner = ?').bind('nobody@example.com').first('name')).toBeNull()
+    expect(
+      await db.prepare('SELECT name FROM categories WHERE owner = ?').bind('nobody@example.com').first('name'),
+    ).toBeNull()
     const all = await db.prepare('SELECT id FROM categories WHERE owner = ?').bind('alex@example.com').all()
     expect(all.results.length).toBe(count?.n)
     const run = await db.prepare('SELECT 1').run()
@@ -34,8 +51,14 @@ describe('the measured database', () => {
 
   it('answers raw with each row as its values in column order, and notes the statement', async () => {
     const { db, recorder } = adapter(false)
-    const named = await db.prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id').bind('alex@example.com').all<{ name: string; id: number }>()
-    const raw = await db.prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id').bind('alex@example.com').raw()
+    const named = await db
+      .prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id')
+      .bind('alex@example.com')
+      .all<{ name: string; id: number }>()
+    const raw = await db
+      .prepare('SELECT name, id FROM categories WHERE owner = ? ORDER BY id')
+      .bind('alex@example.com')
+      .raw()
     expect(raw.length).toBeGreaterThan(0)
     expect(raw).toEqual(named.results.map((row) => [row.name, row.id]))
     expect(recorder.records).toHaveLength(2)
@@ -45,11 +68,7 @@ describe('the measured database', () => {
   it('counts a batch as one call and each statement inside it as one statement', async () => {
     const { db, recorder } = adapter(true)
     const before = summarize(recorder)
-    await db.batch([
-      db.prepare('SELECT 1').bind(),
-      db.prepare('SELECT 2').bind(),
-      db.prepare('SELECT 3').bind(),
-    ])
+    await db.batch([db.prepare('SELECT 1').bind(), db.prepare('SELECT 2').bind(), db.prepare('SELECT 3').bind()])
     const summary = summarize(recorder, { records: before.statements, calls: before.calls })
     expect(summary).toMatchObject({ calls: 1, statements: 3 })
     expect(recorder.records.every((r) => r.batch)).toBe(true)
@@ -57,11 +76,10 @@ describe('the measured database', () => {
 
   it('writes for the synthetic owner once writes are enabled, and charges the rows to the ledger', async () => {
     const { db, ledger, recorder, sqlite } = adapter(true)
-    await db
-      .prepare("INSERT INTO owner_revision (owner, token) VALUES (?, 'tok')")
-      .bind(SYNTHETIC_OWNER)
-      .run()
-    expect(sqlite.prepare('SELECT token FROM owner_revision WHERE owner = ?').get(SYNTHETIC_OWNER)).toEqual({ token: 'tok' })
+    await db.prepare("INSERT INTO owner_revision (owner, token) VALUES (?, 'tok')").bind(SYNTHETIC_OWNER).run()
+    expect(sqlite.prepare('SELECT token FROM owner_revision WHERE owner = ?').get(SYNTHETIC_OWNER)).toEqual({
+      token: 'tok',
+    })
     expect(ledger.totals.written).toBe(1)
     expect(recorder.records[0]).toMatchObject({ write: true, rowsWritten: 1 })
   })
@@ -79,13 +97,19 @@ describe('the measured database', () => {
 
   it('refuses a write for anyone but the synthetic owner even with writes enabled', async () => {
     const { db, sqlite } = adapter(true)
-    await expect(db.prepare('DELETE FROM transactions WHERE owner = ?').bind('alex@example.com').run()).rejects.toThrow(/synthetic owner/)
-    expect(Number((sqlite.prepare('SELECT count(*) AS n FROM transactions').get() as { n: number }).n)).toBeGreaterThan(0)
+    await expect(db.prepare('DELETE FROM transactions WHERE owner = ?').bind('alex@example.com').run()).rejects.toThrow(
+      /synthetic owner/,
+    )
+    expect(Number((sqlite.prepare('SELECT count(*) AS n FROM transactions').get() as { n: number }).n)).toBeGreaterThan(
+      0,
+    )
   })
 
   it('stops the moment the ledger is over its cap', async () => {
     const { db } = adapter(true, { readPerDay: 3 })
-    await expect(db.prepare('SELECT * FROM categories WHERE owner = ?').bind('alex@example.com').all()).rejects.toThrow(BudgetExceeded)
+    await expect(db.prepare('SELECT * FROM categories WHERE owner = ?').bind('alex@example.com').all()).rejects.toThrow(
+      BudgetExceeded,
+    )
   })
 
   it('refuses a batch when the ledger is already over', async () => {

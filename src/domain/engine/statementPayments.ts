@@ -12,7 +12,10 @@ export interface StatementPaymentRow {
   cardName: string
 }
 
-function resolveDebitAccountId(accounts: Account[], defaultAccountId: number | null): number | null {
+function resolveDebitAccountId(
+  accounts: Account[],
+  defaultAccountId: number | null,
+): number | null {
   if (defaultAccountId != null) {
     const preferred = accounts.find((a) => a.id === defaultAccountId)
     if (preferred?.settlement === 'immediate') return preferred.id

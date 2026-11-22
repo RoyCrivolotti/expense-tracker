@@ -6,7 +6,19 @@ import { readPushSlots } from './slots'
 describe('readPush', () => {
   it('reads the words, slots, skeleton and amount of a push in one go', () => {
     const read = readPush('Card payment', 'Paid 12,50 EUR at Example Cafe with card **4821')
-    expect(read.tokens).toEqual(['Card', 'payment', 'Paid', '12,50', 'EUR', 'at', 'Example', 'Cafe', 'with', 'card', '**4821'])
+    expect(read.tokens).toEqual([
+      'Card',
+      'payment',
+      'Paid',
+      '12,50',
+      'EUR',
+      'at',
+      'Example',
+      'Cafe',
+      'with',
+      'card',
+      '**4821',
+    ])
     expect(read.skeleton).toBe('card payment paid <N> <C> at example cafe with card <D>')
     expect(read.titleSkeleton).toBe('card payment')
     expect(read.currencyAmount?.candidates[0]?.cents).toBe(1250)
@@ -32,7 +44,9 @@ describe('readPush', () => {
   })
 
   it('masks a number in the title, so the title of two pushes of one template is the same', () => {
-    expect(readPush('Paid 4,50 EUR', 'at Example').titleSkeleton).toBe(readPush('Paid 19,99 EUR', 'at Other').titleSkeleton)
+    expect(readPush('Paid 4,50 EUR', 'at Example').titleSkeleton).toBe(
+      readPush('Paid 19,99 EUR', 'at Other').titleSkeleton,
+    )
   })
 
   it('has no amount for a push with no currency marker, as a one-time code', () => {

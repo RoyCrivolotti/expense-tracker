@@ -32,18 +32,41 @@ export function createD1PushRepository(env: Pick<Env, 'DB'>): PushRepository {
     },
     listDevices: async (owner) => (await rows<DeviceRow>(db, LIST_DEVICES_SQL, owner)).map(toDevice),
     listTargets: (owner) => rows<TargetRow>(db, LIST_TARGETS_SQL, owner),
-    recordSend: async (owner, id, status, at) => {
+    recordSend: async (
+      owner,
+      id,
+      status,
+      at,
+    ) => {
       await changed(db, RECORD_SEND_SQL, owner, id, at, status)
     },
-    deleteSubscription: (owner, id) => changed(db, DELETE_SUBSCRIPTION_SQL, owner, id),
+    deleteSubscription: (
+      owner,
+      id,
+    ) => changed(db, DELETE_SUBSCRIPTION_SQL, owner, id),
     getSettings: async (owner) => {
       const row = await db.prepare(GET_SETTINGS_SQL).bind(owner).first<SettingsRow>()
       return row ? toSettings(row) : null
     },
-    listSummaryPeople: async () => (await rows<SummaryRow>(db, LIST_SUMMARY_PEOPLE_SQL)).map((r) => ({ owner: r.owner, ...toSettings(r) })),
-    claimSummary: (owner, expected, at) => changed(db, CLAIM_SUMMARY_SQL, owner, expected, at),
-    saveSettings: async (owner, settings, onlyIfMissing) => {
-      await changed(db, onlyIfMissing ? SAVE_SETTINGS_IF_MISSING_SQL : SAVE_SETTINGS_SQL, owner, settings.mode, settings.timeZone)
+    listSummaryPeople: async () =>
+      (await rows<SummaryRow>(db, LIST_SUMMARY_PEOPLE_SQL)).map((r) => ({ owner: r.owner, ...toSettings(r) })),
+    claimSummary: (
+      owner,
+      expected,
+      at,
+    ) => changed(db, CLAIM_SUMMARY_SQL, owner, expected, at),
+    saveSettings: async (
+      owner,
+      settings,
+      onlyIfMissing,
+    ) => {
+      await changed(
+        db,
+        onlyIfMissing ? SAVE_SETTINGS_IF_MISSING_SQL : SAVE_SETTINGS_SQL,
+        owner,
+        settings.mode,
+        settings.timeZone,
+      )
     },
   }
 }

@@ -37,9 +37,18 @@ describe('recommendedWithdrawalRate', () => {
 
 describe('fiPatchForYears', () => {
   it('moves the rate to the guide for the new years when it was the guide for the old ones', () => {
-    expect(fiPatchForYears({ retirementYears: 30, safeWithdrawalRate: 0.04 }, 40)).toEqual({ retirementYears: 40, safeWithdrawalRate: 0.035 })
-    expect(fiPatchForYears({ retirementYears: 40, safeWithdrawalRate: 0.035 }, 55)).toEqual({ retirementYears: 55, safeWithdrawalRate: 0.0325 })
-    expect(fiPatchForYears({ retirementYears: 55, safeWithdrawalRate: 0.0325 }, 25)).toEqual({ retirementYears: 25, safeWithdrawalRate: 0.04 })
+    expect(fiPatchForYears({ retirementYears: 30, safeWithdrawalRate: 0.04 }, 40)).toEqual({
+      retirementYears: 40,
+      safeWithdrawalRate: 0.035,
+    })
+    expect(fiPatchForYears({ retirementYears: 40, safeWithdrawalRate: 0.035 }, 55)).toEqual({
+      retirementYears: 55,
+      safeWithdrawalRate: 0.0325,
+    })
+    expect(fiPatchForYears({ retirementYears: 55, safeWithdrawalRate: 0.0325 }, 25)).toEqual({
+      retirementYears: 25,
+      safeWithdrawalRate: 0.04,
+    })
   })
 
   it('leaves a rate that someone set themselves alone', () => {
@@ -49,12 +58,21 @@ describe('fiPatchForYears', () => {
   })
 
   it('leaves the rate where it is when the guide is the same for the new years', () => {
-    expect(fiPatchForYears({ retirementYears: 30, safeWithdrawalRate: 0.04 }, 35)).toEqual({ retirementYears: 35, safeWithdrawalRate: 0.04 })
+    expect(fiPatchForYears({ retirementYears: 30, safeWithdrawalRate: 0.04 }, 35)).toEqual({
+      retirementYears: 35,
+      safeWithdrawalRate: 0.04,
+    })
   })
 
   it('reads a rate that was typed in as a percentage as the guide', () => {
-    expect(fiPatchForYears({ retirementYears: 40, safeWithdrawalRate: 3.5 / 100 }, 20)).toEqual({ retirementYears: 20, safeWithdrawalRate: 0.04 })
-    expect(fiPatchForYears({ retirementYears: 60, safeWithdrawalRate: 3.25 / 100 }, 20)).toEqual({ retirementYears: 20, safeWithdrawalRate: 0.04 })
+    expect(fiPatchForYears({ retirementYears: 40, safeWithdrawalRate: 3.5 / 100 }, 20)).toEqual({
+      retirementYears: 20,
+      safeWithdrawalRate: 0.04,
+    })
+    expect(fiPatchForYears({ retirementYears: 60, safeWithdrawalRate: 3.25 / 100 }, 20)).toEqual({
+      retirementYears: 20,
+      safeWithdrawalRate: 0.04,
+    })
   })
 })
 
@@ -108,6 +126,8 @@ describe('the drawdown over the years the money must last', () => {
 
   it('runs out in the year the annuity does, and stays at nothing after it', () => {
     // 5 spends and nothing earned: gone after exactly 5 years.
-    expect(projectDrawdown(5_000_000, 1_000_000, 0, 8)).toEqual([5_000_000, 4_000_000, 3_000_000, 2_000_000, 1_000_000, 0, 0, 0, 0])
+    expect(projectDrawdown(5_000_000, 1_000_000, 0, 8)).toEqual([
+      5_000_000, 4_000_000, 3_000_000, 2_000_000, 1_000_000, 0, 0, 0, 0,
+    ])
   })
 })

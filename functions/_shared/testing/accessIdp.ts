@@ -11,7 +11,10 @@ export interface Idp {
   /** The certs document: `{ keys: [...] }`. */
   certs(): Promise<{ keys: Array<Record<string, unknown>> }>
   /** Signs `claims` with this key, or with `options.key`, as an RS256 token. */
-  sign(claims: Record<string, unknown>, options?: SignOptions): Promise<string>
+  sign(
+    claims: Record<string, unknown>,
+    options?: SignOptions,
+  ): Promise<string>
 }
 
 export interface SignOptions {
@@ -49,20 +52,47 @@ export async function createIdp(kid = 'key-1'): Promise<Idp> {
       const jwk = (await crypto.subtle.exportKey('jwk', keyPair.publicKey)) as JsonWebKey
       return { keys: [{ kid, kty: jwk.kty, alg: 'RS256', use: 'sig', n: jwk.n, e: jwk.e }] }
     },
-    async sign(claims, options = {}) {
-      const header = base64Url(JSON.stringify({ alg: options.alg ?? 'RS256', ...(options.kid === null ? {} : { kid: options.kid ?? kid }), typ: 'JWT' }))
+    async sign(
+      claims,
+      options = {},
+    ) {
+      const header = base64Url(
+        JSON.stringify({
+          alg: options.alg ?? 'RS256',
+          ...(options.kid === null ? {} : { kid: options.kid ?? kid }),
+          typ: 'JWT',
+        }),
+      )
       const payload = base64Url(JSON.stringify(claims))
       const signed = `${header}.${payload}`
       if (options.signature !== undefined) return `${signed}.${options.signature}`
-      const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', options.key ?? keyPair.privateKey, encoder.encode(signed))
+      const signature = await crypto.subtle.sign(
+        'RSASSA-PKCS1-v1_5',
+        options.key ?? keyPair.privateKey,
+        encoder.encode(signed),
+      )
       return `${signed}.${base64Url(new Uint8Array(signature))}`
     },
   }
 }
 
 /** The claims Access puts in a token for a person, valid for an hour from `now` (seconds). */
-export function claimsFor(email: string, over: Record<string, unknown> = {}, now = Date.now() / 1000): Record<string, unknown> {
-  return { iss: `https://${TEAM}`, aud: [AUD], email, sub: 'user-1', iat: now - 5, nbf: now - 5, exp: now + 3600, type: 'app', ...over }
+export function claimsFor(
+  email: string,
+  over: Record<string, unknown> = {},
+  now = Date.now() / 1000,
+): Record<string, unknown> {
+  return {
+    iss: `https://${TEAM}`,
+    aud: [AUD],
+    email,
+    sub: 'user-1',
+    iat: now - 5,
+    nbf: now - 5,
+    exp: now + 3600,
+    type: 'app',
+    ...over,
+  }
 }
 
 export interface CertsFetch {
@@ -94,7 +124,10 @@ export function certsFetch(initial: Idp[]): CertsFetch {
       const keys = (await Promise.all(served.map((idp) => idp.certs()))).flatMap((doc) => doc.keys)
       // A failing endpoint still sends the keys in its body here, so that a client which trusts a body without
       // looking at the status is caught.
-      return new Response(JSON.stringify({ keys }), { status: failing ?? 200, headers: { 'content-type': 'application/json' } })
+      return new Response(JSON.stringify({ keys }), {
+        status: failing ?? 200,
+        headers: { 'content-type': 'application/json' },
+      })
     },
   }
 }

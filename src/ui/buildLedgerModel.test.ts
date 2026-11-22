@@ -12,7 +12,12 @@ import { buildLedgerModel, fixedHistoryOf } from './buildLedgerModel'
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 
 describe('buildLedgerModel, for a ledger that holds every row', () => {
-  const datasets = [syntheticLedger({ months: 30, perMonth: 25, seed: 5 }), adversarialLedger(), randomLedger(3), randomLedger(11)]
+  const datasets = [
+    syntheticLedger({ months: 30, perMonth: 25, seed: 5 }),
+    adversarialLedger(),
+    randomLedger(3),
+    randomLedger(11),
+  ]
 
   it('is the model buildExpenseModel makes from the whole dataset', () => {
     for (const dataset of datasets) {

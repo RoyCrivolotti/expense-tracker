@@ -24,7 +24,10 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-async function get(path: string, email?: string) {
+async function get(
+  path: string,
+  email?: string,
+) {
   const response = await world.call(getAttachments, { path, ...(email ? { email } : {}) })
   return { response, text: await response.text() }
 }
@@ -53,10 +56,12 @@ describe('GET /attachments?transactionId=', () => {
     expect(JSON.parse((await get('/attachments', OTHER)).text)).toEqual([])
   })
 
-  it.each([['zero', '/attachments?transactionId=0'], ['text', '/attachments?transactionId=x'], ['a fraction', '/attachments?transactionId=1.5'], ['an extra parameter', '/attachments?transactionId=1&owner=x']])(
-    'refuses %s with a 400',
-    async (_label, url) => {
-      expect((await get(url)).response.status).toBe(400)
-    },
-  )
+  it.each([
+    ['zero', '/attachments?transactionId=0'],
+    ['text', '/attachments?transactionId=x'],
+    ['a fraction', '/attachments?transactionId=1.5'],
+    ['an extra parameter', '/attachments?transactionId=1&owner=x'],
+  ])('refuses %s with a 400', async (_label, url) => {
+    expect((await get(url)).response.status).toBe(400)
+  })
 })

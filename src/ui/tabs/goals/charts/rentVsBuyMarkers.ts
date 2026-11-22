@@ -22,7 +22,11 @@ export function rentVsBuyMarkers(
     })
   }
   if (loanPaidOffYear !== null && loanPaidOffYear <= lastYear) {
-    markers.push({ index: loanPaidOffYear, label: 'Loan paid off', title: 'The loan is paid off here: from now on the buyer pays no loan payment.' })
+    markers.push({
+      index: loanPaidOffYear,
+      label: 'Loan paid off',
+      title: 'The loan is paid off here: from now on the buyer pays no loan payment.',
+    })
   }
   return markers
 }

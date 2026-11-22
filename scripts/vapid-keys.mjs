@@ -15,4 +15,6 @@ console.log(`VAPID_PUBLIC_KEY=${point.toString('base64url')}`)
 console.log(`VAPID_PRIVATE_KEY=${jwk.d}`)
 console.log('')
 console.log('The public line goes on the capture Worker (a secret) and on each Pages project (a plain variable).')
-console.log('The private line goes on the capture Worker only, as a secret. VAPID_SUBJECT is the app URL, https://<app origin>.')
+console.log(
+  'The private line goes on the capture Worker only, as a secret. VAPID_SUBJECT is the app URL, https://<app origin>.',
+)

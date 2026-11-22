@@ -103,10 +103,7 @@ describe('groupTransactionsByFlag', () => {
   })
 
   it('omits a group whose only rows are income or investment', () => {
-    const groups = groupTransactionsByFlag(
-      [txn({ flagId: 1, type: 'income', amountCents: 50_000 })],
-      [flag({ id: 1 })],
-    )
+    const groups = groupTransactionsByFlag([txn({ flagId: 1, type: 'income', amountCents: 50_000 })], [flag({ id: 1 })])
 
     expect(groups).toHaveLength(0)
   })
@@ -125,19 +122,13 @@ describe('groupTransactionsByFlag', () => {
   })
 
   it('omits a group once everything in it has been reimbursed', () => {
-    const groups = groupTransactionsByFlag(
-      [txn({ flagId: 1, settledBy: 99 })],
-      [flag({ id: 1 })],
-    )
+    const groups = groupTransactionsByFlag([txn({ flagId: 1, settledBy: 99 })], [flag({ id: 1 })])
 
     expect(groups).toHaveLength(0)
   })
 
   it('never puts one transaction in two groups', () => {
-    const groups = groupTransactionsByFlag(
-      [txn({ flagId: 1 }), txn({ flagId: 2 })],
-      [flag({ id: 1 }), flag({ id: 2 })],
-    )
+    const groups = groupTransactionsByFlag([txn({ flagId: 1 }), txn({ flagId: 2 })], [flag({ id: 1 }), flag({ id: 2 })])
     const ids = groups.flatMap((g) => g.transactions.map((t) => t.id))
 
     expect(new Set(ids).size).toBe(ids.length)

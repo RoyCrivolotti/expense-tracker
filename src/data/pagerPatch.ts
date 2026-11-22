@@ -9,7 +9,10 @@ export interface RowChanges {
 }
 
 /** The rows that differ between two lists of them, by id. A row the patch left as it was (the same object) is not one. */
-export function rowChangesOf(before: readonly Transaction[], after: readonly Transaction[]): RowChanges {
+export function rowChangesOf(
+  before: readonly Transaction[],
+  after: readonly Transaction[],
+): RowChanges {
   const was = new Map(before.map((row) => [row.id, row]))
   const now = new Set(after.map((row) => row.id))
   return {

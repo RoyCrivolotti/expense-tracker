@@ -10,7 +10,10 @@ import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import formStyles from './TransactionForm.module.css'
 import styles from './InstallmentStep.module.css'
 
-type SetDraft = <K extends keyof InstallmentDraft>(key: K, value: InstallmentDraft[K]) => void
+type SetDraft = <K extends keyof InstallmentDraft>(
+  key: K,
+  value: InstallmentDraft[K],
+) => void
 
 interface Props {
   model: ExpenseModel
@@ -27,7 +30,10 @@ interface ModeOption {
   label: string
 }
 
-function modeOptions(linked: boolean, hasPlans: boolean): ModeOption[] {
+function modeOptions(
+  linked: boolean,
+  hasPlans: boolean,
+): ModeOption[] {
   const base: ModeOption[] = linked
     ? [
         { mode: 'none', label: 'Keep' },
@@ -47,15 +53,7 @@ function modeOptions(linked: boolean, hasPlans: boolean): ModeOption[] {
   return base.filter((o) => o.mode !== 'existing' || hasPlans)
 }
 
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
+function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className={formStyles.field}>
       <span className={formStyles.label}>{label}</span>
@@ -151,10 +149,7 @@ function ExistingFields({
     <>
       <label className={formStyles.field}>
         <span className={formStyles.label}>Plan</span>
-        <select
-          value={draft.planId ?? ''}
-          onChange={(e) => onSelectPlan(Number(e.target.value))}
-        >
+        <select value={draft.planId ?? ''} onChange={(e) => onSelectPlan(Number(e.target.value))}>
           {model.dataset.installmentPlans.map((p) => (
             <option key={p.id} value={p.id}>
               {p.description}
@@ -167,9 +162,7 @@ function ExistingFields({
         value={draft.installmentIndex}
         onChange={(v) => set('installmentIndex', v)}
       />
-      {plan ? (
-        <p className={styles.summary}>Last payment {shortMonthFullYearLabel(finalBudgetMonth(plan))}</p>
-      ) : null}
+      {plan ? <p className={styles.summary}>Last payment {shortMonthFullYearLabel(finalBudgetMonth(plan))}</p> : null}
     </>
   )
 }
@@ -184,9 +177,7 @@ export function InstallmentStep({ model, editing, draft, set, error, amountCents
    * (see `promote`), so a look-around costs nothing. This component unmounts on
    * Back, so the initial value re-derives from the draft on every entry.
    */
-  const [selected, setSelected] = useState<InstallmentMode>(
-    linked || draft.mode !== 'none' ? draft.mode : 'new',
-  )
+  const [selected, setSelected] = useState<InstallmentMode>(linked || draft.mode !== 'none' ? draft.mode : 'new')
 
   const selectPlan = (planId: number) => {
     set('planId', planId)
@@ -255,9 +246,7 @@ export function InstallmentStep({ model, editing, draft, set, error, amountCents
       {selected === 'existing' ? (
         <ExistingFields model={model} draft={draft} set={set} onSelectPlan={selectPlan} />
       ) : null}
-      {selected === 'unlink' ? (
-        <p className={styles.summary}>This payment will be removed from its plan.</p>
-      ) : null}
+      {selected === 'unlink' ? <p className={styles.summary}>This payment will be removed from its plan.</p> : null}
       {error ? <p className={formStyles.error}>{error}</p> : null}
     </div>
   )

@@ -11,14 +11,21 @@ const plan = makeScenario({
   planStartDate: '2024-01-01',
   startInvestedCents: 100_000_00,
   monthlyContributionCents: 1_000_00,
-  lifeEvents: [{ year: 1, amountCents: 5_000_00, label: 'Bonus' }, { year: 3, amountCents: -20_000_00, label: 'Car' }],
+  lifeEvents: [
+    { year: 1, amountCents: 5_000_00, label: 'Bonus' },
+    { year: 3, amountCents: -20_000_00, label: 'Car' },
+  ],
   housePurchaseYear: 5,
   isActive: true,
 })
 
 describe('planFromToday', () => {
   it('counts what it restarts in the euros of the check-in: spending 30.000 of 2024 is 31.836 in 2027', () => {
-    const from = planFromToday({ ...plan, annualSpendCents: 3_000_000 }, { investedCents: 160_000_00, date: '2027-01-01' }, 0.02)!
+    const from = planFromToday(
+      { ...plan, annualSpendCents: 3_000_000 },
+      { investedCents: 160_000_00, date: '2027-01-01' },
+      0.02,
+    )!
     expect(from.scenario.annualSpendCents).toBe(3_183_624)
   })
 
@@ -36,7 +43,7 @@ describe('planFromToday', () => {
     expect(plan.startInvestedCents).toBe(100_000_00)
   })
 
-  it('makes a plan from a check-in dated on the plan\'s own start day, which is how a plan usually begins', () => {
+  it("makes a plan from a check-in dated on the plan's own start day, which is how a plan usually begins", () => {
     const from = planFromToday(plan, { investedCents: 100_000_00, date: plan.planStartDate! }, DEFAULT_INFLATION_RATE)!
     expect(from).not.toBeNull()
     expect(from.offsetYears).toBe(0)
@@ -63,7 +70,13 @@ describe('planFromToday', () => {
 
   it('is nothing without a dated plan, a check-in, or one before the plan started', () => {
     expect(planFromToday(null, { investedCents: 1, date: '2026-01-01' }, DEFAULT_INFLATION_RATE)).toBeNull()
-    expect(planFromToday(makeScenario({ planStartDate: null }), { investedCents: 1, date: '2026-01-01' }, DEFAULT_INFLATION_RATE)).toBeNull()
+    expect(
+      planFromToday(
+        makeScenario({ planStartDate: null }),
+        { investedCents: 1, date: '2026-01-01' },
+        DEFAULT_INFLATION_RATE,
+      ),
+    ).toBeNull()
     expect(planFromToday(plan, null, DEFAULT_INFLATION_RATE)).toBeNull()
     expect(planFromToday(plan, { investedCents: 1, date: '2023-06-01' }, DEFAULT_INFLATION_RATE)).toBeNull()
   })
@@ -80,4 +93,3 @@ describe('planFromTodayAt', () => {
     expect(tried.offsetYears).toBe(saved.offsetYears)
   })
 })
-

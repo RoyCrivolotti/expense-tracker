@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react'
 
 /** Browser online/offline flag with event subscription. */
 export function useConnectivity(): boolean {
-  const [online, setOnline] = useState(
-    () => typeof navigator === 'undefined' || navigator.onLine,
-  )
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
 
   useEffect(() => {
     const onOnline = () => setOnline(true)

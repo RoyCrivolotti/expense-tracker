@@ -24,7 +24,8 @@ try {
 const { d1DatabaseId, d1DatabaseName } = devConfig
 console.log(`Starting dev stack with D1: ${d1DatabaseName} (${d1DatabaseId})`)
 
-execSync(
-  `npx wrangler pages dev --d1 DB=${d1DatabaseId} -- npm run dev`,
-  { cwd: ROOT, stdio: 'inherit', env: { ...process.env } }
-)
+execSync(`npx wrangler pages dev --d1 DB=${d1DatabaseId} -- npm run dev`, {
+  cwd: ROOT,
+  stdio: 'inherit',
+  env: { ...process.env },
+})

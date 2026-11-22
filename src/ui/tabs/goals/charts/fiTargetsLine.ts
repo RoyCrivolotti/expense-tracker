@@ -8,6 +8,8 @@ export function fiTargetsLine(
   format: MoneyFormat,
 ): string | null {
   if (annualSpendCents <= 0) return null
-  const [a, b, c] = fiTargetsCents(annualSpendCents).map((t) => `${money(t.targetCents)} at ${formatPercent(t.rate, format)}`)
+  const [a, b, c] = fiTargetsCents(annualSpendCents).map(
+    (t) => `${money(t.targetCents)} at ${formatPercent(t.rate, format)}`,
+  )
   return `The same spending needs ${a}, ${b} or ${c}.`
 }

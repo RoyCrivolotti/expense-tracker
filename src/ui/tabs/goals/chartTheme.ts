@@ -1,12 +1,18 @@
 import { applySymbol, formatCents, type MoneyFormat } from '../../../engine'
 
 /** The minus goes in front of the whole amount, symbol included, as `formatCents` puts it. */
-function withSign(cents: number, compact: string): string {
+function withSign(
+  cents: number,
+  compact: string,
+): string {
   return cents < 0 ? `-${compact}` : compact
 }
 
 /** A number printed by `toFixed`, with the decimal mark the owner's format uses: "8.2" is "8,2" beside "8.179.020 €". */
-function withMark(fixed: string, format: MoneyFormat): string {
+function withMark(
+  fixed: string,
+  format: MoneyFormat,
+): string {
   return fixed.replace('.', format.decimalSeparator)
 }
 
@@ -14,7 +20,11 @@ function withMark(fixed: string, format: MoneyFormat): string {
  * Compact money for dense chart axes/tooltips, e.g. 1.2M / 340k in the owner's currency. Millions
  * have `millionDecimals` places (one, unless a reading wants more precision: 1.24M).
  */
-export function formatMoneyShort(cents: number, format: MoneyFormat, millionDecimals = 1): string {
+export function formatMoneyShort(
+  cents: number,
+  format: MoneyFormat,
+  millionDecimals = 1,
+): string {
   // Infinity is larger than the millions threshold, so without this it took the
   // compact branch and rendered "InfinityM". formatCents already has the answer for
   // a non-finite amount, and an infinite FI target reaches here whenever a scenario's
@@ -36,25 +46,39 @@ export function formatMoneyShort(cents: number, format: MoneyFormat, millionDeci
  * ticks `stepCents` apart. A year of a plan spans a few percent of the balance, and
  * "1.0M" five times down the axis says nothing.
  */
-export function formatMoneyAxis(cents: number, format: MoneyFormat, stepCents: number): string {
+export function formatMoneyAxis(
+  cents: number,
+  format: MoneyFormat,
+  stepCents: number,
+): string {
   if (!Number.isFinite(cents)) return formatCents(cents, format)
-  const decimalsFor = (unit: number, floor: number, cap: number) =>
-    Math.min(cap, Math.max(floor, Math.ceil(-Math.log10(Math.max(stepCents, 1) / unit))))
+  const decimalsFor = (
+    unit: number,
+    floor: number,
+    cap: number,
+  ) => Math.min(cap, Math.max(floor, Math.ceil(-Math.log10(Math.max(stepCents, 1) / unit))))
   const abs = Math.abs(cents)
   if (abs >= 1_000_000_00) {
-    return withSign(cents, applySymbol(`${withMark((abs / 1_000_000_00).toFixed(decimalsFor(1_000_000_00, 1, 3)), format)}M`, format))
+    return withSign(
+      cents,
+      applySymbol(`${withMark((abs / 1_000_000_00).toFixed(decimalsFor(1_000_000_00, 1, 3)), format)}M`, format),
+    )
   }
   if (abs >= 1_000_00) {
-    return withSign(cents, applySymbol(`${withMark((abs / 1_000_00).toFixed(decimalsFor(1_000_00, 0, 2)), format)}k`, format))
+    return withSign(
+      cents,
+      applySymbol(`${withMark((abs / 1_000_00).toFixed(decimalsFor(1_000_00, 0, 2)), format)}k`, format),
+    )
   }
   return formatCents(cents, format)
 }
 
-export function formatSignedMoneyShort(cents: number, format: MoneyFormat): string {
+export function formatSignedMoneyShort(
+  cents: number,
+  format: MoneyFormat,
+): string {
   const abs = formatMoneyShort(Math.abs(cents), format)
   if (cents > 0) return `+${abs}`
   if (cents < 0) return `−${abs}`
   return abs
 }
-
-

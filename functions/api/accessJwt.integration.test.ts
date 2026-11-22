@@ -7,7 +7,16 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { accessKeys } from '../_shared/access/accessKeys'
-import { AUD, TEAM, certsFetch, claimsFor, createIdp, generateKeyPair, type CertsFetch, type Idp } from '../_shared/testing/accessIdp'
+import {
+  AUD,
+  TEAM,
+  certsFetch,
+  claimsFor,
+  createIdp,
+  generateKeyPair,
+  type CertsFetch,
+  type Idp,
+} from '../_shared/testing/accessIdp'
 import { migratedDatabase, newStats, sqliteD1 } from '../../src/testing/sqliteD1'
 import { OWNER, OTHER, createExpenseWorld, pinClock, type World } from '../_shared/testing/expenseWorld'
 import { seedLedger, type SeededIds } from '../_shared/testing/seedLedger'
@@ -46,9 +55,20 @@ const turnOn = () => {
   world.env.ACCESS_TEAM_DOMAIN = TEAM
   world.env.ACCESS_AUD = AUD
 }
-const token = (email = OWNER, over: Record<string, unknown> = {}) => idp.sign(claimsFor(email, over))
-const one = (headers: Record<string, string>, email = OWNER) =>
-  world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, headers, email })
+const token = (
+  email = OWNER,
+  over: Record<string, unknown> = {},
+) => idp.sign(claimsFor(email, over))
+const one = (
+  headers: Record<string, string>,
+  email = OWNER,
+) =>
+  world.call(getOne, {
+    path: `/transactions/${ids.transactions[0]}`,
+    params: { id: String(ids.transactions[0]) },
+    headers,
+    email,
+  })
 
 describe('with the Access settings off', () => {
   beforeEach(() => {
@@ -68,30 +88,51 @@ describe('with the Access settings off', () => {
     world.env.ACCESS_AUD = ''
 
     expect((await one({})).status).toBe(200)
-    expect((await world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, ...deployed() })).status).toBe(503)
+    expect(
+      (
+        await world.call(getOne, {
+          path: `/transactions/${ids.transactions[0]}`,
+          params: { id: String(ids.transactions[0]) },
+          ...deployed(),
+        })
+      ).status,
+    ).toBe(503)
   })
 
-  it.each(['', ' '])('anywhere else every route is a 503 and a forged header gets nothing, whether the settings are missing or %j', async (blank) => {
-    if (blank !== '') Object.assign(world.env, { ACCESS_TEAM_DOMAIN: blank, ACCESS_AUD: blank })
-    const forged = deployed({ 'cf-access-jwt-assertion': 'x' })
-    const target = { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) } }
-    const spare = { method: 'DELETE', path: `/transactions/${ids.spareTransaction}`, params: { id: String(ids.spareTransaction) } }
+  it.each(['', ' '])(
+    'anywhere else every route is a 503 and a forged header gets nothing, whether the settings are missing or %j',
+    async (blank) => {
+      if (blank !== '') Object.assign(world.env, { ACCESS_TEAM_DOMAIN: blank, ACCESS_AUD: blank })
+      const forged = deployed({ 'cf-access-jwt-assertion': 'x' })
+      const target = { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) } }
+      const spare = {
+        method: 'DELETE',
+        path: `/transactions/${ids.spareTransaction}`,
+        params: { id: String(ids.spareTransaction) },
+      }
 
-    const read = await world.call(getOne, { ...target, ...forged })
-    const dataset = await world.call(getDataset, forged)
-    const status = await world.call(getStatus, forged)
-    const write = await world.call(deleteOne, { ...spare, ...forged })
+      const read = await world.call(getOne, { ...target, ...forged })
+      const dataset = await world.call(getDataset, forged)
+      const status = await world.call(getStatus, forged)
+      const write = await world.call(deleteOne, { ...spare, ...forged })
 
-    expect([read.status, dataset.status, status.status, write.status]).toEqual([503, 503, 503, 503])
-    expect(await read.json()).toEqual({ error: 'Sign-in checking is not set up correctly' })
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
-    expect(certs.calls()).toBe(0)
-  })
+      expect([read.status, dataset.status, status.status, write.status]).toEqual([503, 503, 503, 503])
+      expect(await read.json()).toEqual({ error: 'Sign-in checking is not set up correctly' })
+      expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({
+        n: 1,
+      })
+      expect(certs.calls()).toBe(0)
+    },
+  )
 
   it('and nothing is read for the owner before the refusal', async () => {
     world.clearLog()
 
-    await world.call(getOne, { path: `/transactions/${ids.transactions[0]}`, params: { id: String(ids.transactions[0]) }, ...deployed() })
+    await world.call(getOne, {
+      path: `/transactions/${ids.transactions[0]}`,
+      params: { id: String(ids.transactions[0]) },
+      ...deployed(),
+    })
 
     expect(world.log.filter((sql) => /FROM transactions|allowed_users|owner_revision/.test(sql))).toEqual([])
   })
@@ -115,12 +156,19 @@ describe('with the Access settings set and unusable', () => {
     Object.assign(world.env, env)
 
     const read = await one(forged)
-    const write = await world.call(deleteOne, { method: 'DELETE', path: `/transactions/${ids.spareTransaction}`, params: { id: String(ids.spareTransaction) }, headers: forged })
+    const write = await world.call(deleteOne, {
+      method: 'DELETE',
+      path: `/transactions/${ids.spareTransaction}`,
+      params: { id: String(ids.spareTransaction) },
+      headers: forged,
+    })
 
     expect(read.status).toBe(503)
     expect(await read.json()).toEqual({ error: 'Sign-in checking is not set up correctly' })
     expect(write.status).toBe(503)
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({
+      n: 1,
+    })
     expect(certs.calls()).toBe(0)
   })
 })
@@ -141,9 +189,16 @@ describe('with the Access settings on', () => {
     expect((await world.call(getStatus, { headers: { 'cf-access-jwt-assertion': jwt } })).status).toBe(200)
     expect((await world.call(getStatus, { headers: bad })).status).toBe(401)
     expect((await world.call(getDataset, { headers: bad })).status).toBe(401)
-    const write = await world.call(deleteOne, { method: 'DELETE', path: `/transactions/${ids.spareTransaction}`, params: { id: String(ids.spareTransaction) }, headers: bad })
+    const write = await world.call(deleteOne, {
+      method: 'DELETE',
+      path: `/transactions/${ids.spareTransaction}`,
+      params: { id: String(ids.spareTransaction) },
+      headers: bad,
+    })
     expect(write.status).toBe(401)
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({ n: 1 })
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(ids.spareTransaction)).toEqual({
+      n: 1,
+    })
   })
 
   it('a request with no token is a 401', async () => {
@@ -155,13 +210,17 @@ describe('with the Access settings on', () => {
   })
 
   it('an expired token is a 401', async () => {
-    expect((await one({ 'cf-access-jwt-assertion': await token(OWNER, { exp: Date.now() / 1000 - 3600 }) })).status).toBe(401)
+    expect(
+      (await one({ 'cf-access-jwt-assertion': await token(OWNER, { exp: Date.now() / 1000 - 3600 }) })).status,
+    ).toBe(401)
   })
 
   it('a token signed by another key is a 401', async () => {
     const stranger = await generateKeyPair()
 
-    expect((await one({ 'cf-access-jwt-assertion': await idp.sign(claimsFor(OWNER), { key: stranger.privateKey }) })).status).toBe(401)
+    expect(
+      (await one({ 'cf-access-jwt-assertion': await idp.sign(claimsFor(OWNER), { key: stranger.privateKey }) })).status,
+    ).toBe(401)
   })
 
   it('a header changed after the token was issued is a 401: someone else’s address with the owner’s token', async () => {

@@ -20,7 +20,14 @@ import { buildCells, partitionPinned } from '../../../src/domain/ledger'
 import { shiftBudgetMonth } from '../../../src/domain/engine'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { createD1ExpenseRepository } from '../../_shared/adapters/d1ExpenseRepository'
-import { OTHER, OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
+import {
+  OTHER,
+  OWNER,
+  createExpenseWorld,
+  pinClock,
+  type Handler,
+  type World,
+} from '../../_shared/testing/expenseWorld'
 import { expense, seedLedger, uploadForm, type SeededIds } from '../../_shared/testing/seedLedger'
 import { onRequestPost as postTransaction } from './transactions/index'
 import { onRequestPut as putSettings } from './settings/index'
@@ -50,7 +57,12 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-async function get(handler: Handler, path: string, headers?: Record<string, string>, email?: string) {
+async function get(
+  handler: Handler,
+  path: string,
+  headers?: Record<string, string>,
+  email?: string,
+) {
   const response = await world.call(handler, { path, ...(headers ? { headers } : {}), ...(email ? { email } : {}) })
   return { response, etag: response.headers.get('etag'), text: await response.text() }
 }
@@ -71,7 +83,11 @@ async function addRow(over: Record<string, unknown>) {
 }
 
 /** Rows written straight to the table, for the bounds, which would take thousands of requests. */
-function insertMany(owner: string, count: number, at: (i: number) => { month: string; account?: number; category?: number }) {
+function insertMany(
+  owner: string,
+  count: number,
+  at: (i: number) => { month: string; account?: number; category?: number },
+) {
   sqlite.exec('PRAGMA foreign_keys = OFF')
   const stmt = sqlite.prepare(
     `INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled)
@@ -125,7 +141,12 @@ describe.each(ROUTES)('GET %s', (name, handler, path) => {
 
   it('does not treat a tag held for something else as current', async () => {
     const { etag } = await get(handler, path)
-    for (const stale of [etag!.replace('-2026-10-', '-2026-09-'), etag!.replace(/[0-9a-f]{16}/, 'ffffffffffffffff'), etag!.replace(/1(-[\d.-]+)?"$/, '0"'), '*']) {
+    for (const stale of [
+      etag!.replace('-2026-10-', '-2026-09-'),
+      etag!.replace(/[0-9a-f]{16}/, 'ffffffffffffffff'),
+      etag!.replace(/1(-[\d.-]+)?"$/, '0"'),
+      '*',
+    ]) {
       expect((await get(handler, path, { 'if-none-match': stale })).response.status).toBe(200)
     }
   })
@@ -184,7 +205,9 @@ describe('GET /reference', () => {
     const { text } = await get(getReference, '/reference')
     const part = referenceOf(text)
 
-    expect(part.reference).toEqual(JSON.parse(JSON.stringify({ ...dataset, transactions: undefined, attachments: undefined })))
+    expect(part.reference).toEqual(
+      JSON.parse(JSON.stringify({ ...dataset, transactions: undefined, attachments: undefined })),
+    )
     expect(part.pinned.map((t) => t.id).sort()).toEqual([investment, flagged].sort())
     expect(part.pinned.map((t) => t.id)).toEqual(partitionPinned(dataset.transactions).pinned.map((t) => t.id))
     expect(part.months).toEqual(['2026-10'])
@@ -251,7 +274,11 @@ describe('GET /reference', () => {
 
   it('sends only the caller’s own tables and rows', async () => {
     sqlite.exec('PRAGMA foreign_keys = OFF')
-    sqlite.prepare("INSERT INTO accounts (owner, name, kind, settlement, active) VALUES (?, 'Their account', 'debit', 'immediate', 1)").run(OTHER)
+    sqlite
+      .prepare(
+        "INSERT INTO accounts (owner, name, kind, settlement, active) VALUES (?, 'Their account', 'debit', 'immediate', 1)",
+      )
+      .run(OTHER)
     insertMany(OTHER, 3, () => ({ month: '2026-10' }))
     sqlite.prepare("UPDATE transactions SET type = 'investment' WHERE owner = ?").run(OTHER)
 
@@ -268,7 +295,10 @@ describe('GET /reference', () => {
 })
 
 describe('GET /transactions/months', () => {
-  const path = (from: string, to: string) => `/transactions/months?from=${from}&to=${to}`
+  const path = (
+    from: string,
+    to: string,
+  ) => `/transactions/months?from=${from}&to=${to}`
 
   it('sends every row whose budget month is in the range, newest first, with the receipts of those rows', async () => {
     const dataset = await createD1ExpenseRepository(world.env).loadDataset(OWNER)
@@ -323,7 +353,9 @@ describe('GET /transactions/months', () => {
   })
 
   it('allows exactly the most months, and refuses one more', async () => {
-    expect((await get(getMonths, path('2025-01', shiftBudgetMonth('2025-01', MAX_ROWS_MONTHS - 1)))).response.status).toBe(200)
+    expect(
+      (await get(getMonths, path('2025-01', shiftBudgetMonth('2025-01', MAX_ROWS_MONTHS - 1)))).response.status,
+    ).toBe(200)
     const { response, text } = await get(getMonths, path('2025-01', shiftBudgetMonth('2025-01', MAX_ROWS_MONTHS)))
     expect(response.status).toBe(400)
     expect(text).toContain(`at most ${MAX_ROWS_MONTHS}`)
@@ -366,7 +398,10 @@ describe('GET /transactions/months', () => {
 })
 
 describe('GET /cube', () => {
-  const path = (from: string, to: string) => `/cube?from=${from}&to=${to}`
+  const path = (
+    from: string,
+    to: string,
+  ) => `/cube?from=${from}&to=${to}`
 
   it('sends the cells of the unpinned rows in the range, as buildCells makes them', async () => {
     await addRow({ type: 'investment', description: 'Index fund', amountCents: 50_000 })
@@ -391,7 +426,9 @@ describe('GET /cube', () => {
   })
 
   it('allows exactly the most months, and refuses one more', async () => {
-    expect((await get(getCube, path('2016-01', shiftBudgetMonth('2016-01', MAX_CUBE_MONTHS - 1)))).response.status).toBe(200)
+    expect(
+      (await get(getCube, path('2016-01', shiftBudgetMonth('2016-01', MAX_CUBE_MONTHS - 1)))).response.status,
+    ).toBe(200)
     const over = await get(getCube, path('2016-01', shiftBudgetMonth('2016-01', MAX_CUBE_MONTHS)))
     expect(over.response.status).toBe(400)
     expect(over.text).toContain(`at most ${MAX_CUBE_MONTHS}`)
@@ -401,7 +438,11 @@ describe('GET /cube', () => {
     const first = '2016-01'
     const last = shiftBudgetMonth(first, MAX_CUBE_MONTHS - 1)
     const month = (i: number) => shiftBudgetMonth(first, i % MAX_CUBE_MONTHS)
-    insertMany(OWNER, MAX_CUBE_CELLS, (i) => ({ month: month(i), account: 100, category: 1 + Math.floor(i / MAX_CUBE_MONTHS) }))
+    insertMany(OWNER, MAX_CUBE_CELLS, (i) => ({
+      month: month(i),
+      account: 100,
+      category: 1 + Math.floor(i / MAX_CUBE_MONTHS),
+    }))
 
     const exact = await get(getCube, path(first, last))
     expect(exact.response.status).toBe(200)

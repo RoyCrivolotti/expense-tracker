@@ -7,7 +7,10 @@ import { NativeDateOverlay } from './NativeDateOverlay'
  * so a change event carrying an out-of-range date is a real thing this component sees
  * on the platform most of this app is used from. The attributes alone are not the guard.
  */
-function renderOverlay(max?: string, disabled?: boolean) {
+function renderOverlay(
+  max?: string,
+  disabled?: boolean,
+) {
   const onChange = vi.fn()
   render(
     <NativeDateOverlay

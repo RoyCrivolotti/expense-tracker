@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { localTime, summaryState } from './summaryDue'
 
 const at = (iso: string) => new Date(iso)
-const madrid = (mode: 'daily' | 'weekly', lastSummaryAt: string | null = null) => ({ mode, timeZone: 'Europe/Madrid', lastSummaryAt })
+const madrid = (
+  mode: 'daily' | 'weekly',
+  lastSummaryAt: string | null = null,
+) => ({ mode, timeZone: 'Europe/Madrid', lastSummaryAt })
 
 describe('localTime', () => {
-  it('reads the date, hour and weekday on the person\'s own clock', () => {
+  it("reads the date, hour and weekday on the person's own clock", () => {
     expect(localTime(at('2026-11-23T19:00:00Z'), 'Europe/Madrid')).toEqual({ date: '2026-11-23', hour: 20, weekday: 1 })
     // Midnight is hour 0, not 24, and the calendar date has already turned.
     expect(localTime(at('2026-11-23T23:00:00Z'), 'Europe/Madrid')).toEqual({ date: '2026-11-24', hour: 0, weekday: 2 })
@@ -74,7 +77,7 @@ describe('summaryState, weekly', () => {
     expect(summaryState(madrid('weekly'), at('2026-11-24T19:00:00Z'))).toBe('not-yet') // Tuesday
   })
 
-  it('uses Monday in the person\'s zone: late Sunday UTC is already Monday in Auckland', () => {
+  it("uses Monday in the person's zone: late Sunday UTC is already Monday in Auckland", () => {
     const auckland = { mode: 'weekly' as const, timeZone: 'Pacific/Auckland', lastSummaryAt: null }
     expect(summaryState(auckland, at('2026-11-23T07:00:00Z'))).toBe('due') // Mon 20:00 NZDT
     expect(summaryState(auckland, at('2026-11-22T07:00:00Z'))).toBe('not-yet') // Sun 20:00
@@ -93,11 +96,17 @@ describe('summaryState, weekly', () => {
 
 describe('summaryState, other cases', () => {
   it('reports a bad zone, whatever else is true', () => {
-    expect(summaryState({ mode: 'daily', timeZone: 'Nowhere/Land', lastSummaryAt: null }, at('2026-11-23T19:00:00Z'))).toBe('invalid-zone')
-    expect(summaryState({ mode: 'daily', timeZone: '', lastSummaryAt: null }, at('2026-11-23T19:00:00Z'))).toBe('invalid-zone')
+    expect(
+      summaryState({ mode: 'daily', timeZone: 'Nowhere/Land', lastSummaryAt: null }, at('2026-11-23T19:00:00Z')),
+    ).toBe('invalid-zone')
+    expect(summaryState({ mode: 'daily', timeZone: '', lastSummaryAt: null }, at('2026-11-23T19:00:00Z'))).toBe(
+      'invalid-zone',
+    )
   })
 
   it('is never due for a person who chose a push per payment', () => {
-    expect(summaryState({ mode: 'each', timeZone: 'Europe/Madrid', lastSummaryAt: null }, at('2026-11-23T19:00:00Z'))).toBe('not-yet')
+    expect(
+      summaryState({ mode: 'each', timeZone: 'Europe/Madrid', lastSummaryAt: null }, at('2026-11-23T19:00:00Z')),
+    ).toBe('not-yet')
   })
 })

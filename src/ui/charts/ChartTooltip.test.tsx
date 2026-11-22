@@ -31,9 +31,16 @@ afterEach(() => {
 })
 
 /** The bars' probes are 60px; the chart is where the test puts it, and the panel is `panelHeight` tall. */
-function scene(top: number, bottom: number, panelHeight = 100) {
+function scene(
+  top: number,
+  bottom: number,
+  panelHeight = 100,
+) {
   const chart = document.createElement('div')
-  const move = (t: number, b: number) => {
+  const move = (
+    t: number,
+    b: number,
+  ) => {
     chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
   }
   move(top, bottom)

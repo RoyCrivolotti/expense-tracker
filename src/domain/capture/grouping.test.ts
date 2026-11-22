@@ -3,8 +3,20 @@ import { GROUP_WINDOW_MS, sameMovement } from './grouping'
 import type { GroupablePush } from './grouping'
 
 const AT = Date.parse('2026-11-03T08:41:07.000Z')
-const payment: GroupablePush = { amountCents: 1050, currency: 'EUR', occurredAtMs: AT, templateId: 't-payment', shapeId: 's-payment' }
-const alert: GroupablePush = { amountCents: 1050, currency: 'EUR', occurredAtMs: AT + 5_000, templateId: 't-alert', shapeId: 's-alert' }
+const payment: GroupablePush = {
+  amountCents: 1050,
+  currency: 'EUR',
+  occurredAtMs: AT,
+  templateId: 't-payment',
+  shapeId: 's-payment',
+}
+const alert: GroupablePush = {
+  amountCents: 1050,
+  currency: 'EUR',
+  occurredAtMs: AT + 5_000,
+  templateId: 't-alert',
+  shapeId: 's-alert',
+}
 
 describe('sameMovement', () => {
   it('joins a payment and the balance alert of the same amount seconds later', () => {
@@ -27,7 +39,9 @@ describe('sameMovement', () => {
   it('joins pushes when either has no template, as long as the shapes differ', () => {
     expect(sameMovement({ ...payment, templateId: null }, alert)).toBe(true)
     expect(sameMovement({ ...payment, templateId: null }, { ...alert, templateId: null })).toBe(true)
-    expect(sameMovement({ ...payment, templateId: null, shapeId: null }, { ...alert, templateId: null, shapeId: null })).toBe(true)
+    expect(
+      sameMovement({ ...payment, templateId: null, shapeId: null }, { ...alert, templateId: null, shapeId: null }),
+    ).toBe(true)
   })
 
   it('reaches exactly the window, and not a millisecond past it', () => {

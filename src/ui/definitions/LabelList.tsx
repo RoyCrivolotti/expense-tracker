@@ -24,23 +24,19 @@ export function LabelList({ model, actions }: { model: ExpenseModel; actions: Ex
       <Card>
         {labels.length === 0 ? (
           <p className={styles.deleteNote}>
-            No labels yet. Labels mark what a transaction permanently belongs to — a trip, a
-            project — and stay even after any flag on it clears.
+            No labels yet. Labels mark what a transaction permanently belongs to — a trip, a project — and stay even
+            after any flag on it clears.
           </p>
         ) : (
           labels.map((label) => (
-            <div
-              key={label.id}
-              className={label.active ? styles.row : `${styles.row} ${styles.inactive}`}
-            >
+            <div key={label.id} className={label.active ? styles.row : `${styles.row} ${styles.inactive}`}>
               <div className={styles.rowMain}>
                 <span className={styles.rowName}>
                   <LabelGlyph label={label} className={flagStyles.rowGlyph} /> {label.name}
                 </span>
                 <span className={styles.rowMeta}>
                   {label.description ? `${label.description} · ` : ''}
-                  {usage.count('label', label.id) ?? '—'}{' '}
-                  tagged
+                  {usage.count('label', label.id) ?? '—'} tagged
                 </span>
               </div>
             </div>

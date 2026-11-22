@@ -19,15 +19,15 @@ describe('flagService — sortOrder and active', () => {
   })
 
   it('rejects a null sort order rather than leaking a NOT NULL constraint error', async () => {
-    await expect(
-      patchFlag(repo, 'owner@example.com', 1, { sortOrder: null as unknown as number }),
-    ).rejects.toThrow(/whole number/)
+    await expect(patchFlag(repo, 'owner@example.com', 1, { sortOrder: null as unknown as number })).rejects.toThrow(
+      /whole number/,
+    )
   })
 
   it('rejects a non-boolean active', async () => {
-    await expect(
-      patchFlag(repo, 'owner@example.com', 1, { active: 'yes' as unknown as boolean }),
-    ).rejects.toThrow(/true or false/)
+    await expect(patchFlag(repo, 'owner@example.com', 1, { active: 'yes' as unknown as boolean })).rejects.toThrow(
+      /true or false/,
+    )
   })
 
   it('accepts a well-formed flag', async () => {
@@ -37,15 +37,9 @@ describe('flagService — sortOrder and active', () => {
 
 describe('flagService — autoLabelId', () => {
   it('rejects zero, a negative id, and a non-integer', async () => {
-    await expect(
-      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 0 }),
-    ).rejects.toThrow(/positive whole number/)
-    await expect(
-      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: -1 }),
-    ).rejects.toThrow(/positive whole number/)
-    await expect(
-      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 1.5 }),
-    ).rejects.toThrow(/positive whole number/)
+    await expect(patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 0 })).rejects.toThrow(/positive whole number/)
+    await expect(patchFlag(repo, 'owner@example.com', 1, { autoLabelId: -1 })).rejects.toThrow(/positive whole number/)
+    await expect(patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 1.5 })).rejects.toThrow(/positive whole number/)
   })
 
   it('passes a valid id through to the repository', async () => {

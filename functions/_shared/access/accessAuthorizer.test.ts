@@ -3,7 +3,10 @@ import type { AccessRepository } from '../../domain/ports/accessRepository'
 import { isEmailAllowed } from './accessAuthorizer'
 import type { Env } from './env'
 
-function repo(activeCount: number, allowed = false): AccessRepository {
+function repo(
+  activeCount: number,
+  allowed = false,
+): AccessRepository {
   return {
     countActiveUsers: vi.fn().mockResolvedValue(activeCount),
     isAllowed: vi.fn().mockResolvedValue(allowed),

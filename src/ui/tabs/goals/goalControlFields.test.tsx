@@ -41,9 +41,7 @@ describe('NumberField', () => {
   it('steps by one with the buttons and stops at the bounds', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    const { rerender } = render(
-      <NumberField label="Horizon (years)" value={29} min={1} max={30} onChange={onChange} />,
-    )
+    const { rerender } = render(<NumberField label="Horizon (years)" value={29} min={1} max={30} onChange={onChange} />)
 
     await user.click(screen.getByRole('button', { name: 'Increase Horizon (years)' }))
     expect(onChange).toHaveBeenLastCalledWith(30)
@@ -112,12 +110,7 @@ describe('DateField', () => {
 
   it('renders an optional hint', () => {
     render(
-      <DateField
-        label="Plan start date"
-        value={null}
-        hint="Anchors the projection to a date."
-        onChange={vi.fn()}
-      />,
+      <DateField label="Plan start date" value={null} hint="Anchors the projection to a date." onChange={vi.fn()} />,
     )
     expect(screen.getByText('Anchors the projection to a date.')).toBeInTheDocument()
   })
@@ -218,18 +211,21 @@ describe('typing nothing, or something that is not a number, into a field', () =
 })
 
 describe('typing a number with a letter in it, or too many digits, into a field', () => {
-  it.each(['250k', '1e9', '1.5M'])('takes %s for no amount at all and puts the amount back, not the digits in it', async (typed) => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
-    const input = screen.getByRole('textbox', { name: 'House price' })
-    const shown = (input as HTMLInputElement).value
+  it.each(['250k', '1e9', '1.5M'])(
+    'takes %s for no amount at all and puts the amount back, not the digits in it',
+    async (typed) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
+      const input = screen.getByRole('textbox', { name: 'House price' })
+      const shown = (input as HTMLInputElement).value
 
-    await user.clear(input)
-    await user.type(input, `${typed}{Enter}`)
-    expect(onChange).not.toHaveBeenCalled()
-    expect(input).toHaveValue(shown)
-  })
+      await user.clear(input)
+      await user.type(input, `${typed}{Enter}`)
+      expect(onChange).not.toHaveBeenCalled()
+      expect(input).toHaveValue(shown)
+    },
+  )
 
   it('reads an amount written the other way round, with the point for thousands in a comma format', async () => {
     const user = userEvent.setup()
@@ -303,9 +299,7 @@ describe('typing a number with a letter in it, or too many digits, into a field'
 
 describe('a comma typed into a field written with a decimal point', () => {
   const usd = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix' as const, decimalSeparator: '.' }
-  const inDollars = (ui: ReactElement) => (
-    <MoneyFormatContext.Provider value={usd}>{ui}</MoneyFormatContext.Provider>
-  )
+  const inDollars = (ui: ReactElement) => <MoneyFormatContext.Provider value={usd}>{ui}</MoneyFormatContext.Provider>
 
   it('is the decimal mark of an amount, and three digits after it still make a thousand', async () => {
     const user = userEvent.setup()
@@ -350,7 +344,9 @@ describe('fields holding a value the person did not type', () => {
   it('shows a fraction of a year to two places, and steps by a whole year from it', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<NumberField label="Mortgage term (years)" value={24.5833} decimals={2} min={1} max={40} onChange={onChange} />)
+    render(
+      <NumberField label="Mortgage term (years)" value={24.5833} decimals={2} min={1} max={40} onChange={onChange} />,
+    )
 
     expect(screen.getByRole('textbox', { name: 'Mortgage term (years)' })).toHaveValue('24,58')
     await user.click(screen.getByRole('button', { name: 'Increase Mortgage term (years)' }))
@@ -399,4 +395,3 @@ describe('fields holding a value the person did not type', () => {
     expect(onChange).toHaveBeenLastCalledWith(0.3)
   })
 })
-

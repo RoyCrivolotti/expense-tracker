@@ -13,7 +13,11 @@ export interface ReceiptObject {
  * that is missing must not stop the daily backup, and vice versa.
  */
 export interface ReceiptStore {
-  put(key: string, body: ArrayBuffer, contentType: string): Promise<void>
+  put(
+    key: string,
+    body: ArrayBuffer,
+    contentType: string,
+  ): Promise<void>
   get(key: string): Promise<ReceiptObject | null>
   /** Best-effort: R2 deletes cannot join a D1 batch, so callers delete rows first. */
   deleteMany(keys: string[]): Promise<void>

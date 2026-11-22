@@ -36,8 +36,13 @@ export function rowOutputs(c: Context): Outputs {
   const whole = c.groups === undefined ? {} : { classifier }
   const groups = (groupBy: 'category' | 'fixedFlexible' | 'label' | 'description') => () =>
     computeSpendingGroups({ transactions: linear, categories: cats, labels: ds.labels, ...whole }, { ...opts, groupBy })
-  const detail = (groupBy: 'fixedFlexible' | 'label' | 'description', key: string) => () =>
-    computeSpendingGroupDetail({ transactions: linear, categories: cats, ...whole }, { ...opts, groupBy, key })
+  const detail =
+    (
+      groupBy: 'fixedFlexible' | 'label' | 'description',
+      key: string,
+    ) =>
+    () =>
+      computeSpendingGroupDetail({ transactions: linear, categories: cats, ...whole }, { ...opts, groupBy, key })
   const pace = once(() =>
     computeSpendingPace(tx, cats, ds.installmentPlans, classifier, {
       ...base,
@@ -75,7 +80,11 @@ export function rowOutputs(c: Context): Outputs {
 /** Consumers that follow rows by exact date, sign or link across any month (class P). */
 export function linkedOutputs(c: Context): Outputs {
   const { ds, real: tx, viewed } = c
-  const plan = samplePlan({ planStartDate: '2022-01-01', startInvestedCents: 1_500_000, monthlyContributionCents: 80_000 })
+  const plan = samplePlan({
+    planStartDate: '2022-01-01',
+    startInvestedCents: 1_500_000,
+    monthlyContributionCents: 80_000,
+  })
   const links = () => buildReimbursementLinks(tx)
   return {
     portfolioReturn: () => portfolioReturn(ds.wealthCheckins, ds.wealthAccounts, tx),
@@ -83,7 +92,14 @@ export function linkedOutputs(c: Context): Outputs {
     splitGap: () => splitGap(plan, ds.wealthCheckins, ds.wealthAccounts, tx, 0.02),
     flagGroups: () => groupTransactionsByFlag(tx, ds.flags),
     pastReports: () => listPastReports(tx, ds.flags),
-    links: () => tx.filter((t) => t.reportCount).map((t) => links().settledBy(t.id).map((r) => r.id)),
+    links: () =>
+      tx
+        .filter((t) => t.reportCount)
+        .map((t) =>
+          links()
+            .settledBy(t.id)
+            .map((r) => r.id),
+        ),
     planProgress: () => ds.installmentPlans.map((p) => planProgress(p, tx)),
     installments: () =>
       ds.installmentPlans.map((p) => [paidInstallmentInMonth(p, tx, viewed), nextInstallmentSuggestion(p, tx, viewed)]),

@@ -30,16 +30,27 @@ interface Reference {
   autoLabel: number
 }
 
-function seedReference(owner: string, base: number): Reference {
+function seedReference(
+  owner: string,
+  base: number,
+): Reference {
   const ref = { account: base, category: base, label: base, flag: base, autoLabel: base + 1 }
   db.prepare('INSERT INTO accounts (owner,id,name,kind,settlement,active) VALUES (?,?,?,?,?,1)').run(
-    owner, ref.account, 'Checking', 'debit', 'immediate',
+    owner,
+    ref.account,
+    'Checking',
+    'debit',
+    'immediate',
   )
   db.prepare('INSERT INTO categories (owner,id,name,monthly_budget_cents,sort_order,active) VALUES (?,?,?,0,0,1)').run(
-    owner, ref.category, 'Food',
+    owner,
+    ref.category,
+    'Food',
   )
   db.prepare('INSERT INTO categories (owner,id,name,monthly_budget_cents,sort_order,active) VALUES (?,?,?,0,0,1)').run(
-    owner, base + 1, 'Travel',
+    owner,
+    base + 1,
+    'Travel',
   )
   const label = db.prepare('INSERT INTO labels (owner,id,name,color,sort_order,active) VALUES (?,?,?,?,0,1)')
   label.run(owner, ref.label, 'Trip', '#10b981')
@@ -51,7 +62,12 @@ function seedReference(owner: string, base: number): Reference {
 }
 
 /** `count` expenses with ids `first..first+count-1`, each with a label link and a receipt with a thumbnail. */
-function seedTransactions(owner: string, ref: Reference, first: number, count: number): void {
+function seedTransactions(
+  owner: string,
+  ref: Reference,
+  first: number,
+  count: number,
+): void {
   const insert = db.prepare(
     `INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
      VALUES (?,?,?,?,?,?,?,?,?,0)`,
@@ -68,10 +84,15 @@ function seedTransactions(owner: string, ref: Reference, first: number, count: n
   }
 }
 
-const range = (first: number, count: number): number[] => Array.from({ length: count }, (_, i) => first + i)
+const range = (
+  first: number,
+  count: number,
+): number[] => Array.from({ length: count }, (_, i) => first + i)
 
-const count = (sql: string, ...args: (string | number)[]): number =>
-  (db.prepare(sql).get(...args) as { n: number }).n
+const count = (
+  sql: string,
+  ...args: (string | number)[]
+): number => (db.prepare(sql).get(...args) as { n: number }).n
 
 const transactionsOf = (owner: string): number => count('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?', owner)
 const linksOf = (owner: string): number =>
@@ -81,8 +102,10 @@ const linksOf = (owner: string): number =>
   )
 const receiptsOf = (owner: string): number =>
   count('SELECT COUNT(*) AS n FROM transaction_attachments WHERE owner = ?', owner)
-const categoriesOf = (owner: string, categoryId: number): number =>
-  count('SELECT COUNT(*) AS n FROM transactions WHERE owner = ? AND category_id = ?', owner, categoryId)
+const categoriesOf = (
+  owner: string,
+  categoryId: number,
+): number => count('SELECT COUNT(*) AS n FROM transactions WHERE owner = ? AND category_id = ?', owner, categoryId)
 
 let owned: Reference
 let others: Reference
@@ -119,10 +142,7 @@ describe.each(SIZES)('deleting %i transactions at once', (size) => {
   })
 
   it('leaves another owner’s rows, links and receipts alone when their ids are in the list', async () => {
-    const deleted = await deleteTransactions(env, OWNER, [
-      ...range(OWNER_FIRST, size),
-      ...range(OTHER_FIRST, size),
-    ])
+    const deleted = await deleteTransactions(env, OWNER, [...range(OWNER_FIRST, size), ...range(OTHER_FIRST, size)])
 
     expect(deleted).toBe(size)
     expect(transactionsOf(OTHER)).toBe(600)
@@ -194,7 +214,9 @@ describe.each(SIZES)('editing %i transactions at once', (size) => {
   })
 
   it('refuses a type change that would leave a withdrawal on an expense, before touching any row', async () => {
-    db.prepare("UPDATE transactions SET type = 'investment', amount_cents = -500 WHERE id = ?").run(OWNER_FIRST + size - 1)
+    db.prepare("UPDATE transactions SET type = 'investment', amount_cents = -500 WHERE id = ?").run(
+      OWNER_FIRST + size - 1,
+    )
 
     await expect(
       bulkUpdateTransactions(env, OWNER, range(OWNER_FIRST, size), { type: 'expense', categoryId: owned.category + 1 }),
@@ -278,7 +300,11 @@ describe('looking up receipts of a few transactions', () => {
 describe('backfilling instalments for many plans', () => {
   it('reads the rows of more than 100 plans', async () => {
     db.prepare('INSERT INTO accounts (owner,id,name,kind,settlement,active) VALUES (?,?,?,?,?,1)').run(
-      OWNER, 50, 'Visa', 'credit', 'deferred',
+      OWNER,
+      50,
+      'Visa',
+      'credit',
+      'deferred',
     )
     const plan = db.prepare(
       `INSERT INTO installment_plans
@@ -289,6 +315,8 @@ describe('backfilling instalments for many plans', () => {
 
     await backfillInstallments(env, OWNER)
 
-    expect(count('SELECT COUNT(DISTINCT plan_id) AS n FROM transactions WHERE owner = ? AND plan_id IS NOT NULL', OWNER)).toBe(150)
+    expect(
+      count('SELECT COUNT(DISTINCT plan_id) AS n FROM transactions WHERE owner = ? AND plan_id IS NOT NULL', OWNER),
+    ).toBe(150)
   })
 })

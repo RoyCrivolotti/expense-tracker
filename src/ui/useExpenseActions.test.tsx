@@ -45,9 +45,7 @@ vi.mock('../data/recommendationsApi', () => ({
 describe('useExpenseActions', () => {
   it('returns undefined for read-only sources', () => {
     const source: ExpenseDataSource = { canWrite: false, load: vi.fn() }
-    const { result } = renderHook(() =>
-      useExpenseActions(source, vi.fn(), vi.fn()),
-    )
+    const { result } = renderHook(() => useExpenseActions(source, vi.fn(), vi.fn()))
     expect(result.current).toBeUndefined()
   })
 
@@ -62,9 +60,7 @@ describe('useExpenseActions', () => {
     const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
       dataset = patch(dataset)
     })
-    const { result } = renderHook(() =>
-      useExpenseActions(source, applyPatch, vi.fn()),
-    )
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
     await act(async () => {
       await result.current!.createTransaction(newTxn)
     })
@@ -117,9 +113,7 @@ describe('useExpenseActions', () => {
     const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
       dataset = patch(dataset)
     })
-    const { result } = renderHook(() =>
-      useExpenseActions(source, applyPatch, vi.fn()),
-    )
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
     await act(async () => {
       await result.current!.updateTransactions([42], { categoryId: 9 })
     })
@@ -204,7 +198,13 @@ describe('useExpenseActions — flags', () => {
     })
 
     await act(async () => {
-      await actions.createFlag({ name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true })
+      await actions.createFlag({
+        name: 'Work travel',
+        color: '#6366f1',
+        reimbursable: true,
+        sortOrder: 0,
+        active: true,
+      })
       await actions.updateFlag(flag.id, { name: 'Client travel' })
     })
 
@@ -219,14 +219,19 @@ describe('useExpenseActions — flags', () => {
 
     let result
     await act(async () => {
-      await actions.createFlag({ name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true })
+      await actions.createFlag({
+        name: 'Work travel',
+        color: '#6366f1',
+        reimbursable: true,
+        sortOrder: 0,
+        active: true,
+      })
       result = await actions.deleteFlag(flag.id)
     })
 
     expect(result).toEqual({ unflagged: 3 })
     expect(read().flags).toEqual([])
   })
-
 })
 
 describe('useExpenseActions — labels', () => {
@@ -383,8 +388,15 @@ describe('useExpenseActions — what a write reached', () => {
   const target = { filter: { categoryId: 1 }, expectedCount: 2, expectedRevision: 'r7' }
 
   function setup(source: Partial<ExpenseDataSource>) {
-    const applyPatch = vi.fn<(patch: (d: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void>()
-    const { result } = renderHook(() => useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()))
+    const applyPatch = vi.fn<
+      (
+        patch: (d: ExpenseDataset) => ExpenseDataset,
+        reach?: WriteReach,
+      ) => void
+    >()
+    const { result } = renderHook(() =>
+      useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()),
+    )
     return { applyPatch, actions: () => result.current! }
   }
 

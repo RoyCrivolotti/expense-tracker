@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { makeTransaction } from '../../testing/factories'
 import { usePastReports } from './usePastReports'
 
-const payment = () =>
-  makeTransaction({ id: 99, type: 'refund', amountCents: 14_000, description: 'Alicante' })
+const payment = () => makeTransaction({ id: 99, type: 'refund', amountCents: 14_000, description: 'Alicante' })
 
 describe('usePastReports entry', () => {
   it('is hidden until something has been reimbursed', () => {
@@ -14,9 +13,7 @@ describe('usePastReports entry', () => {
   })
 
   it('opens once a row points at a payment', () => {
-    const { result } = renderHook(() =>
-      usePastReports([makeTransaction({ id: 1, settledBy: 99 }), payment()]),
-    )
+    const { result } = renderHook(() => usePastReports([makeTransaction({ id: 1, settledBy: 99 }), payment()]))
 
     expect(result.current.entry).toBeDefined()
     act(() => result.current.entry!())

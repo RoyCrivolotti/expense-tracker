@@ -20,7 +20,13 @@ beforeEach(async () => {
   sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   await seedLedger(world)
-  const asOther = { ...world, call: (h, o = {}) => world.call(h, { ...o, email: OTHER }) } as World
+  const asOther = {
+    ...world,
+    call: (
+      h,
+      o = {},
+    ) => world.call(h, { ...o, email: OTHER }),
+  } as World
   await seedLedger(asOther)
 })
 
@@ -38,11 +44,14 @@ const revokeOther = (email = OTHER) =>
     email: OWNER,
   })
 
-const rowsOf = (table: string, column = 'owner'): number =>
-  (sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`).get(OTHER) as { n: number }).n
+const rowsOf = (
+  table: string,
+  column = 'owner',
+): number => (sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`).get(OTHER) as { n: number }).n
 
 const status = (): string | undefined =>
-  (sqlite.prepare('SELECT status FROM allowed_users WHERE email = ?').get(OTHER) as { status: string } | undefined)?.status
+  (sqlite.prepare('SELECT status FROM allowed_users WHERE email = ?').get(OTHER) as { status: string } | undefined)
+    ?.status
 
 describe('revoking a user whose purge failed', () => {
   it('finishes the purge when the request is repeated', async () => {
@@ -68,11 +77,15 @@ describe('revoking a user whose purge failed', () => {
 
   it('can be repeated once more without harm, and leaves the other owner alone', async () => {
     expect((await revokeOther()).status).toBe(200)
-    const ownersRows = (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n
+    const ownersRows = (
+      sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }
+    ).n
 
     expect((await revokeOther()).status).toBe(200)
 
-    expect((sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n).toBe(ownersRows)
+    expect(
+      (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n,
+    ).toBe(ownersRows)
   })
 
   it('is still a 404 for an address that was never allowed', async () => {
@@ -114,11 +127,15 @@ describe('switching the expenses group off for a user whose purge failed', () =>
   })
 
   it('leaves the other owner’s data alone', async () => {
-    const before = (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n
+    const before = (
+      sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }
+    ).n
 
     expect((await switchOff()).status).toBe(200)
     expect((await switchOff()).status).toBe(200)
 
-    expect((sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n).toBe(before)
+    expect(
+      (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }).n,
+    ).toBe(before)
   })
 })

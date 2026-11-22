@@ -10,7 +10,10 @@ vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => false 
 import { setMotionDisabledForTests } from '../hooks/motion'
 import { DateInput } from './DateInput'
 
-async function openPicker(value: string, max?: string) {
+async function openPicker(
+  value: string,
+  max?: string,
+) {
   const onChange = vi.fn()
   const user = userEvent.setup()
   render(<DateInput value={value} max={max} onChange={onChange} />)

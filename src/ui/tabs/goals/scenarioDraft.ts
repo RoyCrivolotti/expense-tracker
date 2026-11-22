@@ -34,7 +34,10 @@ const EDIT_KEYS = [
 ] as const satisfies readonly (keyof NewGoalScenario)[]
 
 /** The keys the draft has changed from its saved scenario. */
-export function editedKeys(draft: NewGoalScenario, saved: NewGoalScenario): (keyof NewGoalScenario)[] {
+export function editedKeys(
+  draft: NewGoalScenario,
+  saved: NewGoalScenario,
+): (keyof NewGoalScenario)[] {
   const keys: (keyof NewGoalScenario)[] = EDIT_KEYS.filter((k) => draft[k] !== saved[k])
   if (draft.name !== saved.name) keys.push('name')
   if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) keys.push('lifeEvents')
@@ -46,11 +49,17 @@ export function editedKeys(draft: NewGoalScenario, saved: NewGoalScenario): (key
 }
 
 /** Whether the draft holds edits its saved scenario does not. */
-export function differsFrom(draft: NewGoalScenario, saved: NewGoalScenario): boolean {
+export function differsFrom(
+  draft: NewGoalScenario,
+  saved: NewGoalScenario,
+): boolean {
   return editedKeys(draft, saved).length > 0
 }
 
-function pick(draft: NewGoalScenario, keys: (keyof NewGoalScenario)[]): Partial<NewGoalScenario> {
+function pick(
+  draft: NewGoalScenario,
+  keys: (keyof NewGoalScenario)[],
+): Partial<NewGoalScenario> {
   return Object.fromEntries(keys.map((k) => [k, draft[k]]))
 }
 
@@ -59,7 +68,10 @@ function pick(draft: NewGoalScenario, keys: (keyof NewGoalScenario)[]): Partial<
  * whole draft would write back what the draft was loaded with too, over whatever another device
  * has saved since.
  */
-export function editedPatch(draft: NewGoalScenario, saved: GoalScenario): Partial<NewGoalScenario> {
+export function editedPatch(
+  draft: NewGoalScenario,
+  saved: GoalScenario,
+): Partial<NewGoalScenario> {
   return pick(draft, editedKeys(draft, saved))
 }
 
@@ -69,7 +81,11 @@ export function editedPatch(draft: NewGoalScenario, saved: GoalScenario): Partia
  * everything else from the new row, so a change saved elsewhere is not shown as an edit here and
  * not written back over.
  */
-export function rebaseDraft(draft: NewGoalScenario, from: GoalScenario, onto: GoalScenario): NewGoalScenario {
+export function rebaseDraft(
+  draft: NewGoalScenario,
+  from: GoalScenario,
+  onto: GoalScenario,
+): NewGoalScenario {
   return { ...scenarioToDraft(onto), ...pick(draft, editedKeys(draft, from)) }
 }
 

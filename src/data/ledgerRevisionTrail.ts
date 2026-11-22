@@ -61,7 +61,10 @@ export class RevisionTrail {
   }
 
   /** The patch for what `take` returned has been applied, leaving the held ledger's own revision as `base`. */
-  vouch(at: string | null, base: string | null): void {
+  vouch(
+    at: string | null,
+    base: string | null,
+  ): void {
     this.chain = at === null ? null : { base, at }
   }
 
@@ -79,7 +82,10 @@ export class RevisionTrail {
    * after one that was answered with a receipt that did not follow on, since someone else wrote beside it and the rows
    * held may lack that. Null then, and the next month read finds out.
    */
-  adoptable(held: HeldLedger, revision: string | null): string | null {
+  adoptable(
+    held: HeldLedger,
+    revision: string | null,
+  ): string | null {
     if (this.interfered) return null
     const known = this.known(held)
     return known === null || known === revision ? revision : null
@@ -87,7 +93,10 @@ export class RevisionTrail {
 }
 
 /** The revision `from` is at once `receipts` are in, if each starts where the last left off; else null. */
-function followed(from: string | null, receipts: readonly WriteReceipt[]): string | null {
+function followed(
+  from: string | null,
+  receipts: readonly WriteReceipt[],
+): string | null {
   if (from === null || receipts.length === 0) return null
   let at = from
   for (const { before, after } of receipts) {

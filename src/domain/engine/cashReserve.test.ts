@@ -15,7 +15,10 @@ const checkin = makeWealthCheckin({
   ],
 })
 
-function spend(month: string, cents: number) {
+function spend(
+  month: string,
+  cents: number,
+) {
   return makeTransaction({ budgetMonth: month, date: `${month}-10`, type: 'expense', amountCents: cents })
 }
 
@@ -49,7 +52,10 @@ describe('averageMonthlySpendCents', () => {
 
   it('looks back twelve months at most', () => {
     const txns = Array.from({ length: 14 }, (_, i) =>
-      spend(`2025-${String(i + 1).padStart(2, '0')}`.replace('2025-13', '2026-01').replace('2025-14', '2026-02'), i < 2 ? 100_000_00 : 1_000_00),
+      spend(
+        `2025-${String(i + 1).padStart(2, '0')}`.replace('2025-13', '2026-01').replace('2025-14', '2026-02'),
+        i < 2 ? 100_000_00 : 1_000_00,
+      ),
     )
     expect(averageMonthlySpendCents(txns)).toBe(1_000_00)
   })

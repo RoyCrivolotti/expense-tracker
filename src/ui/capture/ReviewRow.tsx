@@ -48,25 +48,53 @@ function Fields({ view }: { view: ReviewView }) {
   )
 }
 
-function Buttons({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: (view: ReviewView) => void }) {
+function Buttons({
+  view,
+  review,
+  onReview,
+}: {
+  view: ReviewView
+  review: ReviewApi
+  onReview: (view: ReviewView) => void
+}) {
   const match = view.rec.possibleMatch
   const label = view.description || 'payment'
   return (
     <div className={styles.actions}>
       {view.oneTap ? (
-        <button type="button" className={`${styles.pill} ${styles.primary}`} aria-label={`Add ${label}`} onClick={() => review.add(view)}>
+        <button
+          type="button"
+          className={`${styles.pill} ${styles.primary}`}
+          aria-label={`Add ${label}`}
+          onClick={() => review.add(view)}
+        >
           Add
         </button>
       ) : null}
-      <button type="button" className={`${styles.pill} ${view.oneTap ? '' : styles.primary}`} onClick={() => onReview(view)}>
+      <button
+        type="button"
+        className={`${styles.pill} ${view.oneTap ? '' : styles.primary}`}
+        onClick={() => onReview(view)}
+      >
         {view.oneTap ? 'Change' : 'Review'}
       </button>
       {match ? (
-        <button type="button" className={styles.link} aria-label={`Already entered as ${shortened(match.description)}? Link${shortened(match.description) === match.description ? '' : `, ${match.description}`}`} title={match.description} onClick={() => review.link(view)}>
+        <button
+          type="button"
+          className={styles.link}
+          aria-label={`Already entered as ${shortened(match.description)}? Link${shortened(match.description) === match.description ? '' : `, ${match.description}`}`}
+          title={match.description}
+          onClick={() => review.link(view)}
+        >
           Already entered as {shortened(match.description)}? Link
         </button>
       ) : null}
-      <button type="button" className={`${styles.pill} ${styles.quiet}`} aria-label={`Don't add ${label}`} onClick={() => review.dontAdd(view)}>
+      <button
+        type="button"
+        className={`${styles.pill} ${styles.quiet}`}
+        aria-label={`Don't add ${label}`}
+        onClick={() => review.dontAdd(view)}
+      >
         Don&apos;t add
       </button>
     </div>
@@ -74,7 +102,15 @@ function Buttons({ view, review, onReview }: { view: ReviewView; review: ReviewA
 }
 
 /** One payment to review. Without write access (an offline copy) it is shown and nothing can be pressed. */
-export function ReviewRow({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: (view: ReviewView) => void }) {
+export function ReviewRow({
+  view,
+  review,
+  onReview,
+}: {
+  view: ReviewView
+  review: ReviewApi
+  onReview: (view: ReviewView) => void
+}) {
   const failure = review.failures.get(view.rec.id)
   // A missing category, account or merchant is already marked in the fields themselves.
   const chips = view.reasons.filter((r) => !IN_FIELDS.has(r))

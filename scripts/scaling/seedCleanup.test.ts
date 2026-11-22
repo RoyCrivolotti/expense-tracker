@@ -12,8 +12,11 @@ import { differences, fingerprintOthers } from './snapshot'
 import { sqliteTransport } from './sqliteTransport'
 import { MONTH, OTHER_OWNER, databaseWithAnotherOwner, ledgerOf, seededDatabase } from './testKit'
 
-const count = (db: ReturnType<typeof migratedDatabase>, sql: string, ...params: string[]): number =>
-  Number((db.prepare(sql).get(...params) as { n: number }).n)
+const count = (
+  db: ReturnType<typeof migratedDatabase>,
+  sql: string,
+  ...params: string[]
+): number => Number((db.prepare(sql).get(...params) as { n: number }).n)
 
 describe('seeding a database that already holds someone else', () => {
   it('puts the whole ledger under the synthetic owner and leaves the other owner byte for byte alone', async () => {
@@ -23,8 +26,12 @@ describe('seeding a database that already holds someone else', () => {
     const dataset = ledgerOfAbout(300, MONTH)
     const result = await runSeed(transport, seedSteps(dataset, await readIdBases(transport)), ledgerOf())
 
-    expect(count(db, 'SELECT count(*) AS n FROM transactions WHERE owner = ?', SYNTHETIC_OWNER)).toBe(dataset.transactions.length)
-    expect(count(db, 'SELECT count(*) AS n FROM categories WHERE owner = ?', SYNTHETIC_OWNER)).toBe(dataset.categories.length)
+    expect(count(db, 'SELECT count(*) AS n FROM transactions WHERE owner = ?', SYNTHETIC_OWNER)).toBe(
+      dataset.transactions.length,
+    )
+    expect(count(db, 'SELECT count(*) AS n FROM categories WHERE owner = ?', SYNTHETIC_OWNER)).toBe(
+      dataset.categories.length,
+    )
     expect(count(db, 'SELECT count(*) AS n FROM owner_revision WHERE owner = ?', SYNTHETIC_OWNER)).toBe(1)
     expect(result.calibration?.expected).toBeGreaterThan(0)
     expect(differences(before, await fingerprintOthers(transport, ledgerOf()))).toEqual([])
@@ -39,8 +46,16 @@ describe('seeding a database that already holds someone else', () => {
 
   it('writes the same description_norm the app does, and the label links the ledger has', async () => {
     const { db } = await seededDatabase(200)
-    expect(count(db, 'SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL', SYNTHETIC_OWNER)).toBe(0)
-    expect(count(db, 'SELECT count(*) AS n FROM transaction_labels l JOIN transactions t ON t.id = l.transaction_id WHERE t.owner = ?', SYNTHETIC_OWNER)).toBeGreaterThan(0)
+    expect(
+      count(db, 'SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL', SYNTHETIC_OWNER),
+    ).toBe(0)
+    expect(
+      count(
+        db,
+        'SELECT count(*) AS n FROM transaction_labels l JOIN transactions t ON t.id = l.transaction_id WHERE t.owner = ?',
+        SYNTHETIC_OWNER,
+      ),
+    ).toBeGreaterThan(0)
   })
 
   it('sends only statements the write guard lets through, each binding the synthetic owner', async () => {
@@ -54,7 +69,14 @@ describe('seeding a database that already holds someone else', () => {
   })
 
   it('starts the transactions with a calibration chunk, then chunks of 500', () => {
-    const steps = seedSteps(ledgerOfAbout(1300, MONTH), { categories: 0, accounts: 0, flags: 0, labels: 0, installment_plans: 0, transactions: 0 })
+    const steps = seedSteps(ledgerOfAbout(1300, MONTH), {
+      categories: 0,
+      accounts: 0,
+      flags: 0,
+      labels: 0,
+      installment_plans: 0,
+      transactions: 0,
+    })
     const sizes = steps.filter((s) => s.table === 'transactions').map((s) => s.rows)
     expect(sizes[0]).toBe(CALIBRATION_ROWS)
     expect(sizes.slice(1, -1).every((n) => n === 500)).toBe(true)
@@ -69,7 +91,9 @@ describe('the calibration stop', () => {
       ...inner,
       query: async (s: Parameters<typeof inner.query>[0]) => {
         const reply = await inner.query(s)
-        const inflated = s.sql.includes('INTO transactions') ? (reply.meta.rows_written ?? 0) * 40 : reply.meta.rows_written
+        const inflated = s.sql.includes('INTO transactions')
+          ? (reply.meta.rows_written ?? 0) * 40
+          : reply.meta.rows_written
         return { ...reply, meta: { ...reply.meta, rows_written: inflated } }
       },
     }
@@ -125,8 +149,12 @@ describe('cleaning up', () => {
 
   it('also removes what the routes leave behind: access rows, settings and scenarios of the owner', async () => {
     const { db, transport } = await seededDatabase(100)
-    db.prepare("INSERT INTO allowed_users (email, status, granted_by) VALUES (?, 'active', 'test')").run(SYNTHETIC_OWNER)
-    db.prepare("INSERT INTO user_group_grants (email, group_id, granted_by) VALUES (?, 'expenses', 'test')").run(SYNTHETIC_OWNER)
+    db.prepare("INSERT INTO allowed_users (email, status, granted_by) VALUES (?, 'active', 'test')").run(
+      SYNTHETIC_OWNER,
+    )
+    db.prepare("INSERT INTO user_group_grants (email, group_id, granted_by) VALUES (?, 'expenses', 'test')").run(
+      SYNTHETIC_OWNER,
+    )
     db.prepare('INSERT INTO settings (owner) VALUES (?)').run(SYNTHETIC_OWNER)
     await cleanUp(transport, ledgerOf())
     const left = await ownerRowCounts(transport, ledgerOf())
@@ -167,7 +195,10 @@ describe('knowing every table', () => {
         expect(scoped.has(name), `${name} has an ${named} column but is not in OWNER_TABLES`).toBe(true)
         expect(OWNER_TABLES.find((t) => t.table === name)?.column).toBe(named)
       } else {
-        expect(NOT_OWNER_SCOPED[name], `${name} has no owner column: say why a delete by owner leaves nothing in it`).toBeTruthy()
+        expect(
+          NOT_OWNER_SCOPED[name],
+          `${name} has no owner column: say why a delete by owner leaves nothing in it`,
+        ).toBeTruthy()
       }
     }
   })

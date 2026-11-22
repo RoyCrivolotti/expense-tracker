@@ -89,9 +89,7 @@ export function buildSettledReport(
   const covered = transactions.filter((t) => t.settledBy === reimbursementId)
   if (covered.length === 0) return null
   const flagId = settledFlagId(covered, flags)
-  const flag =
-    flags.find((f) => f.id === flagId) ??
-    standInFlag(transactions.find((t) => t.id === reimbursementId))
+  const flag = flags.find((f) => f.id === flagId) ?? standInFlag(transactions.find((t) => t.id === reimbursementId))
   return assembleReport(flag, covered, attachments)
 }
 
@@ -140,13 +138,14 @@ function assembleReport(
     else byTransaction.set(attachment.transactionId, [attachment])
   }
 
-  const chronological = [...rows].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
-  )
+  const chronological = [...rows].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
   // Numbering runs across the claimed lines only, and in print order, so R3 on
   // a row is the third figure down the Receipts section.
   let nextRef = 0
-  const toLine = (transaction: Transaction, numbered: boolean): ReportLine => {
+  const toLine = (
+    transaction: Transaction,
+    numbered: boolean,
+  ): ReportLine => {
     const receipts = byTransaction.get(transaction.id) ?? []
     return {
       transaction,

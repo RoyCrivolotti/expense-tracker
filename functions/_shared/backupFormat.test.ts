@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { EXPORT_FORMAT } from '../domain/data/exportTables'
-import { BACKUP_FORMAT, BackupFormatError, emptyCounts, parseBackupManifest, parseBackupState, type BackupManifest, type BackupState } from './backupFormat'
+import {
+  BACKUP_FORMAT,
+  BackupFormatError,
+  emptyCounts,
+  parseBackupManifest,
+  parseBackupState,
+  type BackupManifest,
+  type BackupState,
+} from './backupFormat'
 
 const state = (over: Partial<BackupState> = {}): BackupState => ({
   format: BACKUP_FORMAT,
@@ -36,7 +44,9 @@ const manifest = (over: Record<string, unknown> = {}): string =>
 describe('parseBackupState', () => {
   it('reads a state this code wrote, for this owner and day', () => {
     expect(parseBackupState(JSON.stringify(state()), 'a@b.com', '2026-10-15')).toEqual(state())
-    expect(parseBackupState(JSON.stringify(state({ revision: null, after: null })), 'a@b.com', '2026-10-15')?.after).toBeNull()
+    expect(
+      parseBackupState(JSON.stringify(state({ revision: null, after: null })), 'a@b.com', '2026-10-15')?.after,
+    ).toBeNull()
   })
 
   it.each([

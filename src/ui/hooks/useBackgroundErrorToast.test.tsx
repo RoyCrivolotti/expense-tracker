@@ -5,7 +5,15 @@ import { ToastContext, type ToastApi } from './useToast'
 
 const toastSpy = () => vi.fn<ToastApi['showToast']>()
 
-function Host({ error, refresh, showToast }: { error: string | null | undefined; refresh: () => void; showToast: ToastApi['showToast'] }) {
+function Host({
+  error,
+  refresh,
+  showToast,
+}: {
+  error: string | null | undefined
+  refresh: () => void
+  showToast: ToastApi['showToast']
+}) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       <Probe error={error} refresh={refresh} />

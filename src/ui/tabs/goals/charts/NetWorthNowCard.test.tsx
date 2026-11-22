@@ -30,7 +30,7 @@ describe('NetWorthNowCard', () => {
     expect(screen.queryByText('100.000,00 €')).toBeNull()
   })
 
-  it('takes the FI share from the balance in today\'s money, and shows the balance as measured', () => {
+  it("takes the FI share from the balance in today's money, and shows the balance as measured", () => {
     // 4% of 1M a year: the target is 25M, in the plan start's money.
     const draft = makeScenario({ annualSpendCents: 1_000_000, safeWithdrawalRate: 0.04, planStartDate: '2020-01-01' })
     render(
@@ -48,8 +48,19 @@ describe('NetWorthNowCard', () => {
 
   it('says what the same spending needs at 4%, 3,5% and 3%, beside the target it uses', () => {
     const draft = makeScenario({ annualSpendCents: 3_000_000, safeWithdrawalRate: 0.04 })
-    render(<NetWorthNowCard draft={draft} latest={{ investedCents: 11_700_000, date: '2026-09-11' }} milestones={[]} reached={noneReached} />)
-    expect(screen.getByText(/The same spending needs 750\.000,00 € at 4,0%, 857\.142,86 € at 3,5% or 1\.000\.000,00 € at 3,0%\./)).toBeTruthy()
+    render(
+      <NetWorthNowCard
+        draft={draft}
+        latest={{ investedCents: 11_700_000, date: '2026-09-11' }}
+        milestones={[]}
+        reached={noneReached}
+      />,
+    )
+    expect(
+      screen.getByText(
+        /The same spending needs 750\.000,00 € at 4,0%, 857\.142,86 € at 3,5% or 1\.000\.000,00 € at 3,0%\./,
+      ),
+    ).toBeTruthy()
   })
 
   it('says it is showing the plan start when there is no check-in yet', () => {
@@ -70,11 +81,7 @@ describe('NetWorthNowCard', () => {
   it('shows the amount alone for an unnamed next milestone', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(
-      <NetWorthNowCard
-        draft={draft}
-        milestones={[{ amountCents: 15_000_000, label: '' }]}
-        reached={noneReached}
-      />,
+      <NetWorthNowCard draft={draft} milestones={[{ amountCents: 15_000_000, label: '' }]} reached={noneReached} />,
     )
     expect(screen.getByText(/Next milestone:/)).toBeTruthy()
   })
@@ -132,26 +139,37 @@ describe('NetWorthNowCard in both moneys', () => {
     horizonYears: 10,
     housePurchaseYear: null,
   }
-  const renderCard = (draft: ReturnType<typeof makeScenario>, latest: { investedCents: number; date: string } | null, inflation = 0.02) =>
+  const renderCard = (
+    draft: ReturnType<typeof makeScenario>,
+    latest: { investedCents: number; date: string } | null,
+    inflation = 0.02,
+  ) =>
     render(
       <AssumedInflationContext.Provider value={inflation}>
         <NetWorthNowCard draft={draft} latest={latest} milestones={[]} reached={noneReached} />
       </AssumedInflationContext.Provider>,
     )
 
-  it('says what a check-in is worth in the plan\'s euros, which is the money the FI target is in', () => {
+  it("says what a check-in is worth in the plan's euros, which is the money the FI target is in", () => {
     renderCard(makeScenario(stuck), { investedCents: 22_500_000, date: '2026-01-01' })
     const real = nominalToReal(22_500_000, '2020-01-01', '2026-01-01', 0.02)
-    expect(screen.getByText(`worth about ${formatCents(real, EU_MONEY_FORMAT)} in 2020 euros, the money the FI target is in`)).toBeTruthy()
+    expect(
+      screen.getByText(
+        `worth about ${formatCents(real, EU_MONEY_FORMAT)} in 2020 euros, the money the FI target is in`,
+      ),
+    ).toBeTruthy()
   })
 
   it('names the date, not the year, when the check-in is in the year the plan started: two moneys of one year', () => {
-    renderCard(makeScenario({ ...stuck, planStartDate: '2026-01-01' }), { investedCents: 11_000_000, date: '2026-10-09' })
+    renderCard(makeScenario({ ...stuck, planStartDate: '2026-01-01' }), {
+      investedCents: 11_000_000,
+      date: '2026-10-09',
+    })
     expect(screen.getByText(/worth about .* in euros of .*2026, the money the FI target is in/)).toBeTruthy()
     expect(screen.queryByText(/in 2026 euros, the money the FI target is in/)).toBeNull()
   })
 
-  it('has no worth line before a check-in, as the plan start is already in the plan\'s euros', () => {
+  it("has no worth line before a check-in, as the plan start is already in the plan's euros", () => {
     renderCard(makeScenario(stuck), null)
     expect(screen.queryByText(/the money the FI target is in/)).toBeNull()
   })
@@ -161,25 +179,40 @@ describe('NetWorthNowCard in both moneys', () => {
     expect(screen.queryByText(/the money the FI target is in/)).toBeNull()
   })
 
-  it('says the FI target is in the plan\'s euros and what it would be on the account at the end of the plan, when it is never reached', () => {
+  it("says the FI target is in the plan's euros and what it would be on the account at the end of the plan, when it is never reached", () => {
     renderCard(makeScenario(stuck), { investedCents: 11_000_000, date: '2020-06-01' })
     expect(
-      screen.getByText(`The target is in 2020 euros, about ${short(onAccountCents(25_000_000, 10, 0.02))} on your account in 2030, when the plan ends.`),
+      screen.getByText(
+        `The target is in 2020 euros, about ${short(onAccountCents(25_000_000, 10, 0.02))} on your account in 2030, when the plan ends.`,
+      ),
     ).toBeTruthy()
   })
 
   it('says it on the account in the year the plan reaches it', () => {
-    const reaching = makeScenario({ ...stuck, startInvestedCents: 20_000_000, monthlyContributionCents: 500_000, horizonYears: 20 })
-    const fiYear = yearsToFi(scenarioToParams({ ...reaching, id: 0 }, 0.02), reaching.annualSpendCents, reaching.safeWithdrawalRate)
+    const reaching = makeScenario({
+      ...stuck,
+      startInvestedCents: 20_000_000,
+      monthlyContributionCents: 500_000,
+      horizonYears: 20,
+    })
+    const fiYear = yearsToFi(
+      scenarioToParams({ ...reaching, id: 0 }, 0.02),
+      reaching.annualSpendCents,
+      reaching.safeWithdrawalRate,
+    )
     expect(fiYear).not.toBeNull()
     renderCard(reaching, { investedCents: 20_000_000, date: '2020-06-01' })
     expect(
-      screen.getByText(`The target is in 2020 euros, about ${short(onAccountCents(25_000_000, fiYear!, 0.02))} on your account in ${2020 + fiYear!}, the year the plan reaches it.`),
+      screen.getByText(
+        `The target is in 2020 euros, about ${short(onAccountCents(25_000_000, fiYear!, 0.02))} on your account in ${2020 + fiYear!}, the year the plan reaches it.`,
+      ),
     ).toBeTruthy()
   })
 
   it('says the same, once, with no inflation', () => {
     renderCard(makeScenario(stuck), { investedCents: 11_000_000, date: '2020-06-01' }, 0)
-    expect(screen.getByText('The target is in 2020 euros, the same on your account in 2030, when the plan ends.')).toBeTruthy()
+    expect(
+      screen.getByText('The target is in 2020 euros, the same on your account in 2030, when the plan ends.'),
+    ).toBeTruthy()
   })
 })

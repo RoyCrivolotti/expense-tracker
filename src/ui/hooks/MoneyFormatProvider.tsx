@@ -16,9 +16,6 @@ export function MoneyFormatProvider({
   numberLocale: string
   children: ReactNode
 }) {
-  const format = useMemo(
-    () => resolveMoneyFormat(currencyCode, numberLocale),
-    [currencyCode, numberLocale],
-  )
+  const format = useMemo(() => resolveMoneyFormat(currencyCode, numberLocale), [currencyCode, numberLocale])
   return <MoneyFormatContext.Provider value={format}>{children}</MoneyFormatContext.Provider>
 }

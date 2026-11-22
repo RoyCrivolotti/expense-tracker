@@ -32,10 +32,23 @@ beforeEach(async () => {
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
   vi.spyOn(console, 'log').mockImplementation(() => undefined)
-  const seeded = async (handler: Handler, path: string, body: unknown) =>
-    ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
-  accountId = await seeded(postAccount, '/accounts', { name: 'Debit', kind: 'debit', settlement: 'immediate', active: true })
-  categoryId = await seeded(postCategory, '/categories', { name: 'Food', monthlyBudgetCents: 50_000, sortOrder: 0, active: true })
+  const seeded = async (
+    handler: Handler,
+    path: string,
+    body: unknown,
+  ) => ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
+  accountId = await seeded(postAccount, '/accounts', {
+    name: 'Debit',
+    kind: 'debit',
+    settlement: 'immediate',
+    active: true,
+  })
+  categoryId = await seeded(postCategory, '/categories', {
+    name: 'Food',
+    monthlyBudgetCents: 50_000,
+    sortOrder: 0,
+    active: true,
+  })
   push = (await capturePhone(world.env.DB, OWNER, NOW)).push
 })
 
@@ -43,12 +56,19 @@ function captures() {
   return createD1CaptureRepository(world.env)
 }
 
-function decide(handler: Handler, id: string, body: unknown = {}) {
+function decide(
+  handler: Handler,
+  id: string,
+  body: unknown = {},
+) {
   const action = handler === submit ? 'submit' : handler === link ? 'link' : 'dismiss'
   return world.call(handler, { method: 'POST', path: `/../recommendations/${id}/${action}`, params: { id }, body })
 }
 
-const row = (description: string, over: Record<string, unknown> = {}) => ({
+const row = (
+  description: string,
+  over: Record<string, unknown> = {},
+) => ({
   date: '2026-11-03',
   budgetMonth: '2026-11',
   description,
@@ -72,9 +92,13 @@ type TemplateRow = {
 }
 const templates = () =>
   sqlite
-    .prepare('SELECT accepts, dismissals, dismiss_streak, amount_slot, amount_mark, type, account_id, ignored_at FROM capture_templates ORDER BY first_seen')
+    .prepare(
+      'SELECT accepts, dismissals, dismiss_streak, amount_slot, amount_mark, type, account_id, ignored_at FROM capture_templates ORDER BY first_seen',
+    )
     .all() as TemplateRow[]
-const outcome = (recId: string) => (sqlite.prepare('SELECT outcome FROM capture_events WHERE rec_id = ?').get(recId) as { outcome: string | null }).outcome
+const outcome = (recId: string) =>
+  (sqlite.prepare('SELECT outcome FROM capture_events WHERE rec_id = ?').get(recId) as { outcome: string | null })
+    .outcome
 const linkCard = () => captures().saveCard(OWNER, { source: 'iberia', digitsKind: 'card', digits: '4321', accountId })
 
 describe('submitting a recommendation', () => {
@@ -86,7 +110,16 @@ describe('submitting a recommendation', () => {
 
     expect(outcome(id)).toBe('edited:description,category')
     expect(templates()).toEqual([
-      { accepts: 1, dismissals: 0, dismiss_streak: 0, amount_slot: 4, amount_mark: 'comma', type: 'expense', account_id: null, ignored_at: null },
+      {
+        accepts: 1,
+        dismissals: 0,
+        dismiss_streak: 0,
+        amount_slot: 4,
+        amount_mark: 'comma',
+        type: 'expense',
+        account_id: null,
+        ignored_at: null,
+      },
     ])
   })
 
@@ -94,7 +127,9 @@ describe('submitting a recommendation', () => {
     await linkCard()
     const id = (await push(WITH_CARD('Example Cafe')))!
     // The bank's words as the card shows them, less the words that hold a digit.
-    expect((await decide(submit, id, row('Has pagado EUR en Example Cafe con tu tarjeta', { amountCents: 3000 }))).status).toBe(201)
+    expect(
+      (await decide(submit, id, row('Has pagado EUR en Example Cafe con tu tarjeta', { amountCents: 3000 }))).status,
+    ).toBe(201)
 
     expect(outcome(id)).toBe('edited:amount,category')
     expect(templates()[0]).toMatchObject({ accepts: 1, amount_slot: null, amount_mark: null, type: 'expense' })
@@ -126,11 +161,19 @@ describe('submitting a recommendation', () => {
 describe('linking a recommendation', () => {
   it('learns from the row it was linked to and records linked', async () => {
     const id = (await push(NO_CARD('Example Cafe')))!
-    const typed = (await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: row('Coffee') })).json()) as { id: number }
+    const typed = (await (
+      await world.call(postTransaction, { method: 'POST', path: '/transactions', body: row('Coffee') })
+    ).json()) as { id: number }
     expect((await decide(link, id, { transactionId: typed.id })).status).toBe(200)
 
     expect(outcome(id)).toBe('linked')
-    expect(templates()[0]).toMatchObject({ accepts: 1, amount_slot: 4, amount_mark: 'comma', type: 'expense', account_id: accountId })
+    expect(templates()[0]).toMatchObject({
+      accepts: 1,
+      amount_slot: 4,
+      amount_mark: 'comma',
+      type: 'expense',
+      account_id: accountId,
+    })
   })
 })
 
@@ -157,7 +200,12 @@ describe('dismissing', () => {
 
   it('three times on one merchant mute that merchant, and a push of another is stored and teaches the run', async () => {
     for (let i = 0; i < 3; i++) await decide(dismiss, (await push(WITH_CARD('Offer Shop')))!)
-    const muted = () => sqlite.prepare('SELECT skeleton, merchant_start, ignored_at FROM capture_templates').get() as { skeleton: string; merchant_start: number | null; ignored_at: string | null }
+    const muted = () =>
+      sqlite.prepare('SELECT skeleton, merchant_start, ignored_at FROM capture_templates').get() as {
+        skeleton: string
+        merchant_start: number | null
+        ignored_at: string | null
+      }
     expect(muted()).toMatchObject({ merchant_start: null, ignored_at: expect.any(String) })
     expect(await push(WITH_CARD('Offer Shop'))).toBeNull()
 
@@ -169,7 +217,8 @@ describe('dismissing', () => {
 
   it('never ignores a template the person accepted once', async () => {
     await decide(submit, (await push(WITH_CARD('Example Cafe')))!, row('Coffee'))
-    for (const merchant of ['Offer One', 'Offer Two', 'Offer Three']) await decide(dismiss, (await push(WITH_CARD(merchant)))!)
+    for (const merchant of ['Offer One', 'Offer Two', 'Offer Three'])
+      await decide(dismiss, (await push(WITH_CARD(merchant)))!)
 
     expect(templates()[0]).toMatchObject({ accepts: 1, dismiss_streak: 3, ignored_at: null })
   })
@@ -188,7 +237,10 @@ describe('learning', () => {
       expect.objectContaining({ accepts: 0, amount_slot: null, type: null, account_id: null }),
     ])
     const outcomes = sqlite.prepare('SELECT outcome FROM capture_events WHERE rec_id = ? ORDER BY grouped').all(id)
-    expect(outcomes).toEqual([{ outcome: 'edited:account,description,category' }, { outcome: 'edited:account,description,category' }])
+    expect(outcomes).toEqual([
+      { outcome: 'edited:account,description,category' },
+      { outcome: 'edited:account,description,category' },
+    ])
   })
 
   it('writes the outcome and teaches nothing when the template has gone', async () => {
@@ -223,14 +275,35 @@ describe('learning', () => {
     const id = (await push(NO_CARD('Example Cafe')))!
     const rec = (await captures().getRecommendation(OWNER, id))!
     await decide(dismiss, id)
-    await learnAfterDecision(captures(), OWNER, rec, { kind: 'submitted', saved: { amountCents: 3340, type: 'expense', accountId, description: 'Coffee', categoryId } }, NOW)
+    await learnAfterDecision(
+      captures(),
+      OWNER,
+      rec,
+      {
+        kind: 'submitted',
+        saved: { amountCents: 3340, type: 'expense', accountId, description: 'Coffee', categoryId },
+      },
+      NOW,
+    )
 
     expect(templates()[0]).toMatchObject({ accepts: 0, dismissals: 1, amount_slot: null, type: null, account_id: null })
     expect(outcome(id)).toBe('dismissed')
   })
 
   it('does nothing for a recommendation no push made', async () => {
-    const rec = { id: '00000000-0000-4000-8000-000000000001', owner: OWNER, accountId: null, amountCents: 1, currency: 'EUR', occurredAt: '2026-11-03T09:00:00+01:00', localDate: '2026-11-03', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense' as const, createdAt: NOW.toISOString() }
+    const rec = {
+      id: '00000000-0000-4000-8000-000000000001',
+      owner: OWNER,
+      accountId: null,
+      amountCents: 1,
+      currency: 'EUR',
+      occurredAt: '2026-11-03T09:00:00+01:00',
+      localDate: '2026-11-03',
+      merchantRaw: null,
+      descriptionSuggested: null,
+      suggestedType: 'expense' as const,
+      createdAt: NOW.toISOString(),
+    }
     await captures().createRecommendation(rec)
     expect((await decide(dismiss, rec.id)).status).toBe(200)
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM capture_events').get()).toEqual({ n: 0 })

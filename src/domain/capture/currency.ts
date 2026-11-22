@@ -27,36 +27,38 @@ const HOMOGRAPH_CODES: ReadonlySet<string> = new Set(
  * Symbols and short written forms, lower case, with the code each most likely means. `$`, `¥` and `kr` are
  * shared by several currencies; the first is a guess and a person's own history is the way to correct it.
  */
-const SYMBOLS: ReadonlyMap<string, string> = new Map(Object.entries({
-  '€': 'EUR',
-  $: 'USD',
-  '£': 'GBP',
-  '¥': 'JPY',
-  '₹': 'INR',
-  '₽': 'RUB',
-  '₩': 'KRW',
-  '₺': 'TRY',
-  '₪': 'ILS',
-  '₫': 'VND',
-  '฿': 'THB',
-  '₱': 'PHP',
-  '₦': 'NGN',
-  '₴': 'UAH',
-  '₸': 'KZT',
-  '₡': 'CRC',
-  '₲': 'PYG',
-  r$: 'BRL',
-  us$: 'USD',
-  a$: 'AUD',
-  c$: 'CAD',
-  nz$: 'NZD',
-  hk$: 'HKD',
-  s$: 'SGD',
-  mx$: 'MXN',
-  kr: 'SEK',
-  zł: 'PLN',
-  kč: 'CZK',
-}))
+const SYMBOLS: ReadonlyMap<string, string> = new Map(
+  Object.entries({
+    '€': 'EUR',
+    $: 'USD',
+    '£': 'GBP',
+    '¥': 'JPY',
+    '₹': 'INR',
+    '₽': 'RUB',
+    '₩': 'KRW',
+    '₺': 'TRY',
+    '₪': 'ILS',
+    '₫': 'VND',
+    '฿': 'THB',
+    '₱': 'PHP',
+    '₦': 'NGN',
+    '₴': 'UAH',
+    '₸': 'KZT',
+    '₡': 'CRC',
+    '₲': 'PYG',
+    r$: 'BRL',
+    us$: 'USD',
+    a$: 'AUD',
+    c$: 'CAD',
+    nz$: 'NZD',
+    hk$: 'HKD',
+    s$: 'SGD',
+    mx$: 'MXN',
+    kr: 'SEK',
+    zł: 'PLN',
+    kč: 'CZK',
+  }),
+)
 
 /** Symbols several currencies share, so the code given for them is a guess to confirm, not a reading. */
 const SHARED_SYMBOLS: ReadonlySet<string> = new Set(['$', '¥', 'kr'])
@@ -77,7 +79,12 @@ export function splitNumberToken(token: string): NumberToken | null {
   const match = NUMBER_TOKEN.exec(trimEdges(token))
   if (!match) return null
   const minus = (sign: string | undefined) => sign === '-' || sign === '−'
-  return { negative: minus(match[1]) || minus(match[3]), prefix: match[2] ?? '', core: match[4] ?? '', suffix: match[5] ?? '' }
+  return {
+    negative: minus(match[1]) || minus(match[3]),
+    prefix: match[2] ?? '',
+    core: match[4] ?? '',
+    suffix: match[5] ?? '',
+  }
 }
 
 /** A currency marker read from text: the ISO code, and whether the marker leaves it a guess. */

@@ -54,7 +54,9 @@ export function replayRetirement(input: RetirementOddsInput): RetirementOdds {
     for (let run = 0; run < runs; run++) {
       if (lasted[run] !== years) continue
       const draw = draws[base + (run >> 1)]! * (run & 1 ? -1 : 1)
-      const next = Math.round(balance[run]! * (typical * Math.exp(input.volatility * draw)) - input.annualWithdrawalCents)
+      const next = Math.round(
+        balance[run]! * (typical * Math.exp(input.volatility * draw)) - input.annualWithdrawalCents,
+      )
       if (next < 0) lasted[run] = year - 1
       else balance[run] = next
     }

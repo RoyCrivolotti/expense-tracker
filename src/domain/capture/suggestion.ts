@@ -54,22 +54,32 @@ const SUGGESTED_TYPES: ReadonlySet<string> = new Set<SuggestedType>(['expense', 
  * mark, or its only reading. Only a number with a currency marker counts. The slot is a token position, and a merchant
  * of another length moves the numbers after it, so a position that now holds some other number must not be read.
  */
-function learnedAmount(template: TemplateFacts | null, slots: readonly Slot[]): number | null {
+function learnedAmount(
+  template: TemplateFacts | null,
+  slots: readonly Slot[],
+): number | null {
   if (template?.amountSlot == null) return null
   const slot = slots.find((s) => s.index === template.amountSlot)
   if (slot?.kind !== 'number' || slot.currency === null) return null
-  const reading = slot.candidates.find((c) => c.mark === template.amountMark) ?? (slot.candidates.length === 1 ? slot.candidates[0] : undefined)
+  const reading =
+    slot.candidates.find((c) => c.mark === template.amountMark) ??
+    (slot.candidates.length === 1 ? slot.candidates[0] : undefined)
   return reading?.cents ?? null
 }
 
-const isNewer = (a: MerchantRow, b: MerchantRow) => a.lastSeen > b.lastSeen || (a.lastSeen === b.lastSeen && a.votes > b.votes)
+const isNewer = (
+  a: MerchantRow,
+  b: MerchantRow,
+) => a.lastSeen > b.lastSeen || (a.lastSeen === b.lastSeen && a.votes > b.votes)
 
 /**
  * The description the rows vote for. Descriptions are compared folded (case and accents) and their votes summed, and
  * the label is the most recently used spelling, with its category. Most votes wins, a tie to the more recently used.
  * It is settled under the rule the phone's own history uses (`review.ts`), with votes standing in for typed rows.
  */
-function vote(rows: readonly MerchantRow[]): Pick<Suggestion, 'description' | 'categoryId' | 'sightings' | 'settled'> | null {
+function vote(
+  rows: readonly MerchantRow[],
+): Pick<Suggestion, 'description' | 'categoryId' | 'sightings' | 'settled'> | null {
   if (rows.length === 0) return null
   const groups = new Map<string, { votes: number; newest: MerchantRow }>()
   for (const row of rows) {
@@ -98,7 +108,11 @@ function vote(rows: readonly MerchantRow[]): Pick<Suggestion, 'description' | 'c
  * `template` is null when the push has no template; that counts as one the person never accepted, so one tap never
  * adds a push of a wording before the person has accepted one. `merchantRows` are the rows of this push's merchant only.
  */
-export function suggestFor(rec: SuggestionInput, template: TemplateFacts | null, merchantRows: readonly MerchantRow[]): Suggestion {
+export function suggestFor(
+  rec: SuggestionInput,
+  template: TemplateFacts | null,
+  merchantRows: readonly MerchantRow[],
+): Suggestion {
   const learned = learnedAmount(template, rec.slots)
   const amountCents = learned ?? rec.amountCents
   return {
@@ -118,20 +132,33 @@ const NO_DESCRIPTION = { description: null, categoryId: null, sightings: 0, sett
  * that shares its merchant's name with other purchases. Otherwise a thin price row would hide what the merchant's whole
  * history agrees on (one add at 3,40 against ten at other prices), so the rows at any price speak.
  */
-function merchantDescription(rows: readonly MerchantRow[], amountCents: number | null) {
+function merchantDescription(
+  rows: readonly MerchantRow[],
+  amountCents: number | null,
+) {
   const atPrice = amountCents === null ? null : vote(rows.filter((r) => r.amountCents === amountCents))
   const anyPrice = vote(rows.filter((r) => r.amountCents === ANY_AMOUNT))
-  const differs = atPrice !== null && anyPrice?.settled === true && foldTitle(atPrice.description ?? '') !== foldTitle(anyPrice.description ?? '')
+  const differs =
+    atPrice !== null &&
+    anyPrice?.settled === true &&
+    foldTitle(atPrice.description ?? '') !== foldTitle(anyPrice.description ?? '')
   if (atPrice?.settled || differs) return atPrice
   return anyPrice ?? atPrice ?? NO_DESCRIPTION
 }
 
-function typeOf(template: TemplateFacts | null, firstGuess: SuggestedType | null): SuggestedType | null {
+function typeOf(
+  template: TemplateFacts | null,
+  firstGuess: SuggestedType | null,
+): SuggestedType | null {
   const learned = template?.type
   return learned != null && SUGGESTED_TYPES.has(learned) ? (learned as SuggestedType) : firstGuess
 }
 
-function reasonsOf(template: TemplateFacts | null, learned: number | null, firstReading: number | null): SuggestionReason[] {
+function reasonsOf(
+  template: TemplateFacts | null,
+  learned: number | null,
+  firstReading: number | null,
+): SuggestionReason[] {
   const reasons: SuggestionReason[] = []
   if (template === null || template.accepts === 0) reasons.push('new-shape')
   if (learned !== null && learned !== firstReading) reasons.push('amount-relearned')

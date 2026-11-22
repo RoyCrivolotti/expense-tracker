@@ -76,12 +76,7 @@ export function SectionTabs<T extends string>({
           tabs={tabs}
         />
       </div>
-      <div
-        id={tabs.panelId}
-        role="tabpanel"
-        aria-labelledby={`${tabs.idPrefix}-${value}`}
-        className={styles.panel}
-      >
+      <div id={tabs.panelId} role="tabpanel" aria-labelledby={`${tabs.idPrefix}-${value}`} className={styles.panel}>
         <div id={anchorId} className={styles.anchor} />
         {children}
       </div>

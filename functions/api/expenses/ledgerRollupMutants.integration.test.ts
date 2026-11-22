@@ -20,8 +20,16 @@ import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 afterEach(() => vi.useRealTimers())
 
 /** Tables after 0039 that purging an owner deletes from. */
-const LATER_TABLES = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql', '0044_push_subscriptions.sql']
-const MIGRATION = readFileSync(join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'), 'utf8')
+const LATER_TABLES = [
+  '0040_capture.sql',
+  '0041_capture_shapes.sql',
+  '0042_capture_merchants.sql',
+  '0044_push_subscriptions.sql',
+]
+const MIGRATION = readFileSync(
+  join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'),
+  'utf8',
+)
 
 /** The migration with one statement changed; throws if the change finds nothing to change, so a mutant cannot be a no-op. */
 function mutated(mutant: Mutant): string {
@@ -56,7 +64,9 @@ async function backfillIsWrong(sql: string): Promise<boolean> {
     const k = await newKit(sqlite, sqliteD1(sqlite, newStats()), raced ? 22 : 21)
     await seedRows(k, 20)
     await walk(k, 100, false)
-    sqlite.exec("INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled) SELECT owner, date, budget_month, 'Zero', account_id, category_id, type, 0, cancelled FROM transactions WHERE amount_cents > 0 LIMIT 3")
+    sqlite.exec(
+      "INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled) SELECT owner, date, budget_month, 'Zero', account_id, category_id, type, 0, cancelled FROM transactions WHERE amount_cents > 0 LIMIT 3",
+    )
     try {
       if (raced) {
         const { setup, backfill } = parts(sql)
@@ -97,9 +107,16 @@ async function triggersAreWrong(sql: string): Promise<boolean> {
 }
 
 describe('the oracle fails when a trigger or a backfill is weakened', () => {
-  it.each(MUTANTS)('$name', async (mutant) => {
-    const sql = mutated(mutant)
-    expect(() => applyMigrationSql(migratedDatabase('0038'), sql), 'the mutated migration must still be valid SQL').not.toThrow()
-    expect(await (mutant.backfill ? backfillIsWrong(sql) : triggersAreWrong(sql))).toBe(true)
-  }, 120_000)
+  it.each(MUTANTS)(
+    '$name',
+    async (mutant) => {
+      const sql = mutated(mutant)
+      expect(
+        () => applyMigrationSql(migratedDatabase('0038'), sql),
+        'the mutated migration must still be valid SQL',
+      ).not.toThrow()
+      expect(await (mutant.backfill ? backfillIsWrong(sql) : triggersAreWrong(sql))).toBe(true)
+    },
+    120_000,
+  )
 })

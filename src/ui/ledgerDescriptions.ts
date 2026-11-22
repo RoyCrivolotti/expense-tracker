@@ -48,7 +48,10 @@ export function withOlderDescriptions(
 ): DescriptionIndex {
   const asked = new Map<string, DescriptionMatch[]>()
 
-  function useSuggestions(current: DescriptionIndex, value: string): DescriptionSuggestion[] {
+  function useSuggestions(
+    current: DescriptionIndex,
+    value: string,
+  ): DescriptionSuggestion[] {
     const prefix = normalizeDescriptionKey(value)
     // The index's own search is a dependency: React keeps the memo by its place, not by the closure, so a combobox
     // that stays mounted across a rebuild of the index would otherwise keep the old rows' matches and counts.
@@ -78,12 +81,24 @@ export function withOlderDescriptions(
     // matches do not drop out of the list and come back as the typing goes on.
     const older =
       asked.get(prefix) ??
-      (last && prefix.startsWith(last.prefix) ? last.items.filter((m) => normalizeDescriptionKey(m.label).startsWith(prefix)) : undefined)
+      (last && prefix.startsWith(last.prefix)
+        ? last.items.filter((m) => normalizeDescriptionKey(m.label).startsWith(prefix))
+        : undefined)
     return useMemo(() => {
-      const matches = older && older.length > 0 ? mergeDescriptionMatches(own, older, { text: value, limit: DEFAULT_SUGGEST_LIMIT }) : own
+      const matches =
+        older && older.length > 0
+          ? mergeDescriptionMatches(own, older, { text: value, limit: DEFAULT_SUGGEST_LIMIT })
+          : own
       return matches.map(({ label, template }) => ({ label, template }))
     }, [own, older, value])
   }
 
-  return { search: (prefix, limit) => index.search(prefix, limit), resolve: (label) => index.resolve(label), useSuggestions }
+  return {
+    search: (
+      prefix,
+      limit,
+    ) => index.search(prefix, limit),
+    resolve: (label) => index.resolve(label),
+    useSuggestions,
+  }
 }

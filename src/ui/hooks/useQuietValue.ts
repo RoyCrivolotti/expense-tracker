@@ -6,7 +6,10 @@ import { useEffect, useState } from 'react'
  * that costs more than one edit's worth of time and that no one watches while they are still editing.
  * A `quietMs` of 0 or less returns the value as it comes.
  */
-export function useQuietValue<T>(value: T, quietMs: number): T {
+export function useQuietValue<T>(
+  value: T,
+  quietMs: number,
+): T {
   const [quiet, setQuiet] = useState(value)
   useEffect(() => {
     if (quietMs <= 0) return undefined

@@ -14,14 +14,24 @@ const base: RetirementOddsInput = {
 const odds = (over: Partial<RetirementOddsInput> = {}) => replayRetirement({ ...base, ...over })
 
 /** The plan's drawdown year by year with no clamp at nothing, so a year the money is short can be told from a year it is exactly spent. */
-function drawdownSeries(start: number, withdrawal: number, realReturn: number, years: number): number[] {
+function drawdownSeries(
+  start: number,
+  withdrawal: number,
+  realReturn: number,
+  years: number,
+): number[] {
   const series = [start]
   for (let y = 1; y <= years; y++) series.push(Math.round(series[y - 1]! * (1 + realReturn) - withdrawal))
   return series
 }
 
 /** The first year the money is short, or null. */
-function firstShortYear(start: number, withdrawal: number, realReturn: number, years: number): number | null {
+function firstShortYear(
+  start: number,
+  withdrawal: number,
+  realReturn: number,
+  years: number,
+): number | null {
   const short = drawdownSeries(start, withdrawal, realReturn, years).findIndex((balance) => balance < 0)
   return short < 0 ? null : short
 }
@@ -67,21 +77,36 @@ describe('replayRetirement with no bounce', () => {
         drawdownSeries(start, withdrawal, realReturn, years).map((balance) => Math.max(0, balance)),
       )
       const short = firstShortYear(start, withdrawal, realReturn, years)
-      const out = replayRetirement({ startCents: start, annualWithdrawalCents: withdrawal, realReturn, volatility: 0, years, runs: 200 })
+      const out = replayRetirement({
+        startCents: start,
+        annualWithdrawalCents: withdrawal,
+        realReturn,
+        volatility: 0,
+        years,
+        runs: 200,
+      })
       expect(out.lasts).toBe(short === null ? 1 : 0)
       expect(out.unluckiestTenth).toBe(short === null ? years : short - 1)
     }
   })
 
-  it('rounds each year to the cent as the plan\'s drawdown does, so 40 cents short in a year is not short', () => {
+  it("rounds each year to the cent as the plan's drawdown does, so 40 cents short in a year is not short", () => {
     // 1.000 cents at -0,04% grows to 999,6, less 1.000 is -0,4, which is nothing once rounded.
-    const out = replayRetirement({ startCents: 1_000, annualWithdrawalCents: 1_000, realReturn: -0.0004, volatility: 0, years: 1, runs: 2 })
+    const out = replayRetirement({
+      startCents: 1_000,
+      annualWithdrawalCents: 1_000,
+      realReturn: -0.0004,
+      volatility: 0,
+      years: 1,
+      runs: 2,
+    })
     expect(out).toMatchObject({ lasts: 1, unluckiestTenth: 1 })
     expect(projectDrawdown(1_000, 1_000, -0.0004, 1)).toEqual([1_000, 0])
   })
 
   it('lasts as many years as the target is of the spending, at no return: a 4% target is 25 years of it', () => {
-    const at = (years: number) => odds({ startCents: 75_000_000, annualWithdrawalCents: 3_000_000, realReturn: 0, volatility: 0, years })
+    const at = (years: number) =>
+      odds({ startCents: 75_000_000, annualWithdrawalCents: 3_000_000, realReturn: 0, volatility: 0, years })
     expect(at(25)).toMatchObject({ lasts: 1, unluckiestTenth: 25 })
     expect(at(26)).toMatchObject({ lasts: 0, unluckiestTenth: 25 })
     expect(at(60)).toMatchObject({ lasts: 0, unluckiestTenth: 25 })
@@ -90,14 +115,25 @@ describe('replayRetirement with no bounce', () => {
 
 describe('replayRetirement in a bouncing market', () => {
   it('matches the plain run-at-a-time version exactly, shares and years', () => {
-    for (const over of [{}, { years: 50, volatility: 0.2 }, { annualWithdrawalCents: 2_625_000, years: 45 }, { runs: 1_001 }, { runs: 2 }, { runs: 4, years: 60 }, { realReturn: 0.02, years: 100 }]) {
+    for (const over of [
+      {},
+      { years: 50, volatility: 0.2 },
+      { annualWithdrawalCents: 2_625_000, years: 45 },
+      { runs: 1_001 },
+      { runs: 2 },
+      { runs: 4, years: 60 },
+      { realReturn: 0.02, years: 100 },
+    ]) {
       const input = { ...base, ...over }
       expect(replayRetirement(input)).toMatchObject(bruteForce(input))
     }
   })
 
   it('agrees with an independent simulation written from scratch (100.000 runs in Python, its own random numbers)', () => {
-    const run = (swr: number, years: number) => {
+    const run = (
+      swr: number,
+      years: number,
+    ) => {
       const spend = 3_000_000
       return odds({ startCents: Math.round(spend / swr), annualWithdrawalCents: spend, years, runs: 10_000 })
     }

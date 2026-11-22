@@ -11,8 +11,7 @@ describe('collectAccessDiagnostics', () => {
         getRegistration: vi.fn().mockResolvedValue({ waiting: { state: 'installed' } }),
       },
     })
-    document.head.innerHTML =
-      '<script type="module" src="/assets/index-D8KT9Hlv.js"></script>'
+    document.head.innerHTML = '<script type="module" src="/assets/index-D8KT9Hlv.js"></script>'
   })
 
   afterEach(() => {

@@ -1,10 +1,5 @@
 import type { CashRow } from '../../../engine'
-import {
-  CASH_DRIFT_TOLERANCE_CENTS,
-  firstCountedMonth,
-  formatCents,
-  shortMonthLabel,
-} from '../../../engine'
+import { CASH_DRIFT_TOLERANCE_CENTS, firstCountedMonth, formatCents, shortMonthLabel } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './cash.module.css'
 
@@ -18,9 +13,7 @@ export function DriftBars({ rows }: { rows: CashRow[] }) {
   const counted = rows.filter((r) => r.monthGapCents !== null && r.month !== start)
   if (counted.length === 0) {
     return start === null ? null : (
-      <p className={styles.driftWait}>
-        Drift shows from the second count: the first one sets the starting point.
-      </p>
+      <p className={styles.driftWait}>Drift shows from the second count: the first one sets the starting point.</p>
     )
   }
   const maxAbs = Math.max(CASH_DRIFT_TOLERANCE_CENTS * 2, ...counted.map((r) => Math.abs(r.monthGapCents!)))
@@ -31,9 +24,7 @@ export function DriftBars({ rows }: { rows: CashRow[] }) {
     <div className={styles.drift}>
       <div className={styles.driftHead}>
         <span>New drift per counted month</span>
-        <span className={styles.driftTolerance}>
-          band: ±{formatCents(CASH_DRIFT_TOLERANCE_CENTS, format)}
-        </span>
+        <span className={styles.driftTolerance}>band: ±{formatCents(CASH_DRIFT_TOLERANCE_CENTS, format)}</span>
       </div>
       {counted.map((row) => {
         const gap = row.monthGapCents!
@@ -50,9 +41,7 @@ export function DriftBars({ rows }: { rows: CashRow[] }) {
                 />
               )}
             </span>
-            <span className={over ? styles.driftAmountOver : styles.driftAmount}>
-              {formatCents(gap, format)}
-            </span>
+            <span className={over ? styles.driftAmountOver : styles.driftAmount}>{formatCents(gap, format)}</span>
           </div>
         )
       })}

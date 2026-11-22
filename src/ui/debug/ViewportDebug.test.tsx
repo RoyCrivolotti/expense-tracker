@@ -4,7 +4,10 @@ import { ViewportDebug } from './ViewportDebug'
 
 type Listener = () => void
 
-function stubViewport(offsetTop: number, height: number) {
+function stubViewport(
+  offsetTop: number,
+  height: number,
+) {
   const listeners: { resize: Listener[]; scroll: Listener[] } = { resize: [], scroll: [] }
   const vv = {
     offsetTop,
@@ -12,8 +15,14 @@ function stubViewport(offsetTop: number, height: number) {
     height,
     width: 390,
     pageTop: offsetTop,
-    addEventListener: (type: 'resize' | 'scroll', fn: Listener) => listeners[type].push(fn),
-    removeEventListener: (type: 'resize' | 'scroll', fn: Listener) => {
+    addEventListener: (
+      type: 'resize' | 'scroll',
+      fn: Listener,
+    ) => listeners[type].push(fn),
+    removeEventListener: (
+      type: 'resize' | 'scroll',
+      fn: Listener,
+    ) => {
       listeners[type] = listeners[type].filter((l) => l !== fn)
     },
   }

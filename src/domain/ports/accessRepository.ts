@@ -27,7 +27,10 @@ export interface AccessRepository {
   isAllowed(email: string): Promise<boolean>
   getAllowedUser(email: string): Promise<AllowedUser | null>
   listActiveUsers(): Promise<AllowedUser[]>
-  grantAccess(email: string, grantedBy: string): Promise<void>
+  grantAccess(
+    email: string,
+    grantedBy: string,
+  ): Promise<void>
   findPendingRequest(email: string): Promise<AccessRequest | null>
   listPendingRequests(): Promise<AccessRequest[]>
   countPendingRequests(): Promise<number>
@@ -37,9 +40,19 @@ export interface AccessRepository {
   markRequestApproved(id: string): Promise<void>
   markRequestRejected(id: string): Promise<void>
   revokeAccess(email: string): Promise<boolean>
-  touchLastSeen(email: string, seenAt: string): Promise<void>
+  touchLastSeen(
+    email: string,
+    seenAt: string,
+  ): Promise<void>
   listGroupGrants(email: string): Promise<AccessGroupId[]>
-  grantGroup(email: string, groupId: AccessGroupId, grantedBy: string): Promise<void>
-  revokeGroup(email: string, groupId: AccessGroupId): Promise<boolean>
+  grantGroup(
+    email: string,
+    groupId: AccessGroupId,
+    grantedBy: string,
+  ): Promise<void>
+  revokeGroup(
+    email: string,
+    groupId: AccessGroupId,
+  ): Promise<boolean>
   revokeAllGroups(email: string): Promise<void>
 }

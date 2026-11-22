@@ -31,7 +31,10 @@ interface SelectionState {
   confirmBatchDelete: () => Promise<void>
   requestBulkEdit: () => void
   cancelBulkEdit: () => void
-  confirmBulkEdit: (patch: BulkTransactionPatch, labelIdsToAdd: number[]) => Promise<void>
+  confirmBulkEdit: (
+    patch: BulkTransactionPatch,
+    labelIdsToAdd: number[],
+  ) => Promise<void>
 }
 
 interface TransactionsSelectFooterProps {

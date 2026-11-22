@@ -18,5 +18,9 @@ export function fromTodayPoints(
   planOffsetYears = 0,
 ): { xIndex: number; value: number }[] {
   const at = planFromTodayAt(fromToday, inflationRate)
-  return onAxis(projectNetWorth(scenarioToParams(at.scenario, inflationRate)), planOffsetYears + at.offsetYears, inflationRate)
+  return onAxis(
+    projectNetWorth(scenarioToParams(at.scenario, inflationRate)),
+    planOffsetYears + at.offsetYears,
+    inflationRate,
+  )
 }

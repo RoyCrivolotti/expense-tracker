@@ -22,7 +22,12 @@ interface Props {
    * hand down, and a picker without it simply falls back to pointing at
    * Settings, exactly as before.
    */
-  onCreate?: ((name: string, reimbursable: boolean) => Promise<number>) | undefined
+  onCreate?:
+    | ((
+        name: string,
+        reimbursable: boolean,
+      ) => Promise<number>)
+    | undefined
 }
 
 /**
@@ -39,7 +44,10 @@ function QuickCreate({
   onCancel,
 }: {
   flags: Flag[]
-  onCreate: (name: string, reimbursable: boolean) => Promise<number>
+  onCreate: (
+    name: string,
+    reimbursable: boolean,
+  ) => Promise<number>
   onCreated: (flagId: number) => void
   onCancel: () => void
 }) {
@@ -120,14 +128,7 @@ function QuickCreate({
   )
 }
 
-export function FlagPickerPopover({
-  value,
-  flags,
-  triggerRef,
-  onSelect,
-  onClose,
-  onCreate,
-}: Props) {
+export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose, onCreate }: Props) {
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
   const motion = usePopoverMotion(pos)
@@ -163,17 +164,16 @@ export function FlagPickerPopover({
     >
       <ul className={styles.list}>
         <li>
-          <button
-            type="button"
-            className={styles.option}
-            onClick={() => choose(null)}
-            aria-pressed={value === null}
-          >
+          <button type="button" className={styles.option} onClick={() => choose(null)} aria-pressed={value === null}>
             <span className={`${styles.swatch} ${styles.swatchNone}`} aria-hidden />
             <span className={styles.optionBody}>
               <span className={styles.optionName}>No flag</span>
             </span>
-            {value === null ? <span className={styles.tick} aria-hidden>✓</span> : null}
+            {value === null ? (
+              <span className={styles.tick} aria-hidden>
+                ✓
+              </span>
+            ) : null}
           </button>
         </li>
         {options.map((flag) => (
@@ -192,32 +192,27 @@ export function FlagPickerPopover({
                   {flag.name}
                   {!flag.active ? <span className={styles.archived}> · archived</span> : null}
                 </span>
-                {flag.description ? (
-                  <span className={styles.optionDesc}>{flag.description}</span>
-                ) : null}
+                {flag.description ? <span className={styles.optionDesc}>{flag.description}</span> : null}
               </span>
-              {value === flag.id ? <span className={styles.tick} aria-hidden>✓</span> : null}
+              {value === flag.id ? (
+                <span className={styles.tick} aria-hidden>
+                  ✓
+                </span>
+              ) : null}
             </button>
           </li>
         ))}
       </ul>
       {onCreate ? (
         creating ? (
-          <QuickCreate
-            flags={flags}
-            onCreate={onCreate}
-            onCreated={choose}
-            onCancel={() => setCreating(false)}
-          />
+          <QuickCreate flags={flags} onCreate={onCreate} onCreated={choose} onCancel={() => setCreating(false)} />
         ) : (
           <button type="button" className={styles.newFlag} onClick={() => setCreating(true)}>
             + New flag
           </button>
         )
       ) : options.length === 0 ? (
-        <p className={styles.empty}>
-          No flags to choose from. Add one under Settings &rarr; Flags.
-        </p>
+        <p className={styles.empty}>No flags to choose from. Add one under Settings &rarr; Flags.</p>
       ) : null}
     </div>,
     document.body,

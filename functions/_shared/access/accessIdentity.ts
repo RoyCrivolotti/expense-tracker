@@ -54,7 +54,11 @@ export function isLocalDevelopmentHost(request: Request): boolean {
  * is a 503, except one to a local development host, which is identified by the header alone. Settings that are set but
  * unusable are a 503 too. Either way the log names the problem and the response says nothing of it.
  */
-export async function resolveVerifiedEmail(request: Request, env: AccessEnv, keyFor: KeyForId = accessKeys): Promise<string> {
+export async function resolveVerifiedEmail(
+  request: Request,
+  env: AccessEnv,
+  keyFor: KeyForId = accessKeys,
+): Promise<string> {
   const check = accessCheck(env)
   if (check.state === 'misconfigured') {
     console.error(`access: ${check.problem}; refusing every request until it is fixed`)

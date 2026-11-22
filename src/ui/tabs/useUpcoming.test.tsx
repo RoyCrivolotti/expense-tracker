@@ -35,8 +35,10 @@ describe('useUpcoming', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  const dates = (model: ExpenseModel, month: string) =>
-    renderHook(() => useUpcoming(model, month)).result.current.suggestions.map((s) => s.predictedDate)
+  const dates = (
+    model: ExpenseModel,
+    month: string,
+  ) => renderHook(() => useUpcoming(model, month)).result.current.suggestions.map((s) => s.predictedDate)
 
   it('says which day the charges were worked out for, for the rows to be worded against', () => {
     const { result } = renderHook(() => useUpcoming(modelWith(), '2026-10'))
@@ -49,8 +51,9 @@ describe('useUpcoming', () => {
 
   it('carries the month the add form would pick for each charge, not the series own habit', () => {
     const filedUnder = (rolloverDay: number) =>
-      renderHook(() => useUpcoming(modelWith(GYM, ['2026-09', '2026-10'], rolloverDay), '2026-10')).result
-        .current.suggestions.map((s) => s.filedUnder)
+      renderHook(() =>
+        useUpcoming(modelWith(GYM, ['2026-09', '2026-10'], rolloverDay), '2026-10'),
+      ).result.current.suggestions.map((s) => s.filedUnder)
     // The habit is October, the month the 20th falls in; from a rollover day of 13 the 20th counts to November.
     expect(filedUnder(1)).toEqual(['2026-10'])
     expect(filedUnder(13)).toEqual(['2026-11'])
@@ -96,7 +99,10 @@ describe('useUpcoming', () => {
     const GYM_KEY = 'gym|1|1|expense'
 
     it('is left out, and comes back when it is taken back', () => {
-      const { result } = renderHook(() => ({ upcoming: useUpcoming(modelWith(), '2026-10'), list: useStoppedSuggestions() }))
+      const { result } = renderHook(() => ({
+        upcoming: useUpcoming(modelWith(), '2026-10'),
+        list: useStoppedSuggestions(),
+      }))
       expect(result.current.upcoming.suggestions).toHaveLength(1)
 
       act(() => result.current.list.stop(GYM_KEY, { after: '2026-09-20', label: 'Gym' }))
@@ -112,7 +118,10 @@ describe('useUpcoming', () => {
       expect(dates(modelWith(), '2026-10')).toEqual([])
 
       vi.setSystemTime(new Date('2026-11-19T12:00:00'))
-      const resumed = [...GYM, makeTransaction({ id: 20, description: 'Gym', date: '2026-10-20', budgetMonth: '2026-10' })]
+      const resumed = [
+        ...GYM,
+        makeTransaction({ id: 20, description: 'Gym', date: '2026-10-20', budgetMonth: '2026-10' }),
+      ]
       expect(dates(modelWith(resumed, ['2026-09', '2026-10', '2026-11']), '2026-11')).toEqual(['2026-11-20'])
     })
   })
@@ -161,8 +170,11 @@ describe('useUpcoming', () => {
       before.push(new Date(at).toISOString().slice(0, 10))
     }
     const monthly = GYM.map((g) => g.date)
-    const rows = (description: string, dates: string[], firstId: number) =>
-      dates.map((date, i) => makeTransaction({ id: firstId + i, description, date, budgetMonth: date.slice(0, 7) }))
+    const rows = (
+      description: string,
+      dates: string[],
+      firstId: number,
+    ) => dates.map((date, i) => makeTransaction({ id: firstId + i, description, date, budgetMonth: date.slice(0, 7) }))
     const everything = [...rows('Cleaner', [...before, ...monthly], 100), ...rows('Rent', monthly, 300)]
     const loaded = [...rows('Cleaner', monthly.slice(3), 200), ...rows('Rent', monthly.slice(3), 400)]
     const history = { groups: recurringFixedGroupsFromSeries(seriesFromTransactions(everything)) }

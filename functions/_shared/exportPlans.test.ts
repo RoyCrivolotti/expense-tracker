@@ -62,7 +62,9 @@ describe.each([{ stats: false }, { stats: true }])('export query plans (table st
       const text = plan.join('\n')
       const scans = plan.filter((line) => fullScan(TABLES[table]).test(line))
 
-      expect(scans, text).toEqual(NO_OWNER_INDEX.includes(table) && after === undefined ? [`SCAN ${TABLES[table]}`] : [])
+      expect(scans, text).toEqual(
+        NO_OWNER_INDEX.includes(table) && after === undefined ? [`SCAN ${TABLES[table]}`] : [],
+      )
       expect(text, text).not.toMatch(SORT)
     }
   })
@@ -70,12 +72,17 @@ describe.each([{ stats: false }, { stats: true }])('export query plans (table st
   it('transactions are read through the owner’s index, from the position, in order', () => {
     const { sql, params } = exportSql('transactions', OWNER, '1000', 100)
 
-    expect(planOf(kit.sqlite, { sql, params }).join('\n')).toMatch(/SEARCH t USING INDEX idx_txn_owner \(owner=\? AND rowid>\?\)/)
+    expect(planOf(kit.sqlite, { sql, params }).join('\n')).toMatch(
+      /SEARCH t USING INDEX idx_txn_owner \(owner=\? AND rowid>\?\)/,
+    )
   })
 
   it('the entries of a chunk’s check-ins are found by check-in, not by scanning the entries', () => {
     const plan = planOf(kit.sqlite, { sql: CHECKIN_ENTRIES_SQL, params: [OWNER, '[1,2,3]'] })
 
-    expect(plan.filter((line) => /^SCAN (e|wealth_checkin_entries)\b/.test(line)), plan.join('\n')).toEqual([])
+    expect(
+      plan.filter((line) => /^SCAN (e|wealth_checkin_entries)\b/.test(line)),
+      plan.join('\n'),
+    ).toEqual([])
   })
 })

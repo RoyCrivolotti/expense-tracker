@@ -22,17 +22,30 @@ function useBarExit(barRef: RefObject<HTMLElement | null>) {
 }
 
 /** "Select all", or "Select 100" when the list holds only some of the rows that match: the rows it selects are those. */
-function selectAllLabel(allSelected: boolean, partial: boolean | undefined, loaded: number): string {
+function selectAllLabel(
+  allSelected: boolean,
+  partial: boolean | undefined,
+  loaded: number,
+): string {
   return `${allSelected ? 'Deselect' : 'Select'} ${partial ? loaded : 'all'}`
 }
 
 /** The select button as the bar words it itself, when the list has no step of its own to offer. */
-function usualSelectAll(allSelected: boolean, partial: boolean | undefined, loaded: number, select: () => void, clear: () => void) {
+function usualSelectAll(
+  allSelected: boolean,
+  partial: boolean | undefined,
+  loaded: number,
+  select: () => void,
+  clear: () => void,
+) {
   return { label: selectAllLabel(allSelected, partial, loaded), onClick: allSelected ? clear : select }
 }
 
 /** What is said beside the count: the list's own note, or how many chosen rows a filter hides. */
-function selectionNote(note: string | undefined, hiddenCount: number): string {
+function selectionNote(
+  note: string | undefined,
+  hiddenCount: number,
+): string {
   return note ?? (hiddenCount > 0 ? `${hiddenCount} not shown` : '')
 }
 
@@ -102,28 +115,13 @@ export function BatchBar({
         </span>
       </div>
       <div className={styles.batchActions}>
-        <button
-          type="button"
-          className={styles.batchSelectAll}
-          disabled={busy}
-          onClick={all.onClick}
-        >
+        <button type="button" className={styles.batchSelectAll} disabled={busy} onClick={all.onClick}>
           {all.label}
         </button>
-        <button
-          type="button"
-          className={styles.batchEdit}
-          disabled={!canAct}
-          onClick={onEdit}
-        >
+        <button type="button" className={styles.batchEdit} disabled={!canAct} onClick={onEdit}>
           Edit
         </button>
-        <button
-          type="button"
-          className={styles.batchDelete}
-          disabled={!canAct || deleteBlocked}
-          onClick={onDelete}
-        >
+        <button type="button" className={styles.batchDelete} disabled={!canAct || deleteBlocked} onClick={onDelete}>
           {deleting ? 'Deleting…' : 'Delete'}
         </button>
       </div>

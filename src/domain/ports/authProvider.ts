@@ -5,5 +5,8 @@ export interface AuthConfig {
 
 /** Resolves the authenticated owner key (email) from an incoming HTTP request. */
 export interface AuthProvider {
-  resolveUser(request: Request, config: AuthConfig): string
+  resolveUser(
+    request: Request,
+    config: AuthConfig,
+  ): string
 }

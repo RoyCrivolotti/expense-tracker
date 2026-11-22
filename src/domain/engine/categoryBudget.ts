@@ -62,14 +62,20 @@ export function computeCategoryActuals(
 }
 
 /** Signed net-expense cents for a transaction, or null when it doesn't count. */
-function countedExpenseCents(txn: Transaction, includeForecast: boolean): number | null {
+function countedExpenseCents(
+  txn: Transaction,
+  includeForecast: boolean,
+): number | null {
   if (txn.status === 'cancelled') return null
   if (!includeForecast && txn.status === 'forecast') return null
   if (txn.type !== 'expense' && txn.type !== 'refund') return null
   return txn.type === 'refund' ? -txn.amountCents : txn.amountCents
 }
 
-function scopeYtdToYear(entries: Iterable<CategoryActuals>, throughMonth: string): void {
+function scopeYtdToYear(
+  entries: Iterable<CategoryActuals>,
+  throughMonth: string,
+): void {
   const year = throughMonth.slice(0, 4)
   for (const entry of entries) {
     entry.ytdActualCents = sumYearToDateActual(entry.byMonth, year, throughMonth)
@@ -94,7 +100,10 @@ export interface BudgetHealth {
   status: BudgetStatus
 }
 
-function healthStatus(ratio: number, hasBudget: boolean): BudgetStatus {
+function healthStatus(
+  ratio: number,
+  hasBudget: boolean,
+): BudgetStatus {
   if (!hasBudget) return 'under'
   // Checked before the thresholds, which all assume a non-negative ratio: a
   // ratio of -0.45 is neither over nor >= 0.8, so it used to fall through to
@@ -140,7 +149,10 @@ function sumYearToDateActual(
   return total
 }
 
-function ytdBudgetCents(monthlyBudgetCents: number, month: string): number {
+function ytdBudgetCents(
+  monthlyBudgetCents: number,
+  month: string,
+): number {
   return monthlyBudgetCents * parseInt(month.slice(5, 7), 10)
 }
 
@@ -170,7 +182,10 @@ export function computeYtdBudgetHealth(
 }
 
 /** Sum budget-health rows (e.g. mobile Analytics total footer). */
-export function sumBudgetHealth(rows: BudgetHealth[], name = 'Total'): BudgetHealth {
+export function sumBudgetHealth(
+  rows: BudgetHealth[],
+  name = 'Total',
+): BudgetHealth {
   let actualCents = 0
   let budgetCents = 0
   for (const row of rows) {

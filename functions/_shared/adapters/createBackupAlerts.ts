@@ -1,14 +1,18 @@
 import type { BackupAlerts } from '../../domain/ports/backupAlerts'
-import {
-  createEmailBackupAlerts,
-  consoleBackupAlerts,
-} from './backupAlertsFactory'
+import { createEmailBackupAlerts, consoleBackupAlerts } from './backupAlertsFactory'
 import { createCloudflareEmailSender } from './cloudflareEmailSender'
 import type { Env } from '../env'
 
 function parseRecipients(raw: string | undefined): string[] {
   if (!raw?.trim()) return []
-  return [...new Set(raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  return [
+    ...new Set(
+      raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ]
 }
 
 /** Console-only fallback when email is not configured. */

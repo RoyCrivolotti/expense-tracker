@@ -37,7 +37,8 @@ export const BACKFILL_PASSES = 4
  * test fails if it stops.
  */
 export const REPAIR_ALL_SQL = 'UPDATE transactions SET description_norm = NULL'
-export const REPAIR_SINCE_SQL = "UPDATE transactions SET description_norm = NULL WHERE updated_at >= '<when the rollback began, UTC>'"
+export const REPAIR_SINCE_SQL =
+  "UPDATE transactions SET description_norm = NULL WHERE updated_at >= '<when the rollback began, UTC>'"
 export const REVISION_RESET_SQL = 'DELETE FROM owner_revision'
 
 export const PENDING_SQL = 'SELECT 1 AS pending FROM transactions WHERE owner = ? AND description_norm IS NULL LIMIT 1'
@@ -74,12 +75,20 @@ export interface BackfillResult {
   pending: boolean
 }
 
-export async function hasPendingDescriptionNorm(db: D1Database, owner: string): Promise<boolean> {
+export async function hasPendingDescriptionNorm(
+  db: D1Database,
+  owner: string,
+): Promise<boolean> {
   return (await db.prepare(PENDING_SQL).bind(owner).first()) !== null
 }
 
 /** The next rows to fill with their values, as `[id, norm]` pairs, never past `chars` unless that takes the first row. */
-async function nextPairs(db: D1Database, owner: string, rows: number, chars: number): Promise<Array<[number, string]>> {
+async function nextPairs(
+  db: D1Database,
+  owner: string,
+  rows: number,
+  chars: number,
+): Promise<Array<[number, string]>> {
   const { results } = await db.prepare(PENDING_ROWS_SQL).bind(owner, rows).all<{ id: number; description: string }>()
   const pairs: Array<[number, string]> = []
   let size = 0
@@ -113,9 +122,14 @@ export async function fillDescriptionNorm(
  * `description_norm`, and answers 503 with a `Retry-After` while some are: grouping before then would leave
  * rows out. Each request makes progress, so a retry gets further.
  */
-export async function ensureDescriptionNorm(db: D1Database, owner: string): Promise<void> {
+export async function ensureDescriptionNorm(
+  db: D1Database,
+  owner: string,
+): Promise<void> {
   const { pending } = await fillDescriptionNorm(db, owner)
   if (pending) {
-    throw new HttpError(503, 'The description index is still being built. Try again in a moment.', { 'Retry-After': '1' })
+    throw new HttpError(503, 'The description index is still being built. Try again in a moment.', {
+      'Retry-After': '1',
+    })
   }
 }

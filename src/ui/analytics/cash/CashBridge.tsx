@@ -3,7 +3,10 @@ import { cashBridge, formatCents } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './cash.module.css'
 
-function barFor(segment: BridgeSegment, maxAbs: number): { width: number; cls: string } {
+function barFor(
+  segment: BridgeSegment,
+  maxAbs: number,
+): { width: number; cls: string } {
   const width = (Math.abs(segment.cents) / maxAbs) * 100
   if (segment.kind === 'in') return { width, cls: styles.bridgeIn! }
   if (segment.kind === 'out') return { width, cls: styles.bridgeOut! }

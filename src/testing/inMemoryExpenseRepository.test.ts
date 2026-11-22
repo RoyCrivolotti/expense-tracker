@@ -30,16 +30,12 @@ describe('inMemoryExpenseRepository settings milestones', () => {
   // The in-memory repo validates synchronously, before returning its promise.
   it('rejects a non-positive milestone amount', () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
-    expect(() =>
-      repo.updateSettings(OWNER, { milestones: [{ amountCents: 0, label: '' }] }),
-    ).toThrow(RepoHttpError)
+    expect(() => repo.updateSettings(OWNER, { milestones: [{ amountCents: 0, label: '' }] })).toThrow(RepoHttpError)
   })
 
   it('rejects a milestone list that is not an array', () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
-    expect(() => repo.updateSettings(OWNER, { milestones: 'nope' as unknown as [] })).toThrow(
-      /must be an array/,
-    )
+    expect(() => repo.updateSettings(OWNER, { milestones: 'nope' as unknown as [] })).toThrow(/must be an array/)
   })
 
   it('accepts a deliberately empty list', async () => {
@@ -96,7 +92,7 @@ describe('inMemoryExpenseRepository settings goalLevers', () => {
 })
 
 describe('inMemoryExpenseRepository settings tipsSeen', () => {
-  it('has no list until one is written, keeps an empty one, and keeps each owner\'s apart', async () => {
+  it("has no list until one is written, keeps an empty one, and keeps each owner's apart", async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
     expect((await repo.loadDataset(OWNER)).settings).not.toHaveProperty('tipsSeen')
     expect((await repo.updateSettings(OWNER, { tipsSeen: [] })).tipsSeen).toEqual([])
@@ -125,7 +121,10 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
     const label = makeLabel({ id: 2 })
     const carrying = makeTransaction({ id: 10, flagId: 1 })
     const notCarrying = makeTransaction({ id: 11 })
-    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying, notCarrying] }, OWNER)
+    const repo = inMemoryExpenseRepository(
+      { flags: [flag], labels: [label], transactions: [carrying, notCarrying] },
+      OWNER,
+    )
 
     await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
 
@@ -197,10 +196,7 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
     const flag = makeFlag({ id: 1, autoLabelId: 2 })
     const label = makeLabel({ id: 2 })
     const existing = makeTransaction({ id: 10 })
-    const repo = inMemoryExpenseRepository(
-      { flags: [flag], labels: [label], transactions: [existing] },
-      OWNER,
-    )
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [existing] }, OWNER)
 
     const updated = await repo.updateTransaction(OWNER, 10, { flagId: 1 })
 
@@ -221,10 +217,7 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
 
   it('does not fan out for a flag with no auto-label configured', async () => {
     const flag = makeFlag({ id: 1 })
-    const repo = inMemoryExpenseRepository(
-      { flags: [flag], accounts: [account], categories: [category] },
-      OWNER,
-    )
+    const repo = inMemoryExpenseRepository({ flags: [flag], accounts: [account], categories: [category] }, OWNER)
 
     const created = await repo.insertTransaction(OWNER, {
       date: '2026-01-01',
@@ -301,10 +294,7 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
     const flag = makeFlag({ id: 1, autoLabelId: 2 })
     const label = makeLabel({ id: 2, active: false })
     const existing = makeTransaction({ id: 10 })
-    const repo = inMemoryExpenseRepository(
-      { flags: [flag], labels: [label], transactions: [existing] },
-      OWNER,
-    )
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [existing] }, OWNER)
 
     const updated = await repo.updateTransaction(OWNER, 10, { flagId: 1 })
 
@@ -348,7 +338,10 @@ describe('inMemoryExpenseRepository labels — tenancy boundary', () => {
 
 describe('inMemoryExpenseRepository recent transactions', () => {
   it('lists the highest ids first, as many as asked for, and only the owner’s', async () => {
-    const repo = inMemoryExpenseRepository({ transactions: [makeTransaction({ id: 4 }), makeTransaction({ id: 9 }), makeTransaction({ id: 2 })] }, OWNER)
+    const repo = inMemoryExpenseRepository(
+      { transactions: [makeTransaction({ id: 4 }), makeTransaction({ id: 9 }), makeTransaction({ id: 2 })] },
+      OWNER,
+    )
     expect((await repo.recentTransactions(OWNER, 2)).map((t) => t.id)).toEqual([9, 4])
     expect(await repo.recentTransactions('someone@example.com', 2)).toEqual([])
   })

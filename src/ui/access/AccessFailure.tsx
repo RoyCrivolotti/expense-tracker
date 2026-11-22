@@ -44,6 +44,7 @@ export function AccessFailure({ message, answered, source, onRetry }: Props) {
   }, [unreachable])
 
   if (owner === undefined) return <AppLoadingSkeleton label="Checking access" />
-  if (owner) return <AllowedAccessView access={{ status: 'allowed', email: owner, groups: OFFLINE_GROUPS }} source={source} />
+  if (owner)
+    return <AllowedAccessView access={{ status: 'allowed', email: owner, groups: OFFLINE_GROUPS }} source={source} />
   return <AccessConnectionError error={message} onRetry={onRetry} />
 }

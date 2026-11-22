@@ -35,7 +35,10 @@ export interface ListView {
   footer?: ReactNode
 }
 
-export type ListHook = (model: ExpenseModel, filter: TxnFilter) => ListView
+export type ListHook = (
+  model: ExpenseModel,
+  filter: TxnFilter,
+) => ListView
 
 /** What a selection needs to know of the list it is over, beyond the ids on screen. */
 export interface SelectionView {

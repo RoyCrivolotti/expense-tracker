@@ -14,17 +14,32 @@ describe('RentVsOwnChart', () => {
   it('says its two lines are the choices on their own, not the plan, so they are not compared with its net worth', () => {
     render(<RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000 })} />)
 
-    expect(screen.getByText(/without your starting portfolio and contributions, so they will not match the plan's net worth/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /without your starting portfolio and contributions, so they will not match the plan's net worth/,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('puts a unit on the years along the bottom, which count from the purchase and not from the plan start', () => {
-    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000, housePurchaseYear: 8, horizonYears: 40 })} />)
+    render(
+      <RentVsOwnChart
+        draft={draftOf({
+          housePriceCents: 400_000_000,
+          rentMonthlyCents: 120_000,
+          housePurchaseYear: 8,
+          horizonYears: 40,
+        })}
+      />,
+    )
     expect(screen.getByText('10y')).toBeInTheDocument()
     expect(screen.queryByText(/^10$/)).not.toBeInTheDocument()
   })
 
   it('shows a short lead and keeps the rest of what it assumes in a closed disclosure', () => {
-    const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000 })} />)
+    const { container } = render(
+      <RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000 })} />,
+    )
     expect(screen.getByText(/this is not the plan's net worth\.$/)).toBeInTheDocument()
     const details = container.querySelector('details')!
     expect(details.open).toBe(false)
@@ -34,18 +49,26 @@ describe('RentVsOwnChart', () => {
     expect(details).not.toHaveTextContent('Both start with')
   })
 
-  it('names the upkeep it assumes as the scenario\'s own, not a fixed one', () => {
-    const { rerender } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0.04 })} />)
+  it("names the upkeep it assumes as the scenario's own, not a fixed one", () => {
+    const { rerender } = render(
+      <RentVsOwnChart
+        draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0.04 })}
+      />,
+    )
     expect(screen.getByText(/upkeep, tax and insurance of 4,0% of the house's value a year/)).toBeInTheDocument()
-    rerender(<RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0 })} />)
+    rerender(
+      <RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0 })} />,
+    )
     expect(screen.getByText(/upkeep, tax and insurance of 0,0% of the house's value a year/)).toBeInTheDocument()
     expect(screen.queryByText(/1\.5%/)).not.toBeInTheDocument()
   })
 
-  it('counts the scenario\'s own upkeep against the buyer: a dearer house to keep lets renting overtake sooner', () => {
+  it("counts the scenario's own upkeep against the buyer: a dearer house to keep lets renting overtake sooner", () => {
     const headline = (homeCarryRate: number) => {
       const { unmount } = render(
-        <RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, horizonYears: 30, homeCarryRate })} />,
+        <RentVsOwnChart
+          draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, horizonYears: 30, homeCarryRate })}
+        />,
       )
       const text = document.body.textContent ?? ''
       unmount()
@@ -78,7 +101,11 @@ describe('RentVsOwnChart', () => {
       />,
     )
 
-    expect(screen.getByText(/Renting overtakes buying 5 years after you buy and stays ahead to the end, by .* after 40 years\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Renting overtakes buying 5 years after you buy and stays ahead to the end, by .* after 40 years\./,
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByText(/no costs of selling/)).toBeInTheDocument()
     expect(screen.queryByText(/overtakes renting around year/)).not.toBeInTheDocument()
   })
@@ -91,19 +118,35 @@ describe('RentVsOwnChart', () => {
   })
 
   it('names its two lines and where each starts, so the chart says what it is drawing', () => {
-    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, downPaymentFraction: 0.2, transactionCostsCents: 600_000, housePurchaseYear: null })} />)
+    render(
+      <RentVsOwnChart
+        draft={draftOf({
+          housePriceCents: 30_000_000,
+          rentMonthlyCents: 100_000,
+          downPaymentFraction: 0.2,
+          transactionCostsCents: 600_000,
+          housePurchaseYear: null,
+        })}
+      />,
+    )
     expect(screen.getByText('Renter: money invested (starts at 66k €)')).toBeInTheDocument()
     expect(screen.getByText('Buyer: house less loan, plus savings (starts at 60k €)')).toBeInTheDocument()
   })
 
   it('names the loan being paid off on the chart, and when owning gets cheaper than renting', () => {
-    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 150_000, mortgageTermYears: 20 })} />)
+    render(
+      <RentVsOwnChart
+        draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 150_000, mortgageTermYears: 20 })}
+      />,
+    )
     expect(screen.getByText('Loan paid off')).toBeInTheDocument()
     expect(screen.getByText(/^Owning (first )?costs less a month$/)).toBeInTheDocument()
   })
 
   it('says what each side holds and invests a month when a year is picked', () => {
-    const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000 })} />)
+    const { container } = render(
+      <RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000 })} />,
+    )
     const svg = container.querySelector('svg[role="img"]')!
     fireEvent.keyDown(svg, { key: 'Home' })
     fireEvent.keyDown(svg, { key: 'ArrowRight' })
@@ -115,7 +158,11 @@ describe('RentVsOwnChart', () => {
   })
 
   it('begins at the purchase year when the plan buys later, and says so', () => {
-    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, housePurchaseYear: 8 })} />)
+    render(
+      <RentVsOwnChart
+        draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, housePurchaseYear: 8 })}
+      />,
+    )
     expect(screen.getByText(/Compared from year 8, at the .* the house will cost then/)).toBeInTheDocument()
   })
 })

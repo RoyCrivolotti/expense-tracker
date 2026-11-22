@@ -33,7 +33,7 @@ describe('useScrollMemory', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 1360, behavior: 'auto' })
   })
 
-  it('keeps each section\'s own place', () => {
+  it("keeps each section's own place", () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     runFramesNow()
     const { result } = renderHook(() => useScrollMemory<'a' | 'b'>())

@@ -11,12 +11,7 @@ import { buildExpenseModel } from '../ui/buildExpenseModel'
 import { buildOverviewData } from '../ui/analytics/overview/overviewModel'
 import { ADVERSARIAL_ROLLOVER_DAY, adversarialLedger } from './adversarialLedger'
 import { LATER, differing, fingerprint, openAt, outputs, plain, wholeLedger } from './engineOutputs'
-import {
-  GLOBAL_DIFFERENCES,
-  INTENDED_DIFFERENCES,
-  ONLY_WHILE_OPEN,
-  PACE_ENVELOPE_FIELDS,
-} from './intendedDifferences'
+import { GLOBAL_DIFFERENCES, INTENDED_DIFFERENCES, ONLY_WHILE_OPEN, PACE_ENVELOPE_FIELDS } from './intendedDifferences'
 
 const ds = adversarialLedger()
 const whole = wholeLedger(ds)
@@ -26,7 +21,10 @@ const months = sortedMonths(ds.transactions.map((t) => t.budgetMonth))
 const KEYS = Object.keys(outputs(ds, whole, months[0]!, classifier))
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
-const clockFor = (mode: 'closed' | 'open', month: string) => (mode === 'closed' ? LATER : openAt(month))
+const clockFor = (
+  mode: 'closed' | 'open',
+  month: string,
+) => (mode === 'closed' ? LATER : openAt(month))
 
 type Fingerprints = Record<string, string>
 
@@ -48,7 +46,12 @@ function paceOutsideEnvelope(pace: unknown): string {
   return JSON.stringify(plain(Object.fromEntries(fields)))
 }
 
-function run(lists: typeof whole, month: string, mode: 'closed' | 'open', withHistory = false): Fingerprints {
+function run(
+  lists: typeof whole,
+  month: string,
+  mode: 'closed' | 'open',
+  withHistory = false,
+): Fingerprints {
   const out = outputs(ds, lists, month, classifier, clockFor(mode, month), withHistory ? groups : undefined)
   return { ...fingerprint(out, KEYS), paceOutsideEnvelope: paceOutsideEnvelope(out.pace!()) }
 }
@@ -79,7 +82,10 @@ function snapshots(mode: 'closed' | 'open'): Map<string, Snapshot> {
 type Side = 'windowed' | 'windowedWithHistory' | 'defaultPolicy'
 
 /** For each consumer, the viewed months in which the lists gave a different answer. */
-function sweep(snaps: Map<string, Snapshot>, side: Side): Map<string, string[]> {
+function sweep(
+  snaps: Map<string, Snapshot>,
+  side: Side,
+): Map<string, string[]> {
   const seen = new Map<string, string[]>()
   for (const [month, snap] of snaps) {
     for (const key of KEYS.filter((k) => snap[side][k] !== snap.reference[k])) {
@@ -100,7 +106,9 @@ describe('the adversarial ledger', () => {
     expect(tx.some((t) => t.description === 'Car insurance')).toBe(true)
     const live = new Set(tx.filter((t) => !t.cancelled).map((t) => t.budgetMonth))
     expect(months.filter((m) => !live.has(m)).length).toBeGreaterThanOrEqual(3)
-    const gaps = months.filter((m, i) => i > 0 && sortedMonths([months[i - 1]!, m]).length === 2 && m !== nextMonth(months[i - 1]!))
+    const gaps = months.filter(
+      (m, i) => i > 0 && sortedMonths([months[i - 1]!, m]).length === 2 && m !== nextMonth(months[i - 1]!),
+    )
     expect(gaps.length).toBeGreaterThanOrEqual(2)
     expect(months.length).toBeGreaterThanOrEqual(50)
   })
@@ -134,7 +142,7 @@ describe.each(['closed', 'open'] as const)('viewed-month sweep, %s month', (mode
     expect([...sweep(snaps, 'windowedWithHistory').keys()].sort()).toEqual(Object.keys(GLOBAL_DIFFERENCES).sort())
   })
 
-  it('is exactly today\'s behaviour under the default size policy', () => {
+  it("is exactly today's behaviour under the default size policy", () => {
     expect([...sweep(snaps, 'defaultPolicy').keys()]).toEqual([])
   })
 
@@ -152,14 +160,25 @@ describe('the newest rows', () => {
     const lists = (month: string) => assembleRows(ledgerFor(ds, month, WINDOWED))
     const lists_ = ['latestEight', 'recentlyAdded']
     expect(differing(ds, newest, whole, lists(newest), lists_, { clock: LATER, classifier })).toEqual([])
-    expect(differing(ds, months.at(-14)!, whole, lists(months.at(-14)!), lists_, { clock: LATER, classifier })).toEqual(lists_)
+    expect(differing(ds, months.at(-14)!, whole, lists(months.at(-14)!), lists_, { clock: LATER, classifier })).toEqual(
+      lists_,
+    )
   })
 })
 
 describe('the Overview screen model', () => {
   const modelFrom = (rows: typeof ds.transactions) => buildExpenseModel({ ...ds, transactions: rows })
-  const overview = (rows: typeof ds.transactions, month: string) =>
-    buildOverviewData(modelFrom(rows), { month, period: 'month', compare: 'prevMonth', basis: 'committed', ...openAt(month) })
+  const overview = (
+    rows: typeof ds.transactions,
+    month: string,
+  ) =>
+    buildOverviewData(modelFrom(rows), {
+      month,
+      period: 'month',
+      compare: 'prevMonth',
+      basis: 'committed',
+      ...openAt(month),
+    })
 
   it('matches in the KPIs, baseline and unpaid caps, and differs only where a classifier is built from the rows', () => {
     const differs = new Map<string, number>()
@@ -168,7 +187,8 @@ describe('the Overview screen model', () => {
       const a = overview(ds.transactions, month) as unknown as Record<string, unknown>
       const b = overview(linear, month) as unknown as Record<string, unknown>
       for (const key of Object.keys(a)) {
-        if (JSON.stringify(plain(a[key])) !== JSON.stringify(plain(b[key]))) differs.set(key, (differs.get(key) ?? 0) + 1)
+        if (JSON.stringify(plain(a[key])) !== JSON.stringify(plain(b[key])))
+          differs.set(key, (differs.get(key) ?? 0) + 1)
       }
     }
     // The model builds its classifier from the rows it is handed, so everything that reads one can differ.

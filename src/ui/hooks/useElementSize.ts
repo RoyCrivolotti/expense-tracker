@@ -17,7 +17,11 @@ export interface Size {
  * stretched to the new box, which is a flash when a neighbour appears or goes: a resize observer's
  * callback is not a layout effect, and React would otherwise paint first and render after.
  */
-export function useElementSize(ref: RefObject<HTMLElement | null>, fallback: Size, track = false): Size {
+export function useElementSize(
+  ref: RefObject<HTMLElement | null>,
+  fallback: Size,
+  track = false,
+): Size {
   const [size, setSize] = useState(fallback)
   // What was last set, so a resize that changes nothing does not ask React for another render.
   const last = useRef(size)

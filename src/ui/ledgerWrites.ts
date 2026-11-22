@@ -15,7 +15,11 @@ const LIST_FAILED = 'The list could not be read again.'
  * change them. A write also goes to the list read in pages at once, as what it did to rows, and the list is read again
  * after it (`applyWrite`).
  */
-export function sessionWithCounts(source: LedgerPartsSource, pager: TransactionPager, options: SessionOptions | undefined) {
+export function sessionWithCounts(
+  source: LedgerPartsSource,
+  pager: TransactionPager,
+  options: SessionOptions | undefined,
+) {
   const counts = new LedgerUsage(source)
   const onWrite: SessionOptions['onWrite'] = (write) => {
     counts.noteWrite(touchesUsage(write))
@@ -28,7 +32,10 @@ export function sessionWithCounts(source: LedgerPartsSource, pager: TransactionP
  * Why the list could not be read again after the last write or refresh that needed it, or null, and the write that says
  * so. A read that worked takes the failure away, and a write that needed no read leaves it as it was.
  */
-export function useListFailure(session: LedgerSession, pager: TransactionPager) {
+export function useListFailure(
+  session: LedgerSession,
+  pager: TransactionPager,
+) {
   const [failure, setFailure] = useState<string | null>(null)
   const noteRead = useCallback(
     (worked: boolean | null) => {

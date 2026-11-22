@@ -77,7 +77,10 @@ export interface UsualDay {
 }
 
 /** Calendar date of the anchor day in `yearMonth`, clamped to a short month. */
-function anchorDate(yearMonth: string, anchor: number): string {
+function anchorDate(
+  yearMonth: string,
+  anchor: number,
+): string {
   const lastDay = dayOfMonth(lastDayOfBudgetMonth(yearMonth))
   return `${yearMonth}-${String(Math.min(anchor, lastDay)).padStart(2, '0')}`
 }
@@ -86,7 +89,10 @@ function anchorDate(yearMonth: string, anchor: number): string {
  * Signed days from the anchor day to `iso`, measured from whichever month's anchor date is
  * nearest, so the 1st and the 30th are two days apart rather than twenty-nine.
  */
-function daysFromAnchor(iso: string, anchor: number): number {
+function daysFromAnchor(
+  iso: string,
+  anchor: number,
+): number {
   const month = iso.slice(0, 7)
   let nearest = Infinity
   for (const delta of [-1, 0, 1]) {
@@ -114,12 +120,18 @@ export function usualDay(sortedDates: string[]): UsualDay {
 }
 
 /** The date a series with this usual day lands on in `yearMonth`. */
-export function usualDate(yearMonth: string, usual: UsualDay): string {
+export function usualDate(
+  yearMonth: string,
+  usual: UsualDay,
+): string {
   return addDaysIso(anchorDate(yearMonth, usual.anchor), usual.shift)
 }
 
 /** Signed days from the usual date nearest to `iso` to `iso`; negative when it came early. */
-function daysFromUsual(iso: string, usual: UsualDay): number {
+function daysFromUsual(
+  iso: string,
+  usual: UsualDay,
+): number {
   const month = iso.slice(0, 7)
   let nearest = Infinity
   for (const delta of [-1, 0, 1]) {
@@ -133,10 +145,10 @@ function daysFromUsual(iso: string, usual: UsualDay): number {
  * Days before the usual date that a reminder starts to show: a day's notice, plus how early the
  * newest charges have landed, up to a cap.
  */
-export function leadFromHistory(sortedDates: string[], usual: UsualDay): number {
-  const early = Math.max(
-    0,
-    ...sortedDates.slice(-WINDOW_HISTORY).map((d) => -daysFromUsual(d, usual)),
-  )
+export function leadFromHistory(
+  sortedDates: string[],
+  usual: UsualDay,
+): number {
+  const early = Math.max(0, ...sortedDates.slice(-WINDOW_HISTORY).map((d) => -daysFromUsual(d, usual)))
   return BASE_LEAD_DAYS + Math.min(MAX_EARLY_DAYS, early)
 }

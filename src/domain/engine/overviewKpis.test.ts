@@ -18,7 +18,12 @@ function txn(partial: Partial<Transaction>): Transaction {
   }
 }
 
-function month(m: string, incomeCents: number, spendCents: number, investedCents = 0): Transaction[] {
+function month(
+  m: string,
+  incomeCents: number,
+  spendCents: number,
+  investedCents = 0,
+): Transaction[] {
   const rows = [
     txn({ id: Math.random(), date: `${m}-01`, budgetMonth: m, type: 'income', amountCents: incomeCents }),
     txn({ id: Math.random(), date: `${m}-10`, budgetMonth: m, amountCents: spendCents }),
@@ -209,7 +214,13 @@ describe('computeOverviewKpis', () => {
         ...month('2026-01', 300000, 100000),
         ...month('2026-03', 300000, 60000),
       ]
-      const k = computeOverviewKpis(rows, { ...opts, months: gap, month: '2026-03', period: 'ytd', today: '2026-06-01' })
+      const k = computeOverviewKpis(rows, {
+        ...opts,
+        months: gap,
+        month: '2026-03',
+        period: 'ytd',
+        today: '2026-06-01',
+      })
       expect(k.current.spendCents).toBe(100000 + 60000)
       expect(k.baseline?.spendCents).toBe(80000 + 70000)
     })

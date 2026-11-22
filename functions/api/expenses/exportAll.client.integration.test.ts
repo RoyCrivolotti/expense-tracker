@@ -49,22 +49,30 @@ async function serve() {
 }
 
 describe('the export of every transaction, over a ledger of more rows than one request carries', () => {
-  it('writes the file a ledger held in full gives, in as many requests as it takes, and the count it shows is the rows in it', async () => {
-    const { dataset, rowCount, exportCalls } = await serve()
-    const rows = await exportAllTransactions(apiLedgerParts)
-    expect(exportCalls.length).toBe(Math.ceil(dataset.transactions.length / EXPORT_CHUNK_ROWS.transactions))
-    expect(exportCalls.length).toBeGreaterThan(1)
-    expect(rows).toHaveLength(rowCount)
-    expect(exportTransactionsCsv({ ...dataset, transactions: rows }, {})).toBe(exportTransactionsCsv(dataset, {}))
-  }, SLOW)
+  it(
+    'writes the file a ledger held in full gives, in as many requests as it takes, and the count it shows is the rows in it',
+    async () => {
+      const { dataset, rowCount, exportCalls } = await serve()
+      const rows = await exportAllTransactions(apiLedgerParts)
+      expect(exportCalls.length).toBe(Math.ceil(dataset.transactions.length / EXPORT_CHUNK_ROWS.transactions))
+      expect(exportCalls.length).toBeGreaterThan(1)
+      expect(rows).toHaveLength(rowCount)
+      expect(exportTransactionsCsv({ ...dataset, transactions: rows }, {})).toBe(exportTransactionsCsv(dataset, {}))
+    },
+    SLOW,
+  )
 
-  it('starts again when something is written between two requests, and the file holds the ledger as it is then', async () => {
-    const { sqlite, dataset, exportCalls, onExport } = await serve()
-    onExport.mockImplementation((call: number) => {
-      if (call === 2) sqlite.prepare('UPDATE owner_revision SET token = ? WHERE owner = ?').run('moved', OWNER)
-    })
-    const rows = await exportAllTransactions(apiLedgerParts)
-    expect(exportCalls).toHaveLength(4)
-    expect(exportTransactionsCsv({ ...dataset, transactions: rows }, {})).toBe(exportTransactionsCsv(dataset, {}))
-  }, SLOW)
+  it(
+    'starts again when something is written between two requests, and the file holds the ledger as it is then',
+    async () => {
+      const { sqlite, dataset, exportCalls, onExport } = await serve()
+      onExport.mockImplementation((call: number) => {
+        if (call === 2) sqlite.prepare('UPDATE owner_revision SET token = ? WHERE owner = ?').run('moved', OWNER)
+      })
+      const rows = await exportAllTransactions(apiLedgerParts)
+      expect(exportCalls).toHaveLength(4)
+      expect(exportTransactionsCsv({ ...dataset, transactions: rows }, {})).toBe(exportTransactionsCsv(dataset, {}))
+    },
+    SLOW,
+  )
 })

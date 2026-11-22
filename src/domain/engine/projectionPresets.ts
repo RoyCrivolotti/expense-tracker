@@ -16,7 +16,10 @@ export function pickScenarioColor(usedColors: readonly string[]): string {
 }
 
 /** The base cut so base plus suffix fits the name limit the server enforces, which a copy of a long name would otherwise break. */
-function withSuffix(base: string, suffix: string): string {
+function withSuffix(
+  base: string,
+  suffix: string,
+): string {
   return `${base.slice(0, SCENARIO_NAME_MAX_LENGTH - suffix.length).trimEnd()}${suffix}`
 }
 
@@ -33,7 +36,10 @@ export function saveAsNewName(name: string): string {
 }
 
 /** A copy's name, counting on past the copies that already exist so no two are alike. */
-export function copyName(name: string, taken: readonly string[] = []): string {
+export function copyName(
+  name: string,
+  taken: readonly string[] = [],
+): string {
   let candidate = nextCopyName(name)
   while (taken.includes(candidate)) candidate = nextCopyName(candidate)
   return candidate

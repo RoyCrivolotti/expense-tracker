@@ -5,7 +5,10 @@ const headers = (init: Record<string, string>) => new Headers(init)
 
 describe('readWriteReceipt', () => {
   it('reads both tokens', () => {
-    expect(readWriteReceipt(headers({ [REVISION_BEFORE_HEADER]: 'aa', [REVISION_AFTER_HEADER]: 'bb' }))).toEqual({ before: 'aa', after: 'bb' })
+    expect(readWriteReceipt(headers({ [REVISION_BEFORE_HEADER]: 'aa', [REVISION_AFTER_HEADER]: 'bb' }))).toEqual({
+      before: 'aa',
+      after: 'bb',
+    })
   })
 
   it('reads the one that is there, and leaves the other null', () => {

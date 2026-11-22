@@ -1,7 +1,10 @@
 /** What a gesture does at each stage; `S` is whatever it measured when the pointer came down. */
 export interface Gesture<S> {
   start: (e: PointerEvent) => S
-  move: (state: S, e: PointerEvent) => void
+  move: (
+    state: S,
+    e: PointerEvent,
+  ) => void
   finish: (state: S) => void
 }
 

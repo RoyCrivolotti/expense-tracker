@@ -46,16 +46,35 @@ export function parsePayload(text: string | null): PushPayload | null {
   const currency = optionalText(parsed.currency)
   if (parsed.kind === 'payment' && typeof parsed.id === 'string') {
     const merchant = parsed.merchant === null ? null : optionalText(parsed.merchant)
-    return { kind: 'payment', id: parsed.id, url: parsed.url, amountCents: optionalInt(parsed.amountCents), currency, merchant, open }
+    return {
+      kind: 'payment',
+      id: parsed.id,
+      url: parsed.url,
+      amountCents: optionalInt(parsed.amountCents),
+      currency,
+      merchant,
+      open,
+    }
   }
   if (parsed.kind === 'summary' && typeof parsed.count === 'number') {
-    return { kind: 'summary', url: parsed.url, count: parsed.count, totalCents: optionalInt(parsed.totalCents), currency, open }
+    return {
+      kind: 'summary',
+      url: parsed.url,
+      count: parsed.count,
+      totalCents: optionalInt(parsed.totalCents),
+      currency,
+      open,
+    }
   }
   return null
 }
 
 /** An amount in the device's own way of writing money, or the plain figure when the currency code is not one. */
-export function moneyText(cents: number, currency: string, locale: string): string {
+export function moneyText(
+  cents: number,
+  currency: string,
+  locale: string,
+): string {
   try {
     return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100)
   } catch {
@@ -71,34 +90,61 @@ export interface Shown {
 const ICON = '/icons/icon-192.png'
 
 /** The words on the lock screen. The amount and the merchant are what the bank's own push already showed there. */
-export function notificationOf(payload: PushPayload | null, locale: string): Shown {
-  if (payload === null) return { title: 'Payment to review', options: { body: 'Tap to see it', tag: 'review', icon: ICON, data: { url: '/' } } }
+export function notificationOf(
+  payload: PushPayload | null,
+  locale: string,
+): Shown {
+  if (payload === null)
+    return {
+      title: 'Payment to review',
+      options: { body: 'Tap to see it', tag: 'review', icon: ICON, data: { url: '/' } },
+    }
   if (payload.kind === 'payment') {
-    const amount = payload.amountCents !== undefined && payload.currency ? moneyText(payload.amountCents, payload.currency, locale) : null
+    const amount =
+      payload.amountCents !== undefined && payload.currency
+        ? moneyText(payload.amountCents, payload.currency, locale)
+        : null
     const what = payload.merchant ?? 'New payment'
     const body = amount ? `${amount} · ${what}` : what
-    return { title: 'Payment to review', options: { body, tag: `review-${payload.id}`, icon: ICON, data: { url: payload.url } } }
+    return {
+      title: 'Payment to review',
+      options: { body, tag: `review-${payload.id}`, icon: ICON, data: { url: payload.url } },
+    }
   }
-  const total = payload.totalCents !== undefined && payload.currency ? ` · ${moneyText(payload.totalCents, payload.currency, locale)}` : ''
+  const total =
+    payload.totalCents !== undefined && payload.currency
+      ? ` · ${moneyText(payload.totalCents, payload.currency, locale)}`
+      : ''
   const count = payload.count === 1 ? '1 payment' : `${payload.count} payments`
-  return { title: 'Payments to review', options: { body: `${count}${total}`, tag: 'review-summary', icon: ICON, data: { url: payload.url } } }
+  return {
+    title: 'Payments to review',
+    options: { body: `${count}${total}`, tag: 'review-summary', icon: ICON, data: { url: payload.url } },
+  }
 }
 
 /** The device's badge setter, where it has one: a worker's `navigator` in a browser that supports the Badging API. */
 export function badgeOf(nav: unknown): ((count: number) => Promise<void>) | null {
   const setter = isRecord(nav) ? nav.setAppBadge : undefined
-  return typeof setter === 'function' ? (count) => Promise.resolve((setter as (n: number) => unknown).call(nav, count)).then(() => undefined) : null
+  return typeof setter === 'function'
+    ? (count) => Promise.resolve((setter as (n: number) => unknown).call(nav, count)).then(() => undefined)
+    : null
 }
 
 export interface ShowsNotifications {
-  showNotification(title: string, options?: NotificationOptions): Promise<void>
+  showNotification(
+    title: string,
+    options?: NotificationOptions,
+  ): Promise<void>
 }
 
 /** What the worker tells an open window when a push arrived, so the window can read the list again (docs/PUSH.md). */
 export const REVIEW_CHANGED = 'review-changed'
 
 export interface MessagesWindows {
-  matchAll(options: { type: 'window'; includeUncontrolled: boolean }): Promise<readonly { postMessage(message: unknown): void }[]>
+  matchAll(options: {
+    type: 'window'
+    includeUncontrolled: boolean
+  }): Promise<readonly { postMessage(message: unknown): void }[]>
 }
 
 /** Tells every open window of the app that a payment to review may have arrived. Never fails the push. */
@@ -115,7 +161,13 @@ export async function tellWindows(clients: MessagesWindows): Promise<void> {
  * Shows the notification, puts the open count on the app icon where the device has a badge, then tells open windows.
  * The windows come last, so a slow `clients.matchAll()` never delays what the lock screen and the icon say.
  */
-export async function showPush(text: string | null, registration: ShowsNotifications, badge: ((count: number) => Promise<void>) | null, locale: string, clients?: MessagesWindows): Promise<void> {
+export async function showPush(
+  text: string | null,
+  registration: ShowsNotifications,
+  badge: ((count: number) => Promise<void>) | null,
+  locale: string,
+  clients?: MessagesWindows,
+): Promise<void> {
   const payload = parsePayload(text)
   const { title, options } = notificationOf(payload, locale)
   await registration.showNotification(title, options)
@@ -124,7 +176,10 @@ export async function showPush(text: string | null, registration: ShowsNotificat
 }
 
 /** Where a tap lands: the notification's URL inside the app, else the app itself. Another origin is never opened. */
-export function landingUrl(data: unknown, scope: string): string {
+export function landingUrl(
+  data: unknown,
+  scope: string,
+): string {
   const url = isRecord(data) && typeof data.url === 'string' ? data.url : '/'
   try {
     const resolved = new URL(url, scope)
@@ -146,7 +201,10 @@ export interface ClientsLike {
 }
 
 /** An open window of the app is brought forward and sent to the payment; with none, one is opened. */
-export async function openReview(url: string, clients: ClientsLike): Promise<void> {
+export async function openReview(
+  url: string,
+  clients: ClientsLike,
+): Promise<void> {
   const origin = new URL(url).origin
   const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true })
   const open = windows.find((w) => new URL(w.url).origin === origin)

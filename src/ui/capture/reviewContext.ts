@@ -29,9 +29,20 @@ export interface ReviewCore {
    * Hides the payment, holds `send` for the undo window and shows `message`. A send that fails puts the payment back
    * with the reason and says `Couldn't ${failure}`. A new decision sends the held one at once.
    */
-  decide: (id: string, message: string, failure: string, send: () => Promise<unknown>) => void
+  decide: (
+    id: string,
+    message: string,
+    failure: string,
+    send: () => Promise<unknown>,
+  ) => void
   /** Creates the transaction for a payment through its recommendation. Absent where the app cannot write. */
-  submit?: ((id: string, input: NewTransaction, allowDuplicate?: boolean) => Promise<Transaction>) | undefined
+  submit?:
+    | ((
+        id: string,
+        input: NewTransaction,
+        allowDuplicate?: boolean,
+      ) => Promise<Transaction>)
+    | undefined
   /** Opens the add form. The form saves at once, so anything held is sent first. */
   openForm: (seed: TransactionSeed) => void
 }

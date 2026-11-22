@@ -55,7 +55,18 @@ export function useHoldUpdateReload(): void {
   useEffect(() => holdUpdateReload(), [])
 }
 
-const NOT_TEXT = new Set(['button', 'checkbox', 'radio', 'range', 'submit', 'reset', 'image', 'file', 'color', 'hidden'])
+const NOT_TEXT = new Set([
+  'button',
+  'checkbox',
+  'radio',
+  'range',
+  'submit',
+  'reset',
+  'image',
+  'file',
+  'color',
+  'hidden',
+])
 
 /** A field where typing can be lost: not a button, a checkbox or a slider. */
 export function isTextEntry(el: Element | null): boolean {
@@ -63,7 +74,9 @@ export function isTextEntry(el: Element | null): boolean {
   if (el instanceof HTMLTextAreaElement) return !el.readOnly
   if (el instanceof HTMLInputElement) return !NOT_TEXT.has(el.type) && !el.readOnly
   // The attribute as well as the property, which jsdom does not implement.
-  return el.isContentEditable || ['', 'true', 'plaintext-only'].includes(el.getAttribute('contenteditable') ?? 'inherit')
+  return (
+    el.isContentEditable || ['', 'true', 'plaintext-only'].includes(el.getAttribute('contenteditable') ?? 'inherit')
+  )
 }
 
 /**

@@ -32,9 +32,7 @@ export function buildTrendModel(
     }
   })
   const avgSpendCents =
-    points.length === 0
-      ? 0
-      : Math.round(points.reduce((sum, p) => sum + p.spendCents, 0) / points.length)
+    points.length === 0 ? 0 : Math.round(points.reduce((sum, p) => sum + p.spendCents, 0) / points.length)
   const { max, ticks } = chartAxis(points.flatMap((p) => [p.incomeCents, p.spendCents]))
   return { points, avgSpendCents, maxVal: max, ticks }
 }

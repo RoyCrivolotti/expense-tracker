@@ -29,7 +29,7 @@ describe('usePopoverTrapPause', () => {
     expect(result.current[0]).toBe(false)
   })
 
-  it('stays paused when a second popover opens inside the first one\'s un-pause window', async () => {
+  it("stays paused when a second popover opens inside the first one's un-pause window", async () => {
     // The bug this hook exists for: close the date popover, open the flag popover within
     // the exit window, and a per-field timer would have un-paused the trap under the
     // still-open flag popover — Escape then closed the whole editor.
@@ -43,7 +43,7 @@ describe('usePopoverTrapPause', () => {
     expect(result.current[0]).toBe(true)
   })
 
-  it('a reopen then a close still un-pauses on the later close\'s clock', async () => {
+  it("a reopen then a close still un-pauses on the later close's clock", async () => {
     const { result } = renderHook(() => usePopoverTrapPause())
 
     act(() => result.current[1](true))

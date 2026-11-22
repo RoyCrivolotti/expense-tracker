@@ -55,7 +55,10 @@ export function expenseReportCsv(
   const showNotes = options.showNotes ?? true
   const header = HEADER.filter((name) => showNotes || name !== 'Notes')
 
-  const row = (line: ReportLine, signed: boolean) =>
+  const row = (
+    line: ReportLine,
+    signed: boolean,
+  ) =>
     [
       esc(line.transaction.date),
       escText(line.transaction.description || options.categoryName(line.transaction.categoryId)),
@@ -85,18 +88,10 @@ export function expenseReportCsv(
   const rows = report.lines.map((line) => row(line, false))
   const credits = report.credits.map((line) => row(line, true))
   // Labels are literals and the amount must keep its sign, so neither needs guarding.
-  const blank = (label: string, cents: number) =>
-    [
-      '',
-      label,
-      ...(showNotes ? [''] : []),
-      '',
-      '',
-      formatCents(cents, options.format),
-      '',
-    ]
-      .map(esc)
-      .join(',')
+  const blank = (
+    label: string,
+    cents: number,
+  ) => ['', label, ...(showNotes ? [''] : []), '', '', formatCents(cents, options.format), ''].map(esc).join(',')
 
   const totals = [blank('Total expenses', report.totalClaimedCents)]
   if (report.credits.length > 0) {
@@ -116,7 +111,10 @@ export function downloadExpenseReportCsv(
   // Downloads as work-travel(1).csv, or overwrites the first.
   const period = report.from ? `-${report.from.slice(0, 7)}` : ''
   const name = options.title ?? report.flag.name
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

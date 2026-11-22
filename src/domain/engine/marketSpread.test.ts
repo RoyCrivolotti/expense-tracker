@@ -24,7 +24,7 @@ describe('the draws a replay reads', () => {
 })
 
 describe('growthFor', () => {
-  it('is the plan\'s growth at no spread, to the bit', () => {
+  it("is the plan's growth at no spread, to the bit", () => {
     expect(growthFor(1_000_000, 0.05, 0, 1.7)).toBe(1 + 0.05)
     expect(growthFor(1_000_000, 0.05, 0, -3)).toBe(1 + 0.05)
   })
@@ -54,7 +54,10 @@ describe('percentile', () => {
 
 describe('crossingRange', () => {
   // Runs counted by the year they first cross, for years 0 to 8 unless said.
-  const counts = (byYear: Record<number, number>, years = 8) => Array.from({ length: years + 1 }, (_, y) => byYear[y] ?? 0)
+  const counts = (
+    byYear: Record<number, number>,
+    years = 8,
+  ) => Array.from({ length: years + 1 }, (_, y) => byYear[y] ?? 0)
 
   it('names the year at each rank, counted nearest-rank, with the share that gets there', () => {
     const r = crossingRange(counts({ 5: 1, 6: 1, 7: 1 }), 2)
@@ -83,7 +86,11 @@ describe('crossingRange', () => {
 
 describe('replayMarket at no spread', () => {
   it('is the plan, every year and every percentile, to the cent, before and after the events', () => {
-    for (const over of [{}, { housePurchaseYear: 0 }, { housePurchaseYear: null, lifeEvents: [{ year: 4, amountCents: -500_000, label: 'x' }] }]) {
+    for (const over of [
+      {},
+      { housePurchaseYear: 0 },
+      { housePurchaseYear: null, lifeEvents: [{ year: 4, amountCents: -500_000, label: 'x' }] },
+    ]) {
       const params = sample(over)
       const plan = projectNetWorth(params)
       const out = replayMarket({ params, volatility: 0, runs: 200 })
@@ -96,7 +103,13 @@ describe('replayMarket at no spread', () => {
   it('has the first crossing of every amount the plan has, in the year the plan says, and the FI year too', () => {
     const params = sample()
     const amounts = Array.from({ length: 400 }, (_, k) => 2_000_000 + k * 400_000)
-    const out = replayMarket({ params, volatility: 0, runs: 100, milestonesCents: amounts, fiTargetCents: fireNumber(3_000_000, 0.04) })
+    const out = replayMarket({
+      params,
+      volatility: 0,
+      runs: 100,
+      milestonesCents: amounts,
+      fiTargetCents: fireNumber(3_000_000, 0.04),
+    })
     amounts.forEach((amount, k) => {
       const plan = wholeYearsToAmount(params, amount, I)
       const range = out.milestones[k]!
@@ -111,7 +124,10 @@ describe('replayMarket at no spread', () => {
   it('crosses an amount that falls between the value before a bonus and the value after it in the year of the bonus, as the plan does', () => {
     // The sample plan has only a house payment, which takes the value down, so the value before it always reaches
     // an amount the value after it does too: only a bonus tells the two apart.
-    const params = sample({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 20_000_000, label: 'Bonus' }] })
+    const params = sample({
+      housePurchaseYear: null,
+      lifeEvents: [{ year: 5, amountCents: 20_000_000, label: 'Bonus' }],
+    })
     const plan = projectNetWorth(params)
     const grown = Math.pow(1 + I, 5)
     const amount = Math.round(((plan[5]!.preEventInvestedCents + plan[5]!.investedCents) / 2) * grown)
@@ -127,7 +143,7 @@ describe('replayMarket at no spread', () => {
     const params = sample()
     const plan = projectNetWorth(params)
     // A target just under what the portfolio holds before paying for the house in year 8, which it no longer holds after.
-    const spend = Math.floor(((plan[8]!.preEventInvestedCents - 100) * 0.04))
+    const spend = Math.floor((plan[8]!.preEventInvestedCents - 100) * 0.04)
     const target = fireNumber(spend, 0.04)
     expect(target).toBeLessThan(plan[8]!.preEventInvestedCents)
     expect(target).toBeGreaterThan(plan[8]!.investedCents)
@@ -190,11 +206,13 @@ describe('replayMarket with a spread', () => {
   it('keeps the first years of a picture when the plan is made longer, because the draws belong to the year and not to the length', () => {
     const shorter = replayMarket({ params: { ...params, horizonYears: 12 }, volatility: 0.15, runs: 4_000 })
     const longer = replayMarket({ params: { ...params, horizonYears: 31 }, volatility: 0.15, runs: 4_000 })
-    for (const k of ['p10', 'p25', 'p50', 'p75', 'p90'] as const) expect(longer.after[k].slice(0, 13)).toEqual(shorter.after[k])
+    for (const k of ['p10', 'p25', 'p50', 'p75', 'p90'] as const)
+      expect(longer.after[k].slice(0, 13)).toEqual(shorter.after[k])
   })
 
   it('moves smoothly when the typical return does: the same draws, a different return', () => {
-    const at = (r: number) => replayMarket({ params: { ...params, expectedRealReturn: r }, volatility: 0.15, runs: 4_000 }).after.p10[20]!
+    const at = (r: number) =>
+      replayMarket({ params: { ...params, expectedRealReturn: r }, volatility: 0.15, runs: 4_000 }).after.p10[20]!
     const steps = [0.045, 0.046, 0.047, 0.048].map(at)
     for (let i = 1; i < steps.length; i++) expect(Math.abs(steps[i]! / steps[i - 1]! - 1)).toBeLessThan(0.03)
   })
@@ -206,7 +224,8 @@ describe('replayMarket with a spread', () => {
       expect(r.milestones[k]!.p50).toBeGreaterThanOrEqual(r.milestones[k - 1]!.p50)
       expect(r.milestones[k]!.share).toBeLessThanOrEqual(r.milestones[k - 1]!.share)
     }
-    for (const range of r.milestones) for (const v of [range.p10, range.p50, range.p90]) expect(Number.isInteger(v) || v === Infinity).toBe(true)
+    for (const range of r.milestones)
+      for (const v of [range.p10, range.p50, range.p90]) expect(Number.isInteger(v) || v === Infinity).toBe(true)
   })
 
   it('rounds an odd number of runs up to a pair, so every run has the mirror of its draws', () => {
@@ -217,7 +236,12 @@ describe('replayMarket with a spread', () => {
 
 describe('replayMarket when the house takes more than the portfolio has', () => {
   // 10.000 € in the portfolio and a house that takes the down payment of 60.000 € in year 3.
-  const short = sample({ startInvestedCents: 1_000_000, monthlyContributionCents: 0, housePurchaseYear: 3, lifeEvents: [] })
+  const short = sample({
+    startInvestedCents: 1_000_000,
+    monthlyContributionCents: 0,
+    housePurchaseYear: 3,
+    lifeEvents: [],
+  })
   const out = replayMarket({ params: short, volatility: 0.15, runs: 2_000 })
 
   it('says how many runs are in debt each year, from the year the house is paid for', () => {
@@ -225,7 +249,7 @@ describe('replayMarket when the house takes more than the portfolio has', () => 
     expect(out.belowZero[3]).toBeGreaterThan(0.9)
   })
 
-  it('lets the debt grow at the plain return rather than with the market, so each run\'s debt keeps its size against the others', () => {
+  it("lets the debt grow at the plain return rather than with the market, so each run's debt keeps its size against the others", () => {
     expect(out.belowZero[3]).toBe(1)
     // Nobody has anything left to risk, so from year 3 every run grows at 5% and the ranks and the ratios stay as they were.
     for (const k of ['p10', 'p50', 'p90'] as const) {

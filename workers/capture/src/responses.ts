@@ -5,7 +5,11 @@
  */
 const HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' }
 
-function reply(status: number, body: string, extra: Record<string, string> = {}): Response {
+function reply(
+  status: number,
+  body: string,
+  extra: Record<string, string> = {},
+): Response {
   return new Response(body, { status, headers: { ...HEADERS, ...extra } })
 }
 

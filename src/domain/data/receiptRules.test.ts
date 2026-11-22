@@ -91,9 +91,10 @@ describe('checkUpload', () => {
   })
 
   it('rejects when the owner would cross the storage quota', () => {
-    expect(
-      checkUpload({ ...base, bytes: JPEG, ownerBytesUsed: limits.maxOwnerBytes }),
-    ).toEqual({ ok: false, reason: { kind: 'owner-quota', limit: limits.maxOwnerBytes } })
+    expect(checkUpload({ ...base, bytes: JPEG, ownerBytesUsed: limits.maxOwnerBytes })).toEqual({
+      ok: false,
+      reason: { kind: 'owner-quota', limit: limits.maxOwnerBytes },
+    })
   })
 
   it('checks size before type, so a huge unsupported file is not sniffed', () => {
@@ -113,9 +114,7 @@ describe('checkUpload', () => {
 
 describe('rejectionMessage', () => {
   it('names the limit in units a person reads', () => {
-    expect(rejectionMessage({ kind: 'too-large', limit: 5_000_000 })).toBe(
-      'Receipts must be 5 MB or smaller',
-    )
+    expect(rejectionMessage({ kind: 'too-large', limit: 5_000_000 })).toBe('Receipts must be 5 MB or smaller')
     expect(rejectionMessage({ kind: 'owner-quota', limit: 2_000_000_000 })).toContain('2.0 GB')
   })
 
@@ -164,9 +163,7 @@ describe('serveHeaders', () => {
   })
 
   it('caches immutably, which content-addressed keys make safe', () => {
-    expect(serveHeaders('image/png', 'a.png', '"x"')['cache-control']).toBe(
-      'private, max-age=31536000, immutable',
-    )
+    expect(serveHeaders('image/png', 'a.png', '"x"')['cache-control']).toBe('private, max-age=31536000, immutable')
   })
 })
 

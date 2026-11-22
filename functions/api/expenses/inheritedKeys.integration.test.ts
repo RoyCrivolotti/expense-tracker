@@ -54,18 +54,113 @@ interface Target {
 }
 
 const TARGETS: Target[] = [
-  { name: 'account', handler: patchAccount, method: 'PATCH', path: () => `/accounts/${ids.spareAccount}`, params: () => ({ id: String(ids.spareAccount) }), real: { body: { name: 'Renamed' }, table: 'accounts', where: () => `id = ${ids.spareAccount}`, column: 'name', value: 'Renamed' } },
-  { name: 'category', handler: patchCategory, method: 'PATCH', path: () => `/categories/${ids.spareCategory}`, params: () => ({ id: String(ids.spareCategory) }), real: { body: { name: 'Renamed' }, table: 'categories', where: () => `id = ${ids.spareCategory}`, column: 'name', value: 'Renamed' } },
-  { name: 'flag', handler: patchFlag, method: 'PATCH', path: () => `/flags/${ids.spareFlag}`, params: () => ({ id: String(ids.spareFlag) }), real: { body: { name: 'Renamed' }, table: 'flags', where: () => `id = ${ids.spareFlag}`, column: 'name', value: 'Renamed' } },
-  { name: 'label', handler: patchLabel, method: 'PATCH', path: () => `/labels/${ids.spareLabel}`, params: () => ({ id: String(ids.spareLabel) }), real: { body: { name: 'Renamed' }, table: 'labels', where: () => `id = ${ids.spareLabel}`, column: 'name', value: 'Renamed' } },
-  { name: 'installment plan', handler: patchPlan, method: 'PATCH', path: () => `/installment-plans/${ids.plan}`, params: () => ({ id: String(ids.plan) }), real: { body: { description: 'Renamed' }, table: 'installment_plans', where: () => `id = ${ids.plan}`, column: 'description', value: 'Renamed' } },
-  { name: 'scenario', handler: patchScenario, method: 'PATCH', path: () => `/scenarios/${ids.spareScenario}`, params: () => ({ id: String(ids.spareScenario) }), real: { body: { name: 'Renamed' }, table: 'goal_scenarios', where: () => `id = ${ids.spareScenario}`, column: 'name', value: 'Renamed' } },
-  { name: 'settings', handler: putSettings, method: 'PUT', path: () => '/settings', real: { body: { openingCashCents: 4_242 }, table: 'settings', where: () => `owner = 'alex@example.com'`, column: 'opening_cash_cents', value: 4_242 } },
+  {
+    name: 'account',
+    handler: patchAccount,
+    method: 'PATCH',
+    path: () => `/accounts/${ids.spareAccount}`,
+    params: () => ({ id: String(ids.spareAccount) }),
+    real: {
+      body: { name: 'Renamed' },
+      table: 'accounts',
+      where: () => `id = ${ids.spareAccount}`,
+      column: 'name',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'category',
+    handler: patchCategory,
+    method: 'PATCH',
+    path: () => `/categories/${ids.spareCategory}`,
+    params: () => ({ id: String(ids.spareCategory) }),
+    real: {
+      body: { name: 'Renamed' },
+      table: 'categories',
+      where: () => `id = ${ids.spareCategory}`,
+      column: 'name',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'flag',
+    handler: patchFlag,
+    method: 'PATCH',
+    path: () => `/flags/${ids.spareFlag}`,
+    params: () => ({ id: String(ids.spareFlag) }),
+    real: {
+      body: { name: 'Renamed' },
+      table: 'flags',
+      where: () => `id = ${ids.spareFlag}`,
+      column: 'name',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'label',
+    handler: patchLabel,
+    method: 'PATCH',
+    path: () => `/labels/${ids.spareLabel}`,
+    params: () => ({ id: String(ids.spareLabel) }),
+    real: {
+      body: { name: 'Renamed' },
+      table: 'labels',
+      where: () => `id = ${ids.spareLabel}`,
+      column: 'name',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'installment plan',
+    handler: patchPlan,
+    method: 'PATCH',
+    path: () => `/installment-plans/${ids.plan}`,
+    params: () => ({ id: String(ids.plan) }),
+    real: {
+      body: { description: 'Renamed' },
+      table: 'installment_plans',
+      where: () => `id = ${ids.plan}`,
+      column: 'description',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'scenario',
+    handler: patchScenario,
+    method: 'PATCH',
+    path: () => `/scenarios/${ids.spareScenario}`,
+    params: () => ({ id: String(ids.spareScenario) }),
+    real: {
+      body: { name: 'Renamed' },
+      table: 'goal_scenarios',
+      where: () => `id = ${ids.spareScenario}`,
+      column: 'name',
+      value: 'Renamed',
+    },
+  },
+  {
+    name: 'settings',
+    handler: putSettings,
+    method: 'PUT',
+    path: () => '/settings',
+    real: {
+      body: { openingCashCents: 4_242 },
+      table: 'settings',
+      where: () => `owner = 'alex@example.com'`,
+      column: 'opening_cash_cents',
+      value: 4_242,
+    },
+  },
 ]
 
 describe.each(TARGETS)('a partial update of a $name', (target) => {
   const send = (body: unknown) =>
-    world.call(target.handler, { method: target.method, path: target.path(), body, ...(target.params ? { params: target.params() } : {}) })
+    world.call(target.handler, {
+      method: target.method,
+      path: target.path(),
+      body,
+      ...(target.params ? { params: target.params() } : {}),
+    })
 
   it.each(JUNK)('with only %s in the body is a 400, not a 500', async (_label, body) => {
     const response = await send(body)
@@ -78,7 +173,9 @@ describe.each(TARGETS)('a partial update of a $name', (target) => {
 
     expect(response.status).toBe(200)
     const { table, where, column, value } = target.real
-    expect((sqlite.prepare(`SELECT ${column} AS v FROM ${table} WHERE ${where()}`).get() as { v: unknown }).v).toBe(value)
+    expect((sqlite.prepare(`SELECT ${column} AS v FROM ${table} WHERE ${where()}`).get() as { v: unknown }).v).toBe(
+      value,
+    )
   })
 })
 
@@ -87,7 +184,12 @@ describe.each([
   ['wealth check-in', patchCheckin, () => ids.checkin],
 ] as const)('a partial update of a %s', (_name, handler, id) => {
   it.each(JUNK)('with %s in the body is not a 500', async (_label, body) => {
-    const response = await world.call(handler, { method: 'PATCH', path: `/x/${id()}`, params: { id: String(id()) }, body })
+    const response = await world.call(handler, {
+      method: 'PATCH',
+      path: `/x/${id()}`,
+      params: { id: String(id()) },
+      body,
+    })
 
     expect(response.status).toBeLessThan(500)
   })

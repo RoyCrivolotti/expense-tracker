@@ -78,7 +78,13 @@ interface Reading {
  * keep. The description is the merchant when the template knows where it sits, otherwise the whole cleaned body,
  * which the person edits once, and none when the body is empty (the amount was in the title).
  */
-async function readForStore(captures: CaptureRepository, owner: string, push: RawPush, body: string, reading: PushReading): Promise<Reading> {
+async function readForStore(
+  captures: CaptureRepository,
+  owner: string,
+  push: RawPush,
+  body: string,
+  reading: PushReading,
+): Promise<Reading> {
   const templates = await captures.findTemplates(owner, push.source, reading.titleSkeleton)
   const { decision, merchant } = decideTemplate(templates, reading, () => crypto.randomUUID())
   const joined = decision.kind === 'existing' ? templates.find((t) => t.templateId === decision.templateId) : undefined
@@ -96,8 +102,19 @@ async function readForStore(captures: CaptureRepository, owner: string, push: Ra
 }
 
 /** The merchant goes in the notification only when the template knows where it sits: the whole bank text is not shown. */
-function createdPayment(owner: string, recommendationId: string, amount: { cents: number; currency: string }, read: Reading): CreatedPayment {
-  return { owner, recommendationId, amountCents: amount.cents, currency: amount.currency, merchant: read.merchantIsSpan ? read.merchantRaw : null }
+function createdPayment(
+  owner: string,
+  recommendationId: string,
+  amount: { cents: number; currency: string },
+  read: Reading,
+): CreatedPayment {
+  return {
+    owner,
+    recommendationId,
+    amountCents: amount.cents,
+    currency: amount.currency,
+    merchant: read.merchantIsSpan ? read.merchantRaw : null,
+  }
 }
 
 /**
@@ -105,7 +122,11 @@ function createdPayment(owner: string, recommendationId: string, amount: { cents
  * that push is announced, since one that joins a recommendation tells the person nothing new. Null when nothing was
  * stored.
  */
-function announced(recorded: CaptureRecorded, onCreated: ((payment: CreatedPayment) => void) | undefined, payment: CreatedPayment): StoreResult | null {
+function announced(
+  recorded: CaptureRecorded,
+  onCreated: ((payment: CreatedPayment) => void) | undefined,
+  payment: CreatedPayment,
+): StoreResult | null {
   if (!recorded) return null
   if (recorded === 'created') onCreated?.(payment)
   return recorded === 'grouped' ? 'grouped' : 'stored'
@@ -179,5 +200,8 @@ export async function storePush(
   }
   const recorded = await captures.recordCapture(event, recommendation, caps, read.decision)
   const payment = createdPayment(key.owner, recommendation.id, amount, read)
-  return announced(recorded, onCreated, payment) ?? ((await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited')
+  return (
+    announced(recorded, onCreated, payment) ??
+    ((await captures.hasEvent(key.keyId, push.source, hash)) ? 'replay' : 'limited')
+  )
 }

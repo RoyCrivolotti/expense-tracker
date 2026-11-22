@@ -13,7 +13,10 @@ function cellKey(c: CellFields): string {
 }
 
 /** Month first, so the list reads in calendar order and two builds of the same rows are equal. */
-function compareCells(a: MonthCell, b: MonthCell): number {
+function compareCells(
+  a: MonthCell,
+  b: MonthCell,
+): number {
   if (a.budgetMonth !== b.budgetMonth) return a.budgetMonth < b.budgetMonth ? -1 : 1
   return (
     a.accountId - b.accountId ||

@@ -37,7 +37,10 @@ function unitsOf(objects: BackupObjectMeta[]): Unit[] {
  * owner whose backups have been failing, or a bucket over its cap, loses the last backup there is. Only owners who
  * still have data are listed: the backups of someone who was revoked and purged age out like any other.
  */
-function newestCompletePerOwner(units: Unit[], owners: ReadonlySet<string>): Set<Unit> {
+function newestCompletePerOwner(
+  units: Unit[],
+  owners: ReadonlySet<string>,
+): Set<Unit> {
   const newest = new Map<string, Unit>()
   for (const unit of units) {
     if (!owners.has(unit.owner)) continue
@@ -57,9 +60,7 @@ export function keysOlderThan(
   cutoff.setUTCDate(cutoff.getUTCDate() - retentionDays)
   const units = unitsOf(objects)
   const kept = newestCompletePerOwner(units, owners)
-  return units
-    .filter((unit) => !kept.has(unit) && utcDateFromKey(unit.dateKey) < cutoff)
-    .flatMap((unit) => unit.keys)
+  return units.filter((unit) => !kept.has(unit) && utcDateFromKey(unit.dateKey) < cutoff).flatMap((unit) => unit.keys)
 }
 
 /**
@@ -103,7 +104,11 @@ export function buildPrunePlan(
  * Deletes the keys. One object at a time unless `batch` is true and the store can delete many in one call, which
  * only the chunked backup asks for, because pruning one of its days removes dozens of objects.
  */
-export async function applyPrunePlan(store: BackupStore, keys: string[], batch = false): Promise<number> {
+export async function applyPrunePlan(
+  store: BackupStore,
+  keys: string[],
+  batch = false,
+): Promise<number> {
   if (batch && keys.length > 0 && store.deleteMany) {
     await store.deleteMany(keys)
     return keys.length

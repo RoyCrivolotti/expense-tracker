@@ -105,7 +105,11 @@ function hasStateShape(value: Record<string, unknown>): boolean {
 }
 
 /** The saved state, or null when it is not one this code wrote: the run then starts again, over its own parts. */
-export function parseBackupState(text: string | null, owner: string, dateKey: string): BackupState | null {
+export function parseBackupState(
+  text: string | null,
+  owner: string,
+  dateKey: string,
+): BackupState | null {
   const value = text === null ? undefined : json(text)
   if (!isRecord(value) || value.format !== BACKUP_FORMAT) return null
   if (value.owner !== owner || value.dateKey !== dateKey) return null

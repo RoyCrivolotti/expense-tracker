@@ -58,7 +58,7 @@ describe('inkOn', () => {
     expect(inkOn('#f59e0b')).toBe('#000000')
   })
 
-  it('reads on each theme\'s ink of a colour that has one for each', () => {
+  it("reads on each theme's ink of a colour that has one for each", () => {
     expect(inkOn('light-dark(#0f766e, #84cc16)')).toBe('light-dark(#ffffff, #000000)')
   })
 

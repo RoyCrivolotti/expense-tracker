@@ -11,12 +11,23 @@ import type { GoalScenario } from '../types'
 
 const I = SAMPLE_INFLATION
 const g = 1 + I
-const checkin = (investedCents: number, date: string) => ({ investedCents, date })
-const apply = (plan: GoalScenario, patch: object): GoalScenario => ({ ...plan, ...patch })
+const checkin = (
+  investedCents: number,
+  date: string,
+) => ({ investedCents, date })
+const apply = (
+  plan: GoalScenario,
+  patch: object,
+): GoalScenario => ({ ...plan, ...patch })
 const say = (r: ReturnType<typeof rebaseline>) => rebaselineSummary(r, EU_MONEY_FORMAT, (iso) => iso)
 
 describe('rebaseline restates what is typed in the euros of the old start', () => {
-  const plan = samplePlan({ lifeEvents: [{ year: 6, amountCents: -2_000_000, label: 'Car' }, { year: 2, amountCents: 1_000_000, label: 'Gift' }] })
+  const plan = samplePlan({
+    lifeEvents: [
+      { year: 6, amountCents: -2_000_000, label: 'Car' },
+      { year: 2, amountCents: 1_000_000, label: 'Gift' },
+    ],
+  })
 
   it('brings spending, rent and fees to the euros of the new start: 30.000 of 2026 is 31.836 three years on', () => {
     const { patch } = rebaseline(plan, checkin(7_000_000, '2029-01-01'), I)
@@ -76,7 +87,9 @@ describe('rebaseline restates the price of a house not yet bought by the house�
 
   it('restates a price kept for Rent vs buy too, when no purchase is planned', () => {
     const plan = samplePlan({ housePurchaseYear: null })
-    expect(rebaseline(plan, checkin(7_000_000, '2029-01-01'), I).patch.housePriceCents).toBe(Math.round(30_000_000 * 1.03 ** 3))
+    expect(rebaseline(plan, checkin(7_000_000, '2029-01-01'), I).patch.housePriceCents).toBe(
+      Math.round(30_000_000 * 1.03 ** 3),
+    )
   })
 
   it('keeps the price a purchase carried to a later year buys at, as today’s price grown the whole way', () => {
@@ -100,7 +113,12 @@ describe('rebaseline of a house already bought', () => {
   const date = '2029-01-01' // 1 year after the purchase on 1 January 2028
 
   /** The loan, month by month in euros of the day, as a bank would run it. */
-  function bankBalance(loan: number, ratePerYear: number, months: number, elapsed: number): number {
+  function bankBalance(
+    loan: number,
+    ratePerYear: number,
+    months: number,
+    elapsed: number,
+  ): number {
     const r = ratePerYear / 12
     const payment = r === 0 ? loan / months : (loan * r) / (1 - (1 + r) ** -months)
     let balance = loan
@@ -130,7 +148,12 @@ describe('rebaseline of a house already bought', () => {
   })
 
   it('keeps the payment the bank asks for, to the cent, however far into the loan it is', () => {
-    const payment = (term: number, price: number, fraction: number, rate: number) => {
+    const payment = (
+      term: number,
+      price: number,
+      fraction: number,
+      rate: number,
+    ) => {
       const loan = price - Math.round(price * fraction)
       const r = rate / 12
       const n = term * 12
@@ -249,7 +272,10 @@ describe('a plan restarted on its own path, at an anniversary, goes where it was
   }
 
   /** The account, the house and the loan in euros of the day at each year of a plan, with `shift` years of inflation already behind its euros. */
-  const nominal = (plan: GoalScenario, shift: number) =>
+  const nominal = (
+    plan: GoalScenario,
+    shift: number,
+  ) =>
     projectNetWorth(scenarioToParams(plan, I)).map((p) => {
       const f = Math.pow(g, p.year + shift)
       return { invested: p.investedCents * f, house: p.houseEquityCents * f, loan: p.mortgageBalanceCents * f }
@@ -272,7 +298,9 @@ describe('a plan restarted on its own path, at an anniversary, goes where it was
         mortgageTermYears: 15 + Math.floor(rand() * 16),
         mortgageRateAnnual: rand() * 0.05,
         houseAppreciationRate: 0.01 + rand() * 0.04,
-        lifeEvents: [{ year: 2 + Math.floor(rand() * 20), amountCents: Math.round((rand() - 0.4) * 5_000_000), label: 'Event' }],
+        lifeEvents: [
+          { year: 2 + Math.floor(rand() * 20), amountCents: Math.round((rand() - 0.4) * 5_000_000), label: 'Event' },
+        ],
         contributionSchedule: [{ from: '2033-05', monthlyCents: Math.round(rand() * 300_000) }],
       })
       const k = 1 + Math.floor(rand() * 10)
@@ -312,13 +340,21 @@ describe('what the re-baseline says it did to the amounts and the house', () => 
 
   it('says a house price not yet reached grew by the house\u2019s own rate', () => {
     const r = rebaseline(samplePlan(), checkin(7_000_000, '2029-01-01'), I)
-    expect(say(r)).toContain('The house price 300.000,00 € becomes 327.818,10 €: houses rose 3,0% a year over those 3 years.')
+    expect(say(r)).toContain(
+      'The house price 300.000,00 € becomes 327.818,10 €: houses rose 3,0% a year over those 3 years.',
+    )
   })
 
   it('says a house already bought is held as owned, with what is assumed to be owed, and how to undo a purchase that has not happened', () => {
-    const r = rebaseline(samplePlan({ housePurchaseYear: 2, mortgageTermYears: 25 }), checkin(10_000_000, '2029-01-01'), I)
+    const r = rebaseline(
+      samplePlan({ housePurchaseYear: 2, mortgageTermYears: 25 }),
+      checkin(10_000_000, '2029-01-01'),
+      I,
+    )
     const text = say(r).join(' ')
-    expect(text).toMatch(/The house purchase \(2028-01-01\) is behind the new start, so the plan holds the house as owned from day one: worth about 327\.818,10 €, with about [\d.]+,\d\d € still owed over 24 years \(the loan's own schedule, not a balance you logged\)\./)
+    expect(text).toMatch(
+      /The house purchase \(2028-01-01\) is behind the new start, so the plan holds the house as owned from day one: worth about 327\.818,10 €, with about [\d.]+,\d\d € still owed over 24 years \(the loan's own schedule, not a balance you logged\)\./,
+    )
     expect(text).toContain('If you have not bought it yet, cancel, move the purchase year, then re-baseline.')
   })
 
@@ -329,7 +365,23 @@ describe('what the re-baseline says it did to the amounts and the house', () => 
   })
 
   it('says nothing about amounts that did not move: the same day, or no inflation', () => {
-    expect(say(rebaseline(samplePlan({ housePurchaseYear: null, houseAppreciationRate: 0 }), checkin(7_000_000, '2026-01-01'), I))).toEqual([])
-    expect(say(rebaseline(samplePlan({ housePurchaseYear: null, houseAppreciationRate: 0 }), checkin(7_000_000, '2029-01-01'), 0))).toEqual([])
+    expect(
+      say(
+        rebaseline(
+          samplePlan({ housePurchaseYear: null, houseAppreciationRate: 0 }),
+          checkin(7_000_000, '2026-01-01'),
+          I,
+        ),
+      ),
+    ).toEqual([])
+    expect(
+      say(
+        rebaseline(
+          samplePlan({ housePurchaseYear: null, houseAppreciationRate: 0 }),
+          checkin(7_000_000, '2029-01-01'),
+          0,
+        ),
+      ),
+    ).toEqual([])
   })
 })

@@ -70,9 +70,7 @@ describe('createFlagInPlace', () => {
     const actions = { createFlag } as unknown as ExpenseActions
 
     await expect(createFlagInPlace(actions, [])('Madrid trip', true)).resolves.toBe(77)
-    expect(createFlag).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Madrid trip', reimbursable: true }),
-    )
+    expect(createFlag).toHaveBeenCalledWith(expect.objectContaining({ name: 'Madrid trip', reimbursable: true }))
   })
 
   it('throws rather than calling the API with a blank name', async () => {

@@ -125,7 +125,11 @@ describe('UpcomingCard', () => {
     const names = ['Gym', 'Rent', 'Streaming', 'Phone', 'Cloud', 'Music', 'News']
     const suggestionsFor = (count: number) =>
       names.slice(0, count).map((description, i) =>
-        makeSuggestion({ description, seriesKey: `${description.toLowerCase()}|1|1|expense`, predictedDate: `2026-09-${String(20 + i).padStart(2, '0')}` }),
+        makeSuggestion({
+          description,
+          seriesKey: `${description.toLowerCase()}|1|1|expense`,
+          predictedDate: `2026-09-${String(20 + i).padStart(2, '0')}`,
+        }),
       )
     const foldOf = (description: string) => screen.getByText(description).closest('[inert]')
 
@@ -271,11 +275,7 @@ describe('UpcomingCard', () => {
       const showToast = vi.fn<ToastApi['showToast']>()
       const { unmount } = renderCard([makeSuggestion()], { showToast })
       fireEvent.click(screen.getByRole('button', { name: 'Dismiss Netflix' }))
-      expect(showToast).toHaveBeenCalledWith(
-        'Dismissed Netflix',
-        'info',
-        expect.objectContaining({ label: 'Undo' }),
-      )
+      expect(showToast).toHaveBeenCalledWith('Dismissed Netflix', 'info', expect.objectContaining({ label: 'Undo' }))
       act(() => showToast.mock.calls[0]![2]!.onAction())
       expect(screen.getByText('Netflix')).toBeDefined()
       unmount()
@@ -417,7 +417,10 @@ describe('UpcomingCard', () => {
 
     it('does not read what an earlier build kept under the keys that named no one', () => {
       localStorage.setItem(DISMISSED_KEY, JSON.stringify(['Netflix|1|1|expense|2026-09']))
-      localStorage.setItem(STOPPED_KEY, JSON.stringify({ 'netflix|1|1|expense': { after: '2026-08-24', label: 'Netflix' } }))
+      localStorage.setItem(
+        STOPPED_KEY,
+        JSON.stringify({ 'netflix|1|1|expense': { after: '2026-08-24', label: 'Netflix' } }),
+      )
       renderCard([makeSuggestion()], { owner: BOB })
       expect(screen.getByText('Netflix')).toBeDefined()
     })

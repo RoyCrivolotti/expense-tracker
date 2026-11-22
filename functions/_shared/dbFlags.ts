@@ -18,14 +18,21 @@ const FLAG_COLUMNS: ColumnMap = {
   autoLabelId: 'auto_label_id',
 }
 
-function coerce(key: keyof NewFlag, value: unknown): unknown {
+function coerce(
+  key: keyof NewFlag,
+  value: unknown,
+): unknown {
   if (key === 'active' || key === 'reimbursable') return value ? 1 : 0
   // An explicit '' from the editor means "no description"; store NULL for it.
   if (key === 'description') return value === '' ? null : (value ?? null)
   return value ?? null
 }
 
-export async function createFlag(env: Env, owner: string, input: NewFlag): Promise<Flag> {
+export async function createFlag(
+  env: Env,
+  owner: string,
+  input: NewFlag,
+): Promise<Flag> {
   if (input.autoLabelId != null) await assertOwnedLabel(env, owner, input.autoLabelId)
   const row = await env.DB.prepare(
     `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active, auto_label_id)
@@ -87,9 +94,7 @@ export async function deleteFlag(
   // write when a row leaves the pinned cells (docs/decisions/ledger-rollup.md).
   const [counted] = await env.DB.batch([
     env.DB.prepare('SELECT COUNT(*) AS n FROM transactions WHERE flag_id = ? AND owner = ?').bind(id, owner),
-    env.DB
-      .prepare('UPDATE transactions SET flag_id = NULL WHERE flag_id = ? AND owner = ?')
-      .bind(id, owner),
+    env.DB.prepare('UPDATE transactions SET flag_id = NULL WHERE flag_id = ? AND owner = ?').bind(id, owner),
     env.DB.prepare('DELETE FROM flags WHERE id = ? AND owner = ?').bind(id, owner),
   ])
   return { unflagged: (counted?.results?.[0] as { n: number } | undefined)?.n ?? 0 }

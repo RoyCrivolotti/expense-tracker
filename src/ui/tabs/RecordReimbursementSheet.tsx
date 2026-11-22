@@ -9,12 +9,7 @@ import {
   settleIdsFor,
   type ReimbursementDraft,
 } from '../../domain/engine/reimbursementDraft'
-import {
-  formatCents,
-  formatMoneyInput,
-  parseMoneyToCents,
-  type MoneyFormat,
-} from '../../engine/money'
+import { formatCents, formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { todayIso } from '../components/transactionFormState'
 import { defaultBudgetMonth } from '../../engine/dates'
@@ -36,7 +31,10 @@ interface Props {
   /** Set when the last attempt failed; the payment was rolled back. */
   error?: string | null
   onCancel: () => void
-  onRecord: (input: RecordInput, transactionIds: number[]) => void
+  onRecord: (
+    input: RecordInput,
+    transactionIds: number[],
+  ) => void
 }
 
 export interface RecordInput {
@@ -62,7 +60,10 @@ export interface RecordInput {
  * empty row in the ledger. Lifted out of the component to keep it under the
  * complexity ceiling.
  */
-function reportName(typed: string, fallback: string): string {
+function reportName(
+  typed: string,
+  fallback: string,
+): string {
   return typed.trim() || fallback
 }
 
@@ -82,15 +83,7 @@ function reportName(typed: string, fallback: string): string {
  * Its own component so the parent keeps its branches; that component sits on
  * the complexity ceiling of 12.
  */
-function AmountNote({
-  cents,
-  owedCents,
-  format,
-}: {
-  cents: number
-  owedCents: number
-  format: MoneyFormat
-}) {
+function AmountNote({ cents, owedCents, format }: { cents: number; owedCents: number; format: MoneyFormat }) {
   const difference = cents - owedCents
   if (difference === 0 || owedCents === 0) return null
   // One interpolated string rather than interleaved nodes: React splits the
@@ -118,12 +111,8 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
     resolveDefaultAccountId(model.dataset.accounts, model.dataset.settings),
   )
 
-  const [selected, setSelected] = useState<Set<number>>(
-    () => new Set(draft?.selectedIds ?? []),
-  )
-  const [amount, setAmount] = useState(() =>
-    formatMoneyInput(draft?.amountCents ?? 0, format),
-  )
+  const [selected, setSelected] = useState<Set<number>>(() => new Set(draft?.selectedIds ?? []))
+  const [amount, setAmount] = useState(() => formatMoneyInput(draft?.amountCents ?? 0, format))
   // Whether the figure still tracks the ticks. Once it has been typed over it
   // stops moving on its own — an employer's payment is often not the claim total,
   // and silently rewriting what was typed would be worse than a stale default.
@@ -172,27 +161,16 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
   }
 
   return (
-    <Modal
-      title="Record reimbursement"
-      subtitle={group.flag.name}
-      onClose={onCancel}
-      trapPaused={datePopoverOpen}
-    >
+    <Modal title="Record reimbursement" subtitle={group.flag.name} onClose={onCancel} trapPaused={datePopoverOpen}>
       <p className={styles.lead}>Tick what this payment covers. Anything left unticked stays owed.</p>
 
       <ul className={styles.lines}>
         {draft.candidates.map((txn) => (
           <li key={txn.id}>
             <label className={styles.line}>
-              <input
-                type="checkbox"
-                checked={selected.has(txn.id)}
-                onChange={() => toggle(txn.id)}
-              />
+              <input type="checkbox" checked={selected.has(txn.id)} onChange={() => toggle(txn.id)} />
               <span className={styles.lineBody}>
-                <span className={styles.lineDesc}>
-                  {txn.description || model.lookup.categoryName(txn.categoryId)}
-                </span>
+                <span className={styles.lineDesc}>{txn.description || model.lookup.categoryName(txn.categoryId)}</span>
                 <span className={styles.lineMeta}>{formatDayLabel(txn.date)}</span>
               </span>
               <span className={styles.lineAmount}>
@@ -204,13 +182,9 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
       </ul>
 
       <p className={styles.summary}>
-        {selected.size} of {draft.candidates.length} selected ·{' '}
-        {formatCents(selectedCents, format)}
+        {selected.size} of {draft.candidates.length} selected · {formatCents(selectedCents, format)}
         {notCovered > 0 ? (
-          <span className={styles.remaining}>
-            {' '}
-            · {formatCents(notCovered, format)} left owed
-          </span>
+          <span className={styles.remaining}> · {formatCents(notCovered, format)} left owed</span>
         ) : null}
       </p>
       {alreadyBack > 0 ? (
@@ -248,25 +222,15 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
         />
       </Field>
       <p className={styles.hint}>
-        What this settlement is called in Past reports, and the description on the transaction it
-        creates.
+        What this settlement is called in Past reports, and the description on the transaction it creates.
       </p>
 
       <div className={formStyles.row}>
         <Field label="Date" as="div">
-          <DateInput
-            value={date}
-            ariaLabel="Date"
-            onChange={setDate}
-            onTrapPausedChange={setDatePopoverOpen}
-          />
+          <DateInput value={date} ariaLabel="Date" onChange={setDate} onTrapPausedChange={setDatePopoverOpen} />
         </Field>
         <Field label="Into account">
-          <select
-            className={formStyles.input}
-            value={accountId}
-            onChange={(e) => setAccountId(Number(e.target.value))}
-          >
+          <select className={formStyles.input} value={accountId} onChange={(e) => setAccountId(Number(e.target.value))}>
             {selectableOptions(model.dataset.accounts, accountId).map((a) => (
               <option key={a.id} value={a.id}>
                 {optionLabel(a)}
@@ -277,11 +241,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
       </div>
 
       <Field label="Credited to">
-        <select
-          className={formStyles.input}
-          value={categoryId}
-          onChange={(e) => setCategoryId(Number(e.target.value))}
-        >
+        <select className={formStyles.input} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
           {selectableOptions(model.dataset.categories, categoryId).map((c) => (
             <option key={c.id} value={c.id}>
               {optionLabel(c)}
@@ -290,8 +250,8 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
         </select>
       </Field>
       <p className={styles.hint}>
-        Credited to the category the selected rows spent most in, in this month&rsquo;s budget —
-        change either if you&rsquo;d rather book it elsewhere.
+        Credited to the category the selected rows spent most in, in this month&rsquo;s budget — change either if
+        you&rsquo;d rather book it elsewhere.
       </p>
 
       {error ? (

@@ -25,12 +25,18 @@ function UserGroupToggles({
   user: ActiveAccessUser
   groupMeta: AccessGroupMeta[]
   disabled: boolean
-  onGroupsChange: (email: string, groups: ActiveAccessUser['groups']) => void
+  onGroupsChange: (
+    email: string,
+    groups: ActiveAccessUser['groups'],
+  ) => void
 }) {
   const [busyId, setBusyId] = useState<AccessGroupId | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function onToggle(groupId: AccessGroupId, enabled: boolean) {
+  async function onToggle(
+    groupId: AccessGroupId,
+    enabled: boolean,
+  ) {
     if (groupId === 'expenses' && !enabled) {
       if (
         !window.confirm(
@@ -93,16 +99,15 @@ export function ActiveUsersSection({
       })
   }, [])
 
-  function updateUserGroups(email: string, groups: ActiveAccessUser['groups']) {
+  function updateUserGroups(
+    email: string,
+    groups: ActiveAccessUser['groups'],
+  ) {
     onChange(users.map((row) => (row.email === email ? { ...row, groups } : row)))
   }
 
   async function onRevokeAll(email: string) {
-    if (
-      !window.confirm(
-        `Revoke all access for ${email}? Their expense data will be permanently deleted.`,
-      )
-    ) {
+    if (!window.confirm(`Revoke all access for ${email}? Their expense data will be permanently deleted.`)) {
       return
     }
     setBusyEmail(email)

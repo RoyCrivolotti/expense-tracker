@@ -53,15 +53,19 @@ describe('StoppedSuggestionsSetting', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Suggest Gym again' }))
     expect(screen.queryByText('Gym')).not.toBeInTheDocument()
     expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(1)
-    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ 'rent|1|2|expense': { after: '2026-06-01', label: 'Rent' } })
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+      'rent|1|2|expense': { after: '2026-06-01', label: 'Rent' },
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Suggest Rent again' }))
     expect(container.firstChild).toBeNull()
   })
 
   describe('a series that was logged again', () => {
-    const gym = (date: string, id: number) =>
-      makeTransaction({ id, description: 'Gym', date, accountId: 1, categoryId: 1, type: 'expense' })
+    const gym = (
+      date: string,
+      id: number,
+    ) => makeTransaction({ id, description: 'Gym', date, accountId: 1, categoryId: 1, type: 'expense' })
 
     it('is not listed once a charge after the one it was stopped at is logged', () => {
       stoppedOnThisDevice({
@@ -79,9 +83,7 @@ describe('StoppedSuggestionsSetting', () => {
     it('is still listed when only an older charge was logged late, or the same day again', () => {
       stoppedOnThisDevice({ 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' } })
       render(
-        <StoppedSuggestionsSetting
-          transactions={[gym('2026-05-20', 1), gym('2026-06-05', 2), gym('2026-06-05', 3)]}
-        />,
+        <StoppedSuggestionsSetting transactions={[gym('2026-05-20', 1), gym('2026-06-05', 2), gym('2026-06-05', 3)]} />,
       )
       expect(screen.getByText('Gym')).toBeInTheDocument()
     })
@@ -109,8 +111,21 @@ describe('StoppedSuggestionsSetting, over a window of the ledger', () => {
   })
 
   it('does not list a series whose newer charge is among the rows the window does not hold', () => {
-    stoppedOnThisDevice({ 'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' }, 'rent|1|2|expense': { after: '2026-06-01', label: 'Rent' } })
-    render(<StoppedSuggestionsSetting transactions={[]} known={new Map([['gym|1|1|expense', '2026-07-05'], ['rent|1|2|expense', '2026-06-01']])} />)
+    stoppedOnThisDevice({
+      'gym|1|1|expense': { after: '2026-06-05', label: 'Gym' },
+      'rent|1|2|expense': { after: '2026-06-01', label: 'Rent' },
+    })
+    render(
+      <StoppedSuggestionsSetting
+        transactions={[]}
+        known={
+          new Map([
+            ['gym|1|1|expense', '2026-07-05'],
+            ['rent|1|2|expense', '2026-06-01'],
+          ])
+        }
+      />,
+    )
     expect(screen.queryByText('Gym')).not.toBeInTheDocument()
     expect(screen.getByText('Rent')).toBeInTheDocument()
   })

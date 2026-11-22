@@ -43,9 +43,7 @@ const cashRows: CashRow[] = [
 
 describe('buildTransactionListRows', () => {
   it('merges transactions with paid statement rows for the budget month', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-    ]
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
     const rows = buildTransactionListRows(
       [txn({ budgetMonth: '2026-06', id: 10 })],
       { month: '2026-06' },
@@ -88,41 +86,25 @@ describe('buildTransactionListRows', () => {
         reconciled: false,
       },
     ]
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-05', paid: true, paidOn: '2026-07-15' },
-    ]
-    const rows = buildTransactionListRows(
-      [],
-      { month: '2026-07' },
-      statements,
-      mayCashRows,
-      accounts,
-      { defaultAccountId: 1 },
-    )
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-05', paid: true, paidOn: '2026-07-15' }]
+    const rows = buildTransactionListRows([], { month: '2026-07' }, statements, mayCashRows, accounts, {
+      defaultAccountId: 1,
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0]?.kind).toBe('statement-payment')
   })
 
   it('shows payment when filtering by deferred card account', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-    ]
-    const rows = buildTransactionListRows(
-      [],
-      { month: '2026-06', accountId: 2 },
-      statements,
-      cashRows,
-      accounts,
-      { defaultAccountId: 1 },
-    )
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
+    const rows = buildTransactionListRows([], { month: '2026-06', accountId: 2 }, statements, cashRows, accounts, {
+      defaultAccountId: 1,
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0]?.kind).toBe('statement-payment')
   })
 
   it('groups statement payments with same-day transactions', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-    ]
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
     const rows = buildTransactionListRows(
       [txn({ budgetMonth: '2026-06', id: 10, date: '2026-06-15' })],
       { month: '2026-06' },
@@ -139,27 +121,15 @@ describe('buildTransactionListRows', () => {
   })
 
   it('hides budget-month settlement until paidOn falls in the filtered month', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' },
-    ]
-    const juneRows = buildTransactionListRows(
-      [],
-      { month: '2026-06' },
-      statements,
-      cashRows,
-      accounts,
-      { defaultAccountId: 1 },
-    )
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' }]
+    const juneRows = buildTransactionListRows([], { month: '2026-06' }, statements, cashRows, accounts, {
+      defaultAccountId: 1,
+    })
     expect(juneRows).toHaveLength(0)
 
-    const julyRows = buildTransactionListRows(
-      [],
-      { month: '2026-07' },
-      statements,
-      cashRows,
-      accounts,
-      { defaultAccountId: 1 },
-    )
+    const julyRows = buildTransactionListRows([], { month: '2026-07' }, statements, cashRows, accounts, {
+      defaultAccountId: 1,
+    })
     expect(julyRows).toHaveLength(1)
     expect(julyRows[0]?.kind).toBe('statement-payment')
     expect(groupListRowsByDay(julyRows)[0]?.date).toBe('2026-07-15')
@@ -167,17 +137,12 @@ describe('buildTransactionListRows', () => {
 })
 
 describe('buildTransactionListRows — flag filter', () => {
-  const statements: AccountStatement[] = [
-    { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-  ]
+  const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
   const settings = { defaultAccountId: 1 }
 
   function rowsFor(filter: Parameters<typeof buildTransactionListRows>[1]) {
     return buildTransactionListRows(
-      [
-        txn({ budgetMonth: '2026-06', id: 10, flagId: 7 }),
-        txn({ budgetMonth: '2026-06', id: 11 }),
-      ],
+      [txn({ budgetMonth: '2026-06', id: 10, flagId: 7 }), txn({ budgetMonth: '2026-06', id: 11 })],
       filter,
       statements,
       cashRows,
@@ -208,17 +173,12 @@ describe('buildTransactionListRows — flag filter', () => {
 })
 
 describe('buildTransactionListRows — label filter', () => {
-  const statements: AccountStatement[] = [
-    { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-  ]
+  const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
   const settings = { defaultAccountId: 1 }
 
   function rowsFor(filter: Parameters<typeof buildTransactionListRows>[1]) {
     return buildTransactionListRows(
-      [
-        txn({ budgetMonth: '2026-06', id: 10, labelIds: [4] }),
-        txn({ budgetMonth: '2026-06', id: 11, labelIds: [] }),
-      ],
+      [txn({ budgetMonth: '2026-06', id: 10, labelIds: [4] }), txn({ budgetMonth: '2026-06', id: 11, labelIds: [] })],
       filter,
       statements,
       cashRows,

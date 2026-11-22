@@ -42,7 +42,10 @@ describe('importInChunks', () => {
   })
 
   it('stops a later request with how many rows are saved, and sends nothing after it', async () => {
-    const send = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new ApiError('Something went wrong on our side', 500))
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new ApiError('Something went wrong on our side', 500))
     const stopped = await importInChunks(rows(250), send).catch((error: unknown) => error)
     expect(stopped).toBeInstanceOf(ImportStopped)
     expect((stopped as ImportStopped).imported).toBe(100)
@@ -50,7 +53,10 @@ describe('importInChunks', () => {
   })
 
   it('says that a request the server answered with an error may have been saved, and that confirming again could duplicate it', async () => {
-    const send = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new ApiError('Something went wrong on our side', 500))
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new ApiError('Something went wrong on our side', 500))
     const stopped = (await importInChunks(rows(250), send).catch((error: unknown) => error)) as ImportStopped
     expect(stopped.maybeSaved).toBe(true)
     expect(stopped.message).toContain('Imported 100 of 250 transactions.')
@@ -69,7 +75,10 @@ describe('importInChunks', () => {
   })
 
   it('says that a refused request saved nothing, and names its row by its place in the whole import', async () => {
-    const send = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new ApiError('Row 30: Unknown category', 400))
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new ApiError('Row 30: Unknown category', 400))
     const stopped = (await importInChunks(rows(250), send).catch((error: unknown) => error)) as ImportStopped
     expect(stopped.maybeSaved).toBe(false)
     expect(stopped.message).toContain('were refused and not saved: Row 130: Unknown category')

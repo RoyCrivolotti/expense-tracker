@@ -156,7 +156,10 @@ export type ReturnReading =
 
 type PlanExpectation = Pick<GoalScenario, 'monthlyContributionCents' | 'planStartDate' | 'contributionSchedule'>
 
-function investmentsRecorded(transactions: Transaction[], ret: PortfolioReturn): number {
+function investmentsRecorded(
+  transactions: Transaction[],
+  ret: PortfolioReturn,
+): number {
   return transactions.filter((t) => isFlow(t) && t.date > ret.startDate && t.date <= ret.endDate).length
 }
 

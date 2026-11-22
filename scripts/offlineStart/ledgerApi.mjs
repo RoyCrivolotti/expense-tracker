@@ -6,7 +6,10 @@ import { tsImport } from 'tsx/esm/api'
 
 const { inMemoryLedgerParts } = await tsImport('../../src/data/inMemoryLedgerParts.ts', import.meta.url)
 
-export function serveLedgerParts(site, dataset) {
+export function serveLedgerParts(
+  site,
+  dataset,
+) {
   const parts = inMemoryLedgerParts(() => ({ dataset, revision: 'r1' }))
   const range = (url) => ({ from: url.searchParams.get('from'), to: url.searchParams.get('to') })
   const routes = {

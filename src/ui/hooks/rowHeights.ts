@@ -44,11 +44,17 @@ export interface Seed {
 export interface RowHeights {
   subscribe: (listener: () => void) => () => void
   version: () => number
-  height: (key: string, shape: number) => number
+  height: (
+    key: string,
+    shape: number,
+  ) => number
   header: () => number
   gap: () => number
   record: (samples: readonly Sample[]) => void
-  setChrome: (header: number, gap: number) => void
+  setChrome: (
+    header: number,
+    gap: number,
+  ) => void
   /** What it has learned about rows of each shape, to start another store from. */
   seed: () => Seed
 }
@@ -93,7 +99,10 @@ export function createRowHeights(seed?: Seed): RowHeights {
       return () => void listeners.delete(listener)
     },
     version: () => version,
-    height: (key, shape) => measured.get(key) ?? estimate(shape),
+    height: (
+      key,
+      shape,
+    ) => measured.get(key) ?? estimate(shape),
     header: () => header,
     gap: () => gap,
     record(samples) {
@@ -116,7 +125,10 @@ export function createRowHeights(seed?: Seed): RowHeights {
       for (const [shape, total] of totals) means.set(shape, total.sum / total.count)
       return { means, header, gap }
     },
-    setChrome(nextHeader, nextGap) {
+    setChrome(
+      nextHeader,
+      nextGap,
+    ) {
       if (Math.abs(nextHeader - header) < CHANGE_PX && Math.abs(nextGap - gap) < CHANGE_PX) return
       header = nextHeader
       gap = nextGap

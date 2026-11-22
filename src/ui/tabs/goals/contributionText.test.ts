@@ -10,9 +10,7 @@ describe('contributionPhrase', () => {
   })
 
   it('reads a scenario cached before the schedule existed as never changing it', () => {
-    expect(
-      contributionPhrase({ monthlyContributionCents: 1_500_00 } as never, EU_MONEY_FORMAT),
-    ).toBe('1.500,00 €/mo')
+    expect(contributionPhrase({ monthlyContributionCents: 1_500_00 } as never, EU_MONEY_FORMAT)).toBe('1.500,00 €/mo')
   })
 
   it('names one change with its month', () => {

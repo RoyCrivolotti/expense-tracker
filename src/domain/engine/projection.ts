@@ -154,9 +154,7 @@ export function purchaseYearBreakdown(
 export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   const priceCents = housePriceAtPurchaseCents(params)
   const loanCents =
-    params.housePurchaseYear !== null
-      ? priceCents - Math.round(priceCents * params.downPaymentFraction)
-      : 0
+    params.housePurchaseYear !== null ? priceCents - Math.round(priceCents * params.downPaymentFraction) : 0
 
   const points: YearPoint[] = []
   let invested = params.startInvestedCents
@@ -209,7 +207,10 @@ export function projectInvested(params: ProjectionParams): number[] {
   return projectNetWorth(params).map((p) => p.investedCents)
 }
 
-export function yearsToTarget(series: number[], targetCents: number): number | null {
+export function yearsToTarget(
+  series: number[],
+  targetCents: number,
+): number | null {
   const idx = series.findIndex((v) => v >= targetCents)
   return idx === -1 ? null : idx
 }
@@ -219,9 +220,7 @@ export function yearsToTargetFromProjection(
   targetCents: number,
   useNetWorth = false,
 ): number | null {
-  const series = projectNetWorth(params).map((p) =>
-    useNetWorth ? p.netWorthCents : p.investedCents,
-  )
+  const series = projectNetWorth(params).map((p) => (useNetWorth ? p.netWorthCents : p.investedCents))
   return yearsToTarget(series, targetCents)
 }
 
@@ -238,7 +237,10 @@ export function annualSavingsFromCashflow(
 }
 
 /** FIRE number: annual spend divided by safe withdrawal rate. */
-export function fireNumber(annualSpendCents: number, swr: number): number {
+export function fireNumber(
+  annualSpendCents: number,
+  swr: number,
+): number {
   if (swr <= 0) return Infinity
   return Math.round(annualSpendCents / swr)
 }
@@ -264,13 +266,7 @@ export function monthlyMortgageCents(params: ProjectionParams): number {
   const priceCents = housePriceAtPurchaseCents(params)
   const loan = priceCents - Math.round(priceCents * params.downPaymentFraction)
   if (loan <= 0) return 0
-  return Math.round(
-    pmt(
-      params.mortgageRateAnnual / 12,
-      params.mortgageTermYears * 12,
-      loan,
-    ),
-  )
+  return Math.round(pmt(params.mortgageRateAnnual / 12, params.mortgageTermYears * 12, loan))
 }
 
 /** Year-by-year drawdown after reaching FI (a constant withdrawal in the plan's euros, like the rest of the plan). */

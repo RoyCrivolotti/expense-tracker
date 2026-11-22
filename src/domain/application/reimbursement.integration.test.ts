@@ -24,7 +24,10 @@ function repoWithClaim() {
   )
 }
 
-const line = (description: string, amountCents: number) => ({
+const line = (
+  description: string,
+  amountCents: number,
+) => ({
   date: '2026-05-02',
   budgetMonth: '2026-05',
   description,
@@ -311,7 +314,11 @@ describe('a claim settled by two payments', () => {
 describe('a claim entered through bulk add', () => {
   it('flags every row, then claims and settles them as one', async () => {
     const repo = repoWithClaim()
-    const row = (id: string, amount: string, description: string) => ({
+    const row = (
+      id: string,
+      amount: string,
+      description: string,
+    ) => ({
       id,
       type: 'expense' as const,
       amount,
@@ -339,7 +346,12 @@ describe('a claim entered through bulk add', () => {
     expect(group?.totalCents).toBe(14_000)
 
     const payment = await repo.insertTransaction(OWNER, reimbursement(14_000))
-    await bulkUpdateTransactions(repo, OWNER, saved.map((t) => t.id), { settledBy: payment.id })
+    await bulkUpdateTransactions(
+      repo,
+      OWNER,
+      saved.map((t) => t.id),
+      { settledBy: payment.id },
+    )
 
     const after = await repo.loadDataset(OWNER)
     expect(groupTransactionsByFlag(after.transactions, after.flags)).toEqual([])
@@ -366,9 +378,10 @@ describe('settledBy ownership and conflict guards', () => {
     const repo = repoWithClaim()
     const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
 
-    await expect(
-      bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: 9999 }),
-    ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
+    await expect(bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: 9999 })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid settledBy',
+    })
   })
 
   it('rejects settling a row already settled by a different payment, leaving the whole selection untouched', async () => {

@@ -13,7 +13,10 @@ interface Sentence {
   view: AnalyticsView
 }
 
-function sentenceOf(signal: AnalyticsSignal, format: MoneyFormat): Sentence {
+function sentenceOf(
+  signal: AnalyticsSignal,
+  format: MoneyFormat,
+): Sentence {
   if (signal.kind === 'pace') {
     const over = signal.projectedCents > signal.flexibleBudgetCents
     return {

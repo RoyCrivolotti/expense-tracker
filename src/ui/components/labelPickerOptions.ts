@@ -15,7 +15,10 @@ export { transactionCountLabel }
  * (legacy data, or a race with another tab's delete) — gets a synthetic
  * placeholder so it still renders as a chip instead of silently vanishing.
  */
-export function selectableLabels(labels: Label[], selectedIds: number[]): Label[] {
+export function selectableLabels(
+  labels: Label[],
+  selectedIds: number[],
+): Label[] {
   const selected = new Set(selectedIds)
   const filtered = labels.filter((l) => l.active || selected.has(l.id))
   const knownIds = new Set(labels.map((l) => l.id))
@@ -33,6 +36,7 @@ export function selectableLabels(labels: Label[], selectedIds: number[]): Label[
 /** What deleting a label will actually do, in the user's terms. */
 export function labelDeleteMessage(usageCount: number | null): string {
   if (usageCount === 0) return 'Nothing is labeled with it, so nothing else changes.'
-  if (usageCount === null) return 'Every transaction with this label will lose it. Nothing else changes — no transaction is deleted.'
+  if (usageCount === null)
+    return 'Every transaction with this label will lose it. Nothing else changes — no transaction is deleted.'
   return `${transactionCountLabel(usageCount)} will lose this label. Nothing else changes — no transaction is deleted.`
 }

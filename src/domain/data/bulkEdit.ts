@@ -38,7 +38,10 @@ export const BULK_REVISION_MESSAGE =
   'The ledger changed since you looked at these transactions. Nothing was changed; look again and retry'
 
 /** The filter matches a different number of rows from the one the user was shown. */
-export function bulkCountMessage(found: number, expected: number): string {
+export function bulkCountMessage(
+  found: number,
+  expected: number,
+): string {
   return `${found} transactions match, not the ${expected} you were shown. Nothing was changed; look again and retry`
 }
 

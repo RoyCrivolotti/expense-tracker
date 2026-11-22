@@ -135,7 +135,7 @@ describe('dragPosition', () => {
     expect(dragPosition(s, 650, 400)).toEqual({ x: 250, y: 100 })
   })
 
-  it('reads a turned box from the screen\'s other axis', () => {
+  it("reads a turned box from the screen's other axis", () => {
     const s = session({ turn: 1 })
     // 20px down the screen is 20px along the box; 10px to the left of it is 10px down the box.
     expect(dragPosition(s, 490, 420)).toEqual({ x: 120, y: 110 })

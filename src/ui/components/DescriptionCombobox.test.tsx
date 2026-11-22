@@ -3,9 +3,15 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DescriptionIndex, DescriptionSuggestion } from '../../data/descriptionIndex'
 import { DescriptionCombobox } from './DescriptionCombobox'
 
-const suggestion = (label: string): DescriptionSuggestion => ({ label, template: { type: 'expense', categoryId: 1, accountId: 2 } })
+const suggestion = (label: string): DescriptionSuggestion => ({
+  label,
+  template: { type: 'expense', categoryId: 1, accountId: 2 },
+})
 
-function indexOf(own: DescriptionSuggestion[], extra?: DescriptionIndex['useSuggestions']): DescriptionIndex {
+function indexOf(
+  own: DescriptionSuggestion[],
+  extra?: DescriptionIndex['useSuggestions'],
+): DescriptionIndex {
   return { search: vi.fn(() => own), resolve: () => undefined, ...(extra ? { useSuggestions: extra } : {}) }
 }
 
@@ -27,7 +33,9 @@ describe('DescriptionCombobox', () => {
   })
 
   it('lists what an index with more to say gives, which is how a window adds the server’s matches', () => {
-    const useSuggestions = vi.fn((_index: DescriptionIndex, value: string) => [suggestion(`${value} from an older month`)])
+    const useSuggestions = vi.fn((_index: DescriptionIndex, value: string) => [
+      suggestion(`${value} from an older month`),
+    ])
     const index = indexOf([suggestion('Its own')], useSuggestions)
     const onAccept = vi.fn()
     render(<DescriptionCombobox value="caf" index={index} onChange={vi.fn()} onAccept={onAccept} />)
@@ -103,7 +111,10 @@ describe('DescriptionCombobox', () => {
 
     it('accepts the row that was clicked when the press was long ago, since that click is another', () => {
       const { onAccept, merge } = changing()
-      const at = (type: string, timeStamp: number) => {
+      const at = (
+        type: string,
+        timeStamp: number,
+      ) => {
         const event = new MouseEvent(type, { bubbles: true })
         Object.defineProperty(event, 'timeStamp', { value: timeStamp })
         return event

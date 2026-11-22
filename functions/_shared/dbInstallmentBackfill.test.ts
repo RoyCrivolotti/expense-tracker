@@ -141,8 +141,7 @@ function envForBackfill(state: MockState): Env {
           }
           if (sql.includes('budget_rollover_day')) {
             return {
-              first: async () =>
-                state.rolloverDay != null ? { budget_rollover_day: state.rolloverDay } : null,
+              first: async () => (state.rolloverDay != null ? { budget_rollover_day: state.rolloverDay } : null),
             }
           }
           return { first: async () => null, all: async () => ({ results: [] }) }
@@ -212,7 +211,7 @@ describe('backfillInstallments', () => {
     expect(state.insertedRows).toHaveLength(0)
   })
 
-  it('uses the owner\'s rollover-day budget month, not the raw calendar month, to decide what is due', async () => {
+  it("uses the owner's rollover-day budget month, not the raw calendar month, to decide what is due", async () => {
     // rolloverDay=2 shifts every day but the 1st of the month into next month's
     // budget — so whenever today isn't the 1st, this constructs exactly the case
     // the fix targets: a month the rollover-aware budget calendar has already
@@ -246,8 +245,12 @@ describe('backfillInstallments', () => {
     const budgetMonthsAgo = (n: number) => shiftBudgetMonth(cur, -n)
     // Installments 1..3 fall due two months ago, last month and this month.
     const plan = () => planRow({ id: 1, total_count: 4, anchor_budget_month: budgetMonthsAgo(2), due_day_of_month: 6 })
-    const first = (date: string) => txnRow({ id: 1, plan_id: 1, installment_index: 1, date, budget_month: budgetMonthsAgo(2) })
-    const run = async (planRows: InstallmentPlanRow[], txnRows: TxnRow[]) => {
+    const first = (date: string) =>
+      txnRow({ id: 1, plan_id: 1, installment_index: 1, date, budget_month: budgetMonthsAgo(2) })
+    const run = async (
+      planRows: InstallmentPlanRow[],
+      txnRows: TxnRow[],
+    ) => {
       const state: MockState = { planRows, txnRows, insertedRows: [], prepared: [], nextId: 1000 }
       await backfillInstallments(envForBackfill(state), 'a@b.com')
       return state.insertedRows
@@ -266,11 +269,7 @@ describe('backfillInstallments', () => {
 
     it('stays in the budget month when nothing has been recorded to read a gap from', async () => {
       const created = await run([plan()], [])
-      expect(created.map((r) => r.date)).toEqual([
-        `${budgetMonthsAgo(2)}-06`,
-        `${budgetMonthsAgo(1)}-06`,
-        `${cur}-06`,
-      ])
+      expect(created.map((r) => r.date)).toEqual([`${budgetMonthsAgo(2)}-06`, `${budgetMonthsAgo(1)}-06`, `${cur}-06`])
     })
 
     it('keeps the first of the budget month for a plan with no due day', async () => {
@@ -312,7 +311,10 @@ describe('backfillInstallments', () => {
   describe('the dataset revision', () => {
     const bumps = (state: MockState) => state.prepared.filter((sql) => sql.includes('owner_revision')).length
     const monthsAgo = (n: number) => shiftBudgetMonth(currentBudgetMonth(), -n)
-    const fresh = (planRows: InstallmentPlanRow[], extra: Partial<MockState> = {}): MockState => ({
+    const fresh = (
+      planRows: InstallmentPlanRow[],
+      extra: Partial<MockState> = {},
+    ): MockState => ({
       planRows,
       txnRows: [],
       insertedRows: [],

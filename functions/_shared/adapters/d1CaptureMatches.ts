@@ -27,7 +27,11 @@ function toTypedRow(r: CandidateRow): TypedRow {
  * and one date, so it walks `idx_txn_owner_date` over at most the match window, and the same `possibleMatchFor`
  * chooses the row. Null without a read when the payment cannot be matched.
  */
-export async function findMatch(db: D1Database, owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null> {
+export async function findMatch(
+  db: D1Database,
+  owner: string,
+  payment: PaymentToMatch,
+): Promise<PossibleMatch | null> {
   const span = candidateSpan([payment])
   if (!span || payment.amountCents === null) return null
   const candidates = (
@@ -45,7 +49,11 @@ const asShown = (r: Recommendation): Recommendation =>
  * it holds, and none when no payment on it can be matched. The candidates of every payment come back together and
  * `possibleMatchesFor` gives each row to one payment. Each payment is matched as it is shown (`asShown`).
  */
-export async function withMatches(db: D1Database, owner: string, page: Recommendation[]): Promise<Recommendation[]> {
+export async function withMatches(
+  db: D1Database,
+  owner: string,
+  page: Recommendation[],
+): Promise<Recommendation[]> {
   const shown = page.map(asShown)
   const span = candidateSpan(shown)
   if (!span) return page.map((r) => ({ ...r, possibleMatch: null }))

@@ -29,7 +29,14 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
       allowDuplicate === true,
     )
     if (!result.ok && result.reason === 'possible-duplicate') {
-      return json({ error: 'A typed row already looks like this payment', code: result.reason, possibleMatch: result.possibleMatch }, 409)
+      return json(
+        {
+          error: 'A typed row already looks like this payment',
+          code: result.reason,
+          possibleMatch: result.possibleMatch,
+        },
+        409,
+      )
     }
     if (!result.ok) refuse(result)
     return json(result.transaction, 201)

@@ -12,7 +12,9 @@ describe('withDefaultResponseHeaders', () => {
   })
 
   it('keeps a Cache-Control the route set, and adds only what is missing', () => {
-    const out = withDefaultResponseHeaders(new Response('{}', { headers: { 'cache-control': 'private, no-cache', etag: 'W/"x"' } }))
+    const out = withDefaultResponseHeaders(
+      new Response('{}', { headers: { 'cache-control': 'private, no-cache', etag: 'W/"x"' } }),
+    )
 
     expect(out.headers.get('cache-control')).toBe('private, no-cache')
     expect(out.headers.get('etag')).toBe('W/"x"')
@@ -20,7 +22,9 @@ describe('withDefaultResponseHeaders', () => {
   })
 
   it('returns the same response when it has both already', () => {
-    const response = new Response('{}', { headers: { 'cache-control': 'private, max-age=60', 'x-content-type-options': 'nosniff' } })
+    const response = new Response('{}', {
+      headers: { 'cache-control': 'private, max-age=60', 'x-content-type-options': 'nosniff' },
+    })
 
     expect(withDefaultResponseHeaders(response)).toBe(response)
   })

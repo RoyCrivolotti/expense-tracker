@@ -9,7 +9,10 @@ import type { TransactionsEntry } from './tabs/transactionsEntry'
  * with a filter, Settings on a section. Every route out of a tab goes through `guardLeave`, which asks first if the tab holds
  * unsaved edits. Pressing the tab already open leaves nothing, so it never asks.
  */
-export function useTabNavigation(guardLeave: (go: () => void) => void, onMonth: (month: string) => void) {
+export function useTabNavigation(
+  guardLeave: (go: () => void) => void,
+  onMonth: (month: string) => void,
+) {
   const [tab, setTab] = useState<TabId>('dashboard')
   // Where Goals should open when the dashboard sends the user there for a check-in. Cleared by every ordinary tab change,
   // so a later visit to Goals opens on Plan as usual. The same goes for the other two.
@@ -18,13 +21,19 @@ export function useTabNavigation(guardLeave: (go: () => void) => void, onMonth: 
   const [txnEntry, setTxnEntry] = useState<TransactionsEntry | null>(null)
   // The section of Settings a pointer on the Dashboard sends the person to.
   const [settingsEntry, setSettingsEntry] = useState<SettingsView | null>(null)
-  const open = (next: TabId, entries: { goals?: GoalsEntry; txn?: TransactionsEntry; settings?: SettingsView }) => {
+  const open = (
+    next: TabId,
+    entries: { goals?: GoalsEntry; txn?: TransactionsEntry; settings?: SettingsView },
+  ) => {
     setGoalsEntry(entries.goals ?? null)
     setTxnEntry(entries.txn ?? null)
     setSettingsEntry(entries.settings ?? null)
     setTab(next)
   }
-  const goTo = (next: TabId, entry: GoalsEntry) => {
+  const goTo = (
+    next: TabId,
+    entry: GoalsEntry,
+  ) => {
     if (next === tab) open(next, { goals: entry })
     else guardLeave(() => open(next, { goals: entry }))
   }

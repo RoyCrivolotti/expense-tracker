@@ -5,7 +5,10 @@ import { useLayoutEffect, useState, type RefObject } from 'react'
  * callers get before the first measurement and wherever layout does not run (jsdom
  * reports every element as 0 wide), so server and test output stay deterministic.
  */
-export function useElementWidth(ref: RefObject<HTMLElement | null>, fallback: number): number {
+export function useElementWidth(
+  ref: RefObject<HTMLElement | null>,
+  fallback: number,
+): number {
   const [width, setWidth] = useState(fallback)
   useLayoutEffect(() => {
     const el = ref.current

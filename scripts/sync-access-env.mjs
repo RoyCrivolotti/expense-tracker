@@ -21,12 +21,17 @@ function loadAccessConfig() {
     throw new Error('config/access.json missing — copy access.example.json')
   }
   const raw = JSON.parse(readFileSync(filePath, 'utf8'))
-  const ownerEmail = String(raw.ownerEmail ?? '').trim().toLowerCase()
+  const ownerEmail = String(raw.ownerEmail ?? '')
+    .trim()
+    .toLowerCase()
   if (!ownerEmail) throw new Error('access.json "ownerEmail" is required')
   return { ownerEmail }
 }
 
-async function cf(path, init = {}) {
+async function cf(
+  path,
+  init = {},
+) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...init,
     headers: {

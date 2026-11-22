@@ -83,9 +83,7 @@ export async function storeReceipt(
   const hash = await sha256Hex(request.file)
   const objectKey = receiptKey(owner, transactionId, hash, extensionFor(check.contentType))
   const thumbKey =
-    thumbBytes && supportsThumbnail(check.contentType)
-      ? receiptThumbKey(owner, transactionId, hash)
-      : undefined
+    thumbBytes && supportsThumbnail(check.contentType) ? receiptThumbKey(owner, transactionId, hash) : undefined
 
   await store.put(objectKey, request.file, check.contentType)
   if (thumbKey && request.thumb) await store.put(thumbKey, request.thumb, 'image/jpeg')

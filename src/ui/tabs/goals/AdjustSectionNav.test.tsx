@@ -66,9 +66,7 @@ function sectionElement(key: AdjustSection): HTMLDetailsElement {
 describe('AdjustSectionNav', () => {
   it('offers a chip per section on a phone, and nothing on a wide screen', () => {
     const { unmount } = render(<AdjustSectionNav />)
-    expect(
-      screen.getAllByRole('button').map((b) => b.textContent),
-    ).toEqual(ADJUST_SECTIONS.map((s) => s.chip))
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(ADJUST_SECTIONS.map((s) => s.chip))
     unmount()
 
     setViewport(false)
@@ -167,7 +165,7 @@ describe('AdjustSectionNav', () => {
   // A touch, the wheel, a key (PageUp after tapping Events) or a press on the page, which is all
   // a scrollbar drag sends, each hands the scrolling back to the viewer.
   it.each(['touchstart', 'pointerdown', 'wheel', 'keydown'])(
-    'lets go of a tapped chip at the viewer\'s %s, so the mark follows the page again',
+    "lets go of a tapped chip at the viewer's %s, so the mark follows the page again",
     async (type) => {
       const user = userEvent.setup()
       render(<AdjustSectionNav />)
@@ -467,7 +465,10 @@ describe('AdjustSectionNav', () => {
     const removed = vi.spyOn(window, 'removeEventListener')
     const removedFromDocument = vi.spyOn(document, 'removeEventListener')
     const { unmount } = render(<AdjustSectionNav />)
-    const mine = (calls: unknown[][], types: string[]) => calls.filter(([type]) => types.includes(type as string))
+    const mine = (
+      calls: unknown[][],
+      types: string[],
+    ) => calls.filter(([type]) => types.includes(type as string))
     const putUp = mine(added.mock.calls, windowTypes)
     const putUpOnDocument = mine(addedToDocument.mock.calls, ['focusin'])
     // Each type once, so a listener that is never put away cannot hide among the others.

@@ -64,9 +64,7 @@ function paceSignal(pace: SpendingPace): AnalyticsSignal | null {
 
 function moverSignal(movers: Mover[]): AnalyticsSignal | null {
   const candidate = movers.find(
-    (m) =>
-      m.baselineCents >= MOVER_MIN_BASELINE_CENTS &&
-      Math.abs(m.deltaCents) / m.baselineCents >= MOVER_MIN_RATIO,
+    (m) => m.baselineCents >= MOVER_MIN_BASELINE_CENTS && Math.abs(m.deltaCents) / m.baselineCents >= MOVER_MIN_RATIO,
   )
   if (!candidate) return null
   return {
@@ -81,7 +79,10 @@ function moverSignal(movers: Mover[]): AnalyticsSignal | null {
 }
 
 /** The newest month ready to count, the same one the Cash view's banner names. */
-function cashSignal(cashRows: CashRow[], openMonth?: string): AnalyticsSignal | null {
+function cashSignal(
+  cashRows: CashRow[],
+  openMonth?: string,
+): AnalyticsSignal | null {
   const month = readyToCountMonth(cashRows, openMonth)
   return month === null ? null : { kind: 'cashReady', tone: 'info', month }
 }

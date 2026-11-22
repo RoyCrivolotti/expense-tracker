@@ -26,7 +26,10 @@ export interface PushReading {
   currencyAmount: NumberSlot | null
 }
 
-export function readPush(title: string, body: string): PushReading {
+export function readPush(
+  title: string,
+  body: string,
+): PushReading {
   const titleTokens = tokenise(title)
   const tokens = [...titleTokens, ...tokenise(body)]
   const slots = readPushSlots(title, body)
@@ -54,7 +57,10 @@ const TRAILING = /[)\]}"'”’»,;:]+$/u
  * name taken off. Empty for an empty run. A run that starts or ends inside a word with a glued marker takes the
  * whole word.
  */
-export function spanText(reading: PushReading, run: TokenRun): string {
+export function spanText(
+  reading: PushReading,
+  run: TokenRun,
+): string {
   if (run.end <= run.start) return ''
   const first = reading.origin[run.start]
   const last = reading.origin[run.end - 1]

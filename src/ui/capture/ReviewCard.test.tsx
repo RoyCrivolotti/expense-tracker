@@ -12,7 +12,10 @@ import { ReviewContext, type ReviewCore } from './reviewContext'
 
 const model = makeReviewModel()
 const id = (n: number) => `0b0c0d0e-1111-4222-8333-44445555666${n}`
-const rec = (n: number, over: Partial<RecommendationInfo> = {}) => makeRecommendation({ id: id(n), ...over })
+const rec = (
+  n: number,
+  over: Partial<RecommendationInfo> = {},
+) => makeRecommendation({ id: id(n), ...over })
 
 function makeCore(over: Partial<ReviewCore> = {}): ReviewCore {
   const items = over.items ?? [rec(1)]
@@ -50,7 +53,16 @@ const show = (core: ReviewCore) => render(wrap(core))
 describe('a payment the server suggests from the person’s history', () => {
   const suggested = rec(1, {
     merchantRaw: 'NEW PLACE 0099',
-    suggestion: { description: 'Weekly shop', categoryId: 2, type: 'expense', accountId: 1, amountCents: 1250, sightings: 2, settled: true, reasons: [] },
+    suggestion: {
+      description: 'Weekly shop',
+      categoryId: 2,
+      type: 'expense',
+      accountId: 1,
+      amountCents: 1250,
+      sightings: 2,
+      settled: true,
+      reasons: [],
+    },
   })
 
   it('shows the person’s own description and category instead of the bank’s words', () => {
@@ -97,9 +109,14 @@ describe('a known payment', () => {
 
     const [recId, message, failure, send] = vi.mocked(core.decide).mock.calls[0]!
     expect([recId, failure]).toEqual([id(1), 'add Cafe Example'])
-    expect(message.split('\n')[1]).toBe('Expense \u00b7 Eating out \u00b7 Main Debit \u00b7 Tue 10 Nov \u00b7 Nov budget')
+    expect(message.split('\n')[1]).toBe(
+      'Expense \u00b7 Eating out \u00b7 Main Debit \u00b7 Tue 10 Nov \u00b7 Nov budget',
+    )
     await send()
-    expect(core.submit).toHaveBeenCalledWith(id(1), expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, budgetMonth: '2026-11' }))
+    expect(core.submit).toHaveBeenCalledWith(
+      id(1),
+      expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, budgetMonth: '2026-11' }),
+    )
   })
 
   it("holds a Don't add that only dismisses, and says it teaches nothing", () => {
@@ -121,7 +138,12 @@ describe('a known payment', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change' }))
 
     const seed = vi.mocked(core.openForm).mock.calls[0]![0]
-    expect(seed).toMatchObject({ recommendationId: id(1), amountCents: 1250, categoryId: 1, description: 'Cafe Example' })
+    expect(seed).toMatchObject({
+      recommendationId: id(1),
+      amountCents: 1250,
+      categoryId: 1,
+      description: 'Cafe Example',
+    })
     expect(seed.queue?.left).toBe(0)
   })
 
@@ -155,7 +177,9 @@ describe('a payment in doubt', () => {
   })
 
   it('offers to link the typed row the server named, and holds the link', () => {
-    const core = makeCore({ items: [rec(1, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })] })
+    const core = makeCore({
+      items: [rec(1, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })],
+    })
     show(core)
 
     expect(screen.queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
@@ -170,7 +194,9 @@ describe('a payment in doubt', () => {
     const long = 'A very long description that somebody typed once and that runs past the end of any row'
     show(makeCore({ items: [rec(1, { possibleMatch: { transactionId: 9, description: long, date: '2026-11-09' } })] }))
 
-    const button = screen.getByRole('button', { name: `Already entered as A very long description that somebo\u2026? Link, ${long}` })
+    const button = screen.getByRole('button', {
+      name: `Already entered as A very long description that somebo\u2026? Link, ${long}`,
+    })
 
     expect(button).toHaveTextContent(/^Already entered as A very long description that somebo\u2026\? Link$/)
     expect(button).toHaveAttribute('title', long)
@@ -210,20 +236,28 @@ describe('the card', () => {
   it.each([
     ['a phone', true, 3],
     ['a wide screen', false, 5],
-  ])('shows %s the most rows, and all of them when it is exactly one more, with the full count on the heading', (_name, phone, limit) => {
-    viewport(phone)
-    for (const total of [0, 1, 3, 4, 5, 6, 7]) {
-      const items = Array.from({ length: total }, (_x, i) => rec(i + 1))
-      const { unmount } = show(makeCore({ items }))
-      const rows = screen.queryAllByRole('listitem').length
-      const expected = total === 0 ? 0 : total === limit + 1 ? total : Math.min(total, limit)
+  ])(
+    'shows %s the most rows, and all of them when it is exactly one more, with the full count on the heading',
+    (_name, phone, limit) => {
+      viewport(phone)
+      for (const total of [0, 1, 3, 4, 5, 6, 7]) {
+        const items = Array.from({ length: total }, (_x, i) => rec(i + 1))
+        const { unmount } = show(makeCore({ items }))
+        const rows = screen.queryAllByRole('listitem').length
+        const expected = total === 0 ? 0 : total === limit + 1 ? total : Math.min(total, limit)
 
-      expect(rows, `${total} on ${limit}`).toBe(expected)
-      expect(screen.queryByRole('button', { name: `See all ${total}` }) !== null, `${total} see all`).toBe(total > expected)
-      if (total > 0) expect(screen.getByRole('heading', { name: total === 1 ? '1 payment to review' : `${total} payments to review` })).toBeInTheDocument()
-      unmount()
-    }
-  })
+        expect(rows, `${total} on ${limit}`).toBe(expected)
+        expect(screen.queryByRole('button', { name: `See all ${total}` }) !== null, `${total} see all`).toBe(
+          total > expected,
+        )
+        if (total > 0)
+          expect(
+            screen.getByRole('heading', { name: total === 1 ? '1 payment to review' : `${total} payments to review` }),
+          ).toBeInTheDocument()
+        unmount()
+      }
+    },
+  )
 
   it('queues the payments after the one reviewed, so the form can move on to them', () => {
     const core = makeCore({ items: [rec(1, { merchantRaw: 'BRAND NEW PLACE' }), rec(2), rec(3)] })

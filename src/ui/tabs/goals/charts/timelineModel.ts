@@ -52,7 +52,11 @@ export function axisSpan(rows: MilestoneRow[]): number {
  * check-ins say nothing that tells them apart, so only the ones already there on the path's own
  * terms are collapsed and the rest are placed where the path reaches them.
  */
-export function layoutRow(row: MilestoneRow, milestones: Milestone[], reached: Map<number, string>): RowLayout {
+export function layoutRow(
+  row: MilestoneRow,
+  milestones: Milestone[],
+  reached: Map<number, string>,
+): RowLayout {
   const allReached = milestones.every((m) => reached.has(m.amountCents))
   const gutter: number[] = []
   const beyond: number[] = []
@@ -70,7 +74,10 @@ export function layoutRow(row: MilestoneRow, milestones: Milestone[], reached: M
 }
 
 /** Axis ticks every `step` years, with the end of the axis added when it is not close to the last. */
-export function axisTicks(span: number, step = 5): number[] {
+export function axisTicks(
+  span: number,
+  step = 5,
+): number[] {
   const ticks: number[] = []
   for (let t = 0; t <= span; t += step) ticks.push(t)
   const last = ticks[ticks.length - 1] ?? 0
@@ -136,7 +143,11 @@ function listOf(parts: string[]): string {
  * badge), and since the years to its start are rounded up, that dot can also hold a milestone it reaches
  * soon after starting: each part is said for what it is.
  */
-export function describeCluster(row: MilestoneRow, cluster: DotCluster, amounts: string[]): string {
+export function describeCluster(
+  row: MilestoneRow,
+  cluster: DotCluster,
+  amounts: string[],
+): string {
   const atStart = amounts.filter((_, k) => row.sinceStart[cluster.indices[k] ?? -1] === 0)
   const later = amounts.filter((_, k) => row.sinceStart[cluster.indices[k] ?? -1] !== 0)
   const own = cluster.indices.map((i) => row.sinceStart[i] ?? 0).find((y) => y !== 0) ?? cluster.sinceStart
@@ -147,11 +158,18 @@ export function describeCluster(row: MilestoneRow, cluster: DotCluster, amounts:
 }
 
 /** What the badge at the left edge stands for. `how` says for each milestone why it is already there. */
-export function describeGutter(row: MilestoneRow, amounts: string[], how: string[]): string {
+export function describeGutter(
+  row: MilestoneRow,
+  amounts: string[],
+  how: string[],
+): string {
   return `${row.name} already has ${listOf(amounts.map((a, i) => `${a} (${how[i] ?? ''})`))}.`
 }
 
 /** What the badge past the end of a path stands for. */
-export function describeBeyond(row: MilestoneRow, amounts: string[]): string {
+export function describeBeyond(
+  row: MilestoneRow,
+  amounts: string[],
+): string {
   return beyondText(row, listOf(amounts))
 }

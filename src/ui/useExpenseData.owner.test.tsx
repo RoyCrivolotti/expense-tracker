@@ -31,7 +31,10 @@ const datasetWith = (openingCashCents: number): ExpenseDataset => ({
   settings: { ...defaultExpenseSettings(), openingCashCents },
 })
 
-const loads = (dataset: ExpenseDataset): ExpenseDataSource => ({ canWrite: false, load: () => Promise.resolve(dataset) })
+const loads = (dataset: ExpenseDataset): ExpenseDataSource => ({
+  canWrite: false,
+  load: () => Promise.resolve(dataset),
+})
 const fails = (error: Error): ExpenseDataSource => ({ canWrite: false, load: () => Promise.reject(error) })
 
 function setOnline(online: boolean) {
@@ -50,7 +53,10 @@ afterEach(() => {
 })
 
 /** Opens the app's data as `owner` and waits until it has settled on a model or an error. */
-async function open(source: ExpenseDataSource, owner?: string) {
+async function open(
+  source: ExpenseDataSource,
+  owner?: string,
+) {
   const view = renderHook(() => useExpenseData(source, owner))
   await waitFor(() => expect(view.result.current.status).not.toBe('loading'))
   view.unmount()
@@ -120,23 +126,29 @@ describe('the saved copy of the dataset', () => {
     expect(saved()).toBeUndefined()
   })
 
-  it.each([401, 403])('is removed when a refresh is refused with %i, though the model already on screen stays', async (status) => {
-    const load = vi.fn().mockResolvedValueOnce(datasetWith(12_345)).mockRejectedValue(new ApiError('Refused', status))
-    const source: ExpenseDataSource = { canWrite: false, load }
-    const view = renderHook(() => useExpenseData(source, ALICE))
-    await waitFor(() => expect(view.result.current.status).toBe('ready'))
-    expect(saved()?.owner).toBe(ALICE)
+  it.each([401, 403])(
+    'is removed when a refresh is refused with %i, though the model already on screen stays',
+    async (status) => {
+      const load = vi.fn().mockResolvedValueOnce(datasetWith(12_345)).mockRejectedValue(new ApiError('Refused', status))
+      const source: ExpenseDataSource = { canWrite: false, load }
+      const view = renderHook(() => useExpenseData(source, ALICE))
+      await waitFor(() => expect(view.result.current.status).toBe('ready'))
+      expect(saved()?.owner).toBe(ALICE)
 
-    act(() => view.result.current.reload())
+      act(() => view.result.current.reload())
 
-    await waitFor(() => expect(view.result.current.refreshOutcome).toBe('fail'))
-    expect(saved()).toBeUndefined()
-    expect(view.result.current.status).toBe('ready')
-    view.unmount()
-  })
+      await waitFor(() => expect(view.result.current.refreshOutcome).toBe('fail'))
+      expect(saved()).toBeUndefined()
+      expect(view.result.current.status).toBe('ready')
+      view.unmount()
+    },
+  )
 
   it('is kept when a refresh fails for any other reason', async () => {
-    const load = vi.fn().mockResolvedValueOnce(datasetWith(12_345)).mockRejectedValue(new Error('503 Service Unavailable'))
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(datasetWith(12_345))
+      .mockRejectedValue(new Error('503 Service Unavailable'))
     const source: ExpenseDataSource = { canWrite: false, load }
     const view = renderHook(() => useExpenseData(source, ALICE))
     await waitFor(() => expect(view.result.current.status).toBe('ready'))

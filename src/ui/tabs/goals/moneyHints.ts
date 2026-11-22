@@ -4,7 +4,10 @@ import { bothMoneys, type BothMoneys } from './bothMoneys'
 import { planMoneyLabel } from './planMoneyLabel'
 
 /** "about 54.341 € a year on your account in 2056", or "the same on your account in 2056". */
-function onAccountPer(b: BothMoneys, unit = ''): string {
+function onAccountPer(
+  b: BothMoneys,
+  unit = '',
+): string {
   return b.same ? `the same ${b.accountLabel}` : `about ${b.account}${unit ? ` ${unit}` : ''} ${b.accountLabel}`
 }
 
@@ -15,7 +18,11 @@ const RENT_LOOKAHEAD_YEARS = 10
  * Said under the spending at FI: what it is typed in, and what it comes to on the account where the plan
  * reaches FI, or at the end of the plan when it never does.
  */
-export function spendMoneyHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function spendMoneyHint(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   if (draft.annualSpendCents <= 0) return null
   const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const fiYear = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
@@ -36,7 +43,11 @@ export function spendMoneyHint(draft: NewGoalScenario, inflationRate: number, fo
  * Said under the rent: it is counted in the plan's euros, so on the account it rises with the inflation, and
  * this gives what it comes to in the year the house is bought (or ten years on, with none to buy).
  */
-export function rentMoneyHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function rentMoneyHint(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   if (draft.rentMonthlyCents <= 0) return null
   const year = draft.housePurchaseYear
   const buys = year !== null && year > 0
@@ -55,7 +66,11 @@ export function rentMoneyHint(draft: NewGoalScenario, inflationRate: number, for
  * Said under the purchase fees: they are typed in the plan's euros and come out with the down payment in the year the
  * house is bought, where the account shows more.
  */
-export function feesMoneyHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function feesMoneyHint(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   const year = draft.housePurchaseYear
   if (year === null || year <= 0 || draft.transactionCostsCents <= 0) return null
   const fees = bothMoneys({
@@ -104,7 +119,11 @@ const MONTHLY_EXAMPLE_YEARS = 10
  * Said under the monthly investing: the amount is euros as sent, so one that stays the same counts for less in the plan's
  * euros every year. Worked once, on the amount the plan starts with. Nothing without inflation or without an amount.
  */
-export function monthlyAmountMoneyHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function monthlyAmountMoneyHint(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   if (draft.monthlyContributionCents <= 0 || inflationRate <= 0) return null
   const worth = Math.round(draft.monthlyContributionCents / Math.pow(1 + inflationRate, MONTHLY_EXAMPLE_YEARS))
   const money = (cents: number) => formatCentsCompact(cents, format)

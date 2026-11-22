@@ -3,7 +3,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useLongPress } from './useLongPress'
 import type { TouchEvent } from 'react'
 
-function touch(x: number, y: number) {
+function touch(
+  x: number,
+  y: number,
+) {
   return { touches: [{ clientX: x, clientY: y }] } as unknown as TouchEvent
 }
 

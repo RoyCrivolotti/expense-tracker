@@ -43,7 +43,10 @@ describe('readBackup of a chunked backup', () => {
     const read = await readBackup(backup(), OWNER, DAY)
 
     expect(read.kind).toBe('chunked')
-    expect(read.tables.categories).toEqual([{ id: 1, name: 'Food' }, { id: 2, name: 'Rent' }])
+    expect(read.tables.categories).toEqual([
+      { id: 1, name: 'Food' },
+      { id: 2, name: 'Rent' },
+    ])
     expect(read.tables.accounts).toEqual([{ id: 1, name: 'Main' }])
     expect(read.tables.transactions).toEqual([])
     expect(read.manifest?.revision).toBe('r')
@@ -79,7 +82,9 @@ describe('readBackup of a chunked backup', () => {
   it('refuses tables whose rows do not add up to the manifest’s counts', async () => {
     const store = backup({ manifest: { tables: { ...emptyCounts(), categories: 3, accounts: 1 } } })
 
-    await expect(readBackup(store, OWNER, DAY)).rejects.toThrow('categories: the manifest records 3 rows and the parts hold 2')
+    await expect(readBackup(store, OWNER, DAY)).rejects.toThrow(
+      'categories: the manifest records 3 rows and the parts hold 2',
+    )
   })
 
   it.each([

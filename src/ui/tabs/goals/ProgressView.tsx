@@ -79,11 +79,7 @@ export function ProgressView({
 
       <NetWorthHistoryChart checkins={checkins} accounts={accounts} />
 
-      <CheckinHistoryChart
-        checkins={checkins}
-        accounts={accounts}
-        plan={plan}
-      />
+      <CheckinHistoryChart checkins={checkins} accounts={accounts} plan={plan} />
 
       <ReachedMilestones
         milestones={milestones}
@@ -118,13 +114,7 @@ export function ProgressView({
         )
       ) : null}
 
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={plan}
-        canWrite={canWrite}
-        actions={actions}
-      />
+      <CheckinList checkins={checkins} accounts={accounts} plan={plan} canWrite={canWrite} actions={actions} />
     </div>
   )
 }

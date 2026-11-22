@@ -28,7 +28,10 @@ function renderStrip(
   return { actions, onTrapPausedChange, fileInput }
 }
 
-function file(name = 'hotel.jpg', type = 'image/jpeg'): File {
+function file(
+  name = 'hotel.jpg',
+  type = 'image/jpeg',
+): File {
   return new File([new Uint8Array([1, 2, 3])], name, { type })
 }
 
@@ -37,10 +40,7 @@ describe('ReceiptStrip', () => {
     renderStrip([makeAttachment({ id: 7, originalName: 'hotel.jpg' })])
 
     const thumb = screen.getByRole('button', { name: 'View hotel.jpg' })
-    expect(thumb.querySelector('img')).toHaveAttribute(
-      'src',
-      '/api/expenses/attachments/7?variant=thumb',
-    )
+    expect(thumb.querySelector('img')).toHaveAttribute('src', '/api/expenses/attachments/7?variant=thumb')
   })
 
   it('marks a PDF rather than trying to show a preview it does not have', () => {
@@ -69,10 +69,7 @@ describe('ReceiptStrip', () => {
     })
     const { fileInput } = renderStrip([], { uploadAttachment })
 
-    await userEvent.upload(fileInput, [
-      file('a.jpg'),
-      file('b.jpg'),
-    ])
+    await userEvent.upload(fileInput, [file('a.jpg'), file('b.jpg')])
 
     await waitFor(() => expect(uploadAttachment).toHaveBeenCalledTimes(2))
     expect(order).toEqual(['start:a.jpg', 'end:a.jpg', 'start:b.jpg', 'end:b.jpg'])
@@ -178,12 +175,7 @@ describe('ReceiptStrip — before the transaction exists', () => {
     } as unknown as ExpenseActions
     const onPendingChange = vi.fn()
     const view = render(
-      <ReceiptStrip
-        attachments={[]}
-        actions={actions}
-        pendingFiles={initial}
-        onPendingChange={onPendingChange}
-      />,
+      <ReceiptStrip attachments={[]} actions={actions} pendingFiles={initial} onPendingChange={onPendingChange} />,
     )
     const fileInput = view.container.querySelector('input[type=file]') as HTMLInputElement
     return { actions, onPendingChange, fileInput, view }
@@ -260,15 +252,11 @@ describe('ReceiptStrip — before the transaction exists', () => {
       uploadAttachment: vi.fn().mockRejectedValue(new Error('Receipt storage is full')),
       deleteAttachment: vi.fn(),
     } as unknown as ExpenseActions
-    const view = render(
-      <ReceiptStrip transactionId={1} attachments={[]} actions={actions} />,
-    )
+    const view = render(<ReceiptStrip transactionId={1} attachments={[]} actions={actions} />)
     const fileInput = view.container.querySelector('input[type=file]') as HTMLInputElement
 
     await userEvent.upload(fileInput, file('flight.jpg'))
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent('Receipt storage is full'),
-    )
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Receipt storage is full'))
   })
 })

@@ -36,11 +36,19 @@ export async function createCaptureKey(
   return { keyId: minted.keyId, label: name, createdAt, lastUsedAt: null, key: minted.key }
 }
 
-export function listCaptureKeys(repo: CaptureRepository, owner: string): Promise<CaptureKeySummary[]> {
+export function listCaptureKeys(
+  repo: CaptureRepository,
+  owner: string,
+): Promise<CaptureKeySummary[]> {
   return repo.listKeys(owner)
 }
 
 /** False when the key is not this person's or is already revoked. The two are not told apart, so ids cannot be probed. */
-export function revokeCaptureKey(repo: CaptureRepository, owner: string, keyId: string, now: Date): Promise<boolean> {
+export function revokeCaptureKey(
+  repo: CaptureRepository,
+  owner: string,
+  keyId: string,
+  now: Date,
+): Promise<boolean> {
   return repo.revokeKey(owner, keyId, now.toISOString())
 }

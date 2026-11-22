@@ -26,7 +26,11 @@ import { idsSql, matchGuardSql } from './transactionQuerySql'
  * The ids the filter matches, when there are exactly `expectedCount` of them. One row more than the cap
  * is read so that a filter that reaches it is told apart from one that stops there.
  */
-async function resolveFilter(env: Env, owner: string, target: FilterTarget): Promise<number[]> {
+async function resolveFilter(
+  env: Env,
+  owner: string,
+  target: FilterTarget,
+): Promise<number[]> {
   const { sql, params } = idsSql(owner, target.filter, MAX_FILTER_EDIT_ROWS + 1)
   const { results } = await env.DB.prepare(sql)
     .bind(...params)
@@ -39,7 +43,12 @@ async function resolveFilter(env: Env, owner: string, target: FilterTarget): Pro
   return ids
 }
 
-function matchGuard(env: Env, owner: string, target: FilterTarget, ids: number[]): D1PreparedStatement {
+function matchGuard(
+  env: Env,
+  owner: string,
+  target: FilterTarget,
+  ids: number[],
+): D1PreparedStatement {
   const { sql, params } = matchGuardSql(owner, target.filter, ids, MAX_FILTER_EDIT_ROWS)
   return env.DB.prepare(sql).bind(...params)
 }

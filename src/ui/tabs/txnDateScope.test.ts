@@ -48,9 +48,7 @@ describe('scopeChipLabel', () => {
   it('labels presets and custom ranges', () => {
     expect(scopeChipLabel('last3Months', '', '')).toBe('Dates: last 3 months')
     expect(scopeChipLabel('allDates', '', '')).toBe('Dates: all')
-    expect(scopeChipLabel('custom', '2026-05-01', '2026-07-31')).toBe(
-      'Dates: 2026-05-01 – 2026-07-31',
-    )
+    expect(scopeChipLabel('custom', '2026-05-01', '2026-07-31')).toBe('Dates: 2026-05-01 – 2026-07-31')
   })
 })
 

@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  toGoalScenario,
-  toSettings,
-  toStoredTxn,
-  type GoalScenarioRow,
-  type SettingsRow,
-  type TxnRow,
-} from './rows'
+import { toGoalScenario, toSettings, toStoredTxn, type GoalScenarioRow, type SettingsRow, type TxnRow } from './rows'
 import { defaultMilestones } from '../../src/domain/engine'
 
 function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
@@ -64,7 +57,13 @@ describe('toGoalScenario', () => {
 
   it('leaves out a stored event that is not an event instead of passing it on to crash the Goals screen', () => {
     const good = { year: 3, amountCents: 10_000_000, label: 'Bonus' }
-    const stored = JSON.stringify([null, good, { year: 'x', amountCents: 1, label: 'a' }, { year: 2, amountCents: 'x', label: 'b' }, 'abc'])
+    const stored = JSON.stringify([
+      null,
+      good,
+      { year: 'x', amountCents: 1, label: 'a' },
+      { year: 2, amountCents: 'x', label: 'b' },
+      'abc',
+    ])
     expect(toGoalScenario(baseRow({ life_events: stored })).lifeEvents).toEqual([good])
   })
 
@@ -138,9 +137,7 @@ describe('toSettings milestones', () => {
 
   it('reads a stored ladder', () => {
     const stored = [{ amountCents: 5_000_000, label: 'Emergency fund' }]
-    expect(toSettings(settingsRow({ milestones: JSON.stringify(stored) })).milestones).toEqual(
-      stored,
-    )
+    expect(toSettings(settingsRow({ milestones: JSON.stringify(stored) })).milestones).toEqual(stored)
   })
 
   it('preserves a deliberately empty ladder', () => {

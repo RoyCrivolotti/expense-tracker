@@ -3,7 +3,10 @@
  * kept as chunks arrive and the stream is cancelled at the limit, so a chunked body with no Content-Length cannot
  * make the Worker buffer more than the cap.
  */
-export async function readCappedText(request: Request, maxBytes: number): Promise<string | null> {
+export async function readCappedText(
+  request: Request,
+  maxBytes: number,
+): Promise<string | null> {
   if (!request.body) return ''
   const reader = request.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
   const chunks: Uint8Array[] = []

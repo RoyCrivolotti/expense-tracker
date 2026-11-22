@@ -7,7 +7,11 @@
  * includes every transform above the chart, in every engine, and the matrix does not in all of
  * them. `viewWidth` is the viewBox's width, which maps one to one onto the box's height here.
  */
-export function quarterTurnX(clientY: number, rect: { top: number; height: number }, viewWidth: number): number | null {
+export function quarterTurnX(
+  clientY: number,
+  rect: { top: number; height: number },
+  viewWidth: number,
+): number | null {
   if (!(rect.height > 0)) return null
   return ((clientY - rect.top) * viewWidth) / rect.height
 }

@@ -41,9 +41,7 @@ describe('inMemoryExpenseRepository — wealth accounts', () => {
 
   it('throws 404 when updating non-existent account', async () => {
     const repo = inMemoryExpenseRepository()
-    await expect(
-      repo.updateWealthAccount(OWNER, 999, { archived: true }),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(repo.updateWealthAccount(OWNER, 999, { archived: true })).rejects.toMatchObject({ status: 404 })
   })
 
   it('throws on empty patch', async () => {
@@ -116,9 +114,9 @@ describe('inMemoryExpenseRepository — wealth checkins', () => {
 
   it('throws for invalid date', async () => {
     const repo = inMemoryExpenseRepository()
-    await expect(
-      repo.createWealthCheckin(OWNER, { checkinDate: 'not-a-date', entries: [] }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(repo.createWealthCheckin(OWNER, { checkinDate: 'not-a-date', entries: [] })).rejects.toMatchObject({
+      status: 400,
+    })
   })
 
   it('rejects a future date, as D1 does', async () => {
@@ -155,9 +153,9 @@ describe('inMemoryExpenseRepository — wealth checkins', () => {
 
   it('throws 404 when updating non-existent checkin', async () => {
     const repo = inMemoryExpenseRepository()
-    await expect(
-      repo.updateWealthCheckin(OWNER, 999, { checkinDate: '2024-01-01' }),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(repo.updateWealthCheckin(OWNER, 999, { checkinDate: '2024-01-01' })).rejects.toMatchObject({
+      status: 404,
+    })
   })
 
   it('throws on empty patch', async () => {
@@ -215,18 +213,20 @@ describe('inMemoryExpenseRepository — mirrors dbWealth validation', () => {
   it('rejects an account kind outside the whitelist', async () => {
     const repo = inMemoryExpenseRepository()
 
-    await expect(
-      repo.createWealthAccount(OWNER, { ...account, kind: 'crypto' as never }),
-    ).rejects.toMatchObject({ status: 400, message: 'Invalid account kind' })
+    await expect(repo.createWealthAccount(OWNER, { ...account, kind: 'crypto' as never })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid account kind',
+    })
   })
 
   it('rejects an invalid kind on update too', async () => {
     const repo = inMemoryExpenseRepository()
     const created = await repo.createWealthAccount(OWNER, account)
 
-    await expect(
-      repo.updateWealthAccount(OWNER, created.id, { kind: 'savings' as never }),
-    ).rejects.toMatchObject({ status: 400, message: 'Invalid account kind' })
+    await expect(repo.updateWealthAccount(OWNER, created.id, { kind: 'savings' as never })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid account kind',
+    })
   })
 
   it('refuses a check-in entry for an account the owner does not have', async () => {

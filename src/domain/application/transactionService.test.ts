@@ -39,14 +39,16 @@ describe('transactionService validation', () => {
   it('takes a bulk create up to a cap and refuses more before looking at a row', () => {
     const rows = (n: number) => Array.from({ length: n }, () => validTxn)
     expect(validateBulkTransactions(rows(MAX_BULK_CREATE))).toHaveLength(MAX_BULK_CREATE)
-    expect(() => validateBulkTransactions(rows(MAX_BULK_CREATE + 1))).toThrow(`Too many transactions (max ${MAX_BULK_CREATE})`)
+    expect(() => validateBulkTransactions(rows(MAX_BULK_CREATE + 1))).toThrow(
+      `Too many transactions (max ${MAX_BULK_CREATE})`,
+    )
     expect(() => validateBulkTransactions([...rows(MAX_BULK_CREATE), null])).toThrow('Too many transactions')
   })
 
   it('names the row whose note is too long', () => {
-    expect(() => validateBulkTransactions([validTxn, { ...validTxn, notes: 'n'.repeat(MAX_NOTES_LENGTH + 1) }])).toThrow(
-      'Row 2: notes must be',
-    )
+    expect(() =>
+      validateBulkTransactions([validTxn, { ...validTxn, notes: 'n'.repeat(MAX_NOTES_LENGTH + 1) }]),
+    ).toThrow('Row 2: notes must be')
   })
 
   it('requires core fields on a single transaction', () => {
@@ -87,7 +89,9 @@ describe('transactionService validation', () => {
       expect(() => validateBulkUpdatePatch({ date }), date).toThrow('date must be YYYY-MM-DD')
     }
     for (const budgetMonth of ['2026-00', '2026-13', '2026-1', '26-01', 'january']) {
-      expect(() => validateNewTransaction({ ...validTxn, budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
+      expect(() => validateNewTransaction({ ...validTxn, budgetMonth }), budgetMonth).toThrow(
+        'budgetMonth must be YYYY-MM',
+      )
       expect(() => validateTransactionPatch({ budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
       expect(() => validateBulkUpdatePatch({ budgetMonth }), budgetMonth).toThrow('budgetMonth must be YYYY-MM')
     }
@@ -97,7 +101,9 @@ describe('transactionService validation', () => {
 
   it('refuses a date or month that is not text, which used to reach SQLite as given', () => {
     expect(() => validateNewTransaction({ ...validTxn, date: 20260101 as never })).toThrow('date must be YYYY-MM-DD')
-    expect(() => validateNewTransaction({ ...validTxn, budgetMonth: 202601 as never })).toThrow('budgetMonth must be YYYY-MM')
+    expect(() => validateNewTransaction({ ...validTxn, budgetMonth: 202601 as never })).toThrow(
+      'budgetMonth must be YYYY-MM',
+    )
   })
 
   it('requires a text description on create, and lets it be blank or padded as sent', () => {
@@ -105,7 +111,9 @@ describe('transactionService validation', () => {
     // A number or an object reaching that line threw a 500 after the write path started
     // computing the norm; it is a 400 here.
     for (const description of [42, null, undefined, {}, ['a']]) {
-      expect(() => validateNewTransaction({ ...validTxn, description: description as never })).toThrow('description must be text')
+      expect(() => validateNewTransaction({ ...validTxn, description: description as never })).toThrow(
+        'description must be text',
+      )
     }
     expect(validateNewTransaction({ ...validTxn, description: '' }).description).toBe('')
     expect(validateNewTransaction({ ...validTxn, description: '  Rent  ' }).description).toBe('  Rent  ')
@@ -135,9 +143,7 @@ describe('transactionService validation', () => {
     const repo = inMemoryExpenseRepository(
       {
         accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
-        categories: [
-          { id: 2, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true },
-        ],
+        categories: [{ id: 2, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
       },
       'owner@example.com',
     )
@@ -217,9 +223,7 @@ describe('validateBulkUpdatePatch', () => {
 
   it('rejects malformed date / budgetMonth', () => {
     expect(() => validateBulkUpdatePatch({ date: '2026-1-1' })).toThrow('date must be YYYY-MM-DD')
-    expect(() => validateBulkUpdatePatch({ budgetMonth: '2026-1' })).toThrow(
-      'budgetMonth must be YYYY-MM',
-    )
+    expect(() => validateBulkUpdatePatch({ budgetMonth: '2026-1' })).toThrow('budgetMonth must be YYYY-MM')
   })
 })
 
@@ -272,7 +276,10 @@ function planRepo() {
   return inMemoryExpenseRepository(seed, OWNER)
 }
 
-async function seedTxn(repo: ReturnType<typeof planRepo>, budgetMonth: string) {
+async function seedTxn(
+  repo: ReturnType<typeof planRepo>,
+  budgetMonth: string,
+) {
   return repo.insertTransaction(OWNER, {
     date: `${budgetMonth}-05`,
     budgetMonth,
@@ -334,7 +341,10 @@ describe('validateTransactionPatch', () => {
     // repository's check. With the type in the same patch it is judged here.
     expect(validateTransactionPatch({ amountCents: -500 })).toEqual({ amountCents: -500 })
     expect(() => validateTransactionPatch({ amountCents: -500, type: 'expense' })).toThrow('withdrawal')
-    expect(validateTransactionPatch({ amountCents: -500, type: 'investment' })).toEqual({ amountCents: -500, type: 'investment' })
+    expect(validateTransactionPatch({ amountCents: -500, type: 'investment' })).toEqual({
+      amountCents: -500,
+      type: 'investment',
+    })
     expect(() => validateTransactionPatch({ amountCents: 12.5 })).toThrow('amountCents')
     expect(() => validateTransactionPatch({ date: 'yesterday' })).toThrow('date must be YYYY-MM-DD')
     expect(() => validateTransactionPatch({ budgetMonth: '2026-1' })).toThrow('budgetMonth')
@@ -392,9 +402,9 @@ describe('transactionService plan linking on update', () => {
     const first = await seedTxn(repo, '2026-01')
     const second = await seedTxn(repo, '2026-02')
     await patchTransaction(repo, OWNER, first.id, { planId: 7, installmentIndex: 3 })
-    await expect(
-      patchTransaction(repo, OWNER, second.id, { planId: 7, installmentIndex: 3 }),
-    ).rejects.toThrow('Installment already recorded')
+    await expect(patchTransaction(repo, OWNER, second.id, { planId: 7, installmentIndex: 3 })).rejects.toThrow(
+      'Installment already recorded',
+    )
   })
 
   it('allows re-saving a linked row at its own index (self excluded)', async () => {

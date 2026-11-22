@@ -19,7 +19,10 @@ export const STAR_HOME_ATTR = 'data-star-home'
  * Only a star that has focus is followed: a press that did not focus it (Safari does not focus
  * a button on click) has no place to keep.
  */
-export function toggleKeepingFocus(toggle: () => void, fallback: () => HTMLElement | null): void {
+export function toggleKeepingFocus(
+  toggle: () => void,
+  fallback: () => HTMLElement | null,
+): void {
   const pressed = document.activeElement
   const home = pressed instanceof HTMLElement && pressed.matches(STAR) ? pressed.closest(`[${STAR_HOME_ATTR}]`) : null
   if (!(pressed instanceof HTMLElement) || home === null) {

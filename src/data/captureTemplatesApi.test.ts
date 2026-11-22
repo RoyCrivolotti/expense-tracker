@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchMutedWordings, unmuteWording } from './captureTemplatesApi'
 
-const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+const ok = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 afterEach(() => vi.unstubAllGlobals())
 
 function stub(body: unknown) {
@@ -10,7 +11,14 @@ function stub(body: unknown) {
   return fetchMock
 }
 
-const MUTED = { templateId: '0b6f1c1e-2d1b-4c55-9a0e-7d7e2f9b1a10', source: 'newbank', skeleton: 'offer <N> <C>', seen: 4, dismissals: 3, ignoredAt: '2026-11-10T09:00:00.000Z' }
+const MUTED = {
+  templateId: '0b6f1c1e-2d1b-4c55-9a0e-7d7e2f9b1a10',
+  source: 'newbank',
+  skeleton: 'offer <N> <C>',
+  seen: 4,
+  dismissals: 3,
+  ignoredAt: '2026-11-10T09:00:00.000Z',
+}
 
 describe('muted wording calls', () => {
   it('reads the muted list', async () => {

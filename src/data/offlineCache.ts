@@ -35,7 +35,10 @@ interface SnapshotRecord {
  * Whether `record` is a copy this build can open for `owner`. Pure so it can be tested without an IndexedDB
  * implementation. A copy is one person's: it is never shown to anyone else, nor when no owner is named.
  */
-export function isCompatibleSnapshot(record: { version?: number; owner?: string } | undefined, owner: string): boolean {
+export function isCompatibleSnapshot(
+  record: { version?: number; owner?: string } | undefined,
+  owner: string,
+): boolean {
   return record?.version === SNAPSHOT_VERSION && record.owner === owner
 }
 
@@ -66,7 +69,10 @@ function removeSnapshot(store: IDBObjectStore): Promise<void> {
   })
 }
 
-function writeSnapshot(store: IDBObjectStore, record: SnapshotRecord): Promise<void> {
+function writeSnapshot(
+  store: IDBObjectStore,
+  record: SnapshotRecord,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const req = store.put(record)
     req.onsuccess = () => resolve()
@@ -88,7 +94,10 @@ export async function withStore<T>(
   })
 }
 
-export async function saveOfflineSnapshot(owner: string, dataset: ExpenseDataset): Promise<void> {
+export async function saveOfflineSnapshot(
+  owner: string,
+  dataset: ExpenseDataset,
+): Promise<void> {
   if (typeof indexedDB === 'undefined') return
   const record: SnapshotRecord = {
     key: SNAPSHOT_KEY,

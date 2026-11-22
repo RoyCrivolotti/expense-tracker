@@ -1,10 +1,6 @@
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
-import {
-  groupTransactionsByFlag,
-  summarizeFlagGroups,
-  type FlagGroup,
-} from '../../domain/engine/flagGroups'
+import { groupTransactionsByFlag, summarizeFlagGroups, type FlagGroup } from '../../domain/engine/flagGroups'
 import { Card, SectionTitle } from '../components/primitives'
 import { FlaggedTip } from '../tips/TransactionsTips'
 import { Money } from '../components/Money'
@@ -67,9 +63,7 @@ function FlagGroupSection({
         <FlagGlyph flag={group.flag} className={styles.summaryGlyph} decorative />
         <span className={styles.summaryBody}>
           <span className={styles.summaryName}>{group.flag.name}</span>
-          {group.flag.description ? (
-            <span className={styles.summaryDesc}>{group.flag.description}</span>
-          ) : null}
+          {group.flag.description ? <span className={styles.summaryDesc}>{group.flag.description}</span> : null}
         </span>
         <span className={styles.summaryStats}>
           <span className={styles.count}>
@@ -101,11 +95,7 @@ function FlagGroupSection({
                 to find things later, an expense report is a document addressed to
                 nobody for money that is not coming. */}
             {group.flag.reimbursable ? (
-              <button
-                type="button"
-                className={styles.packBtn}
-                onClick={() => onOpenReport(group.flag.id)}
-              >
+              <button type="button" className={styles.packBtn} onClick={() => onOpenReport(group.flag.id)}>
                 Expense report
               </button>
             ) : null}
@@ -119,11 +109,7 @@ function FlagGroupSection({
           */}
           {group.flag.reimbursable && group.totalCents > 0 ? (
             <div className={styles.actionsRow}>
-              <button
-                type="button"
-                className={styles.settleBtn}
-                onClick={() => onSettle(group)}
-              >
+              <button type="button" className={styles.settleBtn} onClick={() => onSettle(group)}>
                 Record reimbursement
               </button>
             </div>
@@ -134,11 +120,7 @@ function FlagGroupSection({
               rows above already fill 375px between them. */}
           {onClearGroup ? (
             <div className={styles.actionsRow}>
-              <button
-                type="button"
-                className={styles.clearAllBtn}
-                onClick={() => onClearGroup(group)}
-              >
+              <button type="button" className={styles.clearAllBtn} onClick={() => onClearGroup(group)}>
                 Clear all in this group
               </button>
             </div>
@@ -173,7 +155,13 @@ export function FlaggedCard({
 }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   // The line is mounted before there is anything flagged, in the same place, so it folds open when the first flag is used.
-  if (groups.length === 0) return <>{null}<FlaggedTip present={false} /></>
+  if (groups.length === 0)
+    return (
+      <>
+        {null}
+        <FlaggedTip present={false} />
+      </>
+    )
   const total = summarizeFlagGroups(groups)
 
   return (

@@ -29,7 +29,10 @@ export interface Lookup {
   settledBy: (reimbursementId: number) => Transaction[]
 }
 
-export function buildLookup(dataset: ExpenseDataset, counts: AttachmentCounts = {}): Lookup {
+export function buildLookup(
+  dataset: ExpenseDataset,
+  counts: AttachmentCounts = {},
+): Lookup {
   const cats = new Map(dataset.categories.map((c) => [c.id, c]))
   const accs = new Map(dataset.accounts.map((a) => [a.id, a]))
   const plans = new Map(dataset.installmentPlans.map((p) => [p.id, p]))

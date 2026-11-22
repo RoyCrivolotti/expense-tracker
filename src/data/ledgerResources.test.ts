@@ -71,7 +71,8 @@ describe('mergeRead', () => {
     const merged = mergeRead(first, later, { reference: true, rows: true, cube: false })
     const summed = new Set(merged.cells!.map((cell) => cell.budgetMonth))
     for (const month of merged.months) expect(merged.rows.has(month) || summed.has(month), month).toBe(true)
-    for (const month of first.rows.keys()) if (!summed.has(month)) expect(merged.rows.get(month)).toBe(first.rows.get(month))
+    for (const month of first.rows.keys())
+      if (!summed.has(month)) expect(merged.rows.get(month)).toBe(first.rows.get(month))
   })
 
   it('replaces the rows when the sums are replaced too, since every month then has its sums', async () => {
@@ -86,7 +87,18 @@ describe('mergeRead', () => {
     const { a, b } = await twoStates()
     const id = Number(Object.keys(b.attachmentCounts)[0])
     const withLists = (count: number) =>
-      holdReceipts({ ...a, attachmentCounts: { ...a.attachmentCounts } }, id, Array.from({ length: count }, (_, i) => ({ id: i + 1, transactionId: id, contentType: 'image/jpeg', byteSize: 1, createdAt: 'x', hasThumb: true })))
+      holdReceipts(
+        { ...a, attachmentCounts: { ...a.attachmentCounts } },
+        id,
+        Array.from({ length: count }, (_, i) => ({
+          id: i + 1,
+          transactionId: id,
+          contentType: 'image/jpeg',
+          byteSize: 1,
+          createdAt: 'x',
+          hasThumb: true,
+        })),
+      )
     const same = mergeRead(withLists(b.attachmentCounts[id]!), b, { reference: true, rows: true, cube: true })
     expect(same.receipts.has(id)).toBe(true)
     const other = mergeRead(withLists(b.attachmentCounts[id]! + 1), b, { reference: true, rows: true, cube: true })

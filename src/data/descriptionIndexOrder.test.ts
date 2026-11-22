@@ -34,9 +34,15 @@ function entriesOf(rows: IndexRow[]): Entry[] {
   return [...byKey.values()]
 }
 
-function reference(rows: IndexRow[]): (text: string, limit: number) => string[] {
+function reference(rows: IndexRow[]): (
+  text: string,
+  limit: number,
+) => string[] {
   const entries = entriesOf(rows)
-  return (text, limit) => {
+  return (
+    text,
+    limit,
+  ) => {
     const typed = normalizeDescriptionKey(text)
     if (!typed) return []
     return entries
@@ -54,7 +60,10 @@ function reference(rows: IndexRow[]): (text: string, limit: number) => string[] 
 }
 
 /** What a person might type: the starts of descriptions, and pieces from inside them. */
-function typedFor(rows: IndexRow[], rnd: () => number): string[] {
+function typedFor(
+  rows: IndexRow[],
+  rnd: () => number,
+): string[] {
   const out = new Set(prefixesFor(rows, rnd))
   for (const row of rows) {
     const key = [...normalizeDescriptionKey(row.description)]
@@ -80,7 +89,8 @@ function checkLedger(seed: number): { searches: number; fromInside: number; notA
     expect(mine, JSON.stringify({ seed, text, limit })).toEqual(expected(text, limit))
     const typed = normalizeDescriptionKey(text)
     if (mine.some((label) => !normalizeDescriptionKey(label).startsWith(typed))) counts.fromInside += 1
-    if (JSON.stringify(byKey.search(text, limit).map((s) => s.label)) !== JSON.stringify(mine)) counts.notAlphabetical += 1
+    if (JSON.stringify(byKey.search(text, limit).map((s) => s.label)) !== JSON.stringify(mine))
+      counts.notAlphabetical += 1
     counts.searches += 1
   }
   return counts
@@ -112,10 +122,18 @@ describe('the order the app lists suggestions in', () => {
       { ...base, id: 7, date: '2026-01-07', description: 'Mercería' },
     ]
     const index = buildDescriptionIndex(rows)
-    expect(index.search('merc').map((s) => s.label)).toEqual(['Mercadona', 'Mercería', 'Mercado de abastos', 'Supermercado'])
+    expect(index.search('merc').map((s) => s.label)).toEqual([
+      'Mercadona',
+      'Mercería',
+      'Mercado de abastos',
+      'Supermercado',
+    ])
     expect(index.search('cado').map((s) => s.label)).toEqual(['Supermercado', 'Mercadona', 'Mercado de abastos'])
     expect(index.search('xyz')).toEqual([])
-    expect(index.resolve(' MERCADONA ')).toEqual({ label: 'Mercadona', template: { type: 'expense', categoryId: 1, accountId: 1 } })
+    expect(index.resolve(' MERCADONA ')).toEqual({
+      label: 'Mercadona',
+      template: { type: 'expense', categoryId: 1, accountId: 1 },
+    })
   })
 
   it('counts rows of one description whatever their spelling, and not cancelled ones', () => {
@@ -127,7 +145,11 @@ describe('the order the app lists suggestions in', () => {
       { ...base, id: 4, date: '2026-01-04', description: 'Gas', cancelled: true },
       { ...base, id: 5, date: '2026-01-05', description: 'Gas', cancelled: true },
     ]
-    expect(buildDescriptionIndex(rows).searchEntries('g').map((m) => [m.label, m.uses])).toEqual([
+    expect(
+      buildDescriptionIndex(rows)
+        .searchEntries('g')
+        .map((m) => [m.label, m.uses]),
+    ).toEqual([
       [' GYM ', 2],
       ['Gas', 1],
     ])
@@ -142,16 +164,41 @@ describe('the key order, which is the server’s', () => {
       { ...base, id: 2, description: 'Apple bar' },
       { ...base, id: 3, description: 'Bat' },
     ]
-    expect(keyed(rows).search('ba').map((s) => s.label)).toEqual([' Bar', 'Bat'])
-    expect(buildDescriptionIndex(rows).search('ba').map((s) => s.label)).toEqual(['Bat', ' Bar', 'Apple bar'])
-    const padded: IndexRow[] = [{ ...base, id: 1, description: ' Zed' }, { ...base, id: 2, description: 'Zebra' }]
-    expect(keyed(padded).search('ze').map((s) => s.label)).toEqual(['Zebra', ' Zed'])
+    expect(
+      keyed(rows)
+        .search('ba')
+        .map((s) => s.label),
+    ).toEqual([' Bar', 'Bat'])
+    expect(
+      buildDescriptionIndex(rows)
+        .search('ba')
+        .map((s) => s.label),
+    ).toEqual(['Bat', ' Bar', 'Apple bar'])
+    const padded: IndexRow[] = [
+      { ...base, id: 1, description: ' Zed' },
+      { ...base, id: 2, description: 'Zebra' },
+    ]
+    expect(
+      keyed(padded)
+        .search('ze')
+        .map((s) => s.label),
+    ).toEqual(['Zebra', ' Zed'])
   })
 
   it('answers a search the same whatever locale, apart from how letters sort', () => {
     const rows = generatedRows(3)
-    expect(new Set(keyed(rows, { locale: 'sv' }).search('ä', 25).map((s) => s.label))).toEqual(
-      new Set(keyed(rows).search('ä', 25).map((s) => s.label)),
+    expect(
+      new Set(
+        keyed(rows, { locale: 'sv' })
+          .search('ä', 25)
+          .map((s) => s.label),
+      ),
+    ).toEqual(
+      new Set(
+        keyed(rows)
+          .search('ä', 25)
+          .map((s) => s.label),
+      ),
     )
   })
 })

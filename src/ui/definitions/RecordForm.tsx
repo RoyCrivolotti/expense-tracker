@@ -29,11 +29,7 @@ function FieldInput({
   if (field.kind === 'toggle') {
     return (
       <label className={styles.toggle}>
-        <input
-          type="checkbox"
-          checked={value === true}
-          onChange={(e) => onChange(e.target.checked)}
-        />
+        <input type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />
         <span>{field.label}</span>
       </label>
     )
@@ -53,9 +49,7 @@ function FieldInput({
         <input
           type={inputType(field.kind)}
           step={stepFor(field.kind)}
-          {...(field.kind === 'money' || field.kind === 'percent'
-            ? { inputMode: 'decimal' as const }
-            : {})}
+          {...(field.kind === 'money' || field.kind === 'percent' ? { inputMode: 'decimal' as const } : {})}
           value={String(value)}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -75,9 +69,7 @@ interface RecordFormProps {
 /** Generic form driven by a field-spec list; converts euros↔cents and %↔fraction. */
 export function RecordForm({ fields, initial, submitLabel, onSubmit, onClose }: RecordFormProps) {
   const format = useMoneyFormat()
-  const [vals, setVals] = useState<Record<string, InputValue>>(() =>
-    buildInitial(fields, initial, format),
-  )
+  const [vals, setVals] = useState<Record<string, InputValue>>(() => buildInitial(fields, initial, format))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 

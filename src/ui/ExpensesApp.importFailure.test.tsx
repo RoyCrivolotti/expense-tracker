@@ -41,7 +41,10 @@ const category = dataset.categories[0]!.name
 const account = dataset.accounts[0]!.name
 const csv = [
   EXPORT_CSV_HEADER,
-  ...Array.from({ length: 250 }, (_, i) => `,2026-01-05,2026-01,Import ${i + 1},${category},${account},expense,${100 + i},posted,0,`),
+  ...Array.from(
+    { length: 250 },
+    (_, i) => `,2026-01-05,2026-01,Import ${i + 1},${category},${account},expense,${100 + i},posted,0,`,
+  ),
 ].join('\n')
 
 /** A source whose second create is saved and then dropped. */
@@ -53,7 +56,9 @@ function droppingSource() {
     load: vi.fn(() => Promise.resolve(parts.dataset)),
     createTransactions: (inputs: NewTransaction[]): Promise<Transaction[]> => {
       requests += 1
-      const created = inputs.map((input, i) => ({ ...input, id: 90_000 + requests * 1_000 + i, status: 'posted' }) as Transaction)
+      const created = inputs.map(
+        (input, i) => ({ ...input, id: 90_000 + requests * 1_000 + i, status: 'posted' }) as Transaction,
+      )
       parts.dataset = { ...parts.dataset, transactions: [...parts.dataset.transactions, ...created] }
       return requests === 2 ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(created)
     },

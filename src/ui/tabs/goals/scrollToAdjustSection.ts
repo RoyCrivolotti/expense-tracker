@@ -32,7 +32,10 @@ export function pinnedBottom(): number {
 }
 
 /** Scroll an Scenarios section's heading to just under what is pinned, opening it first. */
-export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'smooth'): void {
+export function scrollToAdjustSection(
+  key: AdjustSection,
+  behavior: 'auto' | 'smooth',
+): void {
   const section = document.getElementById(adjustSectionId(key))
   if (!section) return
   if (section instanceof HTMLDetailsElement) section.open = true

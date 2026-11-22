@@ -147,18 +147,14 @@ describe('InstallmentPlanForm when a save is refused', () => {
   function renderRefusing(message: string) {
     const actions = noopActions()
     actions.updateInstallmentPlan = vi.fn().mockRejectedValue(new Error(message))
-    render(
-      <InstallmentPlanForm plan={basePlan} model={modelWith(datasetWith())} actions={actions} onBack={vi.fn()} />,
-    )
+    render(<InstallmentPlanForm plan={basePlan} model={modelWith(datasetWith())} actions={actions} onBack={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /save plan/i }))
   }
 
   it('names the field by the label on screen, not by its payload key', async () => {
     renderRefusing('totalCount must be a positive integer')
 
-    expect(
-      await screen.findByText('Total installments must be a whole number, at least 1.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Total installments must be a whole number, at least 1.')).toBeInTheDocument()
     expect(screen.queryByText(/totalCount/)).not.toBeInTheDocument()
   })
 

@@ -4,17 +4,29 @@ import { NOW, asEmail } from './inMemoryAccessDb'
 type Changes = { meta: { changes: number } }
 
 /** The dataset revision lives in D1 beside the data; this fake only records that a bump happened. */
-function recordRevisionBump(sql: string, state: AccessState, args: unknown[]): Changes | null {
+function recordRevisionBump(
+  sql: string,
+  state: AccessState,
+  args: unknown[],
+): Changes | null {
   if (!sql.includes('INSERT INTO owner_revision')) return null
   state.revisionBumps.push(asEmail(args[0]))
   return { meta: { changes: 1 } }
 }
 
-export function runMutation(sql: string, state: AccessState, args: unknown[]): Changes {
+export function runMutation(
+  sql: string,
+  state: AccessState,
+  args: unknown[],
+): Changes {
   return recordRevisionBump(sql, state, args) ?? runAccessMutation(sql, state, args)
 }
 
-function runAccessMutation(sql: string, state: AccessState, args: unknown[]): Changes {
+function runAccessMutation(
+  sql: string,
+  state: AccessState,
+  args: unknown[],
+): Changes {
   if (sql.includes('INSERT INTO allowed_users')) return insertAllowedUser(state, args)
   if (sql.includes('UPDATE allowed_users SET status =')) return revokeAllowedUser(state, args)
   if (sql.includes('UPDATE allowed_users SET last_seen_at')) return touchLastSeen(state, args)
@@ -31,7 +43,10 @@ function runAccessMutation(sql: string, state: AccessState, args: unknown[]): Ch
   throw new Error(`inMemoryAccessDb: unsupported mutation: ${sql}`)
 }
 
-function insertAllowedUser(state: AccessState, args: unknown[]) {
+function insertAllowedUser(
+  state: AccessState,
+  args: unknown[],
+) {
   const email = asEmail(args[0])
   state.users.set(email, {
     email,
@@ -43,20 +58,29 @@ function insertAllowedUser(state: AccessState, args: unknown[]) {
   return { meta: { changes: 1 } }
 }
 
-function revokeAllowedUser(state: AccessState, args: unknown[]) {
+function revokeAllowedUser(
+  state: AccessState,
+  args: unknown[],
+) {
   const row = state.users.get(asEmail(args[0]))
   if (!row || row.status !== 'active') return { meta: { changes: 0 } }
   row.status = 'revoked'
   return { meta: { changes: 1 } }
 }
 
-function touchLastSeen(state: AccessState, args: unknown[]) {
+function touchLastSeen(
+  state: AccessState,
+  args: unknown[],
+) {
   const row = state.users.get(asEmail(args[1]))
   if (row) row.last_seen_at = asEmail(args[0])
   return { meta: { changes: row ? 1 : 0 } }
 }
 
-function insertGroupGrant(state: AccessState, args: unknown[]) {
+function insertGroupGrant(
+  state: AccessState,
+  args: unknown[],
+) {
   const email = asEmail(args[0])
   const set = state.grants.get(email) ?? new Set<string>()
   set.add(asEmail(args[1]))
@@ -64,18 +88,27 @@ function insertGroupGrant(state: AccessState, args: unknown[]) {
   return { meta: { changes: 1 } }
 }
 
-function deleteGroupGrant(state: AccessState, args: unknown[]) {
+function deleteGroupGrant(
+  state: AccessState,
+  args: unknown[],
+) {
   const set = state.grants.get(asEmail(args[0]))
   const had = set?.delete(asEmail(args[1])) ?? false
   return { meta: { changes: had ? 1 : 0 } }
 }
 
-function deleteAllGroupGrants(state: AccessState, args: unknown[]) {
+function deleteAllGroupGrants(
+  state: AccessState,
+  args: unknown[],
+) {
   state.grants.delete(asEmail(args[0]))
   return { meta: { changes: 1 } }
 }
 
-function insertAccessRequest(state: AccessState, args: unknown[]) {
+function insertAccessRequest(
+  state: AccessState,
+  args: unknown[],
+) {
   const id = asEmail(args[0])
   state.requests.set(id, {
     id,
@@ -98,7 +131,10 @@ function setRequestStatus(
   return { meta: { changes: row ? 1 : 0 } }
 }
 
-function purgeTransactions(state: AccessState, args: unknown[]) {
+function purgeTransactions(
+  state: AccessState,
+  args: unknown[],
+) {
   state.purgedOwners.push(asEmail(args[0]))
   return { meta: { changes: 1 } }
 }

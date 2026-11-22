@@ -30,8 +30,7 @@ const STATUS_NOTE = {
   untracked: 'From before you started counting, so there is nothing to reconcile here.',
 } as const
 
-const BASELINE_NOTE =
-  'Starting point: this count sets the baseline, and drift is measured from here on.'
+const BASELINE_NOTE = 'Starting point: this count sets the baseline, and drift is measured from here on.'
 
 function CloseCard({
   row,
@@ -130,14 +129,10 @@ export function CashView({
   }
   const readyMonth = readyToCountMonth(rows, openMonth)
   const pickedRow = picked !== null && rows.some((r) => r.month === picked) ? picked : null
-  const selectedMonth =
-    pickedRow ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
+  const selectedMonth = pickedRow ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
   const selected = rows.find((r) => r.month === selectedMonth)
   const balances = useMemo(
-    () =>
-      selected
-        ? balancesAtCost(rows, sums.settings, sums.transactions, selected.month)
-        : null,
+    () => (selected ? balancesAtCost(rows, sums.settings, sums.transactions, selected.month) : null),
     [rows, sums, selected],
   )
 
@@ -156,28 +151,15 @@ export function CashView({
       )}
       <Card>
         <h3 className={styles.cardTitle}>Month close</h3>
-        <MonthCloseDots
-          rows={rows}
-          selected={selected.month}
-          openMonth={openMonth}
-          onSelect={setPicked}
-        />
+        <MonthCloseDots rows={rows} selected={selected.month} openMonth={openMonth} onSelect={setPicked} />
       </Card>
       <div className={styles.grid2}>
-        <CloseCard
-          row={selected}
-          status={status}
-          baseline={selected.month === countingStart}
-          actions={actions}
-        />
+        <CloseCard row={selected} status={status} baseline={selected.month === countingStart} actions={actions} />
         <DriftCard rows={rows} status={status} balances={balances} />
       </div>
       <details className={styles.fold}>
         <summary className={styles.foldSummary}>Full reconciliation table</summary>
-        <CashReconciliationTable
-          model={model}
-          {...(actions ? { onSetCashActual: actions.setCashActual } : {})}
-        />
+        <CashReconciliationTable model={model} {...(actions ? { onSetCashActual: actions.setCashActual } : {})} />
       </details>
     </div>
   )

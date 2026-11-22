@@ -285,15 +285,25 @@ export interface CaptureRepository extends CaptureStatusReads {
   /** The owner's keys that are not revoked, newest first. */
   listKeys(owner: string): Promise<CaptureKeySummary[]>
   /** False when the key is not the owner's or is already revoked. */
-  revokeKey(owner: string, keyId: string, at: string): Promise<boolean>
+  revokeKey(
+    owner: string,
+    keyId: string,
+    at: string,
+  ): Promise<boolean>
   /** Records a use, at most once a minute per key. */
-  touchKey(keyId: string, at: string): Promise<void>
+  touchKey(
+    keyId: string,
+    at: string,
+  ): Promise<void>
 
   /**
    * False when nothing was stored: the same push was stored before (replaying changes nothing), or the key is
    * unknown or revoked. A row that breaks a constraint throws instead, so a lost push is never read as a replay.
    */
-  recordEvent(event: CaptureEvent, caps?: CaptureCaps): Promise<boolean>
+  recordEvent(
+    event: CaptureEvent,
+    caps?: CaptureCaps,
+  ): Promise<boolean>
   /**
    * Stores the event and its recommendation in one D1 batch, which commits both or neither, so a failure between
    * them cannot leave a push stored with no recommendation (a retry would then be read as a replay). The
@@ -314,51 +324,108 @@ export interface CaptureRepository extends CaptureStatusReads {
    * The owner's templates for this source and masked title, at most `TEMPLATE_LOOKUP_LIMIT`, the most recently seen
    * first.
    */
-  findTemplates(owner: string, source: CaptureSource, title: string): Promise<CaptureTemplate[]>
+  findTemplates(
+    owner: string,
+    source: CaptureSource,
+    title: string,
+  ): Promise<CaptureTemplate[]>
   /**
    * Counts a push of an ignored template, in one batch: as unrecognised on the owner's counter for `day`, and as seen
    * on the template, which stays ignored. Nothing of the push is stored.
    */
-  countIgnoredPush(owner: string, source: CaptureSource, day: string, templateId: string, at: string): Promise<void>
+  countIgnoredPush(
+    owner: string,
+    source: CaptureSource,
+    day: string,
+    templateId: string,
+    at: string,
+  ): Promise<void>
   /** The owner's ignored templates, the most recently ignored first, at most `MAX_IGNORED_LISTED`. */
   listIgnoredTemplates(owner: string): Promise<IgnoredTemplate[]>
   /**
    * Makes the template suggest again: clears its ignore and its dismissal streak, so three more dismissals in a row are
    * needed to mute it again. False when the owner holds no such template.
    */
-  unignoreTemplate(owner: string, templateId: string): Promise<boolean>
+  unignoreTemplate(
+    owner: string,
+    templateId: string,
+  ): Promise<boolean>
   /** Whether this push is already stored. Tells a replay from a push refused for a cap, as both store nothing. */
-  hasEvent(keyId: string, source: CaptureSource, replayKey: string): Promise<boolean>
+  hasEvent(
+    keyId: string,
+    source: CaptureSource,
+    replayKey: string,
+  ): Promise<boolean>
   /**
    * Counts one received push for the key's owner today, unless the owner or everyone has reached the daily cap.
    * The check and the count are one statement, so parallel requests cannot pass the cap together. 'sources' means
    * the person already has the most source words allowed and this one is new: unlike a daily cap, that does not lift
    * with time.
    */
-  admit(owner: string, source: CaptureSource, day: string, caps: DailyCaps): Promise<'admitted' | 'limited' | 'sources'>
-  eventsSince(keyId: string, since: string): Promise<number>
-  lastCaptureAt(owner: string, source: CaptureSource): Promise<string | null>
-  bumpCounter(owner: string, source: CaptureSource, day: string, field: 'received' | 'unrecognised' | 'malformed'): Promise<void>
-  readCounters(owner: string, fromDay: string): Promise<CaptureCounter[]>
+  admit(
+    owner: string,
+    source: CaptureSource,
+    day: string,
+    caps: DailyCaps,
+  ): Promise<'admitted' | 'limited' | 'sources'>
+  eventsSince(
+    keyId: string,
+    since: string,
+  ): Promise<number>
+  lastCaptureAt(
+    owner: string,
+    source: CaptureSource,
+  ): Promise<string | null>
+  bumpCounter(
+    owner: string,
+    source: CaptureSource,
+    day: string,
+    field: 'received' | 'unrecognised' | 'malformed',
+  ): Promise<void>
+  readCounters(
+    owner: string,
+    fromDay: string,
+  ): Promise<CaptureCounter[]>
 
-  saveCard(owner: string, card: CaptureCard): Promise<void>
+  saveCard(
+    owner: string,
+    card: CaptureCard,
+  ): Promise<void>
   /**
    * Links digits to one of the owner's accounts, or changes the account they point at, and points the open
    * recommendations those digits made at it. `no-account` when the account is not the owner's, `limit` at the cap.
    */
-  linkCard(owner: string, card: CaptureCard): Promise<LinkCardResult>
+  linkCard(
+    owner: string,
+    card: CaptureCard,
+  ): Promise<LinkCardResult>
   /** Removes the link, and unmaps the open recommendations those digits made. False when there was none. */
-  unlinkCard(owner: string, source: CaptureSource, digitsKind: CardDigitsKind, digits: string): Promise<boolean>
+  unlinkCard(
+    owner: string,
+    source: CaptureSource,
+    digitsKind: CardDigitsKind,
+    digits: string,
+  ): Promise<boolean>
   /** The cards open payments wait on for want of an account. */
   listWaitingCards(owner: string): Promise<WaitingCard[]>
   listCards(owner: string): Promise<CaptureCard[]>
 
   createRecommendation(rec: NewRecommendation): Promise<void>
-  getRecommendation(owner: string, id: string): Promise<Recommendation | null>
+  getRecommendation(
+    owner: string,
+    id: string,
+  ): Promise<Recommendation | null>
   /** Open ones, newest day first, `limit` of them from after the cursor. */
-  listOpenRecommendations(owner: string, limit: number, after?: RecommendationCursor): Promise<Recommendation[]>
+  listOpenRecommendations(
+    owner: string,
+    limit: number,
+    after?: RecommendationCursor,
+  ): Promise<Recommendation[]>
   /** The typed row of the owner that looks like this payment, by the rule the list uses, or null. One read. */
-  findPossibleMatch(owner: string, payment: PaymentToMatch): Promise<PossibleMatch | null>
+  findPossibleMatch(
+    owner: string,
+    payment: PaymentToMatch,
+  ): Promise<PossibleMatch | null>
   /** How many are open, for the badge. */
   countOpenRecommendations(owner: string): Promise<number>
   /** What a summary notification says about the open ones, from one read. */
@@ -377,14 +444,24 @@ export interface CaptureRepository extends CaptureStatusReads {
    * The push a recommendation came from, with its template's learned columns, in one read. Null when it came from none
    * (one made before pushes were stored).
    */
-  eventOfRecommendation(owner: string, recId: string): Promise<RecommendationEvent | null>
+  eventOfRecommendation(
+    owner: string,
+    recId: string,
+  ): Promise<RecommendationEvent | null>
   /**
    * Writes what a decision taught, in one batch: the template's new facts, when there is a template to teach, the
    * merchant's votes, and the outcome on the recommendation's events. All of it happens only while the outcome is still
    * empty, so a decision learns once however often this runs for it. Merchant rows past `MAX_CAPTURE_MERCHANTS` are
    * evicted in the same batch.
    */
-  applyDecisionLearning(owner: string, recId: string, learning: DecisionLearning): Promise<void>
+  applyDecisionLearning(
+    owner: string,
+    recId: string,
+    learning: DecisionLearning,
+  ): Promise<void>
   /** The owner's rows for one merchant key, at any price and at each one. */
-  merchantRows(owner: string, key: string): Promise<MerchantRow[]>
+  merchantRows(
+    owner: string,
+    key: string,
+  ): Promise<MerchantRow[]>
 }

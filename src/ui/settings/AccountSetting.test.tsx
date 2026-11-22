@@ -14,7 +14,13 @@ let keptWhenLeaving: unknown[]
 
 beforeEach(() => {
   idb = installFakeIndexedDb()
-  idb.stores.set('snapshots', new Map<IDBValidKey, unknown>([['latest', { key: 'latest' }], ['ledger:a@example.com', { key: 'ledger:a@example.com' }]]))
+  idb.stores.set(
+    'snapshots',
+    new Map<IDBValidKey, unknown>([
+      ['latest', { key: 'latest' }],
+      ['ledger:a@example.com', { key: 'ledger:a@example.com' }],
+    ]),
+  )
   keptWhenLeaving = []
   assign = vi.fn(() => void (keptWhenLeaving = [...(idb.stores.get('snapshots')?.keys() ?? [])]))
   vi.stubGlobal('location', { assign })
@@ -33,7 +39,10 @@ describe('Sign out', () => {
   it('keeps the link, so it still works where nothing runs', () => {
     render(<AccountSetting email="a@example.com" />)
 
-    expect(screen.getByRole('link', { name: 'Sign out' })).toHaveAttribute('href', expect.stringContaining('/cdn-cgi/access/logout'))
+    expect(screen.getByRole('link', { name: 'Sign out' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/cdn-cgi/access/logout'),
+    )
   })
 
   it('drops every saved copy, then goes to the sign-out address', async () => {

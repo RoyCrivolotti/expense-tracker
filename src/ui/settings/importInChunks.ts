@@ -13,7 +13,12 @@ export class ImportStopped extends Error {
   /** True when the request that failed may have been saved: it was refused by nothing the server said. */
   readonly maybeSaved: boolean
 
-  constructor(message: string, imported: number, maybeSaved: boolean, options: ErrorOptions) {
+  constructor(
+    message: string,
+    imported: number,
+    maybeSaved: boolean,
+    options: ErrorOptions,
+  ) {
     super(message, options)
     this.name = 'ImportStopped'
     this.imported = imported
@@ -28,7 +33,12 @@ const count = (n: number): string => n.toLocaleString('en-US')
  * whole import, not in the request, and whether the rows of that request may be saved depends on what answered: a
  * refusal (a 4xx) wrote nothing, anything else may have.
  */
-function stoppedAt(error: unknown, imported: number, total: number, sent: number): ImportStopped {
+function stoppedAt(
+  error: unknown,
+  imported: number,
+  total: number,
+  sent: number,
+): ImportStopped {
   const reason = error instanceof Error ? error.message : String(error)
   const refused = wasRefused(error)
   const left = total - imported

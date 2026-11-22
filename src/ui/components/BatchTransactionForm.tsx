@@ -11,12 +11,7 @@ import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
-import {
-  buildBatchTransactions,
-  isRowEmpty,
-  type BatchRowDraft,
-  type DateBatchDraft,
-} from './batchTransactionIntent'
+import { buildBatchTransactions, isRowEmpty, type BatchRowDraft, type DateBatchDraft } from './batchTransactionIntent'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { FlagField } from './FlagField'
 import { createFlagInPlace } from './quickFlag'
@@ -62,7 +57,11 @@ export function BatchTransactionForm({
     model.dataset.categories.find((c) => c.active)?.id ?? model.dataset.categories[0]?.id ?? 0
   const defaultAccountId = () => resolveDefaultAccountId(model.dataset.accounts, model.dataset.settings)
 
-  const makeRow = (categoryId: number, accountId: number, type: TxnType = 'expense'): BatchRowDraft => ({
+  const makeRow = (
+    categoryId: number,
+    accountId: number,
+    type: TxnType = 'expense',
+  ): BatchRowDraft => ({
     id: crypto.randomUUID(),
     type,
     amount: '',
@@ -70,7 +69,10 @@ export function BatchTransactionForm({
     categoryId,
     accountId,
   })
-  const makeBatch = (date: string, seedRow: BatchRowDraft): DateBatchDraft => ({
+  const makeBatch = (
+    date: string,
+    seedRow: BatchRowDraft,
+  ): DateBatchDraft => ({
     id: crypto.randomUUID(),
     date,
     rows: [seedRow],
@@ -89,15 +91,19 @@ export function BatchTransactionForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batches, flagId])
 
-  const updateBatch = (batchId: string, patch: Partial<DateBatchDraft>) =>
-    setBatches((bs) => bs.map((b) => (b.id === batchId ? { ...b, ...patch } : b)))
+  const updateBatch = (
+    batchId: string,
+    patch: Partial<DateBatchDraft>,
+  ) => setBatches((bs) => bs.map((b) => (b.id === batchId ? { ...b, ...patch } : b)))
 
-  const updateRow = (batchId: string, rowId: string, patch: Partial<BatchRowDraft>) => {
+  const updateRow = (
+    batchId: string,
+    rowId: string,
+    patch: Partial<BatchRowDraft>,
+  ) => {
     setBatches((bs) =>
       bs.map((b) =>
-        b.id !== batchId
-          ? b
-          : { ...b, rows: b.rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)) },
+        b.id !== batchId ? b : { ...b, rows: b.rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)) },
       ),
     )
     setErrors((e) => {
@@ -127,10 +133,10 @@ export function BatchTransactionForm({
       }),
     )
 
-  const removeRow = (batchId: string, rowId: string) =>
-    setBatches((bs) =>
-      bs.map((b) => (b.id !== batchId ? b : { ...b, rows: b.rows.filter((r) => r.id !== rowId) })),
-    )
+  const removeRow = (
+    batchId: string,
+    rowId: string,
+  ) => setBatches((bs) => bs.map((b) => (b.id !== batchId ? b : { ...b, rows: b.rows.filter((r) => r.id !== rowId) })))
 
   const addBatch = () =>
     setBatches((bs) => {
@@ -145,10 +151,13 @@ export function BatchTransactionForm({
       return [...bs, makeBatch(addDaysIso(earliest, -1), seedRow)]
     })
 
-  const removeBatch = (batchId: string) =>
-    setBatches((bs) => (bs.length > 1 ? bs.filter((b) => b.id !== batchId) : bs))
+  const removeBatch = (batchId: string) => setBatches((bs) => (bs.length > 1 ? bs.filter((b) => b.id !== batchId) : bs))
 
-  const onAcceptSuggestion = (batchId: string, rowId: string, suggestion: DescriptionSuggestion) =>
+  const onAcceptSuggestion = (
+    batchId: string,
+    rowId: string,
+    suggestion: DescriptionSuggestion,
+  ) =>
     setBatches((bs) =>
       bs.map((b) => {
         if (b.id !== batchId) return b
@@ -185,9 +194,7 @@ export function BatchTransactionForm({
       setErrors(result.errors)
       const firstErrorRowId = Object.keys(result.errors)[0]
       if (firstErrorRowId) {
-        document
-          .getElementById(rowElementId(firstErrorRowId))
-          ?.scrollIntoView({ behavior: 'auto', block: 'center' })
+        document.getElementById(rowElementId(firstErrorRowId))?.scrollIntoView({ behavior: 'auto', block: 'center' })
       } else {
         showToast('Add at least one transaction', 'error')
       }
@@ -197,7 +204,10 @@ export function BatchTransactionForm({
     setBusy(true)
     try {
       await actions.createTransactions(result.transactions)
-      showToast(`Added ${result.transactions.length} transaction${result.transactions.length === 1 ? '' : 's'}`, 'success')
+      showToast(
+        `Added ${result.transactions.length} transaction${result.transactions.length === 1 ? '' : 's'}`,
+        'success',
+      )
       onClose()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Could not save', 'error')
@@ -257,7 +267,9 @@ export function BatchTransactionForm({
                 onChange={(e) => updateRow(batch.id, row.id, { type: e.target.value as TxnType })}
               >
                 {TYPE_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
                 ))}
               </select>
               <select
@@ -267,18 +279,24 @@ export function BatchTransactionForm({
                 onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
               >
                 {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
-                  <option key={a.id} value={a.id}>{optionLabel(a)}</option>
+                  <option key={a.id} value={a.id}>
+                    {optionLabel(a)}
+                  </option>
                 ))}
               </select>
               <select
                 className={`${styles.compactSelect} ${styles.compactCategory}`}
-                value={row.type === 'investment' && investmentCategoryId !== null ? investmentCategoryId : row.categoryId}
+                value={
+                  row.type === 'investment' && investmentCategoryId !== null ? investmentCategoryId : row.categoryId
+                }
                 disabled={row.type === 'investment' && investmentCategoryId !== null}
                 aria-label="Category"
                 onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
               >
                 {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
-                  <option key={c.id} value={c.id}>{optionLabel(c)}</option>
+                  <option key={c.id} value={c.id}>
+                    {optionLabel(c)}
+                  </option>
                 ))}
               </select>
               <div className={styles.descriptionRow}>

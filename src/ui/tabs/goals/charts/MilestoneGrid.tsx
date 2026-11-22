@@ -56,9 +56,7 @@ function MilestoneHead({
     <th className={classes.join(' ')} scope="col" title={tooltip}>
       {name ? <span className={styles.milestoneHeadName}>{name}</span> : null}
       <span
-        className={
-          name ? `${styles.milestoneHeadAmount} ${styles.milestoneHeadAmountSub}` : styles.milestoneHeadAmount
-        }
+        className={name ? `${styles.milestoneHeadAmount} ${styles.milestoneHeadAmountSub}` : styles.milestoneHeadAmount}
       >
         {shown}
       </span>
@@ -78,7 +76,10 @@ function boxClass(years: number | null): string {
   return `${styles.matrixBox} ${styles.matrixTint}`
 }
 
-function crosshairClass(onRow: boolean, onCol: boolean): string {
+function crosshairClass(
+  onRow: boolean,
+  onCol: boolean,
+): string {
   if (onRow && onCol) return styles.matrixCross ?? ''
   if (onRow || onCol) return styles.matrixLine ?? ''
   return ''
@@ -87,7 +88,10 @@ function crosshairClass(onRow: boolean, onCol: boolean): string {
 /** A blank line holds its height with a no-break space, so the cells of a row stay level. */
 function GapLine({ label }: { label: GapText | null }) {
   return (
-    <span className={label?.sooner ? `${styles.matrixGap} ${styles.matrixSooner}` : styles.matrixGap} aria-hidden="true">
+    <span
+      className={label?.sooner ? `${styles.matrixGap} ${styles.matrixSooner}` : styles.matrixGap}
+      aria-hidden="true"
+    >
       {label?.text ?? ' '}
     </span>
   )
@@ -109,7 +113,19 @@ interface CellProps {
   onPoint: () => void
 }
 
-function Cell({ row, rowIndex, colIndex, longest, unit, plan, gaps, sentence, tabStop, crosshair, onPoint }: CellProps) {
+function Cell({
+  row,
+  rowIndex,
+  colIndex,
+  longest,
+  unit,
+  plan,
+  gaps,
+  sentence,
+  tabStop,
+  crosshair,
+  onPoint,
+}: CellProps) {
   const years = row.cells[colIndex] ?? null
   const tint = tintPercent(years, longest)
   const style = tint === null ? undefined : ({ '--tint': `${tint}%` } as CSSProperties)

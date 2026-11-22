@@ -18,13 +18,7 @@ export function AppearanceSetting({
   return (
     <>
       <SectionTitle>Appearance</SectionTitle>
-      <SegmentedControl
-        options={OPTIONS}
-        value={theme}
-        onChange={onChange}
-        ariaLabel="Colour theme"
-        layout="bar"
-      />
+      <SegmentedControl options={OPTIONS} value={theme} onChange={onChange} ariaLabel="Colour theme" layout="bar" />
     </>
   )
 }

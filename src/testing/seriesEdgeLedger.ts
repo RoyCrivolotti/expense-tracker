@@ -16,7 +16,10 @@ interface Plan {
   rows: Transaction[]
 }
 
-function row(plan: Plan, over: Partial<Transaction>): void {
+function row(
+  plan: Plan,
+  over: Partial<Transaction>,
+): void {
   const date = over.date ?? '2025-01-10'
   plan.rows.push(
     makeTransaction({ id: plan.next, date, budgetMonth: date.slice(0, 7), createdAt: '2025-01-01T00:00:00Z', ...over }),
@@ -25,7 +28,13 @@ function row(plan: Plan, over: Partial<Transaction>): void {
 }
 
 /** `count` rows of one text a month apart from `startMonth` (2025-01 is 1). */
-function monthly(plan: Plan, description: string, count: number, over: Partial<Transaction> = {}, startMonth = 1): void {
+function monthly(
+  plan: Plan,
+  description: string,
+  count: number,
+  over: Partial<Transaction> = {},
+  startMonth = 1,
+): void {
   for (let i = 0; i < count; i += 1) {
     const index = startMonth - 1 + i
     const date = `${2025 + Math.floor(index / 12)}-${pad((index % 12) + 1)}-12`
@@ -42,11 +51,27 @@ function ties(plan: Plan): void {
   for (let i = 0; i < 4; i += 1) row(plan, { description: 'Same day', date: '2025-03-03' })
   for (let i = 0; i < 3; i += 1) row(plan, { description: 'Same day too', date: '2025-03-03' })
   // Booked out of date order: the highest ids are the oldest dates.
-  for (const date of ['2025-06-30', '2025-05-30', '2025-04-30', '2025-03-30', '2025-02-28', '2025-01-30', '2024-12-30']) {
+  for (const date of [
+    '2025-06-30',
+    '2025-05-30',
+    '2025-04-30',
+    '2025-03-30',
+    '2025-02-28',
+    '2025-01-30',
+    '2024-12-30',
+  ]) {
     row(plan, { description: 'Back dated', date })
   }
   // A zero gap inside a longer series, and the newest two rows on one date.
-  for (const date of ['2025-01-05', '2025-01-05', '2025-02-05', '2025-03-05', '2025-04-05', '2025-05-05', '2025-05-05']) {
+  for (const date of [
+    '2025-01-05',
+    '2025-01-05',
+    '2025-02-05',
+    '2025-03-05',
+    '2025-04-05',
+    '2025-05-05',
+    '2025-05-05',
+  ]) {
     row(plan, { description: 'Zero gap', date })
   }
 }
@@ -60,8 +85,14 @@ function gaps(plan: Plan): void {
 
 function offsets(plan: Plan): void {
   const pairs: Array<[string, string]> = [
-    ['2024-12-28', '2025-01'], ['2025-01-31', '2025-02'], ['2025-02-27', '2025-02'], ['2025-03-03', '2025-02'],
-    ['2025-04-26', '2025-05'], ['2025-05-29', '2025-07'], ['2025-12-30', '2026-01'], ['2026-01-02', '2025-12'],
+    ['2024-12-28', '2025-01'],
+    ['2025-01-31', '2025-02'],
+    ['2025-02-27', '2025-02'],
+    ['2025-03-03', '2025-02'],
+    ['2025-04-26', '2025-05'],
+    ['2025-05-29', '2025-07'],
+    ['2025-12-30', '2026-01'],
+    ['2026-01-02', '2025-12'],
   ]
   for (const [date, budgetMonth] of pairs) row(plan, { description: 'Budget moves', date, budgetMonth })
   monthly(plan, 'Many months', 30)

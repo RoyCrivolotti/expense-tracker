@@ -21,17 +21,23 @@ async function ownTransactions(session: Session): Promise<number> {
   return Number(reply.results[0]?.n ?? 0)
 }
 
-export async function seed(args: Args, deps: Deps): Promise<number> {
+export async function seed(
+  args: Args,
+  deps: Deps,
+): Promise<number> {
   const dataset = ledgerOfAbout(args.transactions, currentBudgetMonth(deps.now()))
   const budget = seedBudget(dataset)
   if (!args.write) {
     const offline = Object.fromEntries(ID_TABLES.map((t) => [t, ID_HEADROOM])) as IdBases
     const steps = seedSteps(dataset, offline)
     deps.print(`dry run: ${steps.length} statements insert ${budget.transactions} transactions as ${SYNTHETIC_OWNER}`)
-    deps.print(`expected rows written: ${budget.insertWrites + budget.referenceWrites}; removing them again later: ${budget.deleteWrites}`)
+    deps.print(
+      `expected rows written: ${budget.insertWrites + budget.referenceWrites}; removing them again later: ${budget.deleteWrites}`,
+    )
     return budget.fitsTotalCap && budget.fitsDailyCap ? 0 : 1
   }
-  if (!budget.fitsTotalCap || !budget.fitsDailyCap) throw new Error('This seed does not fit the caps; see the plan command')
+  if (!budget.fitsTotalCap || !budget.fitsDailyCap)
+    throw new Error('This seed does not fit the caps; see the plan command')
   const session = await openSession(args, deps, budget.insertWrites + budget.referenceWrites)
   if (!args.snapshot || !deps.files.exists(args.snapshot)) {
     throw new Error('seed needs --snapshot FILE from the snapshot command, taken first, so cleanup can be proved')
@@ -40,12 +46,19 @@ export async function seed(args: Args, deps: Deps): Promise<number> {
   const bases = await readIdBases(session.transport)
   const result = await runSeed(session.transport, seedSteps(dataset, bases), session.ledger, deps.stopRequested)
   session.saveSpend()
-  deps.print(`seeded ${budget.transactions} transactions in ${result.statements} statements, ${result.rowsWritten} rows written`)
-  deps.print(`first 20 transactions: ${result.calibration?.actual} rows written, the plan expected ${result.calibration?.expected}`)
+  deps.print(
+    `seeded ${budget.transactions} transactions in ${result.statements} statements, ${result.rowsWritten} rows written`,
+  )
+  deps.print(
+    `first 20 transactions: ${result.calibration?.actual} rows written, the plan expected ${result.calibration?.expected}`,
+  )
   return 0
 }
 
-export async function measure(args: Args, deps: Deps): Promise<number> {
+export async function measure(
+  args: Args,
+  deps: Deps,
+): Promise<number> {
   const session = await openSession(args, deps, args.write ? ROUTE_WRITES_ESTIMATE : 0)
   const count = await ownTransactions(session)
   if (count === 0) throw new Error('The synthetic owner has no rows; seed first')
@@ -73,9 +86,14 @@ export async function measure(args: Args, deps: Deps): Promise<number> {
   return results.some((r) => r.status >= 400 || r.unexpectedWrite) ? 1 : 0
 }
 
-export async function cleanup(args: Args, deps: Deps): Promise<number> {
+export async function cleanup(
+  args: Args,
+  deps: Deps,
+): Promise<number> {
   if (!args.write) {
-    deps.print(`dry run: deletes ${SYNTHETIC_OWNER}'s transactions ${DELETE_CHUNK} at a time (links first), then ${tableDeletes().length} more tables`)
+    deps.print(
+      `dry run: deletes ${SYNTHETIC_OWNER}'s transactions ${DELETE_CHUNK} at a time (links first), then ${tableDeletes().length} more tables`,
+    )
     deps.print('every delete binds the synthetic owner; nothing else can match')
     return 0
   }
@@ -90,7 +108,10 @@ export async function cleanup(args: Args, deps: Deps): Promise<number> {
   return remaining.length === 0 ? 0 : 1
 }
 
-export async function verify(args: Args, deps: Deps): Promise<number> {
+export async function verify(
+  args: Args,
+  deps: Deps,
+): Promise<number> {
   if (!args.snapshot || !deps.files.exists(args.snapshot)) throw new Error('verify needs --snapshot FILE')
   const session = await openSession(args, deps, 0)
   const before = (deps.files.readJson(args.snapshot) as { fingerprint: Fingerprint }).fingerprint
@@ -101,7 +122,13 @@ export async function verify(args: Args, deps: Deps): Promise<number> {
   const changed = differences(before, after)
   for (const [table, n] of remaining) deps.print(`STILL THERE: ${table} has ${n} rows`)
   for (const line of changed) deps.print(`CHANGED: ${line}`)
-  deps.print(remaining.length === 0 ? 'the synthetic owner has no rows in any table' : 'the synthetic owner still has rows')
-  deps.print(changed.length === 0 ? 'every other row is byte-for-byte what the snapshot recorded' : 'other rows differ from the snapshot: check whether someone else wrote meanwhile')
+  deps.print(
+    remaining.length === 0 ? 'the synthetic owner has no rows in any table' : 'the synthetic owner still has rows',
+  )
+  deps.print(
+    changed.length === 0
+      ? 'every other row is byte-for-byte what the snapshot recorded'
+      : 'other rows differ from the snapshot: check whether someone else wrote meanwhile',
+  )
   return remaining.length === 0 && changed.length === 0 ? 0 : 1
 }

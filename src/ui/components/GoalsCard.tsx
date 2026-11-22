@@ -99,7 +99,12 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
     return {
       avgInvesting: averageMonthlyCents(months.map((m) => m.investedCents)),
       // What the plan averages over those same months, which is what the pace is set against.
-      plannedAverage: scenario ? plannedMonthlyAverage(scenario, months.map((m) => m.month)) : 0,
+      plannedAverage: scenario
+        ? plannedMonthlyAverage(
+            scenario,
+            months.map((m) => m.month),
+          )
+        : 0,
     }
   }, [dataset.transactions, dataset.settings.budgetRolloverDay, scenario])
   const fromToday = useMemo(() => {
@@ -133,10 +138,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
       <>
         <SectionTitle>Goals</SectionTitle>
         <Card>
-          <EmptyState
-            actionLabel={onOpenGoals ? 'Open Goals' : undefined}
-            onAction={onOpenGoals}
-          >
+          <EmptyState actionLabel={onOpenGoals ? 'Open Goals' : undefined} onAction={onOpenGoals}>
             {dataset.goalScenarios.length > 0
               ? 'Pick one of your scenarios as your plan under Goals, and this card will track it.'
               : 'A long-range plan: what you invest each month and where that leads in 10, 20 or 30 years.'}

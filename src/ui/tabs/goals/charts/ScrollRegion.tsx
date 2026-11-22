@@ -20,12 +20,7 @@ export function ScrollRegion({
   children: ReactNode
 }) {
   return (
-    <div
-      className={styles.milestoneScroll}
-      role="region"
-      aria-label={label}
-      tabIndex={focusable ? 0 : undefined}
-    >
+    <div className={styles.milestoneScroll} role="region" aria-label={label} tabIndex={focusable ? 0 : undefined}>
       {children}
     </div>
   )

@@ -41,11 +41,7 @@ export function LifeEventsList({
             <li key={idx} className={styles.lifeEventRow}>
               <span className={styles.lifeEventLabel}>{ev.label}</span>
               <span className={styles.lifeEventYear}>yr {ev.year}</span>
-              <span
-                className={
-                  ev.amountCents >= 0 ? styles.lifeEventInflow : styles.lifeEventOutflow
-                }
-              >
+              <span className={ev.amountCents >= 0 ? styles.lifeEventInflow : styles.lifeEventOutflow}>
                 {ev.amountCents >= 0 ? '+' : ''}
                 {formatCents(ev.amountCents, format)}
               </span>
@@ -72,11 +68,7 @@ export function LifeEventsList({
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <button
-          type="button"
-          className={styles.addLifeEventBtn}
-          onClick={() => setAdding(true)}
-        >
+        <button type="button" className={styles.addLifeEventBtn} onClick={() => setAdding(true)}>
           + Add life event
         </button>
       )}
@@ -142,8 +134,8 @@ function LifeEventForm({
             name="le-sign"
             checked={amountCents >= 0}
             onChange={() => setAmountCents(Math.abs(amountCents))}
-          />
-          {' '}Inflow (add to portfolio)
+          />{' '}
+          Inflow (add to portfolio)
         </label>
         <label className={styles.lifeEventSignLabel}>
           <input
@@ -151,8 +143,8 @@ function LifeEventForm({
             name="le-sign"
             checked={amountCents < 0}
             onChange={() => setAmountCents(-Math.abs(amountCents))}
-          />
-          {' '}Outflow (remove from portfolio)
+          />{' '}
+          Outflow (remove from portfolio)
         </label>
       </div>
       <div className={styles.lifeEventActions}>

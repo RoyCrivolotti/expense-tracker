@@ -42,7 +42,8 @@ describe('inSuggestionOrder', () => {
   it('gives the first n of any subset among the first n of the whole', () => {
     const rnd = mulberry32(5)
     const alphabet = ['a', 'á', 'b', 'c', 'ç', 'é', 'e', 'ñ', 'n', ' ', '-']
-    const word = () => Array.from({ length: 1 + Math.floor(rnd() * 5) }, () => alphabet[Math.floor(rnd() * alphabet.length)]!).join('')
+    const word = () =>
+      Array.from({ length: 1 + Math.floor(rnd() * 5) }, () => alphabet[Math.floor(rnd() * alphabet.length)]!).join('')
     for (let round = 0; round < 50; round += 1) {
       const all = [...new Set(Array.from({ length: 40 }, word))].map((key) => ({ key }))
       const subset = all.filter(() => rnd() < 0.5)
@@ -78,13 +79,16 @@ describe('prefixUpperBound', () => {
   it('bounds exactly the strings that start with the prefix, in the order SQLite compares text', () => {
     const rnd = mulberry32(11)
     const alphabet = ['a', 'b', 'é', '\u{10FFFF}', '🍕', '퟿', '', '\u0000'.replace('\u0000', 'z')]
-    const text = (max: number) => Array.from({ length: Math.floor(rnd() * max) }, () => alphabet[Math.floor(rnd() * alphabet.length)]!).join('')
+    const text = (max: number) =>
+      Array.from({ length: Math.floor(rnd() * max) }, () => alphabet[Math.floor(rnd() * alphabet.length)]!).join('')
     const bytes = (s: string) => Buffer.from(s, 'utf8')
     for (let i = 0; i < 4_000; i += 1) {
       const prefix = text(3)
       const other = text(5)
       const upper = prefixUpperBound(prefix)
-      const inRange = Buffer.compare(bytes(other), bytes(prefix)) >= 0 && (upper === null || Buffer.compare(bytes(other), bytes(upper)) < 0)
+      const inRange =
+        Buffer.compare(bytes(other), bytes(prefix)) >= 0 &&
+        (upper === null || Buffer.compare(bytes(other), bytes(upper)) < 0)
       expect(inRange, JSON.stringify([prefix, other])).toBe(other.startsWith(prefix))
     }
   })

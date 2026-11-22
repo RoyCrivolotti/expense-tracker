@@ -21,7 +21,9 @@ describe('the Account view', () => {
   })
 
   it('shows only the build to a person with no email known and no access to manage', () => {
-    const { container } = render(<AccountView model={{} as ExpenseModel} ownerAccess={undefined} accountEmail={undefined} />)
+    const { container } = render(
+      <AccountView model={{} as ExpenseModel} ownerAccess={undefined} accountEmail={undefined} />,
+    )
 
     expect(screen.getByText('version')).toBeInTheDocument()
     expect(container.querySelectorAll('p')).toHaveLength(1)

@@ -24,18 +24,27 @@ type Dated = Pick<NewGoalScenario, 'planStartDate'>
  * start on one, and the table reads each at its own plan year as it always has. The draft counts, as on the
  * chart: an edit to its start date moves its row.
  */
-export function comparisonOrigin(scenarios: readonly Dated[], draft: Dated): string | null {
+export function comparisonOrigin(
+  scenarios: readonly Dated[],
+  draft: Dated,
+): string | null {
   const { origin, offsets } = scenarioAxis([...scenarios, draft].map((s) => s.planStartDate))
   return origin !== null && offsets.some((o) => o > 0) ? origin : null
 }
 
 /** A scenario's start on the calendar: its own date, or the origin for one with none, which is where it is drawn. */
-function startOf(scenario: Dated, origin: string): string {
+function startOf(
+  scenario: Dated,
+  origin: string,
+): string {
   return scenario.planStartDate && isCalendarDate(scenario.planStartDate) ? scenario.planStartDate : origin
 }
 
 /** The years from the origin to where the scenario starts. */
-export function offsetOf(scenario: Dated, origin: string): number {
+export function offsetOf(
+  scenario: Dated,
+  origin: string,
+): number {
   return yearsBetween(origin, startOf(scenario, origin))
 }
 
@@ -56,10 +65,20 @@ export interface Placed {
   end: number
 }
 
-export function place(scenario: Scenario, origin: string, inflationRate: number): Placed {
+export function place(
+  scenario: Scenario,
+  origin: string,
+  inflationRate: number,
+): Placed {
   const points = projectNetWorth(scenarioToParams(scenario, inflationRate))
   const offset = offsetOf(scenario, origin)
-  return { scenario, points, start: startOf(scenario, origin), offset, end: offset + (points[points.length - 1]?.year ?? scenario.horizonYears) }
+  return {
+    scenario,
+    points,
+    start: startOf(scenario, origin),
+    offset,
+    end: offset + (points[points.length - 1]?.year ?? scenario.horizonYears),
+  }
 }
 
 /** A float this close to a whole year is that year: starts part-way through one add scraps to it. */
@@ -95,7 +114,13 @@ export interface Figure {
  * not started says when it does; one that has ended gives its last figure with the year it ends, so no
  * figure is passed off as being on the date the others are.
  */
-export function figureAt(row: Placed, axisYear: number, field: AxisField, inflationRate: number, format: MoneyFormat): Figure {
+export function figureAt(
+  row: Placed,
+  axisYear: number,
+  field: AxisField,
+  inflationRate: number,
+  format: MoneyFormat,
+): Figure {
   const value = valueOnAxisAt(row.points, row.offset, inflationRate, axisYear, field)
   if (value !== null) return { text: formatMoneyShort(value, format), cents: value, ended: false }
   if (axisYear < row.offset) return { text: `starts ${monthOf(row.start)}`, cents: null, ended: false }
@@ -108,7 +133,10 @@ export function figureAt(row: Placed, axisYear: number, field: AxisField, inflat
  * FI as the month it is reached in, which every row's start can be read against: the month a path starts in
  * when it has enough from its first day. Bare, as the house is, since the hint says both are months.
  */
-export function fiOnCalendar(row: Placed, inflationRate: number): string {
+export function fiOnCalendar(
+  row: Placed,
+  inflationRate: number,
+): string {
   const { scenario } = row
   const params = scenarioToParams(scenario, inflationRate)
   if (yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate) === null) return 'not in horizon'

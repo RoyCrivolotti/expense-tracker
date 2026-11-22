@@ -3,8 +3,10 @@ import { makeTransaction } from '../../testing/factories'
 import type { Account, AccountStatement } from '../types'
 import { buildCells, cellRows, isCellRow } from './cells'
 
-const row = (id: number, overrides: Parameters<typeof makeTransaction>[0] = {}) =>
-  makeTransaction({ id, budgetMonth: '2025-03', date: '2025-03-10', ...overrides })
+const row = (
+  id: number,
+  overrides: Parameters<typeof makeTransaction>[0] = {},
+) => makeTransaction({ id, budgetMonth: '2025-03', date: '2025-03-10', ...overrides })
 
 describe('buildCells', () => {
   it('sums rows that share a month, account, category, type, cancelled flag and sign', () => {

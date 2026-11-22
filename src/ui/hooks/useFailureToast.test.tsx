@@ -3,7 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../data/apiClient'
 import { failureMessage, useFailureToast } from './useFailureToast'
 
-function Host({ showToast }: { showToast: (message: string, tone?: string) => void }) {
+function Host({
+  showToast,
+}: {
+  showToast: (
+    message: string,
+    tone?: string,
+  ) => void
+}) {
   useFailureToast(showToast)
   return null
 }
@@ -17,9 +24,7 @@ describe('failureMessage', () => {
     expect(failureMessage(new ApiError('Something went wrong on our side', 500))).toBe(
       'Something went wrong on our side',
     )
-    expect(failureMessage(new ApiError('Scenario name is required', 400))).toBe(
-      'Scenario name is required',
-    )
+    expect(failureMessage(new ApiError('Scenario name is required', 400))).toBe('Scenario name is required')
   })
 
   it('names the connection when fetch itself failed', () => {

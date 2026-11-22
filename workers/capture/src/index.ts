@@ -18,7 +18,11 @@ import { runSummaries } from './summaries'
  * `waitUntil`, so the phone's request is never slowed or failed by it.
  */
 export default {
-  async fetch(request: Request, env: CaptureEnv, ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: CaptureEnv,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     const created: CreatedPayment[] = []
     try {
       const captures = createD1CaptureRepository(env)
@@ -43,7 +47,11 @@ export default {
    * The hourly cron. A daily or weekly summary is due at 20:00 in the person's own zone, which Cloudflare's UTC cron
    * knows nothing of, so it runs every hour and asks per person (workers/capture/src/summaryDue.ts).
    */
-  scheduled(controller: ScheduledController, env: CaptureEnv, ctx: ExecutionContext): void {
+  scheduled(
+    controller: ScheduledController,
+    env: CaptureEnv,
+    ctx: ExecutionContext,
+  ): void {
     ctx.waitUntil(
       runSummaries(env, {
         push: createD1PushRepository(env),

@@ -61,7 +61,9 @@ describe('PINNED_SQL and UNPINNED_SQL', () => {
       const { sqlite } = queryDb(ledger)
       const payments = settlementPaymentIds(ledger.transactions)
       const read = sqlite
-        .prepare(`SELECT t.id AS id, ${PINNED_SQL} AS pinned, ${UNPINNED_SQL} AS unpinned FROM transactions t WHERE t.owner = ?`)
+        .prepare(
+          `SELECT t.id AS id, ${PINNED_SQL} AS pinned, ${UNPINNED_SQL} AS unpinned FROM transactions t WHERE t.owner = ?`,
+        )
         .all(OWNER) as Array<{ id: number; pinned: number; unpinned: number }>
       expect(read.length).toBe(ledger.transactions.length)
       for (const { id, pinned, unpinned } of read) {

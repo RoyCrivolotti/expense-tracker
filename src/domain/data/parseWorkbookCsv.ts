@@ -31,7 +31,10 @@ interface Lookups {
   categories: Category[]
 }
 
-function categoryId(name: string, lookups: Lookups): number {
+function categoryId(
+  name: string,
+  lookups: Lookups,
+): number {
   const existing = lookups.categoryByName.get(name)
   if (existing) return existing.id
   const created: Category = {
@@ -46,11 +49,18 @@ function categoryId(name: string, lookups: Lookups): number {
   return created.id
 }
 
-function at(fields: string[], index: number): string {
+function at(
+  fields: string[],
+  index: number,
+): string {
   return fields[index] ?? ''
 }
 
-function parseTxnRow(fields: string[], id: number, lookups: Lookups): StoredTransaction | null {
+function parseTxnRow(
+  fields: string[],
+  id: number,
+  lookups: Lookups,
+): StoredTransaction | null {
   const date = parseHumanDate(at(fields, 1))
   const budgetMonth = budgetMonthFromName(at(fields, 0), WORKBOOK_YEAR)
   const account = lookups.accountByName.get(at(fields, 3))
@@ -73,7 +83,10 @@ function parseTxnRow(fields: string[], id: number, lookups: Lookups): StoredTran
   }
 }
 
-function parseTransactions(rows: string[][], lookups: Lookups): StoredTransaction[] {
+function parseTransactions(
+  rows: string[][],
+  lookups: Lookups,
+): StoredTransaction[] {
   const start = rows.findIndex((f) => f[0] === 'Budget Month' && f[1] === 'Date')
   if (start < 0) return []
   const transactions: StoredTransaction[] = []

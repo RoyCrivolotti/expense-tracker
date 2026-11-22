@@ -51,14 +51,22 @@ export function parseCaptureKey(text: string): CaptureKeyParts | null {
   return match ? { keyId: match[1] as string, secret: match[2] as string } : null
 }
 
-type TimingSafeSubtle = SubtleCrypto & { timingSafeEqual?: (a: ArrayBufferView, b: ArrayBufferView) => boolean }
+type TimingSafeSubtle = SubtleCrypto & {
+  timingSafeEqual?: (
+    a: ArrayBufferView,
+    b: ArrayBufferView,
+  ) => boolean
+}
 
 /**
  * Whether `secret` is the one `storedHash` was made from. It compares two digests of the same length rather than the
  * secrets, so the time taken does not depend on how much of a guess is right. `timingSafeEqual` is a Workers
  * extension that not every runtime has, and the fallback reads all 32 bytes without stopping at the first difference.
  */
-export async function secretMatches(storedHash: string, secret: string): Promise<boolean> {
+export async function secretMatches(
+  storedHash: string,
+  secret: string,
+): Promise<boolean> {
   const given = await sha256(secret)
   const stored = hexToBytes(storedHash)
   if (stored === null || stored.length !== given.length) return false

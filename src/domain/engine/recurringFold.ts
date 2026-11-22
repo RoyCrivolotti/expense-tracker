@@ -11,10 +11,16 @@ import type { Transaction } from '../types'
 import { budgetOffset, countsAsOccurrence, groupKeyString, occurrenceKey } from './recurringDetect'
 import type { OccurrenceGroup } from './recurringTypes'
 
-const byDateThenId = (a: Transaction, b: Transaction): number => a.date.localeCompare(b.date) || a.id - b.id
+const byDateThenId = (
+  a: Transaction,
+  b: Transaction,
+): number => a.date.localeCompare(b.date) || a.id - b.id
 
 /** `groups`, each with the rows of `rows` that come after its newest charge added as its newest charges. */
-export function foldNewerRows(groups: OccurrenceGroup[], rows: readonly Transaction[]): OccurrenceGroup[] {
+export function foldNewerRows(
+  groups: OccurrenceGroup[],
+  rows: readonly Transaction[],
+): OccurrenceGroup[] {
   const newest = new Map(groups.map((group) => [groupKeyString(group.key), group.dates[group.dates.length - 1]!]))
   const newer = new Map<string, Transaction[]>()
   for (const row of rows) {

@@ -40,13 +40,18 @@ describe('reviewFormat', () => {
   })
 
   it('says what is missing rather than leaving a gap', () => {
-    expect(detailLine(view({ merchantRaw: 'BRAND NEW PLACE', accountId: null }))).toBe('Expense · No category · No account · Tue 10 Nov · Nov budget')
+    expect(detailLine(view({ merchantRaw: 'BRAND NEW PLACE', accountId: null }))).toBe(
+      'Expense · No category · No account · Tue 10 Nov · Nov budget',
+    )
   })
 
   it('writes the toast with the action and amount first, and all seven fields in all', () => {
     const text = toastText('Added', view(), EU_MONEY_FORMAT)
 
-    expect(text.split('\n')).toEqual([expect.stringMatching(/^Added · Cafe Example −/), 'Expense · Eating out · Main Debit · Tue 10 Nov · Nov budget'])
+    expect(text.split('\n')).toEqual([
+      expect.stringMatching(/^Added · Cafe Example −/),
+      'Expense · Eating out · Main Debit · Tue 10 Nov · Nov budget',
+    ])
     expect(text).toContain('12')
   })
 

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildCalendarGrid,
-  clampDateToRange,
-  dayCellToIso,
-  isDateOutOfRange,
-} from './datePickerGrid'
+import { buildCalendarGrid, clampDateToRange, dayCellToIso, isDateOutOfRange } from './datePickerGrid'
 
 describe('buildCalendarGrid', () => {
   it('returns exactly 6 rows of 7 columns', () => {

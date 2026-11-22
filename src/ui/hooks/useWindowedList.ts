@@ -1,11 +1,4 @@
-import {
-  useEffectEvent,
-  useLayoutEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-  type RefObject,
-} from 'react'
+import { useEffectEvent, useLayoutEffect, useMemo, useState, useSyncExternalStore, type RefObject } from 'react'
 import type { ListDayGroup } from '../../engine'
 import { useElementWidth } from './useElementWidth'
 import { createRowHeights, rowKey, rowShape, type RowHeights } from './rowHeights'
@@ -35,7 +28,10 @@ function flatten(groups: readonly ListDayGroup[]): Flat {
  * asks the window where it is; a first guess that the list starts at the top is put right by
  * the layout effect before the first paint.
  */
-function useScrollBand(listRef: RefObject<HTMLElement | null>, total: number): Band {
+function useScrollBand(
+  listRef: RefObject<HTMLElement | null>,
+  total: number,
+): Band {
   const [band, setBand] = useState<Band>(() =>
     nextBand(null, window.scrollY, window.scrollY + window.innerHeight, total),
   )
@@ -65,7 +61,10 @@ function useScrollBand(listRef: RefObject<HTMLElement | null>, total: number): B
 }
 
 /** Feeds what the rendered rows measure back to the store, which lays the list out again if it matters. */
-function useMeasuredRows(listRef: RefObject<HTMLElement | null>, store: RowHeights): void {
+function useMeasuredRows(
+  listRef: RefObject<HTMLElement | null>,
+  store: RowHeights,
+): void {
   useLayoutEffect(() => {
     const list = listRef.current
     if (!list) return

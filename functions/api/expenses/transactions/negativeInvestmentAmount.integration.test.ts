@@ -32,7 +32,10 @@ function setup() {
   return { env, repo }
 }
 
-function row(type: string, amountCents: number) {
+function row(
+  type: string,
+  amountCents: number,
+) {
   return {
     date: '2026-09-10',
     budgetMonth: '2026-09',
@@ -45,7 +48,12 @@ function row(type: string, amountCents: number) {
   }
 }
 
-async function create(env: Env, repo: ExpenseRepository, type: string, amountCents: number) {
+async function create(
+  env: Env,
+  repo: ExpenseRepository,
+  type: string,
+  amountCents: number,
+) {
   return invokeExpenseApiRoute({
     handler: createTransaction,
     repo,
@@ -57,13 +65,23 @@ async function create(env: Env, repo: ExpenseRepository, type: string, amountCen
   })
 }
 
-async function created(env: Env, repo: ExpenseRepository, type: string, amountCents: number) {
+async function created(
+  env: Env,
+  repo: ExpenseRepository,
+  type: string,
+  amountCents: number,
+) {
   const response = await create(env, repo, type, amountCents)
   expect(response.status).toBe(201)
   return (await response.json()) as { id: number; type: string; amountCents: number }
 }
 
-async function patch(env: Env, repo: ExpenseRepository, id: number, body: unknown) {
+async function patch(
+  env: Env,
+  repo: ExpenseRepository,
+  id: number,
+  body: unknown,
+) {
   return invokeExpenseApiRoute({
     handler: patchTransaction,
     repo,

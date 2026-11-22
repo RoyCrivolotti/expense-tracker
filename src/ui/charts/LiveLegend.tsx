@@ -78,7 +78,11 @@ function LegendRow({
 }) {
   const body = (
     <>
-      <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} {...(item.dotted ? { dotted: true } : {})} />
+      <SeriesSwatch
+        color={item.color}
+        {...(item.dashed ? { dashed: true } : {})}
+        {...(item.dotted ? { dotted: true } : {})}
+      />
       <RowLabel item={item} />
       <RowValue item={item} formatValue={formatValue} />
     </>
@@ -89,7 +93,9 @@ function LegendRow({
       <li className={styles.rowItem}>
         <button
           type="button"
-          className={item.hidden ? `${styles.row} ${styles.rowButton} ${styles.rowHidden}` : `${styles.row} ${styles.rowButton}`}
+          className={
+            item.hidden ? `${styles.row} ${styles.rowButton} ${styles.rowHidden}` : `${styles.row} ${styles.rowButton}`
+          }
           aria-pressed={!item.hidden}
           aria-label={`${item.hidden ? 'Show' : 'Hide'} ${item.label} on chart`}
           onClick={() => onToggle(id)}

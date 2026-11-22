@@ -2,15 +2,7 @@ import type { Transaction } from '../types'
 import type { TransactionSeed } from './actions'
 
 const TXN_TYPES = new Set(['expense', 'income', 'investment', 'refund'])
-const SEED_KEYS = [
-  'description',
-  'type',
-  'accountId',
-  'categoryId',
-  'amountCents',
-  'date',
-  'budgetMonth',
-] as const
+const SEED_KEYS = ['description', 'type', 'accountId', 'categoryId', 'amountCents', 'date', 'budgetMonth'] as const
 
 function isClickEvent(value: Record<string, unknown>): boolean {
   return typeof value.preventDefault === 'function' && !('accountId' in value) && !('date' in value)

@@ -26,7 +26,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, tone: ToastTone = 'info', action?: ToastAction, options?: ToastOptions) => {
       clear()
       setToast({ id: Date.now(), message, tone, action, key: options?.key, keepOnTap: options?.keepOnTap })
-      timer.current = setTimeout(() => setToast(null), options?.holdMs ?? (action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone]))
+      timer.current = setTimeout(
+        () => setToast(null),
+        options?.holdMs ?? (action ? Math.max(ACTION_TOAST_MS, TOAST_MS[tone]) : TOAST_MS[tone]),
+      )
     },
     [clear],
   )

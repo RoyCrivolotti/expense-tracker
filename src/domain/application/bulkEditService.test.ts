@@ -68,18 +68,46 @@ describe('parseBulkFilterEdit', () => {
     ['a null filter', { ...ok, filter: null }, 'filter must be an object'],
     ['a filter field it does not know', { ...ok, filter: { owner: 'x' } }, 'Unknown filter: owner'],
     ['a filter field it cannot read', { ...ok, filter: { month: 'June' } }, 'month must be YYYY-MM'],
-    ['no count', { ...ok, expectedCount: undefined }, 'expectedCount must be the number of transactions you were shown'],
-    ['a count that is text', { ...ok, expectedCount: '12' }, 'expectedCount must be the number of transactions you were shown'],
-    ['a fractional count', { ...ok, expectedCount: 1.5 }, 'expectedCount must be the number of transactions you were shown'],
-    ['a negative count', { ...ok, expectedCount: -1 }, 'expectedCount must be the number of transactions you were shown'],
+    [
+      'no count',
+      { ...ok, expectedCount: undefined },
+      'expectedCount must be the number of transactions you were shown',
+    ],
+    [
+      'a count that is text',
+      { ...ok, expectedCount: '12' },
+      'expectedCount must be the number of transactions you were shown',
+    ],
+    [
+      'a fractional count',
+      { ...ok, expectedCount: 1.5 },
+      'expectedCount must be the number of transactions you were shown',
+    ],
+    [
+      'a negative count',
+      { ...ok, expectedCount: -1 },
+      'expectedCount must be the number of transactions you were shown',
+    ],
     ['a count above the cap', { ...ok, expectedCount: MAX_FILTER_EDIT_ROWS + 1 }, bulkTooManyMessage()],
     ['no revision', { ...ok, expectedRevision: undefined }, 'expectedRevision must be the revision you were given'],
     ['a blank revision', { ...ok, expectedRevision: '' }, 'expectedRevision must be the revision you were given'],
-    ['a revision that is a number', { ...ok, expectedRevision: 7 }, 'expectedRevision must be the revision you were given'],
-    ['a revision that is far too long', { ...ok, expectedRevision: 'x'.repeat(101) }, 'expectedRevision must be the revision you were given'],
+    [
+      'a revision that is a number',
+      { ...ok, expectedRevision: 7 },
+      'expectedRevision must be the revision you were given',
+    ],
+    [
+      'a revision that is far too long',
+      { ...ok, expectedRevision: 'x'.repeat(101) },
+      'expectedRevision must be the revision you were given',
+    ],
     ['no patch', { ...ok, patch: undefined }, 'patch is required'],
     ['an empty patch', { ...ok, patch: {} }, 'At least one field must be set'],
-    ['a patch field that is not bulk-editable', { ...ok, patch: { amountCents: 5 } }, 'Field "amountCents" is not bulk-editable'],
+    [
+      'a patch field that is not bulk-editable',
+      { ...ok, patch: { amountCents: 5 } },
+      'Field "amountCents" is not bulk-editable',
+    ],
   ])('refuses %s', (_name, body, message) => {
     expect(refused(() => parseBulkFilterEdit(body))).toBe(message)
   })
@@ -110,13 +138,29 @@ describe('parseBulkLabelRequest', () => {
     ['an empty list of labels', { ids: [1], labelIds: [] }, 'labelIds must name at least one label'],
     ['a label that is not an id', { ids: [1], labelIds: ['a'] }, 'Invalid labelId'],
     ['a label id of zero', { ids: [1], labelIds: [0] }, 'Invalid labelId'],
-    ['too many labels', { ids: [1], labelIds: Array.from({ length: MAX_BULK_LABELS + 1 }, (_, i) => i + 1) }, `A request may name at most ${MAX_BULK_LABELS} labels`],
+    [
+      'too many labels',
+      { ids: [1], labelIds: Array.from({ length: MAX_BULK_LABELS + 1 }, (_, i) => i + 1) },
+      `A request may name at most ${MAX_BULK_LABELS} labels`,
+    ],
     ['no rows', { labelIds: [1] }, 'ids must be an array'],
     ['an empty list of ids', { ids: [], labelIds: [1] }, 'ids must not be empty'],
-    ['ids and a filter', { ids: [1], filter: {}, expectedCount: 1, expectedRevision: 'r', labelIds: [1] }, 'Give ids or a filter, not both'],
+    [
+      'ids and a filter',
+      { ids: [1], filter: {}, expectedCount: 1, expectedRevision: 'r', labelIds: [1] },
+      'Give ids or a filter, not both',
+    ],
     ['a field it does not know', { ids: [1], labelIds: [1], patch: {} }, 'Unknown field "patch" in a filter request'],
-    ['a filter with no revision', { filter: {}, expectedCount: 1, labelIds: [1] }, 'expectedRevision must be the revision you were given'],
-    ['a filter with no count', { filter: {}, expectedRevision: 'r', labelIds: [1] }, 'expectedCount must be the number of transactions you were shown'],
+    [
+      'a filter with no revision',
+      { filter: {}, expectedCount: 1, labelIds: [1] },
+      'expectedRevision must be the revision you were given',
+    ],
+    [
+      'a filter with no count',
+      { filter: {}, expectedRevision: 'r', labelIds: [1] },
+      'expectedCount must be the number of transactions you were shown',
+    ],
   ])('refuses %s', (_name, body, message) => {
     expect(refused(() => parseBulkLabelRequest(body))).toBe(message)
   })
@@ -153,10 +197,19 @@ describe('handing the request to the repository', () => {
 
   it('edits the rows of the filter', async () => {
     const repo = inMemoryExpenseRepository(seed, owner)
-    const edit = parseBulkFilterEdit({ ...ok, filter: { month: '2026-09' }, expectedCount: 2, patch: { description: 'Renamed' } })
+    const edit = parseBulkFilterEdit({
+      ...ok,
+      filter: { month: '2026-09' },
+      expectedCount: 2,
+      patch: { description: 'Renamed' },
+    })
 
     expect(await bulkUpdateTransactionsByFilter(repo, owner, edit)).toEqual({ updated: 2 })
-    expect((await repo.loadDataset(owner)).transactions.map((t) => t.description)).toEqual(['Row 1', 'Renamed', 'Renamed'])
+    expect((await repo.loadDataset(owner)).transactions.map((t) => t.description)).toEqual([
+      'Row 1',
+      'Renamed',
+      'Renamed',
+    ])
   })
 
   it('adds the labels', async () => {

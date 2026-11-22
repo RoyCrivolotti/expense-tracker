@@ -46,13 +46,27 @@ function viewedMonths(ds: ExpenseDataset): string[] {
   if (months.length === 0) return ['2026-06']
   const first = months[0]!
   const last = months.at(-1)!
-  return [...new Set([last, first, months[Math.floor(months.length / 2)]!, shiftBudgetMonth(last, 2), shiftBudgetMonth(first, -1)])]
+  return [
+    ...new Set([
+      last,
+      first,
+      months[Math.floor(months.length / 2)]!,
+      shiftBudgetMonth(last, 2),
+      shiftBudgetMonth(first, -1),
+    ]),
+  ]
 }
 
-const clocks = (viewed: string): Array<[string, Clock]> => [['closed', LATER], ['open', openAt(viewed)]]
+const clocks = (viewed: string): Array<[string, Clock]> => [
+  ['closed', LATER],
+  ['open', openAt(viewed)],
+]
 
 /** For each consumer that differs, the number of (ledger, month, clock) runs in which it did. */
-async function differences(ds: ExpenseDataset, months: string[]): Promise<Map<string, number>> {
+async function differences(
+  ds: ExpenseDataset,
+  months: string[],
+): Promise<Map<string, number>> {
   const groups = recurringFixedGroupsFromSeries(await servedSeries(ds))
   const served = classifierFromGroups(groups)
   const reference = classifyFixedSpend(ds.transactions)
@@ -68,7 +82,10 @@ async function differences(ds: ExpenseDataset, months: string[]): Promise<Map<st
   return found
 }
 
-function merge(into: Map<string, number>, from: Map<string, number>): void {
+function merge(
+  into: Map<string, number>,
+  from: Map<string, number>,
+): void {
   for (const [key, n] of from) into.set(key, (into.get(key) ?? 0) + n)
 }
 
@@ -78,7 +95,10 @@ describe('every consumer from the served series and a 13 month window', () => {
     for (let seed = 0; seed < 80; seed += 1) {
       const ds = randomLedger(seed)
       const found = await differences(ds, viewedMonths(ds))
-      expect([...found.keys()].filter((k) => !(k in GLOBAL_DIFFERENCES)), `seed ${seed}`).toEqual([])
+      expect(
+        [...found.keys()].filter((k) => !(k in GLOBAL_DIFFERENCES)),
+        `seed ${seed}`,
+      ).toEqual([])
       merge(all, found)
     }
     expect([...all.keys()].sort()).toEqual(GLOBAL)
@@ -119,18 +139,24 @@ describe('upcoming charges and stopped series from the served series', () => {
       const series = await servedSeries(ds)
       const groups = recurringFixedGroupsFromSeries(series)
       const known = newestChargesOfSeries(series)
-      const window = assembleRows(ledgerFor(ds, sortedMonths(ds.transactions.map((t) => t.budgetMonth)).at(-1) ?? '2026-06', WINDOWED)).real
+      const window = assembleRows(
+        ledgerFor(ds, sortedMonths(ds.transactions.map((t) => t.budgetMonth)).at(-1) ?? '2026-06', WINDOWED),
+      ).real
       for (const today of todays(ds)) {
         const expected = detectUpcoming(ds.transactions, { today })
         expect(detectUpcoming(window, { today, groups }), `${name} ${today}`).toEqual(expected)
         suggested += expected.length
         const stopped = Object.fromEntries(expected.map((s) => [s.seriesKey, { after: s.lastChargeDate }]))
-        const early = Object.fromEntries(expected.map((s) => [s.seriesKey, { after: addDaysIso(s.lastChargeDate, -1) }]))
+        const early = Object.fromEntries(
+          expected.map((s) => [s.seriesKey, { after: addDaysIso(s.lastChargeDate, -1) }]),
+        )
         for (const list of [stopped, early]) {
           expect(detectUpcoming(window, { today, groups, stopped: list }), `${name} ${today} stopped`).toEqual(
             detectUpcoming(ds.transactions, { today, stopped: list }),
           )
-          expect(stillStopped(window, list, known), `${name} ${today} still stopped`).toEqual(stillStopped(ds.transactions, list))
+          expect(stillStopped(window, list, known), `${name} ${today} still stopped`).toEqual(
+            stillStopped(ds.transactions, list),
+          )
         }
         stoppedSeries += Object.keys(stillStopped(ds.transactions, stopped)).length
       }
@@ -141,7 +167,11 @@ describe('upcoming charges and stopped series from the served series', () => {
 
   it('predict the budget month from the median of the newest three offsets, not from the newest one', async () => {
     // A pay date near the month end, booked to the next month except in the newest month.
-    const rows = spelledSeries(1, Array.from({ length: 10 }, () => 'Salary'), { type: 'income' }).map((t, i) => {
+    const rows = spelledSeries(
+      1,
+      Array.from({ length: 10 }, () => 'Salary'),
+      { type: 'income' },
+    ).map((t, i) => {
       const date = `2025-${String(i + 1).padStart(2, '0')}-28`
       const next = i + 2 > 12 ? '2026-01' : `2025-${String(i + 2).padStart(2, '0')}`
       return { ...t, date, budgetMonth: i === 9 ? date.slice(0, 7) : next }

@@ -28,10 +28,16 @@ const OWNER = 'owner@example.com'
 const MONTHS = 120
 const SIZES = (process.env.SCALING_ROWS ?? '5000,20000,50000,100000,250000').split(',').map(Number)
 
-const fixed = (n: number, digits = 1): number => Number(n.toFixed(digits))
+const fixed = (
+  n: number,
+  digits = 1,
+): number => Number(n.toFixed(digits))
 
 /** Fastest of a few runs, in ms. */
-function best<T>(fn: () => T, runs = 3): { ms: number; value: T } {
+function best<T>(
+  fn: () => T,
+  runs = 3,
+): { ms: number; value: T } {
   let value = fn()
   let ms = Infinity
   for (let i = 0; i < runs; i += 1) {
@@ -58,7 +64,11 @@ async function measure(rows: number): Promise<Record<string, number>> {
   const served = { ...stats }
 
   const counted = (
-    db.prepare("SELECT count(*) AS n FROM transactions WHERE owner = ? AND cancelled = 0 AND plan_id IS NULL AND description_norm > ''").get(OWNER) as { n: number }
+    db
+      .prepare(
+        "SELECT count(*) AS n FROM transactions WHERE owner = ? AND cancelled = 0 AND plan_id IS NULL AND description_norm > ''",
+      )
+      .get(OWNER) as { n: number }
   ).n
   const json = JSON.stringify({ series })
   const stringify = best(() => JSON.stringify({ series })).ms

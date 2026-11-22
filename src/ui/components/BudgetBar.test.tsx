@@ -4,12 +4,7 @@ import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { BudgetBar } from './BudgetBar'
 import type { BudgetStatus } from '../../engine/categoryBudget'
 
-function renderBar(props: {
-  actualCents: number
-  budgetCents: number
-  ratio: number
-  status: BudgetStatus
-}) {
+function renderBar(props: { actualCents: number; budgetCents: number; ratio: number; status: BudgetStatus }) {
   return render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <BudgetBar name="Travel" {...props} />

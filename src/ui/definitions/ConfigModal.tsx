@@ -1,11 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Account, Category } from '../../types'
-import type {
-  DeleteAccountOptions,
-  DeleteCategoryOptions,
-  NewAccount,
-  NewCategory,
-} from '../../data/dataSource'
+import type { DeleteAccountOptions, DeleteCategoryOptions, NewAccount, NewCategory } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Modal } from '../components/Modal'
@@ -21,9 +16,7 @@ import type { FieldSpec, FieldValue } from './recordFields'
 import styles from './definitions.module.css'
 
 export type EditTarget =
-  | { kind: 'category'; record: Category | null }
-  | { kind: 'account'; record: Account | null }
-  | { kind: 'settings' }
+  { kind: 'category'; record: Category | null } | { kind: 'account'; record: Account | null } | { kind: 'settings' }
 
 const categoryFields = (cur: string): FieldSpec[] => [
   { key: 'name', label: 'Name', kind: 'text' },
@@ -162,9 +155,7 @@ function categoryConfig(
     fields: categoryFields(cur),
     initial: record ?? { active: true, sortOrder: nextOrder, monthlyBudgetCents: 0 },
     onSubmit: (patch) =>
-      record
-        ? actions.updateCategory(record.id, patch)
-        : actions.createCategory(patch as unknown as NewCategory),
+      record ? actions.updateCategory(record.id, patch) : actions.createCategory(patch as unknown as NewCategory),
     ...(record ? { delete: categoryDeleteConfig(record, model, actions, usage) } : {}),
   }
 }
@@ -182,9 +173,7 @@ function accountConfig(
     fields: ACCOUNT_FIELDS,
     initial: record ?? { active: true, settlement: 'immediate', kind: 'debit' },
     onSubmit: (patch) =>
-      record
-        ? actions.updateAccount(record.id, patch)
-        : actions.createAccount(patch as unknown as NewAccount),
+      record ? actions.updateAccount(record.id, patch) : actions.createAccount(patch as unknown as NewAccount),
     ...(record ? { delete: accountDeleteConfig(record, model, actions, usage) } : {}),
   }
 }
@@ -209,9 +198,7 @@ function buildConfig(
 
 /** Structural check so this stays agnostic of which `ExpenseDataSource` threw (see `ApiError`). */
 function hasHttpStatus(error: unknown): error is Error & { status: number } {
-  return (
-    error instanceof Error && 'status' in error && typeof (error as { status: unknown }).status === 'number'
-  )
+  return error instanceof Error && 'status' in error && typeof (error as { status: unknown }).status === 'number'
 }
 
 type DeleteMode = 'idle' | 'confirm' | 'reassign'
@@ -239,11 +226,7 @@ function DeleteControl({
   }
 
   if (config.isLast) {
-    return (
-      <p className={styles.deleteNote}>
-        You need at least one {config.noun}, so this one can&apos;t be deleted.
-      </p>
-    )
+    return <p className={styles.deleteNote}>You need at least one {config.noun}, so this one can&apos;t be deleted.</p>
   }
 
   const runPlainDelete = async () => {

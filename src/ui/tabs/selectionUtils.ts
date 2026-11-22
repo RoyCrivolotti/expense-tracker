@@ -1,5 +1,8 @@
 /** Toggle all ids in a day group: select if any are unselected, else clear the day. */
-export function toggleDateSelection(selected: ReadonlySet<number>, ids: number[]): Set<number> {
+export function toggleDateSelection(
+  selected: ReadonlySet<number>,
+  ids: number[],
+): Set<number> {
   const next = new Set(selected)
   const allSelected = ids.length > 0 && ids.every((id) => next.has(id))
   for (const id of ids) {

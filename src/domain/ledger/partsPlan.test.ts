@@ -4,11 +4,15 @@ import { PartTooLargeError } from '../data/ledgerPartsErrors'
 import { monthsBetweenBudget, shiftBudgetMonth } from '../engine/dates'
 import { planCubeRanges, planCubeRangesOutside, planRowRanges, splitRange } from './partsPlan'
 
-const months = (from: string, count: number): string[] =>
-  Array.from({ length: count }, (_, i) => shiftBudgetMonth(from, i))
+const months = (
+  from: string,
+  count: number,
+): string[] => Array.from({ length: count }, (_, i) => shiftBudgetMonth(from, i))
 
-const perMonth = (list: string[], rows: number): Record<string, number> =>
-  Object.fromEntries(list.map((month) => [month, rows]))
+const perMonth = (
+  list: string[],
+  rows: number,
+): Record<string, number> => Object.fromEntries(list.map((month) => [month, rows]))
 
 describe('planRowRanges', () => {
   it('asks for nothing when there is nothing to hydrate', () => {

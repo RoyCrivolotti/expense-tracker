@@ -6,8 +6,11 @@ import { buildLedger } from './build'
 import { ledgerFromParts } from './fromParts'
 import { ledgerReferenceOf } from './partsOfDataset'
 
-const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
-  makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
+const row = (
+  id: number,
+  month: string,
+  over: Parameters<typeof makeTransaction>[0] = {},
+) => makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
 
 const dataset = makeDataset({
   transactions: [
@@ -19,21 +22,56 @@ const dataset = makeDataset({
   ],
 })
 const reference: ReferencePart = { revision: 'v1', ...ledgerReferenceOf(dataset) }
-const rows = (from: string, to: string, ids: number[], counts = {}): MonthRowsPart => ({
+const rows = (
+  from: string,
+  to: string,
+  ids: number[],
+  counts = {},
+): MonthRowsPart => ({
   revision: 'v1',
   from,
   to,
   transactions: dataset.transactions.filter((t) => ids.includes(t.id)).reverse(),
   attachmentCounts: counts,
 })
-const cube = (from: string, to: string): CubePart => ({
+const cube = (
+  from: string,
+  to: string,
+): CubePart => ({
   revision: 'v1',
   from,
   to,
   cells: [
-    { budgetMonth: '2026-01', accountId: 1, categoryId: 1, type: 'expense', cancelled: false, sign: 1, amountCents: 1, count: 1 },
-    { budgetMonth: '2026-02', accountId: 1, categoryId: 1, type: 'expense', cancelled: false, sign: 1, amountCents: 2, count: 1 },
-    { budgetMonth: '2026-03', accountId: 1, categoryId: 1, type: 'expense', cancelled: false, sign: 1, amountCents: 3, count: 1 },
+    {
+      budgetMonth: '2026-01',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      cancelled: false,
+      sign: 1,
+      amountCents: 1,
+      count: 1,
+    },
+    {
+      budgetMonth: '2026-02',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      cancelled: false,
+      sign: 1,
+      amountCents: 2,
+      count: 1,
+    },
+    {
+      budgetMonth: '2026-03',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      cancelled: false,
+      sign: 1,
+      amountCents: 3,
+      count: 1,
+    },
   ],
 })
 

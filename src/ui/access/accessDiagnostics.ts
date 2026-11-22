@@ -1,8 +1,4 @@
-import {
-  classifyAccessError,
-  isStandaloneDisplay,
-  type AccessErrorKind,
-} from './accessErrorKind'
+import { classifyAccessError, isStandaloneDisplay, type AccessErrorKind } from './accessErrorKind'
 
 export interface AccessDiagnostics {
   buildId: string

@@ -30,7 +30,7 @@ describe('currencyWord', () => {
     expect(currencyWord(resolveMoneyFormat())).toBe('euros')
   })
 
-  it('does not depend on the number style: the word is the currency\'s, not the locale\'s', async () => {
+  it("does not depend on the number style: the word is the currency's, not the locale's", async () => {
     // A module of its own, since the words are kept once found and an earlier test would have found every one of them.
     vi.resetModules()
     const fresh = await import('./money')
@@ -41,7 +41,11 @@ describe('currencyWord', () => {
 
   it('says the code itself for one the runtime has no name for, and money for a format made by hand with no code and no euro', () => {
     expect(currencyWord(resolveMoneyFormat('XYZ', 'en-US'))).toBe('XYZ')
-    expect(currencyWord({ locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' })).toBe('money')
-    expect(currencyWord({ locale: 'de-DE', symbol: '€', symbolPosition: 'suffix', decimalSeparator: ',' })).toBe('euros')
+    expect(currencyWord({ locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' })).toBe(
+      'money',
+    )
+    expect(currencyWord({ locale: 'de-DE', symbol: '€', symbolPosition: 'suffix', decimalSeparator: ',' })).toBe(
+      'euros',
+    )
   })
 })

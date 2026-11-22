@@ -29,7 +29,11 @@ describe('the route matrix, over a seeded database', () => {
       expect(result.unexpectedWrite, result.name).toBe(false)
       expect(result.summary.rowsWritten, result.name).toBe(0)
     }
-    expect(Number((db.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(SYNTHETIC_OWNER) as { n: number }).n)).toBeGreaterThan(SIZE * 0.9)
+    expect(
+      Number(
+        (db.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(SYNTHETIC_OWNER) as { n: number }).n,
+      ),
+    ).toBeGreaterThan(SIZE * 0.9)
   })
 
   it('answers a repeat of the dataset read with a 304 after one statement', async () => {
@@ -88,9 +92,18 @@ describe('the route matrix, over a seeded database', () => {
     const { results } = await run(true)
     for (const result of results) {
       const { statements, summary } = result
-      expect(statements.reduce((sum, s) => sum + s.runs, 0), result.name).toBe(summary.statements)
-      expect(statements.reduce((sum, s) => sum + s.rowsRead, 0), result.name).toBe(summary.rowsRead)
-      expect(statements.reduce((sum, s) => sum + s.rowsWritten, 0), result.name).toBe(summary.rowsWritten)
+      expect(
+        statements.reduce((sum, s) => sum + s.runs, 0),
+        result.name,
+      ).toBe(summary.statements)
+      expect(
+        statements.reduce((sum, s) => sum + s.rowsRead, 0),
+        result.name,
+      ).toBe(summary.rowsRead)
+      expect(
+        statements.reduce((sum, s) => sum + s.rowsWritten, 0),
+        result.name,
+      ).toBe(summary.rowsWritten)
     }
     const bulk = results.find((r) => r.name === 'POST transactions/bulk, 20 rows')
     expect(bulk?.statements.length).toBeLessThan(bulk?.summary.statements ?? 0)
@@ -99,8 +112,18 @@ describe('the route matrix, over a seeded database', () => {
 
   it('stops at the first route that fails, since later ones lean on its answer', async () => {
     const seeded = await seededDatabase(200)
-    const { db, recorder } = measuredDb({ transport: sqliteTransport(seeded.db), ledger: ledgerOf(), writesEnabled: false })
-    const results = await measureRoutes({ db, recorder, owner: 'not-seeded@example.com', month: MONTH, includeWrites: false })
+    const { db, recorder } = measuredDb({
+      transport: sqliteTransport(seeded.db),
+      ledger: ledgerOf(),
+      writesEnabled: false,
+    })
+    const results = await measureRoutes({
+      db,
+      recorder,
+      owner: 'not-seeded@example.com',
+      month: MONTH,
+      includeWrites: false,
+    })
     expect(results.at(-1)?.status).toBeGreaterThanOrEqual(400)
     expect(results.length).toBeLessThan(READ_CASES.length)
   })

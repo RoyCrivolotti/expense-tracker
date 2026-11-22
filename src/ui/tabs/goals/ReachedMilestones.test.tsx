@@ -12,9 +12,7 @@ const milestones = [
 
 describe('ReachedMilestones', () => {
   it('renders nothing when none have been reached', () => {
-    const { container } = render(
-      <ReachedMilestones milestones={milestones} reached={new Map()} />,
-    )
+    const { container } = render(<ReachedMilestones milestones={milestones} reached={new Map()} />)
     expect(container.firstChild).toBeNull()
   })
 
@@ -24,12 +22,7 @@ describe('ReachedMilestones', () => {
   })
 
   it('lists only the reached milestones, naming each with its amount and date', () => {
-    render(
-      <ReachedMilestones
-        milestones={milestones}
-        reached={new Map([[10_000_000, '2026-03-14']])}
-      />,
-    )
+    render(<ReachedMilestones milestones={milestones} reached={new Map([[10_000_000, '2026-03-14']])} />)
     expect(screen.getByText(/House deposit \(.*\)/)).toBeTruthy()
     expect(screen.getByText(/^by .*2026$/)).toBeTruthy()
     expect(screen.queryByText(/Coast FI/)).toBeNull()
@@ -48,10 +41,17 @@ describe('ReachedMilestones', () => {
     })
     // Ahead of plan a year in (the plan has about 108.300 euros on the account by then, this has 109.500):
     // the crossing from today comes sooner than the plan said.
-    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_950_000 }] })
+    const latest = makeWealthCheckin({
+      id: 1,
+      checkinDate: '2027-01-01',
+      entries: [{ accountId: 1, valueCents: 10_950_000 }],
+    })
     render(
       <ReachedMilestones
-        milestones={[{ amountCents: 11_000_000, label: 'Soon' }, { amountCents: 900_000_000, label: 'Far' }]}
+        milestones={[
+          { amountCents: 11_000_000, label: 'Soon' },
+          { amountCents: 900_000_000, label: 'Far' },
+        ]}
         reached={new Map()}
         plan={plan}
         latestCheckin={latest}
@@ -89,7 +89,9 @@ describe('ReachedMilestones', () => {
     )
     expect(screen.getByText('Milestones')).toBeInTheDocument()
     expect(screen.getByText(/^on track: .*, target .*2031 \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
-    expect(screen.getByText(/^\d+ months late: .*, target .*2026 \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/^\d+ months late: .*, target .*2026 \(worth about [\d.]+ € in 2026 euros\)$/),
+    ).toBeInTheDocument()
     expect(screen.getByText(/^expected .*20\d\d \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
     expect(screen.getByText(/^not within the horizon, target .*2040$/)).toBeInTheDocument()
   })
@@ -112,7 +114,12 @@ describe('ReachedMilestones', () => {
     expect(screen.getByText(/^on track: /)).toBeInTheDocument()
     unmount()
     // A year in, with 40.000 where the plan has about 108.000: from today it comes after the target.
-    render(<ReachedMilestones {...props} fromToday={planFromToday(plan, { investedCents: 4_000_000, date: '2027-01-01' }, 0.02)} />)
+    render(
+      <ReachedMilestones
+        {...props}
+        fromToday={planFromToday(plan, { investedCents: 4_000_000, date: '2027-01-01' }, 0.02)}
+      />,
+    )
     const chip = screen.getByText(/^behind: from today, /)
     expect(chip).toHaveTextContent(/after the target .*2031; the plan has .*20\d\d/)
     expect(chip.closest('li')?.className).toMatch(/milestoneChipLate/)
@@ -161,7 +168,11 @@ describe('ReachedMilestones', () => {
         latestCheckin={makeWealthCheckin({ checkinDate: '2026-09-01', entries: [] })}
       />,
     )
-    expect(screen.getByText(/^not reached yet; the plan had it by .*, target .*2030 \(worth about [\d.]+ € in 2020 euros\)$/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /^not reached yet; the plan had it by .*, target .*2030 \(worth about [\d.]+ € in 2020 euros\)$/,
+      ),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/on track/)).not.toBeInTheDocument()
   })
 
@@ -215,7 +226,10 @@ describe('ReachedMilestones on the account', () => {
   const render150and500 = () =>
     render(
       <ReachedMilestones
-        milestones={[{ amountCents: 15_000_000, label: 'Deposit' }, { amountCents: 50_000_000, label: 'Half' }]}
+        milestones={[
+          { amountCents: 15_000_000, label: 'Deposit' },
+          { amountCents: 50_000_000, label: 'Half' },
+        ]}
         reached={new Map()}
         plan={plan}
       />,

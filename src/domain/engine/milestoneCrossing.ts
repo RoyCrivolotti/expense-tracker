@@ -32,12 +32,18 @@ interface Curve {
   kappa: number
 }
 
-function curveOf(segment: PlanSegment, g: number): Curve {
+function curveOf(
+  segment: PlanSegment,
+  g: number,
+): Curve {
   return { segment, base: Math.pow(g, segment.from), g, kappa: Math.log(g) }
 }
 
 /** The line in euros on the account, `u` of the way through the segment. */
-function screen(c: Curve, u: number): number {
+function screen(
+  c: Curve,
+  u: number,
+): number {
   const { start, end } = c.segment
   return (start + (end - start) * u) * c.base * Math.pow(c.g, u)
 }
@@ -63,7 +69,12 @@ function onlyFalls(c: Curve): boolean {
 }
 
 /** The smallest `u` in [lo, hi] with `f(u) >= amount`, where f rises on all of it and reaches it at hi. */
-function bisectUp(c: Curve, amount: number, lo: number, hi: number): number {
+function bisectUp(
+  c: Curve,
+  amount: number,
+  lo: number,
+  hi: number,
+): number {
   let low = lo
   let high = hi
   for (let i = 0; i < BISECTIONS; i++) {
@@ -75,7 +86,12 @@ function bisectUp(c: Curve, amount: number, lo: number, hi: number): number {
 }
 
 /** The smallest `u` in [lo, hi] with `f(u) < amount`, where f falls on all of it and is under at hi. */
-function bisectDown(c: Curve, amount: number, lo: number, hi: number): number {
+function bisectDown(
+  c: Curve,
+  amount: number,
+  lo: number,
+  hi: number,
+): number {
   let low = lo
   let high = hi
   for (let i = 0; i < BISECTIONS; i++) {
@@ -87,7 +103,11 @@ function bisectDown(c: Curve, amount: number, lo: number, hi: number): number {
 }
 
 /** The first time inside the segment, from `from` on, that the screen value is at the amount going up. */
-function riseWithin(c: Curve, amount: number, from: number): number | null {
+function riseWithin(
+  c: Curve,
+  amount: number,
+  from: number,
+): number | null {
   if (onlyFalls(c)) return null
   const peak = peakOf(c)
   const top = peak ?? 1
@@ -96,7 +116,11 @@ function riseWithin(c: Curve, amount: number, from: number): number | null {
 }
 
 /** The first time inside the segment, from `from` on (where it is at the amount or above), that it is below. */
-function fallWithin(c: Curve, amount: number, from: number): number | null {
+function fallWithin(
+  c: Curve,
+  amount: number,
+  from: number,
+): number | null {
   const peak = peakOf(c)
   const start = peak === null ? from : Math.max(from, peak)
   const falls = peak !== null || onlyFalls(c)
@@ -105,11 +129,18 @@ function fallWithin(c: Curve, amount: number, from: number): number | null {
 }
 
 /** The screen value just after the anniversary a segment ends on, once its step has happened. */
-function afterStep(segment: PlanSegment, g: number): number {
+function afterStep(
+  segment: PlanSegment,
+  g: number,
+): number {
   return segment.after * Math.pow(g, segment.to)
 }
 
-function firstRise(line: PlanLine, amount: number, g: number): { index: number; offset: number } | null {
+function firstRise(
+  line: PlanLine,
+  amount: number,
+  g: number,
+): { index: number; offset: number } | null {
   for (let i = 0; i < line.segments.length; i++) {
     const c = curveOf(line.segments[i]!, g)
     const u = riseWithin(c, amount, 0)
@@ -121,7 +152,13 @@ function firstRise(line: PlanLine, amount: number, g: number): { index: number; 
 }
 
 /** Where, after a crossing in segment `index` at `offset`, the screen value first falls below the amount. */
-function firstDip(line: PlanLine, amount: number, g: number, index: number, offset: number): number | null {
+function firstDip(
+  line: PlanLine,
+  amount: number,
+  g: number,
+  index: number,
+  offset: number,
+): number | null {
   const first = curveOf(line.segments[index]!, g)
   const inside = offset >= first.segment.to ? null : fallWithin(first, amount, offset - first.segment.from)
   if (inside !== null) return first.segment.from + inside
@@ -143,7 +180,11 @@ function firstDip(line: PlanLine, amount: number, g: number, index: number, offs
  * The first day the plan's line, in euros on the account, reaches `amountCents`, and whether it stays
  * there. Null when it never does within the plan.
  */
-export function milestoneCrossing(line: PlanLine, amountCents: number, inflationRate: number): MilestoneCrossing | null {
+export function milestoneCrossing(
+  line: PlanLine,
+  amountCents: number,
+  inflationRate: number,
+): MilestoneCrossing | null {
   const g = 1 + inflationRate
   const first = planValueAt(line, 0)
   if (first === null) return null

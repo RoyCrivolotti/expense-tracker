@@ -25,7 +25,14 @@ describe('describeRecommendation with the server’s suggestion', () => {
   it('prefers the person’s own description and category from the server over the rows the app holds', () => {
     const v = view({ suggestion: suggestion() })
 
-    expect(v).toMatchObject({ description: 'Morning coffee', fromHistory: true, categoryId: 2, categoryName: 'Groceries', oneTap: true, reasons: [] })
+    expect(v).toMatchObject({
+      description: 'Morning coffee',
+      fromHistory: true,
+      categoryId: 2,
+      categoryName: 'Groceries',
+      oneTap: true,
+      reasons: [],
+    })
   })
 
   it('reads a merchant the phone has never seen typed', () => {
@@ -46,9 +53,20 @@ describe('describeRecommendation with the server’s suggestion', () => {
   })
 
   it('takes the amount, type and account the wording taught, and says so when the amount was re-read', () => {
-    const v = view({ accountId: null, amountCents: 123400, suggestion: suggestion({ amountCents: 1234, type: 'refund', reasons: ['amount-relearned'] }) })
+    const v = view({
+      accountId: null,
+      amountCents: 123400,
+      suggestion: suggestion({ amountCents: 1234, type: 'refund', reasons: ['amount-relearned'] }),
+    })
 
-    expect(v).toMatchObject({ amountCents: 1234, type: 'refund', accountId: 1, accountName: 'Main Debit', reasons: ['amount-relearned'], oneTap: false })
+    expect(v).toMatchObject({
+      amountCents: 1234,
+      type: 'refund',
+      accountId: 1,
+      accountName: 'Main Debit',
+      reasons: ['amount-relearned'],
+      oneTap: false,
+    })
   })
 
   it('sends a wording the person has never accepted to Review', () => {
@@ -59,20 +77,37 @@ describe('describeRecommendation with the server’s suggestion', () => {
   })
 
   it('still checks that a suggested category or account is in use', () => {
-    const v = view({ merchantRaw: 'ARCHIVE SHOP', accountId: null, suggestion: suggestion({ categoryId: 99, accountId: 99 }) })
+    const v = view({
+      merchantRaw: 'ARCHIVE SHOP',
+      accountId: null,
+      suggestion: suggestion({ categoryId: 99, accountId: 99 }),
+    })
 
     expect(v).toMatchObject({ categoryId: null, accountId: null })
     expect(v.reasons).toEqual(expect.arrayContaining(['no-category', 'no-account']))
   })
 
   it('adds the suggested fields in one tap', () => {
-    expect(transactionOf(view({ suggestion: suggestion() }))).toMatchObject({ description: 'Morning coffee', categoryId: 2, amountCents: 1250, accountId: 1 })
+    expect(transactionOf(view({ suggestion: suggestion() }))).toMatchObject({
+      description: 'Morning coffee',
+      categoryId: 2,
+      amountCents: 1250,
+      accountId: 1,
+    })
   })
 })
 
 describe('describeRecommendation', () => {
   const withRows = (descriptions: string[]) => {
-    const rows = descriptions.map((description, i) => makeTransaction({ id: 100 + i, description, categoryId: 1, date: `2026-10-${String(10 + i).padStart(2, '0')}`, amountCents: 400 }))
+    const rows = descriptions.map((description, i) =>
+      makeTransaction({
+        id: 100 + i,
+        description,
+        categoryId: 1,
+        date: `2026-10-${String(10 + i).padStart(2, '0')}`,
+        amountCents: 400,
+      }),
+    )
     const own = buildExpenseModel({ ...model.dataset, transactions: rows })
     return describeRecommendation(makeRecommendation(), own, buildMerchantIndex(own.dataset.transactions, '2026-11-14'))
   }
@@ -112,7 +147,9 @@ describe('describeRecommendation', () => {
   })
 
   it('computes the budget month from the payment, never a fixed one', () => {
-    expect(view({ localDate: '2026-09-14', occurredAt: pushAt(2026, 9, 14), createdAt: arrivedAt(2026, 9, 14) }).budgetMonth).toBe('2026-09')
+    expect(
+      view({ localDate: '2026-09-14', occurredAt: pushAt(2026, 9, 14), createdAt: arrivedAt(2026, 9, 14) }).budgetMonth,
+    ).toBe('2026-09')
   })
 
   it('wants a look at a merchant seen once, and shows the bank text as its name', () => {
@@ -152,8 +189,17 @@ describe('describeRecommendation', () => {
   })
 
   it('wants a look near the end of a month and when the push arrived in a later month', () => {
-    expect(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) }).reasons).toContain('month-edge')
-    expect(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 18), createdAt: arrivedAt(2026, 12, 1, 0, 19) }).reasons).toContain('month-edge')
+    expect(
+      view({
+        localDate: '2026-11-30',
+        occurredAt: pushAt(2026, 11, 30, 23, 52),
+        createdAt: arrivedAt(2026, 11, 30, 23, 53),
+      }).reasons,
+    ).toContain('month-edge')
+    expect(
+      view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 18), createdAt: arrivedAt(2026, 12, 1, 0, 19) })
+        .reasons,
+    ).toContain('month-edge')
   })
 
   it('has no clock for a row written in UTC: next to a month end it wants a look, in mid-month it does not', () => {
@@ -165,7 +211,11 @@ describe('describeRecommendation', () => {
   })
 
   it("reads the payment's own time, so it does not depend on the zone of this device", () => {
-    const v = view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 30), createdAt: arrivedAt(2026, 11, 30, 23, 31) })
+    const v = view({
+      localDate: '2026-11-30',
+      occurredAt: pushAt(2026, 11, 30, 23, 30),
+      createdAt: arrivedAt(2026, 11, 30, 23, 31),
+    })
 
     expect(v.time).toBe('23:30')
     expect(v.clock.minuteOfDay).toBe(23 * 60 + 30)
@@ -173,8 +223,20 @@ describe('describeRecommendation', () => {
   })
 
   it('follows the rollover day setting: the evening before it is a budget month edge and the calendar month end is not', () => {
-    const rollover = buildExpenseModel({ ...model.dataset, settings: { ...model.dataset.settings, budgetRolloverDay: 15 } })
-    const at = (day: number) => describeRecommendation(makeRecommendation({ localDate: `2026-11-${day}`, occurredAt: pushAt(2026, 11, day, 23, 30), createdAt: arrivedAt(2026, 11, day, 23, 31) }), rollover, merchants)
+    const rollover = buildExpenseModel({
+      ...model.dataset,
+      settings: { ...model.dataset.settings, budgetRolloverDay: 15 },
+    })
+    const at = (day: number) =>
+      describeRecommendation(
+        makeRecommendation({
+          localDate: `2026-11-${day}`,
+          occurredAt: pushAt(2026, 11, day, 23, 30),
+          createdAt: arrivedAt(2026, 11, day, 23, 31),
+        }),
+        rollover,
+        merchants,
+      )
 
     expect(at(14).reasons).toContain('month-edge')
     expect(at(14).edgeDays).toEqual(['2026-11-15'])
@@ -182,7 +244,11 @@ describe('describeRecommendation', () => {
   })
 
   it('takes the budget month from the same rule for the payment day and the day an hour away', () => {
-    const v = view({ localDate: '2026-12-31', occurredAt: pushAt(2026, 12, 31, 23, 30), createdAt: arrivedAt(2026, 12, 31, 23, 31) })
+    const v = view({
+      localDate: '2026-12-31',
+      occurredAt: pushAt(2026, 12, 31, 23, 30),
+      createdAt: arrivedAt(2026, 12, 31, 23, 31),
+    })
 
     expect(v.budgetMonth).toBe('2026-12')
     expect(v.edgeDays).toEqual(['2027-01-01'])
@@ -217,7 +283,12 @@ describe('seedOf', () => {
   it('leaves out what is not known: no euros from another currency, no type for own money, no description with no merchant', () => {
     const seed = seedOf(view({ merchantRaw: null, currency: 'USD', suggestedType: null, accountId: null }))
 
-    expect(seed).toEqual({ recommendationId: '0b0c0d0e-1111-4222-8333-444455556661', date: '2026-11-10', budgetMonth: '2026-11', categoryId: 0 })
+    expect(seed).toEqual({
+      recommendationId: '0b0c0d0e-1111-4222-8333-444455556661',
+      date: '2026-11-10',
+      budgetMonth: '2026-11',
+      categoryId: 0,
+    })
   })
 
   it('asks for the category with the empty choice when there is no suggestion, so the form cannot fall back on its first one', () => {
@@ -232,7 +303,13 @@ describe('seedOf', () => {
   })
 
   it('carries the month-end note for a payment near a month end, and none otherwise', () => {
-    const edge = seedOf(view({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) }))
+    const edge = seedOf(
+      view({
+        localDate: '2026-11-30',
+        occurredAt: pushAt(2026, 11, 30, 23, 52),
+        createdAt: arrivedAt(2026, 11, 30, 23, 53),
+      }),
+    )
 
     expect(edge.notice?.alternate.date).toBe('2026-12-01')
     expect(seedOf(view())).not.toHaveProperty('notice')
@@ -265,7 +342,12 @@ describe('the card to ask about', () => {
     const asked = view({ card, accountId: null })
 
     expect(seedOf(asked, remember).accountId).toBe(0)
-    expect(seedOf(asked, remember).card).toEqual({ ...card, answer: { accountId: null, remember: true }, unanswered: 'Choose the account for the card ending 4821 first', remember })
+    expect(seedOf(asked, remember).card).toEqual({
+      ...card,
+      answer: { accountId: null, remember: true },
+      unanswered: 'Choose the account for the card ending 4821 first',
+      remember,
+    })
     expect(seedOf(asked)).not.toHaveProperty('card')
     expect(seedOf(asked)).not.toHaveProperty('accountId')
     expect(seedOf(view({ card, accountId: 1 }), remember)).not.toHaveProperty('card')
@@ -318,7 +400,9 @@ describe('transactionOf', () => {
 
   it('is null for any payment in doubt, so one tap cannot add it', () => {
     expect(transactionOf(view({ merchantRaw: 'BRAND NEW PLACE' }))).toBeNull()
-    expect(transactionOf(view({ possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } }))).toBeNull()
+    expect(
+      transactionOf(view({ possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })),
+    ).toBeNull()
     expect(transactionOf(view({ currency: 'USD' }))).toBeNull()
   })
 

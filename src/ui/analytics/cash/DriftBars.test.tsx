@@ -30,9 +30,7 @@ describe('DriftBars', () => {
 
   it('leaves the first count out as a baseline and says drift starts at the second', () => {
     const { container } = render(
-      <DriftBars
-        rows={[makeCashRow({ month: '2026-01', actualCashCents: 5, monthGapCents: 90_000 })]}
-      />,
+      <DriftBars rows={[makeCashRow({ month: '2026-01', actualCashCents: 5, monthGapCents: 90_000 })]} />,
     )
     expect(container.querySelectorAll('[class*="driftOver"]')).toHaveLength(0)
     expect(screen.getByText(/Drift shows from the second count/)).toBeInTheDocument()

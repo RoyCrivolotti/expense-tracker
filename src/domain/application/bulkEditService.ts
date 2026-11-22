@@ -46,7 +46,10 @@ export function isFilterBody(body: unknown): boolean {
   return isRecord(body) && 'filter' in body
 }
 
-function allowOnly(body: Record<string, unknown>, allowed: string[]): void {
+function allowOnly(
+  body: Record<string, unknown>,
+  allowed: string[],
+): void {
   for (const key of Object.keys(body)) {
     if (!allowed.includes(key)) {
       throw new ValidationError(

@@ -28,8 +28,11 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const list = (headers?: Record<string, string>, path = '/attachments', email?: string) =>
-  world.call(onRequestGet, { path, ...(headers ? { headers } : {}), ...(email ? { email } : {}) })
+const list = (
+  headers?: Record<string, string>,
+  path = '/attachments',
+  email?: string,
+) => world.call(onRequestGet, { path, ...(headers ? { headers } : {}), ...(email ? { email } : {}) })
 
 const tagOf = (response: Response): string => response.headers.get('etag')!
 
@@ -78,7 +81,15 @@ describe('GET /attachments', () => {
   it('is a 200 with a new list after a receipt is added', async () => {
     const tag = tagOf(await list())
 
-    expect((await world.call(onRequestPost, { method: 'POST', path: '/attachments', rawBody: uploadForm(ids.transactions[1]!) })).status).toBe(201)
+    expect(
+      (
+        await world.call(onRequestPost, {
+          method: 'POST',
+          path: '/attachments',
+          rawBody: uploadForm(ids.transactions[1]!),
+        })
+      ).status,
+    ).toBe(201)
 
     const after = await list({ 'if-none-match': tag })
     expect(after.status).toBe(200)
@@ -88,7 +99,11 @@ describe('GET /attachments', () => {
   it('is a 200 with a new list after a receipt is removed', async () => {
     const tag = tagOf(await list())
 
-    await world.call(deleteAttachment, { method: 'DELETE', path: `/attachments/${ids.attachment}`, params: { id: String(ids.attachment) } })
+    await world.call(deleteAttachment, {
+      method: 'DELETE',
+      path: `/attachments/${ids.attachment}`,
+      params: { id: String(ids.attachment) },
+    })
 
     const after = await list({ 'if-none-match': tag })
     expect(after.status).toBe(200)

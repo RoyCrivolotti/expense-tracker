@@ -44,41 +44,31 @@ function makeModel(budgetRolloverDay = 1): ExpenseModel {
 
 describe('BulkEditSheet', () => {
   it('renders the modal with correct title and count', () => {
-    render(
-      <BulkEditSheet count={3} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={3} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.getByRole('dialog', { name: 'Edit selected' })).toBeInTheDocument()
     expect(screen.getByText('3 transactions')).toBeInTheDocument()
   })
 
   it('shows singular noun for count=1', () => {
-    render(
-      <BulkEditSheet count={1} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={1} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.getByText('1 transaction')).toBeInTheDocument()
   })
 
   it('disables Apply when no fields toggled', () => {
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Apply changes' })).toBeDisabled()
   })
 
   it('enables Apply after toggling a field', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Category'))
     expect(screen.getByRole('button', { name: 'Apply changes' })).toBeEnabled()
   })
 
   it('shows category select when Category is toggled', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Category'))
     expect(screen.getByRole('combobox')).toBeInTheDocument()
     expect(screen.getByText('Groceries')).toBeInTheDocument()
@@ -87,9 +77,7 @@ describe('BulkEditSheet', () => {
 
   it('shows type selector when Type is toggled', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Type'))
     expect(screen.getByRole('button', { name: 'Expense' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Income' })).toBeInTheDocument()
@@ -98,9 +86,7 @@ describe('BulkEditSheet', () => {
   it('calls onApply with only toggled fields', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Category'))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
     expect(onApply).toHaveBeenCalledWith({ categoryId: 1 }, [])
@@ -109,17 +95,13 @@ describe('BulkEditSheet', () => {
   it('calls onCancel when Cancel is clicked', async () => {
     const onCancel = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={onCancel} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={onCancel} />)
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onCancel).toHaveBeenCalled()
   })
 
   it('shows "Applying…" and disables button when busy', () => {
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={true} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={true} onApply={vi.fn()} onCancel={vi.fn()} />)
     const btn = screen.getByRole('button', { name: 'Applying…' })
     expect(btn).toBeDisabled()
   })
@@ -127,24 +109,17 @@ describe('BulkEditSheet', () => {
   it('includes multiple toggled fields in the patch', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Category'))
     await user.click(screen.getByLabelText('Type'))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith(
-      expect.objectContaining({ categoryId: 1, type: 'expense' }),
-      [],
-    )
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 1, type: 'expense' }), [])
   })
 
   it('allows changing category selection', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Category'))
     await user.selectOptions(screen.getByRole('combobox'), '2')
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
@@ -154,9 +129,7 @@ describe('BulkEditSheet', () => {
   it('shows account select and includes it in patch', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Account'))
     const selects = screen.getAllByRole('combobox')
     await user.selectOptions(selects[0]!, '11')
@@ -166,9 +139,7 @@ describe('BulkEditSheet', () => {
 
   it('shows date input and includes it in patch', async () => {
     const onApply = vi.fn()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByLabelText('Date'))
     const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement
     expect(dateInput).toBeTruthy()
@@ -181,9 +152,7 @@ describe('BulkEditSheet', () => {
 
   it('shows budget month input and includes it in patch', async () => {
     const onApply = vi.fn()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByLabelText('Budget month'))
     const monthInput = document.querySelector('input[type="month"]') as HTMLInputElement
     expect(monthInput).toBeTruthy()
@@ -196,9 +165,7 @@ describe('BulkEditSheet', () => {
   it('changes type when a different type button is clicked', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Type'))
     await user.click(screen.getByRole('button', { name: 'Income' }))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
@@ -207,12 +174,12 @@ describe('BulkEditSheet', () => {
 
   it('offers the flag field once the owner has flags, and can clear one', async () => {
     const model = makeModel()
-    model.dataset.flags = [{ id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }]
+    model.dataset.flags = [
+      { id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true },
+    ]
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Flag'))
     await user.click(screen.getByRole('button', { name: 'Work travel' }))
@@ -224,15 +191,7 @@ describe('BulkEditSheet', () => {
 
   it('offers the flag field even before any flag exists, so it stays discoverable', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet
-        count={2}
-        model={makeModel()}
-        busy={false}
-        onApply={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Flag'))
 
@@ -267,9 +226,7 @@ describe('BulkEditSheet', () => {
 
   it('offers the labels field even before any label exists, so it stays discoverable', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Labels'))
 
@@ -278,14 +235,10 @@ describe('BulkEditSheet', () => {
 
   it('picks an existing label and applies it as an addition, not a patch field', async () => {
     const model = makeModel()
-    model.dataset.labels = [
-      { id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true },
-    ]
+    model.dataset.labels = [{ id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true }]
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Labels'))
     await user.click(screen.getByRole('button', { name: 'No labels' }))
@@ -300,9 +253,7 @@ describe('BulkEditSheet', () => {
 
   it('explains that labels are added, not replaced, since rows can differ', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Labels'))
 
@@ -338,13 +289,9 @@ describe('BulkEditSheet', () => {
 
   it('enables Apply for a labels-only edit, with nothing else toggled', async () => {
     const model = makeModel()
-    model.dataset.labels = [
-      { id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true },
-    ]
+    model.dataset.labels = [{ id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true }]
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={model} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={model} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
 
     await user.click(screen.getByLabelText('Labels'))
 
@@ -367,9 +314,7 @@ describe('BulkEditSheet rename', () => {
 
   it('shows the description field once toggled, and the Analytics hint', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 
     await user.click(screen.getByLabelText('Description'))
@@ -382,9 +327,7 @@ describe('BulkEditSheet rename', () => {
 
   it('blocks Apply while the field is on but empty, and when it holds only spaces', async () => {
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Description'))
     expect(screen.getByRole('button', { name: 'Apply changes' })).toBeDisabled()
 
@@ -398,9 +341,7 @@ describe('BulkEditSheet rename', () => {
   it('applies the trimmed text as the description', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Description'))
     await user.type(screen.getByRole('combobox'), '  Spotify ')
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
@@ -411,9 +352,7 @@ describe('BulkEditSheet rename', () => {
   it('sets the text only when an existing description is picked, never category or account', async () => {
     const onApply = vi.fn()
     const user = userEvent.setup()
-    render(
-      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Description'))
     await user.type(screen.getByRole('combobox'), 'net')
     await user.click(screen.getByRole('option', { name: 'Netflix' }))
@@ -463,7 +402,14 @@ describe('BulkEditSheet rename', () => {
   it('says nothing about current descriptions when there are none to show', async () => {
     const user = userEvent.setup()
     render(
-      <BulkEditSheet count={2} currentDescriptions={[]} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+      <BulkEditSheet
+        count={2}
+        currentDescriptions={[]}
+        model={modelWithHistory()}
+        busy={false}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
     )
     await user.click(screen.getByLabelText('Description'))
 
@@ -478,9 +424,7 @@ describe('BulkEditSheet — the date and month pickers', () => {
 
   it('opens a popover from a button where there is no native picker, so no bare native input is sized by the browser', async () => {
     picker.native = false
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByLabelText('Date'))
     await userEvent.click(screen.getByLabelText('Budget month'))
     expect(document.querySelector('input[type="date"]')).toBeNull()
@@ -493,9 +437,7 @@ describe('BulkEditSheet — the date and month pickers', () => {
   })
 
   it('gives the native inputs their own names, apart from the toggles', async () => {
-    render(
-      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByLabelText('Date'))
     await userEvent.click(screen.getByLabelText('Budget month'))
     expect(screen.getByLabelText('New date')).toHaveAttribute('type', 'date')
@@ -523,15 +465,7 @@ describe('BulkEditSheet — budget month respects the rollover day', () => {
   async function budgetMonthFor(rolloverDay: number): Promise<string | undefined> {
     const user = userEvent.setup()
     const onApply = vi.fn()
-    render(
-      <BulkEditSheet
-        count={2}
-        model={makeModel(rolloverDay)}
-        busy={false}
-        onApply={onApply}
-        onCancel={vi.fn()}
-      />,
-    )
+    render(<BulkEditSheet count={2} model={makeModel(rolloverDay)} busy={false} onApply={onApply} onCancel={vi.fn()} />)
     await user.click(screen.getByLabelText('Budget month'))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
     return (onApply.mock.calls[0]?.[0] as { budgetMonth?: string } | undefined)?.budgetMonth
@@ -558,7 +492,14 @@ describe('BulkEditSheet — budget month respects the rollover day', () => {
 describe('BulkEditSheet with chosen rows off screen', () => {
   it('says the edit leaves them alone', () => {
     render(
-      <BulkEditSheet count={10} hiddenCount={1} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+      <BulkEditSheet
+        count={10}
+        hiddenCount={1}
+        model={makeModel()}
+        busy={false}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
     )
     expect(screen.getByRole('note')).toHaveTextContent("1 more you selected isn't shown and won't be changed.")
   })

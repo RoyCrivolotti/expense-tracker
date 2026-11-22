@@ -27,7 +27,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
 }
 
 describe('updateSettings with investmentCategoryId', () => {
-  it('checks the category is the owner\'s before saving it', async () => {
+  it("checks the category is the owner's before saving it", async () => {
     const { env, bind } = stubEnv(makeRow({ investment_category_id: 4 }))
     await expect(updateSettings(env, OWNER, { investmentCategoryId: 4 })).resolves.toMatchObject({
       investmentCategoryId: 4,
@@ -88,7 +88,9 @@ describe('updateSettings with assumedInflation', () => {
 describe('updateSettings with marketVolatility', () => {
   it('accepts a yearly spread from none up to half, and nothing else', async () => {
     const { env } = stubEnv(makeRow({ market_volatility: 0.11 }))
-    await expect(updateSettings(env, OWNER, { marketVolatility: 0.11 })).resolves.toMatchObject({ marketVolatility: 0.11 })
+    await expect(updateSettings(env, OWNER, { marketVolatility: 0.11 })).resolves.toMatchObject({
+      marketVolatility: 0.11,
+    })
     for (const ok of [0, 0.5]) {
       await expect(updateSettings(env, OWNER, { marketVolatility: ok })).resolves.toBeDefined()
     }
@@ -99,11 +101,15 @@ describe('updateSettings with marketVolatility', () => {
 
   it('reads as 15% until one is set, including on a database without the column', async () => {
     const { env } = stubEnv(makeRow({ market_volatility: null }))
-    await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ marketVolatility: 0.15 })
+    await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
+      marketVolatility: 0.15,
+    })
     const { market_volatility: omitted, ...before } = makeRow()
     void omitted
     const { env: oldEnv } = stubEnv(before as SettingsRow)
-    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ marketVolatility: 0.15 })
+    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
+      marketVolatility: 0.15,
+    })
   })
 
   it('keeps zero, which is a spread of none and not a missing one', async () => {
@@ -143,21 +149,27 @@ describe('updateSettings with goalLevers', () => {
       'rentMonthlyCents',
     ]
     for (const bad of [six, ['planStartDate'], ['horizonYears', 'horizonYears'], 'horizonYears', null]) {
-      await expect(
-        updateSettings(env, OWNER, { goalLevers: bad as unknown as [] }),
-      ).rejects.toBeInstanceOf(HttpError)
+      await expect(updateSettings(env, OWNER, { goalLevers: bad as unknown as [] })).rejects.toBeInstanceOf(HttpError)
     }
   })
 
   it('reads as the five defaults until one is chosen, including on a database without the column', async () => {
     const { env } = stubEnv(makeRow({ goal_levers: null }))
-    const defaults = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']
+    const defaults = [
+      'monthlyContributionCents',
+      'expectedRealReturn',
+      'horizonYears',
+      'housePurchaseYear',
+      'startInvestedCents',
+    ]
     await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ goalLevers: defaults })
     // A row from before the migration has no such key at all.
     const { goal_levers: omitted, ...before } = makeRow()
     void omitted
     const { env: oldEnv } = stubEnv(before as SettingsRow)
-    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ goalLevers: defaults })
+    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
+      goalLevers: defaults,
+    })
   })
 })
 
@@ -236,17 +248,17 @@ describe('updateSettings with milestones', () => {
   it('rejects an invalid milestone amount with a 400', async () => {
     const { env } = stubEnv(makeRow())
 
-    await expect(
-      updateSettings(env, OWNER, { milestones: [{ amountCents: -1, label: '' }] }),
-    ).rejects.toBeInstanceOf(HttpError)
+    await expect(updateSettings(env, OWNER, { milestones: [{ amountCents: -1, label: '' }] })).rejects.toBeInstanceOf(
+      HttpError,
+    )
   })
 
   it('rejects a milestone list that is not an array with a 400', async () => {
     const { env } = stubEnv(makeRow())
 
-    await expect(
-      updateSettings(env, OWNER, { milestones: 'nope' as unknown as [] }),
-    ).rejects.toThrow(/must be an array/)
+    await expect(updateSettings(env, OWNER, { milestones: 'nope' as unknown as [] })).rejects.toThrow(
+      /must be an array/,
+    )
   })
 
   it('leaves other settings patches untouched by the milestone branch', async () => {
@@ -261,7 +273,9 @@ describe('updateSettings with milestones', () => {
 describe('updateSettings with the opening balances', () => {
   it('takes a whole number of cents, and an overdrawn cash balance, up to a hundred billion euros', async () => {
     const { env } = stubEnv(makeRow({ opening_investment_cents: 5_000_000, opening_cash_cents: -20_000 }))
-    await expect(updateSettings(env, OWNER, { openingInvestmentCents: 5_000_000, openingCashCents: -20_000 })).resolves.toBeDefined()
+    await expect(
+      updateSettings(env, OWNER, { openingInvestmentCents: 5_000_000, openingCashCents: -20_000 }),
+    ).resolves.toBeDefined()
     await expect(updateSettings(env, OWNER, { openingInvestmentCents: 1e13 })).resolves.toBeDefined()
   })
 
@@ -275,6 +289,8 @@ describe('updateSettings with the opening balances', () => {
     ['openingCashCents', 0.5],
   ])('refuses %s of %s with a 400', async (key, value) => {
     const { env } = stubEnv(makeRow())
-    await expect(updateSettings(env, OWNER, { [key]: value } as Partial<ExpenseSettings>)).rejects.toMatchObject({ status: 400 })
+    await expect(updateSettings(env, OWNER, { [key]: value } as Partial<ExpenseSettings>)).rejects.toMatchObject({
+      status: 400,
+    })
   })
 })

@@ -14,8 +14,6 @@ describe('createCloudflareEmailSender', () => {
       text: 'Body',
     })
     expect(send).toHaveBeenCalledTimes(2)
-    expect(send).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'a@example.com', subject: 'Test' }),
-    )
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: 'a@example.com', subject: 'Test' }))
   })
 })

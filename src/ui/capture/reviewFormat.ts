@@ -2,7 +2,12 @@ import { formatCents, type MoneyFormat } from '../../engine/money'
 import type { TxnType } from '../../types'
 import type { ReviewView } from './reviewFields'
 
-const TYPE_WORD: Record<TxnType, string> = { expense: 'Expense', income: 'Income', investment: 'Investment', refund: 'Refund' }
+const TYPE_WORD: Record<TxnType, string> = {
+  expense: 'Expense',
+  income: 'Income',
+  investment: 'Investment',
+  refund: 'Refund',
+}
 
 export const typeWord = (type: TxnType | null): string => (type ? TYPE_WORD[type] : 'Type: pick one')
 
@@ -19,7 +24,10 @@ export function monthWord(yearMonth: string): string {
 }
 
 /** The amount with its sign, as the row and the toast show it. An unknown amount is blank. */
-export function signedAmount(view: ReviewView, format: MoneyFormat): string {
+export function signedAmount(
+  view: ReviewView,
+  format: MoneyFormat,
+): string {
   if (view.amountCents === null) return ''
   const sign = view.type === 'income' || view.type === 'refund' ? '+' : view.type === 'expense' ? '−' : ''
   return `${sign}${formatCents(view.amountCents, format)}`
@@ -37,8 +45,15 @@ export function detailLine(view: ReviewView): string {
 }
 
 /** The undo toast: what was done on the first line, all seven fields on the second. */
-export function toastText(verb: string, view: ReviewView, format: MoneyFormat): string {
-  return `${verb} · ${view.description || 'Payment'} ${signedAmount(view, format)}\n${detailLine(view)}`.replace(/ \n/, '\n')
+export function toastText(
+  verb: string,
+  view: ReviewView,
+  format: MoneyFormat,
+): string {
+  return `${verb} · ${view.description || 'Payment'} ${signedAmount(view, format)}\n${detailLine(view)}`.replace(
+    / \n/,
+    '\n',
+  )
 }
 
 /** An amount in a currency other than euros, written with its own code. Never read as euros. */
@@ -57,6 +72,9 @@ export const SHOWN_PHONE = 3
 export const SHOWN_WIDE = 5
 
 /** One more than the limit shows them all: a "See all" for a single hidden payment is wasted effort. */
-export function rowsShown(total: number, limit: number): number {
+export function rowsShown(
+  total: number,
+  limit: number,
+): number {
   return total === limit + 1 ? total : limit
 }

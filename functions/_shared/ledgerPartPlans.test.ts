@@ -21,10 +21,14 @@ const BIG = 1_000_000
 const SCAN = /^SCAN /
 /** Walks every row the owner has, by whichever of the owner indexes. */
 const OWNER_WIDE = /USING (COVERING )?INDEX idx_txn_owner(_date|_month_date)? \(owner=\?\)/
-const MONTH_RANGE = /USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month>\? AND budget_month<\?\)/
+const MONTH_RANGE =
+  /USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month>\? AND budget_month<\?\)/
 
 function expectNoScan(plan: string[]): void {
-  expect(plan.filter((line) => SCAN.test(line)), `scans:\n${plan.join('\n')}`).toEqual([])
+  expect(
+    plan.filter((line) => SCAN.test(line)),
+    `scans:\n${plan.join('\n')}`,
+  ).toEqual([])
 }
 
 describe.each([{ stats: false }, { stats: true }])('query plans (table statistics: $stats)', ({ stats }) => {
@@ -67,7 +71,9 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
     const text = plan.join('\n')
     expectNoScan(plan)
     expect(text, text).toMatch(/COVERING INDEX idx_txn_settled_by \(owner=\? AND settled_by>\?\)/)
-    expect(text, `walks the owner’s rows:\n${text}`).not.toMatch(/SEARCH t USING (COVERING )?INDEX idx_txn_owner(_date|_month_date)? \(owner=\?\)/)
+    expect(text, `walks the owner’s rows:\n${text}`).not.toMatch(
+      /SEARCH t USING (COVERING )?INDEX idx_txn_owner(_date|_month_date)? \(owner=\?\)/,
+    )
   })
 
   it('counts rows per month from the index alone', async () => {
@@ -94,10 +100,15 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
     const [, accounts, paid] = await ran(() => repo.readMonthRows(OWNER, RANGE, BIG))
     for (const statement of [accounts!, paid!]) {
       const plan = planOf(kit.sqlite, statement)
-      expect(plan.filter((line) => SCAN.test(line) && line !== 'SCAN accounts'), plan.join('\n')).toEqual([])
+      expect(
+        plan.filter((line) => SCAN.test(line) && line !== 'SCAN accounts'),
+        plan.join('\n'),
+      ).toEqual([])
     }
     const text = planOf(kit.sqlite, paid!).join('\n')
-    expect(text, text).toMatch(/SEARCH account_statements USING INDEX \S+ \(owner=\? AND account_id=\? AND year_month>\? AND year_month<\?\)/)
+    expect(text, text).toMatch(
+      /SEARCH account_statements USING INDEX \S+ \(owner=\? AND account_id=\? AND year_month>\? AND year_month<\?\)/,
+    )
   })
 
   it('reads the cube of a range by the month index, and looks settled rows up by key', async () => {
@@ -111,7 +122,10 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
   })
 
   it('reads the same plans whatever range it is asked for, a single month or the whole span', async () => {
-    const shapes = [{ from: '2026-02', to: '2026-02' }, { from: '2020-01', to: '2030-12' }]
+    const shapes = [
+      { from: '2026-02', to: '2026-02' },
+      { from: '2020-01', to: '2030-12' },
+    ]
     for (const range of shapes) {
       const [rows] = await ran(() => repo.readMonthRows(OWNER, range, BIG))
       const [cells] = await ran(() => repo.readMonthCells(OWNER, range, BIG))
@@ -145,7 +159,11 @@ describe('the partial index', () => {
   it('holds only pinned rows, so an ordinary row pays no written row for it', () => {
     const kit = queryDb(syntheticLedger({ months: 12, perMonth: 30, seed: 7 }))
     const rowCount = (kit.sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
-    const pinned = (kit.sqlite.prepare(`SELECT COUNT(*) AS n FROM transactions t WHERE t.owner = ? AND ${PINNED_SQL}`).get(OWNER) as { n: number }).n
+    const pinned = (
+      kit.sqlite.prepare(`SELECT COUNT(*) AS n FROM transactions t WHERE t.owner = ? AND ${PINNED_SQL}`).get(OWNER) as {
+        n: number
+      }
+    ).n
     expect(pinned).toBeGreaterThan(0)
     expect(pinned).toBeLessThan(rowCount / 4)
   })

@@ -13,10 +13,23 @@ function elementWithRect(rect: Partial<DOMRect>): HTMLElement {
  * Gives the next <div> the hook creates — its safe-area probe — a real height,
  * which is the only thing the hook reads the inset from.
  */
-function withSafeAreaInset(inset: number, run: () => void) {
+function withSafeAreaInset(
+  inset: number,
+  run: () => void,
+) {
   const probe = getSafeAreaProbe()
   const original = probe.getBoundingClientRect.bind(probe)
-  probe.getBoundingClientRect = () => ({ top: 0, left: 0, width: 0, height: inset, right: 0, bottom: inset, x: 0, y: 0, toJSON: () => {} })
+  probe.getBoundingClientRect = () => ({
+    top: 0,
+    left: 0,
+    width: 0,
+    height: inset,
+    right: 0,
+    bottom: inset,
+    x: 0,
+    y: 0,
+    toJSON: () => {},
+  })
   try {
     run()
   } finally {
@@ -24,7 +37,10 @@ function withSafeAreaInset(inset: number, run: () => void) {
   }
 }
 
-function positionFor(trigger: Partial<DOMRect>, popover: Partial<DOMRect>) {
+function positionFor(
+  trigger: Partial<DOMRect>,
+  popover: Partial<DOMRect>,
+) {
   const triggerRef = { current: elementWithRect(trigger) }
   const popoverRef = { current: elementWithRect(popover) }
   return renderHook(() => usePopoverPosition(triggerRef, popoverRef)).result.current
@@ -98,8 +114,7 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     // 50px tall fits in the 70px below the trigger.
     expect(result.current).toMatchObject({ top: 734, left: 20 })
 
-    popover.getBoundingClientRect = () =>
-      ({ top: 0, left: 0, width: 200, height: 300 }) as DOMRect
+    popover.getBoundingClientRect = () => ({ top: 0, left: 0, width: 200, height: 300 }) as DOMRect
     act(() => resizeObservers.at(-1)?.trigger())
 
     // 300px does not, so it flips above instead of hanging off the bottom.
@@ -202,8 +217,7 @@ describe('usePopoverPosition — repositioning after it opens', () => {
   it('reuses a single probe element across mounts', () => {
     const triggerRef = { current: elementWithRect({ top: 100, bottom: 130, left: 20 }) }
     const popoverRef = { current: elementWithRect({ width: 200, height: 100 }) }
-    const probes = () =>
-      document.body.querySelectorAll('[data-safe-area-probe]').length
+    const probes = () => document.body.querySelectorAll('[data-safe-area-probe]').length
 
     const { unmount } = renderHook(() => usePopoverPosition(triggerRef, popoverRef))
     expect(probes()).toBe(1)
@@ -230,7 +244,14 @@ describe('usePopoverPosition — repositioning after it opens', () => {
   it('never caps the popover below a usable minimum', () => {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
-      value: { width: 400, height: 60, offsetTop: 0, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+      value: {
+        width: 400,
+        height: 60,
+        offsetTop: 0,
+        offsetLeft: 0,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
     })
     try {
       // A sliver of popover is worse than one that overflows and can scroll.
@@ -248,7 +269,14 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     // coordinates, so the band has to be expressed in the same ones.
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
-      value: { width: 400, height: 400, offsetTop: 300, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+      value: {
+        width: 400,
+        height: 400,
+        offsetTop: 300,
+        offsetLeft: 0,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
     })
     try {
       const pos = positionFor({ top: 620, bottom: 650, left: 20 }, { width: 200, height: 150 })
@@ -264,10 +292,21 @@ describe('usePopoverPosition — repositioning after it opens', () => {
 })
 
 describe('usePopoverPosition — when the keyboard hides the trigger', () => {
-  function withViewport(height: number, offsetTop: number, run: () => void) {
+  function withViewport(
+    height: number,
+    offsetTop: number,
+    run: () => void,
+  ) {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
-      value: { width: 400, height, offsetTop, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+      value: {
+        width: 400,
+        height,
+        offsetTop,
+        offsetLeft: 0,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
     })
     try {
       run()

@@ -27,7 +27,10 @@ export interface DateScopeChoice {
  * June. A month move means "show me this month", so from then on the list shows it. Month
  * and the last three months follow the header already and are left as chosen.
  */
-export function anchoredDateScope(choice: DateScopeChoice, navigation: number): TxnDateScope {
+export function anchoredDateScope(
+  choice: DateScopeChoice,
+  navigation: number,
+): TxnDateScope {
   if (navigation === choice.atNavigation) return choice.scope
   return choice.scope === 'allDates' || choice.scope === 'custom' ? 'budgetMonth' : choice.scope
 }

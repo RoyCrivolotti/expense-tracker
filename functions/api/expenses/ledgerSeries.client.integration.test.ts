@@ -52,7 +52,10 @@ interface Served {
   dataset: ExpenseDataset
 }
 
-function routeFetch(world: World, seen: string[] = []) {
+function routeFetch(
+  world: World,
+  seen: string[] = [],
+) {
   const handlers: Array<[string, Handler]> = [
     ['/api/expenses/transactions/months', getMonths],
     ['/api/expenses/reference', getReference],
@@ -68,7 +71,10 @@ function routeFetch(world: World, seen: string[] = []) {
   }
 }
 
-async function serve(name: string, source: ExpenseDataset): Promise<Served> {
+async function serve(
+  name: string,
+  source: ExpenseDataset,
+): Promise<Served> {
   const sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
   seedDataset(sqlite, OWNER, source)
@@ -121,7 +127,8 @@ function withIrregularPast(base: ExpenseDataset): ExpenseDataset {
 
 /** The first few random ledgers that are longer than a window, since a shorter one is held in full. */
 function randomWindowed(count: number): Array<[string, ExpenseDataset]> {
-  const longEnough = (ds: ExpenseDataset) => new Set(ds.transactions.map((t) => t.budgetMonth)).size > HYDRATED_DATA_MONTHS + 1
+  const longEnough = (ds: ExpenseDataset) =>
+    new Set(ds.transactions.map((t) => t.budgetMonth)).size > HYDRATED_DATA_MONTHS + 1
   const found: Array<[string, ExpenseDataset]> = []
   for (let seed = 0; found.length < count && seed < 100; seed++) {
     const ledger = randomLedger(seed)
@@ -152,7 +159,12 @@ afterEach(() => {
 })
 
 /** The model a browser builds over the routes with a window around `month`, and the series it was given. */
-async function windowedModel(c: Served, month: string, withSeries: boolean, seen: string[] = []) {
+async function windowedModel(
+  c: Served,
+  month: string,
+  withSeries: boolean,
+  seen: string[] = [],
+) {
   vi.stubGlobal('fetch', routeFetch(c.world, seen))
   const session = new LedgerSession(apiDataSource as Required<typeof apiDataSource>, { policy: WINDOWED })
   await session.open(month)
@@ -171,9 +183,15 @@ function modelAfterWrite(session: LedgerSession): ExpenseModel {
 }
 
 /** What the Overview and the Spending view show of a model for a viewed month, as strings that can be compared. */
-function readings(model: ExpenseModel, month: string): Record<string, string> {
+function readings(
+  model: ExpenseModel,
+  month: string,
+): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const [mode, clock] of [['closed', LATER], ['open', openAt(month)]] as const) {
+  for (const [mode, clock] of [
+    ['closed', LATER],
+    ['open', openAt(month)],
+  ] as const) {
     for (const basis of ['committed', 'paid'] as const) {
       for (const [period, compare] of PERIODS) {
         const data = buildOverviewData(model, { month, period, compare, basis, ...clock })
@@ -200,118 +218,154 @@ function todays(model: ExpenseModel): string[] {
   return days.map((day) => `${last}-${day}`)
 }
 
-const differing = (a: Record<string, string>, b: Record<string, string>): string[] =>
-  Object.keys(a).filter((key) => a[key] !== b[key])
+const differing = (
+  a: Record<string, string>,
+  b: Record<string, string>,
+): string[] => Object.keys(a).filter((key) => a[key] !== b[key])
 
-const upcomingNames = (model: ExpenseModel, today: string): string =>
+const upcomingNames = (
+  model: ExpenseModel,
+  today: string,
+): string =>
   JSON.stringify(
     upcomingOf(model.dataset.transactions, model.history, today, {}).map((s) => [s.description, s.predictedDate]),
   )
 
 describe('the series the routes serve', () => {
-  it('are the series of every row of the dataset, newest first', async () => {
-    for (const c of cases) {
-      const { series, windowed } = await windowedModel(c, sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth)).at(-1)!, true)
-      expect(windowed, c.name).toBe(true)
-      expect(series, c.name).toEqual(seriesFromTransactions(c.dataset.transactions))
-    }
-  }, SLOW)
+  it(
+    'are the series of every row of the dataset, newest first',
+    async () => {
+      for (const c of cases) {
+        const { series, windowed } = await windowedModel(
+          c,
+          sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth)).at(-1)!,
+          true,
+        )
+        expect(windowed, c.name).toBe(true)
+        expect(series, c.name).toEqual(seriesFromTransactions(c.dataset.transactions))
+      }
+    },
+    SLOW,
+  )
 })
 
 describe('a windowed model with the served series', () => {
-  it('reads the Overview and Spending as the model of every row does, from the first month to the last', async () => {
-    for (const c of cases) {
-      const whole = buildExpenseModel(c.dataset)
-      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
-      for (const month of [months[0]!, months[Math.floor(months.length / 2)]!, months.at(-1)!]) {
-        const { model } = await windowedModel(c, month, true)
-        expect(differing(readings(whole, month), readings(model, month)), `${c.name} ${month}`).toEqual([])
+  it(
+    'reads the Overview and Spending as the model of every row does, from the first month to the last',
+    async () => {
+      for (const c of cases) {
+        const whole = buildExpenseModel(c.dataset)
+        const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+        for (const month of [months[0]!, months[Math.floor(months.length / 2)]!, months.at(-1)!]) {
+          const { model } = await windowedModel(c, month, true)
+          expect(differing(readings(whole, month), readings(model, month)), `${c.name} ${month}`).toEqual([])
+        }
       }
-    }
-  }, SLOW)
+    },
+    SLOW,
+  )
 
-  it('offers the charges the model of every row offers, on the days around the end of the ledger', async () => {
-    let offered = 0
-    for (const c of cases) {
-      const whole = buildExpenseModel(c.dataset)
-      const { model } = await windowedModel(c, whole.months.at(-1)!, true)
-      for (const today of todays(whole)) {
-        const expected = upcomingNames(whole, today)
-        expect(upcomingNames(model, today), `${c.name} ${today}`).toBe(expected)
-        offered += (JSON.parse(expected) as unknown[]).length
-        const first = detectUpcoming(whole.dataset.transactions, { today })[0]
-        if (!first) continue
-        const stopped = { [first.seriesKey]: { after: first.lastChargeDate } }
-        expect(
-          upcomingOf(model.dataset.transactions, model.history, today, stopped),
-          `${c.name} ${today} stopped`,
-        ).toEqual(upcomingOf(whole.dataset.transactions, undefined, today, stopped))
+  it(
+    'offers the charges the model of every row offers, on the days around the end of the ledger',
+    async () => {
+      let offered = 0
+      for (const c of cases) {
+        const whole = buildExpenseModel(c.dataset)
+        const { model } = await windowedModel(c, whole.months.at(-1)!, true)
+        for (const today of todays(whole)) {
+          const expected = upcomingNames(whole, today)
+          expect(upcomingNames(model, today), `${c.name} ${today}`).toBe(expected)
+          offered += (JSON.parse(expected) as unknown[]).length
+          const first = detectUpcoming(whole.dataset.transactions, { today })[0]
+          if (!first) continue
+          const stopped = { [first.seriesKey]: { after: first.lastChargeDate } }
+          expect(
+            upcomingOf(model.dataset.transactions, model.history, today, stopped),
+            `${c.name} ${today} stopped`,
+          ).toEqual(upcomingOf(whole.dataset.transactions, undefined, today, stopped))
+        }
       }
-    }
-    expect(offered).toBeGreaterThan(0)
-  }, SLOW)
+      expect(offered).toBeGreaterThan(0)
+    },
+    SLOW,
+  )
 })
 
 describe('the same model without the served series', () => {
-  it('reads the Overview and Spending differently, so the comparison above has teeth', async () => {
-    let broken = 0
-    for (const c of cases) {
-      const whole = buildExpenseModel(c.dataset)
-      const month = whole.months.at(-1)!
-      const { model } = await windowedModel(c, month, false)
-      broken += differing(readings(whole, month), readings(model, month)).length
-    }
-    expect(broken).toBeGreaterThan(0)
-  }, SLOW)
+  it(
+    'reads the Overview and Spending differently, so the comparison above has teeth',
+    async () => {
+      let broken = 0
+      for (const c of cases) {
+        const whole = buildExpenseModel(c.dataset)
+        const month = whole.months.at(-1)!
+        const { model } = await windowedModel(c, month, false)
+        broken += differing(readings(whole, month), readings(model, month)).length
+      }
+      expect(broken).toBeGreaterThan(0)
+    },
+    SLOW,
+  )
 
-  it('offers a charge the whole history says is not regular enough, which is why the card waits for the series', async () => {
-    const c = cases.find((x) => x.name === 'irregular past')!
-    const whole = buildExpenseModel(c.dataset)
-    const { model } = await windowedModel(c, whole.months.at(-1)!, false)
-    const days = todays(whole)
-    const wrong = days.filter((today) => upcomingNames(model, today) !== upcomingNames(whole, today))
-    expect(wrong.length).toBeGreaterThan(0)
-    expect(days.map((today) => upcomingNames(whole, today)).join()).not.toContain('Cleaner')
-    expect(wrong.map((today) => upcomingNames(model, today)).join()).toContain('Cleaner')
-  }, SLOW)
+  it(
+    'offers a charge the whole history says is not regular enough, which is why the card waits for the series',
+    async () => {
+      const c = cases.find((x) => x.name === 'irregular past')!
+      const whole = buildExpenseModel(c.dataset)
+      const { model } = await windowedModel(c, whole.months.at(-1)!, false)
+      const days = todays(whole)
+      const wrong = days.filter((today) => upcomingNames(model, today) !== upcomingNames(whole, today))
+      expect(wrong.length).toBeGreaterThan(0)
+      expect(days.map((today) => upcomingNames(whole, today)).join()).not.toContain('Cleaner')
+      expect(wrong.map((today) => upcomingNames(model, today)).join()).toContain('Cleaner')
+    },
+    SLOW,
+  )
 })
 
 describe('a windowed model after a write, with the series as they were read', () => {
-  it('stops offering a charge once it is logged, as the model of every row does, without reading the series again', async () => {
-    let logged = 0
-    for (const c of cases) {
-      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
-      const seen: string[] = []
-      const { session, stop } = await windowedModel(c, months.at(-1)!, true, seen)
-      const whole = buildExpenseModel(c.dataset)
-      const day = todays(whole).find((today) => detectUpcoming(whole.dataset.transactions, { today }).length > 0)
-      if (!day) continue
-      const due = detectUpcoming(whole.dataset.transactions, { today: day })[0]!
-      const row: Transaction = {
-        id: Math.max(...c.dataset.transactions.map((t) => t.id)) + 1,
-        date: due.predictedDate,
-        budgetMonth: due.predictedBudgetMonth,
-        description: due.description,
-        accountId: due.accountId,
-        categoryId: due.categoryId,
-        type: due.type,
-        amountCents: due.amountCents,
-        cancelled: false,
-        status: 'posted',
-        labelIds: [],
+  it(
+    'stops offering a charge once it is logged, as the model of every row does, without reading the series again',
+    async () => {
+      let logged = 0
+      for (const c of cases) {
+        const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+        const seen: string[] = []
+        const { session, stop } = await windowedModel(c, months.at(-1)!, true, seen)
+        const whole = buildExpenseModel(c.dataset)
+        const day = todays(whole).find((today) => detectUpcoming(whole.dataset.transactions, { today }).length > 0)
+        if (!day) continue
+        const due = detectUpcoming(whole.dataset.transactions, { today: day })[0]!
+        const row: Transaction = {
+          id: Math.max(...c.dataset.transactions.map((t) => t.id)) + 1,
+          date: due.predictedDate,
+          budgetMonth: due.predictedBudgetMonth,
+          description: due.description,
+          accountId: due.accountId,
+          categoryId: due.categoryId,
+          type: due.type,
+          amountCents: due.amountCents,
+          cancelled: false,
+          status: 'posted',
+          labelIds: [],
+        }
+        expect(upcomingNames(modelAfterWrite(session), day), c.name).toContain(due.description)
+        session.patch((d) => patchAfterTransactionCreate(d, row))
+        const model = modelAfterWrite(session)
+        const written = buildExpenseModel({ ...c.dataset, transactions: [row, ...c.dataset.transactions] })
+        for (const today of todays(whole)) {
+          expect(upcomingNames(model, today), `${c.name} ${today}`).toBe(upcomingNames(written, today))
+        }
+        expect(upcomingNames(model, day), c.name).not.toContain(due.description)
+        expect(
+          seen.filter((path) => path.endsWith('/series')),
+          c.name,
+        ).toHaveLength(1)
+        logged += 1
+        stop()
       }
-      expect(upcomingNames(modelAfterWrite(session), day), c.name).toContain(due.description)
-      session.patch((d) => patchAfterTransactionCreate(d, row))
-      const model = modelAfterWrite(session)
-      const written = buildExpenseModel({ ...c.dataset, transactions: [row, ...c.dataset.transactions] })
-      for (const today of todays(whole)) {
-        expect(upcomingNames(model, today), `${c.name} ${today}`).toBe(upcomingNames(written, today))
-      }
-      expect(upcomingNames(model, day), c.name).not.toContain(due.description)
-      expect(seen.filter((path) => path.endsWith('/series')), c.name).toHaveLength(1)
-      logged += 1
-      stop()
-    }
-    expect(logged).toBeGreaterThan(0)
-  }, SLOW)
+      expect(logged).toBeGreaterThan(0)
+    },
+    SLOW,
+  )
 })

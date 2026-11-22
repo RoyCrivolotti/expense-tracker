@@ -17,7 +17,15 @@ function byDay(views: readonly ReviewView[]): { date: string; views: ReviewView[
 }
 
 /** Every payment waiting for a look. Review opens the add form, which then moves on to the next payment. */
-export function ReviewSheet({ review, onClose, onReview }: { review: ReviewApi; onClose: () => void; onReview: (view: ReviewView) => void }) {
+export function ReviewSheet({
+  review,
+  onClose,
+  onReview,
+}: {
+  review: ReviewApi
+  onClose: () => void
+  onReview: (view: ReviewView) => void
+}) {
   return (
     <Modal title={`To review (${review.count})`} onClose={onClose}>
       <p className={styles.hint}>&ldquo;Don&apos;t add&rdquo; only removes that one suggestion.</p>

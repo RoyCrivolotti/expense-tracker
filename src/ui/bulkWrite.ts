@@ -1,7 +1,10 @@
 import type { WriteReach } from '../data/ledgerSession'
 import type { ExpenseDataset } from '../types'
 
-export type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
+export type ApplyPatch = (
+  patch: (dataset: ExpenseDataset) => ExpenseDataset,
+  reach?: WriteReach,
+) => void
 
 /** The patch of a write whose answer says nothing about the rows it touched: the data is left as it is and told to read them again. */
 export const unchanged = (dataset: ExpenseDataset): ExpenseDataset => dataset
@@ -12,7 +15,11 @@ export const unchanged = (dataset: ExpenseDataset): ExpenseDataset => dataset
  */
 export const bulkWriteOf =
   (applyPatch: ApplyPatch) =>
-  async <R, T>(write: () => Promise<R>, apply: (result: R) => void, count: (result: R) => T): Promise<T> => {
+  async <R, T>(
+    write: () => Promise<R>,
+    apply: (result: R) => void,
+    count: (result: R) => T,
+  ): Promise<T> => {
     try {
       const result = await write()
       apply(result)

@@ -22,7 +22,14 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
-function setup(overrides: { activeId?: number | null; withActions?: boolean; saved?: GoalScenario | null; draft?: typeof draft } = {}) {
+function setup(
+  overrides: {
+    activeId?: number | null
+    withActions?: boolean
+    saved?: GoalScenario | null
+    draft?: typeof draft
+  } = {},
+) {
   const showToast = vi.fn()
   const actions = makeActions()
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -76,7 +83,10 @@ describe('useScenarioSave', () => {
     const release = registerOpenForm()
     await pressSave(result)
     release()
-    expect(showToast).toHaveBeenCalledWith('Saved Path A. What you are still adding or editing is not in it yet.', 'success')
+    expect(showToast).toHaveBeenCalledWith(
+      'Saved Path A. What you are still adding or editing is not in it yet.',
+      'success',
+    )
 
     await pressSave(result)
     expect(showToast).toHaveBeenLastCalledWith('Saved Path A', 'success')

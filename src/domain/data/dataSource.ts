@@ -47,10 +47,7 @@ export type NewTransaction = Omit<
   flagId?: number | null
 }
 export type BulkTransactionPatch = Partial<
-  Pick<
-    NewTransaction,
-    'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId' | 'description'
-  >
+  Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId' | 'description'>
 > & {
   /** Reimbursement link: an id settles the rows, null un-settles them. */
   settledBy?: number | null
@@ -162,7 +159,10 @@ export interface LedgerPartsSource {
     request?: { limit?: number; cursor?: string; signal?: AbortSignal },
   ): Promise<TransactionPagePart>
   /** How many rows `filter` matches (counted to a cap) and what they net to. `signal` cancels the read. */
-  readTransactionSummary(filter: TxnFilter, request?: { signal?: AbortSignal }): Promise<TransactionSummaryPart>
+  readTransactionSummary(
+    filter: TxnFilter,
+    request?: { signal?: AbortSignal },
+  ): Promise<TransactionSummaryPart>
   /**
    * The recurring series of the whole history, which a client that holds only some of the rows needs to
    * tell what is fixed and what is due (a series needs every row it is made of). The server works it out
@@ -192,7 +192,10 @@ export interface LedgerPartsSource {
    * none is given), for a client that holds the rows from that month on: `mergeDescriptionMatches` joins the two.
    * `signal` cancels the read.
    */
-  readDescriptionSuggest(request: DescriptionSuggestRequest, options?: { signal?: AbortSignal }): Promise<DescriptionSuggestResult>
+  readDescriptionSuggest(
+    request: DescriptionSuggestRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<DescriptionSuggestResult>
 }
 
 export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
@@ -201,7 +204,10 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
   load(): Promise<ExpenseDataset>
   createTransaction?(input: NewTransaction): Promise<Transaction>
   createTransactions?(inputs: NewTransaction[]): Promise<Transaction[]>
-  updateTransaction?(id: number, patch: Partial<NewTransaction>): Promise<Transaction>
+  updateTransaction?(
+    id: number,
+    patch: Partial<NewTransaction>,
+  ): Promise<Transaction>
   deleteTransaction?(id: number): Promise<void>
   deleteTransactions?(ids: number[]): Promise<{ deleted: number; requested: number }>
   updateTransactions?(
@@ -209,7 +215,10 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
     patch: BulkTransactionPatch,
   ): Promise<{ updated: number; transactions: Transaction[] }>
   /** Adds labels to these transactions and keeps the ones they have (`setTransactionLabels` replaces them). */
-  addLabelsToTransactions?(ids: number[], labelIds: number[]): Promise<{ matched: number; added: number }>
+  addLabelsToTransactions?(
+    ids: number[],
+    labelIds: number[],
+  ): Promise<{ matched: number; added: number }>
   /**
    * Adds labels to, and edits, every row `target` names. Refused with a 409 (`ApiError`) if anything was written to
    * the ledger since the count was read, in which case nothing was changed and the count is read again before a retry.
@@ -219,43 +228,87 @@ export interface ExpenseDataSource extends Partial<LedgerPartsSource> {
     patch: BulkTransactionPatch,
     labelIds?: number[],
   ): Promise<{ updated: number }>
-  setStatementPaid?(accountId: number, yearMonth: string, paid: boolean, paidOn?: string): Promise<AccountStatement>
+  setStatementPaid?(
+    accountId: number,
+    yearMonth: string,
+    paid: boolean,
+    paidOn?: string,
+  ): Promise<AccountStatement>
   /** Record actual cash for a month, or pass null to clear (empty Actual field). */
-  setCashActual?(yearMonth: string, actualCashCents: number | null): Promise<CashActual | null>
+  setCashActual?(
+    yearMonth: string,
+    actualCashCents: number | null,
+  ): Promise<CashActual | null>
   // Definitions — categories, accounts, opening balances.
   createCategory?(input: NewCategory): Promise<Category>
-  updateCategory?(id: number, patch: Partial<NewCategory>): Promise<Category>
-  deleteCategory?(id: number, options?: DeleteCategoryOptions): Promise<DeleteCategoryResult>
+  updateCategory?(
+    id: number,
+    patch: Partial<NewCategory>,
+  ): Promise<Category>
+  deleteCategory?(
+    id: number,
+    options?: DeleteCategoryOptions,
+  ): Promise<DeleteCategoryResult>
   createAccount?(input: NewAccount): Promise<Account>
-  updateAccount?(id: number, patch: Partial<NewAccount>): Promise<Account>
-  deleteAccount?(id: number, options?: DeleteAccountOptions): Promise<DeleteAccountResult>
+  updateAccount?(
+    id: number,
+    patch: Partial<NewAccount>,
+  ): Promise<Account>
+  deleteAccount?(
+    id: number,
+    options?: DeleteAccountOptions,
+  ): Promise<DeleteAccountResult>
   /** Multipart upload; resolves with the stored metadata. */
-  uploadAttachment?(transactionId: number, file: File): Promise<TransactionAttachment>
+  uploadAttachment?(
+    transactionId: number,
+    file: File,
+  ): Promise<TransactionAttachment>
   deleteAttachment?(id: number): Promise<void>
   createFlag?(input: NewFlag): Promise<Flag>
-  updateFlag?(id: number, patch: Partial<NewFlag>): Promise<Flag>
+  updateFlag?(
+    id: number,
+    patch: Partial<NewFlag>,
+  ): Promise<Flag>
   /** Deleting a flag clears it from its transactions; the result says how many. */
   deleteFlag?(id: number): Promise<{ unflagged: number }>
   createLabel?(input: NewLabel): Promise<Label>
-  updateLabel?(id: number, patch: Partial<NewLabel>): Promise<Label>
+  updateLabel?(
+    id: number,
+    patch: Partial<NewLabel>,
+  ): Promise<Label>
   /** Deleting a label unlinks it from its transactions; the result says how many. */
   deleteLabel?(id: number): Promise<{ unlabeled: number }>
   /** Replaces a transaction's whole label set. */
-  setTransactionLabels?(transactionId: number, labelIds: number[]): Promise<Transaction>
+  setTransactionLabels?(
+    transactionId: number,
+    labelIds: number[],
+  ): Promise<Transaction>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>
-  updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>
+  updateScenario?(
+    id: number,
+    patch: Partial<NewGoalScenario>,
+  ): Promise<GoalScenario>
   /** Make this scenario the owner's plan; the previous plan stops being one. */
   activateScenario?(id: number): Promise<GoalScenario>
   deleteScenario?(id: number): Promise<void>
   createInstallmentPlan?(input: NewInstallmentPlan): Promise<InstallmentPlan>
-  updateInstallmentPlan?(id: number, patch: Partial<NewInstallmentPlan>): Promise<InstallmentPlan>
+  updateInstallmentPlan?(
+    id: number,
+    patch: Partial<NewInstallmentPlan>,
+  ): Promise<InstallmentPlan>
   deleteInstallmentPlan?(id: number): Promise<void>
   createWealthAccount?(input: NewWealthAccount): Promise<WealthAccount>
-  updateWealthAccount?(id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
+  updateWealthAccount?(
+    id: number,
+    patch: Partial<NewWealthAccount>,
+  ): Promise<WealthAccount>
   deleteWealthAccount?(id: number): Promise<DeleteWealthAccountResult>
   createWealthCheckin?(input: NewWealthCheckin): Promise<WealthCheckin>
-  updateWealthCheckin?(id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
+  updateWealthCheckin?(
+    id: number,
+    patch: Partial<NewWealthCheckin>,
+  ): Promise<WealthCheckin>
   deleteWealthCheckin?(id: number): Promise<void>
 }
 

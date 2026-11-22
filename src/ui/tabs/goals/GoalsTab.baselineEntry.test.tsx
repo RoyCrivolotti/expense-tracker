@@ -27,20 +27,14 @@ describe('GoalsTab baseline entry', () => {
   function goalsModel() {
     return buildExpenseModel(
       makeDataset({
-        goalScenarios: [
-          makeScenario({ id: 1, name: 'Path A', isActive: true, annualSpendCents: 2_400_000 }),
-        ],
+        goalScenarios: [makeScenario({ id: 1, name: 'Path A', isActive: true, annualSpendCents: 2_400_000 })],
       }),
     )
   }
 
   it('opens Plan with the measured spend as an unsaved draft edit, never a silent save', () => {
     render(
-      <GoalsTab
-        model={goalsModel()}
-        actions={makeActions()}
-        entry={{ kind: 'baseline', monthlyCents: 250_000 }}
-      />,
+      <GoalsTab model={goalsModel()} actions={makeActions()} entry={{ kind: 'baseline', monthlyCents: 250_000 }} />,
     )
     // The prefill is a dirty draft: the Save group is up, and nothing was written.
     expect(screen.getByRole('group', { name: 'Unsaved changes' })).toBeInTheDocument()

@@ -22,8 +22,8 @@ function Unreadable({ count }: { count: number }) {
   const requests = count === 1 ? '1 request' : `${count} requests`
   return (
     <p className={styles.warn}>
-      {requests} from your shortcut in the last 7 days could not be read: check its fields. If your bank app&rsquo;s name
-      has no Latin letters or digits, add a <b>source</b> field with a short name you type, such as <b>mybank</b>.
+      {requests} from your shortcut in the last 7 days could not be read: check its fields. If your bank app&rsquo;s
+      name has no Latin letters or digits, add a <b>source</b> field with a short name you type, such as <b>mybank</b>.
     </p>
   )
 }

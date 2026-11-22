@@ -35,9 +35,7 @@ function useScrollEdges() {
     if (!el) return
     const atStart = el.scrollLeft <= 1
     const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
-    setEdges((prev) =>
-      prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd },
-    )
+    setEdges((prev) => (prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd }))
   }, [])
   useEffect(() => {
     const el = ref.current
@@ -101,7 +99,15 @@ function SecondaryViewChart({
 }) {
   switch (view) {
     case 'compare':
-      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded />
+      return (
+        <ScenarioComparison
+          scenarios={scenarios}
+          draft={draft}
+          includeDraft={includeDraft}
+          fromToday={fromToday}
+          embedded
+        />
+      )
     case 'composition':
       return <CompositionChart draft={draft} embedded />
     case 'milestones':
@@ -127,13 +133,7 @@ function SecondaryViewChart({
   }
 }
 
-function SecondaryTabPicker({
-  view,
-  onViewChange,
-}: {
-  view: SecondaryView
-  onViewChange: (v: SecondaryView) => void
-}) {
+function SecondaryTabPicker({ view, onViewChange }: { view: SecondaryView; onViewChange: (v: SecondaryView) => void }) {
   const { ref, atStart, atEnd } = useScrollEdges()
   const { stop, onKeyDown } = useRadioGroupKeys({
     groupRef: ref,
@@ -145,11 +145,7 @@ function SecondaryTabPicker({
     },
   })
   const scrollStep = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * 140, behavior: 'smooth' })
-  const cls = [
-    styles.tabScroller,
-    atStart ? '' : styles.canScrollLeft,
-    atEnd ? '' : styles.canScrollRight,
-  ]
+  const cls = [styles.tabScroller, atStart ? '' : styles.canScrollLeft, atEnd ? '' : styles.canScrollRight]
     .filter(Boolean)
     .join(' ')
 

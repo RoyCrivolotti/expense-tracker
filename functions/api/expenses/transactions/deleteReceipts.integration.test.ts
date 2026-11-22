@@ -37,13 +37,21 @@ async function bytesServed(): Promise<boolean> {
   return (await world.call(getAttachment, { path: `/attachments/${ids.attachment}`, params })).status === 200
 }
 
-const rows = (table: 'transactions' | 'transaction_attachments', id: number): number =>
-  (sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${table === 'transactions' ? 'id' : 'transaction_id'} = ?`).get(id) as { n: number }).n
+const rows = (
+  table: 'transactions' | 'transaction_attachments',
+  id: number,
+): number =>
+  (
+    sqlite
+      .prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${table === 'transactions' ? 'id' : 'transaction_id'} = ?`)
+      .get(id) as { n: number }
+  ).n
 
 const bulk = (idsBody: unknown) =>
   world.call(deleteBulk, { method: 'DELETE', path: '/transactions/bulk', body: { ids: idsBody } })
 
-const single = (id: number) => world.call(deleteOne, { method: 'DELETE', path: `/transactions/${id}`, params: { id: String(id) } })
+const single = (id: number) =>
+  world.call(deleteOne, { method: 'DELETE', path: `/transactions/${id}`, params: { id: String(id) } })
 
 describe('a delete that is refused leaves the receipt files alone', () => {
   it('for an id that is not a number', async () => {

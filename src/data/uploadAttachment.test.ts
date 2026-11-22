@@ -18,7 +18,10 @@ function captureUpload() {
   return () => (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.body as FormData
 }
 
-function file(name = 'hotel.jpg', type = 'image/jpeg'): File {
+function file(
+  name = 'hotel.jpg',
+  type = 'image/jpeg',
+): File {
   return new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], name, { type })
 }
 

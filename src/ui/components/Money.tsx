@@ -19,7 +19,11 @@ interface MoneyProps {
   className?: string | undefined
 }
 
-function signFor(cents: number, type?: TxnType, signed?: boolean): string {
+function signFor(
+  cents: number,
+  type?: TxnType,
+  signed?: boolean,
+): string {
   if (cents === 0) return ''
   if (type === 'income') return '+'
   if (type === 'expense') return '−'

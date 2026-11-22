@@ -1,8 +1,5 @@
 import type { Env, ExpensesData } from '../../../../_shared/env'
-import {
-  addLabelsToTransactions,
-  parseBulkLabelRequest,
-} from '../../../../domain/application/bulkEditService'
+import { addLabelsToTransactions, parseBulkLabelRequest } from '../../../../domain/application/bulkEditService'
 import { json, readJson } from '../../../../_shared/http'
 import { mapAppError } from '../../../../_shared/mapAppError'
 import { assertRevisionUnchanged } from '../../../../_shared/revisionPrecondition'

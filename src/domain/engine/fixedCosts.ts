@@ -78,11 +78,8 @@ export function detectedFixedCosts(
       frequency,
       lastMonth: newest(group.budgetMonths),
       payment: null,
-      inPaceBudget:
-        budgeted.has(group.categoryId) && isMonthlyGroup(group) && activeInMonth(group, month),
+      inPaceBudget: budgeted.has(group.categoryId) && isMonthlyGroup(group) && activeInMonth(group, month),
     })
   }
-  return items.sort(
-    (a, b) => Number(b.inPaceBudget) - Number(a.inPaceBudget) || b.amountCents - a.amountCents,
-  )
+  return items.sort((a, b) => Number(b.inPaceBudget) - Number(a.inPaceBudget) || b.amountCents - a.amountCents)
 }

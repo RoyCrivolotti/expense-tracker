@@ -28,7 +28,12 @@ initExpenseTheme()
 if (import.meta.env.PROD) {
   reloadWhenWorkerReplaced(navigator.serviceWorker, reloadPageWhenNothingOpen)
   trackTypingFocus()
-  reloadOnChunkError(window, window.sessionStorage, import.meta.env.VITE_BUILD_ID ?? 'unknown', reloadPageWhenNothingOpen)
+  reloadOnChunkError(
+    window,
+    window.sessionStorage,
+    import.meta.env.VITE_BUILD_ID ?? 'unknown',
+    reloadPageWhenNothingOpen,
+  )
 }
 
 function renderApp(node: ReactNode) {
@@ -53,9 +58,7 @@ void resolveSource().then((source) => {
 
   const ownerAccess = import.meta.env.VITE_DOCS_CAPTURE ? { pendingCount: 1 } : undefined
   if (import.meta.env.DEV) {
-    renderApp(
-      <ExpensesApp source={source} hubGrants={allGroupsGranted()} {...(ownerAccess ? { ownerAccess } : {})} />,
-    )
+    renderApp(<ExpensesApp source={source} hubGrants={allGroupsGranted()} {...(ownerAccess ? { ownerAccess } : {})} />)
     return
   }
 

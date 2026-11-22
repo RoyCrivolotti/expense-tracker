@@ -11,9 +11,17 @@ const plan = samplePlan({ id: 1, isActive: true })
 const line = planLineOf(projectNetWorth(scenarioToParams(plan, SAMPLE_INFLATION)))
 
 /** The status of a check-in whose balance is `realCents` in the plan's money on `date`. */
-function statusFor(date: string, realCents: number) {
+function statusFor(
+  date: string,
+  realCents: number,
+) {
   const nominal = realToNominal(realCents, '2026-01-01', date, SAMPLE_INFLATION)
-  const checkin: WealthCheckin = { id: 1, checkinDate: date, createdAt: `${date}T00:00:00Z`, entries: [{ accountId: 1, valueCents: nominal }] }
+  const checkin: WealthCheckin = {
+    id: 1,
+    checkinDate: date,
+    createdAt: `${date}T00:00:00Z`,
+    entries: [{ accountId: 1, valueCents: nominal }],
+  }
   return trackStatus(checkin, plan, accounts, SAMPLE_INFLATION)!
 }
 const lineOn = (date: string) => planValueAt(line, yearOffsetFromDate('2026-01-01', date)!)!

@@ -52,9 +52,7 @@ function Detail({
     <SpendingDetailBody
       detail={detail}
       model={model}
-      onOpenTransactions={
-        preset && onOpenTransactions ? () => onOpenTransactions(preset) : undefined
-      }
+      onOpenTransactions={preset && onOpenTransactions ? () => onOpenTransactions(preset) : undefined}
     />
   )
 }

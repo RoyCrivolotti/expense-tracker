@@ -12,7 +12,8 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const id = routeParam(context.params.id)
   if (!ID_PATTERN.test(id)) throw new HttpError(404, 'Device not found')
   try {
-    if (!(await removePushDevice(createD1PushRepository(context.env), context.data.owner, id))) throw new HttpError(404, 'Device not found')
+    if (!(await removePushDevice(createD1PushRepository(context.env), context.data.owner, id)))
+      throw new HttpError(404, 'Device not found')
     return json({ ok: true })
   } catch (error) {
     mapAppError(error)

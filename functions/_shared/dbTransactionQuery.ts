@@ -23,7 +23,10 @@ export function toTransaction(row: QueryRow): Transaction {
   return { ...toStoredTxn(row), status: row.status, labelIds }
 }
 
-function run({ sql, params }: Sql, env: Env): D1PreparedStatement {
+function run(
+  { sql, params }: Sql,
+  env: Env,
+): D1PreparedStatement {
   return env.DB.prepare(sql).bind(...params)
 }
 
@@ -40,18 +43,30 @@ export async function queryTransactions(
 }
 
 /** The owner's `limit` most recently added rows, newest first. */
-export async function recentTransactions(env: Env, owner: string, limit: number): Promise<Transaction[]> {
+export async function recentTransactions(
+  env: Env,
+  owner: string,
+  limit: number,
+): Promise<Transaction[]> {
   const { results } = await run(recentSql(owner, limit), env).all<QueryRow>()
   return (results ?? []).map(toTransaction)
 }
 
-export async function getTransaction(env: Env, owner: string, id: number): Promise<Transaction | null> {
+export async function getTransaction(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<Transaction | null> {
   const row = await run(oneSql(owner, id), env).first<QueryRow>()
   return row ? toTransaction(row) : null
 }
 
 /** The owner's rows among `ids` in one read, with status and label ids derived as the list derives them. */
-export async function getTransactionsByIds(env: Env, owner: string, ids: readonly number[]): Promise<Transaction[]> {
+export async function getTransactionsByIds(
+  env: Env,
+  owner: string,
+  ids: readonly number[],
+): Promise<Transaction[]> {
   const { results } = await run(rowsByIdsSql(owner, ids), env).all<QueryRow>()
   return (results ?? []).map(toTransaction)
 }
@@ -62,10 +77,7 @@ export async function summarizeTransactions(
   owner: string,
   filter: TxnFilter,
 ): Promise<TransactionSummary> {
-  const [count, net] = await env.DB.batch([
-    run(countSql(owner, filter), env),
-    run(netSpendSql(owner, filter), env),
-  ])
+  const [count, net] = await env.DB.batch([run(countSql(owner, filter), env), run(netSpendSql(owner, filter), env)])
   const n = (count?.results?.[0] as { n: number } | undefined)?.n ?? 0
   const netSpendCents = (net?.results?.[0] as { net: number } | undefined)?.net ?? 0
   return { count: Math.min(n, SUMMARY_COUNT_CAP), capped: n > SUMMARY_COUNT_CAP, netSpendCents }

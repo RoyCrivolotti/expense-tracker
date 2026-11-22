@@ -53,9 +53,15 @@ function mergeCounts(...lists: readonly AttachmentCounts[]): AttachmentCounts {
   return merged
 }
 
-const within = (month: string, range: { from: string; to: string }): boolean => month >= range.from && month <= range.to
+const within = (
+  month: string,
+  range: { from: string; to: string },
+): boolean => month >= range.from && month <= range.to
 
-function groupByMonth(parts: readonly MonthRowsPart[], months: readonly string[]): Map<string, Transaction[]> {
+function groupByMonth(
+  parts: readonly MonthRowsPart[],
+  months: readonly string[],
+): Map<string, Transaction[]> {
   const grouped = new Map<string, Transaction[]>()
   for (const part of parts) {
     for (const month of months) if (within(month, part)) grouped.set(month, [])
@@ -98,30 +104,47 @@ export function ledgerOfHeld(held: HeldLedger): Ledger {
  * The months to hold as rows for a screen showing `viewed`: the window around it, and the newest window,
  * which what reads the recent past (recent activity, the cash reserve, the pace) does not move away from.
  */
-function windows(months: readonly string[], viewed: string, count: number): string[] {
+function windows(
+  months: readonly string[],
+  viewed: string,
+  count: number,
+): string[] {
   const newest = months[months.length - 1] ?? viewed
-  return sortedMonths([
-    ...chooseHydratedMonths(months, viewed, count),
-    ...chooseHydratedMonths(months, newest, count),
-  ])
+  return sortedMonths([...chooseHydratedMonths(months, viewed, count), ...chooseHydratedMonths(months, newest, count)])
 }
 
 /** Every month for a ledger held in full, otherwise the windows. */
-export function wantedMonths(held: HeldLedger, viewed: string, count: number = HYDRATED_DATA_MONTHS): string[] {
+export function wantedMonths(
+  held: HeldLedger,
+  viewed: string,
+  count: number = HYDRATED_DATA_MONTHS,
+): string[] {
   return held.cells === null ? held.months : windows(held.months, viewed, count)
 }
 
 /** The months to read as rows for a reference: every month while the ledger is small, otherwise the windows. */
-export function monthsToHold(reference: ReferencePart, viewed: string, policy: HydrationPolicy): string[] {
-  return reference.rowCount <= policy.fullBelowRows ? reference.months : windows(reference.months, viewed, policy.dataMonths)
+export function monthsToHold(
+  reference: ReferencePart,
+  viewed: string,
+  policy: HydrationPolicy,
+): string[] {
+  return reference.rowCount <= policy.fullBelowRows
+    ? reference.months
+    : windows(reference.months, viewed, policy.dataMonths)
 }
 
-export function missingMonths(held: HeldLedger, wanted: readonly string[]): string[] {
+export function missingMonths(
+  held: HeldLedger,
+  wanted: readonly string[],
+): string[] {
   return wanted.filter((month) => !held.rows.has(month))
 }
 
 /** Whether every row among `ids` is held as a row, so that a patch showed all of a write that named them. */
-export function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined): boolean {
+export function holdsEvery(
+  held: HeldLedger,
+  ids: readonly number[] | undefined,
+): boolean {
   if (ids === undefined) return false
   if (held.cells === null) return true
   const rows = new Set(held.pinned.map((row) => row.id))
@@ -130,17 +153,27 @@ export function holdsEvery(held: HeldLedger, ids: readonly number[] | undefined)
 }
 
 /** Holds the rows of every month with data inside the ranges of `parts`. */
-export function holdRows(held: HeldLedger, parts: readonly MonthRowsPart[]): HeldLedger {
+export function holdRows(
+  held: HeldLedger,
+  parts: readonly MonthRowsPart[],
+): HeldLedger {
   const rows = new Map(held.rows)
   for (const [month, list] of groupByMonth(parts, held.months)) {
     rows.delete(month)
     rows.set(month, list)
   }
-  return { ...held, rows, attachmentCounts: mergeCounts(held.attachmentCounts, ...parts.map((part) => part.attachmentCounts)) }
+  return {
+    ...held,
+    rows,
+    attachmentCounts: mergeCounts(held.attachmentCounts, ...parts.map((part) => part.attachmentCounts)),
+  }
 }
 
 /** Marks months as used just now, so that they are the last to be given up. */
-export function touchMonths(held: HeldLedger, months: readonly string[]): HeldLedger {
+export function touchMonths(
+  held: HeldLedger,
+  months: readonly string[],
+): HeldLedger {
   const rows = new Map(held.rows)
   for (const month of months) {
     const list = rows.get(month)
@@ -156,7 +189,11 @@ export function touchMonths(held: HeldLedger, months: readonly string[]): HeldLe
  * sums, since giving it up would take it out of the totals (a month the first read took as rows has none until a
  * write touches it). A ledger held in full gives up nothing: it has no sums to fall back on.
  */
-export function evictMonths(held: HeldLedger, keep: Iterable<string>, cap: number): HeldLedger {
+export function evictMonths(
+  held: HeldLedger,
+  keep: Iterable<string>,
+  cap: number,
+): HeldLedger {
   if (held.cells === null || held.rows.size <= cap) return held
   const protectedMonths = new Set(keep)
   const summed = new Set(held.cells.map((cell) => cell.budgetMonth))
@@ -169,15 +206,23 @@ export function evictMonths(held: HeldLedger, keep: Iterable<string>, cap: numbe
 }
 
 /** Replaces the sums of the months the parts cover and keeps the rest. */
-export function holdCells(held: HeldLedger, parts: readonly CubePart[]): HeldLedger {
+export function holdCells(
+  held: HeldLedger,
+  parts: readonly CubePart[],
+): HeldLedger {
   const kept = (held.cells ?? []).filter((cell) => !parts.some((part) => within(cell.budgetMonth, part)))
   const fresh = parts.flatMap((part) => part.cells)
-  const cells = [...kept, ...fresh].sort((a, b) => (a.budgetMonth < b.budgetMonth ? -1 : a.budgetMonth > b.budgetMonth ? 1 : 0))
+  const cells = [...kept, ...fresh].sort((a, b) =>
+    a.budgetMonth < b.budgetMonth ? -1 : a.budgetMonth > b.budgetMonth ? 1 : 0,
+  )
   return { ...held, cells }
 }
 
 /** What a reference part replaces: the tables, the index of months and counts, and the receipt counts. */
-export function holdReference(held: HeldLedger, part: ReferencePart): HeldLedger {
+export function holdReference(
+  held: HeldLedger,
+  part: ReferencePart,
+): HeldLedger {
   return {
     ...held,
     reference: part.reference,
@@ -190,7 +235,11 @@ export function holdReference(held: HeldLedger, part: ReferencePart): HeldLedger
 }
 
 /** Holds the receipts read for one transaction, and the count the parts gave it moves to match. */
-export function holdReceipts(held: HeldLedger, transactionId: number, list: readonly TransactionAttachment[]): HeldLedger {
+export function holdReceipts(
+  held: HeldLedger,
+  transactionId: number,
+  list: readonly TransactionAttachment[],
+): HeldLedger {
   const receipts = new Map(held.receipts)
   receipts.set(transactionId, list)
   const counts = { ...held.attachmentCounts }
@@ -207,12 +256,16 @@ export function holdReceiptLists(
   again: boolean,
 ): HeldLedger {
   let next = held
-  for (const [i, id] of ids.entries()) if (again || !next.receipts.has(id)) next = holdReceipts(next, id, lists[i] ?? [])
+  for (const [i, id] of ids.entries())
+    if (again || !next.receipts.has(id)) next = holdReceipts(next, id, lists[i] ?? [])
   return next
 }
 
 /** The transactions among `ids` that have receipts whose list has not been read. */
-export function receiptsToRead(held: HeldLedger, ids: readonly number[]): number[] {
+export function receiptsToRead(
+  held: HeldLedger,
+  ids: readonly number[],
+): number[] {
   return ids.filter((id) => (held.attachmentCounts[id] ?? 0) > 0 && !held.receipts.has(id))
 }
 

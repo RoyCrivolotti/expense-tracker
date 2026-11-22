@@ -19,12 +19,14 @@ function pinnedElements(): (HTMLElement | null)[] {
  * any, and how tall they are, depends on whether any rows match and on picking rows, which is
  * what the two arguments are here to measure again on.
  */
-export function useTransactionsScrollPadding(hasRows: boolean, selecting: boolean): void {
+export function useTransactionsScrollPadding(
+  hasRows: boolean,
+  selecting: boolean,
+): void {
   useEffect(
     () =>
       trackScrollPadding({
-        top: () =>
-          Math.max(0, ...pinnedElements().map((el) => (el ? stickyBottom(el) : 0))) + PINNED_AIR_PX,
+        top: () => Math.max(0, ...pinnedElements().map((el) => (el ? stickyBottom(el) : 0))) + PINNED_AIR_PX,
         watch: pinnedElements,
       }),
     [hasRows, selecting],

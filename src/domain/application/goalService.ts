@@ -1,11 +1,13 @@
 import type { NewGoalScenario, ScenarioPatch } from '../data/dataSource'
-import {
-  normalizeContributionSchedule,
-  validateContributionSchedule,
-} from '../engine/contributionSchedule'
+import { normalizeContributionSchedule, validateContributionSchedule } from '../engine/contributionSchedule'
 import { isCalendarDate } from '../engine/dates'
 import { validateLifeEvents } from '../engine/lifeEvents'
-import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS, RETIREMENT_YEARS_MAX, SCENARIO_NAME_MAX_LENGTH } from '../engine/projectionConstants'
+import {
+  DEFAULT_HOME_CARRY_RATE,
+  DEFAULT_RETIREMENT_YEARS,
+  RETIREMENT_YEARS_MAX,
+  SCENARIO_NAME_MAX_LENGTH,
+} from '../engine/projectionConstants'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -49,7 +51,14 @@ const RATE_RANGES = {
 
 /** Every number a scenario is made of, which a create must carry: a missing one reaches the database as undefined. */
 const REQUIRED_ON_CREATE = [
-  ...(['startInvestedCents', 'monthlyContributionCents', 'housePriceCents', 'transactionCostsCents', 'rentMonthlyCents', 'annualSpendCents'] as const),
+  ...([
+    'startInvestedCents',
+    'monthlyContributionCents',
+    'housePriceCents',
+    'transactionCostsCents',
+    'rentMonthlyCents',
+    'annualSpendCents',
+  ] as const),
   'horizonYears',
   'expectedRealReturn',
   'downPaymentFraction',
@@ -74,15 +83,28 @@ const REQUIRED_ON_CREATE = [
  */
 const MIN_MORTGAGE_TERM_YEARS = 0.001
 
-function assertCents(value: unknown, message: string): void {
-  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > MAX_STORED_CENTS) throw new ValidationError(message)
+function assertCents(
+  value: unknown,
+  message: string,
+): void {
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > MAX_STORED_CENTS)
+    throw new ValidationError(message)
 }
 
-function assertWholeAtLeast(value: unknown, min: number, message: string): void {
+function assertWholeAtLeast(
+  value: unknown,
+  min: number,
+  message: string,
+): void {
   if (!Number.isInteger(value) || (value as number) < min) throw new ValidationError(message)
 }
 
-function assertInClosedRange(value: number, lo: number, hi: number, message: string): void {
+function assertInClosedRange(
+  value: number,
+  lo: number,
+  hi: number,
+  message: string,
+): void {
   if (!Number.isFinite(value) || value < lo || value > hi) throw new ValidationError(message)
 }
 
@@ -92,7 +114,8 @@ function assertInClosedRange(value: number, lo: number, hi: number, message: str
  */
 function validatePlanStartDate(value: unknown): void {
   if (value === undefined || value === null) return
-  if (typeof value !== 'string' || !isCalendarDate(value)) throw new ValidationError('planStartDate must be a calendar date, or null')
+  if (typeof value !== 'string' || !isCalendarDate(value))
+    throw new ValidationError('planStartDate must be a calendar date, or null')
   if (value < PLAN_START_RANGE[0] || value > PLAN_START_RANGE[1]) {
     throw new ValidationError(`planStartDate must be between ${PLAN_START_RANGE[0]} and ${PLAN_START_RANGE[1]}`)
   }
@@ -113,14 +136,24 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
     }
   }
   if (rec.horizonYears !== undefined) {
-    assertInClosedRange(rec.horizonYears as number, 1, MAX_HORIZON_YEARS, `horizonYears must be at most ${MAX_HORIZON_YEARS}`)
+    assertInClosedRange(
+      rec.horizonYears as number,
+      1,
+      MAX_HORIZON_YEARS,
+      `horizonYears must be at most ${MAX_HORIZON_YEARS}`,
+    )
   }
 
   // A loan can have months left, so its term is a number of years that need not be whole. A re-baseline in a
   // loan's last month writes about 0.003, so the floor is a day or so, not a month: a term of 5e-324 makes the
   // payment Infinity and the Goals screen NaN.
   if (rec.mortgageTermYears !== undefined) {
-    assertInClosedRange(rec.mortgageTermYears as number, MIN_MORTGAGE_TERM_YEARS, 100, 'mortgageTermYears must be a number of years from 0.001 to 100')
+    assertInClosedRange(
+      rec.mortgageTermYears as number,
+      MIN_MORTGAGE_TERM_YEARS,
+      100,
+      'mortgageTermYears must be a number of years from 0.001 to 100',
+    )
   }
 
   validateScenarioRatesAndLists(rec)
@@ -176,17 +209,17 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
   }
 
   if (patch.downPaymentFraction !== undefined) {
-    assertInClosedRange(
-      patch.downPaymentFraction,
-      0,
-      1,
-      'downPaymentFraction must be between 0 and 1',
-    )
+    assertInClosedRange(patch.downPaymentFraction, 0, 1, 'downPaymentFraction must be between 0 and 1')
   }
 
   // The drawdown loops over every one of these years, so an absurd number would hang the chart, and no plan runs this long.
   if (patch.retirementYears !== undefined) {
-    assertInClosedRange(patch.retirementYears, 1, RETIREMENT_YEARS_MAX, `retirementYears must be between 1 and ${RETIREMENT_YEARS_MAX}`)
+    assertInClosedRange(
+      patch.retirementYears,
+      1,
+      RETIREMENT_YEARS_MAX,
+      `retirementYears must be between 1 and ${RETIREMENT_YEARS_MAX}`,
+    )
   }
 
   // A tenth of the house's value a year is already more than owning costs anywhere; above it is a typo.
@@ -214,7 +247,14 @@ export async function createScenario(
   validateScenarioNumbers(input)
   const named = { ...input, name: validateScenarioName(input.name) }
   // A client that predates the field posts without it.
-  return repo.createScenario(owner, withSortedSchedule({ ...named, homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE, retirementYears: input.retirementYears ?? DEFAULT_RETIREMENT_YEARS }))
+  return repo.createScenario(
+    owner,
+    withSortedSchedule({
+      ...named,
+      homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE,
+      retirementYears: input.retirementYears ?? DEFAULT_RETIREMENT_YEARS,
+    }),
+  )
 }
 
 export async function patchScenario(
@@ -246,6 +286,10 @@ function withSortedSchedule<T extends Partial<NewGoalScenario>>(scenario: T): T 
   return { ...scenario, contributionSchedule: normalizeContributionSchedule(scenario.contributionSchedule) }
 }
 
-export async function removeScenario(repo: ExpenseRepository, owner: string, id: number) {
+export async function removeScenario(
+  repo: ExpenseRepository,
+  owner: string,
+  id: number,
+) {
   await repo.deleteScenario(owner, id)
 }

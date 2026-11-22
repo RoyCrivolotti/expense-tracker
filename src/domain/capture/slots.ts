@@ -62,13 +62,20 @@ export const MAX_AMOUNT_CENTS = 100_000_000
 const GROUPING = (separator: string) => new RegExp(`^[1-9]\\d{0,2}(?:\\${separator}\\d{3})+$`)
 const OTHER_MARK: Record<'.' | ',', DecimalMark> = { '.': 'comma', ',': 'dot' }
 
-function toCents(whole: string, fraction: string): number | null {
+function toCents(
+  whole: string,
+  fraction: string,
+): number | null {
   if (whole.length > 10) return null
   const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'))
   return cents > 0 && cents <= MAX_AMOUNT_CENTS ? cents : null
 }
 
-function candidate(cents: number | null, mark: Candidate['mark'], ambiguous = false): Candidate[] {
+function candidate(
+  cents: number | null,
+  mark: Candidate['mark'],
+  ambiguous = false,
+): Candidate[] {
   return cents === null ? [] : [ambiguous ? { cents, mark, ambiguous: true } : { cents, mark }]
 }
 
@@ -81,10 +88,14 @@ function readMixed(core: string): Candidate[] {
   return candidate(toCents(whole.replaceAll(grouping, ''), fraction), decimal === ',' ? 'comma' : 'dot')
 }
 
-function readSingleKind(core: string, separator: '.' | ','): Candidate[] {
+function readSingleKind(
+  core: string,
+  separator: '.' | ',',
+): Candidate[] {
   const parts = core.split(separator)
   const [whole = '', fraction = ''] = parts
-  if (parts.length === 2 && fraction.length <= 2) return candidate(toCents(whole, fraction), separator === ',' ? 'comma' : 'dot')
+  if (parts.length === 2 && fraction.length <= 2)
+    return candidate(toCents(whole, fraction), separator === ',' ? 'comma' : 'dot')
   if (!GROUPING(separator).test(core)) return []
   return candidate(toCents(parts.join(''), ''), OTHER_MARK[separator], parts.length === 2)
 }
@@ -110,7 +121,10 @@ const MASK_ONLY = new RegExp(`^${MASK}+$`)
 const FOUR_DIGITS = /^\d{4}$/
 
 // `ending 1234` is the one worded form text.ts already reads; the mask characters need no word.
-function readMasked(token: string, previous: string | undefined): string | null {
+function readMasked(
+  token: string,
+  previous: string | undefined,
+): string | null {
   const direct = MASKED_FOUR.exec(token)?.[1]
   if (direct) return direct
   if (!FOUR_DIGITS.test(token) || previous === undefined) return null
@@ -121,7 +135,11 @@ function readMasked(token: string, previous: string | undefined): string | null 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
 const DAY_FIRST_DATE = /^(\d{1,2})([/.-])(\d{1,2})\2(\d{4})$/
 
-function validDate(year: number, month: number, day: number): string | null {
+function validDate(
+  year: number,
+  month: number,
+  day: number,
+): string | null {
   if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1) return null
   if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -132,7 +150,10 @@ function validDate(year: number, month: number, day: number): string | null {
  * the first two numbers are both 12 or less and differ (`03/04/2026`), the date is read day first and
  * flagged ambiguous, since a writer who puts the month first would mean another day.
  */
-function readDate(index: number, token: string): DateSlot | null {
+function readDate(
+  index: number,
+  token: string,
+): DateSlot | null {
   const iso = ISO_DATE.exec(token)
   if (iso) {
     const date = validDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))
@@ -143,7 +164,9 @@ function readDate(index: number, token: string): DateSlot | null {
   const [day, month] = [Number(dayFirst[1]), Number(dayFirst[3])]
   const date = validDate(Number(dayFirst[4]), month, day)
   if (!date) return null
-  return day <= 12 && month <= 12 && day !== month ? { kind: 'date', index, iso: date, ambiguous: true } : { kind: 'date', index, iso: date }
+  return day <= 12 && month <= 12 && day !== month
+    ? { kind: 'date', index, iso: date, ambiguous: true }
+    : { kind: 'date', index, iso: date }
 }
 
 const MINUS = new Set(['-', '−'])
@@ -157,13 +180,19 @@ function isPlainNumber(token: string | undefined): boolean {
  * The number a standalone marker belongs to: the plain number right before it, else the one right after.
  * A marker is claimed once, so `12,50 EUR 3 items` leaves the 3 with no currency.
  */
-function claimant(tokens: readonly string[], markerIndex: number): number | null {
+function claimant(
+  tokens: readonly string[],
+  markerIndex: number,
+): number | null {
   if (isPlainNumber(tokens[markerIndex - 1])) return markerIndex - 1
   return isPlainNumber(tokens[markerIndex + 1]) ? markerIndex + 1 : null
 }
 
 /** The standalone marker this number has claimed, looking before it first. */
-function neighbourMarker(tokens: readonly string[], index: number): Marker | null {
+function neighbourMarker(
+  tokens: readonly string[],
+  index: number,
+): Marker | null {
   for (const at of [index - 1, index + 1]) {
     const marker = standaloneMarker(tokens[at] ?? '')
     if (marker && claimant(tokens, at) === index) return marker
@@ -172,11 +201,19 @@ function neighbourMarker(tokens: readonly string[], index: number): Marker | nul
 }
 
 /** Four to eight bare digits, with no sign and no currency anywhere near, are a code and not an amount. */
-function looksLikeCode(parts: NumberToken, currency: string | null): boolean {
+function looksLikeCode(
+  parts: NumberToken,
+  currency: string | null,
+): boolean {
   return currency === null && !parts.negative && !parts.prefix && !parts.suffix && /^\d{4,8}$/.test(parts.core)
 }
 
-function numberSlot(tokens: readonly string[], index: number, parts: NumberToken, marker: Marker | null): NumberSlot {
+function numberSlot(
+  tokens: readonly string[],
+  index: number,
+  parts: NumberToken,
+  marker: Marker | null,
+): NumberSlot {
   const negative = parts.negative || MINUS.has(tokens[index - 1] ?? '')
   const slot: NumberSlot = {
     kind: 'number',
@@ -189,7 +226,10 @@ function numberSlot(tokens: readonly string[], index: number, parts: NumberToken
   return marker?.guess ? { ...slot, currencyGuess: true } : slot
 }
 
-function readNumeric(tokens: readonly string[], index: number): Slot | null {
+function readNumeric(
+  tokens: readonly string[],
+  index: number,
+): Slot | null {
   const parts = splitNumberToken(tokens[index] ?? '')
   if (!parts) return null
   const glued = gluedMarker(parts)
@@ -198,7 +238,10 @@ function readNumeric(tokens: readonly string[], index: number): Slot | null {
   return looksLikeCode(parts, marker?.code ?? null) ? { kind: 'code', index } : numberSlot(tokens, index, parts, marker)
 }
 
-function readToken(tokens: readonly string[], index: number): Slot | null {
+function readToken(
+  tokens: readonly string[],
+  index: number,
+): Slot | null {
   const trimmed = trimEdges(tokens[index] ?? '')
   const digits = readMasked(trimmed, tokens[index - 1])
   if (digits) return { kind: 'masked-digits', index, digits }
@@ -216,7 +259,10 @@ export function readSlots(text: string): Slot[] {
 }
 
 /** Convenience for a whole push: the slots of its title and body, indexed the way `skeletonOf` expects. */
-export function readPushSlots(title: string, body: string): Slot[] {
+export function readPushSlots(
+  title: string,
+  body: string,
+): Slot[] {
   return readSlots(`${title} ${body}`)
 }
 

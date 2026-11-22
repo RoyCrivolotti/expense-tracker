@@ -35,9 +35,15 @@ export function FormTip({ show, tone, children }: Props) {
 
 function FormTipBody({ tone, arriving, children }: Omit<Props, 'show'> & { arriving: boolean }) {
   const { leaving, exitMs } = useExit()
-  const classes = [foldStyles.fold, arriving ? foldStyles.arriving : '', leaving ? foldStyles.leaving : ''].filter(Boolean).join(' ')
+  const classes = [foldStyles.fold, arriving ? foldStyles.arriving : '', leaving ? foldStyles.leaving : '']
+    .filter(Boolean)
+    .join(' ')
   return (
-    <div className={classes} style={{ ...exitVars(leaving, exitMs), '--tip-gap': FORM_GAP } as CSSProperties} inert={leaving}>
+    <div
+      className={classes}
+      style={{ ...exitVars(leaving, exitMs), '--tip-gap': FORM_GAP } as CSSProperties}
+      inert={leaving}
+    >
       <div className={foldStyles.foldInner}>
         <p className={tone === 'line' ? styles.line : formStyles.fieldHint} role="note">
           {children}

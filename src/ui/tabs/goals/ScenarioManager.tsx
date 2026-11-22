@@ -38,9 +38,9 @@ export function ScenarioManager(props: ScenarioManagerProps) {
     <Card className={styles.scenarioCard}>
       <h3 className={styles.sectionTitle}>Scenarios</h3>
       <p className={styles.chartHint}>
-        Each colored line on the projection is a saved scenario. Tap one to load it for editing,
-        toggle its dot to show or hide it, or save your current draft to compare. The one marked as
-        your plan is what Progress measures you against.
+        Each colored line on the projection is a saved scenario. Tap one to load it for editing, toggle its dot to show
+        or hide it, or save your current draft to compare. The one marked as your plan is what Progress measures you
+        against.
       </p>
       <ScenarioChips
         scenarios={scenarios}
@@ -52,8 +52,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
       />
       {scenarios.length === 0 ? (
         <p className={styles.emptyState}>
-          No saved scenarios yet. Tune the controls below, give it a name, and save it to start
-          comparing.
+          No saved scenarios yet. Tune the controls below, give it a name, and save it to start comparing.
         </p>
       ) : null}
       <ActiveScenarioHeader

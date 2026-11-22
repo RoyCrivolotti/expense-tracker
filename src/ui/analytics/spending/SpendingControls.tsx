@@ -16,16 +16,7 @@ interface Props {
 }
 
 /** The Spending view's controls: group-by and sort for the list, the CSV export for the grid. */
-export function SpendingControls({
-  mode,
-  onMode,
-  groupBy,
-  onGroupBy,
-  hasLabels,
-  sortBy,
-  onSort,
-  onExport,
-}: Props) {
+export function SpendingControls({ mode, onMode, groupBy, onGroupBy, hasLabels, sortBy, onSort, onExport }: Props) {
   return (
     <div className={styles.controls}>
       {/* The grid is categories-only, so group-by and sort over it would lie. */}

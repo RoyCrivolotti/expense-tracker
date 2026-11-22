@@ -175,7 +175,8 @@ export function TransactionsTab({
           rows={state.listRows}
           loading={state.loading}
           emptyState={state.failed}
-          accountEmpty={model.months.length === 0} canAdd={Boolean(actions)}
+          accountEmpty={model.months.length === 0}
+          canAdd={Boolean(actions)}
           lookup={model.lookup}
           selectMode={state.selectMode}
           selectedIds={state.selected}
@@ -210,12 +211,7 @@ export function TransactionsTab({
               onSave={async (paid, paidOn) => {
                 setStatementPending(true)
                 try {
-                  await actions.setStatementPaid(
-                    statement.cardAccountId,
-                    statement.budgetMonth,
-                    paid,
-                    paidOn,
-                  )
+                  await actions.setStatementPaid(statement.cardAccountId, statement.budgetMonth, paid, paidOn)
                 } finally {
                   setStatementPending(false)
                 }
@@ -253,10 +249,7 @@ export function TransactionsTab({
                     { flagId: null },
                   )
                   .catch((error: unknown) => {
-                    showToast(
-                      error instanceof Error ? error.message : 'Could not clear the flag',
-                      'error',
-                    )
+                    showToast(error instanceof Error ? error.message : 'Could not clear the flag', 'error')
                   })
               }}
               onCancel={() => setClearingGroup(null)}

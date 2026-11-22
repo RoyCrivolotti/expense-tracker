@@ -29,12 +29,18 @@ export function pageOf(
   return { items: rest.slice(0, limit).map(withAscendingLabels), hasMore: rest.length > limit }
 }
 
-export function oneOf(all: Transaction[], id: number): Transaction | null {
+export function oneOf(
+  all: Transaction[],
+  id: number,
+): Transaction | null {
   const found = all.find((t) => t.id === id)
   return found ? withAscendingLabels(found) : null
 }
 
-export function summaryOf(all: Transaction[], filter: TxnFilter): TransactionSummary {
+export function summaryOf(
+  all: Transaction[],
+  filter: TxnFilter,
+): TransactionSummary {
   const matching = filterTransactions(all, filter)
   return {
     count: Math.min(matching.length, SUMMARY_COUNT_CAP),
@@ -44,6 +50,9 @@ export function summaryOf(all: Transaction[], filter: TxnFilter): TransactionSum
 }
 
 /** The `limit` rows with the highest ids, highest first: the rows saved last. */
-export function recentOf(transactions: readonly Transaction[], limit: number): Transaction[] {
+export function recentOf(
+  transactions: readonly Transaction[],
+  limit: number,
+): Transaction[] {
   return [...transactions].sort((a, b) => b.id - a.id).slice(0, limit)
 }

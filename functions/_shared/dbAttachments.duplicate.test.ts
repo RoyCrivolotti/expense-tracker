@@ -16,8 +16,12 @@ let env: Env
 
 beforeEach(() => {
   db = migratedDatabase()
-  db.prepare("INSERT INTO accounts (owner,id,name,kind,settlement,active) VALUES (?,1,'Main','debit','immediate',1)").run(OWNER)
-  db.prepare("INSERT INTO categories (owner,id,name,monthly_budget_cents,sort_order,active) VALUES (?,1,'Food',0,0,1)").run(OWNER)
+  db.prepare(
+    "INSERT INTO accounts (owner,id,name,kind,settlement,active) VALUES (?,1,'Main','debit','immediate',1)",
+  ).run(OWNER)
+  db.prepare(
+    "INSERT INTO categories (owner,id,name,monthly_budget_cents,sort_order,active) VALUES (?,1,'Food',0,0,1)",
+  ).run(OWNER)
   db.prepare(
     `INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
      VALUES (?,7,'2026-09-10','2026-09','Lunch',1,1,'expense',1000,0)`,

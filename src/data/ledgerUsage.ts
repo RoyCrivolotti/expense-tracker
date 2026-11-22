@@ -29,7 +29,9 @@ const COUNTED_FIELDS = ['categoryId', 'accountId', 'flagId', 'labelIds']
 export function touchesUsage({ before, after, beyond, reach }: WriteEvent): boolean {
   if (JSON.stringify(usageFromDataset(before)) !== JSON.stringify(usageFromDataset(after))) return true
   const patch = reach?.patch
-  return beyond && (patch === undefined || Object.keys(patch).length === 0 || COUNTED_FIELDS.some((field) => field in patch))
+  return (
+    beyond && (patch === undefined || Object.keys(patch).length === 0 || COUNTED_FIELDS.some((field) => field in patch))
+  )
 }
 
 /**

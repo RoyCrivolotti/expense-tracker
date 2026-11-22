@@ -6,20 +6,7 @@
  * budget month.
  */
 
-const MONTHS = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'may',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'oct',
-  'nov',
-  'dec',
-] as const
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const
 
 const MONTH_NAMES = [
   'January',
@@ -54,7 +41,10 @@ export function parseHumanDate(raw: string): string | null {
 }
 
 /** Map a budget-month name ("January") plus a year to YYYY-MM. */
-export function budgetMonthFromName(name: string, year: number): string | null {
+export function budgetMonthFromName(
+  name: string,
+  year: number,
+): string | null {
   const idx = MONTH_NAMES.findIndex((m) => m.toLowerCase() === name.trim().toLowerCase())
   if (idx < 0) return null
   return `${year}-${String(idx + 1).padStart(2, '0')}`
@@ -156,7 +146,10 @@ function firstDayOfBudgetMonth(yearMonth: string): string {
 }
 
 /** Budget month `delta` months away from `yearMonth` (negative shifts back). */
-export function shiftBudgetMonth(yearMonth: string, delta: number): string {
+export function shiftBudgetMonth(
+  yearMonth: string,
+  delta: number,
+): string {
   const [y, m] = yearMonth.split('-').map(Number) as [number, number]
   // Straight arithmetic: a loop stepping one month at a time would run `delta` times, and `delta`
   // comes from an installment plan's `totalCount`.
@@ -167,7 +160,10 @@ export function shiftBudgetMonth(yearMonth: string, delta: number): string {
 }
 
 /** Whole-month distance from `a` to `b` (b - a), e.g. 2026-01 → 2026-03 = 2. */
-export function monthsBetweenBudget(a: string, b: string): number {
+export function monthsBetweenBudget(
+  a: string,
+  b: string,
+): number {
   const [ay, am] = a.split('-').map(Number) as [number, number]
   const [by, bm] = b.split('-').map(Number) as [number, number]
   return (by - ay) * 12 + (bm - am)
@@ -180,7 +176,10 @@ export function monthsBetweenBudget(a: string, b: string): number {
  * parsing as UTC and reformatting with `toISOString`, which drifts a day
  * across a DST boundary in some timezones.
  */
-export function addDaysIso(iso: string, days: number): string {
+export function addDaysIso(
+  iso: string,
+  days: number,
+): string {
   const [y, m, d] = iso.split('-').map(Number) as [number, number, number]
   const date = new Date(y, m - 1, d)
   date.setDate(date.getDate() + days)
@@ -202,7 +201,10 @@ export function utcDateMs(iso: string): number {
 }
 
 /** Whole-day distance from `a` to `b` (b - a), positive when `b` is later. */
-export function daysBetween(a: string, b: string): number {
+export function daysBetween(
+  a: string,
+  b: string,
+): number {
   const [ay, am, ad] = a.split('-').map(Number) as [number, number, number]
   const [by, bm, bd] = b.split('-').map(Number) as [number, number, number]
   const diffMs = new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime()
@@ -210,7 +212,11 @@ export function daysBetween(a: string, b: string): number {
 }
 
 /** True when `dateIso` is overdue, today, or within `aheadDays` of `todayIso`. */
-export function isDueSoon(dateIso: string, todayIso: string, aheadDays = 1): boolean {
+export function isDueSoon(
+  dateIso: string,
+  todayIso: string,
+  aheadDays = 1,
+): boolean {
   return daysBetween(todayIso, dateIso) <= aheadDays
 }
 
@@ -226,7 +232,11 @@ export function calendarRangeLastMonths(
   }
 }
 
-function utcDay(year: number, month: number, day: number): number {
+function utcDay(
+  year: number,
+  month: number,
+  day: number,
+): number {
   return Date.UTC(year, month - 1, day)
 }
 
@@ -234,7 +244,10 @@ function utcDay(year: number, month: number, day: number): number {
  * The years from one date to a later one (both `YYYY-MM-DD`), to the day: the whole anniversaries
  * passed, then the part of the year since the last one. Negative when `to` is the earlier date.
  */
-export function yearsBetween(from: string, to: string): number {
+export function yearsBetween(
+  from: string,
+  to: string,
+): number {
   if (to < from) return -yearsBetween(to, from)
   const [fy = 0, fm = 1, fd = 1] = from.split('-').map(Number)
   const [ty = 0, tm = 1, td = 1] = to.split('-').map(Number)
@@ -251,7 +264,10 @@ export function yearsBetween(from: string, to: string): number {
  * part of the year since the last one, to the day. It is the inverse of `yearsBetween` for a date on or
  * after the start. A start on 29 February has its anniversary on 1 March in a year without one.
  */
-export function dateAtYears(from: string, years: number): string {
+export function dateAtYears(
+  from: string,
+  years: number,
+): string {
   const [fy = 0, fm = 1, fd = 1] = from.split('-').map(Number)
   const whole = Math.floor(years)
   const last = utcDay(fy + whole, fm, fd)

@@ -41,14 +41,20 @@ function setOnline(online: boolean) {
   Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => online })
 }
 
-function answer(who: string, kind: Answer): Response | Promise<never> {
+function answer(
+  who: string,
+  kind: Answer,
+): Response | Promise<never> {
   if (kind === 'down') return Promise.reject(new TypeError('Load failed'))
   // An answer whose text reads like a lost connection is still an answer.
   if (kind === 'worded like down') return new Response(JSON.stringify({ error: 'Load failed' }), { status: 503 })
-  const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+  const json = (
+    body: unknown,
+    status = 200,
+  ) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
   if (kind === 'without Expenses') return json({ status: 'allowed', email: who, groups: groups(false) })
-  if (kind === 'owner without Expenses') return json({ status: 'allowed', email: who, isOwner: true, groups: groups(false) })
+  if (kind === 'owner without Expenses')
+    return json({ status: 'allowed', email: who, isOwner: true, groups: groups(false) })
   if (kind === 'with Expenses') return json({ status: 'allowed', email: who, groups: groups(true) })
   if (typeof kind === 'number') return json({ error: kind === 503 ? 'Access is not set up' : 'Not allowed' }, kind)
   return json({ status: kind, email: who })
@@ -105,7 +111,10 @@ async function afterCleanUp() {
 }
 
 /** The person opens the app with a connection, so that it keeps a copy for next time. */
-async function visitOnline(source: ExpenseDataSource, key: string) {
+async function visitOnline(
+  source: ExpenseDataSource,
+  key: string,
+) {
   const view = render(gate(source))
   await screen.findByText('Recent activity')
   await waitFor(() => expect(savedKeys()).toContain(key))

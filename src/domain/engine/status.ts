@@ -8,14 +8,7 @@
  *   deferred + paid month  -> posted (card statement settled)
  *   deferred + unpaid month-> forecast (charge committed, not yet settled)
  */
-import type {
-  Account,
-  AccountStatement,
-  ExpenseDataset,
-  StoredTransaction,
-  Transaction,
-  TxnStatus,
-} from '../types'
+import type { Account, AccountStatement, ExpenseDataset, StoredTransaction, Transaction, TxnStatus } from '../types'
 import { defaultBudgetMonth } from './dates'
 
 /** Is a deferred account's statement for `yearMonth` marked paid? */

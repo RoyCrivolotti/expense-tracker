@@ -13,7 +13,11 @@ export interface CapturePhone {
   push(body: string): Promise<string | null>
 }
 
-export async function capturePhone(db: D1Database, owner: string, now: Date): Promise<CapturePhone> {
+export async function capturePhone(
+  db: D1Database,
+  owner: string,
+  now: Date,
+): Promise<CapturePhone> {
   const env = { DB: db, OWNER_EMAIL: owner, CAPTURE_REPLAY_SECRET: 'replay-secret' }
   const captures = createD1CaptureRepository(env)
   const created = await createCaptureKey(captures, owner, 'Phone', now)
@@ -28,9 +32,17 @@ export async function capturePhone(db: D1Database, owner: string, now: Date): Pr
         headers: { 'content-type': 'application/json', authorization: `Bearer ${created.key}` },
         body: JSON.stringify({ source: 'iberia', title: 'Compra realizada', body, date }),
       })
-      const response = await handleCapture(request, env, { captures, access: createD1AccessRepository(env), now: () => now, log: () => undefined })
+      const response = await handleCapture(request, env, {
+        captures,
+        access: createD1AccessRepository(env),
+        now: () => now,
+        log: () => undefined,
+      })
       if (response.status !== 200) throw new Error(`the capture Worker answered ${response.status}`)
-      const row = await db.prepare('SELECT id FROM recommendations WHERE owner = ?1 AND occurred_at = ?2').bind(owner, date).first<{ id: string }>()
+      const row = await db
+        .prepare('SELECT id FROM recommendations WHERE owner = ?1 AND occurred_at = ?2')
+        .bind(owner, date)
+        .first<{ id: string }>()
       return row?.id ?? null
     },
   }

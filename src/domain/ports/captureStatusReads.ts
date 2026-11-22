@@ -24,7 +24,10 @@ export interface CaptureStatusReads {
   /** Every source word the person's pushes were ever counted under, in order. */
   countedSources(owner: string): Promise<CaptureSource[]>
   /** Per source, the pushes stored since `fromDay` (UTC, inclusive) and what became of them. Sources with none are absent. */
-  readSourceOutcomes(owner: string, fromDay: string): Promise<SourceOutcomes[]>
+  readSourceOutcomes(
+    owner: string,
+    fromDay: string,
+  ): Promise<SourceOutcomes[]>
   /** Per source, the person's templates muted by their dismissals. Sources with none are absent. */
   countMutedTemplates(owner: string): Promise<MutedCount[]>
 }

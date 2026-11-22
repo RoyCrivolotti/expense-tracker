@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { OverviewKpis } from '../../../engine'
 import { buildTrendModel } from './trendChartModel'
 
-function series(month: string, spendCents: number, incomeCents: number): OverviewKpis['series'][number] {
+function series(
+  month: string,
+  spendCents: number,
+  incomeCents: number,
+): OverviewKpis['series'][number] {
   return {
     month,
     totals: { incomeCents, spendCents, savedCents: incomeCents - spendCents, investedCents: 0, rate: null },

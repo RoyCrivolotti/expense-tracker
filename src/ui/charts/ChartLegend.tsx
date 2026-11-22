@@ -10,13 +10,7 @@ export interface LegendItem {
  * `wrap` (default) flows items horizontally; `stack` puts one per line, which
  * reads better when labels are long (e.g. named scenarios).
  */
-export function ChartLegend({
-  items,
-  variant = 'wrap',
-}: {
-  items: LegendItem[]
-  variant?: 'wrap' | 'stack'
-}) {
+export function ChartLegend({ items, variant = 'wrap' }: { items: LegendItem[]; variant?: 'wrap' | 'stack' }) {
   if (items.length === 0) return null
   const className = variant === 'stack' ? `${styles.legend} ${styles.legendStack}` : styles.legend
   return (

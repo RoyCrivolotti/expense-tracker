@@ -26,7 +26,12 @@ const LIMITS = [1, 2, 3, 8, 25]
  * What the merge should list, written out plainly: the union by normalized key, the newest row speaking for a
  * description and the browser's count kept (the server's finds count as unused), in the order the list shows.
  */
-function expectedMerge(own: readonly IndexedMatch[], older: readonly IndexedMatch[], text: string, limit: number): string[] {
+function expectedMerge(
+  own: readonly IndexedMatch[],
+  older: readonly IndexedMatch[],
+  text: string,
+  limit: number,
+): string[] {
   const typed = normalizeDescriptionKey(text)
   const byKey = new Map<string, IndexedMatch>()
   for (const match of [...own, ...older.map((m) => ({ ...m, uses: 0 }))]) {
@@ -49,12 +54,21 @@ function expectedMerge(own: readonly IndexedMatch[], older: readonly IndexedMatc
 }
 
 /** A description the browser holds keeps its count; one only the server found counts as unused. */
-function expectCounts(merged: readonly IndexedMatch[], own: readonly IndexedMatch[], where: string): void {
+function expectCounts(
+  merged: readonly IndexedMatch[],
+  own: readonly IndexedMatch[],
+  where: string,
+): void {
   const ownUses = new Map(own.map((m) => [normalizeDescriptionKey(m.label), m.uses]))
   for (const m of merged) expect(m.uses, where).toBe(ownUses.get(normalizeDescriptionKey(m.label)) ?? 0)
 }
 
-function check(rows: IndexRow[], split: string, rnd: () => number, texts: string[]): number {
+function check(
+  rows: IndexRow[],
+  split: string,
+  rnd: () => number,
+  texts: string[],
+): number {
   const whole = buildDescriptionIndex(rows)
   const olderRows = rows.filter((r) => r.date < split)
   const pinned = new Set(olderRows.filter(() => rnd() < 0.1).map((r) => r.id))
@@ -80,7 +94,17 @@ function check(rows: IndexRow[], split: string, rnd: () => number, texts: string
       // Every description the browser holds is listed before the server's finds that match the same way, since
       // the browser's rows count and the server's do not.
       if (older.length === 0) expect(merged, where).toEqual(own)
-      expect(merged.map((m) => m.label), where).toEqual(expectedMerge(own, older.map((m) => ({ ...m, uses: 0 })), text, limit))
+      expect(
+        merged.map((m) => m.label),
+        where,
+      ).toEqual(
+        expectedMerge(
+          own,
+          older.map((m) => ({ ...m, uses: 0 })),
+          text,
+          limit,
+        ),
+      )
       expectCounts(merged, own, where)
       compared += 1
     }
@@ -107,12 +131,30 @@ describe('the browser’s matches merged with the server’s for older rows', ()
       { ...base, id: 4, date: '2026-01-01', description: 'rent', categoryId: 9 },
     ] satisfies IndexRow[]
     const older = [{ ...base, id: 9, date: '2025-12-01', description: 'Rent', categoryId: 2 }] satisfies IndexRow[]
-    const merged = mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('re'), keyed(older).searchEntries('re'), { text: 're' })
-    expect(merged).toEqual([{ label: 'RENT', template: { type: 'expense', categoryId: 9, accountId: 1 }, date: '2026-01-10', id: 5, uses: 2 }])
+    const merged = mergeDescriptionMatches(
+      buildDescriptionIndex(own).searchEntries('re'),
+      keyed(older).searchEntries('re'),
+      { text: 're' },
+    )
+    expect(merged).toEqual([
+      { label: 'RENT', template: { type: 'expense', categoryId: 9, accountId: 1 }, date: '2026-01-10', id: 5, uses: 2 },
+    ])
 
-    const newerOnServer = [{ ...base, id: 9, date: '2026-02-01', description: 'Rent', categoryId: 2 }] satisfies IndexRow[]
-    const [first] = mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('re'), keyed(newerOnServer).searchEntries('re'), { text: 're' })
-    expect(first).toEqual({ label: 'Rent', template: { type: 'expense', categoryId: 2, accountId: 1 }, date: '2026-02-01', id: 9, uses: 2 })
+    const newerOnServer = [
+      { ...base, id: 9, date: '2026-02-01', description: 'Rent', categoryId: 2 },
+    ] satisfies IndexRow[]
+    const [first] = mergeDescriptionMatches(
+      buildDescriptionIndex(own).searchEntries('re'),
+      keyed(newerOnServer).searchEntries('re'),
+      { text: 're' },
+    )
+    expect(first).toEqual({
+      label: 'Rent',
+      template: { type: 'expense', categoryId: 2, accountId: 1 },
+      date: '2026-02-01',
+      id: 9,
+      uses: 2,
+    })
     expect(isNewer(first!, { label: 'RENT', template: first!.template, date: '2026-01-10', id: 5 })).toBe(true)
   })
 
@@ -130,7 +172,11 @@ describe('the browser’s matches merged with the server’s for older rows', ()
       ['Mercadona', 0],
       ['Supermercado', 1],
     ])
-    expect(mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('merc'), older, { text: 'merc', limit: 1 }).map((m) => m.label)).toEqual(['Mercería'])
+    expect(
+      mergeDescriptionMatches(buildDescriptionIndex(own).searchEntries('merc'), older, { text: 'merc', limit: 1 }).map(
+        (m) => m.label,
+      ),
+    ).toEqual(['Mercería'])
   })
 
   it('does not return the older match of a description the browser holds a newer row of', () => {
@@ -158,17 +204,20 @@ describe('buildDescriptionIndex ordering', () => {
     }))
 
   it('lists descriptions in the collator’s order of their base letters', () => {
-    expect(keyed(rowsOf('Shop 2', 'shop 10', 'Shop 1', 'SHOP A')).search('shop').map((s) => s.label)).toEqual([
-      'Shop 1',
-      'shop 10',
-      'Shop 2',
-      'SHOP A',
-    ])
+    expect(
+      keyed(rowsOf('Shop 2', 'shop 10', 'Shop 1', 'SHOP A'))
+        .search('shop')
+        .map((s) => s.label),
+    ).toEqual(['Shop 1', 'shop 10', 'Shop 2', 'SHOP A'])
   })
 
   it('orders descriptions the collator calls equal by their text, whatever order the rows came in', () => {
-    const forward = keyed(rowsOf('Café', 'Cafe', 'Cafè')).search('caf').map((s) => s.label)
-    const backward = keyed(rowsOf('Cafè', 'Cafe', 'Café')).search('caf').map((s) => s.label)
+    const forward = keyed(rowsOf('Café', 'Cafe', 'Cafè'))
+      .search('caf')
+      .map((s) => s.label)
+    const backward = keyed(rowsOf('Cafè', 'Cafe', 'Café'))
+      .search('caf')
+      .map((s) => s.label)
     expect(forward).toEqual(['Cafe', 'Cafè', 'Café'])
     expect(backward).toEqual(forward)
     expect(descriptionCollator().compare('cafe', 'café')).toBe(0)

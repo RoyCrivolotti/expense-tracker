@@ -60,7 +60,10 @@ export interface OverviewOptions {
  * (`sums`); everything that reads dates, descriptions or a series takes the real rows, with the series of
  * the whole history when the model holds only part of it (see docs/ENGINE-HISTORY.md).
  */
-export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): OverviewData {
+export function buildOverviewData(
+  model: ExpenseModel,
+  opts: OverviewOptions,
+): OverviewData {
   const { dataset, months, history } = model
   const { transactions, categories, installmentPlans, goalScenarios } = dataset
   const summed = sumsOf(model).transactions
@@ -95,12 +98,7 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     openMonth,
     rolloverDay,
   })
-  const cashRows = computeCashReconciliation(
-    summed,
-    dataset.accounts,
-    dataset.settings,
-    dataset.cashActuals,
-  )
+  const cashRows = computeCashReconciliation(summed, dataset.accounts, dataset.settings, dataset.cashActuals)
   const signals = computeSignals({ pace, movers, cashRows, openMonth })
   const unpaidByMonth = new Map(
     kpis.series.map((s) => [s.month, basis === 'committed' ? unpaidExpenseCents(summed, s.month) : 0]),

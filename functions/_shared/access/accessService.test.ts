@@ -115,11 +115,7 @@ describe('accessService', () => {
     const result = await approveAccessRequestById(serviceDeps, 'req-1', 'owner@example.com')
     expect(result.email).toBe('new@example.com')
     expect(serviceDeps.repo.grantAccess).toHaveBeenCalledWith('new@example.com', 'owner@example.com')
-    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledWith(
-      'new@example.com',
-      'expenses',
-      'owner@example.com',
-    )
+    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledWith('new@example.com', 'expenses', 'owner@example.com')
     expect(serviceDeps.repo.grantGroup).toHaveBeenCalledTimes(1)
     expect(serviceDeps.repo.markRequestApproved).toHaveBeenCalledWith('req-1')
   })
@@ -168,9 +164,9 @@ describe('accessService', () => {
     })
     serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
 
-    await expect(
-      revokeAccessByEmail(serviceDeps, 'owner@example.com', 'owner@example.com'),
-    ).rejects.toBeInstanceOf(HttpError)
+    await expect(revokeAccessByEmail(serviceDeps, 'owner@example.com', 'owner@example.com')).rejects.toBeInstanceOf(
+      HttpError,
+    )
 
     const result = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
     expect(result).toEqual({ email: 'guest@example.com', dataPurged: true })
@@ -198,7 +194,9 @@ describe('accessService', () => {
       })
       serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
 
-      await expect(revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')).rejects.toThrow('D1 is down')
+      await expect(revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')).rejects.toThrow(
+        'D1 is down',
+      )
       const retry = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
 
       expect(retry).toEqual({ email: 'guest@example.com', dataPurged: true })
@@ -252,12 +250,7 @@ describe('accessService', () => {
     })
     serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
 
-    await updateUserGroupGrants(
-      serviceDeps,
-      'guest@example.com',
-      'owner@example.com',
-      { expenses: false },
-    )
+    await updateUserGroupGrants(serviceDeps, 'guest@example.com', 'owner@example.com', { expenses: false })
     expect(serviceDeps.repo.revokeGroup).toHaveBeenCalledWith('guest@example.com', 'expenses')
     expect(batch).toHaveBeenCalledOnce()
   })
@@ -281,7 +274,10 @@ describe('accessService', () => {
         revokeGroup: vi.fn().mockResolvedValueOnce(true).mockResolvedValue(false),
         listGroupGrants: vi.fn().mockResolvedValue([]),
       })
-      serviceDeps.env.DB = { prepare: vi.fn(() => ({ bind: vi.fn().mockReturnThis() })), batch } as unknown as D1Database
+      serviceDeps.env.DB = {
+        prepare: vi.fn(() => ({ bind: vi.fn().mockReturnThis() })),
+        batch,
+      } as unknown as D1Database
 
       await expect(off(serviceDeps)).rejects.toThrow('D1 is down')
       await expect(off(serviceDeps)).resolves.toMatchObject({ email: 'guest@example.com' })

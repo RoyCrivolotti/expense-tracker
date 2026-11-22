@@ -125,9 +125,17 @@ describe('purgeOwnerData', () => {
 
 describe('purgeOwnerData against SQLite', () => {
   /** One account, category, transaction and label for `owner`, with the label applied to the transaction. */
-  function seedOwner(db: ReturnType<typeof migratedDatabase>, owner: string, id: number) {
+  function seedOwner(
+    db: ReturnType<typeof migratedDatabase>,
+    owner: string,
+    id: number,
+  ) {
     db.prepare('INSERT INTO accounts (id, owner, name, kind, settlement) VALUES (?, ?, ?, ?, ?)').run(
-      id, owner, 'Card', 'debit', 'immediate',
+      id,
+      owner,
+      'Card',
+      'debit',
+      'immediate',
     )
     db.prepare('INSERT INTO categories (id, owner, name) VALUES (?, ?, ?)').run(id, owner, 'Food')
     db.prepare(
@@ -179,21 +187,30 @@ describe('what a purge leaves behind', () => {
       const columns = (db.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map((c) => c.name)
       if (!columns.includes('owner') && !columns.includes('email')) continue
       const covered = deleted.has(name) || Boolean(NOT_DELETED_BY_NAME[name])
-      expect(covered, `${name} names an owner: delete it in purgeOwnerData, or list it here with the reason it need not be`).toBe(true)
+      expect(
+        covered,
+        `${name} names an owner: delete it in purgeOwnerData, or list it here with the reason it need not be`,
+      ).toBe(true)
     }
   })
 
   it('removes capture keys, events, counters, card maps, templates, merchants and recommendations, and only the revoked owner’s', async () => {
     const db = migratedDatabase()
     for (const owner of ['gone@example.com', 'kept@example.com']) {
-      db.prepare("INSERT INTO capture_keys (key_id, owner, label, secret_hash, created_at) VALUES (?, ?, 'p', 'h', 't')").run(`k-${owner}`, owner)
-      db.prepare("INSERT INTO capture_cards (owner, source, digits_kind, digits, account_id) VALUES (?, 'iberia', 'card', '0000', 1)").run(owner)
+      db.prepare(
+        "INSERT INTO capture_keys (key_id, owner, label, secret_hash, created_at) VALUES (?, ?, 'p', 'h', 't')",
+      ).run(`k-${owner}`, owner)
+      db.prepare(
+        "INSERT INTO capture_cards (owner, source, digits_kind, digits, account_id) VALUES (?, 'iberia', 'card', '0000', 1)",
+      ).run(owner)
       db.prepare("INSERT INTO capture_counters (owner, source, day) VALUES (?, 'iberia', '2026-03-02')").run(owner)
       db.prepare(
         `INSERT INTO capture_events (id, owner, key_id, source, replay_key, kind, occurred_at, local_date, offset_minutes, received_at)
          VALUES (?, ?, 'k', 'iberia', 'r', 'card-purchase', 't', 'd', 0, 't')`,
       ).run(`e-${owner}`, owner)
-      db.prepare("INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, 't', 'd', 't')").run(`r-${owner}`, owner)
+      db.prepare(
+        "INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, 't', 'd', 't')",
+      ).run(`r-${owner}`, owner)
       db.prepare(
         "INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen) VALUES (?, 't', 'iberia', 't', 's', 't', 't')",
       ).run(owner)
@@ -208,7 +225,17 @@ describe('what a purge leaves behind', () => {
 
     await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
 
-    for (const table of ['capture_keys', 'capture_cards', 'capture_counters', 'capture_events', 'capture_templates', 'capture_merchants', 'recommendations', 'push_subscriptions', 'push_settings']) {
+    for (const table of [
+      'capture_keys',
+      'capture_cards',
+      'capture_counters',
+      'capture_events',
+      'capture_templates',
+      'capture_merchants',
+      'recommendations',
+      'push_subscriptions',
+      'push_settings',
+    ]) {
       const left = db.prepare(`SELECT owner FROM ${table}`).all()
       expect(left, table).toEqual([{ owner: 'kept@example.com' }])
     }

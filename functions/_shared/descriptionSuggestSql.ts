@@ -28,7 +28,12 @@ export interface SuggestSql {
  * prefix up starts with it, so the range is open at the top and still exact. The result has one row per
  * description walked, and the columns after `description_norm` are NULL for one with no eligible row.
  */
-export function suggestSql(owner: string, prefix: string, before: string | undefined, cap: number): SuggestSql {
+export function suggestSql(
+  owner: string,
+  prefix: string,
+  before: string | undefined,
+  cap: number,
+): SuggestSql {
   const upper = prefixUpperBound(prefix)
   const params: Array<string | number> = [owner, prefix]
   const upperIn = upper !== null ? params.push(upper) : 0

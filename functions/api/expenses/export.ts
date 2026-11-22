@@ -6,7 +6,10 @@ import { singleParams } from '../../_shared/ledgerPartParams'
 import { mapAppError } from '../../_shared/mapAppError'
 
 /** One row per line, each line complete JSON, and a newline after the last: concatenating chunks stays valid NDJSON. */
-function ndjson(chunk: ExportChunk, revision: string): Response {
+function ndjson(
+  chunk: ExportChunk,
+  revision: string,
+): Response {
   const body = chunk.rows.map((row) => `${JSON.stringify(row)}\n`).join('')
   const headers: Record<string, string> = {
     'content-type': 'application/x-ndjson; charset=utf-8',

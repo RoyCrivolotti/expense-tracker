@@ -43,7 +43,11 @@ describe('LiveLegend', () => {
   it('hands out its list element via listRef', () => {
     const listRef = createRef<HTMLUListElement>()
     const { container } = render(
-      <LiveLegend items={[{ label: 'Path A', color: '#6366f1', valueCents: 100 }]} formatValue={formatValue} listRef={listRef} />,
+      <LiveLegend
+        items={[{ label: 'Path A', color: '#6366f1', valueCents: 100 }]}
+        formatValue={formatValue}
+        listRef={listRef}
+      />,
     )
     expect(listRef.current).toBe(container.querySelector('ul'))
   })
@@ -63,7 +67,13 @@ describe('LiveLegend', () => {
   })
 
   it('does not make a row a button when it has no scenarioId, even with onToggle passed', () => {
-    render(<LiveLegend items={[{ label: 'Path A', color: '#6366f1', valueCents: 100 }]} formatValue={formatValue} onToggle={vi.fn()} />)
+    render(
+      <LiveLegend
+        items={[{ label: 'Path A', color: '#6366f1', valueCents: 100 }]}
+        formatValue={formatValue}
+        onToggle={vi.fn()}
+      />,
+    )
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
@@ -84,7 +94,16 @@ describe('LiveLegend rows with something to say instead of a figure', () => {
   it('puts the note under the name and says the status in place of the dash', () => {
     render(
       <LiveLegend
-        items={[{ label: 'Later', color: '#000', valueCents: null, outOfRun: true, status: 'starts Jul 2027', note: 'from Jul 2027' }]}
+        items={[
+          {
+            label: 'Later',
+            color: '#000',
+            valueCents: null,
+            outOfRun: true,
+            status: 'starts Jul 2027',
+            note: 'from Jul 2027',
+          },
+        ]}
         formatValue={formatValue}
       />,
     )
@@ -94,7 +113,12 @@ describe('LiveLegend rows with something to say instead of a figure', () => {
   })
 
   it('gives an ended line’s last figure followed by the year it ended', () => {
-    render(<LiveLegend items={[{ label: 'Short', color: '#000', valueCents: 120_000, outOfRun: true, endedIn: '2035' }]} formatValue={formatValue} />)
+    render(
+      <LiveLegend
+        items={[{ label: 'Short', color: '#000', valueCents: 120_000, outOfRun: true, endedIn: '2035' }]}
+        formatValue={formatValue}
+      />,
+    )
     expect(screen.getByText('Short').closest('li')).toHaveTextContent(`${formatValue(120_000)} (ended 2035)`)
   })
 })

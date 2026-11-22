@@ -27,7 +27,10 @@ describe('the device’s name and the server key', () => {
     const bytes = new Uint8Array(65)
     bytes[0] = 4
     for (let i = 1; i < 65; i++) bytes[i] = i
-    const base64url = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    const base64url = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
     expect(base64url).toHaveLength(87)
     expect(applicationServerKey(base64url)).toEqual(bytes)
     expect(applicationServerKey(`${base64url}=`)).toEqual(bytes)

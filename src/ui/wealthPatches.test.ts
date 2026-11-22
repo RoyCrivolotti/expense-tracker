@@ -10,11 +10,18 @@ import {
   patchAfterWealthCheckinUpdate,
 } from './datasetPatches'
 
-function makeAccount(id: number, name = 'Account', archived = false): WealthAccount {
+function makeAccount(
+  id: number,
+  name = 'Account',
+  archived = false,
+): WealthAccount {
   return { id, name, kind: 'investment', sortOrder: id, archived }
 }
 
-function makeCheckin(id: number, date: string): WealthCheckin {
+function makeCheckin(
+  id: number,
+  date: string,
+): WealthCheckin {
   return { id, checkinDate: date, createdAt: '2024-01-01T00:00:00', entries: [] }
 }
 

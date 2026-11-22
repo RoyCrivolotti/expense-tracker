@@ -16,9 +16,7 @@ const PAGES_PROJECT = 'expense-tracker'
 function loadAlertConfig() {
   const filePath = join(ROOT, 'config/backup-alerts.json')
   if (!existsSync(filePath)) {
-    throw new Error(
-      'config/backup-alerts.json missing — copy backup-alerts.example.json and set your addresses',
-    )
+    throw new Error('config/backup-alerts.json missing — copy backup-alerts.example.json and set your addresses')
   }
   const raw = JSON.parse(readFileSync(filePath, 'utf8'))
   const to = Array.isArray(raw.to) ? raw.to.map((e) => String(e).trim().toLowerCase()) : []
@@ -29,7 +27,10 @@ function loadAlertConfig() {
   return { to, fromAddress, fromName }
 }
 
-async function cf(path, init = {}) {
+async function cf(
+  path,
+  init = {},
+) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...init,
     headers: {

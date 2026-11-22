@@ -4,7 +4,12 @@ import type { KeyboardEvent, RefObject } from 'react'
 export type RadioGroupArrows = 'all' | 'horizontal'
 
 /** Where a key moves the selection in a radio group or tab list: arrows step and wrap, Home and End jump. */
-function keyTarget(key: string, index: number, count: number, arrows: RadioGroupArrows): number | null {
+function keyTarget(
+  key: string,
+  index: number,
+  count: number,
+  arrows: RadioGroupArrows,
+): number | null {
   const next = (index + 1) % count
   const previous = (index - 1 + count) % count
   switch (key) {

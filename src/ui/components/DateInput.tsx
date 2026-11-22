@@ -66,7 +66,9 @@ export function DateInput({
         ref={triggerRef}
         type="button"
         className={styles.trigger}
-        onClick={() => { if (!disabled) setOpenState(!open) }}
+        onClick={() => {
+          if (!disabled) setOpenState(!open)
+        }}
         disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="dialog"

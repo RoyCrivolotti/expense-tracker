@@ -18,6 +18,10 @@ export async function listCaptureTemplates(
 }
 
 /** False when the id is not one of the person's templates, including an id that cannot be one. */
-export async function unignoreCaptureTemplate(captures: CaptureRepository, owner: string, id: string): Promise<boolean> {
+export async function unignoreCaptureTemplate(
+  captures: CaptureRepository,
+  owner: string,
+  id: string,
+): Promise<boolean> {
   return TEMPLATE_ID_PATTERN.test(id) && captures.unignoreTemplate(owner, id)
 }

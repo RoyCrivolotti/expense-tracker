@@ -27,14 +27,26 @@ const SIGNATURES: { type: ReceiptContentType; test: (b: Uint8Array) => boolean }
   {
     type: 'image/png',
     test: (b) =>
-      b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
-      b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a,
+      b[0] === 0x89 &&
+      b[1] === 0x50 &&
+      b[2] === 0x4e &&
+      b[3] === 0x47 &&
+      b[4] === 0x0d &&
+      b[5] === 0x0a &&
+      b[6] === 0x1a &&
+      b[7] === 0x0a,
   },
   {
     type: 'image/webp',
     test: (b) =>
-      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+      b[0] === 0x52 &&
+      b[1] === 0x49 &&
+      b[2] === 0x46 &&
+      b[3] === 0x46 &&
+      b[8] === 0x57 &&
+      b[9] === 0x45 &&
+      b[10] === 0x42 &&
+      b[11] === 0x50,
   },
   {
     type: 'application/pdf',
@@ -173,7 +185,10 @@ export function serveHeaders(
  * A filename reaches this header from user input, so it is quoted and stripped
  * of anything that could close the quote or inject a header.
  */
-function dispositionHeader(disposition: string, filename: string | undefined): string {
+function dispositionHeader(
+  disposition: string,
+  filename: string | undefined,
+): string {
   if (!filename) return disposition
   const safe = filename.replace(/[^\w.\- ]/g, '_').slice(0, 100)
   return `${disposition}; filename="${safe}"`

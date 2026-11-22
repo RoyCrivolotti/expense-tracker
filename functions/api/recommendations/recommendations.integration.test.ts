@@ -30,10 +30,23 @@ beforeEach(async () => {
   sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-  const seeded = async (handler: Handler, path: string, body: unknown) =>
-    ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
-  accountId = await seeded(postAccount, '/accounts', { name: 'Debit', kind: 'debit', settlement: 'immediate', active: true })
-  categoryId = await seeded(postCategory, '/categories', { name: 'Food', monthlyBudgetCents: 50_000, sortOrder: 0, active: true })
+  const seeded = async (
+    handler: Handler,
+    path: string,
+    body: unknown,
+  ) => ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
+  accountId = await seeded(postAccount, '/accounts', {
+    name: 'Debit',
+    kind: 'debit',
+    settlement: 'immediate',
+    active: true,
+  })
+  categoryId = await seeded(postCategory, '/categories', {
+    name: 'Food',
+    monthlyBudgetCents: 50_000,
+    sortOrder: 0,
+    active: true,
+  })
 })
 
 function call(
@@ -42,7 +55,12 @@ function call(
 ) {
   const id = o.id ?? (o.n === undefined ? undefined : idOf(o.n))
   const post = handler !== list
-  const action = new Map<Handler, string>([[submit, '/submit'], [dismiss, '/dismiss'], [link, '/link']]).get(handler) ?? ''
+  const action =
+    new Map<Handler, string>([
+      [submit, '/submit'],
+      [dismiss, '/dismiss'],
+      [link, '/link'],
+    ]).get(handler) ?? ''
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -55,7 +73,11 @@ function call(
   })
 }
 
-async function seed(n: number, over: Partial<NewRecommendation> = {}, owner = OWNER) {
+async function seed(
+  n: number,
+  over: Partial<NewRecommendation> = {},
+  owner = OWNER,
+) {
   await createD1CaptureRepository(world.env).createRecommendation({
     id: idOf(n),
     owner,
@@ -83,23 +105,41 @@ const expense = () => ({
   cancelled: false,
 })
 const state = (n: number) =>
-  (sqlite.prepare('SELECT state, txn_id FROM recommendations WHERE id = ?').get(idOf(n)) as { state: string; txn_id: number | null })
+  sqlite.prepare('SELECT state, txn_id FROM recommendations WHERE id = ?').get(idOf(n)) as {
+    state: string
+    txn_id: number | null
+  }
 const typedRow = async (over: Record<string, unknown> = {}) =>
-  ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: { ...expense(), amountCents: 1250, ...over } })).json()) as { id: number }).id
+  (
+    (await (
+      await world.call(postTransaction, {
+        method: 'POST',
+        path: '/transactions',
+        body: { ...expense(), amountCents: 1250, ...over },
+      })
+    ).json()) as { id: number }
+  ).id
 const transactions = () => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 
 describe('GET /api/recommendations', () => {
   it('lists the signed-in person open ones with the open count, and no one else', async () => {
     await seed(1)
     await seed(2, {}, OTHER)
-    const body = (await (await call(list)).json()) as { recommendations: Array<{ id: string }>; next: null; openCount: number }
+    const body = (await (await call(list)).json()) as {
+      recommendations: Array<{ id: string }>
+      next: null
+      openCount: number
+    }
     expect(body.recommendations.map((r) => r.id)).toEqual([idOf(1)])
     expect(body).toMatchObject({ next: null, openCount: 1 })
   })
 
   it('pages with a cursor and has no next after the last page', async () => {
     for (const n of [1, 2, 3]) await seed(n, { localDate: `2026-03-0${n}` })
-    const first = (await (await call(list, { query: '?limit=2' })).json()) as { recommendations: Array<{ id: string }>; next: string }
+    const first = (await (await call(list, { query: '?limit=2' })).json()) as {
+      recommendations: Array<{ id: string }>
+      next: string
+    }
     expect(first.recommendations.map((r) => r.id)).toEqual([idOf(3), idOf(2)])
     const second = (await (await call(list, { query: `?limit=2&after=${first.next}` })).json()) as {
       recommendations: Array<{ id: string }>
@@ -110,23 +150,38 @@ describe('GET /api/recommendations', () => {
     expect(second).toMatchObject({ next: null, openCount: 3 })
   })
 
-  it.each(['?limit=0', '?limit=101', '?limit=x', '?limit=1e1', '?limit=+5', '?limit=%205', '?after=nope', "?after=2026-03-02~'; DROP TABLE recommendations"])(
-    'refuses %s with a 400',
-    async (query) => {
-      expect((await call(list, { query })).status).toBe(400)
-    },
-  )
+  it.each([
+    '?limit=0',
+    '?limit=101',
+    '?limit=x',
+    '?limit=1e1',
+    '?limit=+5',
+    '?limit=%205',
+    '?after=nope',
+    "?after=2026-03-02~'; DROP TABLE recommendations",
+  ])('refuses %s with a 400', async (query) => {
+    expect((await call(list, { query })).status).toBe(400)
+  })
 })
 
 describe('GET /api/recommendations, the typed row a payment may duplicate', () => {
-  type Listed = { recommendations: Array<{ id: string; possibleMatch: { transactionId: number; description: string; date: string } | null }> }
+  type Listed = {
+    recommendations: Array<{
+      id: string
+      possibleMatch: { transactionId: number; description: string; date: string } | null
+    }>
+  }
   const listed = async (email = OWNER) => ((await (await call(list, { email })).json()) as Listed).recommendations
 
   it('names the row the person typed for the same price on the same day, as transactionId, description and date', async () => {
     await seed(1)
     const id = await typedRow({ description: 'Coffee at the till' })
 
-    expect((await listed())[0]?.possibleMatch).toEqual({ transactionId: id, description: 'Coffee at the till', date: '2026-03-02' })
+    expect((await listed())[0]?.possibleMatch).toEqual({
+      transactionId: id,
+      description: 'Coffee at the till',
+      date: '2026-03-02',
+    })
   })
 
   it('is null on every payment when there is nothing like it, and the key is always there', async () => {
@@ -141,7 +196,9 @@ describe('GET /api/recommendations, the typed row a payment may duplicate', () =
     await seed(1)
     await seed(2, {}, OTHER)
     sqlite
-      .prepare("INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Their private coffee', ?, ?, 'expense', 1250, ?)")
+      .prepare(
+        "INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Their private coffee', ?, ?, 'expense', 1250, ?)",
+      )
       .run(accountId, categoryId, OTHER)
 
     expect((await listed())[0]?.possibleMatch).toBeNull()
@@ -162,7 +219,9 @@ describe('GET /api/recommendations, the typed row a payment may duplicate', () =
     await typedRow()
 
     expect(await listed()).toHaveLength(1)
-    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250, allowDuplicate: true } })).status).toBe(201)
+    expect((await call(submit, { n: 1, body: { ...expense(), amountCents: 1250, allowDuplicate: true } })).status).toBe(
+      201,
+    )
   })
 })
 
@@ -225,7 +284,9 @@ describe('POST /api/recommendations/:id/submit', () => {
     it('ignores a row of another person, a cancelled row, one that answers for another recommendation, and one outside the window', async () => {
       await seed(1)
       sqlite
-        .prepare("INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Theirs', ?, ?, 'expense', 1250, ?)")
+        .prepare(
+          "INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, owner) VALUES ('2026-03-02', '2026-03', 'Theirs', ?, ?, 'expense', 1250, ?)",
+        )
         .run(accountId, categoryId, OTHER)
       await typedRow({ cancelled: true })
       await typedRow({ date: '2026-02-01' })
@@ -240,7 +301,9 @@ describe('POST /api/recommendations/:id/submit', () => {
       await seed(1)
       await typedRow()
       // Money in is not a duplicate of the typed expense of the same size.
-      expect((await call(submit, { n: 1, body: { ...expense(), type: 'investment', amountCents: -1250 } })).status).toBe(201)
+      expect(
+        (await call(submit, { n: 1, body: { ...expense(), type: 'investment', amountCents: -1250 } })).status,
+      ).toBe(201)
       await seed(2, { amountCents: 7000 })
       const row = await typedRow({ type: 'investment', amountCents: -7000 })
       const again = await call(submit, { n: 2, body: { ...expense(), type: 'investment', amountCents: -7000 } })
@@ -331,7 +394,11 @@ describe('the dataset revision', () => {
     await seed(1)
     await seed(2)
     await seed(3)
-    const typedId = ((await (await world.call(postTransaction, { method: 'POST', path: '/transactions', body: expense() })).json()) as { id: number }).id
+    const typedId = (
+      (await (
+        await world.call(postTransaction, { method: 'POST', path: '/transactions', body: expense() })
+      ).json()) as { id: number }
+    ).id
     const before = world.token()
     await call(list)
     await call(dismiss, { n: 1, empty: true })
@@ -374,10 +441,23 @@ describe('POST /api/recommendations/:id/link', () => {
 
   it("refuses another person's transaction with a 404 and leaves the recommendation open", async () => {
     await seed(1)
-    const theirs = async (handler: Handler, path: string, body: unknown) =>
-      ((await (await world.call(handler, { method: 'POST', path, body, email: OTHER })).json()) as { id: number }).id
-    const account = await theirs(postAccount, '/accounts', { name: 'Debit', kind: 'debit', settlement: 'immediate', active: true })
-    const category = await theirs(postCategory, '/categories', { name: 'Food', monthlyBudgetCents: 50_000, sortOrder: 0, active: true })
+    const theirs = async (
+      handler: Handler,
+      path: string,
+      body: unknown,
+    ) => ((await (await world.call(handler, { method: 'POST', path, body, email: OTHER })).json()) as { id: number }).id
+    const account = await theirs(postAccount, '/accounts', {
+      name: 'Debit',
+      kind: 'debit',
+      settlement: 'immediate',
+      active: true,
+    })
+    const category = await theirs(postCategory, '/categories', {
+      name: 'Food',
+      monthlyBudgetCents: 50_000,
+      sortOrder: 0,
+      active: true,
+    })
     const foreign = await world.call(postTransaction, {
       method: 'POST',
       path: '/transactions',

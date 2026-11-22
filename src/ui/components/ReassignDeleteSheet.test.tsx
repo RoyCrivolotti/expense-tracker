@@ -51,9 +51,7 @@ describe('ReassignDeleteSheet', () => {
     fireEvent.change(nameInput, { target: { value: '  Dining out  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
-    await vi.waitFor(() =>
-      expect(onConfirm).toHaveBeenCalledWith({ createName: 'Dining out' }),
-    )
+    await vi.waitFor(() => expect(onConfirm).toHaveBeenCalledWith({ createName: 'Dining out' }))
   })
 
   it('defaults straight to "create new" when there are no other options', () => {

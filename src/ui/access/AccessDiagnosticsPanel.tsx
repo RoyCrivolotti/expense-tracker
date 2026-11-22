@@ -40,15 +40,8 @@ export function AccessDiagnosticsPanel({ error }: { error: string }) {
       >
         {open ? 'Hide technical details' : 'Show technical details'}
       </button>
-      {open && diagnostics ? (
-        <pre className={styles.detailsPre}>{JSON.stringify(diagnostics, null, 2)}</pre>
-      ) : null}
-      <button
-        type="button"
-        className={styles.secondaryBtn}
-        onClick={onCopy}
-        disabled={!diagnostics}
-      >
+      {open && diagnostics ? <pre className={styles.detailsPre}>{JSON.stringify(diagnostics, null, 2)}</pre> : null}
+      <button type="button" className={styles.secondaryBtn} onClick={onCopy} disabled={!diagnostics}>
         {copyLabel}
       </button>
     </div>

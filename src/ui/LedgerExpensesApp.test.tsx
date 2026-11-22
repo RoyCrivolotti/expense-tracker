@@ -35,12 +35,18 @@ const dataset = syntheticLedger({ months: 8, perMonth: 8, seed: 6 })
 const long = syntheticLedger({ months: HYDRATED_DATA_MONTHS + 11, perMonth: 8, seed: 6 })
 
 /** A source that serves parts and, as the app's own does, the whole dataset. */
-function servingSource(data: ExpenseDataset = dataset): TestSource & ExpenseDataSource & { load: ReturnType<typeof vi.fn> } {
+function servingSource(
+  data: ExpenseDataset = dataset,
+): TestSource & ExpenseDataSource & { load: ReturnType<typeof vi.fn> } {
   const parts = memorySource(data)
   return Object.assign(parts, { canWrite: false, load: vi.fn().mockResolvedValue(data) })
 }
 
-function renderApp(source: ExpenseDataSource, mode: 'on' | 'shadow' = 'on', accountEmail?: string) {
+function renderApp(
+  source: ExpenseDataSource,
+  mode: 'on' | 'shadow' = 'on',
+  accountEmail?: string,
+) {
   return render(
     <ToastProvider>
       <LedgerExpensesApp
@@ -118,7 +124,9 @@ describe('LedgerExpensesApp', () => {
     renderApp(source, 'shadow')
     await screen.findByText('Recent activity')
     await waitFor(() => expect(warn).toHaveBeenCalled())
-    expect((globalThis as { __ledgerShadow?: { differences: string[] } }).__ledgerShadow?.differences).toContain('categories differ')
+    expect((globalThis as { __ledgerShadow?: { differences: string[] } }).__ledgerShadow?.differences).toContain(
+      'categories differ',
+    )
   })
 
   it('survives a whole dataset that cannot be read in shadow mode', async () => {
@@ -141,7 +149,13 @@ describe('LedgerExpensesApp, the source the view writes to', () => {
     }) as unknown as typeof ExpensesAppView
     render(
       <ToastProvider>
-        <LedgerExpensesApp source={source} mode="on" fallback={<p>the whole dataset app</p>} view={view} hubGrants={allGroupsGranted()} />
+        <LedgerExpensesApp
+          source={source}
+          mode="on"
+          fallback={<p>the whole dataset app</p>}
+          view={view}
+          hubGrants={allGroupsGranted()}
+        />
       </ToastProvider>,
     )
     await screen.findByText('the view')
@@ -161,7 +175,9 @@ describe('LedgerExpensesApp, the source the view writes to', () => {
     try {
       const given = await sourceGiven(apiDataSource)
       expect(given).not.toBe(apiDataSource)
-      expect(Object.keys(given ?? {})).toEqual(expect.arrayContaining(['updateMatchingTransactions', 'addLabelsToTransactions']))
+      expect(Object.keys(given ?? {})).toEqual(
+        expect.arrayContaining(['updateMatchingTransactions', 'addLabelsToTransactions']),
+      )
       expect('updateMatchingTransactions' in apiDataSource).toBe(false)
     } finally {
       for (const key of Object.keys(served)) {
@@ -189,7 +205,10 @@ describe('LedgerExpensesApp, a ledger that changes while it is open', () => {
     return { seen, handle, view }
   }
 
-  function renderWatched(source: ExpenseDataSource, view: typeof ExpensesAppView) {
+  function renderWatched(
+    source: ExpenseDataSource,
+    view: typeof ExpensesAppView,
+  ) {
     return render(
       <ToastProvider>
         <LedgerExpensesApp

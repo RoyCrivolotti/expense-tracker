@@ -63,9 +63,7 @@ describe('computeSpendingGroups by category', () => {
     )
     // Day-5 transactions fall outside day 4.
     expect(rows.find((r) => r.name === 'Groceries')?.currentCents).toBe(0)
-    expect(rows.find((r) => r.name === 'Groceries')?.shouldBeTodayCents).toBe(
-      Math.round(40000 * (4 / 31)),
-    )
+    expect(rows.find((r) => r.name === 'Groceries')?.shouldBeTodayCents).toBe(Math.round(40000 * (4 / 31)))
   })
 
   it("clamps the open month's spark point like the row total", () => {
@@ -148,7 +146,11 @@ describe('computeSpendingGroups by label and description', () => {
 })
 
 describe('sortSpendingRows', () => {
-  const row = (name: string, currentCents: number, txnCount: number): SpendingGroupRow => ({
+  const row = (
+    name: string,
+    currentCents: number,
+    txnCount: number,
+  ): SpendingGroupRow => ({
     key: name,
     name,
     currentCents,

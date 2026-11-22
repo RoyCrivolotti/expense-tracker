@@ -51,7 +51,11 @@ function normalizeNewLabel(input: NewLabel): NewLabel {
   }
 }
 
-export async function createLabel(repo: ExpenseRepository, owner: string, input: NewLabel) {
+export async function createLabel(
+  repo: ExpenseRepository,
+  owner: string,
+  input: NewLabel,
+) {
   return repo.createLabel(owner, normalizeNewLabel(input))
 }
 
@@ -74,7 +78,11 @@ export async function patchLabel(
   return repo.updateLabel(owner, id, next)
 }
 
-export async function removeLabel(repo: ExpenseRepository, owner: string, id: number) {
+export async function removeLabel(
+  repo: ExpenseRepository,
+  owner: string,
+  id: number,
+) {
   return repo.deleteLabel(owner, id)
 }
 

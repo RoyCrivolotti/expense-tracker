@@ -24,10 +24,7 @@ describe('createEmailBackupAlerts', () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const alerts = createEmailBackupAlerts(consoleBackupAlerts, send)
     await alerts.onBucketNearLimit({ usedBytes: 900, limitBytes: 1000 })
-    expect(send).toHaveBeenCalledWith(
-      expect.stringContaining('nearing size cap'),
-      expect.stringContaining('900'),
-    )
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('nearing size cap'), expect.stringContaining('900'))
   })
 
   it('says a backup did not finish, naming the owner and the day', async () => {
@@ -58,7 +55,9 @@ describe('createEmailBackupAlerts', () => {
   it('logs it when only the console is configured', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     await consoleBackupAlerts.onIncompleteBackup({ owner: 'a@b.com', dateKey: '2026-10-15' })
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('a@b.com backup for 2026-10-15 was started and never finished'))
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('a@b.com backup for 2026-10-15 was started and never finished'),
+    )
     warn.mockRestore()
   })
 

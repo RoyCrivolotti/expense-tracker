@@ -29,17 +29,23 @@ type Row = Record<string, unknown>
  * `allMap` returns results[] keyed by SQL substring match.
  * `batch` returns an array of {meta:{changes:1}} for each statement.
  */
-function stubEnv(opts: {
-  firstMap?: Record<string, Row | null>
-  runMap?: Record<string, number>
-  allMap?: Record<string, Row[]>
-  batch?: unknown
-} = {}): Env {
+function stubEnv(
+  opts: {
+    firstMap?: Record<string, Row | null>
+    runMap?: Record<string, number>
+    allMap?: Record<string, Row[]>
+    batch?: unknown
+  } = {},
+): Env {
   const firstMap = opts.firstMap ?? {}
   const runMap = opts.runMap ?? {}
   const allMap = opts.allMap ?? {}
 
-  function findInMap<T>(map: Record<string, T>, sql: string, fallback: T): T {
+  function findInMap<T>(
+    map: Record<string, T>,
+    sql: string,
+    fallback: T,
+  ): T {
     for (const key of Object.keys(map)) {
       if (sql.includes(key)) return map[key] as T
     }
@@ -47,8 +53,7 @@ function stubEnv(opts: {
   }
 
   const batch = vi.fn(
-    opts.batch ??
-      ((stmts: unknown[]) => Promise.resolve(stmts.map(() => ({ meta: { changes: 1 } })))),
+    opts.batch ?? ((stmts: unknown[]) => Promise.resolve(stmts.map(() => ({ meta: { changes: 1 } })))),
   )
   const prepare = vi.fn((sql: string) => ({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -145,23 +150,20 @@ describe('updateWealthAccount', () => {
 
   it('throws 400 for empty name in patch', async () => {
     const env = stubEnv()
-    await expect(
-      updateWealthAccount(env, OWNER, 1, { name: '  ' }),
-    ).rejects.toMatchObject({ status: 400, message: 'Account name is required' })
+    await expect(updateWealthAccount(env, OWNER, 1, { name: '  ' })).rejects.toMatchObject({
+      status: 400,
+      message: 'Account name is required',
+    })
   })
 
   it('throws 400 for invalid kind in patch', async () => {
     const env = stubEnv()
-    await expect(
-      updateWealthAccount(env, OWNER, 1, { kind: 'bad' as never }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(updateWealthAccount(env, OWNER, 1, { kind: 'bad' as never })).rejects.toMatchObject({ status: 400 })
   })
 
   it('throws 404 when account not found', async () => {
     const env = stubEnv({ firstMap: { 'UPDATE wealth_accounts': null } })
-    await expect(
-      updateWealthAccount(env, OWNER, 99, { sortOrder: 1 }),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(updateWealthAccount(env, OWNER, 99, { sortOrder: 1 })).rejects.toMatchObject({ status: 404 })
   })
 
   it('updates archived flag', async () => {
@@ -270,24 +272,24 @@ describe('createWealthCheckin', () => {
       }),
     ).rejects.toThrow('D1 batch failed')
     // The compensating DELETE should have been called
-    const deleteCalls = (env.DB.prepare as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([sql]: [string]) => sql.startsWith('DELETE FROM wealth_checkins WHERE id'),
+    const deleteCalls = (env.DB.prepare as ReturnType<typeof vi.fn>).mock.calls.filter(([sql]: [string]) =>
+      sql.startsWith('DELETE FROM wealth_checkins WHERE id'),
     )
     expect(deleteCalls.length).toBe(1)
   })
 
   it('throws 400 for invalid date', async () => {
     const env = stubEnv()
-    await expect(
-      createWealthCheckin(env, OWNER, { checkinDate: 'bad', entries: [] }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(createWealthCheckin(env, OWNER, { checkinDate: 'bad', entries: [] })).rejects.toMatchObject({
+      status: 400,
+    })
   })
 
   it('throws 500 when insert returns no row', async () => {
     const env = stubEnv({ firstMap: { 'INSERT INTO wealth_checkins': null } })
-    await expect(
-      createWealthCheckin(env, OWNER, { checkinDate: '2024-06-01', entries: [] }),
-    ).rejects.toMatchObject({ status: 500 })
+    await expect(createWealthCheckin(env, OWNER, { checkinDate: '2024-06-01', entries: [] })).rejects.toMatchObject({
+      status: 500,
+    })
   })
 
   it('throws 400 for a date beyond the timezone slack', async () => {
@@ -364,27 +366,25 @@ describe('updateWealthCheckin', () => {
 
   it('throws 404 when checkin not found', async () => {
     const env = stubEnv({ firstMap: { 'SELECT id FROM wealth_checkins': null } })
-    await expect(
-      updateWealthCheckin(env, OWNER, 99, { checkinDate: '2024-01-01' }),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(updateWealthCheckin(env, OWNER, 99, { checkinDate: '2024-01-01' })).rejects.toMatchObject({
+      status: 404,
+    })
   })
 
   it('throws 400 for invalid date in patch', async () => {
     const env = stubEnv({
       firstMap: { 'SELECT id FROM wealth_checkins': { id: 10 } },
     })
-    await expect(
-      updateWealthCheckin(env, OWNER, 10, { checkinDate: 'bad' }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(updateWealthCheckin(env, OWNER, 10, { checkinDate: 'bad' })).rejects.toMatchObject({ status: 400 })
   })
 
   it('throws 400 for a future date in patch', async () => {
     const env = stubEnv({
       firstMap: { 'SELECT id FROM wealth_checkins': { id: 10 } },
     })
-    await expect(
-      updateWealthCheckin(env, OWNER, 10, { checkinDate: utcDaysFromToday(2) }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(updateWealthCheckin(env, OWNER, 10, { checkinDate: utcDaysFromToday(2) })).rejects.toMatchObject({
+      status: 400,
+    })
   })
 
   it('replaces entries when provided', async () => {

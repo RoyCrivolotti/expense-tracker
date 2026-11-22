@@ -92,7 +92,10 @@ function seeded(withBucket = true) {
   return { store, repo, bucket, env }
 }
 
-function upload(bytes: Uint8Array, opts: { name?: string; thumb?: Uint8Array; txnId?: number } = {}) {
+function upload(
+  bytes: Uint8Array,
+  opts: { name?: string; thumb?: Uint8Array; txnId?: number } = {},
+) {
   const form = new FormData()
   form.set('transactionId', String(opts.txnId ?? 1))
   form.set('file', new Blob([bytes], { type: 'image/jpeg' }), opts.name ?? 'hotel.jpg')

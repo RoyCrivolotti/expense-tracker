@@ -72,11 +72,13 @@ export function LabelPickerPopover({ value, labels, triggerRef, onToggle, onClos
                       {label.name}
                       {!label.active ? <span className={styles.archived}> · archived</span> : null}
                     </span>
-                    {label.description ? (
-                      <span className={styles.optionDesc}>{label.description}</span>
-                    ) : null}
+                    {label.description ? <span className={styles.optionDesc}>{label.description}</span> : null}
                   </span>
-                  {selected ? <span className={styles.tick} aria-hidden>✓</span> : null}
+                  {selected ? (
+                    <span className={styles.tick} aria-hidden>
+                      ✓
+                    </span>
+                  ) : null}
                 </button>
               </li>
             )

@@ -27,7 +27,11 @@ function draft(planStartDate: string | null) {
   return rest
 }
 
-const flow = (month: string, investedCents: number, netSavingCents: number): MonthlyFlow => ({
+const flow = (
+  month: string,
+  investedCents: number,
+  netSavingCents: number,
+): MonthlyFlow => ({
   month,
   investedCents,
   netSavingCents,
@@ -42,7 +46,7 @@ describe('SavingsRateChart', () => {
     expect(screen.getByText('Net saving')).toBeInTheDocument()
   })
 
-  it('says the amounts are in euros as they went through the account, not in the plan\'s euros', () => {
+  it("says the amounts are in euros as they went through the account, not in the plan's euros", () => {
     render(<SavingsRateChart draft={draft(null)} monthly={[flow('2026-06', 40_000, 285_695)]} />)
     expect(screen.getByText(/In euros as they went through the account\./)).toBeInTheDocument()
   })
@@ -56,15 +60,15 @@ describe('SavingsRateChart', () => {
 
     const stepped = { ...draft('2026-01-01'), contributionSchedule: [{ from: '2026-06', monthlyCents: 90_000 }] }
     const { container } = render(<SavingsRateChart draft={stepped} monthly={months} />)
-    expect(screen.getByText(/vs the plan, which goes from 500,00 € to 900,00 €\/mo over these months/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/vs the plan, which goes from 500,00 € to 900,00 €\/mo over these months/),
+    ).toBeInTheDocument()
     // The plan is a series of its own, dashed like the net saving, instead of a flat line across.
     expect(dashedPaths(container)).toBe(flatDashed + 1)
   })
 
   it('draws one flat line for a plan that does not change, as before', () => {
-    render(
-      <SavingsRateChart draft={draft('2026-01-01')} monthly={[flow('2026-04', 1, 1), flow('2026-05', 2, 2)]} />,
-    )
+    render(<SavingsRateChart draft={draft('2026-01-01')} monthly={[flow('2026-04', 1, 1), flow('2026-05', 2, 2)]} />)
     expect(screen.getByText(/vs the 500,00 €\/mo this scenario assumes/)).toBeInTheDocument()
     expect(screen.queryByText(/goes from/)).toBeNull()
   })

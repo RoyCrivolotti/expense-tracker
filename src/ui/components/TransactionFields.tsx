@@ -145,9 +145,7 @@ function CategoryAccountRow({
         {lockedCategoryId !== null ? (
           <p className={styles.fieldHint}>Investments always go here; change it under Settings.</p>
         ) : null}
-        {categoryInactive ? (
-          <p className={styles.inactiveWarning}>This category is inactive</p>
-        ) : null}
+        {categoryInactive ? <p className={styles.inactiveWarning}>This category is inactive</p> : null}
       </div>
       <div className={styles.fieldStack}>
         <Field label="Account">
@@ -159,9 +157,7 @@ function CategoryAccountRow({
             ))}
           </select>
         </Field>
-        {accountInactive ? (
-          <p className={styles.inactiveWarning}>This account is inactive</p>
-        ) : null}
+        {accountInactive ? <p className={styles.inactiveWarning}>This account is inactive</p> : null}
       </div>
     </div>
   )
@@ -181,12 +177,7 @@ function DateBudgetRow({
   return (
     <div className={styles.row}>
       <Field label="Date" as="div">
-        <DateInput
-          value={form.date}
-          ariaLabel="Date"
-          onChange={onDate}
-          onTrapPausedChange={onTrapPausedChange}
-        />
+        <DateInput value={form.date} ariaLabel="Date" onChange={onDate} onTrapPausedChange={onTrapPausedChange} />
       </Field>
       <Field label="Budget month" as="div">
         <MonthInput
@@ -238,7 +229,10 @@ const NO_PENDING: PendingReceipt[] = []
  * The receipts of the transaction being edited, and how many it has. A model that reads receipt lists on
  * request has only the count until the list is asked for here.
  */
-function useReceipts(model: ExpenseModel, transactionId: number | null) {
+function useReceipts(
+  model: ExpenseModel,
+  transactionId: number | null,
+) {
   const { ensureReceipts, lookup } = model
   useEffect(() => {
     if (transactionId != null) ensureReceipts?.([transactionId])
@@ -299,7 +293,13 @@ export function Fields({
             placeholder="e.g. Mercadona"
           />
         ) : (
-          <ClearableDescription seed={seed} value={form.description} index={model.descriptionIndex} onChange={(v) => set('description', v)} onAccept={onAcceptSuggestion} />
+          <ClearableDescription
+            seed={seed}
+            value={form.description}
+            index={model.descriptionIndex}
+            onChange={(v) => set('description', v)}
+            onAccept={onAcceptSuggestion}
+          />
         )}
       </Field>
       <DescriptionLine model={model} editing={editing !== null} />
@@ -323,11 +323,7 @@ export function Fields({
               {receiptAtCap ? 'Limit reached' : 'Add receipt'}
             </button>
             {!showNoteInput && (
-              <button
-                type="button"
-                className={styles.chip}
-                onClick={() => setNoteExpanded(true)}
-              >
+              <button type="button" className={styles.chip} onClick={() => setNoteExpanded(true)}>
                 <span className={styles.chipIcon} aria-hidden>
                   <PlusIcon />
                 </span>
@@ -363,9 +359,7 @@ export function Fields({
               />
             </Field>
           )}
-          {editing ? (
-            <ReimbursementLink editing={editing} lookup={model.lookup} onOpen={actions.onEdit} />
-          ) : null}
+          {editing ? <ReimbursementLink editing={editing} lookup={model.lookup} onOpen={actions.onEdit} /> : null}
           <ReceiptStrip
             {...(receiptTargetId != null ? { transactionId: receiptTargetId } : {})}
             attachments={attachments}

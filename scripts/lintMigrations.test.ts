@@ -1,15 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import {
-  GRANDFATHERED_THROUGH,
-  lintMigration,
-  lintNumbering,
-  statementsOf,
-} from './lint-migrations.mjs'
+import { GRANDFATHERED_THROUGH, lintMigration, lintNumbering, statementsOf } from './lint-migrations.mjs'
 
 const MIGRATIONS = join(import.meta.dirname, '..', 'migrations')
-const files = readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()
+const files = readdirSync(MIGRATIONS)
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
 const read = (file: string) => readFileSync(join(MIGRATIONS, file), 'utf8')
 const lint = (sql: string) => lintMigration('0032_example.sql', sql)
 
@@ -18,12 +15,9 @@ describe('the migration files in the repo', () => {
     expect(lintNumbering(files)).toEqual([])
   })
 
-  it.each(files.filter((f) => Number(f.slice(0, 4)) > GRANDFATHERED_THROUGH))(
-    '%s follows the rules',
-    (file) => {
-      expect(lintMigration(file, read(file))).toEqual([])
-    },
-  )
+  it.each(files.filter((f) => Number(f.slice(0, 4)) > GRANDFATHERED_THROUGH))('%s follows the rules', (file) => {
+    expect(lintMigration(file, read(file))).toEqual([])
+  })
 
   it('would have stopped the table rebuilds in 0003 and the drop in 0023, which is why they predate the rule', () => {
     expect(lintMigration('0003_multi_user.sql', read('0003_multi_user.sql')).join('\n')).toMatch(/DROP TABLE settings/)
@@ -112,7 +106,9 @@ describe('creating things', () => {
 
 describe('the file as a whole', () => {
   it('wants the NNNN_lower_snake_case.sql name', () => {
-    expect(lintMigration('32_Example.sql', 'SELECT 1')).toEqual([expect.stringMatching(/name it NNNN_lower_snake_case/)])
+    expect(lintMigration('32_Example.sql', 'SELECT 1')).toEqual([
+      expect.stringMatching(/name it NNNN_lower_snake_case/),
+    ])
   })
 
   it('refuses an empty file', () => {
@@ -122,7 +118,9 @@ describe('the file as a whole', () => {
 
 describe('numbering', () => {
   it('spots two files with the same number, as two PRs adding the next one would', () => {
-    expect(lintNumbering(['0001_a.sql', '0002_b.sql', '0002_c.sql'])).toEqual(['0002_c.sql and 0002_b.sql both use number 0002'])
+    expect(lintNumbering(['0001_a.sql', '0002_b.sql', '0002_c.sql'])).toEqual([
+      '0002_c.sql and 0002_b.sql both use number 0002',
+    ])
   })
 
   it('spots a gap, once', () => {

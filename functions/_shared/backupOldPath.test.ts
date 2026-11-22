@@ -44,7 +44,10 @@ function run(over: { objects?: Record<string, string>; policy?: Partial<BackupPo
   const log: string[] = []
   const stored = new Map(Object.entries(over.objects ?? {}))
   const store: BackupStore = {
-    put: (key, text) => {
+    put: (
+      key,
+      text,
+    ) => {
       log.push(`put ${key}`)
       stored.set(key, text)
       return Promise.resolve()
@@ -100,17 +103,27 @@ function run(over: { objects?: Record<string, string>; policy?: Partial<BackupPo
 /** Every way the old path is reached: directly, by the cron worker's entry point with the mode unset, and with it off. */
 const ENTRIES: Array<[string, (deps: BackupDeps) => Promise<unknown>]> = [
   ['runAllBackups', (deps) => runAllBackups(deps)],
-  ['runScheduledBackup with no chunked setting', (deps) => runScheduledBackup(deps as BackupDeps & { store: BackupStore })],
+  [
+    'runScheduledBackup with no chunked setting',
+    (deps) => runScheduledBackup(deps as BackupDeps & { store: BackupStore }),
+  ],
   [
     'runScheduledBackup with chunked mode off',
-    (deps) => runScheduledBackup({ ...deps, chunked: { enabled: false, maxOperations: 44, maxRows: 1_500 } } as BackupDeps & { store: BackupStore }),
+    (deps) =>
+      runScheduledBackup({ ...deps, chunked: { enabled: false, maxOperations: 44, maxRows: 1_500 } } as BackupDeps & {
+        store: BackupStore
+      }),
   ],
 ]
 
 describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) => {
   it('writes one file per owner and day, in the same order of calls, then prunes and measures', async () => {
     const { log, stored, deps } = run({
-      objects: { [`${A}/2026-09-01.json`]: 'old', [`${B}/2026-10-14.json`]: 'yesterday', [`${A}/notes.txt`]: 'not a backup' },
+      objects: {
+        [`${A}/2026-09-01.json`]: 'old',
+        [`${B}/2026-10-14.json`]: 'yesterday',
+        [`${A}/notes.txt`]: 'not a backup',
+      },
     })
 
     await entry(deps)
@@ -127,7 +140,12 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
     ])
     expect(stored.get(`${A}/${TODAY}.json`)).toBe(body(A))
     expect(stored.get(`${B}/${TODAY}.json`)).toBe(body(B))
-    expect([...stored.keys()].sort()).toEqual([`${A}/${TODAY}.json`, `${A}/notes.txt`, `${B}/2026-10-14.json`, `${B}/${TODAY}.json`])
+    expect([...stored.keys()].sort()).toEqual([
+      `${A}/${TODAY}.json`,
+      `${A}/notes.txt`,
+      `${B}/2026-10-14.json`,
+      `${B}/${TODAY}.json`,
+    ])
   })
 
   it('raises the same alerts: a large snapshot before its file is written, the bucket before pruning', async () => {
@@ -175,7 +193,9 @@ describe.each(ENTRIES)('the daily snapshot, reached through %s', (_name, entry) 
     await entry(deps)
 
     expect(log.filter((l) => l.startsWith('delete'))).toEqual([`delete ${A}/2026-10-10.json`])
-    expect(log.filter((l) => l.startsWith('alert bucket'))).toEqual([`alert bucket ${body(A).length + body(B).length + 600} ${cap}`])
+    expect(log.filter((l) => l.startsWith('alert bucket'))).toEqual([
+      `alert bucket ${body(A).length + body(B).length + 600} ${cap}`,
+    ])
   })
 })
 

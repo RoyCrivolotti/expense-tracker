@@ -11,7 +11,10 @@ import type { Env } from './env'
  * quota is enforced synchronously at upload, so the feedback mechanism is a
  * clear rejection in the UI rather than a warning after the fact.
  */
-function parsePositiveInt(raw: string | undefined, fallback: number): number {
+function parsePositiveInt(
+  raw: string | undefined,
+  fallback: number,
+): number {
   const parsed = Number(raw)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }

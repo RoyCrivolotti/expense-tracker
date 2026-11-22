@@ -35,8 +35,15 @@ export function useImportRows(
     setProgress(0)
     setStopped(null)
     try {
-      await importInChunks(rows.map((row) => row.input), actions.createTransactions, { onProgress: setProgress })
-      const message = earlier === 0 ? `Imported ${rows.length} transactions` : `Imported the last ${rows.length} transactions, ${rows.length + earlier} in all`
+      await importInChunks(
+        rows.map((row) => row.input),
+        actions.createTransactions,
+        { onProgress: setProgress },
+      )
+      const message =
+        earlier === 0
+          ? `Imported ${rows.length} transactions`
+          : `Imported the last ${rows.length} transactions, ${rows.length + earlier} in all`
       setDone(message)
       setEarlier(0)
       setResult(null)

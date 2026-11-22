@@ -21,7 +21,10 @@ export class ReadBook {
   }
 
   /** The rows, cursor and count of a read that began at `since`, without any row decided after that. */
-  landed(read: { rows: RecommendationInfo[]; next: string | null; openCount: number }, since: number) {
+  landed(
+    read: { rows: RecommendationInfo[]; next: string | null; openCount: number },
+    since: number,
+  ) {
     const rows = read.rows.filter((r) => (this.decidedAt.get(r.id) ?? 0) <= since)
     this.shown = rows.length
     return { rows, next: read.next, openCount: Math.max(0, read.openCount - (read.rows.length - rows.length)) }

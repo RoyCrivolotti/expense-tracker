@@ -41,20 +41,31 @@ interface Window {
 }
 
 /** Months from `back` before `viewed` to `forward` after it. -1 back leaves the viewed month itself summed. */
-function calendarWindow(viewed: string, back: number, forward = 0): (month: string) => boolean {
+function calendarWindow(
+  viewed: string,
+  back: number,
+  forward = 0,
+): (month: string) => boolean {
   const first = shiftBudgetMonth(viewed, -back)
   const last = shiftBudgetMonth(viewed, forward)
   return (month) => month >= first && month <= last
 }
 
 /** The `count` newest months with data up to and including `viewed`, however far apart they are. */
-function dataMonthWindow(ds: ExpenseDataset, viewed: string, count: number): (month: string) => boolean {
+function dataMonthWindow(
+  ds: ExpenseDataset,
+  viewed: string,
+  count: number,
+): (month: string) => boolean {
   const months = sortedMonths(ds.transactions.map((t) => t.budgetMonth))
   const recent = new Set(months.filter((m) => m <= viewed).slice(-count))
   return (month) => recent.has(month)
 }
 
-function compact(ds: ExpenseDataset, win: Window): Lists {
+function compact(
+  ds: ExpenseDataset,
+  win: Window,
+): Lists {
   const hydrated = sortedMonths(ds.transactions.map((t) => t.budgetMonth)).filter(win.keep)
   if (win.pin) return assembleRows(buildLedger(ds, hydrated))
   const kept = new Set(hydrated)
@@ -64,16 +75,28 @@ function compact(ds: ExpenseDataset, win: Window): Lists {
     ds.accounts,
     ds.accountStatements,
   )
-  const byDate = (a: Transaction, b: Transaction) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
+  const byDate = (
+    a: Transaction,
+    b: Transaction,
+  ) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
   return { real, linear: [...real, ...summed].sort(byDate) }
 }
 
-function sameOutput(ds: ExpenseDataset, viewed: string, win: Window, keys: string[]): string[] {
+function sameOutput(
+  ds: ExpenseDataset,
+  viewed: string,
+  win: Window,
+  keys: string[],
+): string[] {
   return differing(ds, viewed, wholeLedger(ds), compact(ds, win), keys)
 }
 
 /** The fewest months before `viewed` that must stay real for `key` to match the full ledger. */
-function smallestWindow(ds: ExpenseDataset, viewed: string, key: string): number {
+function smallestWindow(
+  ds: ExpenseDataset,
+  viewed: string,
+  key: string,
+): number {
   let needed = -1
   for (let back = 26; back >= -1; back--) {
     if (sameOutput(ds, viewed, { keep: calendarWindow(viewed, back), pin: true }, [key]).length > 0) {
@@ -127,8 +150,11 @@ describe('engine history: old months as one summed row per cell', () => {
 
   describe('the 13 newest months with data', () => {
     const READERS = [...ROW_READERS, ...KPI_KEYS]
-    const withRows = (ds: ExpenseDataset, viewed: string, count: number) =>
-      sameOutput(ds, viewed, { keep: dataMonthWindow(ds, viewed, count), pin: true }, READERS)
+    const withRows = (
+      ds: ExpenseDataset,
+      viewed: string,
+      count: number,
+    ) => sameOutput(ds, viewed, { keep: dataMonthWindow(ds, viewed, count), pin: true }, READERS)
 
     it.each([
       ['no gaps, open month', ledger, OPEN_MONTH],
@@ -157,13 +183,17 @@ describe('engine history: old months as one summed row per cell', () => {
 
   it('fixed against flexible differs on any window short of the whole history, and reads rows after the viewed month', () => {
     const keys = ['groupsByFixedFlexible', 'detailByFixedFlexible', 'fixedCosts']
-    const at = (back: number, forward = 0) =>
-      sameOutput(ledger, OPEN_MONTH, { keep: calendarWindow(OPEN_MONTH, back, forward), pin: true }, keys)
+    const at = (
+      back: number,
+      forward = 0,
+    ) => sameOutput(ledger, OPEN_MONTH, { keep: calendarWindow(OPEN_MONTH, back, forward), pin: true }, keys)
     expect(at(13)).toEqual(keys)
     expect(at(36)).toEqual(keys)
     expect(at(59)).toEqual([])
-    const past = (back: number, forward: number) =>
-      sameOutput(ledger, '2025-06', { keep: calendarWindow('2025-06', back, forward), pin: true }, keys)
+    const past = (
+      back: number,
+      forward: number,
+    ) => sameOutput(ledger, '2025-06', { keep: calendarWindow('2025-06', back, forward), pin: true }, keys)
     expect(past(44, 0)).toEqual(keys)
     expect(past(44, 99)).toEqual([])
   })
@@ -171,10 +201,21 @@ describe('engine history: old months as one summed row per cell', () => {
   it('fixed against flexible matches on a 13 month window once the classifier and series of the whole history are passed in', () => {
     const keys = ['groupsByFixedFlexible', 'detailByFixedFlexible', 'fixedCosts', 'pace']
     const groups = recurringFixedGroups(ledger.transactions)
-    const at = (viewed: string, back: number, forward = 0) =>
-      differing(ledger, viewed, wholeLedger(ledger), compact(ledger, { keep: calendarWindow(viewed, back, forward), pin: true }), keys, {
-        groups,
-      })
+    const at = (
+      viewed: string,
+      back: number,
+      forward = 0,
+    ) =>
+      differing(
+        ledger,
+        viewed,
+        wholeLedger(ledger),
+        compact(ledger, { keep: calendarWindow(viewed, back, forward), pin: true }),
+        keys,
+        {
+          groups,
+        },
+      )
     expect(at(OPEN_MONTH, 13)).toEqual([])
     expect(at('2025-06', 13)).toEqual([])
     expect(at('2025-06', 13, 99)).toEqual([])
@@ -188,12 +229,23 @@ describe('engine history: old months as one summed row per cell', () => {
 })
 
 describe('engine history: recurring detection, cash reserve, portfolio return and the cut', () => {
-  const row = (id: number, month: string, cents: number, type: Transaction['type'] = 'expense') =>
-    makeTransaction({ id, date: `${month}-10`, budgetMonth: month, amountCents: cents, type })
+  const row = (
+    id: number,
+    month: string,
+    cents: number,
+    type: Transaction['type'] = 'expense',
+  ) => makeTransaction({ id, date: `${month}-10`, budgetMonth: month, amountCents: cents, type })
 
   it('cash reserve: the last 12 months with spend can span 18 calendar months', () => {
-    const spend = (months: string[], cents: number, from: number) => months.map((m, i) => row(from + i, m, cents))
-    const run = (first: string, count: number) => Array.from({ length: count }, (_, i) => shiftBudgetMonth(first, i))
+    const spend = (
+      months: string[],
+      cents: number,
+      from: number,
+    ) => months.map((m, i) => row(from + i, m, cents))
+    const run = (
+      first: string,
+      count: number,
+    ) => Array.from({ length: count }, (_, i) => shiftBudgetMonth(first, i))
     const rows = [
       ...spend(run('2025-01', 6), 100_000, 1),
       ...run('2025-07', 6).map((m, i) => row(100 + i, m, 300_000, 'income')),
@@ -206,9 +258,12 @@ describe('engine history: recurring detection, cash reserve, portfolio return an
   })
 
   describe('recurring detection', () => {
-    const series = (dates: string[]) => dates.map((date, i) => makeTxn({ id: i + 1, date, description: 'Car insurance' }))
-    const spaced = (gaps: number[], start = '2024-01-01') =>
-      gaps.reduce<string[]>((dates, gap) => [...dates, addDaysIso(dates[dates.length - 1]!, gap)], [start])
+    const series = (dates: string[]) =>
+      dates.map((date, i) => makeTxn({ id: i + 1, date, description: 'Car insurance' }))
+    const spaced = (
+      gaps: number[],
+      start = '2024-01-01',
+    ) => gaps.reduce<string[]>((dates, gap) => [...dates, addDaysIso(dates[dates.length - 1]!, gap)], [start])
     const rhythm = (dates: string[]) => {
       const group = groupTransactions(series(dates))[0]
       return group ? fixedRhythm(group) : 'no group'
@@ -256,11 +311,21 @@ describe('engine history: recurring detection, cash reserve, portfolio return an
 
   describe('portfolio return and gap split', () => {
     const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]
-    const checkin = (id: number, date: string, cents: number) =>
-      makeWealthCheckin({ id, checkinDate: date, entries: [{ accountId: 1, valueCents: cents }] })
-    const deposit = (id: number, date: string, cents: number) =>
-      makeTransaction({ id, date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents: cents })
-    const checkins = [checkin(1, '2024-01-01', 1_000_000), checkin(2, '2025-01-01', 2_000_000), checkin(3, '2026-07-01', 3_500_000)]
+    const checkin = (
+      id: number,
+      date: string,
+      cents: number,
+    ) => makeWealthCheckin({ id, checkinDate: date, entries: [{ accountId: 1, valueCents: cents }] })
+    const deposit = (
+      id: number,
+      date: string,
+      cents: number,
+    ) => makeTransaction({ id, date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents: cents })
+    const checkins = [
+      checkin(1, '2024-01-01', 1_000_000),
+      checkin(2, '2025-01-01', 2_000_000),
+      checkin(3, '2026-07-01', 3_500_000),
+    ]
     const flows = [
       deposit(1, '2024-06-15', 500_000),
       deposit(2, '2025-03-10', 300_000),
@@ -320,7 +385,10 @@ describe('engine history: recurring detection, cash reserve, portfolio return an
     })
 
     it('measures the 12 months that have data, not the 12 calendar months before', () => {
-      const months = [...Array.from({ length: 6 }, (_, i) => `2025-0${i + 1}`), ...Array.from({ length: 6 }, (_, i) => `2026-0${i + 1}`)]
+      const months = [
+        ...Array.from({ length: 6 }, (_, i) => `2025-0${i + 1}`),
+        ...Array.from({ length: 6 }, (_, i) => `2026-0${i + 1}`),
+      ]
       const rows = months.map((m, i) => makeTransaction({ id: i + 1, date: `${m}-10`, budgetMonth: m }))
       const baseline = computeSpendingBaseline(rows, [], [], { months, month: '2026-07', basis: 'paid' })
       expect(baseline?.months).toHaveLength(12)

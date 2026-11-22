@@ -56,13 +56,21 @@ export const DESCRIPTION_WINDOW_MONTHS = 12
 /** Every merchant in the typed rows at once, so a list of payments is described in one pass over the rows. */
 export type MerchantIndex = ReadonlyMap<string, MerchantHistory>
 
-const isNewer = (a: HistoryRow, b: HistoryRow) => a.date > b.date || (a.date === b.date && a.id > b.id)
+const isNewer = (
+  a: HistoryRow,
+  b: HistoryRow,
+) => a.date > b.date || (a.date === b.date && a.id > b.id)
 
 /** The same calendar day `months` earlier, as `YYYY-MM-DD`, clamped to the month's last day. */
-function monthsBefore(iso: string, months: number): string {
+function monthsBefore(
+  iso: string,
+  months: number,
+): string {
   const [y = 0, m = 1, d = 1] = iso.split('-').map(Number)
   const last = new Date(Date.UTC(y, m - 1 - months + 1, 0))
-  return new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), Math.min(d, last.getUTCDate()))).toISOString().slice(0, 10)
+  return new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), Math.min(d, last.getUTCDate())))
+    .toISOString()
+    .slice(0, 10)
 }
 
 const localToday = () => {
@@ -72,13 +80,20 @@ const localToday = () => {
 
 /** Highest count wins, a tie goes to the more recent. `rows` is every row behind one candidate. */
 function pickMost<K>(groups: Map<K, HistoryRow[]>): { key: K; rows: HistoryRow[]; runnerUp: number } {
-  const ranked = [...groups.entries()].map(([key, rows]) => ({ key, rows, newest: rows.reduce((a, b) => (isNewer(b, a) ? b : a)) }))
+  const ranked = [...groups.entries()].map(([key, rows]) => ({
+    key,
+    rows,
+    newest: rows.reduce((a, b) => (isNewer(b, a) ? b : a)),
+  }))
   ranked.sort((a, b) => b.rows.length - a.rows.length || (isNewer(b.newest, a.newest) ? 1 : -1))
   const [first, second] = ranked as [(typeof ranked)[number], (typeof ranked)[number] | undefined]
   return { key: first.key, rows: first.rows, runnerUp: second?.rows.length ?? 0 }
 }
 
-const groupBy = <K>(rows: readonly HistoryRow[], by: (r: HistoryRow) => K): Map<K, HistoryRow[]> => {
+const groupBy = <K>(
+  rows: readonly HistoryRow[],
+  by: (r: HistoryRow) => K,
+): Map<K, HistoryRow[]> => {
   const groups = new Map<K, HistoryRow[]>()
   for (const r of rows) {
     const held = groups.get(by(r))
@@ -97,7 +112,10 @@ function usualCategory(rows: readonly HistoryRow[]): number | null {
 }
 
 /** One merchant's history from all its typed rows. */
-function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistory {
+function readMerchant(
+  all: readonly HistoryRow[],
+  since: string,
+): MerchantHistory {
   const recent = all.filter((r) => r.date >= since)
   if (recent.length < MIN_SIGHTINGS) {
     // Too little recent history to read a habit, so the newest row speaks, as it did before. It is still settled when
@@ -105,7 +123,12 @@ function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistor
     // history is only old. Rows that differ and are too few to vote leave the choice to the person.
     const newest = newestOf(all)
     const sameThroughout = new Set(all.map((r) => foldTitle(r.description))).size === 1
-    return { sightings: all.length, label: newest.description.trim(), categoryId: newest.categoryId, settled: all.length >= MIN_SIGHTINGS && sameThroughout }
+    return {
+      sightings: all.length,
+      label: newest.description.trim(),
+      categoryId: newest.categoryId,
+      settled: all.length >= MIN_SIGHTINGS && sameThroughout,
+    }
   }
   const top = pickMost(groupBy(recent, (r) => foldTitle(r.description)))
   return {
@@ -129,7 +152,10 @@ function readMerchant(all: readonly HistoryRow[], since: string): MerchantHistor
  * is the most common one among the winning description's rows that carry one, so the pair belongs together. Ties go to
  * the more recent in both choices.
  */
-export function buildMerchantIndex(rows: readonly HistoryRow[], today: string = localToday()): MerchantIndex {
+export function buildMerchantIndex(
+  rows: readonly HistoryRow[],
+  today: string = localToday(),
+): MerchantIndex {
   const since = monthsBefore(today, DESCRIPTION_WINDOW_MONTHS)
   const typed = rows.filter((r) => !r.cancelled && r.type === 'expense')
   const index = new Map<string, MerchantHistory>()
@@ -142,7 +168,10 @@ export function buildMerchantIndex(rows: readonly HistoryRow[], today: string = 
 const NONE: MerchantHistory = { sightings: 0, label: null, categoryId: null, settled: false }
 
 /** What the typed rows say about a merchant named in bank text: how often, and the person's usual description and category. */
-export function merchantHistory(index: MerchantIndex, bankText: string | null): MerchantHistory {
+export function merchantHistory(
+  index: MerchantIndex,
+  bankText: string | null,
+): MerchantHistory {
   const key = bankText === null ? '' : merchantKey(bankText)
   return (key === '' ? undefined : index.get(key)) ?? NONE
 }
@@ -166,7 +195,11 @@ const WITH_OFFSET = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):\d{2}(?:\.\d+)?([+-])(
  * row in UTC, or whose day is not `localDate`, has no known phone clock. Nothing here reads this device's zone, so a
  * device in another zone than the payment reads the same.
  */
-export function paymentClock(occurredAt: string, localDate: string, createdAt: string): PaymentClock {
+export function paymentClock(
+  occurredAt: string,
+  localDate: string,
+  createdAt: string,
+): PaymentClock {
   const m = WITH_OFFSET.exec(occurredAt)
   if (!m || m[1] !== localDate) return { minuteOfDay: null, time: null, arrivedDate: null, arrivedTime: null }
   const offset = (m[4] === '-' ? -1 : 1) * (Number(m[5]) * 60 + Number(m[6]))
@@ -184,7 +217,10 @@ export function paymentClock(occurredAt: string, localDate: string, createdAt: s
 export const EDGE_MINUTES = 60
 
 /** The calendar day `days` away from `iso`. */
-export function shiftDay(iso: string, days: number): string {
+export function shiftDay(
+  iso: string,
+  days: number,
+): string {
   const [y = 0, m = 1, d = 1] = iso.split('-').map(Number)
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
 }
@@ -193,7 +229,11 @@ export function shiftDay(iso: string, days: number): string {
  * Every day a bank might book the payment on: its own day, the day before or after when it is within `EDGE_MINUTES`
  * of midnight (both when its time is unknown), and the day its push arrived, since a late push is a late payment too.
  */
-export function bookingDates(localDate: string, minuteOfDay: number | null, arrivedDate: string | null): string[] {
+export function bookingDates(
+  localDate: string,
+  minuteOfDay: number | null,
+  arrivedDate: string | null,
+): string[] {
   const dates = new Set([localDate])
   if (minuteOfDay === null || minuteOfDay < EDGE_MINUTES) dates.add(shiftDay(localDate, -1))
   if (minuteOfDay === null || minuteOfDay >= 24 * 60 - EDGE_MINUTES) dates.add(shiftDay(localDate, 1))

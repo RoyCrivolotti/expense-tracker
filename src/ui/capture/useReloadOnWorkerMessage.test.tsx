@@ -8,7 +8,10 @@ function fakeContainer() {
   Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: target })
   return target
 }
-const send = (target: EventTarget, data: unknown) => target.dispatchEvent(new MessageEvent('message', { data }))
+const send = (
+  target: EventTarget,
+  data: unknown,
+) => target.dispatchEvent(new MessageEvent('message', { data }))
 
 afterEach(() => {
   Reflect.deleteProperty(navigator, 'serviceWorker')

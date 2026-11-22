@@ -22,13 +22,7 @@ const DATE_SCOPE_OPTIONS: { value: TxnDateScope; label: string }[] = [
  * Laid over a field that is locked while rows are selected, so a tap says why: a disabled
  * input or select never receives the click. A real button, so it is labelled and reachable.
  */
-export function LockShield({
-  label,
-  onPress,
-}: {
-  label: string
-  onPress?: (() => void) | undefined
-}) {
+export function LockShield({ label, onPress }: { label: string; onPress?: (() => void) | undefined }) {
   return <button type="button" className={styles.lockShield} onClick={onPress} aria-label={label} />
 }
 
@@ -64,18 +58,11 @@ export function SearchRow({
           disabled={selectMode}
         />
         {query && !selectMode && (
-          <button
-            type="button"
-            className={styles.searchClear}
-            onClick={() => onQuery('')}
-            aria-label="Clear search"
-          >
+          <button type="button" className={styles.searchClear} onClick={() => onQuery('')} aria-label="Clear search">
             <CloseIcon />
           </button>
         )}
-        {selectMode ? (
-          <LockShield label="Search is locked while rows are selected" onPress={onLockedPress} />
-        ) : null}
+        {selectMode ? <LockShield label="Search is locked while rows are selected" onPress={onLockedPress} /> : null}
       </div>
       {/* A selection already under way can always be cancelled, even once the app has
           gone read-only and could not start a new one. */}
@@ -126,7 +113,10 @@ export function FilterToggle({
   )
 }
 
-function labelTriggerText(value: number[], labels: Label[]): string {
+function labelTriggerText(
+  value: number[],
+  labels: Label[],
+): string {
   if (value.length === 0) return 'Labels'
   if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
   return `Labels (${value.length})`
@@ -441,18 +431,8 @@ export function DateScopeRow({
       />
       {dateScope === 'custom' ? (
         <div className={styles.selectRow}>
-          <DateInput
-            value={customDateFrom}
-            onChange={onCustomDateFrom}
-            disabled={selectMode}
-            ariaLabel="From date"
-          />
-          <DateInput
-            value={customDateTo}
-            onChange={onCustomDateTo}
-            disabled={selectMode}
-            ariaLabel="To date"
-          />
+          <DateInput value={customDateFrom} onChange={onCustomDateFrom} disabled={selectMode} ariaLabel="From date" />
+          <DateInput value={customDateTo} onChange={onCustomDateTo} disabled={selectMode} ariaLabel="To date" />
         </div>
       ) : null}
     </div>

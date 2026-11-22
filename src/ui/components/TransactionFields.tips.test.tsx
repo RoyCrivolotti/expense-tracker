@@ -19,7 +19,10 @@ const INVEST = /Money you put into your investments/
 const REFUND = /Money paid back for something you bought/
 const WITHDRAW = /Money taken out of your investments/
 
-function modelWith(count: number, exportAll?: number): ExpenseModel {
+function modelWith(
+  count: number,
+  exportAll?: number,
+): ExpenseModel {
   const dataset: ExpenseDataset = makeDataset({
     categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
@@ -75,7 +78,11 @@ function ui(opts: Opts) {
   // `saved: undefined` is a column never written, which is not the same as the empty list of a new person.
   const saved = 'saved' in opts ? opts.saved : []
   return (
-    <TipsProvider saved={saved} hasTransactions={model.dataset.transactions.length > 0} save={canWrite ? () => Promise.resolve() : undefined}>
+    <TipsProvider
+      saved={saved}
+      hasTransactions={model.dataset.transactions.length > 0}
+      save={canWrite ? () => Promise.resolve() : undefined}
+    >
       <Fields
         form={form(over)}
         set={vi.fn()}

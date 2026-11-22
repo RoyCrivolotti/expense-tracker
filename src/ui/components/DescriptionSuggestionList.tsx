@@ -12,14 +12,12 @@ interface DescriptionSuggestionListProps {
 /** A press longer ago than this is not the one a click belongs to. */
 const PRESS_MS = 1000
 
-export function DescriptionSuggestionList({
-  listId,
-  suggestions,
-  highlight,
-  onPick,
-}: DescriptionSuggestionListProps) {
+export function DescriptionSuggestionList({ listId, suggestions, highlight, onPick }: DescriptionSuggestionListProps) {
   const pressed = useRef<{ label: string; at: number } | null>(null)
-  const pick = (clicked: DescriptionSuggestion, at: number) => {
+  const pick = (
+    clicked: DescriptionSuggestion,
+    at: number,
+  ) => {
     const press = pressed.current
     pressed.current = null
     // Older matches can reorder the list between a finger going down and the click that follows it, and the click then

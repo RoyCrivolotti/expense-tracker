@@ -47,16 +47,12 @@ function againstSnapshot(
   rows: Transaction[],
 ): Pick<PastReport, 'count' | 'coveredCents' | 'drifted' | 'remaining'> {
   const liveCount = rows.length
-  const liveCents = rows.reduce(
-    (sum, t) => sum + (t.type === 'refund' ? -t.amountCents : t.amountCents),
-    0,
-  )
+  const liveCents = rows.reduce((sum, t) => sum + (t.type === 'refund' ? -t.amountCents : t.amountCents), 0)
   const checkable = payment.reportCount != null && payment.reportCoveredCents != null
   return {
     count: payment.reportCount ?? liveCount,
     coveredCents: payment.reportCoveredCents ?? liveCents,
-    drifted:
-      checkable && (payment.reportCount !== liveCount || payment.reportCoveredCents !== liveCents),
+    drifted: checkable && (payment.reportCount !== liveCount || payment.reportCoveredCents !== liveCents),
     remaining: liveCount,
   }
 }
@@ -68,7 +64,10 @@ function againstSnapshot(
  * tell" is not something to warn about, and the reprint is the best available
  * either way.
  */
-export function pastReportDrifted(paymentId: number, transactions: Transaction[]): boolean {
+export function pastReportDrifted(
+  paymentId: number,
+  transactions: Transaction[],
+): boolean {
   const payment = transactions.find((t) => t.id === paymentId)
   if (!payment) return false
   return againstSnapshot(
@@ -78,7 +77,10 @@ export function pastReportDrifted(paymentId: number, transactions: Transaction[]
 }
 
 /** Newest first, like the rest of the app. */
-export function listPastReports(transactions: Transaction[], flags: Flag[]): PastReport[] {
+export function listPastReports(
+  transactions: Transaction[],
+  flags: Flag[],
+): PastReport[] {
   const covered = new Map<number, Transaction[]>()
   for (const txn of transactions) {
     if (txn.settledBy == null) continue
@@ -114,8 +116,5 @@ export function listPastReports(transactions: Transaction[], flags: Flag[]): Pas
       ...againstSnapshot(payment, rows),
     })
   }
-  return reports.sort(
-    (a, b) =>
-      b.payment.date.localeCompare(a.payment.date) || b.payment.id - a.payment.id,
-  )
+  return reports.sort((a, b) => b.payment.date.localeCompare(a.payment.date) || b.payment.id - a.payment.id)
 }

@@ -24,14 +24,26 @@ beforeEach(() => {
   sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   logged = []
-  for (const level of ['warn', 'error', 'log', 'info'] as const) vi.spyOn(console, level).mockImplementation((...args) => void logged.push(args))
-  const account = sqlite.prepare("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (?, ?, 'Account', 'debit', 'immediate', 1)")
+  for (const level of ['warn', 'error', 'log', 'info'] as const)
+    vi.spyOn(console, level).mockImplementation((...args) => void logged.push(args))
+  const account = sqlite.prepare(
+    "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (?, ?, 'Account', 'debit', 'immediate', 1)",
+  )
   account.run(1, OWNER)
   account.run(2, OWNER)
   account.run(9, OTHER)
 })
 
-function call(handler: Handler, o: { method?: string; body?: unknown; rawBody?: BodyInit; headers?: Record<string, string>; email?: string | false } = {}): Promise<Response> {
+function call(
+  handler: Handler,
+  o: {
+    method?: string
+    body?: unknown
+    rawBody?: BodyInit
+    headers?: Record<string, string>
+    email?: string | false
+  } = {},
+): Promise<Response> {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -45,9 +57,18 @@ function call(handler: Handler, o: { method?: string; body?: unknown; rawBody?: 
   })
 }
 
-const post = (body: unknown, email = OWNER) => call(link, { method: 'POST', body, email })
-const del = (body: unknown, email = OWNER) => call(remove, { method: 'DELETE', body, email })
-const links = () => sqlite.prepare('SELECT owner, source, digits_kind, digits, account_id FROM capture_cards ORDER BY owner, source, digits').all()
+const post = (
+  body: unknown,
+  email = OWNER,
+) => call(link, { method: 'POST', body, email })
+const del = (
+  body: unknown,
+  email = OWNER,
+) => call(remove, { method: 'DELETE', body, email })
+const links = () =>
+  sqlite
+    .prepare('SELECT owner, source, digits_kind, digits, account_id FROM capture_cards ORDER BY owner, source, digits')
+    .all()
 const good = { source: 'iberia', digits: DIGITS, accountId: 1 }
 
 describe('POST /api/capture-cards', () => {
@@ -99,7 +120,8 @@ describe('POST /api/capture-cards', () => {
 
   it('refuses a link past the cap with 409, but still takes one that exists', async () => {
     const repo = createD1CaptureRepository(world.env)
-    for (let i = 0; i < MAX_CAPTURE_CARDS; i++) await repo.linkCard(OWNER, { source: 'iberia', digitsKind: 'card', digits: String(1000 + i), accountId: 1 })
+    for (let i = 0; i < MAX_CAPTURE_CARDS; i++)
+      await repo.linkCard(OWNER, { source: 'iberia', digitsKind: 'card', digits: String(1000 + i), accountId: 1 })
 
     expect((await post({ ...good, digits: '9999' })).status).toBe(409)
     expect((await post({ ...good, digits: '1000', accountId: 2 })).status).toBe(200)
@@ -133,7 +155,10 @@ describe('POST /api/capture-cards', () => {
 
   it('refuses a body over its cap with 413, and one that is not JSON with 400', async () => {
     const json = { 'content-type': 'application/json' }
-    expect((await call(link, { method: 'POST', rawBody: JSON.stringify({ ...good, pad: 'x'.repeat(2000) }), headers: json })).status).toBe(413)
+    expect(
+      (await call(link, { method: 'POST', rawBody: JSON.stringify({ ...good, pad: 'x'.repeat(2000) }), headers: json }))
+        .status,
+    ).toBe(413)
     expect((await call(link, { method: 'POST', rawBody: '{nope', headers: json })).status).toBe(400)
   })
 
@@ -152,8 +177,35 @@ describe('GET /api/capture-cards', () => {
     const repo = createD1CaptureRepository(world.env)
     await repo.createKey({ keyId: 'k1', owner: OWNER, label: 'Phone', secretHash: 'h', createdAt: T0 })
     await repo.recordCapture(
-      { id: 'e1', keyId: 'k1', source: 'iberia', replayKey: 'r1', kind: 'push', amountCents: 100, currency: 'EUR', merchantRaw: 'X', last4: '5533', accountDigits: null, occurredAt: T0, localDate: '2026-03-02', offsetMinutes: 60, receivedAt: T0, body: null },
-      { id: 'rec1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: T0, localDate: '2026-03-02', merchantRaw: 'X', descriptionSuggested: null, suggestedType: 'expense', createdAt: T0 },
+      {
+        id: 'e1',
+        keyId: 'k1',
+        source: 'iberia',
+        replayKey: 'r1',
+        kind: 'push',
+        amountCents: 100,
+        currency: 'EUR',
+        merchantRaw: 'X',
+        last4: '5533',
+        accountDigits: null,
+        occurredAt: T0,
+        localDate: '2026-03-02',
+        offsetMinutes: 60,
+        receivedAt: T0,
+        body: null,
+      },
+      {
+        id: 'rec1',
+        accountId: null,
+        amountCents: 100,
+        currency: 'EUR',
+        occurredAt: T0,
+        localDate: '2026-03-02',
+        merchantRaw: 'X',
+        descriptionSuggested: null,
+        suggestedType: 'expense',
+        createdAt: T0,
+      },
     )
     await post(good)
 

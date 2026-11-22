@@ -32,14 +32,19 @@ function withReference(ds: ExpenseDataset): ExpenseDataset {
   return { ...ds, accounts: syntheticAccounts(), categories: syntheticCategories() }
 }
 
-function build(seed?: { descriptionNorm: boolean }, extra: ExpenseDataset | null = null) {
+function build(
+  seed?: { descriptionNorm: boolean },
+  extra: ExpenseDataset | null = null,
+) {
   sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
   mine = withReference(extra ?? unicodeLedger())
   world = createExpenseWorld(sqlite, sqliteD1(sqlite))
   seedDataset(sqlite, OWNER, mine, seed)
   const theirs = shifted(
-    withReference(makeDataset({ transactions: spelledSeries(1, ['Gym', 'GYM', 'gym ', ' Gym'], { amountCents: 777 }) })),
+    withReference(
+      makeDataset({ transactions: spelledSeries(1, ['Gym', 'GYM', 'gym ', ' Gym'], { amountCents: 777 }) }),
+    ),
     1_000_000,
   )
   seedDataset(sqlite, OTHER, theirs, seed)
@@ -54,8 +59,10 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const get = (headers?: Record<string, string>, email = OWNER) =>
-  world.call(onRequestGet, { path: '/series', email, ...(headers ? { headers } : {}) })
+const get = (
+  headers?: Record<string, string>,
+  email = OWNER,
+) => world.call(onRequestGet, { path: '/series', email, ...(headers ? { headers } : {}) })
 
 const seriesOf = async (response: Response): Promise<RecurringSeries[]> =>
   ((await response.json()) as { series: RecurringSeries[] }).series
@@ -119,7 +126,16 @@ describe('caching against the dataset revision', () => {
     const created = await world.call(postTransaction, {
       method: 'POST',
       path: '/transactions',
-      body: { date: '2026-10-10', budgetMonth: '2026-10', description: 'Rent', accountId: 1, categoryId: 1, type: 'expense', amountCents: 1, cancelled: false },
+      body: {
+        date: '2026-10-10',
+        budgetMonth: '2026-10',
+        description: 'Rent',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 1,
+        cancelled: false,
+      },
     })
     expect(created.status).toBe(201)
 
@@ -143,11 +159,23 @@ describe('caching against the dataset revision', () => {
   it('matches the shape PARTS_FORMAT was last moved for', async () => {
     // One series long enough to have gaps older than its newest dates, or the element type of olderGaps is never seen.
     const base = unicodeLedger()
-    build(undefined, { ...base, transactions: [...base.transactions, ...spelledSeries(700, Array.from({ length: 8 }, () => 'Water bill'))] })
+    build(undefined, {
+      ...base,
+      transactions: [
+        ...base.transactions,
+        ...spelledSeries(
+          700,
+          Array.from({ length: 8 }, () => 'Water bill'),
+        ),
+      ],
+    })
     const body = await (await get()).json()
     expect((body as { series: RecurringSeries[] }).series.some((s) => s.olderGaps.length > 0)).toBe(true)
     const paths = new Set<string>()
-    const walk = (value: unknown, path: string): void => {
+    const walk = (
+      value: unknown,
+      path: string,
+    ): void => {
       if (Array.isArray(value)) {
         paths.add(`${path}[]`)
         for (const item of value) walk(item, `${path}[]`)
@@ -156,7 +184,10 @@ describe('caching against the dataset revision', () => {
       } else paths.add(`${path}:${typeof value}`)
     }
     walk(body, '$')
-    const fingerprint = createHash('sha256').update([...paths].sort().join('\n')).digest('hex').slice(0, 16)
+    const fingerprint = createHash('sha256')
+      .update([...paths].sort().join('\n'))
+      .digest('hex')
+      .slice(0, 16)
     expect(
       { format: PARTS_FORMAT, fingerprint },
       'The JSON shape of GET /api/expenses/series changed. Raise PARTS_FORMAT in datasetEtag.ts, then put the new fingerprint here.',
@@ -167,7 +198,13 @@ describe('caching against the dataset revision', () => {
 describe('while descriptions are still waiting for their normalized form', () => {
   it('answers 503 and makes progress, so that retrying finishes and then answers the same as before', async () => {
     const rows = Array.from({ length: 2_200 }, (_, i) =>
-      makeTransaction({ id: i + 1, description: `Shop ${i % 700}`, date: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 27) + 1).padStart(2, '0')}`, budgetMonth: '2025-01', createdAt: '2025-01-01T00:00:00Z' }),
+      makeTransaction({
+        id: i + 1,
+        description: `Shop ${i % 700}`,
+        date: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 27) + 1).padStart(2, '0')}`,
+        budgetMonth: '2025-01',
+        createdAt: '2025-01-01T00:00:00Z',
+      }),
     )
     build({ descriptionNorm: false }, makeDataset({ transactions: rows }))
 
@@ -178,7 +215,11 @@ describe('while descriptions are still waiting for their normalized form', () =>
     // The client is told when to come back instead of guessing, and the answer is not kept by a cache.
     expect(first.headers.get('retry-after')).toBe('1')
     const waiting = (): number =>
-      (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL').get(OWNER) as { n: number }).n
+      (
+        sqlite
+          .prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL')
+          .get(OWNER) as { n: number }
+      ).n
     expect(waiting()).toBeGreaterThan(0)
     expect(waiting()).toBeLessThan(2_200)
 
@@ -191,7 +232,11 @@ describe('while descriptions are still waiting for their normalized form', () =>
   it('does not move the revision, because the column is in no response', async () => {
     build({ descriptionNorm: false })
     const waiting = (): number =>
-      (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL').get(OWNER) as { n: number }).n
+      (
+        sqlite
+          .prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL')
+          .get(OWNER) as { n: number }
+      ).n
     // A token that exists before the first request, which is the one that fills: read afterwards it proves nothing,
     // and without a row the request itself would create one.
     sqlite.prepare('INSERT INTO owner_revision (owner, token) VALUES (?, ?)').run(OWNER, 'before-the-fill')
@@ -204,7 +249,10 @@ describe('while descriptions are still waiting for their normalized form', () =>
 
 describe('after code from before the column has edited a description', () => {
   /** What the previous release does: it sets the description and knows nothing of description_norm. */
-  function editLikeOldCode(id: number, description: string): void {
+  function editLikeOldCode(
+    id: number,
+    description: string,
+  ): void {
     const info = sqlite
       .prepare("UPDATE transactions SET description = ?, updated_at = '2026-10-17 13:00:00' WHERE owner = ? AND id = ?")
       .run(description, OWNER, id)
@@ -236,7 +284,13 @@ describe('after code from before the column has edited a description', () => {
     const series = await seriesOf(after)
     expect(series).toEqual(seriesFromTransactions(edited))
     expect(series).not.toEqual(stale)
-    expect((sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL').get(OWNER) as { n: number }).n).toBe(0)
+    expect(
+      (
+        sqlite
+          .prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL')
+          .get(OWNER) as { n: number }
+      ).n,
+    ).toBe(0)
   })
 
   it('needs the revision reset as well as the repair: without it every browser keeps the stale body', async () => {

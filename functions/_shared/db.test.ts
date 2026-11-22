@@ -64,9 +64,7 @@ describe('loadDataset — labels', () => {
   it('includes the owner’s labels', async () => {
     const dataset = await loadDataset(stubEnv(), OWNER)
 
-    expect(dataset.labels).toEqual([
-      { id: 2, name: 'Japan trip', color: '#10b981', sortOrder: 0, active: true },
-    ])
+    expect(dataset.labels).toEqual([{ id: 2, name: 'Japan trip', color: '#10b981', sortOrder: 0, active: true }])
   })
 
   it('attaches each transaction’s labelIds from the join, not the row itself', async () => {

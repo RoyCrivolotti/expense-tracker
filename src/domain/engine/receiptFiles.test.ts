@@ -18,9 +18,9 @@ describe('receiptExtension', () => {
 
 describe('receiptFileName', () => {
   it('leads with the reference, so files sort into report order', () => {
-    expect(
-      receiptFileName(1, 'Tren por trabajo', '2026-08-19', 17_526, 'image/jpeg', EU_MONEY_FORMAT),
-    ).toBe('R1 - 2026-08-19 - Tren por trabajo - 175,26 €.jpg')
+    expect(receiptFileName(1, 'Tren por trabajo', '2026-08-19', 17_526, 'image/jpeg', EU_MONEY_FORMAT)).toBe(
+      'R1 - 2026-08-19 - Tren por trabajo - 175,26 €.jpg',
+    )
   })
 
   it('strips characters that break a filename on some OS', () => {
@@ -38,9 +38,7 @@ describe('receiptFileName', () => {
   })
 
   it('never ends a segment in a space or dot, which Windows refuses', () => {
-    expect(receiptFileName(4, 'Hotel  ', '2026-08-22', 100, 'image/jpeg', EU_MONEY_FORMAT)).toContain(
-      'Hotel - ',
-    )
+    expect(receiptFileName(4, 'Hotel  ', '2026-08-22', 100, 'image/jpeg', EU_MONEY_FORMAT)).toContain('Hotel - ')
   })
 })
 

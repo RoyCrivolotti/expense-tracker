@@ -103,7 +103,11 @@ export function currencyWord(format: MoneyFormat): string {
   if (known !== undefined) return known
   let word = code
   try {
-    const parts = new Intl.NumberFormat('en', { style: 'currency', currency: code, currencyDisplay: 'name' }).formatToParts(2)
+    const parts = new Intl.NumberFormat('en', {
+      style: 'currency',
+      currency: code,
+      currencyDisplay: 'name',
+    }).formatToParts(2)
     word = parts.find((part) => part.type === 'currency')?.value ?? code
   } catch {
     // An ill-formed code: it is said as it is.
@@ -123,7 +127,10 @@ export function currencyWord(format: MoneyFormat): string {
  * numeric keypad has only one of the two. Everything else keeps its meaning: "1.500", "1,500" and
  * "1.234.567" are grouped whole numbers.
  */
-export function parseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FORMAT): number {
+export function parseMoneyToCents(
+  raw: string,
+  format: MoneyFormat = EU_MONEY_FORMAT,
+): number {
   return parseCents(raw, format, true)
 }
 
@@ -141,7 +148,10 @@ export const MAX_MONEY_CENTS = 1e13
  * optional sign, one currency symbol before or after, then digits in groups of three with one kind of group mark and at
  * most one decimal mark. A number past `MAX_MONEY_CENTS` is held there.
  */
-export function tryParseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FORMAT): number | null {
+export function tryParseMoneyToCents(
+  raw: string,
+  format: MoneyFormat = EU_MONEY_FORMAT,
+): number | null {
   const edge = splitSymbolAndSign(raw.trim().replace(/\u2212/g, '-'), format.symbol)
   if (edge === null || !/\d/.test(edge.number)) return null
   const cents = centsFromNumber(edge.number, format)
@@ -155,7 +165,10 @@ export function tryParseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY
  * before or after a leading symbol ("-€5", "€-5"); a symbol may lead or trail but not both, and a second one is left
  * in the number where it fails.
  */
-function splitSymbolAndSign(typed: string, symbol: string): { number: string; negative: boolean } | null {
+function splitSymbolAndSign(
+  typed: string,
+  symbol: string,
+): { number: string; negative: boolean } | null {
   let rest = typed
   let negative = false
   let signs = 0
@@ -190,7 +203,10 @@ function escapeRegExp(text: string): string {
 }
 
 const GROUP_MARK = /[.,\s\u00a0\u202f'\u2019]/
-const sameMark = (a: string, b: string) => a.replace(/[\u00a0\u202f]/g, ' ') === b.replace(/[\u00a0\u202f]/g, ' ')
+const sameMark = (
+  a: string,
+  b: string,
+) => a.replace(/[\u00a0\u202f]/g, ' ') === b.replace(/[\u00a0\u202f]/g, ' ')
 
 /** The digits of an integer part written with group marks, or null: one run of digits, or 1 to 3 then groups of 3 joined by one kind of mark. */
 function wholeDigits(whole: string): string | null {
@@ -207,7 +223,10 @@ function wholeDigits(whole: string): string | null {
  * is written: the integer part is one run of digits, or 1 to 3 digits then groups of exactly 3 joined by one kind of
  * mark (a point, comma, space or apostrophe); the decimal mark, picked as `parseMoneyToCents` picks it, comes once.
  */
-function centsFromNumber(number: string, format: MoneyFormat): number | null {
+function centsFromNumber(
+  number: string,
+  format: MoneyFormat,
+): number | null {
   if (!/^[\d.,\s\u00a0\u202f'\u2019]+$/.test(number)) return null
   const typed = number.replace(/^(\d+)[.,]$/, '$1')
   const mark = decimalMark(typed.replace(/[\s\u00a0\u202f]/g, ' '), format, true)
@@ -245,10 +264,15 @@ export function tryParsePercentToFraction(raw: string): number | null {
 const LONE_POINT = /^[^.,]*\.\d{1,2}(?!\d)[^.,]*$/
 const LONE_COMMA = /^[^.,]*,\d{1,2}(?!\d)[^.,]*$/
 
-function decimalMark(body: string, format: MoneyFormat, otherMayBeDecimal: boolean): string {
+function decimalMark(
+  body: string,
+  format: MoneyFormat,
+  otherMayBeDecimal: boolean,
+): string {
   // Both marks in one amount: the earlier is a group mark and the later the decimal one, whichever the format
   // writes its decimals with ("1,234.56" in a comma format is 1.234,56, not 1,23).
-  if (otherMayBeDecimal && body.includes('.') && body.includes(',')) return body.lastIndexOf('.') > body.lastIndexOf(',') ? '.' : ','
+  if (otherMayBeDecimal && body.includes('.') && body.includes(','))
+    return body.lastIndexOf('.') > body.lastIndexOf(',') ? '.' : ','
   if (otherMayBeDecimal) {
     if (format.decimalSeparator === ',' && LONE_POINT.test(body)) return '.'
     if (format.decimalSeparator === '.' && LONE_COMMA.test(body)) return ','
@@ -256,7 +280,11 @@ function decimalMark(body: string, format: MoneyFormat, otherMayBeDecimal: boole
   return format.decimalSeparator
 }
 
-function parseCents(raw: string, format: MoneyFormat, otherMayBeDecimal: boolean): number {
+function parseCents(
+  raw: string,
+  format: MoneyFormat,
+  otherMayBeDecimal: boolean,
+): number {
   const stripped = raw.replace(/[\s\u00a0]/g, '')
   if (stripped === '') return 0
   const negative = stripped.startsWith('-')
@@ -282,7 +310,10 @@ export function parsePercentToFraction(
   raw: string,
   format: MoneyFormat = EU_MONEY_FORMAT,
 ): number {
-  const stripped = raw.replace(/%/g, '').replace(/[\s\u00a0]/g, '').trim()
+  const stripped = raw
+    .replace(/%/g, '')
+    .replace(/[\s\u00a0]/g, '')
+    .trim()
   const lone = (stripped.match(/[.,]/g) ?? []).length === 1
   const cleaned = lone ? stripped.replace(/[.,]/, '.') : stripped.replace(format.decimalSeparator, '.')
   if (cleaned === '') return 0
@@ -324,12 +355,18 @@ export function formatPercentInput(
  * own verbatim copy. A currency whose symbol goes on the other side is then one change,
  * not two, and the second is the one you forget.
  */
-export function applySymbol(body: string, format: MoneyFormat): string {
+export function applySymbol(
+  body: string,
+  format: MoneyFormat,
+): string {
   return format.symbolPosition === 'prefix' ? `${format.symbol}${body}` : `${body} ${format.symbol}`
 }
 
 /** Localized string for editable money inputs (no symbol), e.g. 110 -> "1,10". */
-export function formatMoneyInput(cents: number, format: MoneyFormat = EU_MONEY_FORMAT): string {
+export function formatMoneyInput(
+  cents: number,
+  format: MoneyFormat = EU_MONEY_FORMAT,
+): string {
   return formatCents(cents, format, false)
 }
 
@@ -359,7 +396,10 @@ export function formatCents(
 }
 
 /** Compact display, e.g. 145660 -> "1.457 €" (no decimals), for dense charts. */
-export function formatCentsCompact(cents: number, format: MoneyFormat = EU_MONEY_FORMAT): string {
+export function formatCentsCompact(
+  cents: number,
+  format: MoneyFormat = EU_MONEY_FORMAT,
+): string {
   const negative = cents < 0
   const whole = Math.round(Math.abs(cents) / 100)
   const body = applySymbol(whole.toLocaleString(format.locale), format)

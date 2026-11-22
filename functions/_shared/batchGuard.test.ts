@@ -6,8 +6,7 @@ import { guardSql, isGuardFailure } from './batchGuard'
 let db: DatabaseSync
 let d1: D1Database
 
-const labelCount = (): number =>
-  (db.prepare('SELECT COUNT(*) AS n FROM labels').get() as { n: number }).n
+const labelCount = (): number => (db.prepare('SELECT COUNT(*) AS n FROM labels').get() as { n: number }).n
 
 beforeEach(() => {
   db = migratedDatabase()
@@ -69,7 +68,10 @@ describe('isGuardFailure', () => {
     const failures: Array<[string, () => D1PreparedStatement[]]> = [
       ['a unique constraint', () => [d1.prepare("INSERT INTO owner_revision (owner, token) VALUES ('dup', 'y')")]],
       ['a missing value', () => [d1.prepare("INSERT INTO labels (owner) VALUES ('o')")]],
-      ['a foreign key', () => [d1.prepare('INSERT INTO transaction_labels (transaction_id, label_id) VALUES (99, 99)')]],
+      [
+        'a foreign key',
+        () => [d1.prepare('INSERT INTO transaction_labels (transaction_id, label_id) VALUES (99, 99)')],
+      ],
       ['a table that is not there', () => [d1.prepare('SELECT * FROM no_such_table')]],
       ['too many bound values', () => [d1.prepare('SELECT ?, ?, ?').bind(1, 2, 3)]],
       ['text that is not JSON', () => [d1.prepare("SELECT value FROM json_each('{ nope')")]],

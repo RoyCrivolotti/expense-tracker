@@ -15,23 +15,49 @@ const accounts = [makeWealthAccount({ id: 1, kind: 'investment' }), makeWealthAc
 
 /** A plan with nothing to be paid in and no house: only the starting amount grows. */
 const still = (over: Partial<GoalScenario> = {}) =>
-  samplePlan({ monthlyContributionCents: 0, contributionSchedule: [], housePurchaseYear: null, lifeEvents: [], planStartDate: START, ...over })
+  samplePlan({
+    monthlyContributionCents: 0,
+    contributionSchedule: [],
+    housePurchaseYear: null,
+    lifeEvents: [],
+    planStartDate: START,
+    ...over,
+  })
 /** A plan that pays in 1.000 a month and has no house. */
 const paying = (over: Partial<GoalScenario> = {}) =>
   samplePlan({ housePurchaseYear: null, lifeEvents: [], planStartDate: START, ...over })
 
 const years = (date: string) => yearOffsetFromDate(START, date)!
-const toNominal = (real: number, date: string) => Math.round(real * Math.pow(1 + I, years(date)))
-const checkin = (id: number, date: string, nominal: number) =>
-  makeWealthCheckin({ id, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }, { accountId: 2, valueCents: 0 }] })
-const deposit = (date: string, amountCents: number) =>
-  makeTransaction({ date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents })
+const toNominal = (
+  real: number,
+  date: string,
+) => Math.round(real * Math.pow(1 + I, years(date)))
+const checkin = (
+  id: number,
+  date: string,
+  nominal: number,
+) =>
+  makeWealthCheckin({
+    id,
+    checkinDate: date,
+    entries: [
+      { accountId: 1, valueCents: nominal },
+      { accountId: 2, valueCents: 0 },
+    ],
+  })
+const deposit = (
+  date: string,
+  amountCents: number,
+) => makeTransaction({ date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents })
 
 /**
  * The plan's own path with the monthly amounts paid continuously, summed in small steps: a second
  * way of getting what the engine gets in closed form. Events are not in it, so it is for plans without.
  */
-function ownPath(plan: GoalScenario, to: number): number {
+function ownPath(
+  plan: GoalScenario,
+  to: number,
+): number {
   const r = plan.expectedRealReturn
   const steps = Math.max(1, Math.round(to * 730))
   const dt = to / steps
@@ -44,7 +70,11 @@ function ownPath(plan: GoalScenario, to: number): number {
   return plan.startInvestedCents * Math.pow(1 + r, to) + flows
 }
 
-function split(plan: GoalScenario, checkins: ReturnType<typeof checkin>[], transactions = [] as ReturnType<typeof deposit>[]): GapSplit {
+function split(
+  plan: GoalScenario,
+  checkins: ReturnType<typeof checkin>[],
+  transactions = [] as ReturnType<typeof deposit>[],
+): GapSplit {
   const out = splitGap(plan, checkins, accounts, transactions, I)
   if (out.kind !== 'split') throw new Error(`no split: ${out.reason}`)
   return out
@@ -71,12 +101,23 @@ describe('splitGap: the four parts are the gap', () => {
         monthlyContributionCents: Math.round(rand() * 300_000),
         expectedRealReturn: rand() * 0.09,
         housePurchaseYear: [null, 3, 6][Math.floor(rand() * 3)]!,
-        lifeEvents: rand() < 0.5 ? [{ year: 4, amountCents: Math.round((rand() - 0.5) * 4_000_000), label: 'Event' }] : [],
+        lifeEvents:
+          rand() < 0.5 ? [{ year: 4, amountCents: Math.round((rand() - 0.5) * 4_000_000), label: 'Event' }] : [],
         contributionSchedule: rand() < 0.4 ? [{ from: '2028-03', monthlyCents: Math.round(rand() * 300_000) }] : [],
       })
-      const dates = ['2026-03-17', '2027-02-09', '2028-05-30', '2029-10-12', '2031-01-01'].slice(0, 2 + Math.floor(rand() * 4))
+      const dates = ['2026-03-17', '2027-02-09', '2028-05-30', '2029-10-12', '2031-01-01'].slice(
+        0,
+        2 + Math.floor(rand() * 4),
+      )
       const checkins = dates.map((d, k) => checkin(k + 1, d, Math.round(rand() * 40_000_000)))
-      const flows = dates.slice(1).flatMap((d, k) => (rand() < 0.7 ? [deposit(d.replace(/-\d\d$/, '-02'), Math.round((rand() - 0.2) * 3_000_000))] : []).slice(0, 1 + k % 2))
+      const flows = dates
+        .slice(1)
+        .flatMap((d, k) =>
+          (rand() < 0.7 ? [deposit(d.replace(/-\d\d$/, '-02'), Math.round((rand() - 0.2) * 3_000_000))] : []).slice(
+            0,
+            1 + (k % 2),
+          ),
+        )
       const out = splitGap(plan, checkins, accounts, flows, I)
       if (out.kind !== 'split') continue
       const last = checkins[checkins.length - 1]!
@@ -97,9 +138,10 @@ describe('splitGap: each kind of difference lands in its own part', () => {
    * carried on. The line is drawn straight between year ends, so a balance on the plan's exact own path
    * is a little off it mid-year; that is how the status counts it too.
    */
-  const startOf = (plan: GoalScenario, real: number) =>
-    Math.round(trackStatus(checkin(1, a, toNominal(real, a)), plan, accounts, I)!.deltaCents * growth(plan))
-
+  const startOf = (
+    plan: GoalScenario,
+    real: number,
+  ) => Math.round(trackStatus(checkin(1, a, toNominal(real, a)), plan, accounts, I)!.deltaCents * growth(plan))
 
   it('a start that was off is the start part, grown at the plan return, and nothing else moves', () => {
     const plan = still()
@@ -112,13 +154,20 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     expect(out.merged).toBeNull()
   })
 
-  it('a balance on the plan\'s line at both check-ins has no start part, however long after the start the first is', () => {
+  it("a balance on the plan's line at both check-ins has no start part, however long after the start the first is", () => {
     const plan = paying()
-    const onLine = (id: number, date: string) => {
+    const onLine = (
+      id: number,
+      date: string,
+    ) => {
       const probe = trackStatus(checkin(id, date, 1), plan, accounts, I)!
       return checkin(id, date, toNominal(probe.projectedInvestedCents, date))
     }
-    for (const [first, last] of [['2026-07-01', '2027-01-01'], ['2031-07-01', '2032-01-01'], ['2035-07-01', '2036-01-01']] as const) {
+    for (const [first, last] of [
+      ['2026-07-01', '2027-01-01'],
+      ['2031-07-01', '2032-01-01'],
+      ['2035-07-01', '2036-01-01'],
+    ] as const) {
       const out = split(plan, [onLine(1, first), onLine(2, last)])
       expect(Math.abs(out.gapCents)).toBeLessThanOrEqual(5)
       expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(5)
@@ -132,7 +181,11 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const when = '2027-02-10'
     const real = 5_000_000 / Math.pow(1 + I, years(when))
     const reached = m * growth(plan) + real * Math.pow(1 + plan.expectedRealReturn, years(b) - years(when))
-    const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], [deposit(when, 5_000_000)])
+    const out = split(
+      plan,
+      [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))],
+      [deposit(when, 5_000_000)],
+    )
     const expected = real * Math.pow(1 + plan.expectedRealReturn, years(b) - years(when))
     expect(Math.abs(out.parts.saving - expected)).toBeLessThanOrEqual(4)
     expect(Math.abs(out.parts.start - startOf(plan, m))).toBeLessThanOrEqual(3)
@@ -162,9 +215,42 @@ describe('splitGap: each kind of difference lands in its own part', () => {
   it('investing exactly as planned, month by month, leaves only the way the plan counts time', () => {
     const plan = paying()
     const m = ownPath(plan, years(a))
-    const months = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04', '2027-05', '2027-06', '2027-07', '2027-08', '2027-09', '2027-10', '2027-11', '2027-12', '2028-01', '2028-02', '2028-03']
-    const flows = months.map((month) => deposit(`${month}-01`, 100_000 * Math.round(Math.pow(1 + I, years(`${month}-01`)))) )
-    const recorded = flows.reduce((s, f) => s + (f.amountCents / Math.pow(1 + I, years(f.date))) * Math.pow(1 + plan.expectedRealReturn, years(b) - years(f.date)), 0)
+    const months = [
+      '2026-04',
+      '2026-05',
+      '2026-06',
+      '2026-07',
+      '2026-08',
+      '2026-09',
+      '2026-10',
+      '2026-11',
+      '2026-12',
+      '2027-01',
+      '2027-02',
+      '2027-03',
+      '2027-04',
+      '2027-05',
+      '2027-06',
+      '2027-07',
+      '2027-08',
+      '2027-09',
+      '2027-10',
+      '2027-11',
+      '2027-12',
+      '2028-01',
+      '2028-02',
+      '2028-03',
+    ]
+    const flows = months.map((month) =>
+      deposit(`${month}-01`, 100_000 * Math.round(Math.pow(1 + I, years(`${month}-01`)))),
+    )
+    const recorded = flows.reduce(
+      (s, f) =>
+        s +
+        (f.amountCents / Math.pow(1 + I, years(f.date))) *
+          Math.pow(1 + plan.expectedRealReturn, years(b) - years(f.date)),
+      0,
+    )
     const reached = m * growth(plan) + recorded
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], flows)
     expect(out.merged).toBeNull()
@@ -180,7 +266,10 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const plan = paying()
     const m = ownPath(plan, years(a))
     const flows = [deposit('2027-01-02', 400_000)]
-    const reached = m * growth(plan) + (400_000 / Math.pow(1 + I, years('2027-01-02'))) * Math.pow(1 + plan.expectedRealReturn, years(b) - years('2027-01-02'))
+    const reached =
+      m * growth(plan) +
+      (400_000 / Math.pow(1 + I, years('2027-01-02'))) *
+        Math.pow(1 + plan.expectedRealReturn, years(b) - years('2027-01-02'))
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], flows)
     expect(out.merged).toBeNull()
     expect(out.recordedShort).toBe(true)
@@ -226,7 +315,14 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     const pre = line.find((p) => p.year === 2)!.preEventInvestedCents
     const prior = line.find((p) => p.year === 1)!.investedCents
     const real = prior + (pre - prior) * (t - 1)
-    const out = split(house, [checkin(1, '2026-03-01', toNominal(ownPath({ ...house, housePurchaseYear: null }, years('2026-03-01')), '2026-03-01')), checkin(2, before, toNominal(real, before))])
+    const out = split(house, [
+      checkin(
+        1,
+        '2026-03-01',
+        toNominal(ownPath({ ...house, housePurchaseYear: null }, years('2026-03-01')), '2026-03-01'),
+      ),
+      checkin(2, before, toNominal(real, before)),
+    ])
     const payment = pre - line.find((p) => p.year === 2)!.investedCents
     expect(payment).toBeGreaterThan(5_000_000)
     expect(Math.abs(out.parts.timing)).toBeLessThan(0.02 * payment)
@@ -234,7 +330,13 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
   })
 
   /** The house plan with nothing paid in monthly, so the payment is the only flow, and what it takes out of the plan's own path. */
-  const bought = samplePlan({ housePurchaseYear: 2, lifeEvents: [], planStartDate: START, monthlyContributionCents: 0, contributionSchedule: [] })
+  const bought = samplePlan({
+    housePurchaseYear: 2,
+    lifeEvents: [],
+    planStartDate: START,
+    monthlyContributionCents: 0,
+    contributionSchedule: [],
+  })
   const payment = () => {
     const line = projectNetWorth(scenarioToParams(bought, I))
     return line.find((p) => p.year === 2)!.preEventInvestedCents - line.find((p) => p.year === 2)!.investedCents
@@ -248,9 +350,14 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     const before = ownPath({ ...bought, housePurchaseYear: null }, years(first))
     const reached = before * Math.pow(1 + r, years(last) - years(first)) - payment() * Math.pow(1 + r, years(last) - 2)
     const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
-    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    const out = split(
+      bought,
+      [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))],
+      [deposit(when, -paid)],
+    )
     expect(out.merged).toBeNull()
-    for (const part of [out.parts.start, out.parts.saving, out.parts.market]) expect(Math.abs(part)).toBeLessThan(0.02 * payment())
+    for (const part of [out.parts.start, out.parts.saving, out.parts.market])
+      expect(Math.abs(part)).toBeLessThan(0.02 * payment())
     expect(Math.abs(out.parts.timing)).toBeLessThan(0.02 * payment())
   })
 
@@ -264,7 +371,11 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
     const status = trackStatus(checkin(2, last, toNominal(reached, last)), bought, accounts, I)!
     expect(status.nearStep?.counted).toBe('made')
-    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    const out = split(
+      bought,
+      [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))],
+      [deposit(when, -paid)],
+    )
     expect(Math.abs(out.parts.timing)).toBeLessThan(0.02 * payment())
     expect(Math.abs(out.parts.saving)).toBeLessThan(0.02 * payment())
   })
@@ -277,7 +388,11 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     const before = ownPath({ ...bought, housePurchaseYear: null }, years(first))
     const reached = before * Math.pow(1 + r, years(last) - years(first)) - payment() * Math.pow(1 + r, years(last) - 2)
     const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
-    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    const out = split(
+      bought,
+      [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))],
+      [deposit(when, -paid)],
+    )
     expect(out.merged).toBeNull()
     expect(Math.abs(out.parts.saving)).toBeLessThan(0.05 * payment())
     expect(Math.abs(out.parts.market)).toBeLessThan(0.05 * payment())
@@ -293,7 +408,11 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     // The account still holds the house money on 3 February: the withdrawal is a week away.
     const reached = before * Math.pow(1 + r, years(last) - years(first))
     const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
-    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    const out = split(
+      bought,
+      [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))],
+      [deposit(when, -paid)],
+    )
     expect(Math.abs(out.parts.saving)).toBeLessThan(0.05 * payment())
     expect(Math.abs(out.parts.market)).toBeLessThan(0.05 * payment())
   })
@@ -301,8 +420,12 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
   it('a house payment the account shows but no transaction records is held with the saving and the market', () => {
     const after = '2028-03-01'
     const first = '2027-03-01'
-    const real = (projectNetWorth(scenarioToParams(house, I)).find((p) => p.year === 2)!.investedCents)
-    const out = split(house, [checkin(1, first, toNominal(real * 0.6, first)), checkin(2, after, toNominal(real * 0.65, after))], [deposit('2027-06-01', 100_000)])
+    const real = projectNetWorth(scenarioToParams(house, I)).find((p) => p.year === 2)!.investedCents
+    const out = split(
+      house,
+      [checkin(1, first, toNominal(real * 0.6, first)), checkin(2, after, toNominal(real * 0.65, after))],
+      [deposit('2027-06-01', 100_000)],
+    )
     expect(out.merged).toBe('event-unrecorded')
   })
 
@@ -310,16 +433,21 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     const after = '2028-03-01'
     const first = '2027-03-01'
     const line = projectNetWorth(scenarioToParams(house, I))
-    const payment = line.find((p) => p.year === 2)!.preEventInvestedCents - line.find((p) => p.year === 2)!.investedCents
+    const payment =
+      line.find((p) => p.year === 2)!.preEventInvestedCents - line.find((p) => p.year === 2)!.investedCents
     const nominalPayment = Math.round(payment * Math.pow(1 + I, 2))
     // A year of 5% on 120.000, less the payment, plus the 1.000 put in: nothing out of the ordinary.
     const reached = Math.round(12_000_000 * 1.05 - nominalPayment + 100_000)
-    const out = split(house, [checkin(1, first, 12_000_000), checkin(2, after, reached)], [deposit('2028-01-03', -nominalPayment), deposit('2027-06-01', 100_000)])
+    const out = split(
+      house,
+      [checkin(1, first, 12_000_000), checkin(2, after, reached)],
+      [deposit('2028-01-03', -nominalPayment), deposit('2027-06-01', 100_000)],
+    )
     expect(out.merged).toBeNull()
   })
 })
 
-describe('splitGap: a recorded flow is the plan\'s house payment only when it matches in direction, date and size', () => {
+describe("splitGap: a recorded flow is the plan's house payment only when it matches in direction, date and size", () => {
   const house = samplePlan({ housePurchaseYear: 2, lifeEvents: [], planStartDate: START })
   const first = '2027-03-01'
   const after = '2028-03-01'
@@ -328,8 +456,15 @@ describe('splitGap: a recorded flow is the plan\'s house payment only when it ma
   const nominalPayment = Math.round(payment * Math.pow(1 + I, 2))
   // The account shows the payment taken out (and the 1.000 a month put in): the anniversary is 1 January 2028.
   const reached = Math.round(12_000_000 * 1.05 - nominalPayment + 100_000)
-  const merged = (date: string, amount: number) =>
-    split(house, [checkin(1, first, 12_000_000), checkin(2, after, reached)], [deposit(date, amount), deposit('2027-06-01', 100_000)]).merged
+  const merged = (
+    date: string,
+    amount: number,
+  ) =>
+    split(
+      house,
+      [checkin(1, first, 12_000_000), checkin(2, after, reached)],
+      [deposit(date, amount), deposit('2027-06-01', 100_000)],
+    ).merged
 
   it('counts a withdrawal of the payment near its date', () => {
     expect(merged('2028-01-03', -nominalPayment)).toBeNull()
@@ -372,7 +507,14 @@ describe('splitGap: when saving and the market cannot be told apart', () => {
   it('notes an investment account that was opened or closed between the two check-ins', () => {
     const plan = still()
     const two = makeWealthAccount({ id: 3, kind: 'investment' })
-    const opened = makeWealthCheckin({ id: 2, checkinDate: '2027-03-01', entries: [{ accountId: 1, valueCents: 5_000_000 }, { accountId: 3, valueCents: 400_000 }] })
+    const opened = makeWealthCheckin({
+      id: 2,
+      checkinDate: '2027-03-01',
+      entries: [
+        { accountId: 1, valueCents: 5_000_000 },
+        { accountId: 3, valueCents: 400_000 },
+      ],
+    })
     const out = splitGap(plan, [checkin(1, '2026-03-01', 5_000_000), opened], [...accounts, two], [], I)
     expect(out.kind === 'split' && out.accountsChanged).toBe(true)
     const same = split(plan, [checkin(1, '2026-03-01', 5_000_000), checkin(2, '2027-03-01', 5_300_000)])
@@ -383,12 +525,13 @@ describe('splitGap: when saving and the market cannot be told apart', () => {
 describe('splitGap: the edges of its window', () => {
   it('needs the check-ins to be 30 days apart: 29 is too close and 30 is enough', () => {
     const plan = still()
-    const at = (last: string) => splitGap(plan, [checkin(1, '2026-03-01', 5_100_000), checkin(2, last, 5_110_000)], accounts, [], I)
+    const at = (last: string) =>
+      splitGap(plan, [checkin(1, '2026-03-01', 5_100_000), checkin(2, last, 5_110_000)], accounts, [], I)
     expect(at('2026-03-30')).toEqual({ kind: 'unavailable', reason: 'too-close' })
     expect(at('2026-03-31')).toMatchObject({ kind: 'split' })
   })
 
-  it('leaves out a flow dated the first check-in\'s day, which that balance already holds, and takes one the day after', () => {
+  it("leaves out a flow dated the first check-in's day, which that balance already holds, and takes one the day after", () => {
     const plan = paying()
     const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
     // None counted: the plan invests, nothing is recorded in the window, so the saving and the market are held together.
@@ -396,7 +539,7 @@ describe('splitGap: the edges of its window', () => {
     expect(split(plan, checkins, [deposit('2026-03-02', 100_000)]).merged).not.toBe('none-recorded')
   })
 
-  it('takes one dated the last check-in\'s day, and leaves out one the day after', () => {
+  it("takes one dated the last check-in's day, and leaves out one the day after", () => {
     const plan = paying()
     const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
     expect(split(plan, checkins, [deposit('2027-03-01', 100_000)]).merged).not.toBe('none-recorded')
@@ -406,7 +549,14 @@ describe('splitGap: the edges of its window', () => {
   it('does not count an archived investment account as one that was opened or closed', () => {
     const plan = still()
     const archived = makeWealthAccount({ id: 3, kind: 'investment', archived: true })
-    const opened = makeWealthCheckin({ id: 2, checkinDate: '2027-03-01', entries: [{ accountId: 1, valueCents: 5_000_000 }, { accountId: 3, valueCents: 400_000 }] })
+    const opened = makeWealthCheckin({
+      id: 2,
+      checkinDate: '2027-03-01',
+      entries: [
+        { accountId: 1, valueCents: 5_000_000 },
+        { accountId: 3, valueCents: 400_000 },
+      ],
+    })
     const out = splitGap(plan, [checkin(1, '2026-03-01', 5_000_000), opened], [...accounts, archived], [], I)
     expect(out.kind === 'split' && out.accountsChanged).toBe(false)
   })
@@ -415,7 +565,11 @@ describe('splitGap: the edges of its window', () => {
 describe('splitGap: what it says about itself', () => {
   it('names the check-ins it measures from and to, the verdict, and what a planned month is in the plan’s money', () => {
     const plan = paying()
-    const out = split(plan, [checkin(1, '2026-03-01', 5_200_000), checkin(2, '2027-03-01', 20_000_000)], [deposit('2026-06-01', 100_000)])
+    const out = split(
+      plan,
+      [checkin(1, '2026-03-01', 5_200_000), checkin(2, '2027-03-01', 20_000_000)],
+      [deposit('2026-06-01', 100_000)],
+    )
     expect(out.fromDate).toBe('2026-03-01')
     expect(out.toDate).toBe('2027-03-01')
     expect(out.verdict).toBe('ahead')
@@ -432,14 +586,28 @@ describe('splitGap: what it says about itself', () => {
 
   it('measures from the first check-in on or after the start and leaves the ones before it out', () => {
     const plan = still()
-    const out = split(plan, [checkin(1, '2025-06-01', 1_000_000), checkin(2, '2026-03-01', 5_100_000), checkin(3, '2027-03-01', 5_300_000)])
+    const out = split(plan, [
+      checkin(1, '2025-06-01', 1_000_000),
+      checkin(2, '2026-03-01', 5_100_000),
+      checkin(3, '2027-03-01', 5_300_000),
+    ])
     expect(out.fromDate).toBe('2026-03-01')
   })
 
   it('uses the one logged last when two check-ins are on a day', () => {
     const plan = still()
-    const wrong = makeWealthCheckin({ id: 5, checkinDate: '2026-03-01', createdAt: '2026-03-01T08:00:00Z', entries: [{ accountId: 1, valueCents: 9_000_000 }] })
-    const right = makeWealthCheckin({ id: 6, checkinDate: '2026-03-01', createdAt: '2026-03-01T09:00:00Z', entries: [{ accountId: 1, valueCents: 5_100_000 }] })
+    const wrong = makeWealthCheckin({
+      id: 5,
+      checkinDate: '2026-03-01',
+      createdAt: '2026-03-01T08:00:00Z',
+      entries: [{ accountId: 1, valueCents: 9_000_000 }],
+    })
+    const right = makeWealthCheckin({
+      id: 6,
+      checkinDate: '2026-03-01',
+      createdAt: '2026-03-01T09:00:00Z',
+      entries: [{ accountId: 1, valueCents: 5_100_000 }],
+    })
     const out = split(plan, [wrong, right, checkin(7, '2027-03-01', 5_300_000)])
     const alone = split(plan, [right, checkin(7, '2027-03-01', 5_300_000)])
     expect(out.parts).toEqual(alone.parts)
@@ -451,9 +619,19 @@ describe('splitGap: when there is nothing to split', () => {
   it.each([
     ['no start date', still({ planStartDate: null }), two, 'no-start'],
     ['one check-in', still(), [two[0]!], 'few-checkins'],
-    ['a second one only a few days later', still(), [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2026-03-12', 5_110_000)], 'too-close'],
+    [
+      'a second one only a few days later',
+      still(),
+      [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2026-03-12', 5_110_000)],
+      'too-close',
+    ],
     ['a latest check-in past the plan’s last year', still({ horizonYears: 1 }), two, 'past-horizon'],
-    ['every check-in before the start', still(), [checkin(1, '2025-03-01', 5_100_000), checkin(2, '2025-09-01', 5_300_000)], 'few-checkins'],
+    [
+      'every check-in before the start',
+      still(),
+      [checkin(1, '2025-03-01', 5_100_000), checkin(2, '2025-09-01', 5_300_000)],
+      'few-checkins',
+    ],
   ] as const)('says why for %s', (_name, plan, checkins, reason) => {
     expect(splitGap(plan, [...checkins], accounts, [], I)).toEqual({ kind: 'unavailable', reason })
   })
@@ -498,7 +676,10 @@ describe('startExplainsGap', () => {
     accountsChanged: false,
     plannedMonthCents: 100_000,
   }
-  const with_ = (over: Partial<GapSplit>, parts: Partial<GapSplit['parts']> = {}): GapSplit => ({ ...base, ...over, parts: { ...base.parts, ...parts } })
+  const with_ = (
+    over: Partial<GapSplit>,
+    parts: Partial<GapSplit['parts']> = {},
+  ): GapSplit => ({ ...base, ...over, parts: { ...base.parts, ...parts } })
 
   it('is true when the start is about the size of a gap that is worth several planned months', () => {
     expect(startExplainsGap(base)).toBe(true)

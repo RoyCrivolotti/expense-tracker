@@ -18,7 +18,10 @@ export const OWNER_KEYS = {
 } as const
 
 /** `base` for `owner`. With no one signed in (the demo, a test) it is `base` itself, as it was for everyone before. */
-export const ownerKey = (base: string, owner: string | undefined): string => (owner ? `${base}:${owner}` : base)
+export const ownerKey = (
+  base: string,
+  owner: string | undefined,
+): string => (owner ? `${base}:${owner}` : base)
 
 /**
  * Removes what earlier builds kept under keys that named no one. It cannot be told whose it is, and it is not

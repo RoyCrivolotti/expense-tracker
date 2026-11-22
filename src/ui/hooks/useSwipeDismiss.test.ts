@@ -7,7 +7,10 @@ const SHEET_HEIGHT = 400
 const THRESHOLD = dismissThresholdPx(SHEET_HEIGHT)
 
 /** jsdom has no TouchEvent constructor, and the hook only ever reads `touches[0]`. */
-function touch(type: string, clientY: number): Event {
+function touch(
+  type: string,
+  clientY: number,
+): Event {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'touches', { value: [{ clientY }] })
   return event
@@ -38,7 +41,11 @@ function setup({ scrollTop = 0, enabled = true } = {}) {
 const DELIBERATE_MS = 1000
 
 /** Press at y=0, move through each waypoint `ms` apart, lift at the last one. */
-function dragVia(from: Element, waypoints: number[], ms = DELIBERATE_MS) {
+function dragVia(
+  from: Element,
+  waypoints: number[],
+  ms = DELIBERATE_MS,
+) {
   act(() => {
     from.dispatchEvent(touch('touchstart', 0))
   })
@@ -54,7 +61,11 @@ function dragVia(from: Element, waypoints: number[], ms = DELIBERATE_MS) {
 }
 
 /** Press at y=0 on `from`, move to `distance`, lift. `ms` sets the drag's velocity. */
-function drag(from: Element, distance: number, ms = DELIBERATE_MS) {
+function drag(
+  from: Element,
+  distance: number,
+  ms = DELIBERATE_MS,
+) {
   act(() => {
     from.dispatchEvent(touch('touchstart', 0))
   })
@@ -116,7 +127,10 @@ describe('useSwipeDismiss', () => {
 
   describe('a touch that starts in a text field', () => {
     /** Press in `field`, drag well past the dead zone, lift. Returns the last move event. */
-    function dragFrom(field: Element, distance = THRESHOLD + 20): Event {
+    function dragFrom(
+      field: Element,
+      distance = THRESHOLD + 20,
+    ): Event {
       const move = touch('touchmove', distance)
       act(() => {
         field.dispatchEvent(touch('touchstart', 0))

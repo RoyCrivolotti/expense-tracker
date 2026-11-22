@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { anchorShift, captureAnchor, readChrome, readSamples } from './windowDom'
 
-function rect(top: number, height: number): DOMRect {
+function rect(
+  top: number,
+  height: number,
+): DOMRect {
   return { top, bottom: top + height, height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }
 }
 
@@ -37,7 +40,10 @@ describe('readSamples', () => {
 })
 
 describe('readChrome', () => {
-  function withHeader(height: number, rowGap: string) {
+  function withHeader(
+    height: number,
+    rowGap: string,
+  ) {
     const list = document.createElement('div')
     list.style.rowGap = rowGap
     const header = document.createElement('div')

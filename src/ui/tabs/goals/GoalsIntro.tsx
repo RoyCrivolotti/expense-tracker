@@ -10,9 +10,8 @@ export function GoalsIntro() {
   return (
     <>
       <p className={styles.intro}>
-        Project your net worth and when you can reach financial independence. Horizon sets how far
-        the projection runs and where FI is searched. Adjust the controls, save a scenario, then
-        compare scenarios on the charts.
+        Project your net worth and when you can reach financial independence. Horizon sets how far the projection runs
+        and where FI is searched. Adjust the controls, save a scenario, then compare scenarios on the charts.
       </p>
       <GoalsExplainer />
     </>

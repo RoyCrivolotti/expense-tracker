@@ -10,7 +10,10 @@ export function transactionQueryString(
   { limit, cursor }: { limit?: number | undefined; cursor?: string | undefined } = {},
 ): string {
   const params = new URLSearchParams()
-  const put = (key: string, value: string | number | undefined) => {
+  const put = (
+    key: string,
+    value: string | number | undefined,
+  ) => {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
   put('month', filter.month)

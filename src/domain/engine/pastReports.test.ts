@@ -5,11 +5,17 @@ import { listPastReports, pastReportDrifted } from './pastReports'
 
 const WORK = makeFlag({ id: 4, name: 'Work travel' })
 
-const payment = (id: number, date: string, description = 'Alicante expenses, September 2026') =>
-  makeTransaction({ id, date, description, type: 'refund', amountCents: 12_000 })
+const payment = (
+  id: number,
+  date: string,
+  description = 'Alicante expenses, September 2026',
+) => makeTransaction({ id, date, description, type: 'refund', amountCents: 12_000 })
 
-const covered = (id: number, settledBy: number, overrides: Partial<Transaction> = {}) =>
-  makeTransaction({ id, flagId: 4, settledBy, amountCents: 10_000, ...overrides })
+const covered = (
+  id: number,
+  settledBy: number,
+  overrides: Partial<Transaction> = {},
+) => makeTransaction({ id, flagId: 4, settledBy, amountCents: 10_000, ...overrides })
 
 describe('listPastReports', () => {
   it('lists one entry per payment, with what it covered', () => {
@@ -34,12 +40,7 @@ describe('listPastReports', () => {
 
   it('lists newest first, like the rest of the app', () => {
     const reports = listPastReports(
-      [
-        covered(1, 98),
-        covered(2, 99),
-        payment(98, '2026-05-02'),
-        payment(99, '2026-07-11'),
-      ],
+      [covered(1, 98), covered(2, 99), payment(98, '2026-05-02'), payment(99, '2026-07-11')],
       [WORK],
     )
 
@@ -90,10 +91,7 @@ describe('listPastReports', () => {
     // The auto-label the flag was configured with is still on those rows.
     const withAutoLabel = makeFlag({ id: 4, autoLabelId: 7 })
     const reports = listPastReports(
-      [
-        makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [7] }),
-        payment(99, '2026-06-14'),
-      ],
+      [makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [7] }), payment(99, '2026-06-14')],
       [withAutoLabel],
     )
 
@@ -103,10 +101,7 @@ describe('listPastReports', () => {
   it('falls back to a stand-in flag when no row carries flagId or a matching auto-label', () => {
     const withAutoLabel = makeFlag({ id: 4, autoLabelId: 7 })
     const reports = listPastReports(
-      [
-        makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [8] }),
-        payment(99, '2026-06-14'),
-      ],
+      [makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [8] }), payment(99, '2026-06-14')],
       [withAutoLabel],
     )
 
@@ -116,7 +111,12 @@ describe('listPastReports', () => {
 })
 
 /** A payment carrying the snapshot the settle stamps on it (migration 0021). */
-const stamped = (id: number, date: string, count: number, coveredCents: number) =>
+const stamped = (
+  id: number,
+  date: string,
+  count: number,
+  coveredCents: number,
+) =>
   makeTransaction({
     id,
     date,

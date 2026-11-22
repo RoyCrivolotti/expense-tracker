@@ -12,7 +12,10 @@ type Entries = Map<IDBValidKey, unknown>
 export interface FakeIndexedDb {
   /** The stores of the database, by name, as plain maps, for a test to look at or seed. */
   stores: Map<string, Entries>
-  failNext(method: 'get' | 'put' | 'delete' | 'getAllKeys', error?: Error): void
+  failNext(
+    method: 'get' | 'put' | 'delete' | 'getAllKeys',
+    error?: Error,
+  ): void
   /** From now on `indexedDB.open` returns a request that neither succeeds nor fails. */
   hangOpen(): void
   /** Resolves once no request has been in flight for a few turns. Call it after anything lazy the code under test loads has loaded. */
@@ -27,8 +30,18 @@ interface Shared {
   inFlight: { n: number }
 }
 
-function request<T>(shared: Shared, method: string, pending: { n: number }, run: () => T): IDBRequest<T> {
-  const req = { result: undefined as T, error: null as Error | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) }
+function request<T>(
+  shared: Shared,
+  method: string,
+  pending: { n: number },
+  run: () => T,
+): IDBRequest<T> {
+  const req = {
+    result: undefined as T,
+    error: null as Error | null,
+    onsuccess: null as null | (() => void),
+    onerror: null as null | (() => void),
+  }
   pending.n += 1
   shared.inFlight.n += 1
   setTimeout(() => {
@@ -48,11 +61,16 @@ function request<T>(shared: Shared, method: string, pending: { n: number }, run:
   return req as unknown as IDBRequest<T>
 }
 
-function storeApi(shared: Shared, name: string, pending: { n: number }): IDBObjectStore {
+function storeApi(
+  shared: Shared,
+  name: string,
+  pending: { n: number },
+): IDBObjectStore {
   const entries = shared.stores.get(name)!
   return {
     get: (key: IDBValidKey) => request(shared, 'get', pending, () => structuredClone(entries.get(key))),
-    put: (value: { key: IDBValidKey }) => request(shared, 'put', pending, () => (entries.set(value.key, structuredClone(value)), value.key)),
+    put: (value: { key: IDBValidKey }) =>
+      request(shared, 'put', pending, () => (entries.set(value.key, structuredClone(value)), value.key)),
     delete: (key: IDBValidKey) => request(shared, 'delete', pending, () => void entries.delete(key)),
     getAllKeys: () => request(shared, 'getAllKeys', pending, () => [...entries.keys()]),
   } as unknown as IDBObjectStore
@@ -68,7 +86,12 @@ export function installFakeIndexedDb(): FakeIndexedDb {
     close: () => undefined,
     transaction(name: string) {
       const pending = { n: 0 }
-      const tx = { oncomplete: null as null | (() => void), onerror: null as null | (() => void), error: null as Error | null, objectStore: () => storeApi(shared, name, pending) }
+      const tx = {
+        oncomplete: null as null | (() => void),
+        onerror: null as null | (() => void),
+        error: null as Error | null,
+        objectStore: () => storeApi(shared, name, pending),
+      }
       const settle = () => {
         if (pending.n > 0) return void setTimeout(settle, 0)
         tx.oncomplete?.()
@@ -80,7 +103,13 @@ export function installFakeIndexedDb(): FakeIndexedDb {
 
   const factory = {
     open() {
-      const req = { result: db, error: null, onsuccess: null as null | (() => void), onupgradeneeded: null as null | (() => void), onerror: null }
+      const req = {
+        result: db,
+        error: null,
+        onsuccess: null as null | (() => void),
+        onupgradeneeded: null as null | (() => void),
+        onerror: null,
+      }
       if (hanging) return req
       setTimeout(() => {
         if (shared.stores.size === 0) req.onupgradeneeded?.()
@@ -93,10 +122,14 @@ export function installFakeIndexedDb(): FakeIndexedDb {
 
   return {
     stores: shared.stores,
-    failNext: (method, error = new Error(`${method} failed`)) => void shared.failures.set(method, error),
+    failNext: (
+      method,
+      error = new Error(`${method} failed`),
+    ) => void shared.failures.set(method, error),
     hangOpen: () => void (hanging = true),
     settled: async () => {
-      for (let quiet = 0; quiet < 3; quiet = shared.inFlight.n === 0 ? quiet + 1 : 0) await new Promise((resolve) => setTimeout(resolve, 0))
+      for (let quiet = 0; quiet < 3; quiet = shared.inFlight.n === 0 ? quiet + 1 : 0)
+        await new Promise((resolve) => setTimeout(resolve, 0))
     },
     uninstall: () => {
       if (original) Object.defineProperty(globalThis, 'indexedDB', original)

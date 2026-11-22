@@ -88,11 +88,10 @@ function isRelevantFile(absPath) {
 
 const coverage = parseLcov(readFileSync(LCOV_PATH, 'utf8'))
 
-const diff = execFileSync(
-  'git',
-  ['diff', '--unified=0', `${base}...HEAD`, '--', '*.ts', '*.tsx'],
-  { encoding: 'utf8', maxBuffer: 1024 * 1024 * 100 },
-)
+const diff = execFileSync('git', ['diff', '--unified=0', `${base}...HEAD`, '--', '*.ts', '*.tsx'], {
+  encoding: 'utf8',
+  maxBuffer: 1024 * 1024 * 100,
+})
 const addedLines = parseAddedLines(diff)
 
 // A commit that only reformats code rewrites lines it did not change. When the repo lists such commits, a line is the

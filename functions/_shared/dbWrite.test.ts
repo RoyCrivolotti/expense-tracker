@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  insertTransaction,
-  updateTransaction,
-  bulkUpdateTransactions,
-  bulkInsertTransactions,
-} from './dbWrite'
+import { insertTransaction, updateTransaction, bulkUpdateTransactions, bulkInsertTransactions } from './dbWrite'
 import type { Env } from './env'
 import { AMOUNT_SIGN_MESSAGE } from '../domain/data/amountSign'
 import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
@@ -71,9 +66,7 @@ function envForBulkUpdate(opts: {
       // D1 runs a batch as one transaction; the stub just echoes each statement's own
       // meta, which is enough to tell the settle's changed-row count from the stamp's.
       batch: vi.fn((stmts: { meta?: { changes: number } }[]) =>
-        batchFails
-          ? Promise.reject(batchFails)
-          : Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes } }))),
+        batchFails ? Promise.reject(batchFails) : Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes } }))),
       ),
       prepare: (sql: string) => ({
         bind: () => {
@@ -273,9 +266,10 @@ describe('owner-scoped writes', () => {
   })
 
   it('updateTransaction rejects foreign accountId on patch', async () => {
-    await expect(
-      updateTransaction(envWith(null), 'a@b.com', 5, { accountId: 99 }),
-    ).rejects.toMatchObject({ status: 400, message: 'Invalid accountId' })
+    await expect(updateTransaction(envWith(null), 'a@b.com', 5, { accountId: 99 })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid accountId',
+    })
   })
 })
 
@@ -336,9 +330,10 @@ describe('bulkUpdateTransactions', () => {
 
 describe('updateTransaction settledBy guard', () => {
   it('rejects a settledBy that is not owned', async () => {
-    await expect(
-      updateTransaction(envWith(null), 'a@b.com', 5, { settledBy: 99 }),
-    ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
+    await expect(updateTransaction(envWith(null), 'a@b.com', 5, { settledBy: 99 })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid settledBy',
+    })
   })
 
   it('throws 409 when the guard blocks the update but the row does exist', async () => {
@@ -348,9 +343,7 @@ describe('updateTransaction settledBy guard', () => {
       updateMatches: false,
       targetExists: true,
     })
-    await expect(
-      updateTransaction(env, 'a@b.com', 5, { settledBy: 50 }),
-    ).rejects.toMatchObject({
+    await expect(updateTransaction(env, 'a@b.com', 5, { settledBy: 50 })).rejects.toMatchObject({
       status: 409,
       message: 'Transaction is already settled by another reimbursement',
     })
@@ -363,9 +356,10 @@ describe('updateTransaction settledBy guard', () => {
       updateMatches: false,
       targetExists: false,
     })
-    await expect(
-      updateTransaction(env, 'a@b.com', 5, { settledBy: 50 }),
-    ).rejects.toMatchObject({ status: 404, message: 'Transaction not found' })
+    await expect(updateTransaction(env, 'a@b.com', 5, { settledBy: 50 })).rejects.toMatchObject({
+      status: 404,
+      message: 'Transaction not found',
+    })
   })
 })
 
@@ -377,12 +371,9 @@ describe('updateTransaction amount sign against the stored row', () => {
   })
 
   it('accepts a negative amount alone on an investment row', async () => {
-    const updated = await updateTransaction(
-      envForSignCheck({ type: 'investment', amountCents: 1000 }),
-      'a@b.com',
-      5,
-      { amountCents: -500 },
-    )
+    const updated = await updateTransaction(envForSignCheck({ type: 'investment', amountCents: 1000 }), 'a@b.com', 5, {
+      amountCents: -500,
+    })
     expect(updated.id).toBe(5)
   })
 
@@ -394,8 +385,12 @@ describe('updateTransaction amount sign against the stored row', () => {
 
   it('does not read the row when the patch alone settles the question', async () => {
     const prepared: string[] = []
-    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, { amountCents: 500 })
-    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, { type: 'investment' })
+    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, {
+      amountCents: 500,
+    })
+    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, {
+      type: 'investment',
+    })
     await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, {
       amountCents: -500,
       type: 'investment',
@@ -404,9 +399,9 @@ describe('updateTransaction amount sign against the stored row', () => {
   })
 
   it('leaves a missing row to the update to report', async () => {
-    await expect(
-      updateTransaction(envForSignCheck(null), 'a@b.com', 5, { amountCents: -500 }),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(updateTransaction(envForSignCheck(null), 'a@b.com', 5, { amountCents: -500 })).rejects.toMatchObject({
+      status: 404,
+    })
   })
 })
 
@@ -421,7 +416,9 @@ describe('bulkUpdateTransactions withdrawals', () => {
 
   it('skips the check for a change to investment or one that leaves the type alone', async () => {
     const prepared: string[] = []
-    await bulkUpdateTransactions(envForBulkUpdate({ prepared, withdrawals: [1] }), 'a@b.com', [1], { type: 'investment' })
+    await bulkUpdateTransactions(envForBulkUpdate({ prepared, withdrawals: [1] }), 'a@b.com', [1], {
+      type: 'investment',
+    })
     await bulkUpdateTransactions(envForBulkUpdate({ prepared, withdrawals: [1] }), 'a@b.com', [1], { categoryId: 2 })
     expect(prepared.some((sql) => sql.includes('amount_cents < 0'))).toBe(false)
   })
@@ -443,9 +440,7 @@ describe('bulkUpdateTransactions settledBy guard', () => {
     const updateRan = { value: false }
     const env = envForBulkUpdate({ settledElsewhere: [2], updateRan })
 
-    await expect(
-      bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 }),
-    ).rejects.toMatchObject({
+    await expect(bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 })).rejects.toMatchObject({
       status: 409,
       message: 'Some of those transactions are already settled by another reimbursement',
     })
@@ -456,9 +451,10 @@ describe('bulkUpdateTransactions settledBy guard', () => {
     // Nothing is settled elsewhere when the pre-check runs, but a concurrent settle lands
     // before the batch. The check at the end of the batch fails and D1 undoes the batch.
     const env = envForBulkUpdate({ batchFails: new Error('D1_ERROR: integer overflow: SQLITE_ERROR') })
-    await expect(
-      bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 }),
-    ).rejects.toMatchObject({ status: 409, message: BULK_CHANGED_MESSAGE })
+    await expect(bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 })).rejects.toMatchObject({
+      status: 409,
+      message: BULK_CHANGED_MESSAGE,
+    })
   })
 
   it('passes any other batch failure on unchanged', async () => {
@@ -482,11 +478,7 @@ describe('bulkUpdateTransactions settledBy guard', () => {
  * Enough of D1 for the bulk insert: ownership answers come from `owned`, and every
  * INSERT is recorded so a test can show none was attempted.
  */
-function envForBulkInsert(opts: {
-  ownedAccounts?: number[]
-  ownedCategories?: number[]
-  inserted?: number[]
-}): Env {
+function envForBulkInsert(opts: { ownedAccounts?: number[]; ownedCategories?: number[]; inserted?: number[] }): Env {
   const { ownedAccounts = [1], ownedCategories = [2], inserted } = opts
   return {
     DB: {
@@ -648,9 +640,7 @@ describe('installment plan auto-completion', () => {
     const prepared: string[] = []
     const env = envForPlanCompletion({ planTotalCount: 3, planActive: false, prepared })
     await insertTransaction(env, 'a@b.com', { ...baseTxn, planId: 1, installmentIndex: 3 })
-    expect(
-      prepared.some((sql) => sql.includes('MAX(installment_index)') && sql.includes('cancelled = 0')),
-    ).toBe(false)
+    expect(prepared.some((sql) => sql.includes('MAX(installment_index)') && sql.includes('cancelled = 0'))).toBe(false)
     expect(prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(false)
   })
 
@@ -745,7 +735,10 @@ const autoLabelTxnRow = {
 }
 
 describe('bulkInsertTransactions', () => {
-  const row = (accountId: number, categoryId: number) => ({
+  const row = (
+    accountId: number,
+    categoryId: number,
+  ) => ({
     date: '2026-01-01',
     budgetMonth: '2026-01',
     description: 'Imported',
@@ -763,9 +756,7 @@ describe('bulkInsertTransactions', () => {
     const inserted: number[] = []
     const env = envForBulkInsert({ ownedAccounts: [1], inserted })
 
-    await expect(
-      bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(99, 2)]),
-    ).rejects.toThrow()
+    await expect(bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(99, 2)])).rejects.toThrow()
 
     expect(inserted).toEqual([])
   })
@@ -774,9 +765,7 @@ describe('bulkInsertTransactions', () => {
     const inserted: number[] = []
     const env = envForBulkInsert({ ownedCategories: [2], inserted })
 
-    await expect(
-      bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(1, 77)]),
-    ).rejects.toThrow()
+    await expect(bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(1, 77)])).rejects.toThrow()
 
     expect(inserted).toEqual([])
   })

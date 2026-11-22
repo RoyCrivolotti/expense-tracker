@@ -44,7 +44,10 @@ export interface InMemoryAccessDb {
     email: string,
     opts?: { grantedBy?: string | null; groups?: AccessGroupId[] },
   ): void
-  seedPendingRequest(id: string, email: string): void
+  seedPendingRequest(
+    id: string,
+    email: string,
+  ): void
 }
 
 export const NOW = '2026-01-01T00:00:00.000Z'
@@ -57,7 +60,11 @@ export function activeUsers(users: Map<string, AllowedRow>): AllowedRow[] {
   return [...users.values()].filter((row) => row.status === 'active')
 }
 
-export function bindStatement(sql: string, state: AccessState, args: unknown[] = []): BoundStmt {
+export function bindStatement(
+  sql: string,
+  state: AccessState,
+  args: unknown[] = [],
+): BoundStmt {
   return {
     sql,
     args,
@@ -106,7 +113,10 @@ export function createInMemoryAccessDb(): InMemoryAccessDb {
     get revisionBumps() {
       return state.revisionBumps
     },
-    seedActiveUser(email, opts = {}) {
+    seedActiveUser(
+      email,
+      opts = {},
+    ) {
       state.users.set(email, {
         email,
         status: 'active',
@@ -116,7 +126,10 @@ export function createInMemoryAccessDb(): InMemoryAccessDb {
       })
       if (opts.groups?.length) state.grants.set(email, new Set(opts.groups))
     },
-    seedPendingRequest(id, email) {
+    seedPendingRequest(
+      id,
+      email,
+    ) {
       state.requests.set(id, {
         id,
         email,

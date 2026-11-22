@@ -104,7 +104,10 @@ export function assertStatementAllowed(
 }
 
 /** The `--confirm` flag must repeat the database name, so a pasted command cannot write by accident. */
-export function assertConfirmed(database: string, confirm: string | undefined): void {
+export function assertConfirmed(
+  database: string,
+  confirm: string | undefined,
+): void {
   if (confirm !== database) {
     throw new Error(`Writes need --confirm ${database || '<database>'} to repeat the database name`)
   }

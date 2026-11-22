@@ -12,7 +12,10 @@ import { useToast } from '../hooks/useToast'
  * the row it was told about and offers Link or Add anyway. `moveOn` is called once a link has settled the payment, as a
  * save would, so the queue goes on to the next one.
  */
-export function useDuplicateOffer(seed: TransactionSeed | undefined, moveOn: () => void) {
+export function useDuplicateOffer(
+  seed: TransactionSeed | undefined,
+  moveOn: () => void,
+) {
   const { showToast } = useToast()
   // Kept with the payment it was found for, since the form moves on to the next payment of a queue in this same hook.
   const [found, setFound] = useState<{ id: string; match: PossibleMatch } | null>(null)

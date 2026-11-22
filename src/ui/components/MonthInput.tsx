@@ -19,12 +19,7 @@ interface Props {
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
-export function MonthInput({
-  value,
-  ariaLabel = 'Budget month',
-  onChange,
-  onTrapPausedChange,
-}: Props) {
+export function MonthInput({ value, ariaLabel = 'Budget month', onChange, onTrapPausedChange }: Props) {
   const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)

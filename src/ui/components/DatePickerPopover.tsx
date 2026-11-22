@@ -9,8 +9,18 @@ import styles from './DatePicker.module.css'
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ] as const
 
 function todayIso(): string {
@@ -29,7 +39,9 @@ interface Props {
 }
 
 export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClose }: Props) {
-  const [y, m] = value ? value.split('-').map(Number) as [number, number] : [new Date().getFullYear(), new Date().getMonth() + 1]
+  const [y, m] = value
+    ? (value.split('-').map(Number) as [number, number])
+    : [new Date().getFullYear(), new Date().getMonth() + 1]
   // Year and month move together in one state value. Two setters, one called from
   // inside the other's updater, change the year twice under StrictMode, which
   // runs updaters twice.
@@ -126,7 +138,9 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
       </div>
 
       <div className={styles.weekRow}>
-        {WEEKDAYS.map((d) => <span key={d}>{d}</span>)}
+        {WEEKDAYS.map((d) => (
+          <span key={d}>{d}</span>
+        ))}
       </div>
 
       <div className={styles.grid} role="grid">
@@ -142,7 +156,9 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
               isToday ? styles.dayToday : '',
               isSelected ? styles.daySelected : '',
               outOfRange ? styles.dayDisabled : '',
-            ].filter(Boolean).join(' ')
+            ]
+              .filter(Boolean)
+              .join(' ')
             return (
               <button
                 key={`${ri}-${cell.day}-${cell.month}`}

@@ -25,15 +25,11 @@ describe('ownership guards', () => {
   })
 
   it('assertOwnedCategory rejects foreign ids', async () => {
-    await expect(assertOwnedCategory(envWith(undefined), 'a@b.com', 9)).rejects.toBeInstanceOf(
-      HttpError,
-    )
+    await expect(assertOwnedCategory(envWith(undefined), 'a@b.com', 9)).rejects.toBeInstanceOf(HttpError)
   })
 
   it('assertOwnedTransaction passes when row exists', async () => {
-    await expect(
-      assertOwnedTransaction(envWith({ ok: 1 }), 'a@b.com', 7),
-    ).resolves.toBeUndefined()
+    await expect(assertOwnedTransaction(envWith({ ok: 1 }), 'a@b.com', 7)).resolves.toBeUndefined()
   })
 
   it('assertOwnedTransaction rejects a foreign or missing id', async () => {

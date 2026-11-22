@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
 import { buildDescriptionIndex, normalizeDescriptionKey } from './descriptionIndex'
 
-function txn(
-  partial: Partial<Transaction> & Pick<Transaction, 'id' | 'description' | 'date'>,
-): Transaction {
+function txn(partial: Partial<Transaction> & Pick<Transaction, 'id' | 'description' | 'date'>): Transaction {
   return {
     budgetMonth: '2026-01',
     accountId: 1,

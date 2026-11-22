@@ -24,7 +24,14 @@ afterEach(() => setOnline(true))
 
 describe('the access failure when the saved copy cannot be looked up', () => {
   it('shows the offline screen, with Try again only', async () => {
-    render(<AccessFailure message="Load failed" answered={false} source={{ canWrite: false, load: vi.fn() }} onRetry={vi.fn()} />)
+    render(
+      <AccessFailure
+        message="Load failed"
+        answered={false}
+        source={{ canWrite: false, load: vi.fn() }}
+        onRetry={vi.fn()}
+      />,
+    )
 
     expect(await screen.findByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()

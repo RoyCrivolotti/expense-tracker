@@ -20,10 +20,8 @@ if (!OWNER) throw new Error('Set EXPENSE_OWNER to the demo Cloudflare Access ema
 const ID_OFFSET = Number(process.env.DEMO_ID_OFFSET ?? 900_000)
 const remapId = (id: number): number => ID_OFFSET + id
 
-const csvPath =
-  process.env.DEMO_CSV?.trim() ?? join(ROOT, 'fixtures/demo-staging-expenses.csv')
-const scenariosPath =
-  process.env.DEMO_SCENARIOS?.trim() ?? join(ROOT, 'fixtures/demo-staging-goal-scenarios.json')
+const csvPath = process.env.DEMO_CSV?.trim() ?? join(ROOT, 'fixtures/demo-staging-expenses.csv')
+const scenariosPath = process.env.DEMO_SCENARIOS?.trim() ?? join(ROOT, 'fixtures/demo-staging-goal-scenarios.json')
 
 const csv = readFileSync(csvPath, 'utf8')
 const d = parseWorkbookCsv(csv)
@@ -58,21 +56,13 @@ if (!scenarioFile.scenarios.some((s) => s.isActive) && scenarioFile.scenarios[0]
   scenarioFile.scenarios[0].isActive = true
 }
 
-const str = (v: string | null | undefined): string =>
-  v == null ? 'NULL' : `'${v.replace(/'/g, "''")}'`
+const str = (v: string | null | undefined): string => (v == null ? 'NULL' : `'${v.replace(/'/g, "''")}'`)
 const num = (v: number): string => String(v)
 const bit = (v: boolean): string => (v ? '1' : '0')
 const owner = str(OWNER)
 
 const lines: string[] = []
-for (const t of [
-  'transactions',
-  'account_statements',
-  'cash_actuals',
-  'goal_scenarios',
-  'categories',
-  'accounts',
-]) {
+for (const t of ['transactions', 'account_statements', 'cash_actuals', 'goal_scenarios', 'categories', 'accounts']) {
   lines.push(`DELETE FROM ${t} WHERE owner = ${owner};`)
 }
 

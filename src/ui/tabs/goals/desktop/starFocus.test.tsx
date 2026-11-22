@@ -51,8 +51,8 @@ function Page({ initial }: { initial: readonly LeverKey[] }) {
 
 const removeStar = (name: string) => screen.getByRole('button', { name: `Remove ${name} from the bar` })
 
-describe('the keyboard\'s place after a star is pressed', () => {
-  it('goes to the star that takes the pressed one\'s place in the bar', async () => {
+describe("the keyboard's place after a star is pressed", () => {
+  it("goes to the star that takes the pressed one's place in the bar", async () => {
     render(<Page initial={DEFAULT_LEVERS} />)
     removeStar('Horizon').focus()
 
@@ -80,7 +80,7 @@ describe('the keyboard\'s place after a star is pressed', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'All inputs' })).toHaveFocus())
   })
 
-  it('goes to the next input\'s star in the panel when an input is sent to the bar', async () => {
+  it("goes to the next input's star in the panel when an input is sent to the bar", async () => {
     render(<Page initial={[]} />)
     const panel = screen.getByRole('region', { name: 'All inputs' })
     const stars = within(panel).getAllByRole('button', { name: /^Add .* to the bar$/ })
@@ -129,7 +129,9 @@ describe('the keyboard\'s place after a star is pressed', () => {
     await userEvent.keyboard('{Enter}')
 
     await waitFor(() => expect(document.activeElement?.getAttribute('aria-label')).toBe(next))
-    const calls = focus.mock.calls.filter((_, i) => (focus.mock.contexts[i] as Element).getAttribute('aria-label') === next)
+    const calls = focus.mock.calls.filter(
+      (_, i) => (focus.mock.contexts[i] as Element).getAttribute('aria-label') === next,
+    )
     expect(calls).toHaveLength(1)
     expect(calls[0]?.[0]?.preventScroll).toBe(false)
     focus.mockRestore()

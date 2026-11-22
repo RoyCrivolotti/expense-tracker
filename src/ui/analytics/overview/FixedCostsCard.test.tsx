@@ -21,7 +21,15 @@ describe('FixedCostsCard', () => {
         items={[
           rent,
           { ...rent, key: 'ins', name: 'Insurance', frequency: 'quarterly', amountCents: 24_000, inPaceBudget: false },
-          { ...rent, key: 'plan-1', kind: 'instalment', name: 'Phone', amountCents: 4_000, lastMonth: null, payment: { index: 10, total: 24 } },
+          {
+            ...rent,
+            key: 'plan-1',
+            kind: 'instalment',
+            name: 'Phone',
+            amountCents: 4_000,
+            lastMonth: null,
+            payment: { index: 10, total: 24 },
+          },
         ]}
       />,
     )
@@ -35,6 +43,10 @@ describe('FixedCostsCard', () => {
 
   it('says what it needs when no fixed cost has been detected', () => {
     render(<FixedCostsCard items={[]} />)
-    expect(screen.getByText('Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.',
+      ),
+    ).toBeInTheDocument()
   })
 })

@@ -7,8 +7,7 @@ import { LedgerTable, type LedgerColumn } from './LedgerTable'
 import { sum, useMoneyCells } from './cells'
 import styles from './analytics.module.css'
 
-const signed = (cents: number): string | undefined =>
-  cents > 0 ? styles.pos : cents < 0 ? styles.neg : undefined
+const signed = (cents: number): string | undefined => (cents > 0 ? styles.pos : cents < 0 ? styles.neg : undefined)
 
 /**
  * Per-month income / expenses / net saving / invested. Defaults to the committed
@@ -16,19 +15,13 @@ const signed = (cents: number): string | undefined =>
  * with the Dashboard and the Monthly summary instead of shifting when a
  * statement is paid.
  */
-export function MonthlyTotalsTable({
-  model,
-  basis = 'committed',
-}: {
-  model: ExpenseModel
-  basis?: AnalyticsBasis
-}) {
+export function MonthlyTotalsTable({ model, basis = 'committed' }: { model: ExpenseModel; basis?: AnalyticsBasis }) {
   const { money, moneyAlways } = useMoneyCells()
   const sums = sumsOf(model)
   const rows = useMemo(
     () =>
-      [...computeMonthlyTotals(sums.transactions, basisOptions(basis)).values()].sort(
-        (a, b) => a.month.localeCompare(b.month),
+      [...computeMonthlyTotals(sums.transactions, basisOptions(basis)).values()].sort((a, b) =>
+        a.month.localeCompare(b.month),
       ),
     [sums, basis],
   )

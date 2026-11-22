@@ -7,7 +7,11 @@ export interface DayCell {
 }
 
 /** Monday-first day-of-week index (0=Mon … 6=Sun). */
-function mondayBasedDow(year: number, month: number, day: number): number {
+function mondayBasedDow(
+  year: number,
+  month: number,
+  day: number,
+): number {
   const jsDay = new Date(year, month - 1, day).getDay()
   return (jsDay + 6) % 7
 }
@@ -17,7 +21,10 @@ function mondayBasedDow(year: number, month: number, day: number): number {
  * year/month. Every row has exactly 7 cells; leading/trailing days from
  * adjacent months have `outside: true`.
  */
-export function buildCalendarGrid(year: number, month: number): DayCell[][] {
+export function buildCalendarGrid(
+  year: number,
+  month: number,
+): DayCell[][] {
   const firstDow = mondayBasedDow(year, month, 1)
   const daysInMonth = new Date(year, month, 0).getDate()
 
@@ -63,7 +70,11 @@ export function dayCellToIso(cell: DayCell): string {
  * String comparison is valid because every caller passes zero-padded ISO dates, so
  * lexicographic and chronological order agree.
  */
-export function isDateOutOfRange(iso: string, min?: string, max?: string): boolean {
+export function isDateOutOfRange(
+  iso: string,
+  min?: string,
+  max?: string,
+): boolean {
   if (min && iso < min) return true
   if (max && iso > max) return true
   return false
@@ -80,7 +91,11 @@ export function isDateOutOfRange(iso: string, min?: string, max?: string): boole
  *
  * An empty value passes through, since clearing a date is not out of range.
  */
-export function clampDateToRange(iso: string, min?: string, max?: string): string {
+export function clampDateToRange(
+  iso: string,
+  min?: string,
+  max?: string,
+): string {
   if (!iso) return iso
   if (min && iso < min) return min
   if (max && iso > max) return max

@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isStuck, restoreScroll, scrollToAnchor, stickyBottom } from './stickyScroll'
 
 /** jsdom lays nothing out: a sticky block at `top`, `height` tall, and `y` px down the screen now. */
-function sticky(top: string, height: number, y = 0) {
+function sticky(
+  top: string,
+  height: number,
+  y = 0,
+) {
   const el = document.createElement('div')
   el.style.position = 'sticky'
   el.style.top = top

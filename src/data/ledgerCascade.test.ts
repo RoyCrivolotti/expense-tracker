@@ -74,7 +74,9 @@ describe('cascadeOf, a write the server answers with more than the patch shows',
   it('sees a row given a flag whose auto-label it lacks, but not one that has the label', () => {
     expect(after((d) => patchAfterTransactionCreate(d, makeTransaction({ id: 9, flagId: 2 })))).toBe('autoLabel')
     expect(after((d) => patchAfterTransactionUpdate(d, makeTransaction({ id: 4, flagId: 2 })))).toBe('autoLabel')
-    expect(after((d) => patchAfterTransactionCreate(d, makeTransaction({ id: 9, flagId: 2, labelIds: [5] })))).toBeNull()
+    expect(
+      after((d) => patchAfterTransactionCreate(d, makeTransaction({ id: 9, flagId: 2, labelIds: [5] }))),
+    ).toBeNull()
     expect(after((d) => patchAfterTransactionCreate(d, makeTransaction({ id: 9, flagId: 1 })))).toBeNull()
   })
 
@@ -93,12 +95,27 @@ describe('cascadeOf, a write the server answers with more than the patch shows',
     expect(after((d) => patchAfterTransactionUpdate(d, makeTransaction({ id: 4, description: 'Renamed' })))).toBeNull()
     expect(after((d) => patchAfterTransactionDelete(d, 4))).toBeNull()
     expect(after((d) => patchAfterTransactionCreate(d, makeTransaction({ id: 9 })))).toBeNull()
-    expect(after((d) => patchAfterCategory(d, { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }))).toBeNull()
+    expect(
+      after((d) =>
+        patchAfterCategory(d, { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      ),
+    ).toBeNull()
     expect(after((d) => patchAfterStatementPaid(d, { accountId: 2, yearMonth: '2026-01', paid: true }))).toBeNull()
     expect(after((d) => patchAfterSettings(d, { ...d.settings, openingCashCents: 5 }))).toBeNull()
     expect(after((d) => patchAfterCashActual(d, { yearMonth: '2026-01', actualCashCents: 5 }, '2026-01'))).toBeNull()
     expect(after((d) => patchAfterScenarioCreate(d, makeScenario({ id: 3 })))).toBeNull()
-    expect(after((d) => patchAfterAttachmentAdd(d, { id: 1, transactionId: 4, contentType: 'image/jpeg', byteSize: 1, createdAt: 'x', hasThumb: true }))).toBeNull()
+    expect(
+      after((d) =>
+        patchAfterAttachmentAdd(d, {
+          id: 1,
+          transactionId: 4,
+          contentType: 'image/jpeg',
+          byteSize: 1,
+          createdAt: 'x',
+          hasThumb: true,
+        }),
+      ),
+    ).toBeNull()
     expect(cascadeOf(dataset, structuredClone(dataset))).toBeNull()
   })
 })

@@ -4,7 +4,14 @@ import { HttpError } from '../http'
 
 function parseEnvAllowlist(raw: string | undefined): string[] {
   if (!raw?.trim()) return []
-  return [...new Set(raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  return [
+    ...new Set(
+      raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ]
 }
 
 /** D1 allowlist; ALLOWED_EMAILS env fallback only when table is empty and ALLOW_BOOTSTRAP=1. */
@@ -33,13 +40,19 @@ export async function requireAllowedEmail(
   }
 }
 
-export function requireOwnerEmail(env: Env, email: string): void {
+export function requireOwnerEmail(
+  env: Env,
+  email: string,
+): void {
   const owner = env.OWNER_EMAIL?.trim().toLowerCase()
   if (!owner) throw new HttpError(503, 'Owner not configured')
   if (email !== owner) throw new HttpError(403, 'Owner only')
 }
 
-export function isOwnerEmail(env: Env, email: string): boolean {
+export function isOwnerEmail(
+  env: Env,
+  email: string,
+): boolean {
   const owner = env.OWNER_EMAIL?.trim().toLowerCase()
   return Boolean(owner && email === owner)
 }

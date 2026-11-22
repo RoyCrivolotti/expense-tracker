@@ -25,7 +25,8 @@ function objectOf(body: unknown): Record<string, unknown> {
  */
 function parseDigits(body: Record<string, unknown>): Omit<CaptureCard, 'accountId'> {
   const source = body.source
-  if (!isSourceWord(source)) throw new ValidationError('source must be lowercase letters, digits and hyphens, 1 to 32 characters')
+  if (!isSourceWord(source))
+    throw new ValidationError('source must be lowercase letters, digits and hyphens, 1 to 32 characters')
   const kind = body.digitsKind === undefined ? 'card' : DIGIT_KINDS.find((k) => k === body.digitsKind)
   if (!kind) throw new ValidationError('digitsKind must be card or account')
   if (typeof body.digits !== 'string' || !DIGITS_PATTERN.test(body.digits)) {
@@ -43,12 +44,20 @@ export function parseCardLink(body: unknown): CaptureCard {
   return { ...parseDigits(fields), accountId }
 }
 
-export function linkCaptureCard(repo: CaptureRepository, owner: string, body: unknown): Promise<LinkCardResult> {
+export function linkCaptureCard(
+  repo: CaptureRepository,
+  owner: string,
+  body: unknown,
+): Promise<LinkCardResult> {
   return repo.linkCard(owner, parseCardLink(body))
 }
 
 /** False when there was no such link for this person, which is also what another person's link answers. */
-export function unlinkCaptureCard(repo: CaptureRepository, owner: string, body: unknown): Promise<boolean> {
+export function unlinkCaptureCard(
+  repo: CaptureRepository,
+  owner: string,
+  body: unknown,
+): Promise<boolean> {
   const { source, digitsKind, digits } = parseDigits(objectOf(body))
   return repo.unlinkCard(owner, source, digitsKind, digits)
 }

@@ -162,4 +162,3 @@ describe('AppShell badges', () => {
     expect(screen.getAllByLabelText('12 payments to review')[0]).toHaveTextContent('9+')
   })
 })
-

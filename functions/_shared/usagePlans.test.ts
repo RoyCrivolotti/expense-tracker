@@ -34,11 +34,28 @@ describe.each([false, true])('the usage statement, with table statistics: %s', (
     expect(ran).toHaveLength(1)
     const plan = planOf(kit.sqlite, ran[0]!)
     const where = plan.join('\n')
-    expect(plan.filter((l) => /\btransactions\b/.test(l)).every((l) => /^SEARCH transactions USING INDEX \w+ \(owner=\?\)$/.test(l)), where).toBe(true)
-    expect(plan.some((l) => /^SEARCH transactions/.test(l)), where).toBe(true)
-    expect(plan.some((l) => /SCAN (transactions|transaction_labels|tl|t|l)\b/.test(l)), where).toBe(false)
-    expect(plan.some((l) => /idx_txn_category|idx_txn_account/.test(l)), where).toBe(false)
-    expect(plan.some((l) => /SEARCH tl USING INDEX idx_transaction_labels_label \(label_id=\?\)/.test(l)), where).toBe(true)
+    expect(
+      plan
+        .filter((l) => /\btransactions\b/.test(l))
+        .every((l) => /^SEARCH transactions USING INDEX \w+ \(owner=\?\)$/.test(l)),
+      where,
+    ).toBe(true)
+    expect(
+      plan.some((l) => /^SEARCH transactions/.test(l)),
+      where,
+    ).toBe(true)
+    expect(
+      plan.some((l) => /SCAN (transactions|transaction_labels|tl|t|l)\b/.test(l)),
+      where,
+    ).toBe(false)
+    expect(
+      plan.some((l) => /idx_txn_category|idx_txn_account/.test(l)),
+      where,
+    ).toBe(false)
+    expect(
+      plan.some((l) => /SEARCH tl USING INDEX idx_transaction_labels_label \(label_id=\?\)/.test(l)),
+      where,
+    ).toBe(true)
   })
 
   it('binds the owner and nothing else, as one value, within D1’s limit', async () => {
@@ -64,7 +81,10 @@ describe('the usage statement, in a database of one owner with table statistics'
     await createD1ExpenseRepository({ DB: kit.d1 }).readUsage(OWNER)
     const ran = kit.statements.find((s) => s.sql === USAGE_SQL)!
     const plan = planOf(kit.sqlite, ran)
-    expect(plan.some((l) => /idx_txn_category|idx_txn_account/.test(l)), plan.join('\n')).toBe(false)
+    expect(
+      plan.some((l) => /idx_txn_category|idx_txn_account/.test(l)),
+      plan.join('\n'),
+    ).toBe(false)
   })
 })
 

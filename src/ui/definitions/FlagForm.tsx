@@ -63,23 +63,14 @@ function ActiveToggle({
       <span>
         <span className={styles.label}>Active</span>
         <span className={styles.hint}>
-          Archiving hides it from the pickers but keeps the{' '}
-          {transactionCountLabel(usageCount)} already flagged with it.
+          Archiving hides it from the pickers but keeps the {transactionCountLabel(usageCount)} already flagged with it.
         </span>
       </span>
     </label>
   )
 }
 
-export function FlagForm({
-  flag,
-  existing,
-  usageCount,
-  usage,
-  actions,
-  onDone,
-  onConfirmingChange,
-}: Props) {
+export function FlagForm({ flag, existing, usageCount, usage, actions, onDone, onConfirmingChange }: Props) {
   const [draft, setDraft] = useState(() => initialFlagDraft(flag, DEFAULT_COLOR))
   const [confirming, setConfirming] = useState(false)
   const patch = (next: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...next }))
@@ -92,12 +83,7 @@ export function FlagForm({
 
   return (
     <div className={styles.form}>
-      <TextField
-        label="Name"
-        value={draft.name}
-        placeholder="Work travel"
-        onChange={(name) => patch({ name })}
-      />
+      <TextField label="Name" value={draft.name} placeholder="Work travel" onChange={(name) => patch({ name })} />
       <TextField
         label="Description (optional)"
         value={draft.description}
@@ -110,11 +96,7 @@ export function FlagForm({
 
       <div className={styles.field}>
         <span className={styles.label}>Colour</span>
-        <ColorSwatchPicker
-          color={draft.color}
-          onChange={(color) => patch({ color })}
-          label="Flag colour"
-        />
+        <ColorSwatchPicker color={draft.color} onChange={(color) => patch({ color })} label="Flag colour" />
       </div>
 
       <label className={styles.check}>
@@ -126,19 +108,14 @@ export function FlagForm({
         <span>
           To be reimbursed
           <span className={styles.checkHint}>
-            Adds an expense report and a Record reimbursement action to this flag. Leave it off for
-            a flag that just needs a closer look, not money back — for a permanent tag like
-            tax-deductible spending, use a label instead.
+            Adds an expense report and a Record reimbursement action to this flag. Leave it off for a flag that just
+            needs a closer look, not money back — for a permanent tag like tax-deductible spending, use a label instead.
           </span>
         </span>
       </label>
 
       {flag ? (
-        <ActiveToggle
-          active={draft.active}
-          usageCount={usageCount}
-          onChange={(active) => patch({ active })}
-        />
+        <ActiveToggle active={draft.active} usageCount={usageCount} onChange={(active) => patch({ active })} />
       ) : null}
 
       {err ? <p className={styles.error}>{err}</p> : null}

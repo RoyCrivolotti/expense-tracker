@@ -19,7 +19,11 @@ export function bearerKey(request: Request): string | null {
   return match ? (match[1] as string) : null
 }
 
-async function stillAllowed(access: AccessRepository, env: CaptureEnv, owner: string): Promise<boolean> {
+async function stillAllowed(
+  access: AccessRepository,
+  env: CaptureEnv,
+  owner: string,
+): Promise<boolean> {
   try {
     if (!(await isEmailAllowed(access, env, owner))) return false
     await requireExpensesGroupGrant(access, env, owner)

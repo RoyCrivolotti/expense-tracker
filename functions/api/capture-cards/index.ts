@@ -10,7 +10,9 @@ import { mapAppError } from '../../_shared/mapAppError'
  * quote the statement or a value, and a value here is four digits of a card.
  */
 function plainly(error: unknown): unknown {
-  return error instanceof HttpError || error instanceof ValidationError ? error : new Error('capture card request failed')
+  return error instanceof HttpError || error instanceof ValidationError
+    ? error
+    : new Error('capture card request failed')
 }
 
 /** A link is a bank app, four digits and an account number. */

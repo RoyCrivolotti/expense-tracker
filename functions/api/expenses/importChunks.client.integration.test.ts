@@ -41,7 +41,8 @@ beforeEach(() => {
   afterSaving = () => undefined
   vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
-    if (url.pathname !== '/api/expenses/transactions/bulk' || init?.method !== 'POST') throw new Error(`no route for ${init?.method} ${url.pathname}`)
+    if (url.pathname !== '/api/expenses/transactions/bulk' || init?.method !== 'POST')
+      throw new Error(`no route for ${init?.method} ${url.pathname}`)
     const body = JSON.parse(String(init.body)) as { transactions: unknown[] }
     const before = stats.statements
     const response = await world.call(postBulk, { method: 'POST', path: '/transactions/bulk', body })
@@ -53,7 +54,10 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 afterAll(() => vi.useRealTimers())
 
-const importRow = (n: number, over: Partial<NewTransaction> = {}): NewTransaction => ({
+const importRow = (
+  n: number,
+  over: Partial<NewTransaction> = {},
+): NewTransaction => ({
   date: '2026-08-05',
   budgetMonth: '2026-08',
   description: `Import ${n}`,
@@ -64,14 +68,20 @@ const importRow = (n: number, over: Partial<NewTransaction> = {}): NewTransactio
   ...over,
 })
 
-const batch = (n: number, over: (i: number) => Partial<NewTransaction> = () => ({})): NewTransaction[] =>
-  Array.from({ length: n }, (_, i) => importRow(i + 1, over(i + 1)))
+const batch = (
+  n: number,
+  over: (i: number) => Partial<NewTransaction> = () => ({}),
+): NewTransaction[] => Array.from({ length: n }, (_, i) => importRow(i + 1, over(i + 1)))
 
 /** The same way the section sends them. */
 const send = (chunk: NewTransaction[]): Promise<void> => apiDataSource.createTransactions!(chunk).then(() => undefined)
 
 const saved = (): string[] =>
-  (sqlite.prepare("SELECT description FROM transactions WHERE owner = ? AND description LIKE 'Import %' ORDER BY id").all(OWNER) as { description: string }[]).map((r) => r.description)
+  (
+    sqlite
+      .prepare("SELECT description FROM transactions WHERE owner = ? AND description LIKE 'Import %' ORDER BY id")
+      .all(OWNER) as { description: string }[]
+  ).map((r) => r.description)
 
 describe('importing a file over the real routes', () => {
   it('saves 250 rows in three requests of at most a hundred, each a few hundred statements and not a thousand', async () => {
@@ -96,7 +106,9 @@ describe('importing a file over the real routes', () => {
     const error = stopped as ImportStopped
     expect(error.imported).toBe(100)
     expect(error.maybeSaved).toBe(false)
-    expect(error.message).toMatch(/Imported 100 of 250 transactions\. The next 100 were refused and not saved: Row 130: /)
+    expect(error.message).toMatch(
+      /Imported 100 of 250 transactions\. The next 100 were refused and not saved: Row 130: /,
+    )
     expect(sent.map((s) => s.status)).toEqual([201, 400])
     expect(saved()).toEqual(batch(100).map((r) => r.description))
   })

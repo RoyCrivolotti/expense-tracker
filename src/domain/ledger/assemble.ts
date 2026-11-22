@@ -4,7 +4,10 @@ import { cellRows } from './cells'
 import type { Ledger, LedgerRows } from './types'
 
 /** The order the API returns rows in: newest date first, then highest id. */
-export function byApiOrder(a: Transaction, b: Transaction): number {
+export function byApiOrder(
+  a: Transaction,
+  b: Transaction,
+): number {
   if (a.date !== b.date) return a.date < b.date ? 1 : -1
   return b.id - a.id
 }
@@ -30,7 +33,10 @@ export function assembleRows(ledger: Ledger): LedgerRows {
 }
 
 /** The dataset with `transactions` replaced, for code that takes a whole dataset. */
-export function ledgerDataset(ledger: Ledger, rows: Transaction[]): ExpenseDataset {
+export function ledgerDataset(
+  ledger: Ledger,
+  rows: Transaction[],
+): ExpenseDataset {
   return { ...ledger.reference, transactions: rows }
 }
 

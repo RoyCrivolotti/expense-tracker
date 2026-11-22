@@ -143,7 +143,9 @@ describe('InflationSetting', () => {
     })
 
     // A stepper still showing 2,5 would read as saved.
-    expect(await screen.findByRole('alert')).toHaveTextContent("Something went wrong, so that change probably wasn't saved.")
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Something went wrong, so that change probably wasn't saved.",
+    )
     expect(input()).toHaveValue('2,0')
 
     onChange.mockResolvedValue(undefined)

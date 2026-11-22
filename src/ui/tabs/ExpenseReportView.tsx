@@ -66,15 +66,7 @@ interface Props {
  * hidden when a report has no receipts: the button going missing between two
  * reports reads as a bug, where a disabled one with a reason does not.
  */
-function ReceiptsButton({
-  report,
-  lookup,
-  title,
-}: {
-  report: ExpenseReport
-  lookup: Lookup
-  title: string
-}) {
+function ReceiptsButton({ report, lookup, title }: { report: ExpenseReport; lookup: Lookup; title: string }) {
   const format = useMoneyFormat()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -86,8 +78,10 @@ function ReceiptsButton({
     setErr(null)
     try {
       await deliverReceipts(
-        namedReceipts(figures, format, (f) =>
-          f.transaction.description || lookup.categoryName(f.transaction.categoryId),
+        namedReceipts(
+          figures,
+          format,
+          (f) => f.transaction.description || lookup.categoryName(f.transaction.categoryId),
         ),
         receiptPackName(title, report.from),
       )
@@ -108,9 +102,7 @@ function ReceiptsButton({
         type="button"
         className={styles.secondaryBtn}
         disabled={busy || figures.length === 0}
-        aria-label={
-          figures.length === 0 ? 'No receipts attached to this report' : 'Send receipts'
-        }
+        aria-label={figures.length === 0 ? 'No receipts attached to this report' : 'Send receipts'}
         title={figures.length === 0 ? 'No receipts attached to this report' : undefined}
         onClick={() => void send()}
       >
@@ -180,7 +172,10 @@ function ReportControls({
  * The browser names a saved PDF after the page title, which is otherwise the
  * app's own ("Expenses") — the attachment would arrive with no hint of what it is.
  */
-function useDocumentTitle(title: string, report: ExpenseReport | null) {
+function useDocumentTitle(
+  title: string,
+  report: ExpenseReport | null,
+) {
   const name = report ? `${title} – ${report.from.slice(0, 7)}` : null
   useEffect(() => {
     if (!name) return
@@ -213,7 +208,10 @@ function useReceiptsLoading(
  * The report with the filter applied. Null only when every line left has no receipt: reachable by toggling
  * the filter on a claim that turns out to have none, not by anything a fresh open of the report can produce.
  */
-function shownReport(base: ExpenseReport | null, receiptsOnly: boolean): ExpenseReport | null {
+function shownReport(
+  base: ExpenseReport | null,
+  receiptsOnly: boolean,
+): ExpenseReport | null {
   return base && receiptsOnly ? receiptsOnlyReport(base) : base
 }
 
@@ -295,8 +293,7 @@ export function ExpenseReportView({
 
   // Only a reopened report can have drifted: an open claim has nothing submitted
   // to differ from yet.
-  const drifted =
-    settledByPaymentId != null && pastReportDrifted(settledByPaymentId, dataset.transactions)
+  const drifted = settledByPaymentId != null && pastReportDrifted(settledByPaymentId, dataset.transactions)
 
   return createPortal(
     <div
@@ -363,8 +360,8 @@ export function ExpenseReportView({
 
       {drifted ? (
         <p className={styles.driftNotice}>
-          Some covered transactions have changed since this report was sent. Reprinting it
-          will not reproduce the document you submitted.
+          Some covered transactions have changed since this report was sent. Reprinting it will not reproduce the
+          document you submitted.
         </p>
       ) : null}
 
@@ -388,9 +385,7 @@ export function ExpenseReportView({
       ) : (
         // Reachable only by turning the toggle on when nothing claimed has a
         // receipt yet — a fresh open of the report always has at least one line.
-        <p className={styles.emptyNotice}>
-          None of these items have a receipt attached yet.
-        </p>
+        <p className={styles.emptyNotice}>None of these items have a receipt attached yet.</p>
       )}
     </div>,
     document.body,

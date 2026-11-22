@@ -24,7 +24,8 @@ export interface RawDescriptionSuggest {
 /** The prefix as the browser's index reads it: trimmed and lower-cased, and not blank. */
 function prefix(value: unknown): string {
   if (typeof value !== 'string') throw new ValidationError('q must be text')
-  if (value.length > MAX_SUGGEST_PREFIX * 4) throw new ValidationError(`q must be ${MAX_SUGGEST_PREFIX} characters or fewer`)
+  if (value.length > MAX_SUGGEST_PREFIX * 4)
+    throw new ValidationError(`q must be ${MAX_SUGGEST_PREFIX} characters or fewer`)
   const normalized = normalizeDesc(value)
   if (/\p{Cs}/u.test(normalized)) throw new ValidationError('q must be valid text')
   const length = [...normalized].length

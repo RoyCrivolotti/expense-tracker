@@ -1,12 +1,6 @@
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { Milestone } from '../../../types'
-import {
-  fireNumber,
-  projectNetWorth,
-  scenarioToParams,
-  wholeYearsToAmount,
-  yearsToFi,
-} from '../../../engine'
+import { fireNumber, projectNetWorth, scenarioToParams, wholeYearsToAmount, yearsToFi } from '../../../engine'
 
 export interface MilestoneStat {
   milestone: Milestone
@@ -17,7 +11,11 @@ export interface MilestoneStat {
  * The two milestones worth narrating: the next one the plan should cross, and
  * the top of the ladder. Collapses to one when the next milestone is the top.
  */
-function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
+function narrativeMilestones(
+  draft: NewGoalScenario,
+  milestones: Milestone[],
+  inflationRate: number,
+) {
   const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const toStat = (milestone: Milestone): MilestoneStat => ({
     milestone,
@@ -33,7 +31,11 @@ function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[], in
  * What a plan comes to, for the phone's summary box and the full narrative and, on a wide screen,
  * the line under the hero: where it ends, the year it reaches FI and the milestones worth saying.
  */
-export function getNarrativeStats(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
+export function getNarrativeStats(
+  draft: NewGoalScenario,
+  milestones: Milestone[],
+  inflationRate: number,
+) {
   const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const series = projectNetWorth(params)
   const end = series[series.length - 1]

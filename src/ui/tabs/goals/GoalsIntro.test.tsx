@@ -11,7 +11,10 @@ const CHART = 'Invested portfolio projection'
 const GLOSSARY = 'What do these terms mean?'
 
 /** Whether the first node comes before the second in the document. */
-function before(a: Node, b: Node): boolean {
+function before(
+  a: Node,
+  b: Node,
+): boolean {
   return Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 }
 

@@ -31,12 +31,17 @@ function loadOwnerEmail() {
   const filePath = join(ROOT, 'config/access.json')
   if (!existsSync(filePath)) throw new Error('config/access.json missing')
   const raw = JSON.parse(readFileSync(filePath, 'utf8'))
-  const email = String(raw.ownerEmail ?? '').trim().toLowerCase()
+  const email = String(raw.ownerEmail ?? '')
+    .trim()
+    .toLowerCase()
   if (!email) throw new Error('access.json ownerEmail required')
   return email
 }
 
-async function ensureProject(token, projectName) {
+async function ensureProject(
+  token,
+  projectName,
+) {
   const existing = await findPagesProject(token, projectName)
   if (existing) {
     console.log(`Pages project ${projectName} already exists`)
@@ -49,7 +54,12 @@ async function ensureProject(token, projectName) {
   return findPagesProject(token, projectName)
 }
 
-async function bindProduction(token, projectName, d1DatabaseId, ownerEmail) {
+async function bindProduction(
+  token,
+  projectName,
+  d1DatabaseId,
+  ownerEmail,
+) {
   const project = await findPagesProject(token, projectName)
   if (!project) throw new Error(`Pages project ${projectName} not found after create`)
   const configs = project.deployment_configs ?? {}

@@ -26,16 +26,7 @@ import {
 } from '../domain/ledger'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { adversarialLedger } from './adversarialLedger'
-import {
-  type Clock,
-  KPI_KEYS,
-  LATER,
-  SUMS_ONLY,
-  differing,
-  openAt,
-  outputs,
-  wholeLedger,
-} from './engineOutputs'
+import { type Clock, KPI_KEYS, LATER, SUMS_ONLY, differing, openAt, outputs, wholeLedger } from './engineOutputs'
 import { GLOBAL_DIFFERENCES, INTENDED_DIFFERENCES, OWN_CLASSIFIER_DIFFERENCES } from './intendedDifferences'
 import { makeDataset, makeTransaction } from './factories'
 import { randomLedger } from './randomLedger'
@@ -43,9 +34,7 @@ import { randomLedger } from './randomLedger'
 /** The production window, forced on regardless of size. */
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 
-const ALL_KEYS = Object.keys(
-  outputs(randomLedger(0), wholeLedger(randomLedger(0)), '2026-06', classifyFixedSpend([])),
-)
+const ALL_KEYS = Object.keys(outputs(randomLedger(0), wholeLedger(randomLedger(0)), '2026-06', classifyFixedSpend([])))
 const MUST_MATCH = ALL_KEYS.filter((k) => !(k in INTENDED_DIFFERENCES))
 const MUST_MATCH_WITH_HISTORY = ALL_KEYS.filter((k) => !(k in GLOBAL_DIFFERENCES))
 
@@ -55,7 +44,15 @@ function viewedMonths(ds: ExpenseDataset): string[] {
   if (months.length === 0) return ['2026-06']
   const first = months[0]!
   const last = months.at(-1)!
-  return [...new Set([last, first, months[Math.floor(months.length / 2)]!, shiftBudgetMonth(last, 2), shiftBudgetMonth(first, -1)])]
+  return [
+    ...new Set([
+      last,
+      first,
+      months[Math.floor(months.length / 2)]!,
+      shiftBudgetMonth(last, 2),
+      shiftBudgetMonth(first, -1),
+    ]),
+  ]
 }
 
 function clocksFor(viewed: string): [string, Clock][] {
@@ -67,7 +64,11 @@ function clocksFor(viewed: string): [string, Clock][] {
 
 describe('the model against the engines: seeded random ledgers', () => {
   const seeds = Array.from({ length: 80 }, (_, i) => i)
-  const failures = (policy: HydrationPolicy | 'none', keys: string[], passHistory = false): string[] =>
+  const failures = (
+    policy: HydrationPolicy | 'none',
+    keys: string[],
+    passHistory = false,
+  ): string[] =>
     seeds.flatMap((seed) => {
       const ds = randomLedger(seed)
       const classifier = classifyFixedSpend(ds.transactions)
@@ -114,9 +115,10 @@ describe('the model against the engines: seeded random ledgers', () => {
       const ds = randomLedger(seed)
       const classifier = classifyFixedSpend(ds.transactions)
       return viewedMonths(ds).flatMap((viewed) =>
-        differing(ds, viewed, wholeLedger(ds), assembleRows(buildLedger(ds, [])), KPI_KEYS, { clock: LATER, classifier }).map(
-          (key) => `seed ${seed}, ${viewed}: ${key}`,
-        ),
+        differing(ds, viewed, wholeLedger(ds), assembleRows(buildLedger(ds, [])), KPI_KEYS, {
+          clock: LATER,
+          classifier,
+        }).map((key) => `seed ${seed}, ${viewed}: ${key}`),
       )
     })
     expect(closedOnly).toEqual([])
@@ -161,8 +163,10 @@ describe('what each rule of the model is for', () => {
   const base = ledgerFor(ds, viewed, WINDOWED)
   const hydrated = new Set(base.hydratedMonths)
   const classifier = classifyFixedSpend(ds.transactions)
-  const diff = (ledger: typeof base, keys: string[]) =>
-    differing(ds, viewed, wholeLedger(ds), assembleRows(ledger), keys, { clock: LATER, classifier })
+  const diff = (
+    ledger: typeof base,
+    keys: string[],
+  ) => differing(ds, viewed, wholeLedger(ds), assembleRows(ledger), keys, { clock: LATER, classifier })
 
   it('matches the whole ledger as built', () => {
     expect(diff(base, SUMS_ONLY)).toEqual([])
@@ -194,14 +198,21 @@ describe('what each rule of the model is for', () => {
       pinned: rederive(base.pinned),
       hydrated: rederive(base.hydrated),
     }
-    expect(differing(after, viewed, wholeLedger(after), assembleRows(patched), SUMS_ONLY, { clock: LATER, classifier })).toEqual([])
-    expect(differing(ds, viewed, wholeLedger(after), assembleRows(base), SUMS_ONLY, { clock: LATER, classifier })).not.toEqual([])
+    expect(
+      differing(after, viewed, wholeLedger(after), assembleRows(patched), SUMS_ONLY, { clock: LATER, classifier }),
+    ).toEqual([])
+    expect(
+      differing(ds, viewed, wholeLedger(after), assembleRows(base), SUMS_ONLY, { clock: LATER, classifier }),
+    ).not.toEqual([])
   })
 })
 
 describe('a month with no pinned row exists only through its cell', () => {
-  const row = (id: number, month: string, overrides: Partial<Transaction> = {}) =>
-    makeTransaction({ id, budgetMonth: month, date: `${month}-10`, accountId: 1, amountCents: 1_000, ...overrides })
+  const row = (
+    id: number,
+    month: string,
+    overrides: Partial<Transaction> = {},
+  ) => makeTransaction({ id, budgetMonth: month, date: `${month}-10`, accountId: 1, amountCents: 1_000, ...overrides })
   const ds = makeDataset({
     accounts: [{ id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }],
     transactions: [

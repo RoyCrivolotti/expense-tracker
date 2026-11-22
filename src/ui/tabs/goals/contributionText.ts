@@ -8,7 +8,10 @@ type Contributing = Pick<NewGoalScenario, 'monthlyContributionCents' | 'contribu
  * month. Exact, since 1,000 and 1,100 are different plans. "1.500,00 €/mo, then 2.500,00 €/mo
  * from Mar '28 and 0,00 €/mo from Jan '30".
  */
-export function contributionPhrase(scenario: Contributing, format: MoneyFormat): string {
+export function contributionPhrase(
+  scenario: Contributing,
+  format: MoneyFormat,
+): string {
   const now = `${formatCents(scenario.monthlyContributionCents, format)}/mo`
   const changes = (scenario.contributionSchedule ?? []).map(
     (s) => `${formatCents(s.monthlyCents, format)}/mo from ${shortMonthYearLabel(s.from)}`,
@@ -23,7 +26,10 @@ export function contributionPhrase(scenario: Contributing, format: MoneyFormat):
  * A short note for the monthly input, which edits the starting amount only: "then 2.000,00 € from
  * Jun '27", and how many more follow. Null when the scenario never changes the amount.
  */
-export function firstChangeNote(scenario: Pick<NewGoalScenario, 'contributionSchedule'>, format: MoneyFormat): string | null {
+export function firstChangeNote(
+  scenario: Pick<NewGoalScenario, 'contributionSchedule'>,
+  format: MoneyFormat,
+): string | null {
   const [first, ...rest] = scenario.contributionSchedule ?? []
   if (!first) return null
   const more = rest.length > 0 ? ` (+${rest.length} more)` : ''

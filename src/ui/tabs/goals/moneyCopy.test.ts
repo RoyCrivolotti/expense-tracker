@@ -9,21 +9,19 @@ const BANNED = /today(?:'|&apos;|’)s money/i
 
 /** The source with its comments taken out, so that what is left is what can be shown or compared. */
 export function withoutComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:"'`\\])\/\/.*$/gm, '$1')
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'`\\])\/\/.*$/gm, '$1')
 }
 
 describe('withoutComments', () => {
   it('takes out block, JSX and line comments and keeps strings, including ones with slashes', () => {
     const source = [
-      "const a = \"today's money\" // not today's money here",
+      'const a = "today\'s money" // not today\'s money here',
       "const b = 'https://example.com/today' /* today's money */",
       '{/* today&apos;s money */}',
       'text // today’s money',
     ].join('\n')
     const kept = withoutComments(source)
-    expect(kept).toContain("const a = \"today's money\"")
+    expect(kept).toContain('const a = "today\'s money"')
     expect(kept).toContain('https://example.com/today')
     expect(kept).not.toContain('not today')
     expect(kept).not.toContain('&apos;s money')
@@ -32,11 +30,14 @@ describe('withoutComments', () => {
 })
 
 describe("no string says today's money", () => {
-  const sources = import.meta.glob(['/src/ui/**/*.ts', '/src/ui/**/*.tsx', '/src/domain/**/*.ts', '!/src/**/*.test.*'], {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  })
+  const sources = import.meta.glob(
+    ['/src/ui/**/*.ts', '/src/ui/**/*.tsx', '/src/domain/**/*.ts', '!/src/**/*.test.*'],
+    {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    },
+  )
 
   it('reads the sources it is meant to guard', () => {
     expect(Object.keys(sources).length).toBeGreaterThan(300)

@@ -13,8 +13,11 @@ const accounts: Account[] = [
 ]
 const statements: AccountStatement[] = [{ accountId: 3, yearMonth: '2025-02', paid: true }]
 
-const row = (id: number, month: string, overrides: Partial<Transaction> = {}): Transaction =>
-  makeTransaction({ id, budgetMonth: month, date: `${month}-10`, ...overrides })
+const row = (
+  id: number,
+  month: string,
+  overrides: Partial<Transaction> = {},
+): Transaction => makeTransaction({ id, budgetMonth: month, date: `${month}-10`, ...overrides })
 
 /**
  * Written by hand: January has an expense, a refund, a settled expense (id 2) and a pinned investment.
@@ -22,7 +25,13 @@ const row = (id: number, month: string, overrides: Partial<Transaction> = {}): T
  * for nothing and a flagged card charge, and May (hydrated) holds the payment that settled id 2.
  */
 const rows: Transaction[] = [
-  row(11, '2025-05', { description: 'Payment', type: 'refund', amountCents: 500, reportCount: 1, reportCoveredCents: 500 }),
+  row(11, '2025-05', {
+    description: 'Payment',
+    type: 'refund',
+    amountCents: 500,
+    reportCount: 1,
+    reportCoveredCents: 500,
+  }),
   row(10, '2025-05', { amountCents: 900 }),
   row(9, '2025-04', { accountId: 3, amountCents: 100, flagId: 1, status: 'forecast' }),
   row(8, '2025-04', { amountCents: 0 }),
@@ -84,7 +93,8 @@ describe('buildLedger', () => {
   })
 
   it('never puts a pinned row in a cell, so an investment is counted once', () => {
-    const sum = (list: Transaction[]) => list.filter((t) => t.type === 'investment').reduce((n, t) => n + t.amountCents, 0)
+    const sum = (list: Transaction[]) =>
+      list.filter((t) => t.type === 'investment').reduce((n, t) => n + t.amountCents, 0)
     const { linear } = assembleRows(ledger)
     expect(sum(linear)).toBe(sum(rows))
     expect(ledger.cells.some((c) => c.type === 'investment')).toBe(false)
@@ -128,7 +138,10 @@ describe('assembleRows', () => {
   })
 
   it('does not count a cell for a month that is also hydrated', () => {
-    const both = { ...ledger, cells: [...ledger.cells, ...buildLedger(dataset, []).cells.filter((c) => c.budgetMonth === '2025-05')] }
+    const both = {
+      ...ledger,
+      cells: [...ledger.cells, ...buildLedger(dataset, []).cells.filter((c) => c.budgetMonth === '2025-05')],
+    }
     expect(assembleRows(both).linear).toEqual(linear)
     expect(ledgerRowCount(both)).toBe(rows.length)
   })
@@ -139,7 +152,10 @@ describe('assembleRows', () => {
 
   it('derives the status of a cell row from the statements as they stand', () => {
     const unpaid = { ...ledger, reference: { ...ledger.reference, accountStatements: [] } }
-    const status = (l: typeof ledger) => assembleRows(l).linear.filter((t) => t.accountId === 3 && isCellRow(t)).map((t) => t.status)
+    const status = (l: typeof ledger) =>
+      assembleRows(l)
+        .linear.filter((t) => t.accountId === 3 && isCellRow(t))
+        .map((t) => t.status)
     expect(status(ledger)).toEqual(['posted', 'cancelled'])
     expect(status(unpaid)).toEqual(['forecast', 'cancelled'])
   })

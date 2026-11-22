@@ -38,7 +38,10 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
   }
 }
 
-function renderCard(dataset: ExpenseDataset, filterLocked = false) {
+function renderCard(
+  dataset: ExpenseDataset,
+  filterLocked = false,
+) {
   const onFilterByFlag = vi.fn()
   const onLockedFilterPress = vi.fn()
   const onManage = vi.fn()
@@ -105,10 +108,7 @@ describe('FlaggedCard', () => {
     renderCard(
       makeDataset({
         flags: [work, tax],
-        transactions: [
-          txn({ flagId: 1, amountCents: 10_000 }),
-          txn({ flagId: 2, amountCents: 5_000 }),
-        ],
+        transactions: [txn({ flagId: 1, amountCents: 10_000 }), txn({ flagId: 2, amountCents: 5_000 })],
       }),
     )
 
@@ -185,9 +185,7 @@ describe('FlaggedCard', () => {
   })
 
   it('asks to filter the list to a flag', async () => {
-    const { onFilterByFlag } = renderCard(
-      makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
-    )
+    const { onFilterByFlag } = renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
@@ -209,9 +207,7 @@ describe('FlaggedCard', () => {
   })
 
   it('opens the flag manager', async () => {
-    const { onManage } = renderCard(
-      makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
-    )
+    const { onManage } = renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByRole('button', { name: 'Manage flags' }))
@@ -236,9 +232,7 @@ describe('FlaggedCard', () => {
   })
 
   it('opens the expense report for a flag', async () => {
-    const { onOpenReport } = renderCard(
-      makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
-    )
+    const { onOpenReport } = renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
@@ -291,9 +285,7 @@ describe('FlaggedCard — flags that are not about being paid back', () => {
     await userEvent.click(screen.getByText('Tax deductible'))
 
     expect(screen.queryByRole('button', { name: 'Expense report' })).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Record reimbursement' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Record reimbursement' })).not.toBeInTheDocument()
   })
 
   it('still shows the group, since it is still something you flagged', async () => {

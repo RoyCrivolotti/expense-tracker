@@ -99,7 +99,11 @@ describe('PATCH /api/expenses/transactions/bulk renaming descriptions', () => {
     return { env, repo }
   }
 
-  function rename(env: Env, repo: ReturnType<typeof setup>['repo'], patch: unknown) {
+  function rename(
+    env: Env,
+    repo: ReturnType<typeof setup>['repo'],
+    patch: unknown,
+  ) {
     return invokeExpenseApiRoute({
       handler: onRequestPatch,
       repo,

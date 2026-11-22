@@ -43,12 +43,18 @@ export function migrationFiles(): string[] {
  * Runs migration SQL one statement at a time, the way the documented `--command` fallback does, cut by the
  * splitter the lint and the schema check use, so a trigger is applied whole.
  */
-export function applyMigrationSql(db: DatabaseSync, sql: string): void {
+export function applyMigrationSql(
+  db: DatabaseSync,
+  sql: string,
+): void {
   for (const statement of splitStatements(sql)) db.exec(statement.sql)
 }
 
 /** Applies one migration file from `migrations/`. */
-export function applyMigration(db: DatabaseSync, file: string): void {
+export function applyMigration(
+  db: DatabaseSync,
+  file: string,
+): void {
   applyMigrationSql(db, readFileSync(join(MIGRATIONS, file), 'utf8'))
 }
 
@@ -65,7 +71,10 @@ export function migratedDatabase(through?: string): DatabaseSync {
   return db
 }
 
-function timed<T>(stats: SqliteD1Stats, fn: () => T): T {
+function timed<T>(
+  stats: SqliteD1Stats,
+  fn: () => T,
+): T {
   const start = performance.now()
   try {
     return fn()
@@ -134,7 +143,9 @@ function prepared(
       checked(() => {
         const before = changed()
         // A statement with RETURNING sends its rows back from `run` as well, as D1 does.
-        const results = RETURNING.test(sql) ? (timed(stats, () => stmt.all(...params)) as Row[]) : (timed(stats, () => stmt.run(...params)), [])
+        const results = RETURNING.test(sql)
+          ? (timed(stats, () => stmt.all(...params)) as Row[])
+          : (timed(stats, () => stmt.run(...params)), [])
         stats.rowsReturned += results.length
         return { results, success: true, meta: { changes: changed() - before } }
       }),
@@ -148,7 +159,10 @@ function isRead(sql: string): boolean {
 }
 
 /** One batch as one transaction: any failure rolls the whole batch back. */
-async function runBatch(db: DatabaseSync, statements: Prepared[]) {
+async function runBatch(
+  db: DatabaseSync,
+  statements: Prepared[],
+) {
   db.exec('BEGIN')
   try {
     const out = []

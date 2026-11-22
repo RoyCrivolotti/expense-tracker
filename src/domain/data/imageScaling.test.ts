@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  fitWithin,
-  outputTypeFor,
-  qualityFor,
-  QUALITY_LADDER,
-  shouldDownscale,
-} from './imageScaling'
+import { fitWithin, outputTypeFor, qualityFor, QUALITY_LADDER, shouldDownscale } from './imageScaling'
 
 describe('fitWithin', () => {
   it('leaves an image that already fits alone', () => {

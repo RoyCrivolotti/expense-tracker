@@ -37,7 +37,10 @@ interface CallOptions {
   email?: string | false
 }
 
-function call(handler: Handler, o: CallOptions): Promise<Response> {
+function call(
+  handler: Handler,
+  o: CallOptions,
+): Promise<Response> {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -50,11 +53,24 @@ function call(handler: Handler, o: CallOptions): Promise<Response> {
   })
 }
 
-const device = (over: Record<string, unknown> = {}) => ({ endpoint: APPLE, keys: { p256dh: P256DH, auth: AUTH }, label: 'iPhone', timeZone: 'Europe/Madrid', ...over })
-const saveDevice = (body: unknown = device(), email: string | false = OWNER) => call(save, { path: '/api/push-subscriptions', method: 'PUT', body, email })
+const device = (over: Record<string, unknown> = {}) => ({
+  endpoint: APPLE,
+  keys: { p256dh: P256DH, auth: AUTH },
+  label: 'iPhone',
+  timeZone: 'Europe/Madrid',
+  ...over,
+})
+const saveDevice = (
+  body: unknown = device(),
+  email: string | false = OWNER,
+) => call(save, { path: '/api/push-subscriptions', method: 'PUT', body, email })
 const devices = (email = OWNER) => call(list, { path: '/api/push-subscriptions', email })
-const rows = () => sqlite.prepare('SELECT id, owner, endpoint, p256dh, auth, label, last_status FROM push_subscriptions ORDER BY created_at').all() as Array<Record<string, unknown>>
-const settingsRow = (owner = OWNER) => sqlite.prepare('SELECT mode, time_zone FROM push_settings WHERE owner = ?').get(owner)
+const rows = () =>
+  sqlite
+    .prepare('SELECT id, owner, endpoint, p256dh, auth, label, last_status FROM push_subscriptions ORDER BY created_at')
+    .all() as Array<Record<string, unknown>>
+const settingsRow = (owner = OWNER) =>
+  sqlite.prepare('SELECT mode, time_zone FROM push_settings WHERE owner = ?').get(owner)
 
 describe('saving a device', () => {
   it('stores it for the signed-in person, gives the first device the default choice, and leaves the revision alone', async () => {
@@ -63,7 +79,9 @@ describe('saving a device', () => {
     expect(res.status).toBe(200)
     const { id } = (await res.json()) as { id: string }
     expect(id).toMatch(UUID)
-    expect(rows()).toEqual([{ id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'iPhone', last_status: null }])
+    expect(rows()).toEqual([
+      { id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'iPhone', last_status: null },
+    ])
     expect(settingsRow()).toEqual({ mode: 'daily', time_zone: 'Europe/Madrid' })
     expect(world.token()).toBe(before)
   })
@@ -72,7 +90,9 @@ describe('saving a device', () => {
     const { id } = (await (await saveDevice()).json()) as { id: string }
     sqlite.prepare('UPDATE push_subscriptions SET last_status = 410').run()
     await call(saveSettings, { path: '/api/push-settings', method: 'PUT', body: { mode: 'each', timeZone: 'UTC' } })
-    const again = await saveDevice(device({ label: 'My iPhone', keys: { p256dh: P256DH, auth: 'b'.repeat(22) }, timeZone: 'Europe/Lisbon' }))
+    const again = await saveDevice(
+      device({ label: 'My iPhone', keys: { p256dh: P256DH, auth: 'b'.repeat(22) }, timeZone: 'Europe/Lisbon' }),
+    )
     expect(await again.json()).toEqual({ id })
     expect(rows()).toMatchObject([{ id, label: 'My iPhone', auth: 'b'.repeat(22), last_status: null }])
     expect(settingsRow()).toEqual({ mode: 'each', time_zone: 'UTC' })
@@ -94,14 +114,28 @@ describe('saving a device', () => {
   })
 
   it('keeps a device as the sender will address it, and takes the browser’s padded keys', async () => {
-    const { id } = (await (await saveDevice(device({ endpoint: ` ${APPLE.replace('web.push', 'WEB.PUSH')} `, keys: { p256dh: `${P256DH}=`, auth: `${AUTH}==` }, label: '' }))).json()) as { id: string }
-    expect(rows()).toEqual([{ id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'Device', last_status: null }])
+    const { id } = (await (
+      await saveDevice(
+        device({
+          endpoint: ` ${APPLE.replace('web.push', 'WEB.PUSH')} `,
+          keys: { p256dh: `${P256DH}=`, auth: `${AUTH}==` },
+          label: '',
+        }),
+      )
+    ).json()) as { id: string }
+    expect(rows()).toEqual([
+      { id, owner: OWNER, endpoint: APPLE, p256dh: P256DH, auth: AUTH, label: 'Device', last_status: null },
+    ])
     expect(await (await saveDevice(device({ label: 'x'.repeat(40) }))).json()).toEqual({ id })
     expect(rows()[0]?.label).toBe('x'.repeat(40))
   })
 
   it('takes every push service browsers use', async () => {
-    for (const endpoint of ['https://fcm.googleapis.com/fcm/send/abc:def', 'https://updates.push.services.mozilla.com/wpush/v2/gAAAA', 'https://wns2-par02p.notify.windows.com/w/?token=AwYAAA']) {
+    for (const endpoint of [
+      'https://fcm.googleapis.com/fcm/send/abc:def',
+      'https://updates.push.services.mozilla.com/wpush/v2/gAAAA',
+      'https://wns2-par02p.notify.windows.com/w/?token=AwYAAA',
+    ]) {
       expect((await saveDevice(device({ endpoint }))).status, endpoint).toBe(200)
     }
   })
@@ -142,7 +176,9 @@ describe('listing and forgetting devices', () => {
     const { id } = (await (await saveDevice()).json()) as { id: string }
     await saveDevice(device({ endpoint: `${APPLE}-other` }), OTHER)
     const body = (await (await devices()).json()) as { devices: Array<Record<string, unknown>>; settings: unknown }
-    expect(body.devices).toEqual([{ id, label: 'iPhone', createdAt: expect.any(String), lastSentAt: null, lastStatus: null }])
+    expect(body.devices).toEqual([
+      { id, label: 'iPhone', createdAt: expect.any(String), lastSentAt: null, lastStatus: null },
+    ])
     expect(body.settings).toEqual({ mode: 'daily', timeZone: 'Europe/Madrid' })
     expect(JSON.stringify(body)).not.toContain(APPLE)
     expect(JSON.stringify(body)).not.toContain(P256DH)
@@ -155,8 +191,12 @@ describe('listing and forgetting devices', () => {
   it('forgets a device for its owner alone, and leaves the revision alone', async () => {
     const { id } = (await (await saveDevice()).json()) as { id: string }
     const before = world.token()
-    expect((await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id, email: OTHER })).status).toBe(404)
-    expect((await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id: 'not-an-id' })).status).toBe(404)
+    expect((await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id, email: OTHER })).status).toBe(
+      404,
+    )
+    expect((await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id: 'not-an-id' })).status).toBe(
+      404,
+    )
     const res = await call(remove, { path: '/api/push-subscriptions', method: 'DELETE', id })
     expect(await res.json()).toEqual({ ok: true })
     expect(rows()).toEqual([])
@@ -166,14 +206,20 @@ describe('listing and forgetting devices', () => {
 })
 
 describe('the choice', () => {
-  const choose = (body: unknown, email = OWNER) => call(saveSettings, { path: '/api/push-settings', method: 'PUT', body, email })
+  const choose = (
+    body: unknown,
+    email = OWNER,
+  ) => call(saveSettings, { path: '/api/push-settings', method: 'PUT', body, email })
 
   it('is written for the signed-in person and read back with the devices, leaving the revision alone', async () => {
     const before = world.token()
     expect(await (await choose({ mode: 'weekly', timeZone: 'America/New_York' })).json()).toEqual({ ok: true })
     expect(settingsRow()).toEqual({ mode: 'weekly', time_zone: 'America/New_York' })
     expect(settingsRow(OTHER)).toBeUndefined()
-    expect(((await (await devices()).json()) as { settings: unknown }).settings).toEqual({ mode: 'weekly', timeZone: 'America/New_York' })
+    expect(((await (await devices()).json()) as { settings: unknown }).settings).toEqual({
+      mode: 'weekly',
+      timeZone: 'America/New_York',
+    })
     expect(world.token()).toBe(before)
   })
 

@@ -33,15 +33,20 @@ export interface GroupablePush {
   shapeId: string | null
 }
 
-const sameWording = (a: GroupablePush, b: GroupablePush) =>
-  (a.templateId !== null && a.templateId === b.templateId) || (a.shapeId !== null && a.shapeId === b.shapeId)
+const sameWording = (
+  a: GroupablePush,
+  b: GroupablePush,
+) => (a.templateId !== null && a.templateId === b.templateId) || (a.shapeId !== null && a.shapeId === b.shapeId)
 
 /**
  * Whether two pushes of one person describe one movement: the same absolute amount and currency, at most
  * `GROUP_WINDOW_MS` apart, and different wordings. The wording is the template, and the shape too, so two pushes of
  * one new wording that arrive together, before either has made the template the other would join, stay two.
  */
-export function sameMovement(a: GroupablePush, b: GroupablePush): boolean {
+export function sameMovement(
+  a: GroupablePush,
+  b: GroupablePush,
+): boolean {
   if (a.amountCents === null || b.amountCents === null) return false
   if (Math.abs(a.amountCents) !== Math.abs(b.amountCents) || a.currency !== b.currency) return false
   if (Math.abs(a.occurredAtMs - b.occurredAtMs) > GROUP_WINDOW_MS) return false

@@ -41,13 +41,13 @@ describe('plain statements', () => {
 
 describe('a semicolon that does not end a statement', () => {
   it.each([
-    ["a string", "INSERT INTO t (v) VALUES ('a;b')"],
-    ["a string with an escaped quote", "INSERT INTO t (v) VALUES ('it''s; fine')"],
-    ["a double-quoted name", 'SELECT "odd;name" FROM t'],
-    ["a backtick name", 'SELECT `odd;name` FROM t'],
-    ["a bracketed name", 'SELECT [odd;name] FROM t'],
-    ["a string holding a comment marker", "INSERT INTO t (v) VALUES ('-- not a comment; really')"],
-    ["a string holding a block comment", "INSERT INTO t (v) VALUES ('/* nor; this */')"],
+    ['a string', "INSERT INTO t (v) VALUES ('a;b')"],
+    ['a string with an escaped quote', "INSERT INTO t (v) VALUES ('it''s; fine')"],
+    ['a double-quoted name', 'SELECT "odd;name" FROM t'],
+    ['a backtick name', 'SELECT `odd;name` FROM t'],
+    ['a bracketed name', 'SELECT [odd;name] FROM t'],
+    ['a string holding a comment marker', "INSERT INTO t (v) VALUES ('-- not a comment; really')"],
+    ['a string holding a block comment', "INSERT INTO t (v) VALUES ('/* nor; this */')"],
   ])('inside %s', (_, statement) => {
     expect(sqlOf(`${statement};\nSELECT 2;`)).toEqual([statement, 'SELECT 2'])
   })

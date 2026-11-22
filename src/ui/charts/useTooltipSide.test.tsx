@@ -8,11 +8,18 @@ const PANEL = 200
 const withBars = installFakeBars
 
 /** A chart that can be moved, and a panel of a fixed content height, as refs. */
-function scene(top: number, bottom: number, panelHeight = PANEL) {
+function scene(
+  top: number,
+  bottom: number,
+  panelHeight = PANEL,
+) {
   const chart = document.createElement('div')
   const panel = document.createElement('div')
   Object.defineProperty(panel, 'scrollHeight', { value: panelHeight, configurable: true })
-  const move = (t: number, b: number) => {
+  const move = (
+    t: number,
+    b: number,
+  ) => {
     chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
   }
   move(top, bottom)
@@ -127,8 +134,10 @@ describe('capHeight', () => {
 })
 
 describe('useTooltipSide', () => {
-  const render = (s: ReturnType<typeof scene>, content = 'Year 1') =>
-    renderHook(({ text }) => useTooltipSide(s.chart, s.panel, text), { initialProps: { text: content } })
+  const render = (
+    s: ReturnType<typeof scene>,
+    content = 'Year 1',
+  ) => renderHook(({ text }) => useTooltipSide(s.chart, s.panel, text), { initialProps: { text: content } })
 
   it('opens above a chart low on the screen and below one high on it', () => {
     withBars()

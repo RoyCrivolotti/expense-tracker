@@ -58,8 +58,14 @@ describe('usageFromDataset', () => {
   })
 
   it('counts a row once per flag and once per label however the label is listed', () => {
-    expect(usage.flags).toEqual([{ id: 1, transactions: 2 }, { id: 2, transactions: 0 }])
-    expect(usage.labels).toEqual([{ id: 7, transactions: 2 }, { id: 8, transactions: 1 }])
+    expect(usage.flags).toEqual([
+      { id: 1, transactions: 2 },
+      { id: 2, transactions: 0 },
+    ])
+    expect(usage.labels).toEqual([
+      { id: 7, transactions: 2 },
+      { id: 8, transactions: 1 },
+    ])
   })
 
   it('lists only records that exist, so a row naming a category or account that is gone adds to nothing', () => {

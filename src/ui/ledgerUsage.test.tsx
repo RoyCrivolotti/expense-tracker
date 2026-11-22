@@ -22,7 +22,10 @@ interface Sink {
 }
 
 /** The data of a ledger and, under it, the counts a Settings screen would be given. */
-function open(source: TestSource, policy?: HydrationPolicy) {
+function open(
+  source: TestSource,
+  policy?: HydrationPolicy,
+) {
   const sink: Sink = { data: null, usage: null }
   function Counts({ data }: { data: ExpenseData }) {
     sink.usage = useRecordUsage(data.model!)
@@ -47,11 +50,20 @@ const KINDS: Array<[UsageKind, (ds: ExpenseDataset) => Array<{ id: number }>]> =
   ['label', (ds) => ds.labels],
 ]
 /** The count of every record of `ds`, as the view gives it. */
-const counts = (sink: Sink, ds: ExpenseDataset) =>
-  Object.fromEntries(KINDS.flatMap(([kind, records]) => records(ds).map(({ id }) => [`${kind} ${id}`, sink.usage!.count(kind, id)])))
+const counts = (
+  sink: Sink,
+  ds: ExpenseDataset,
+) =>
+  Object.fromEntries(
+    KINDS.flatMap(([kind, records]) => records(ds).map(({ id }) => [`${kind} ${id}`, sink.usage!.count(kind, id)])),
+  )
 /** The count of every record of `ds`, as the engine counts it over every row. */
 const truth = (ds: ExpenseDataset) =>
-  Object.fromEntries(KINDS.flatMap(([kind, records]) => records(ds).map(({ id }) => [`${kind} ${id}`, usageCount(usageFromDataset(ds), kind, id)])))
+  Object.fromEntries(
+    KINDS.flatMap(([kind, records]) =>
+      records(ds).map(({ id }) => [`${kind} ${id}`, usageCount(usageFromDataset(ds), kind, id)]),
+    ),
+  )
 
 afterEach(() => {
   vi.useRealTimers()
@@ -101,7 +113,12 @@ describe('the counts of a window', () => {
     source.dataset = { ...big, transactions: big.transactions.map((t) => moved.find((m) => m.id === t.id) ?? t) }
     const before = counts(sink, big)
 
-    act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, moved), { ids: older.map((t) => t.id), patch: { categoryId: to.id } }))
+    act(() =>
+      sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, moved), {
+        ids: older.map((t) => t.id),
+        patch: { categoryId: to.id },
+      }),
+    )
 
     await waitFor(() => expect(counts(sink, big)).toEqual(truth(source.dataset)))
     expect(counts(sink, big)).not.toEqual(before)
@@ -114,7 +131,12 @@ describe('the counts of a window', () => {
     await loaded(sink)
     const held = sink.data!.model!.dataset.transactions.find((t) => !t.planId && !t.settledBy && !t.reportCount)!
 
-    act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [{ ...held, description: 'Renamed' }]), { ids: [held.id], patch: { description: 'Renamed' } }))
+    act(() =>
+      sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [{ ...held, description: 'Renamed' }]), {
+        ids: [held.id],
+        patch: { description: 'Renamed' },
+      }),
+    )
     await new Promise((resolve) => setTimeout(resolve, 20))
 
     expect(source.calls.filter((call) => call === 'usage')).toHaveLength(1)
@@ -134,7 +156,12 @@ describe('the counts of a window', () => {
 
     source.readUsagePart = vi.fn().mockRejectedValue(new Error('down again'))
     const first = sink.data!.model!.dataset.transactions.find((t) => !t.planId && !t.settledBy && !t.reportCount)!
-    act(() => sink.data!.applyPatch((d) => patchAfterBulkUpdate(d, [{ ...first, categoryId: first.categoryId === 1 ? 2 : 1 }]), { ids: [first.id], patch: { categoryId: 2 } }))
+    act(() =>
+      sink.data!.applyPatch(
+        (d) => patchAfterBulkUpdate(d, [{ ...first, categoryId: first.categoryId === 1 ? 2 : 1 }]),
+        { ids: [first.id], patch: { categoryId: 2 } },
+      ),
+    )
     await waitFor(() => expect(sink.usage!.note).toBe('failed'))
     expect(counts(sink, big)).toEqual(truth(big))
   })

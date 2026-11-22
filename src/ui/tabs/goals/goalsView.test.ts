@@ -33,7 +33,7 @@ describe('mobileSelection', () => {
     expect(mobileSelection('chart', 'assumptions')).toEqual({ half: 'chart', view: 'plan' })
   })
 
-  it('changes the view for Progress and Assumptions and leaves Plan\'s half alone', () => {
+  it("changes the view for Progress and Assumptions and leaves Plan's half alone", () => {
     expect(mobileSelection('progress', 'plan')).toEqual({ half: null, view: 'progress' })
     expect(mobileSelection('assumptions', 'progress')).toEqual({ half: null, view: 'assumptions' })
   })

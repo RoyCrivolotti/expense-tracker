@@ -235,7 +235,7 @@ describe('Date/Budget month native-input overlay', () => {
     expect(screen.getByDisplayValue<HTMLInputElement>('2026-07').type).toBe('month')
   })
 
-  it('resolves cleanly by accessible name too, via NativeDateOverlay\'s own aria-label', () => {
+  it("resolves cleanly by accessible name too, via NativeDateOverlay's own aria-label", () => {
     // Field renders these as `as="div"`, not a <label> — so there's no wrapping-label
     // textContent to pollute the accessible name the way there was before the caption
     // was pulled out of the click-to-open surface (see the next test).
@@ -264,9 +264,7 @@ describe('Date/Budget month native-input overlay', () => {
 
   it('updates date (and the derived budget month, for a new transaction) when the Date input changes', () => {
     const set = vi.fn()
-    render(
-      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
-    )
+    render(<Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />)
     fireEvent.change(screen.getByDisplayValue('2026-07-05'), { target: { value: '2026-09-10' } })
     expect(set).toHaveBeenCalledWith('date', '2026-09-10')
     expect(set).toHaveBeenCalledWith('budgetMonth', '2026-09')
@@ -274,9 +272,7 @@ describe('Date/Budget month native-input overlay', () => {
 
   it('updates only budgetMonth when the Budget month input changes', () => {
     const set = vi.fn()
-    render(
-      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
-    )
+    render(<Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />)
     fireEvent.change(screen.getByDisplayValue('2026-07'), { target: { value: '2026-11' } })
     expect(set).toHaveBeenCalledWith('budgetMonth', '2026-11')
     expect(set).not.toHaveBeenCalledWith('date', expect.anything())
@@ -286,9 +282,7 @@ describe('Date/Budget month native-input overlay', () => {
 describe('Fields type selector', () => {
   it('offers Withdraw as an investment with the money going out', () => {
     const set = vi.fn()
-    render(
-      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
-    )
+    render(<Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
     expect(set).toHaveBeenCalledWith('type', 'investment')
     expect(set).toHaveBeenCalledWith('outflow', true)

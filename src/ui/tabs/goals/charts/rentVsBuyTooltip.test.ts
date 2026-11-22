@@ -19,7 +19,10 @@ const point = (over: Partial<RentVsBuyPoint> = {}): RentVsBuyPoint => ({
   ...over,
 })
 const ctx = { format: EU_MONEY_FORMAT, rentColor: 'red', buyColor: 'blue' }
-const value = (lines: { label: string; value: string }[], label: string) => lines.find((l) => l.label === label)?.value
+const value = (
+  lines: { label: string; value: string }[],
+  label: string,
+) => lines.find((l) => l.label === label)?.value
 
 describe('rentVsBuyTooltip', () => {
   it('titles the year by the years since buying, and the first as the day of the purchase', () => {
@@ -67,7 +70,14 @@ describe('rentVsBuyTooltip', () => {
   })
 
   it('has no month to speak of on the day of the purchase, and no savings yet', () => {
-    const first = point({ year: 0, buySavingsCents: 0, rentExtraCents: 0, rentHousingMonthlyCents: 0, buyHousingMonthlyCents: 0, rentInvestsMonthlyCents: 0 })
+    const first = point({
+      year: 0,
+      buySavingsCents: 0,
+      rentExtraCents: 0,
+      rentHousingMonthlyCents: 0,
+      buyHousingMonthlyCents: 0,
+      rentInvestsMonthlyCents: 0,
+    })
     const { lines } = rentVsBuyTooltip([first], 0, ctx)
     const labels = lines.map((l) => l.label)
     expect(labels).not.toContain('Renter pays a month')

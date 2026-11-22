@@ -48,10 +48,7 @@ export async function invokeExpenseRoute(options: InvokeExpenseRouteOptions): Pr
   const headers = new Headers({ 'content-type': 'application/json' })
   const init: RequestInit = { method: options.method ?? 'POST', headers }
   if (options.body !== undefined) init.body = JSON.stringify(options.body)
-  const request = new Request(
-    options.url ?? 'https://expenses.test/api/expenses/accounts',
-    init,
-  )
+  const request = new Request(options.url ?? 'https://expenses.test/api/expenses/accounts', init)
   const data: ExpensesData = {
     owner,
     authenticatedEmail: owner,
@@ -59,9 +56,7 @@ export async function invokeExpenseRoute(options: InvokeExpenseRouteOptions): Pr
     repo: options.repo,
   }
   try {
-    return await options.handler(
-      handlerContext(request, {} as Env, options.params ?? {}, data),
-    )
+    return await options.handler(handlerContext(request, {} as Env, options.params ?? {}, data))
   } catch (e) {
     const httpError = toHttpError(e)
     return error(httpError.status, httpError.message)

@@ -13,15 +13,19 @@ interface StatementStub {
  * `first`/`run` are keyed by a substring match against the SQL text.
  */
 function stubEnv(opts: {
-  first?: (sql: string, args: unknown[]) => unknown
-  run?: (sql: string, args: unknown[]) => { meta: { changes: number } }
+  first?: (
+    sql: string,
+    args: unknown[],
+  ) => unknown
+  run?: (
+    sql: string,
+    args: unknown[],
+  ) => { meta: { changes: number } }
   batch?: (stmts: StatementStub[]) => Promise<unknown[]> | unknown[]
 }) {
   const first = opts.first ?? (() => null)
   const run = opts.run ?? (() => ({ meta: { changes: 1 } }))
-  const batch = vi.fn(
-    opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 1 } }))),
-  )
+  const batch = vi.fn(opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 1 } }))))
   const prepare = vi.fn((sql: string) => ({
     bind: (...args: unknown[]) => ({
       sql,
@@ -174,7 +178,10 @@ describe('deleteCategory', () => {
               active: 1,
             }
           : null,
-      run: (sql, args) => {
+      run: (
+        sql,
+        args,
+      ) => {
         runCalls.push({ sql, args })
         return { meta: { changes: 1 } }
       },
@@ -244,9 +251,7 @@ describe('deleteCategory', () => {
       },
     })
 
-    await expect(deleteCategory(env, OWNER, 5, { reassignToId: 7 })).rejects.toThrow(
-      'D1_ERROR: batch failed',
-    )
+    await expect(deleteCategory(env, OWNER, 5, { reassignToId: 7 })).rejects.toThrow('D1_ERROR: batch failed')
     expect(batch).toHaveBeenCalledOnce()
   })
 })
@@ -345,7 +350,7 @@ describe('deleteAccount', () => {
     expect(stmts[5]!.args).toEqual([3, OWNER])
   })
 
-  it("moves settings.defaultAccountId to the reassign target when it pointed at the deleted account", async () => {
+  it('moves settings.defaultAccountId to the reassign target when it pointed at the deleted account', async () => {
     const { env, batch } = stubEnv({
       first: (sql) => (sql.includes('SELECT 1 AS ok FROM accounts') ? { ok: 1 } : null),
     })
@@ -369,9 +374,7 @@ describe('deleteAccount', () => {
 
     const stmts = batch.mock.calls[0]![0] as StatementStub[]
     const conflictDeleteIndex = stmts.findIndex((s) => s.sql.includes('DELETE FROM account_statements'))
-    const migrateIndex = stmts.findIndex((s) =>
-      s.sql.startsWith('UPDATE account_statements SET account_id'),
-    )
+    const migrateIndex = stmts.findIndex((s) => s.sql.startsWith('UPDATE account_statements SET account_id'))
     expect(conflictDeleteIndex).toBeGreaterThanOrEqual(0)
     expect(migrateIndex).toBeGreaterThan(conflictDeleteIndex)
   })
@@ -403,7 +406,10 @@ describe('deleteAccount', () => {
         sql.includes('INSERT INTO accounts')
           ? { id: 42, name: 'Fixed name', kind: 'credit', settlement: 'deferred', active: 1 }
           : null,
-      run: (sql, args) => {
+      run: (
+        sql,
+        args,
+      ) => {
         runCalls.push({ sql, args })
         return { meta: { changes: 1 } }
       },
@@ -444,9 +450,7 @@ describe('deleteAccount', () => {
       },
     })
 
-    await expect(deleteAccount(env, OWNER, 3, { reassignToId: 8 })).rejects.toThrow(
-      'D1_ERROR: batch failed',
-    )
+    await expect(deleteAccount(env, OWNER, 3, { reassignToId: 8 })).rejects.toThrow('D1_ERROR: batch failed')
     expect(batch).toHaveBeenCalledOnce()
   })
 })

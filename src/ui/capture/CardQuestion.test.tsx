@@ -6,7 +6,10 @@ import type { SeedCard } from '../actions'
 import CardQuestion from './CardQuestion'
 import { otherCardsOf } from './cardLinks'
 
-vi.mock('../../data/captureCardsApi', async (original) => ({ ...(await original<typeof api>()), fetchCardLinks: vi.fn() }))
+vi.mock('../../data/captureCardsApi', async (original) => ({
+  ...(await original<typeof api>()),
+  fetchCardLinks: vi.fn(),
+}))
 afterEach(() => vi.resetAllMocks())
 
 const accounts: Account[] = [
@@ -14,7 +17,13 @@ const accounts: Account[] = [
   { id: 2, name: 'Travel Credit', kind: 'credit', settlement: 'deferred', active: true },
   { id: 3, name: 'Closed', kind: 'debit', settlement: 'immediate', active: false },
 ]
-const seedCard = (): SeedCard => ({ source: 'iberia', digits: '4821', answer: { accountId: null, remember: true }, unanswered: 'Choose the account first', remember: vi.fn() })
+const seedCard = (): SeedCard => ({
+  source: 'iberia',
+  digits: '4821',
+  answer: { accountId: null, remember: true },
+  unanswered: 'Choose the account first',
+  remember: vi.fn(),
+})
 const links = (cards: api.CardLink[]) => vi.mocked(api.fetchCardLinks).mockResolvedValue({ cards, waiting: [] })
 
 describe('the question about a card', () => {
@@ -25,7 +34,11 @@ describe('the question about a card', () => {
     expect(screen.getByText('Which account is the card ending 4821?')).toBeInTheDocument()
     const select = screen.getByLabelText('Account for the card ending 4821')
     expect(select).toHaveValue('')
-    expect([...(select as HTMLSelectElement).options].map((o) => o.text)).toEqual(['Pick an account', 'Main Debit', 'Travel Credit'])
+    expect([...(select as HTMLSelectElement).options].map((o) => o.text)).toEqual([
+      'Pick an account',
+      'Main Debit',
+      'Travel Credit',
+    ])
     expect(screen.getByRole('checkbox', { name: 'Remember this card' })).toBeChecked()
   })
 

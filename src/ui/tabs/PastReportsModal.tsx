@@ -34,15 +34,9 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
   const reports = listPastReports(model.dataset.transactions, model.dataset.flags)
 
   return (
-    <Modal
-      title="Past expense reports"
-      subtitle="Reports you have already been reimbursed for."
-      onClose={onClose}
-    >
+    <Modal title="Past expense reports" subtitle="Reports you have already been reimbursed for." onClose={onClose}>
       {reports.length === 0 ? (
-        <EmptyState>
-          Nothing yet. A report lands here once you record the reimbursement for it.
-        </EmptyState>
+        <EmptyState>Nothing yet. A report lands here once you record the reimbursement for it.</EmptyState>
       ) : (
         <ul className={styles.list}>
           {reports.map((report) => (
@@ -70,19 +64,11 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
                 {/* Nothing left to rebuild the document from, so the button would open
                     an empty overlay. The payment, and the figures above, still stand. */}
                 {report.remaining > 0 ? (
-                  <button
-                    type="button"
-                    className={styles.action}
-                    onClick={() => onOpenReport(report.payment.id)}
-                  >
+                  <button type="button" className={styles.action} onClick={() => onOpenReport(report.payment.id)}>
                     Report
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  className={styles.action}
-                  onClick={() => onOpenPayment(report.payment)}
-                >
+                <button type="button" className={styles.action} onClick={() => onOpenPayment(report.payment)}>
                   Payment
                 </button>
               </div>

@@ -28,9 +28,15 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const get = (query: string, email = OWNER) => world.call(getExport, { path: `/export?${query}`, email })
+const get = (
+  query: string,
+  email = OWNER,
+) => world.call(getExport, { path: `/export?${query}`, email })
 const lines = async (response: Response): Promise<unknown[]> =>
-  (await response.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line) as unknown)
+  (await response.text())
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as unknown)
 const count = (table: string): number => (sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n
 
 describe('GET /export', () => {
@@ -46,7 +52,12 @@ describe('GET /export', () => {
     expect(response.headers.get('x-export-next')).toBeNull()
     const text = await response.clone().text()
     expect(text.endsWith('\n')).toBe(true)
-    expect(text.split('\n').filter(Boolean).every((line) => !line.includes('\n'))).toBe(true)
+    expect(
+      text
+        .split('\n')
+        .filter(Boolean)
+        .every((line) => !line.includes('\n')),
+    ).toBe(true)
     expect((await lines(response)).length).toBe(count('transactions'))
   })
 

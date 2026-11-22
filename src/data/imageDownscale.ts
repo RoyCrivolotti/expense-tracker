@@ -1,10 +1,4 @@
-import {
-  fitWithin,
-  outputTypeFor,
-  qualityFor,
-  shouldDownscale,
-  type Dimensions,
-} from '../domain/data/imageScaling'
+import { fitWithin, outputTypeFor, qualityFor, shouldDownscale, type Dimensions } from '../domain/data/imageScaling'
 
 export interface DownscaleResult {
   blob: Blob
@@ -27,7 +21,11 @@ export interface DownscaleLimits {
  */
 export interface CanvasDeps {
   decode(file: Blob): Promise<{ source: CanvasImageSource } & Dimensions>
-  render(source: CanvasImageSource, size: Dimensions, quality: number): Promise<Blob | null>
+  render(
+    source: CanvasImageSource,
+    size: Dimensions,
+    quality: number,
+  ): Promise<Blob | null>
 }
 
 export const browserCanvas: CanvasDeps = {
@@ -35,7 +33,11 @@ export const browserCanvas: CanvasDeps = {
     const bitmap = await createImageBitmap(file)
     return { source: bitmap, width: bitmap.width, height: bitmap.height }
   },
-  render: (source, size, quality) =>
+  render: (
+    source,
+    size,
+    quality,
+  ) =>
     new Promise((resolve) => {
       const canvas = document.createElement('canvas')
       canvas.width = size.width

@@ -52,10 +52,16 @@ export interface RecurringSeries {
   budgetOffsets: number[]
 }
 
-const ascending = (a: number, b: number): number => a - b
+const ascending = (
+  a: number,
+  b: number,
+): number => a - b
 
 /** The API's order: newest first, ties by id. The first row of a series in this order is its newest. */
-function newestFirst(a: Transaction, b: Transaction): number {
+function newestFirst(
+  a: Transaction,
+  b: Transaction,
+): number {
   if (a.date !== b.date) return a.date < b.date ? 1 : -1
   return b.id - a.id
 }

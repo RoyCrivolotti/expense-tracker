@@ -29,7 +29,10 @@ export interface CardLayout {
   /** A size, held to what is allowed, from where the card's top left is; what was asked for is kept. */
   rescale: (scale: number) => void
   /** Where the card is now, as a share of the room it has in the box and size that are given. */
-  remember: (box: Size, size: Size) => void
+  remember: (
+    box: Size,
+    size: Size,
+  ) => void
 }
 
 /** Hundredths of a pixel, which is more than a screen can show and less than a float's own noise. */
@@ -68,7 +71,10 @@ export function createLayout(
     at = clampPx(onDevicePixels(to, window.devicePixelRatio || 1), box(), size)
     card.style.transform = `translate3d(${at.x}px, ${at.y}px, 0)`
   }
-  const remember = (inBox: Size, ofSize: Size) => {
+  const remember = (
+    inBox: Size,
+    ofSize: Size,
+  ) => {
     placement.current = pxToPlacement(at, inBox, ofSize, placement.current)
   }
 

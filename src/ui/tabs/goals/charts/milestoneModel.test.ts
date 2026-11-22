@@ -152,28 +152,45 @@ describe('a path exactly on the plan, restarted from today', () => {
   // The plan restarted on its own line changes nothing (GOALS-MODEL), so its cells are the plan's, whatever day it is.
   const inflation = 0.02
   const milestones = [100_000, 250_000, 500_000, 1_000_000].map((e) => ({ amountCents: e * 100, label: '' }))
-  const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2026-01-01', housePurchaseYear: null })
+  const plan = makeScenario({
+    id: 1,
+    name: 'Path A',
+    isActive: true,
+    planStartDate: '2026-01-01',
+    housePurchaseYear: null,
+  })
   const checkinsOnTheLine = ['2026-07-20', '2027-03-05', '2028-10-15', '2030-05-31', '2033-01-02', '2036-09-09']
 
   it.each(checkinsOnTheLine)('gives the plan and its restart the same years on %s', (date) => {
     const onLine = realToNominal(planValueAtDate(plan, date, inflation)!, '2026-01-01', date, inflation)
     const restarted = planFromToday(plan, { investedCents: onLine, date }, inflation)
     expect(restarted).not.toBeNull()
-    const [planRow, todayRow] = buildRows([plan], makeScenario({ id: 0 }), milestones, inflation, false, restarted, date)
+    const [planRow, todayRow] = buildRows(
+      [plan],
+      makeScenario({ id: 0 }),
+      milestones,
+      inflation,
+      false,
+      restarted,
+      date,
+    )
     expect(todayRow!.kind).toBe('fromToday')
     expect(todayRow!.cells).toEqual(planRow!.cells)
   })
 
-  it.each(checkinsOnTheLine)('is never more than a year later than the day the plan reaches it, counted from %s', (date) => {
-    const [planRow] = buildRows([plan], makeScenario({ id: 0 }), milestones, inflation, false, null, date)
-    planRow!.offsets.forEach((offset, i) => {
-      const cell = planRow!.cells[i]
-      if (offset === null || cell === null || cell === undefined) return
-      const exact = Math.max(0, offset - planRow!.elapsedYears)
-      expect(cell).toBeGreaterThanOrEqual(exact - 1e-9)
-      expect(cell - exact).toBeLessThan(1 + 1e-9)
-    })
-  })
+  it.each(checkinsOnTheLine)(
+    'is never more than a year later than the day the plan reaches it, counted from %s',
+    (date) => {
+      const [planRow] = buildRows([plan], makeScenario({ id: 0 }), milestones, inflation, false, null, date)
+      planRow!.offsets.forEach((offset, i) => {
+        const cell = planRow!.cells[i]
+        if (offset === null || cell === null || cell === undefined) return
+        const exact = Math.max(0, offset - planRow!.elapsedYears)
+        expect(cell).toBeGreaterThanOrEqual(exact - 1e-9)
+        expect(cell - exact).toBeLessThan(1 + 1e-9)
+      })
+    },
+  )
 })
 
 describe('gapVersus', () => {
@@ -195,7 +212,14 @@ describe('gapVersus', () => {
   })
 
   it('gives a figure whatever day each path started on, from the years shown for both', () => {
-    const early = row({ id: 'p', kind: 'plan', startDate: '2024-04-01', elapsedYears: 2.5, sinceStart: [6], cells: [4] })
+    const early = row({
+      id: 'p',
+      kind: 'plan',
+      startDate: '2024-04-01',
+      elapsedYears: 2.5,
+      sinceStart: [6],
+      cells: [4],
+    })
     const late = row({ startDate: '2026-06-01', elapsedYears: 0.3, sinceStart: [7], cells: [7] })
     expect(gapVersus(late, early, 0)).toEqual({ kind: 'years', years: 3 })
     expect(gapVersus({ ...late, cells: [2], startDate: '2021-01-01', elapsedYears: 5.5 }, early, 0)).toEqual({
@@ -270,7 +294,9 @@ describe('describeCell', () => {
 
   it('counts the end of the horizon from today for a path that started a while ago', () => {
     const old = row({ cells: [null], horizonYears: 30, horizonFromNow: 27, elapsedYears: 3.2 })
-    expect(describeCell({ ...base, row: old })).toBe('Path B does not reach 750k € within its horizon (the next 27 years).')
+    expect(describeCell({ ...base, row: old })).toBe(
+      'Path B does not reach 750k € within its horizon (the next 27 years).',
+    )
   })
 
   it('says a path reached it before today, and in what year, when its own step is already behind', () => {
@@ -281,8 +307,12 @@ describe('describeCell', () => {
   it('sets the path against the plan when asked to', () => {
     const later = describeCell({ ...base, row: row({ cells: [6] }), plan })
     expect(later).toBe('Path B reaches 750k € in 6 years, by 2032. That is 3 years later than Path A (the plan).')
-    expect(describeCell({ ...base, row: row({ cells: [2] }), plan })).toContain('That is 1 year sooner than Path A (the plan).')
-    expect(describeCell({ ...base, row: row({ cells: [3] }), plan })).toContain('That is the same as Path A (the plan).')
+    expect(describeCell({ ...base, row: row({ cells: [2] }), plan })).toContain(
+      'That is 1 year sooner than Path A (the plan).',
+    )
+    expect(describeCell({ ...base, row: row({ cells: [3] }), plan })).toContain(
+      'That is the same as Path A (the plan).',
+    )
     expect(describeCell({ ...base, row: row({ cells: [null] }), plan })).toContain(
       'That is later than Path A (the plan), which does get there.',
     )
@@ -383,8 +413,18 @@ describe('buildRows', () => {
   })
 
   it('counts each cell from today: the years since the start less the years the path has already run', () => {
-    const old = makeScenario({ id: 1, planStartDate: '2023-07-01', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
-    const fresh = makeScenario({ id: 2, planStartDate: '2026-10-03', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
+    const old = makeScenario({
+      id: 1,
+      planStartDate: '2023-07-01',
+      startInvestedCents: 1_000_000,
+      monthlyContributionCents: 50_000,
+    })
+    const fresh = makeScenario({
+      id: 2,
+      planStartDate: '2026-10-03',
+      startInvestedCents: 1_000_000,
+      monthlyContributionCents: 50_000,
+    })
     const [first, second] = buildRows([old, fresh], draft, milestones, 0, false, null, '2026-10-04')
     const fromNow = (r: MilestoneRow | undefined) => [Math.ceil(r!.offsets[0]! - r!.elapsedYears)]
 
@@ -407,7 +447,12 @@ describe('buildRows', () => {
   })
 
   it('shows a milestone the path passed before today as already there, keeping its own step for the calendar year', () => {
-    const old = makeScenario({ id: 1, planStartDate: '2015-01-01', startInvestedCents: 1_000_000, monthlyContributionCents: 100_000 })
+    const old = makeScenario({
+      id: 1,
+      planStartDate: '2015-01-01',
+      startInvestedCents: 1_000_000,
+      monthlyContributionCents: 100_000,
+    })
     const [row] = buildRows([old], draft, milestones, 0, false, null, '2026-10-04')
 
     expect(row?.sinceStart[0]).toBeGreaterThan(0)
@@ -419,7 +464,11 @@ describe('buildRows', () => {
     const money = { startInvestedCents: 15_000_000, monthlyContributionCents: 100_000 }
     const started = makeScenario({ id: 1, planStartDate: '2026-01-01', ...money })
     const later = makeScenario({ id: 2, planStartDate: '2028-05-10', ...money })
-    const ladder = [{ amountCents: 10_000_000, label: '' }, { amountCents: 15_000_000, label: '' }, { amountCents: 30_000_000, label: '' }]
+    const ladder = [
+      { amountCents: 10_000_000, label: '' },
+      { amountCents: 15_000_000, label: '' },
+      { amountCents: 30_000_000, label: '' },
+    ]
     const [first, second] = buildRows([started, later], draft, ladder, 0, false, null, '2026-10-03')
 
     expect(second!.elapsedYears).toBeCloseTo(-1.6, 1)
@@ -475,16 +524,42 @@ describe('splitPages', () => {
   })
 
   it('splits as evenly as it can, so no page is left with one column', () => {
-    expect(splitPages(upTo(5), 4)).toEqual([[0, 1, 2], [3, 4]])
-    expect(splitPages(upTo(8), 4)).toEqual([[0, 1, 2, 3], [4, 5, 6, 7]])
-    expect(splitPages(upTo(9), 4)).toEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-    expect(splitPages(upTo(7), 3)).toEqual([[0, 1, 2], [3, 4], [5, 6]])
-    expect(splitPages(upTo(10), 4)).toEqual([[0, 1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    expect(splitPages(upTo(12), 3)).toEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]])
+    expect(splitPages(upTo(5), 4)).toEqual([
+      [0, 1, 2],
+      [3, 4],
+    ])
+    expect(splitPages(upTo(8), 4)).toEqual([
+      [0, 1, 2, 3],
+      [4, 5, 6, 7],
+    ])
+    expect(splitPages(upTo(9), 4)).toEqual([
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+    ])
+    expect(splitPages(upTo(7), 3)).toEqual([
+      [0, 1, 2],
+      [3, 4],
+      [5, 6],
+    ])
+    expect(splitPages(upTo(10), 4)).toEqual([
+      [0, 1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ])
+    expect(splitPages(upTo(12), 3)).toEqual([
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [9, 10, 11],
+    ])
   })
 
   it('keeps the indices it was given, not their position', () => {
-    expect(splitPages([1, 2, 3, 4, 5], 3)).toEqual([[1, 2, 3], [4, 5]])
+    expect(splitPages([1, 2, 3, 4, 5], 3)).toEqual([
+      [1, 2, 3],
+      [4, 5],
+    ])
   })
 
   it('is no pages for no milestones, and one column a page at the very least', () => {
@@ -527,7 +602,12 @@ describe('soonestFirst', () => {
   })
 
   it('keeps the table order for rows that tie, and does not change the rows it was given', () => {
-    const rows = [row({ id: 'a', cells: [4] }), row({ id: 'b', cells: [4] }), row({ id: 'c', cells: [null] }), row({ id: 'd', cells: [null] })]
+    const rows = [
+      row({ id: 'a', cells: [4] }),
+      row({ id: 'b', cells: [4] }),
+      row({ id: 'c', cells: [null] }),
+      row({ id: 'd', cells: [null] }),
+    ]
     expect(soonestFirst(rows, 0).map((r) => r.id)).toEqual(['a', 'b', 'c', 'd'])
     expect(rows.map((r) => r.id)).toEqual(['a', 'b', 'c', 'd'])
   })

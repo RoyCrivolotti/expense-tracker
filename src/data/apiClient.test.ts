@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, req, reqMultipart, wasRefused } from './apiClient'
 import { onWriteReceipt } from './writeReceipts'
 
-function response(body: unknown, init: ResponseInit = {}): Response {
+function response(
+  body: unknown,
+  init: ResponseInit = {},
+): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
     headers: { 'content-type': 'application/json' },
@@ -31,19 +34,13 @@ describe('req', () => {
   })
 
   it('turns the server’s {error} into an ApiError carrying the status', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(response({ error: 'Invalid flagId' }, { status: 400 })),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'Invalid flagId' }, { status: 400 })))
 
     await expect(req('/x')).rejects.toMatchObject({ message: 'Invalid flagId', status: 400 })
   })
 
   it('falls back to a generic message when the body is not JSON', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(new Response('nope', { status: 503 })),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('nope', { status: 503 })))
 
     await expect(req('/x')).rejects.toMatchObject({ message: 'Request failed (503)', status: 503 })
   })
@@ -83,7 +80,8 @@ describe('reqMultipart', () => {
 
 describe('the receipt of a write', () => {
   const told: unknown[] = []
-  const written = (headers: Record<string, string>) => response({}, { headers: { 'content-type': 'application/json', ...headers } })
+  const written = (headers: Record<string, string>) =>
+    response({}, { headers: { 'content-type': 'application/json', ...headers } })
   let stop: () => void = () => {}
 
   beforeEach(() => {
@@ -112,7 +110,10 @@ describe('the receipt of a write', () => {
   })
 
   it('is not passed on when the body could not be read, since the caller never shows that write', async () => {
-    const unreadable = () => Promise.resolve(new Response('not json', { status: 200, headers: { 'x-revision-before': 'aa', 'x-revision-after': 'bb' } }))
+    const unreadable = () =>
+      Promise.resolve(
+        new Response('not json', { status: 200, headers: { 'x-revision-before': 'aa', 'x-revision-after': 'bb' } }),
+      )
     vi.stubGlobal('fetch', vi.fn().mockImplementation(unreadable))
 
     await expect(req('/x', { method: 'POST' })).rejects.toThrow()
@@ -130,7 +131,10 @@ describe('the receipt of a write', () => {
   })
 
   it('is not passed on for a request that failed', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'no' }, { status: 409, headers: { 'x-revision-before': 'aa' } })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(response({ error: 'no' }, { status: 409, headers: { 'x-revision-before': 'aa' } })),
+    )
 
     await expect(req('/x', { method: 'POST' })).rejects.toBeInstanceOf(ApiError)
 

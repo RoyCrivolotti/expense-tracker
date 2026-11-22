@@ -3,10 +3,19 @@ import { reloadOnChunkError } from './reloadOnChunkError'
 
 function memory() {
   const data = new Map<string, string>()
-  return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) }
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (
+      k: string,
+      v: string,
+    ) => void data.set(k, v),
+  }
 }
 
-function setup(buildId = 'abc123', storage: ReturnType<typeof memory> | undefined = memory()) {
+function setup(
+  buildId = 'abc123',
+  storage: ReturnType<typeof memory> | undefined = memory(),
+) {
   const target = new EventTarget() as unknown as Window
   const reload = vi.fn()
   const stop = reloadOnChunkError(target, storage, buildId, reload)

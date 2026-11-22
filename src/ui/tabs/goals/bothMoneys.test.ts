@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT, resolveMoneyFormat } from '../../../engine/money'
-import { aboutOnAccount, bothMoneys, bothMoneysSentence, bothMoneysTail, onAccountCents, onAccountLabel, onAccountPhrase } from './bothMoneys'
+import {
+  aboutOnAccount,
+  bothMoneys,
+  bothMoneysSentence,
+  bothMoneysTail,
+  onAccountCents,
+  onAccountLabel,
+  onAccountPhrase,
+} from './bothMoneys'
 import { yearLabel } from './yearLabel'
 
 const money = (cents: number) => `${Math.round(cents / 100).toLocaleString('de-DE')} €`
@@ -37,15 +45,22 @@ describe('onAccountLabel', () => {
 })
 
 describe('bothMoneys', () => {
-  const args = { cents: 3_000_000, years: 10, planStartDate: '2026-01-01', inflationRate: 0.02, money, format: EU_MONEY_FORMAT }
+  const args = {
+    cents: 3_000_000,
+    years: 10,
+    planStartDate: '2026-01-01',
+    inflationRate: 0.02,
+    money,
+    format: EU_MONEY_FORMAT,
+  }
 
-  it('names the plan\'s money after the currency the owner tracks in', () => {
+  it("names the plan's money after the currency the owner tracks in", () => {
     const usd = bothMoneys({ ...args, format: resolveMoneyFormat('USD', 'en-US') })
     expect(usd.planLabel).toBe('2026 US dollars')
     expect(bothMoneysTail(usd)).toBe('in 2026 US dollars, about 36.570 € on your account in 2036')
   })
 
-  it('says an amount in the plan\'s euros and on the account when it is reached', () => {
+  it("says an amount in the plan's euros and on the account when it is reached", () => {
     expect(bothMoneys(args)).toEqual({
       plan: '30.000 €',
       account: '36.570 €',
@@ -55,7 +70,7 @@ describe('bothMoneys', () => {
     })
   })
 
-  it('reads as one sentence, the plan\'s euros first', () => {
+  it("reads as one sentence, the plan's euros first", () => {
     expect(bothMoneysSentence(bothMoneys(args))).toBe('30.000 € in 2026 euros, about 36.570 € on your account in 2036')
   })
 

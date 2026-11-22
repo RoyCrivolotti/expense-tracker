@@ -28,7 +28,10 @@ export interface LedgerModelOptions {
   descriptions?: { index: DescriptionIndexOptions; wrap: (index: DescriptionEntryIndex) => DescriptionIndex }
 }
 
-function descriptionsOf(real: Transaction[], { descriptions }: LedgerModelOptions): DescriptionIndex {
+function descriptionsOf(
+  real: Transaction[],
+  { descriptions }: LedgerModelOptions,
+): DescriptionIndex {
   if (!descriptions) return buildDescriptionIndex(real)
   return descriptions.wrap(buildDescriptionIndex(real, descriptions.index))
 }
@@ -42,12 +45,18 @@ export function fixedHistoryOf(rows: Transaction[]): FixedHistory {
  * The series of the whole history as the server serves them, for a ledger that does not hold every row, with the
  * rows written since they were read folded in (`foldNewerRows`), so that what a write adds to a series is seen at once.
  */
-export function historyOfSeries(series: RecurringSeries[], rows: readonly Transaction[] = []): FixedHistory {
+export function historyOfSeries(
+  series: RecurringSeries[],
+  rows: readonly Transaction[] = [],
+): FixedHistory {
   return { groups: foldNewerRows(recurringFixedGroupsFromSeries(series), rows) }
 }
 
 /** The model with the history of those series, which are those of the whole ledger as the model's own rows add to them. */
-export function withHistory(model: ExpenseModel, series: RecurringSeries[]): ExpenseModel {
+export function withHistory(
+  model: ExpenseModel,
+  series: RecurringSeries[],
+): ExpenseModel {
   return { ...model, history: historyOfSeries(series, model.dataset.transactions) }
 }
 
@@ -56,7 +65,10 @@ export function withHistory(model: ExpenseModel, series: RecurringSeries[]): Exp
  * `sums` is set only when the ledger holds sums as well (a ledger of every row has none, and then both are
  * the same list, so the model is the one `buildExpenseModel` builds from the whole dataset).
  */
-export function buildLedgerModel(ledger: Ledger, options: LedgerModelOptions = {}): ExpenseModel {
+export function buildLedgerModel(
+  ledger: Ledger,
+  options: LedgerModelOptions = {},
+): ExpenseModel {
   const { real, linear } = assembleRows(ledger)
   const dataset = ledgerDataset(ledger, real)
   return {

@@ -2,7 +2,10 @@ import { MAX_CUBE_MONTHS, MAX_ROWS_MONTHS, MAX_ROWS_PER_REQUEST, type MonthRange
 import { PartTooLargeError } from '../data/ledgerPartsErrors'
 import { monthsBetweenBudget, shiftBudgetMonth, sortedMonths } from '../engine/dates'
 
-const calendarSpan = (from: string, to: string): number => monthsBetweenBudget(from, to) + 1
+const calendarSpan = (
+  from: string,
+  to: string,
+): number => monthsBetweenBudget(from, to) + 1
 
 /**
  * The rows requests that cover `months`, given how many rows each month with data holds. A request is a
@@ -11,10 +14,16 @@ const calendarSpan = (from: string, to: string): number => monthsBetweenBudget(f
  * ranges and not from the months asked for. Requests are as large as the bounds allow, so the common
  * case is one.
  */
-export function planRowRanges(months: Iterable<string>, rowsPerMonth: Readonly<Record<string, number>>): MonthRange[] {
+export function planRowRanges(
+  months: Iterable<string>,
+  rowsPerMonth: Readonly<Record<string, number>>,
+): MonthRange[] {
   const wanted = sortedMonths(months)
   const withData = Object.keys(rowsPerMonth).sort()
-  const rowsIn = (from: string, to: string): number =>
+  const rowsIn = (
+    from: string,
+    to: string,
+  ): number =>
     withData.reduce((sum, month) => (month >= from && month <= to ? sum + (rowsPerMonth[month] ?? 0) : sum), 0)
   const ranges: MonthRange[] = []
   let current: MonthRange | null = null
@@ -25,7 +34,9 @@ export function planRowRanges(months: Iterable<string>, rowsPerMonth: Readonly<R
     }
     if (current) ranges.push(current)
     if (rowsIn(month, month) > MAX_ROWS_PER_REQUEST) {
-      throw new PartTooLargeError(`${month} holds more than ${MAX_ROWS_PER_REQUEST} rows, more than one request returns`)
+      throw new PartTooLargeError(
+        `${month} holds more than ${MAX_ROWS_PER_REQUEST} rows, more than one request returns`,
+      )
     }
     current = { from: month, to: month }
   }
@@ -33,7 +44,14 @@ export function planRowRanges(months: Iterable<string>, rowsPerMonth: Readonly<R
   return ranges
 }
 
-function fits(from: string, to: string, rowsIn: (from: string, to: string) => number): boolean {
+function fits(
+  from: string,
+  to: string,
+  rowsIn: (
+    from: string,
+    to: string,
+  ) => number,
+): boolean {
   return calendarSpan(from, to) <= MAX_ROWS_MONTHS && rowsIn(from, to) <= MAX_ROWS_PER_REQUEST
 }
 
@@ -57,7 +75,10 @@ export function planCubeRanges(months: Iterable<string>): MonthRange[] {
  * month between two others splits what is asked for into two requests, and a run of months without one is a single
  * request, or more at the longest range the route serves.
  */
-export function planCubeRangesOutside(months: Iterable<string>, covered: ReadonlySet<string>): MonthRange[] {
+export function planCubeRangesOutside(
+  months: Iterable<string>,
+  covered: ReadonlySet<string>,
+): MonthRange[] {
   const ranges: MonthRange[] = []
   let run: string[] = []
   const flush = (): void => {

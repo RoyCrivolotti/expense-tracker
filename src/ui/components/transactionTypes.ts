@@ -36,7 +36,8 @@ const TYPE_HINTS = {
     'Money taken out of your investments and into this account: a sale moved to cash, a dividend paid out. Moving money between investment accounts is not a withdrawal.',
   investment:
     'Money you put into your investments: shares, funds, a deposit to a broker. It counts as invested, not as spending.',
-  refund: 'Money paid back for something you bought: a returned item, a reimbursement. It comes off the spending of the category you pick.',
+  refund:
+    'Money paid back for something you bought: a returned item, a reimbursement. It comes off the spending of the category you pick.',
 } as const
 
 /** The word under the type chips for the types that need one; Expense and Income say it themselves. */

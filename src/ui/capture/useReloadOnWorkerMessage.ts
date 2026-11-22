@@ -11,7 +11,8 @@ export function useReloadOnWorkerMessage(): void {
     if (!container) return undefined
     const onMessage = (event: MessageEvent) => {
       const data: unknown = event.data
-      if (typeof data === 'object' && data !== null && (data as { type?: unknown }).type === REVIEW_CHANGED) reloadRecommendations()
+      if (typeof data === 'object' && data !== null && (data as { type?: unknown }).type === REVIEW_CHANGED)
+        reloadRecommendations()
     }
     container.addEventListener('message', onMessage)
     return () => container.removeEventListener('message', onMessage)

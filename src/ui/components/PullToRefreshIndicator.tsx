@@ -9,7 +9,11 @@ interface Props {
 }
 
 /** How tall the strip is: the pull, damped, while a finger is down; a fixed spinner row while refreshing. */
-function stripHeight(visible: boolean, refreshing: boolean, pullPx: number): number {
+function stripHeight(
+  visible: boolean,
+  refreshing: boolean,
+  pullPx: number,
+): number {
   if (!visible) return 0
   return refreshing ? 40 : Math.max(pullPx * 0.45, 0)
 }
@@ -34,7 +38,9 @@ export function PullToRefreshIndicator({ pullPx, isPulling, refreshing }: Props)
     >
       <span
         className={`${styles.icon} ${refreshing ? styles.spin : ''}`}
-        style={refreshing ? undefined : { opacity: visible ? progress : 0, transform: `scale(${0.6 + progress * 0.4})` }}
+        style={
+          refreshing ? undefined : { opacity: visible ? progress : 0, transform: `scale(${0.6 + progress * 0.4})` }
+        }
       >
         <RefreshIcon />
       </span>

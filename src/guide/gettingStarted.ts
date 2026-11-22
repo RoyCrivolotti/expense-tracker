@@ -5,9 +5,7 @@
  */
 
 export type GuideBlock =
-  | { kind: 'p'; text: string }
-  | { kind: 'steps'; items: readonly string[] }
-  | { kind: 'list'; items: readonly string[] }
+  { kind: 'p'; text: string } | { kind: 'steps'; items: readonly string[] } | { kind: 'list'; items: readonly string[] }
 
 export interface GuideSection {
   id: string
@@ -20,7 +18,10 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
     id: 'signing-in',
     title: 'Signing in',
     blocks: [
-      { kind: 'p', text: 'You sign in with your Google account. The first time, the app does not know you yet and shows a Request access button.' },
+      {
+        kind: 'p',
+        text: 'You sign in with your Google account. The first time, the app does not know you yet and shows a Request access button.',
+      },
       {
         kind: 'p',
         text: 'Tap it and wait. The owner approves requests inside the app, and the screen says your request is waiting until then. Tap Refresh status to check, or open the app again later.',
@@ -31,7 +32,10 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
     id: 'setting-up',
     title: 'Setting up',
     blocks: [
-      { kind: 'p', text: 'A short setup opens the first time. It has three screens, and everything in it can be changed later in Settings.' },
+      {
+        kind: 'p',
+        text: 'A short setup opens the first time. It has three screens, and everything in it can be changed later in Settings.',
+      },
       {
         kind: 'steps',
         items: [
@@ -40,7 +44,10 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
           'Where do you pay from? Name the account you pay from. If you also pay with a credit card that is charged once a month, tick the box for it.',
         ],
       },
-      { kind: 'p', text: 'The first time, Finish setup applies your choices straight away. To go through setup again, open Settings, then Setup, then Run setup again; it then lists what it will change before it does.' },
+      {
+        kind: 'p',
+        text: 'The first time, Finish setup applies your choices straight away. To go through setup again, open Settings, then Setup, then Run setup again; it then lists what it will change before it does.',
+      },
     ],
   },
   {
@@ -76,7 +83,10 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
     id: 'older-payments',
     title: 'Bringing in older payments',
     blocks: [
-      { kind: 'p', text: 'If you have payments from before you started, you can bring them in from a file. Set up your categories and accounts first: the file must use their names.' },
+      {
+        kind: 'p',
+        text: 'If you have payments from before you started, you can bring them in from a file. Set up your categories and accounts first: the file must use their names.',
+      },
       {
         kind: 'steps',
         items: [
@@ -120,7 +130,10 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
     id: 'goals',
     title: 'Goals',
     blocks: [
-      { kind: 'p', text: 'Goals is a long-range plan. It answers one question: if you invest the same amount every month, what could you have in 10, 20 or 30 years?' },
+      {
+        kind: 'p',
+        text: 'Goals is a long-range plan. It answers one question: if you invest the same amount every month, what could you have in 10, 20 or 30 years?',
+      },
       {
         kind: 'p',
         text: 'To start you only need two numbers: what you have invested so far and what you add each month. Everything else starts at a sensible value you can change later. Nothing is saved until you save the scenario. If you note what your accounts hold each month, the Progress tab shows how you are doing against the plan.',

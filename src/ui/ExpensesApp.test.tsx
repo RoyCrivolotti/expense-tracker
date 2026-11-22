@@ -121,17 +121,35 @@ describe('ExpensesApp settings kept for a person', () => {
 
   it('opens the setup for someone who has not skipped it, though another person on the browser did', async () => {
     localStorage.setItem('exp-onboarding-skipped:alice@example.com', '1')
-    const alice = render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    const alice = render(
+      <ExpensesApp
+        source={sourceThatSucceeds(datasetWith())}
+        hubGrants={allGroupsGranted()}
+        accountEmail="alice@example.com"
+      />,
+    )
     await screen.findAllByRole('button', { name: 'Settings' })
     expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull()
     alice.unmount()
 
-    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="bob@example.com" />)
+    render(
+      <ExpensesApp
+        source={sourceThatSucceeds(datasetWith())}
+        hubGrants={allGroupsGranted()}
+        accountEmail="bob@example.com"
+      />,
+    )
     expect(await screen.findByRole('heading', { name: 'Welcome' })).toBeInTheDocument()
   })
 
   it('remembers a skipped setup for the person who skipped it', async () => {
-    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    render(
+      <ExpensesApp
+        source={sourceThatSucceeds(datasetWith())}
+        hubGrants={allGroupsGranted()}
+        accountEmail="alice@example.com"
+      />,
+    )
 
     fireEvent.click(await screen.findByText('Skip for now'))
 
@@ -148,7 +166,13 @@ describe('ExpensesApp settings kept for a person', () => {
       accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
     })
 
-    render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    render(
+      <ExpensesApp
+        source={sourceThatSucceeds(dataset)}
+        hubGrants={allGroupsGranted()}
+        accountEmail="alice@example.com"
+      />,
+    )
     fireEvent.click((await screen.findAllByRole('button', { name: 'Settings' }))[0]!)
 
     expect(await screen.findByText('Alices gym')).toBeInTheDocument()
@@ -156,10 +180,17 @@ describe('ExpensesApp settings kept for a person', () => {
   })
 
   it('drops what an earlier build kept under keys that named no one, once it knows who is signed in', async () => {
-    for (const key of ['expense:stopped-recurring', 'expense:dismissed-recurring', 'exp-onboarding-skipped']) localStorage.setItem(key, '1')
+    for (const key of ['expense:stopped-recurring', 'expense:dismissed-recurring', 'exp-onboarding-skipped'])
+      localStorage.setItem(key, '1')
     localStorage.setItem('exp-theme', 'dark')
 
-    render(<ExpensesApp source={sourceThatSucceeds(datasetWith())} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
+    render(
+      <ExpensesApp
+        source={sourceThatSucceeds(datasetWith())}
+        hubGrants={allGroupsGranted()}
+        accountEmail="alice@example.com"
+      />,
+    )
 
     await waitFor(() => expect(localStorage.getItem('expense:stopped-recurring')).toBeNull())
     expect(localStorage.getItem('expense:dismissed-recurring')).toBeNull()
@@ -173,8 +204,16 @@ describe('ExpensesApp saved copy', () => {
     const idb = installFakeIndexedDb()
     try {
       const dataset = datasetWith({ settings: { ...defaultExpenseSettings(), openingCashCents: 4_242_000 } })
-      const alice = render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} accountEmail="alice@example.com" />)
-      await waitFor(() => expect(idb.stores.get('snapshots')?.get('latest')).toMatchObject({ owner: 'alice@example.com' }))
+      const alice = render(
+        <ExpensesApp
+          source={sourceThatSucceeds(dataset)}
+          hubGrants={allGroupsGranted()}
+          accountEmail="alice@example.com"
+        />,
+      )
+      await waitFor(() =>
+        expect(idb.stores.get('snapshots')?.get('latest')).toMatchObject({ owner: 'alice@example.com' }),
+      )
       alice.unmount()
 
       const failing: ExpenseDataSource = { canWrite: false, load: vi.fn().mockRejectedValue(new Error('503')) }
@@ -215,7 +254,10 @@ describe('ExpensesApp tab wiring', () => {
     render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull())
     // Both navs are in the page; the first is the rail, the last the bottom bar.
-    const nav = (name: string, which: 'first' | 'last') => {
+    const nav = (
+      name: string,
+      which: 'first' | 'last',
+    ) => {
       const all = screen.getAllByRole('button', { name })
       return which === 'first' ? all[0]! : all[all.length - 1]!
     }
@@ -271,7 +313,13 @@ describe('ExpensesApp tab wiring', () => {
 })
 
 describe('ExpensesApp Analytics handoffs', () => {
-  const spend = (id: number, month: string, description: string, categoryId: number, amountCents: number) => ({
+  const spend = (
+    id: number,
+    month: string,
+    description: string,
+    categoryId: number,
+    amountCents: number,
+  ) => ({
     id,
     date: `${month}-10`,
     budgetMonth: month,
@@ -328,7 +376,10 @@ describe('ExpensesApp Analytics handoffs', () => {
 })
 
 describe('ExpensesApp while selecting transactions', () => {
-  const row = (id: number, month: string) => ({
+  const row = (
+    id: number,
+    month: string,
+  ) => ({
     id,
     date: `${month}-10`,
     budgetMonth: month,
@@ -463,9 +514,7 @@ describe('ExpensesApp while selecting transactions', () => {
   it('keeps its month when a refresh brings in a newer one mid-selection', async () => {
     // With no month picked the header follows the newest. Mid-selection that would swap
     // July's list for August's, and the locked arrows could not bring July back.
-    const previous = await openTransactions(
-      twoMonths([row(1, '2026-06'), row(2, '2026-07'), row(3, '2026-08')]),
-    )
+    const previous = await openTransactions(twoMonths([row(1, '2026-06'), row(2, '2026-07'), row(3, '2026-08')]))
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
     fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
     expect(screen.getByText('1 selected')).toBeInTheDocument()

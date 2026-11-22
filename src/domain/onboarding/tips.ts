@@ -50,17 +50,28 @@ export function parseTipsSeen(raw: string | null): string[] | undefined {
 }
 
 /** True when the account's own history says this person was here before tips existed. */
-export function isEstablished(saved: readonly string[] | undefined, hasTransactions: boolean): boolean {
+export function isEstablished(
+  saved: readonly string[] | undefined,
+  hasTransactions: boolean,
+): boolean {
   return saved === undefined && hasTransactions
 }
 
 /** Whether `id` is put away: listed, or the person is established. A card's own data rule comes on top of this. */
-export function isTipSeen(saved: readonly string[] | undefined, id: string, hasTransactions: boolean): boolean {
+export function isTipSeen(
+  saved: readonly string[] | undefined,
+  id: string,
+  hasTransactions: boolean,
+): boolean {
   return isEstablished(saved, hasTransactions) || (saved?.includes(id) ?? false)
 }
 
 /** The list to save once `id` is put away, on top of what is saved and what this visit has already put away. */
-export function withTipSeen(saved: readonly string[] | undefined, extra: Iterable<string>, id: string): string[] {
+export function withTipSeen(
+  saved: readonly string[] | undefined,
+  extra: Iterable<string>,
+  id: string,
+): string[] {
   return [...new Set([...(saved ?? []), ...extra, id])]
 }
 

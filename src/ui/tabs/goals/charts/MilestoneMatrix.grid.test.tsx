@@ -42,7 +42,10 @@ const milestones = [
 ]
 const reached = new Map([[10_000_000, '2026-05-14']])
 
-function renderTable(scenarios = [plan, slower], extra = {}) {
+function renderTable(
+  scenarios = [plan, slower],
+  extra = {},
+) {
   return render(
     <MilestoneMatrix
       scenarios={scenarios}
@@ -55,8 +58,10 @@ function renderTable(scenarios = [plan, slower], extra = {}) {
   )
 }
 
-const cell = (row: string, col: number) =>
-  within(screen.getByRole('row', { name: new RegExp(`^${row}`) })).getAllByRole('gridcell')[col] as HTMLElement
+const cell = (
+  row: string,
+  col: number,
+) => within(screen.getByRole('row', { name: new RegExp(`^${row}`) })).getAllByRole('gridcell')[col] as HTMLElement
 
 describe('the years to milestone grid', () => {
   it('is a grid with a cell for every path and milestone, each read as a sentence', () => {
@@ -66,7 +71,9 @@ describe('the years to milestone grid', () => {
     expect(cell('Path A', 0)).toHaveAccessibleName(
       "Path A already has 100k € at its start. Your check-ins reached it by May '26.",
     )
-    expect(cell('Path A', 1).getAttribute('aria-label')).toMatch(/^Path A reaches House deposit \(200k €\) in \d+ years, by 20\d\d\.$/)
+    expect(cell('Path A', 1).getAttribute('aria-label')).toMatch(
+      /^Path A reaches House deposit \(200k €\) in \d+ years, by 20\d\d\.$/,
+    )
   })
 
   it('shows already there as a tick, and not within the horizon as the horizon with a plus', () => {
@@ -142,7 +149,9 @@ describe('years from now and calendar year', () => {
     renderTable([started])
 
     expect(cell('Path A', 1)).toHaveTextContent('✓')
-    expect(cell('Path A', 1).getAttribute('aria-label')).toMatch(/^Path A reached House deposit \(200k €\) before today, in 20\d\d\./)
+    expect(cell('Path A', 1).getAttribute('aria-label')).toMatch(
+      /^Path A reached House deposit \(200k €\) before today, in 20\d\d\./,
+    )
     await userEvent.click(screen.getByRole('radio', { name: 'Calendar year' }))
     expect(cell('Path A', 1)).toHaveTextContent('✓')
   })
@@ -152,7 +161,9 @@ describe('years from now and calendar year', () => {
     renderTable([plan, started])
 
     expect(cell('Path B', 2)).toHaveTextContent('28+')
-    expect(cell('Path B', 2).getAttribute('aria-label')).toBe('Path B does not reach 2,0M € within its horizon (the next 28 years).')
+    expect(cell('Path B', 2).getAttribute('aria-label')).toBe(
+      'Path B does not reach 2,0M € within its horizon (the next 28 years).',
+    )
     expect(screen.getByText(/Darker: further away \(the darkest is 30 years\)/)).toBeInTheDocument()
   })
 
@@ -188,7 +199,10 @@ describe('vs plan', () => {
   })
 
   it('shows a path that is ahead in green with a minus', async () => {
-    renderTable([makeScenario({ ...plan, monthlyContributionCents: 10_000 }), makeScenario({ ...slower, monthlyContributionCents: 100_000 })])
+    renderTable([
+      makeScenario({ ...plan, monthlyContributionCents: 10_000 }),
+      makeScenario({ ...slower, monthlyContributionCents: 100_000 }),
+    ])
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
 
     const gap = within(cell('Path B', 1)).getByText(/^−\d+y$/)
@@ -224,12 +238,21 @@ describe('vs plan', () => {
   it('sets the plan from today against the plan as well, on the same footing, and gives the plan itself nothing', async () => {
     const dated = makeScenario({ ...plan, planStartDate: '2024-01-01' })
     renderTable([dated, makeScenario({ ...slower, planStartDate: '2024-01-01' })], {
-      fromToday: { scenario: makeScenario({ ...dated, startInvestedCents: 12_000_000 }), offsetYears: 2, since: '2026-01-01' },
+      fromToday: {
+        scenario: makeScenario({ ...dated, startInvestedCents: 12_000_000 }),
+        offsetYears: 2,
+        since: '2026-01-01',
+      },
     })
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
 
-    const exact = (name: string, col: number) =>
-      within(screen.getByRole('rowheader', { name: new RegExp(`^${name}( plan)?$`) }).closest('tr')!).getAllByRole('gridcell')[col] as HTMLElement
+    const exact = (
+      name: string,
+      col: number,
+    ) =>
+      within(screen.getByRole('rowheader', { name: new RegExp(`^${name}( plan)?$`) }).closest('tr')!).getAllByRole(
+        'gridcell',
+      )[col] as HTMLElement
     const planYears = Number(shown(exact('Path A', 1)).replace('y', ''))
     const todayYears = Number(shown(exact('Path A, from today', 1)).replace('y', ''))
     // Today's balance is behind the plan's schedule here, so the row is later than the plan.
@@ -241,7 +264,8 @@ describe('vs plan', () => {
 
   it('keeps the line for the gap only in the rows that can have one', async () => {
     renderTable()
-    const lines = (row: string) => screen.getByRole('row', { name: new RegExp(`^${row}`) }).querySelectorAll('[class*="matrixGap"]').length
+    const lines = (row: string) =>
+      screen.getByRole('row', { name: new RegExp(`^${row}`) }).querySelectorAll('[class*="matrixGap"]').length
     expect(lines('Path B')).toBe(0)
 
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
@@ -276,12 +300,17 @@ describe('vs plan', () => {
 })
 
 describe('the sentence under the table', () => {
-  const readout = () => screen.getByText(/ a cell to read it as a sentence|reaches|already has|does not reach/, { selector: 'p[aria-live]' })
+  const readout = () =>
+    screen.getByText(/ a cell to read it as a sentence|reaches|already has|does not reach/, {
+      selector: 'p[aria-live]',
+    })
 
   it('asks to point at a cell before one has been, in a live region', () => {
     renderTable()
 
-    expect(readout()).toHaveTextContent('Point at or focus a cell to read it as a sentence. The arrow keys move between cells.')
+    expect(readout()).toHaveTextContent(
+      'Point at or focus a cell to read it as a sentence. The arrow keys move between cells.',
+    )
     expect(readout()).toHaveAttribute('aria-live', 'polite')
   })
 
@@ -370,9 +399,19 @@ describe('moving about the grid by keyboard', () => {
     const { rerender } = renderTable([plan, slower])
     act(() => cell('Path B', 2).focus())
 
-    rerender(<MilestoneMatrix scenarios={[plan]} draft={draft} milestones={milestones} reached={reached} includeDraft={false} />)
+    rerender(
+      <MilestoneMatrix
+        scenarios={[plan]}
+        draft={draft}
+        milestones={milestones}
+        reached={reached}
+        includeDraft={false}
+      />,
+    )
 
-    expect(screen.getAllByRole('gridcell').filter((c) => c.getAttribute('tabindex') === '0')).toEqual([cell('Path A', 2)])
+    expect(screen.getAllByRole('gridcell').filter((c) => c.getAttribute('tabindex') === '0')).toEqual([
+      cell('Path A', 2),
+    ])
   })
 })
 

@@ -74,7 +74,8 @@ export function CaptureCardsSetting({ model }: { model: ExpenseModel }) {
           {waiting.length > 0 ? (
             <p className={tabStyles.settingHint} role="status">
               {waiting.length === 1 ? '1 card is' : `${waiting.length} cards are`} waiting for an account:{' '}
-              {waiting.map((w) => `${cardName(w)} (${w.count === 1 ? '1 payment' : `${w.count} payments`})`).join(', ')}.
+              {waiting.map((w) => `${cardName(w)} (${w.count === 1 ? '1 payment' : `${w.count} payments`})`).join(', ')}
+              .
             </p>
           ) : null}
           {found && found.cards.length === 0 ? <p className={tabStyles.settingHint}>No cards linked yet.</p> : null}
@@ -83,9 +84,17 @@ export function CaptureCardsSetting({ model }: { model: ExpenseModel }) {
               <li key={`${link.source}:${link.digitsKind}:${link.digits}`} className={styles.row}>
                 <span className={styles.name}>
                   <span className={styles.label}>{cardName(link)}</span>
-                  <span className={styles.meta}>{model.lookup.account(link.accountId)?.name ?? 'An account that was deleted'}</span>
+                  <span className={styles.meta}>
+                    {model.lookup.account(link.accountId)?.name ?? 'An account that was deleted'}
+                  </span>
                 </span>
-                <button type="button" className={styles.revoke} disabled={busy} aria-label={`Remove ${cardName(link)}`} onClick={() => setRemoving(link)}>
+                <button
+                  type="button"
+                  className={styles.revoke}
+                  disabled={busy}
+                  aria-label={`Remove ${cardName(link)}`}
+                  onClick={() => setRemoving(link)}
+                >
                   Remove
                 </button>
               </li>

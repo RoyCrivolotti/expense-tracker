@@ -23,7 +23,10 @@ function apiOrder(dataset: ExpenseDataset): Transaction[] {
     .sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
 }
 
-function receiptsOf(dataset: ExpenseDataset, rows: readonly Transaction[]): AttachmentCounts {
+function receiptsOf(
+  dataset: ExpenseDataset,
+  rows: readonly Transaction[],
+): AttachmentCounts {
   const ids = new Set(rows.map((t) => t.id))
   const counts: AttachmentCounts = {}
   for (const a of dataset.attachments) {
@@ -32,7 +35,10 @@ function receiptsOf(dataset: ExpenseDataset, rows: readonly Transaction[]): Atta
   return counts
 }
 
-const inRange = (month: string, range: MonthRange): boolean => month >= range.from && month <= range.to
+const inRange = (
+  month: string,
+  range: MonthRange,
+): boolean => month >= range.from && month <= range.to
 
 export function ledgerReferenceOf(dataset: ExpenseDataset): LedgerReferenceRead {
   const rows = apiOrder(dataset)
@@ -49,13 +55,21 @@ export function ledgerReferenceOf(dataset: ExpenseDataset): LedgerReferenceRead 
   }
 }
 
-export function monthRowsOf(dataset: ExpenseDataset, range: MonthRange, maxRows: number): MonthRowsRead | null {
+export function monthRowsOf(
+  dataset: ExpenseDataset,
+  range: MonthRange,
+  maxRows: number,
+): MonthRowsRead | null {
   const transactions = apiOrder(dataset).filter((t) => inRange(t.budgetMonth, range))
   if (transactions.length > maxRows) return null
   return { transactions, attachmentCounts: receiptsOf(dataset, transactions) }
 }
 
-export function monthCellsOf(dataset: ExpenseDataset, range: MonthRange, maxCells: number): MonthCell[] | null {
+export function monthCellsOf(
+  dataset: ExpenseDataset,
+  range: MonthRange,
+  maxCells: number,
+): MonthCell[] | null {
   const unpinned = partitionPinned(dataset.transactions).rest
   const cells = buildCells(unpinned.filter((t) => inRange(t.budgetMonth, range)))
   return cells.length > maxCells ? null : cells

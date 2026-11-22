@@ -51,12 +51,20 @@ const month = ledger.transactions[0]!.budgetMonth
 function gate(source: TestSource) {
   const open = { pages: true, summaries: true }
   const waiting: Array<() => void> = []
-  const hold = <T,>(run: () => Promise<T>, on: boolean) =>
-    on ? run() : new Promise<T>((resolve) => waiting.push(() => resolve(run())))
+  const hold = <T,>(
+    run: () => Promise<T>,
+    on: boolean,
+  ) => (on ? run() : new Promise<T>((resolve) => waiting.push(() => resolve(run()))))
   const page = source.readTransactionPage.bind(source)
   const summary = source.readTransactionSummary.bind(source)
-  source.readTransactionPage = (filter, request) => hold(() => page(filter, request), open.pages)
-  source.readTransactionSummary = (filter, request) => hold(() => summary(filter, request), open.summaries)
+  source.readTransactionPage = (
+    filter,
+    request,
+  ) => hold(() => page(filter, request), open.pages)
+  source.readTransactionSummary = (
+    filter,
+    request,
+  ) => hold(() => summary(filter, request), open.summaries)
   return {
     open,
     release: () =>
@@ -69,13 +77,20 @@ function gate(source: TestSource) {
   }
 }
 
-function renderTab(source: TestSource, options: { limit?: number; settleMs?: number; actions?: ExpenseActions | null; dataset?: ExpenseDataset } = {}) {
+function renderTab(
+  source: TestSource,
+  options: { limit?: number; settleMs?: number; actions?: ExpenseActions | null; dataset?: ExpenseDataset } = {},
+) {
   const pager = new TransactionPager(source, { limit: options.limit ?? 10, settleMs: options.settleMs ?? 0 })
   const model: ExpenseModel = { ...buildExpenseModel(options.dataset ?? ledger), pagedList: pagedListOf(pager) }
   const tree = (
     <ToastProvider>
       <ConnectivityContext.Provider value={{ online: true, readOnly: false }}>
-        <TransactionsTab model={model} month={month} {...(options.actions === null ? {} : { actions: options.actions ?? makeActions() })} />
+        <TransactionsTab
+          model={model}
+          month={month}
+          {...(options.actions === null ? {} : { actions: options.actions ?? makeActions() })}
+        />
       </ConnectivityContext.Provider>
     </ToastProvider>
   )
@@ -181,7 +196,10 @@ describe('the Transactions tab over a list read in pages: a filter that changes'
     const source = memorySource(ledger)
     const read = source.readTransactionPage.bind(source)
     let failing = false
-    source.readTransactionPage = (filter, request) => (failing ? Promise.reject(new Error('offline')) : read(filter, request))
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => (failing ? Promise.reject(new Error('offline')) : read(filter, request))
     renderTab(source)
     await waitFor(() => expect(listFrame()).toHaveAttribute('aria-busy', 'false'))
     failing = true
@@ -268,7 +286,9 @@ describe('the Transactions tab over a list read in pages: a write', () => {
     source.dataset = renamed(target.id)
     const gated = gate(source)
     gated.open.pages = false
-    act(() => { void pager.refresh({ summary: true }) })
+    act(() => {
+      void pager.refresh({ summary: true })
+    })
     expect(pager.getState().refreshing).toBe(true)
     expect(pager.getState().rows).toBe(held)
     expect(screen.queryByText('Loading…')).toBeNull()
@@ -284,7 +304,9 @@ describe('the Transactions tab over a list read in pages: a write', () => {
     await waitFor(() => expect(pager.getState().rows).toHaveLength(10))
     const read = source.readTransactionPage.bind(source)
     source.readTransactionPage = () => Promise.reject(new Error('offline'))
-    act(() => { void pager.refresh() })
+    act(() => {
+      void pager.refresh()
+    })
     const retry = await screen.findByRole('button', { name: "Couldn't update the list. Try again" })
     expect(retry.closest('[role="alert"]')).not.toBeNull()
     expect(getComputedStyle(retry).minHeight).toBe('44px')
@@ -298,7 +320,10 @@ describe('the Transactions tab over a list read in pages: a write', () => {
 })
 
 describe('the Transactions tab over a list read in pages: every row that matches', () => {
-  async function selectedLoaded(source: TestSource, actions: ExpenseActions) {
+  async function selectedLoaded(
+    source: TestSource,
+    actions: ExpenseActions,
+  ) {
     const view = renderTab(source, { limit: 10, actions })
     await waitFor(() => expect(view.pager.getState().rows).toHaveLength(10))
     await waitFor(() => expect(view.pager.getState().summary).not.toBeNull())
@@ -332,7 +357,8 @@ describe('the Transactions tab over a list read in pages: every row that matches
 
   it('does not offer them while the count has stopped at what an edit may reach', async () => {
     const source = memorySource(ledger)
-    source.readTransactionSummary = () => Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
+    source.readTransactionSummary = () =>
+      Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
     await selectedLoaded(source, makeActions())
 
     expect(screen.getByRole('button', { name: 'Deselect 10' })).toBeInTheDocument()

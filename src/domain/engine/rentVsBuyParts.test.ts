@@ -52,8 +52,9 @@ function before(i: RentVsBuyInput): { year: number; rent: number; buy: number }[
       rent = Math.round(rent * (1 + r))
       buy = Math.round(buy * (1 + r))
       const outlay =
-        Math.round((annualMortgage * paidShareOfYear(t, params.mortgageTermYears)) / Math.pow(1 + params.inflationRate, t)) +
-        Math.round(point.houseEquityCents * carryRate)
+        Math.round(
+          (annualMortgage * paidShareOfYear(t, params.mortgageTermYears)) / Math.pow(1 + params.inflationRate, t),
+        ) + Math.round(point.houseEquityCents * carryRate)
       const surplus = outlay - rentMonthlyCents * 12
       if (surplus > 0) rent += surplus
       else buy += -surplus
@@ -70,7 +71,10 @@ function rng(seed: number) {
   }
 }
 
-function randomInput(rand: () => number, purchaseYear: number | null): RentVsBuyInput {
+function randomInput(
+  rand: () => number,
+  purchaseYear: number | null,
+): RentVsBuyInput {
   return {
     params: baseParams({
       housePriceCents: Math.round(15_000_000 + rand() * 40_000_000),
@@ -112,7 +116,10 @@ describe('the comparison starts when the plan buys', () => {
     const risen = housePriceAtPurchaseCents(params)
     expect(risen).toBeGreaterThan(params.housePriceCents)
     const later = projectRentVsBuy({ params, rentMonthlyCents: 100_000 })
-    const twin = projectRentVsBuy({ params: { ...params, housePurchaseYear: 0, housePriceCents: risen }, rentMonthlyCents: 100_000 })
+    const twin = projectRentVsBuy({
+      params: { ...params, housePurchaseYear: 0, housePriceCents: risen },
+      rentMonthlyCents: 100_000,
+    })
     expect(later.points).toEqual(twin.points)
     expect(later.startYear).toBe(8)
     expect(twin.startYear).toBe(0)
@@ -139,7 +146,9 @@ describe('the comparison starts when the plan buys', () => {
 
   it('keeps a house bought today, owned already or never planned at its year zero', () => {
     for (const year of [null, 0]) {
-      expect(projectRentVsBuy({ params: baseParams({ housePurchaseYear: year }), rentMonthlyCents: 100_000 }).startYear).toBe(0)
+      expect(
+        projectRentVsBuy({ params: baseParams({ housePurchaseYear: year }), rentMonthlyCents: 100_000 }).startYear,
+      ).toBe(0)
     }
   })
 
@@ -213,7 +222,13 @@ describe('both sides spend the same in total on housing and investing', () => {
   it('has one side paying and investing what the other pays, every month, to the cent', () => {
     for (const i of cases) {
       for (const p of projectRentVsBuy(i).points.slice(1)) {
-        expect(Math.abs(p.rentHousingMonthlyCents + p.rentInvestsMonthlyCents - (p.buyHousingMonthlyCents + p.buyInvestsMonthlyCents))).toBeLessThanOrEqual(1)
+        expect(
+          Math.abs(
+            p.rentHousingMonthlyCents +
+              p.rentInvestsMonthlyCents -
+              (p.buyHousingMonthlyCents + p.buyInvestsMonthlyCents),
+          ),
+        ).toBeLessThanOrEqual(1)
       }
     }
   })
@@ -275,8 +290,12 @@ describe('what the loan does to a month', () => {
     const after = points[21]!
     const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
     // The payment is fixed in the bank's euros, so in the plan's it is the first-year figure over the inflation since.
-    expect(lastFull.buyHousingMonthlyCents - after.buyHousingMonthlyCents).toBeGreaterThan(0.8 * payment / Math.pow(1 + DEFAULT_INFLATION_RATE, 21))
-    expect(after.buyInvestsMonthlyCents - lastFull.buyInvestsMonthlyCents).toBeGreaterThan(0.8 * payment / Math.pow(1 + DEFAULT_INFLATION_RATE, 21))
+    expect(lastFull.buyHousingMonthlyCents - after.buyHousingMonthlyCents).toBeGreaterThan(
+      (0.8 * payment) / Math.pow(1 + DEFAULT_INFLATION_RATE, 21),
+    )
+    expect(after.buyInvestsMonthlyCents - lastFull.buyInvestsMonthlyCents).toBeGreaterThan(
+      (0.8 * payment) / Math.pow(1 + DEFAULT_INFLATION_RATE, 21),
+    )
   })
 
   it('has no payment in the buyer’s month once it is paid, only the upkeep', () => {
@@ -299,7 +318,10 @@ describe('when owning gets cheaper than renting', () => {
         expect(result.ownCheaper).toBeNull()
         continue
       }
-      expect(result.ownCheaper).toEqual({ fromYear: first.year, stays: years.filter((p) => p.year >= first.year).every(cheaper) })
+      expect(result.ownCheaper).toEqual({
+        fromYear: first.year,
+        stays: years.filter((p) => p.year >= first.year).every(cheaper),
+      })
     }
   })
 
@@ -332,7 +354,10 @@ describe('the payment on the account', () => {
     const expected = pmt(params.mortgageRateAnnual / 12, params.mortgageTermYears * 12, nominalLoan)
     const got = projectRentVsBuy({ params, rentMonthlyCents: 100_000 }).paymentOnAccountCents
     expect(Math.abs(got - expected)).toBeLessThanOrEqual(2)
-    const today = projectRentVsBuy({ params: baseParams({ housePurchaseYear: null }), rentMonthlyCents: 100_000 }).paymentOnAccountCents
+    const today = projectRentVsBuy({
+      params: baseParams({ housePurchaseYear: null }),
+      rentMonthlyCents: 100_000,
+    }).paymentOnAccountCents
     expect(got).toBeGreaterThan(today)
   })
 

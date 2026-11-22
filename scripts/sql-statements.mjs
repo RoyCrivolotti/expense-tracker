@@ -24,7 +24,10 @@ const CLOSERS = { "'": "'", '"': '"', '`': '`', '[': ']' }
 const WORD = /[A-Za-z_][A-Za-z0-9_$]*/y
 
 /** The index just past the closer of a quoted run that opens at `from`; a doubled closer is an escape. */
-function endOfQuoted(text, from) {
+function endOfQuoted(
+  text,
+  from,
+) {
   const closer = CLOSERS[text[from]]
   for (let i = from + 1; i < text.length; i += 1) {
     if (text[i] !== closer) continue
@@ -41,11 +44,17 @@ function freshStatement() {
 
 /** `CREATE [TEMP | TEMPORARY] TRIGGER`, going by the first three words. */
 function isTrigger({ head }) {
-  return head[0] === 'CREATE' && (head[1] === 'TRIGGER' || (/^TEMP(ORARY)?$/.test(head[1] ?? '') && head[2] === 'TRIGGER'))
+  return (
+    head[0] === 'CREATE' && (head[1] === 'TRIGGER' || (/^TEMP(ORARY)?$/.test(head[1] ?? '') && head[2] === 'TRIGGER'))
+  )
 }
 
 /** Moves a trigger through `header`, `body` (between BEGIN and its END) and `closed`. */
-function onWord(statement, word, afterDot) {
+function onWord(
+  statement,
+  word,
+  afterDot,
+) {
   const upper = word.toUpperCase()
   if (statement.head.length < 3) statement.head.push(upper)
   if (afterDot || !isTrigger(statement)) return
@@ -56,12 +65,22 @@ function onWord(statement, word, afterDot) {
 }
 
 /** Reads the token at `from` into `statement` and returns the index after it. */
-function take(text, from, statement) {
+function take(
+  text,
+  from,
+  statement,
+) {
   const pair = text.slice(from, from + 2)
   if (pair === '--') {
     const end = text.indexOf('\n', from)
     const stop = end === -1 ? text.length : end
-    if (!statement.sql.trim()) statement.notes.push(text.slice(from + 2, stop).replace(/^\s/, '').trimEnd())
+    if (!statement.sql.trim())
+      statement.notes.push(
+        text
+          .slice(from + 2, stop)
+          .replace(/^\s/, '')
+          .trimEnd(),
+      )
     return stop
   }
   if (pair === '/*') {

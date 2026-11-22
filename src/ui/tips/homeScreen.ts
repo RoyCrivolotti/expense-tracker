@@ -1,4 +1,3 @@
-
 export type HomeScreenAdvice = 'ios' | 'android' | null
 
 interface Env {

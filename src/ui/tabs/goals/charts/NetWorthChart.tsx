@@ -24,11 +24,7 @@ import { endNoteFor, pickCrossings, type PickLine } from './milestonePick'
 import { todayIso } from '../../../components/transactionFormState'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
-import {
-  ScenarioSeriesLegend,
-  type ScenarioLegendBreakdown,
-  type ScenarioLegendItem,
-} from './ScenarioSeriesLegend'
+import { ScenarioSeriesLegend, type ScenarioLegendBreakdown, type ScenarioLegendItem } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
 import { ChartHint, type HintText } from './ChartHint'
 import { computeChartDisplayData } from './nominalTransform'
@@ -39,7 +35,16 @@ import { BreakdownSlot } from './ScenarioSeriesLegend'
 import type { ScenarioLine } from './heroLegendState'
 import { useHeroReadings } from './heroReadings'
 import { axisSpans } from './heroRestYear'
-import { axisLabels, bandSeries, buildSeries, heroAxis, purchaseMarkerIndices, scenarioLines, startMarksOf, type HeroAxis } from './heroSeries'
+import {
+  axisLabels,
+  bandSeries,
+  buildSeries,
+  heroAxis,
+  purchaseMarkerIndices,
+  scenarioLines,
+  startMarksOf,
+  type HeroAxis,
+} from './heroSeries'
 import { chipsAboveHint, restNote, type RestYear } from './heroRestYear'
 import type { HeroLegendStore } from './heroLegendStore'
 
@@ -47,7 +52,11 @@ import type { HeroLegendStore } from './heroLegendStore'
  * Where the draft and the plan from today start on the axis, and the axis' first day where it is a
  * calendar. The plan from today is placed from the plan's own start: the restart's is its check-in.
  */
-function placesOnAxis(axis: HeroAxis, draft: NewGoalScenario, fromToday: PlanFromToday | null | undefined) {
+function placesOnAxis(
+  axis: HeroAxis,
+  draft: NewGoalScenario,
+  fromToday: PlanFromToday | null | undefined,
+) {
   return {
     calendarOrigin: axis.calendar ? axis.origin : null,
     draftOffset: axis.offsetOf(draft.planStartDate),
@@ -56,7 +65,10 @@ function placesOnAxis(axis: HeroAxis, draft: NewGoalScenario, fromToday: PlanFro
 }
 
 /** The breakdown floats on the half of the chart the pointer is not in. */
-function floatSideFor(activeIndex: number | null, pointCount: number): 'start' | 'end' {
+function floatSideFor(
+  activeIndex: number | null,
+  pointCount: number,
+): 'start' | 'end' {
   return activeIndex != null && activeIndex > (pointCount - 1) / 2 ? 'start' : 'end'
 }
 
@@ -102,8 +114,15 @@ function PortfolioLegend({
     return (
       <ScenarioSeriesLegend
         items={chipsAbove ? legendItems.filter((item) => item.dotted) : legendItems}
-        {...(chipsAbove ? { chipsAbove: true, hint: calendar ? chipsAboveHint(calendar.rest, calendar.origin) : CHIPS_ABOVE_HINT } : {})}
-        {...(calendar ? { calendarOrigin: calendar.origin, ...(chipsAbove ? {} : { restNote: restNote(calendar.rest, calendar.origin) }) } : {})}
+        {...(chipsAbove
+          ? { chipsAbove: true, hint: calendar ? chipsAboveHint(calendar.rest, calendar.origin) : CHIPS_ABOVE_HINT }
+          : {})}
+        {...(calendar
+          ? {
+              calendarOrigin: calendar.origin,
+              ...(chipsAbove ? {} : { restNote: restNote(calendar.rest, calendar.origin) }),
+            }
+          : {})}
         activeYear={activeYear}
         breakdowns={chipsAbove ? NO_BREAKDOWNS : breakdowns}
         yearZeroHint={chipsAbove ? false : yearZeroHint}
@@ -127,7 +146,10 @@ function heroHeight(narrow: boolean): number {
 }
 
 /** The hero's window buttons: which years of the projection are drawn. */
-function useHeroWindow(isHero: boolean, horizonYears: number) {
+function useHeroWindow(
+  isHero: boolean,
+  horizonYears: number,
+) {
   const [picked, setHeroWindow] = useState<HeroWindowKey>('all')
   const heroWindows = useMemo(() => heroWindowsFor(horizonYears), [horizonYears])
   // A window the horizon has since shrunk under falls back to All rather than sitting
@@ -190,8 +212,16 @@ function fromTodayDrawing(
 }
 
 /** The draft at a return three points either side, hero only: a sensitivity to the return, not a range of likely outcomes. */
-function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number, offsetYears: number): ChartSeries | null {
-  return useMemo(() => (isHero ? bandSeries(draft, offsetYears, inflationRate) : null), [isHero, draft, inflationRate, offsetYears])
+function useBandSeries(
+  isHero: boolean,
+  draft: NewGoalScenario,
+  inflationRate: number,
+  offsetYears: number,
+): ChartSeries | null {
+  return useMemo(
+    () => (isHero ? bandSeries(draft, offsetYears, inflationRate) : null),
+    [isHero, draft, inflationRate, offsetYears],
+  )
 }
 
 /**
@@ -227,7 +257,10 @@ function useSavedRateFloor(
   const format = useMoneyFormat()
   return useMemo(() => {
     if (!previewing) return null
-    const built = buildSeries(scenarioLines(scenarios, draft, activeId, dirty, savedInflation, axis, format, hiddenIds), savedInflation)
+    const built = buildSeries(
+      scenarioLines(scenarios, draft, activeId, dirty, savedInflation, axis, format, hiddenIds),
+      savedInflation,
+    )
     return clipToWindow(built.years, built.series, windowYears).series
   }, [previewing, scenarios, draft, activeId, dirty, savedInflation, hiddenIds, windowYears, axis, format])
 }
@@ -246,18 +279,28 @@ function useWindowedSeries(
     return {
       years: cut.years,
       series: cut.series.slice(0, n),
-      band: band ? cut.series[n] ?? null : null,
+      band: band ? (cut.series[n] ?? null) : null,
       extra: cut.series.slice(n + bandList.length),
     }
   }, [full, band, extra, windowYears])
 }
 
-function useLifeEventMarkers(isHero: boolean, draft: NewGoalScenario, windowYears: number | null, offsetYears: number) {
+function useLifeEventMarkers(
+  isHero: boolean,
+  draft: NewGoalScenario,
+  windowYears: number | null,
+  offsetYears: number,
+) {
   return useMemo(() => {
     if (!isHero) return []
     return (draft.lifeEvents ?? [])
       .filter((ev) => ev.year >= 1 && ev.year <= draft.horizonYears && insideWindow(offsetYears + ev.year, windowYears))
-      .map((ev) => ({ yearIndex: offsetYears + ev.year, label: ev.label, amountCents: ev.amountCents, ...(offsetYears > 0 ? { year: ev.year } : {}) }))
+      .map((ev) => ({
+        yearIndex: offsetYears + ev.year,
+        label: ev.label,
+        amountCents: ev.amountCents,
+        ...(offsetYears > 0 ? { year: ev.year } : {}),
+      }))
   }, [isHero, draft.lifeEvents, draft.horizonYears, windowYears, offsetYears])
 }
 
@@ -265,7 +308,12 @@ function useLifeEventMarkers(isHero: boolean, draft: NewGoalScenario, windowYear
  * The FI number for the draft, hero only, and only when spend and rate make sense. It is in the draft's
  * own euros, so a draft that starts after the axis' origin has it brought back to the origin's.
  */
-function useFiTarget(isHero: boolean, draft: NewGoalScenario, offsetYears: number, inflationRate: number): number | null {
+function useFiTarget(
+  isHero: boolean,
+  draft: NewGoalScenario,
+  offsetYears: number,
+  inflationRate: number,
+): number | null {
   return useMemo(() => {
     if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
     const own = draft.annualSpendCents / draft.safeWithdrawalRate
@@ -319,7 +367,16 @@ function useMilestonePick({
   // Only the hero chart offers the picker, and a milestone that has since been removed is no longer picked.
   const picked = pickedAmount !== null && offered.includes(pickedAmount) ? pickedAmount : null
   const refs = useMemo(
-    () => referenceLines({ milestones: drawn, drawnMax, fiTargetCents, nominalMode, years, inflationRate, pickedCents: picked }),
+    () =>
+      referenceLines({
+        milestones: drawn,
+        drawnMax,
+        fiTargetCents,
+        nominalMode,
+        years,
+        inflationRate,
+        pickedCents: picked,
+      }),
     [drawn, drawnMax, fiTargetCents, nominalMode, years, inflationRate, picked],
   )
   const pick = useMemo(
@@ -340,7 +397,17 @@ function useMilestonePick({
   const annotations = useMemo(
     () =>
       pick && refs.highlight && picked !== null
-        ? { dots: pick.dots, endNote: endNoteFor({ amountCents: picked, inflationRate, nominalMode, years, planStartDate: origin, format }) }
+        ? {
+            dots: pick.dots,
+            endNote: endNoteFor({
+              amountCents: picked,
+              inflationRate,
+              nominalMode,
+              years,
+              planStartDate: origin,
+              format,
+            }),
+          }
         : undefined,
     [pick, refs.highlight, picked, inflationRate, nominalMode, years, origin, format],
   )
@@ -349,18 +416,35 @@ function useMilestonePick({
     setShown(next)
     if (!next) setPicked(null)
   }
-  return { ...refs, amounts: offered, available: isHero && amounts.length > 0, shown, setShown: setShownAndClear, picked, setPicked, rows: pick?.rows ?? [], pick, annotations }
+  return {
+    ...refs,
+    amounts: offered,
+    available: isHero && amounts.length > 0,
+    shown,
+    setShown: setShownAndClear,
+    picked,
+    setPicked,
+    rows: pick?.rows ?? [],
+    pick,
+    annotations,
+  }
 }
 
 /** The paths as the milestone picker needs them: each with the date its plan starts on. */
-function pickLinesOf(lines: ScenarioLine[], scenarios: GoalScenario[], draft: NewGoalScenario): PickLine[] {
+function pickLinesOf(
+  lines: ScenarioLine[],
+  scenarios: GoalScenario[],
+  draft: NewGoalScenario,
+): PickLine[] {
   return lines.map((l) => ({
     id: l.id,
     name: l.name,
     color: l.color,
     params: l.params,
     offsetYears: l.offsetYears,
-    planStartDate: (l.scenarioId === null ? draft.planStartDate : scenarios.find((s) => s.id === l.scenarioId)?.planStartDate) ?? null,
+    planStartDate:
+      (l.scenarioId === null ? draft.planStartDate : scenarios.find((s) => s.id === l.scenarioId)?.planStartDate) ??
+      null,
   }))
 }
 
@@ -372,7 +456,10 @@ function projectionLabel(marker: { title: string } | undefined): string {
   return marker ? `${PROJECTION_LABEL}. ${marker.title}` : PROJECTION_LABEL
 }
 
-function fiMarker(cents: number | null, format: MoneyFormat): { label: string; title: string } | undefined {
+function fiMarker(
+  cents: number | null,
+  format: MoneyFormat,
+): { label: string; title: string } | undefined {
   if (cents === null) return undefined
   const amount = formatMoneyShort(cents, format)
   return { label: `FI ${amount}`, title: `The FI target, ${amount}, is above the top of this chart.` }
@@ -435,7 +522,12 @@ function ChartFooter({ footer, bare }: { footer: ReactNode; bare: boolean }) {
  * legend instead (HeroNote), so the chart starts two lines higher and the page does not move
  * when a year is hovered.
  */
-function chartHint(isHero: boolean, narrow: boolean, money: string, expectedRealReturn: number): HintText | null {
+function chartHint(
+  isHero: boolean,
+  narrow: boolean,
+  money: string,
+  expectedRealReturn: number,
+): HintText | null {
   // What the chart's euros are leads, apart from the rest, so it can stay in view when the rest is folded.
   const said = (rest: string) => ({ lead: `${money.charAt(0).toUpperCase()}${money.slice(1)}.`, rest })
   if (!isHero) return said(DEFAULT_HINT)
@@ -450,7 +542,10 @@ function bandReach(expectedRealReturn: number): { either: string; lowerAndHigher
 }
 
 /** The today marker, only while it lies inside the window. */
-function todayProp(todayIndex: number | undefined, windowYears: number | null): { todayIndex?: number } {
+function todayProp(
+  todayIndex: number | undefined,
+  windowYears: number | null,
+): { todayIndex?: number } {
   return insideWindow(todayIndex, windowYears) && todayIndex !== undefined ? { todayIndex } : {}
 }
 
@@ -511,10 +606,10 @@ function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: b
   const high = draft.expectedRealReturn + RETURN_BAND_SPREAD
   return (
     <p className={`${styles.chartHint} ${styles.heroNote}`}>
-      Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment
-      comes out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
-      {formatPercent(high, format)}, {bandReach(draft.expectedRealReturn).either}. It shows how much the return matters, not how
-      likely an outcome is.
+      Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment comes
+      out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
+      {formatPercent(high, format)}, {bandReach(draft.expectedRealReturn).either}. It shows how much the return matters,
+      not how likely an outcome is.
     </p>
   )
 }
@@ -535,10 +630,22 @@ interface HeroFootnoteProps {
  * the purchase breakdown has no legend to float over, so it takes the note's place, in a slot as
  * tall as it, while a purchase year is pointed at.
  */
-function HeroFootnote({ chipsAbove, breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, ...note }: HeroFootnoteProps) {
+function HeroFootnote({
+  chipsAbove,
+  breakdowns,
+  yearZeroHint,
+  breakdownInTodaysMoney,
+  reserve,
+  ...note
+}: HeroFootnoteProps) {
   if (!chipsAbove || !note.isHero || note.narrow) return <HeroNote {...note} />
   return (
-    <BreakdownSlot breakdowns={breakdowns} yearZeroHint={yearZeroHint} breakdownInTodaysMoney={breakdownInTodaysMoney} reserve={reserve}>
+    <BreakdownSlot
+      breakdowns={breakdowns}
+      yearZeroHint={yearZeroHint}
+      breakdownInTodaysMoney={breakdownInTodaysMoney}
+      reserve={reserve}
+    >
       <HeroNote {...note} />
     </BreakdownSlot>
   )
@@ -549,7 +656,11 @@ function HeroFootnote({ chipsAbove, breakdowns, yearZeroHint, breakdownInTodaysM
  * values), to two decimals in millions: the chips above the chart are what names the lines, so the
  * chart itself only has to say how much. Absent where the chips are not above it.
  */
-function useValueTags(on: boolean, expectedRealReturn: number, format: MoneyFormat): ValueTagSpec | undefined {
+function useValueTags(
+  on: boolean,
+  expectedRealReturn: number,
+  format: MoneyFormat,
+): ValueTagSpec | undefined {
   return useMemo(
     () =>
       on
@@ -652,7 +763,17 @@ function NetWorthChartImpl({
 
   // Each view fits its own axis, so Purchasing power is not stretched to the nominal plan's
   // height; toggling rescales, and only Nominal holds a floor (for the rate preview).
-  const floorSeries = useSavedRateFloor(previewing, scenarios, draft, activeId, dirty, assumedInflation, hiddenIds, windowYears, axis)
+  const floorSeries = useSavedRateFloor(
+    previewing,
+    scenarios,
+    draft,
+    activeId,
+    dirty,
+    assumedInflation,
+    hiddenIds,
+    windowYears,
+    axis,
+  )
   const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax, drawnMax } = useMemo(
     () =>
       computeChartDisplayData(
@@ -670,20 +791,32 @@ function NetWorthChartImpl({
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
-  const { amounts: milestoneAmounts, available: milestonesAvailable, shown: milestonesShown, setShown: setMilestonesShown, picked, setPicked, rows: milestoneRows, lines: refLines, curves: refCurves, fiAbove, highlight: refHighlight, annotations } =
-    useMilestonePick({
-      isHero,
-      milestones,
-      drawnMax,
-      fiTargetCents: useFiTarget(isHero, draft, draftOffset, projectionRate),
-      nominalMode,
-      years,
-      inflationRate: projectionRate,
-      lines,
-      scenarios,
-      draft,
-      origin: axis.origin,
-    })
+  const {
+    amounts: milestoneAmounts,
+    available: milestonesAvailable,
+    shown: milestonesShown,
+    setShown: setMilestonesShown,
+    picked,
+    setPicked,
+    rows: milestoneRows,
+    lines: refLines,
+    curves: refCurves,
+    fiAbove,
+    highlight: refHighlight,
+    annotations,
+  } = useMilestonePick({
+    isHero,
+    milestones,
+    drawnMax,
+    fiTargetCents: useFiTarget(isHero, draft, draftOffset, projectionRate),
+    nominalMode,
+    years,
+    inflationRate: projectionRate,
+    lines,
+    scenarios,
+    draft,
+    origin: axis.origin,
+  })
   const fiChartMarker = useMemo(() => fiMarker(fiAbove, format), [fiAbove, format])
   const startMarks = useMemo(() => startMarksOf(lines, displaySeries), [lines, displaySeries])
   // Stable between renders, so a year pointed at, which re-renders this, does not make the chart
@@ -698,25 +831,33 @@ function NetWorthChartImpl({
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
   )
-  const { activeYear, legendWithFromToday, breakdowns, yearZeroHint, tooltip, calendar, sheetReading } = useHeroReadings({
-    lines,
-    points: full.points,
-    displaySeries,
-    names,
-    years,
-    inflationRate: projectionRate,
-    nominalMode,
-    scenarios,
-    hiddenIds,
-    calendarOrigin,
-    activeIndex,
-    legendStore,
-    fromTodayLine,
-    fromTodayLabel,
-  })
+  const { activeYear, legendWithFromToday, breakdowns, yearZeroHint, tooltip, calendar, sheetReading } =
+    useHeroReadings({
+      lines,
+      points: full.points,
+      displaySeries,
+      names,
+      years,
+      inflationRate: projectionRate,
+      nominalMode,
+      scenarios,
+      hiddenIds,
+      calendarOrigin,
+      activeIndex,
+      legendStore,
+      fromTodayLine,
+      fromTodayLabel,
+    })
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears, draftOffset)
-  const heroVariantProps = variantProps(isHero, narrow, legendInBand, markerYears, lifeEventMarkers, onActiveIndexChange)
+  const heroVariantProps = variantProps(
+    isHero,
+    narrow,
+    legendInBand,
+    markerYears,
+    lifeEventMarkers,
+    onActiveIndexChange,
+  )
 
   // What the full-screen chart draws from, held between renders so a year pointed at in the card,
   // which re-renders this, does not hand it new objects to work from.
@@ -738,7 +879,23 @@ function NetWorthChartImpl({
       formatValue,
       tooltip,
     }),
-    [chartSeries, labels, refLines, refCurves, refHighlight, annotations, startMarks, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
+    [
+      chartSeries,
+      labels,
+      refLines,
+      refCurves,
+      refHighlight,
+      annotations,
+      startMarks,
+      markerYears,
+      lifeEventMarkers,
+      todayIndex,
+      windowYears,
+      yDomainMax,
+      fiChartMarker,
+      formatValue,
+      tooltip,
+    ],
   )
   const sheetLegend = useMemo(
     () => ({ ...sheetReading, fromTodayLine, fromTodayLabel, nominalMode, onToggleVisible }),

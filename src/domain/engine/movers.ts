@@ -69,9 +69,7 @@ export function computeMovers(
   for (const cat of categories) {
     const currentCents = current.get(cat.id) ?? 0
     const baselineCents =
-      window.length === 0
-        ? 0
-        : Math.round(sums.reduce((s, m) => s + (m.get(cat.id) ?? 0), 0) / window.length)
+      window.length === 0 ? 0 : Math.round(sums.reduce((s, m) => s + (m.get(cat.id) ?? 0), 0) / window.length)
     if (currentCents === 0 && baselineCents === 0) continue
     movers.push({
       categoryId: cat.id,

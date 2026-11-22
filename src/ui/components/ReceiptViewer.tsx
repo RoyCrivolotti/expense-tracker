@@ -10,13 +10,7 @@ import styles from './ReceiptStrip.module.css'
  * on our origin, and an <iframe> that silently downloads instead is worse than
  * a link that says so.
  */
-export function ReceiptViewer({
-  attachment,
-  onClose,
-}: {
-  attachment: TransactionAttachment
-  onClose: () => void
-}) {
+export function ReceiptViewer({ attachment, onClose }: { attachment: TransactionAttachment; onClose: () => void }) {
   const href = `/api/expenses/attachments/${attachment.id}`
   const isPdf = attachment.contentType === 'application/pdf'
   return (

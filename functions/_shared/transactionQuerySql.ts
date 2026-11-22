@@ -60,16 +60,16 @@ export const COLUMNS = `t.id, t.date, t.budget_month, t.description, t.account_i
 const ROW_SELECT = `SELECT ${COLUMNS}, ${STATUS_SQL} AS status, ${LABEL_IDS_SQL} AS label_ids
   FROM transactions t ${STATUS_JOINS}`
 
-function term(sql: string, ...params: SqlParam[]): Sql {
+function term(
+  sql: string,
+  ...params: SqlParam[]
+): Sql {
   return { sql, params }
 }
 
 function period(f: TxnFilter): Sql[] {
   if (f.dateFrom || f.dateTo) {
-    return [
-      f.dateFrom ? term('t.date >= ?', f.dateFrom) : none,
-      f.dateTo ? term('t.date <= ?', f.dateTo) : none,
-    ]
+    return [f.dateFrom ? term('t.date >= ?', f.dateFrom) : none, f.dateTo ? term('t.date <= ?', f.dateTo) : none]
   }
   return [f.month ? term('t.budget_month = ?', f.month) : none]
 }
@@ -88,7 +88,10 @@ function dimensions(f: TxnFilter): Sql[] {
 }
 
 /** Any one of the labels (OR), through a single bound JSON list. */
-function labels(f: TxnFilter, owner: string): Sql {
+function labels(
+  f: TxnFilter,
+  owner: string,
+): Sql {
   if (!f.labelIds || f.labelIds.length === 0) return none
   return term(
     `t.id IN (SELECT tl.transaction_id FROM transaction_labels tl
@@ -135,7 +138,11 @@ function allOf(parts: Sql[]): Sql {
 }
 
 /** `WHERE` text and values for the owner and the filter; the keyset position, when given, goes last. */
-function whereOf(owner: string, f: TxnFilter, after?: TransactionKey): Sql {
+function whereOf(
+  owner: string,
+  f: TxnFilter,
+  after?: TransactionKey,
+): Sql {
   const { sql, params } = allOf([
     term('t.owner = ?', owner),
     ...period(f),
@@ -154,7 +161,12 @@ function joinsFor(f: TxnFilter): string {
 }
 
 /** `limit + 1` rows, so the caller can tell whether another page exists. */
-export function pageSql(owner: string, f: TxnFilter, limit: number, after?: TransactionKey): Sql {
+export function pageSql(
+  owner: string,
+  f: TxnFilter,
+  limit: number,
+  after?: TransactionKey,
+): Sql {
   const where = whereOf(owner, f, after)
   return {
     sql: `${ROW_SELECT} ${where.sql} ORDER BY t.date DESC, t.id DESC LIMIT ?`,
@@ -167,21 +179,33 @@ export function pageSql(owner: string, f: TxnFilter, limit: number, after?: Tran
  * `created_at` is set by the database when it is inserted. The owner index holds the ids in order, so this reads
  * `limit` rows and sorts nothing.
  */
-export function recentSql(owner: string, limit: number): Sql {
+export function recentSql(
+  owner: string,
+  limit: number,
+): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? ORDER BY t.id DESC LIMIT ?`, params: [owner, limit] }
 }
 
-export function oneSql(owner: string, id: number): Sql {
+export function oneSql(
+  owner: string,
+  id: number,
+): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id = ?`, params: [owner, id] }
 }
 
 /** The owner's rows among `ids`, in id order. The ids are bound as one JSON array, since D1 allows 100 bound values. */
-export function rowsByIdsSql(owner: string, ids: readonly number[]): Sql {
+export function rowsByIdsSql(
+  owner: string,
+  ids: readonly number[],
+): Sql {
   return { sql: `${ROW_SELECT} WHERE t.owner = ? AND t.id ${IN_ID_LIST} ORDER BY t.id`, params: [owner, idList(ids)] }
 }
 
 /** Stops reading at one past the cap, so a broad filter costs the cap and not the table. */
-export function countSql(owner: string, f: TxnFilter): Sql {
+export function countSql(
+  owner: string,
+  f: TxnFilter,
+): Sql {
   const where = whereOf(owner, f)
   return {
     sql: `SELECT COUNT(*) AS n FROM (
@@ -191,7 +215,10 @@ export function countSql(owner: string, f: TxnFilter): Sql {
 }
 
 /** `netSpendCents` in the engine: expenses less refunds, income and investments left out. */
-export function netSpendSql(owner: string, f: TxnFilter): Sql {
+export function netSpendSql(
+  owner: string,
+  f: TxnFilter,
+): Sql {
   const where = whereOf(owner, f)
   return {
     sql: `SELECT COALESCE(SUM(CASE t.type
@@ -207,7 +234,11 @@ export function netSpendSql(owner: string, f: TxnFilter): Sql {
  * so a bulk edit reaches the rows those showed. No ORDER BY: the caller refuses a result that reaches
  * its cap, so which rows a cut-short result holds never matters.
  */
-export function idsSql(owner: string, f: TxnFilter, limit: number): Sql {
+export function idsSql(
+  owner: string,
+  f: TxnFilter,
+  limit: number,
+): Sql {
   const where = whereOf(owner, f)
   return { sql: `SELECT t.id FROM transactions t ${joinsFor(f)} ${where.sql} LIMIT ${limit}`, params: where.params }
 }
@@ -218,7 +249,12 @@ export function idsSql(owner: string, f: TxnFilter, limit: number): Sql {
  * that was made when the ids were read hold again at the moment the batch writes. The filter is read
  * once, into `m`, and reads at most one row past the cap.
  */
-export function matchGuardSql(owner: string, f: TxnFilter, ids: readonly number[], cap: number): Sql {
+export function matchGuardSql(
+  owner: string,
+  f: TxnFilter,
+  ids: readonly number[],
+  cap: number,
+): Sql {
   const where = whereOf(owner, f)
   const n = ids.length
   return {

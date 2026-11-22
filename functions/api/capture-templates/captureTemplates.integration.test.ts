@@ -30,7 +30,10 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
-function call(handler: Handler, o: { id?: string; query?: string; email?: string } = {}) {
+function call(
+  handler: Handler,
+  o: { id?: string; query?: string; email?: string } = {},
+) {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -42,18 +45,40 @@ function call(handler: Handler, o: { id?: string; query?: string; email?: string
   })
 }
 
-function template(n: number, over: { owner?: string; ignoredAt?: string | null; skeleton?: string } = {}) {
+function template(
+  n: number,
+  over: { owner?: string; ignoredAt?: string | null; skeleton?: string } = {},
+) {
   sqlite
     .prepare(
       `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, seen, dismissals, dismiss_streak, first_seen, last_seen, ignored_at)
        VALUES (?, ?, 'iberia', 'compra realizada', ?, 4, 3, 3, '2026-11-01', '2026-11-02', ?)`,
     )
-    .run(over.owner ?? OWNER, idOf(n), over.skeleton ?? `compra realizada <N> <C> en <M> ${n}`, over.ignoredAt === undefined ? `2026-11-02T10:00:${String(n % 60).padStart(2, '0')}.000Z` : over.ignoredAt)
+    .run(
+      over.owner ?? OWNER,
+      idOf(n),
+      over.skeleton ?? `compra realizada <N> <C> en <M> ${n}`,
+      over.ignoredAt === undefined ? `2026-11-02T10:00:${String(n % 60).padStart(2, '0')}.000Z` : over.ignoredAt,
+    )
 }
 
-type Listed = { templates: Array<{ templateId: string; source: string; skeleton: string; seen: number; dismissals: number; ignoredAt: string }> }
-const listed = async (email = OWNER) => ((await (await call(list, { query: '?ignored=1', email })).json()) as Listed).templates
-const ignoredAt = (n: number) => (sqlite.prepare('SELECT ignored_at, dismiss_streak FROM capture_templates WHERE template_id = ?').get(idOf(n)) as { ignored_at: string | null; dismiss_streak: number })
+type Listed = {
+  templates: Array<{
+    templateId: string
+    source: string
+    skeleton: string
+    seen: number
+    dismissals: number
+    ignoredAt: string
+  }>
+}
+const listed = async (email = OWNER) =>
+  ((await (await call(list, { query: '?ignored=1', email })).json()) as Listed).templates
+const ignoredAt = (n: number) =>
+  sqlite.prepare('SELECT ignored_at, dismiss_streak FROM capture_templates WHERE template_id = ?').get(idOf(n)) as {
+    ignored_at: string | null
+    dismiss_streak: number
+  }
 
 describe('GET /api/capture-templates?ignored=1', () => {
   it('lists the person’s ignored templates, newest ignore first, by their masked words', async () => {
@@ -63,8 +88,22 @@ describe('GET /api/capture-templates?ignored=1', () => {
     template(4, { owner: OTHER })
 
     expect(await listed()).toEqual([
-      { templateId: idOf(2), source: 'iberia', skeleton: 'compra realizada <N> <C> en <M> 2', seen: 4, dismissals: 3, ignoredAt: '2026-11-02T10:00:02.000Z' },
-      { templateId: idOf(1), source: 'iberia', skeleton: 'compra realizada <N> <C> en <M> 1', seen: 4, dismissals: 3, ignoredAt: '2026-11-02T10:00:01.000Z' },
+      {
+        templateId: idOf(2),
+        source: 'iberia',
+        skeleton: 'compra realizada <N> <C> en <M> 2',
+        seen: 4,
+        dismissals: 3,
+        ignoredAt: '2026-11-02T10:00:02.000Z',
+      },
+      {
+        templateId: idOf(1),
+        source: 'iberia',
+        skeleton: 'compra realizada <N> <C> en <M> 1',
+        seen: 4,
+        dismissals: 3,
+        ignoredAt: '2026-11-02T10:00:01.000Z',
+      },
     ])
     expect((await listed(OTHER)).map((t) => t.templateId)).toEqual([idOf(4)])
   })
@@ -74,9 +113,12 @@ describe('GET /api/capture-templates?ignored=1', () => {
     expect(await listed()).toHaveLength(MAX_IGNORED_LISTED)
   })
 
-  it.each(['', '?ignored=0', '?ignored=true', '?all=1'])('refuses %s with a 400, since only the ignored list exists', async (query) => {
-    expect((await call(list, { query })).status).toBe(400)
-  })
+  it.each(['', '?ignored=0', '?ignored=true', '?all=1'])(
+    'refuses %s with a 400, since only the ignored list exists',
+    async (query) => {
+      expect((await call(list, { query })).status).toBe(400)
+    },
+  )
 })
 
 describe('POST /api/capture-templates/:id/unignore', () => {
@@ -124,7 +166,8 @@ describe('POST /api/capture-templates/:id/unignore', () => {
 
   it('leaves the dataset revision alone, though an ordinary write moves it', async () => {
     template(1)
-    const label = (name: string) => world.call(createLabel, { method: 'POST', path: '/labels', body: { name, color: '#336699' } })
+    const label = (name: string) =>
+      world.call(createLabel, { method: 'POST', path: '/labels', body: { name, color: '#336699' } })
     await label('first')
     const before = world.token()
 

@@ -24,9 +24,13 @@ describe('MarketBounceSetting', () => {
     expect(screen.getByText(/The return you enter on a plan stays the typical growth/)).toBeInTheDocument()
   })
 
-  it('says that a portfolio with more bonds bounces less and grows less, so the plan\'s return should come down too, not only the bounce', () => {
+  it("says that a portfolio with more bonds bounces less and grows less, so the plan's return should come down too, not only the bounce", () => {
     render(<MarketBounceSetting settings={settings(0.07)} onChange={vi.fn()} />)
-    expect(screen.getByText(/A portfolio with more bonds bounces less but also grows less, so lower the return on your plan too\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /A portfolio with more bonds bounces less but also grows less, so lower the return on your plan too\./,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('shows the saved bounce, 15% until set, and saves a typed one as a setting', () => {
@@ -102,7 +106,9 @@ describe('MarketBounceSetting', () => {
 
   it('marks none of them for a bounce of its own', () => {
     render(<MarketBounceSetting settings={settings(0.2)} onChange={vi.fn()} />)
-    const pressed = [...screen.getByRole('group', { name: 'Usual bounce' }).querySelectorAll('button')].map((b) => b.getAttribute('aria-pressed'))
+    const pressed = [...screen.getByRole('group', { name: 'Usual bounce' }).querySelectorAll('button')].map((b) =>
+      b.getAttribute('aria-pressed'),
+    )
     expect(pressed).toEqual(['false', 'false', 'false'])
   })
 

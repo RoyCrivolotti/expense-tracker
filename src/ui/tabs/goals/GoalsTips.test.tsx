@@ -49,7 +49,10 @@ function StartCard({ onChange }: { onChange: (patch: object) => void }) {
     </TipsProvider>
   )
 }
-const type = (label: RegExp, text: string) => {
+const type = (
+  label: RegExp,
+  text: string,
+) => {
   const input = screen.getByLabelText(label)
   fireEvent.change(input, { target: { value: text } })
   fireEvent.blur(input)
@@ -84,30 +87,54 @@ describe('the Goals start card writes the two numbers into the draft through the
     expect(onChange).toHaveBeenCalledWith({ startInvestedCents: 0 })
   })
 
-  it.each(['999.999.999.999.999,99', '1,999', '1.234,5', '0,001'])('writes what the shared reader makes of %s, and nothing when it makes nothing', (text) => {
-    const { onChange } = card()
-    type(/^Starting invested \(/, text)
-    const read = tryParseMoneyToCents(text, resolveMoneyFormat('EUR', 'es-ES'))
-    if (read === null) expect(onChange).not.toHaveBeenCalled()
-    else expect(onChange).toHaveBeenCalledWith({ startInvestedCents: Math.max(0, read) })
-  })
+  it.each(['999.999.999.999.999,99', '1,999', '1.234,5', '0,001'])(
+    'writes what the shared reader makes of %s, and nothing when it makes nothing',
+    (text) => {
+      const { onChange } = card()
+      type(/^Starting invested \(/, text)
+      const read = tryParseMoneyToCents(text, resolveMoneyFormat('EUR', 'es-ES'))
+      if (read === null) expect(onChange).not.toHaveBeenCalled()
+      else expect(onChange).toHaveBeenCalledWith({ startInvestedCents: Math.max(0, read) })
+    },
+  )
 
   it('shows the draft’s own values to begin with', () => {
     card()
-    expect(screen.getByLabelText(/^Starting invested \(/)).toHaveValue(formatMoneyInput(777_00, resolveMoneyFormat('EUR', 'es-ES')))
-    expect(screen.getByLabelText(/^Monthly investing \(/)).toHaveValue(formatMoneyInput(55_00, resolveMoneyFormat('EUR', 'es-ES')))
+    expect(screen.getByLabelText(/^Starting invested \(/)).toHaveValue(
+      formatMoneyInput(777_00, resolveMoneyFormat('EUR', 'es-ES')),
+    )
+    expect(screen.getByLabelText(/^Monthly investing \(/)).toHaveValue(
+      formatMoneyInput(55_00, resolveMoneyFormat('EUR', 'es-ES')),
+    )
   })
 })
 
-function app(opts: { scenarios?: ReturnType<typeof makeScenario>[]; inflation?: number; saved?: string[] | undefined; save?: () => Promise<void>; checkin?: string }) {
+function app(opts: {
+  scenarios?: ReturnType<typeof makeScenario>[]
+  inflation?: number
+  saved?: string[] | undefined
+  save?: () => Promise<void>
+  checkin?: string
+}) {
   const dataset = makeDataset({
     goalScenarios: opts.scenarios ?? [],
-    ...(opts.checkin ? { wealthAccounts: [makeWealthAccount({ id: 1 })], wealthCheckins: [makeWealthCheckin({ checkinDate: opts.checkin, entries: [{ accountId: 1, valueCents: 5_000_00 }] })] } : {}),
+    ...(opts.checkin
+      ? {
+          wealthAccounts: [makeWealthAccount({ id: 1 })],
+          wealthCheckins: [
+            makeWealthCheckin({ checkinDate: opts.checkin, entries: [{ accountId: 1, valueCents: 5_000_00 }] }),
+          ],
+        }
+      : {}),
     settings: { ...defaultExpenseSettings(), assumedInflation: opts.inflation ?? 0.02 },
   })
   const actions = makeActions()
   const view = render(
-    <TipsProvider saved={'saved' in opts ? opts.saved : []} hasTransactions save={opts.save ?? (() => Promise.resolve())}>
+    <TipsProvider
+      saved={'saved' in opts ? opts.saved : []}
+      hasTransactions
+      save={opts.save ?? (() => Promise.resolve())}
+    >
       <GoalsTab model={buildExpenseModel(dataset)} actions={actions} />
     </TipsProvider>,
   )
@@ -118,30 +145,44 @@ const netWorth = () => screen.getByText(/Net worth in \d+ yrs/i).parentElement!.
 const region = () => screen.queryByRole('region', { name: 'A long-range plan' })
 
 describe('the Goals start card on the tab', () => {
-  it.each([0, -0.01, 0.02, 0.06])('with assumed inflation %s, fills the draft the controls and chart read, and saves no scenario', (inflation) => {
-    const { actions } = app({ inflation })
-    expect(region()).toBeInTheDocument()
+  it.each([0, -0.01, 0.02, 0.06])(
+    'with assumed inflation %s, fills the draft the controls and chart read, and saves no scenario',
+    (inflation) => {
+      const { actions } = app({ inflation })
+      expect(region()).toBeInTheDocument()
 
-    type(/^Starting invested \(/, '12.345,67')
-    type(/^Monthly investing \(/, '300')
-    fireEvent.click(screen.getByRole('button', { name: 'Show my plan' }))
+      type(/^Starting invested \(/, '12.345,67')
+      type(/^Monthly investing \(/, '300')
+      fireEvent.click(screen.getByRole('button', { name: 'Show my plan' }))
 
-    expect(region()).toBeNull()
-    // The bar's own fields now hold what the card was given: the same text they hold for a saved plan with those values.
-    const shown = () => [screen.getByLabelText('Starting invested'), screen.getByLabelText('Monthly investing')].map((e) => (e as HTMLInputElement).value)
-    const got = [...shown(), netWorth()]
-    cleanup()
-    app({ inflation, scenarios: [makeScenario({ startInvestedCents: 12_345_67, monthlyContributionCents: 300_00, planStartDate: todayIso() })] })
-    expect([...shown(), netWorth()]).toEqual(got)
-    expect(got.slice(0, 2)).not.toEqual(['0', '0'])
-    expect(got[2]).toMatch(/\d/)
-    expect(actions.createScenario).not.toHaveBeenCalled()
-    expect(actions.updateScenario).not.toHaveBeenCalled()
-  })
+      expect(region()).toBeNull()
+      // The bar's own fields now hold what the card was given: the same text they hold for a saved plan with those values.
+      const shown = () =>
+        [screen.getByLabelText('Starting invested'), screen.getByLabelText('Monthly investing')].map(
+          (e) => (e as HTMLInputElement).value,
+        )
+      const got = [...shown(), netWorth()]
+      cleanup()
+      app({
+        inflation,
+        scenarios: [
+          makeScenario({ startInvestedCents: 12_345_67, monthlyContributionCents: 300_00, planStartDate: todayIso() }),
+        ],
+      })
+      expect([...shown(), netWorth()]).toEqual(got)
+      expect(got.slice(0, 2)).not.toEqual(['0', '0'])
+      expect(got[2]).toMatch(/\d/)
+      expect(actions.createScenario).not.toHaveBeenCalled()
+      expect(actions.updateScenario).not.toHaveBeenCalled()
+    },
+  )
 
   it('has one button, which puts the card away and changes nothing in the draft', () => {
     app({})
-    const read = () => [screen.getByLabelText('Starting invested'), screen.getByLabelText('Monthly investing')].map((e) => (e as HTMLInputElement).value)
+    const read = () =>
+      [screen.getByLabelText('Starting invested'), screen.getByLabelText('Monthly investing')].map(
+        (e) => (e as HTMLInputElement).value,
+      )
     const before = read()
     expect(screen.queryByRole('button', { name: /look around/ })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Show my plan' }))
@@ -190,7 +231,7 @@ describe('the Goals start card on the tab', () => {
     expect(region()).toBeNull()
   })
 
-  it('has a Progress card only on Progress, put away on its own id and not the start card\'s', async () => {
+  it("has a Progress card only on Progress, put away on its own id and not the start card's", async () => {
     const save = vi.fn(() => Promise.resolve())
     app({ save })
     expect(screen.queryByRole('region', { name: 'Monthly check-in' })).toBeNull()
@@ -200,7 +241,9 @@ describe('the Goals start card on the tab', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.getByRole('region', { name: 'Monthly check-in' })).toBeInTheDocument()
     expect(region()).toBeNull()
-    fireEvent.click(within(screen.getByRole('region', { name: 'Monthly check-in' })).getByRole('button', { name: 'Got it' }))
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Monthly check-in' })).getByRole('button', { name: 'Got it' }),
+    )
     await act(() => Promise.resolve())
     expect(save).toHaveBeenCalledWith({ tipsSeen: ['goals-progress'] })
     expect(screen.queryByRole('region', { name: 'Monthly check-in' })).toBeNull()
@@ -210,18 +253,27 @@ describe('the Goals start card on the tab', () => {
 
   it('names the day of the balance when the draft starts from a check-in, and the number typed lands on that day', () => {
     app({ checkin: '2020-03-02' })
-    expect(screen.getByText(/Starting invested is what your investments held on 2 Mar 2020, from your latest check-in/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Starting invested is what your investments held on 2 Mar 2020, from your latest check-in/),
+    ).toBeInTheDocument()
     type(/^Starting invested \(/, '8.000')
     type(/^Monthly investing \(/, '250')
     const got = [netWorth(), screen.getByLabelText<HTMLInputElement>('Starting invested').value]
     cleanup()
-    app({ checkin: '2020-03-02', scenarios: [makeScenario({ startInvestedCents: 8_000_00, monthlyContributionCents: 250_00, planStartDate: '2020-03-02' })] })
+    app({
+      checkin: '2020-03-02',
+      scenarios: [
+        makeScenario({ startInvestedCents: 8_000_00, monthlyContributionCents: 250_00, planStartDate: '2020-03-02' }),
+      ],
+    })
     expect([netWorth(), screen.getByLabelText<HTMLInputElement>('Starting invested').value]).toEqual(got)
   })
 
   it('says now when there is no check-in, and that nothing is saved until the scenario is saved', () => {
     app({})
-    expect(screen.getByText(/Starting invested is what your investments hold now, not your bank balance/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Starting invested is what your investments hold now, not your bank balance/),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText(/^Starting invested \(/)).toBeInTheDocument()
     expect(screen.getByText(/Nothing is saved until you save the scenario/)).toBeInTheDocument()
   })

@@ -41,7 +41,12 @@ const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
  */
 function leavesDatasetAlone(path: string): boolean {
   if (path === '/api/capture-keys' || path.startsWith('/api/capture-keys/')) return true
-  if (path === '/api/push-subscriptions' || path.startsWith('/api/push-subscriptions/') || path === '/api/push-settings') return true
+  if (
+    path === '/api/push-subscriptions' ||
+    path.startsWith('/api/push-subscriptions/') ||
+    path === '/api/push-settings'
+  )
+    return true
   if (path === '/api/capture-cards') return true
   if (/^\/api\/capture-templates\/[^/]+\/unignore$/.test(path)) return true
   return /^\/api\/recommendations\/[^/]+\/(dismiss|link)$/.test(path)

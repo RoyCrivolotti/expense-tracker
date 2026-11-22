@@ -118,9 +118,7 @@ export function TxnFiltersSheet({
             in SearchRow, which the sheet's own focus trap makes unreachable while this
             is open — but kept so a locked field still explains itself if that ever
             changes, exactly as it did inline. */}
-        {selectMode ? (
-          <LockShield label="Filters are locked while rows are selected" onPress={onLockedPress} />
-        ) : null}
+        {selectMode ? <LockShield label="Filters are locked while rows are selected" onPress={onLockedPress} /> : null}
       </div>
     </Modal>
   )

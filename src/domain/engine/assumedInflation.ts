@@ -10,12 +10,7 @@ export const INFLATION_MAX = 0.1
 
 /** Null when `value` is an assumed inflation the app accepts, otherwise what is wrong with it. */
 export function assumedInflationError(value: unknown): string | null {
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    value < INFLATION_MIN ||
-    value > INFLATION_MAX
-  ) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < INFLATION_MIN || value > INFLATION_MAX) {
     return `assumedInflation must be a number between ${INFLATION_MIN} and ${INFLATION_MAX}`
   }
   return null

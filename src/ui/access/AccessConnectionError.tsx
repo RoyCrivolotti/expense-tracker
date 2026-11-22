@@ -7,7 +7,11 @@ interface Props {
   onRetry: () => void
 }
 
-function wording(kind: AccessErrorKind, offline: boolean, error: string): { title: string; body: string } {
+function wording(
+  kind: AccessErrorKind,
+  offline: boolean,
+  error: string,
+): { title: string; body: string } {
   if (offline) {
     return {
       title: 'You’re offline',

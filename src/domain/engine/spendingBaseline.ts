@@ -36,7 +36,10 @@ function median(nums: number[]): number {
  * `month` (a plan that has not started yet contributed nothing to the measured
  * months, so there is nothing of it to subtract) and end within a year of it.
  */
-function endingInstallmentsCents(plans: InstallmentPlan[], month: string): number {
+function endingInstallmentsCents(
+  plans: InstallmentPlan[],
+  month: string,
+): number {
   const horizon = shiftBudgetMonth(month, BASELINE_MONTHS)
   let total = 0
   for (const plan of plans) {
@@ -77,10 +80,7 @@ export function computeSpendingBaseline(
     totalCents,
     meanMonthlyCents,
     medianMonthlyCents: median(spends.map((s) => s.cents)),
-    runRateAfterInstallmentsCents: Math.max(
-      0,
-      meanMonthlyCents - endingInstallmentsCents(plans, month),
-    ),
+    runRateAfterInstallmentsCents: Math.max(0, meanMonthlyCents - endingInstallmentsCents(plans, month)),
     planMonthlyCents,
     deltaVsPlanCents: planMonthlyCents !== null ? meanMonthlyCents - planMonthlyCents : null,
   }

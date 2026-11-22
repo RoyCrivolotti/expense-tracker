@@ -1,7 +1,10 @@
 import { daysBetween } from '../../engine'
 
 /** How many days from `today` a charge is due: negative once its date has passed. */
-export function daysUntilDue(predictedDate: string, today: string): number {
+export function daysUntilDue(
+  predictedDate: string,
+  today: string,
+): number {
   return daysBetween(today, predictedDate)
 }
 

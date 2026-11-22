@@ -15,12 +15,7 @@ interface DefaultAccountSettingProps {
  * What the new-transaction form starts from: the account it pre-selects, and the category
  * every investment is filed under, in both directions, which the form then locks.
  */
-export function DefaultAccountSetting({
-  accounts,
-  categories,
-  settings,
-  onChange,
-}: DefaultAccountSettingProps) {
+export function DefaultAccountSetting({ accounts, categories, settings, onChange }: DefaultAccountSettingProps) {
   const active = accounts.filter((a) => a.active)
   const value = resolveDefaultAccountId(accounts, settings)
   const activeCategories = categories.filter((c) => c.active)
@@ -49,9 +44,7 @@ export function DefaultAccountSetting({
           <select
             className={styles.defaultAccountSelect}
             value={investmentCategory ?? ''}
-            onChange={(e) =>
-              onChange({ investmentCategoryId: e.target.value === '' ? null : Number(e.target.value) })
-            }
+            onChange={(e) => onChange({ investmentCategoryId: e.target.value === '' ? null : Number(e.target.value) })}
           >
             <option value="">Not set</option>
             {activeCategories.map((c) => (
@@ -62,8 +55,8 @@ export function DefaultAccountSetting({
           </select>
         </label>
         <p className={styles.settingHint}>
-          Every Invest and Withdraw transaction is filed under this category; the form locks it
-          so investments never land in a spending category.
+          Every Invest and Withdraw transaction is filed under this category; the form locks it so investments never
+          land in a spending category.
         </p>
       </Card>
     </>

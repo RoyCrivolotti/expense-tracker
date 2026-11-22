@@ -108,7 +108,10 @@ export function syntheticPlans(endMonth: string): InstallmentPlan[] {
 }
 
 /** Deferred accounts are paid up to the month before `endMonth`, so the newest charges stay forecast. */
-export function syntheticStatements(months: string[], endMonth: string): AccountStatement[] {
+export function syntheticStatements(
+  months: string[],
+  endMonth: string,
+): AccountStatement[] {
   const out: AccountStatement[] = []
   for (const accountId of [VISA, TRAVEL_CARD]) {
     for (const yearMonth of months) {
@@ -129,9 +132,7 @@ export function syntheticWealth(months: string[]): {
   wealthAccounts: WealthAccount[]
   wealthCheckins: WealthCheckin[]
 } {
-  const wealthAccounts: WealthAccount[] = [
-    { id: 1, name: 'Broker', kind: 'investment', sortOrder: 0, archived: false },
-  ]
+  const wealthAccounts: WealthAccount[] = [{ id: 1, name: 'Broker', kind: 'investment', sortOrder: 0, archived: false }]
   const wealthCheckins = months
     .filter((m) => m.endsWith('-01'))
     .map((m, i) => ({

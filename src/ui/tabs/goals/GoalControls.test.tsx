@@ -213,7 +213,9 @@ describe('GoalControls', () => {
     expect(patch.lifeEvents).toEqual([{ year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' }])
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
-    expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /Bonus \(.*2025\) is already in the balance, so it is dropped\./,
+    )
   })
 
   it('restarts from the amount a change had reached, keeps the ones to come, and says so', () => {
@@ -385,12 +387,8 @@ describe('GoalControls', () => {
     const labelInput = screen.getByLabelText('Life event label')
     await user.type(labelInput, 'Inheritance')
     await user.click(screen.getByRole('button', { name: /^Add$/ }))
-    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [
-      { lifeEvents: { label: string }[] },
-    ]
-    expect(lastCall[0].lifeEvents).toEqual(
-      expect.arrayContaining([expect.objectContaining({ label: 'Inheritance' })]),
-    )
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [{ lifeEvents: { label: string }[] }]
+    expect(lastCall[0].lifeEvents).toEqual(expect.arrayContaining([expect.objectContaining({ label: 'Inheritance' })]))
   })
 
   it('displays existing life events in the list', () => {
@@ -435,9 +433,7 @@ describe('GoalControls', () => {
     // Second radio is "Outflow"
     await user.click(radios[1]!)
     await user.click(screen.getByRole('button', { name: /^Add$/ }))
-    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [
-      { lifeEvents: { amountCents: number }[] },
-    ]
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [{ lifeEvents: { amountCents: number }[] }]
     expect(lastCall[0].lifeEvents[0]!.amountCents).toBeLessThan(0)
   })
 })

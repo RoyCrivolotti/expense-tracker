@@ -43,7 +43,12 @@ describe('fromTodayPoints', () => {
 
 describe('planFromToday at another rate', () => {
   it('counts spending, rent and events at the rate it is asked for, so a preview of 6% is what a saved 6% draws', () => {
-    const withSpend = samplePlan({ id: 1, isActive: true, housePurchaseYear: null, lifeEvents: [{ year: 6, amountCents: -1_000_000, label: 'Car' }] })
+    const withSpend = samplePlan({
+      id: 1,
+      isActive: true,
+      housePurchaseYear: null,
+      lifeEvents: [{ year: 6, amountCents: -1_000_000, label: 'Car' }],
+    })
     const saved = planFromToday(withSpend, latest, 0.02)!
     const tried = planFromToday(withSpend, latest, 0.06)!
     expect(tried.scenario.annualSpendCents).toBe(Math.round(3_000_000 * 1.06 ** 3))

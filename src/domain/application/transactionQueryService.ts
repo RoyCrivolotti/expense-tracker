@@ -27,7 +27,10 @@ export interface TransactionListRequest {
   cursor?: unknown
 }
 
-type Parse = (value: unknown, key: string) => unknown
+type Parse = (
+  value: unknown,
+  key: string,
+) => unknown
 
 const TYPES = ['all', 'expense', 'income', 'investment', 'refund']
 const STATUSES = ['all', 'posted', 'forecast', 'cancelled']
@@ -35,28 +38,40 @@ const STATUSES = ['all', 'posted', 'forecast', 'cancelled']
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
-function positiveInt(value: unknown, key: string): number {
+function positiveInt(
+  value: unknown,
+  key: string,
+): number {
   if (!Number.isSafeInteger(value) || (value as number) <= 0) {
     throw new ValidationError(`${key} must be a positive whole number`)
   }
   return value as number
 }
 
-function cents(value: unknown, key: string): number {
+function cents(
+  value: unknown,
+  key: string,
+): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {
     throw new ValidationError(`${key} must be a whole number of cents, zero or more`)
   }
   return value as number
 }
 
-function month(value: unknown, key: string): string {
+function month(
+  value: unknown,
+  key: string,
+): string {
   if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
     throw new ValidationError(`${key} must be YYYY-MM`)
   }
   return value
 }
 
-function date(value: unknown, key: string): string {
+function date(
+  value: unknown,
+  key: string,
+): string {
   if (typeof value !== 'string' || parseIsoDate(value) === null) {
     throw new ValidationError(`${key} must be a calendar date, YYYY-MM-DD`)
   }
@@ -65,18 +80,27 @@ function date(value: unknown, key: string): string {
 
 const oneOf =
   (allowed: string[]): Parse =>
-  (value, key) => {
+  (
+    value,
+    key,
+  ) => {
     if (typeof value !== 'string' || !allowed.includes(value)) {
       throw new ValidationError(`${key} must be one of ${allowed.join(', ')}`)
     }
     return value
   }
 
-function flagId(value: unknown, key: string): number | 'none' {
+function flagId(
+  value: unknown,
+  key: string,
+): number | 'none' {
   return value === 'none' ? 'none' : positiveInt(value, key)
 }
 
-function labelIds(value: unknown, key: string): number[] {
+function labelIds(
+  value: unknown,
+  key: string,
+): number[] {
   if (!Array.isArray(value)) throw new ValidationError(`${key} must be a list of label ids`)
   if (value.length > MAX_FILTER_LABELS) {
     throw new ValidationError(`${key} may name at most ${MAX_FILTER_LABELS} labels`)
@@ -84,7 +108,10 @@ function labelIds(value: unknown, key: string): number[] {
   return [...new Set(value.map((id) => positiveInt(id, key)))].sort((a, b) => a - b)
 }
 
-function query(value: unknown, key: string): string {
+function query(
+  value: unknown,
+  key: string,
+): string {
   if (typeof value !== 'string') throw new ValidationError(`${key} must be text`)
   if (value.length > MAX_QUERY_LENGTH) {
     throw new ValidationError(`${key} must be ${MAX_QUERY_LENGTH} characters or fewer`)
@@ -95,7 +122,10 @@ function query(value: unknown, key: string): string {
   return value
 }
 
-function amountRange(value: unknown, key: string): { fromCents: number; toCents: number } {
+function amountRange(
+  value: unknown,
+  key: string,
+): { fromCents: number; toCents: number } {
   if (!isPlainObject(value)) throw new ValidationError(`${key} must hold fromCents and toCents`)
   return {
     fromCents: cents(value.fromCents, `${key}.fromCents`),
@@ -178,8 +208,7 @@ export async function listTransactions(
   const after = request.cursor === undefined ? undefined : await decodeCursor(request.cursor, filter)
   const page = await repo.queryTransactions(owner, filter, after ? { limit, after } : { limit })
   const last = page.items.at(-1)
-  const nextCursor =
-    page.hasMore && last ? await encodeCursor({ date: last.date, id: last.id }, filter) : null
+  const nextCursor = page.hasMore && last ? await encodeCursor({ date: last.date, id: last.id }, filter) : null
   return { items: page.items, nextCursor }
 }
 

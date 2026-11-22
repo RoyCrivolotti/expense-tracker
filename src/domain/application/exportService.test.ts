@@ -14,8 +14,14 @@ const refused = (run: () => unknown): string => {
 
 describe('parseExportRequest', () => {
   it('takes a table alone, and then reads it a full chunk at a time', () => {
-    expect(parseExportRequest({ table: 'transactions' })).toEqual({ table: 'transactions', limit: EXPORT_CHUNK_ROWS.transactions })
-    expect(parseExportRequest({ table: 'categories' })).toEqual({ table: 'categories', limit: EXPORT_CHUNK_ROWS.categories })
+    expect(parseExportRequest({ table: 'transactions' })).toEqual({
+      table: 'transactions',
+      limit: EXPORT_CHUNK_ROWS.transactions,
+    })
+    expect(parseExportRequest({ table: 'categories' })).toEqual({
+      table: 'categories',
+      limit: EXPORT_CHUNK_ROWS.categories,
+    })
   })
 
   it('takes a position and a limit up to the table’s bound', () => {
@@ -24,7 +30,9 @@ describe('parseExportRequest', () => {
       after: '812',
       limit: 250,
     })
-    expect(parseExportRequest({ table: 'transactions', limit: String(EXPORT_CHUNK_ROWS.transactions) }).limit).toBe(5_000)
+    expect(parseExportRequest({ table: 'transactions', limit: String(EXPORT_CHUNK_ROWS.transactions) }).limit).toBe(
+      5_000,
+    )
     expect(parseExportRequest({ table: 'cashActuals', after: '2026-03' }).after).toBe('2026-03')
     expect(parseExportRequest({ table: 'accountStatements', after: '4:2026-03' }).after).toBe('4:2026-03')
   })
@@ -72,7 +80,9 @@ describe('parseExportRequest', () => {
 describe('readExport', () => {
   it('hands the request to the repository', async () => {
     const repo = inMemoryExpenseRepository(
-      { categories: [1, 2, 3].map((id) => ({ id, name: `C${id}`, monthlyBudgetCents: 0, sortOrder: id, active: true })) },
+      {
+        categories: [1, 2, 3].map((id) => ({ id, name: `C${id}`, monthlyBudgetCents: 0, sortOrder: id, active: true })),
+      },
       'owner@example.com',
     )
 

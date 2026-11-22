@@ -116,7 +116,10 @@ export interface RentVsBuyInput {
 }
 
 /** The share of year `t` the loan is still paid in: all of it, none of it, or the months left when it ends part way through one. */
-export function paidShareOfYear(t: number, termYears: number): number {
+export function paidShareOfYear(
+  t: number,
+  termYears: number,
+): number {
   return Math.min(1, Math.max(0, termYears - (t - 1)))
 }
 
@@ -139,7 +142,8 @@ function buyerOutlayCents(
   params: ProjectionParams,
   carryRate: number,
 ): number {
-  const loan = (annualMortgageCents * paidShareOfYear(t, params.mortgageTermYears)) / Math.pow(1 + params.inflationRate, t)
+  const loan =
+    (annualMortgageCents * paidShareOfYear(t, params.mortgageTermYears)) / Math.pow(1 + params.inflationRate, t)
   return Math.round(loan) + Math.round(houseValueCents * carryRate)
 }
 
@@ -155,7 +159,11 @@ function ownCheaperFrom(points: readonly RentVsBuyPoint[]): RentVsBuyResult['own
 }
 
 /** The bank's payment on the day of the purchase: the loan in that day's euros, paid over the term. */
-function paymentOnAccountCents(loanCents: number, purchaseYear: number, params: ProjectionParams): number {
+function paymentOnAccountCents(
+  loanCents: number,
+  purchaseYear: number,
+  params: ProjectionParams,
+): number {
   if (loanCents <= 0) return 0
   const nominalLoan = loanCents * Math.pow(1 + params.inflationRate, purchaseYear)
   return Math.round(pmt(params.mortgageRateAnnual / 12, params.mortgageTermYears * 12, nominalLoan))
@@ -168,7 +176,11 @@ interface Portfolios {
 }
 
 /** A year on: both portfolios earn the real return, then whichever side pays less in housing invests the difference. */
-function endOfYear(books: Portfolios, returnRate: number, surplus: number): Portfolios {
+function endOfYear(
+  books: Portfolios,
+  returnRate: number,
+  surplus: number,
+): Portfolios {
   const rent = Math.round(books.rent * (1 + returnRate))
   const buy = Math.round(books.buy * (1 + returnRate))
   return surplus > 0 ? { rent: rent + surplus, buy } : { rent, buy: buy - surplus }
@@ -199,13 +211,21 @@ interface YearFlows {
 }
 
 /** What the buyer pays in housing over the year against the rent, and so who invests the difference. */
-function yearFlows(point: YearPoint, c: YearContext): YearFlows {
+function yearFlows(
+  point: YearPoint,
+  c: YearContext,
+): YearFlows {
   if (point.year <= 0) return { outlay: 0, surplus: 0 }
   const outlay = buyerOutlayCents(point.year, point.houseEquityCents, c.annualMortgageCents, c.params, c.carryRate)
   return { outlay, surplus: outlay - c.rentMonthlyCents * 12 }
 }
 
-function pointOf(point: YearPoint, books: Portfolios, flows: YearFlows, c: YearContext): RentVsBuyPoint {
+function pointOf(
+  point: YearPoint,
+  books: Portfolios,
+  flows: YearFlows,
+  c: YearContext,
+): RentVsBuyPoint {
   const seed = Math.round(c.upfrontCents * Math.pow(1 + c.params.expectedRealReturn, point.year))
   return {
     year: point.year,

@@ -8,8 +8,17 @@ import { usageCount } from '../ledgerUsage'
 import { type UsageKind, heldCount } from './recordUsage'
 
 const category = (id: number) => ({ id, name: `Category ${id}`, monthlyBudgetCents: 0, sortOrder: id, active: true })
-const account = (id: number) => ({ id, name: `Account ${id}`, kind: 'debit' as const, settlement: 'immediate' as const, active: true })
-const plan = (categoryId: number, accountId: number): InstallmentPlan => ({
+const account = (id: number) => ({
+  id,
+  name: `Account ${id}`,
+  kind: 'debit' as const,
+  settlement: 'immediate' as const,
+  active: true,
+})
+const plan = (
+  categoryId: number,
+  accountId: number,
+): InstallmentPlan => ({
   id: 1,
   description: 'plan',
   totalCount: 12,
@@ -24,7 +33,12 @@ const plan = (categoryId: number, accountId: number): InstallmentPlan => ({
 
 describe('heldCount', () => {
   it('is zero for a record referenced by nothing', () => {
-    const ds = makeDataset({ categories: [category(1)], accounts: [account(1)], flags: [makeFlag({ id: 1 })], labels: [makeLabel({ id: 1 })] })
+    const ds = makeDataset({
+      categories: [category(1)],
+      accounts: [account(1)],
+      flags: [makeFlag({ id: 1 })],
+      labels: [makeLabel({ id: 1 })],
+    })
     for (const kind of ['category', 'account', 'flag', 'label'] as const) expect(heldCount(ds, kind, 1)).toBe(0)
   })
 
@@ -64,8 +78,13 @@ describe('heldCount', () => {
   })
 
   it('equals what the engine counts for every record of ledgers that have all of them, which is what the server answers', () => {
-    const idsOf = (ds: ExpenseDataset, kind: UsageKind) =>
-      ({ category: ds.categories, account: ds.accounts, flag: ds.flags, label: ds.labels })[kind].map((record) => record.id)
+    const idsOf = (
+      ds: ExpenseDataset,
+      kind: UsageKind,
+    ) =>
+      ({ category: ds.categories, account: ds.accounts, flag: ds.flags, label: ds.labels })[kind].map(
+        (record) => record.id,
+      )
     let compared = 0
     for (const ds of [adversarialLedger(), randomLedger(5), randomLedger(1), randomLedger(2)]) {
       const reference = usageFromDataset(ds)

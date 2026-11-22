@@ -42,11 +42,12 @@ beforeAll(async () => {
   filters = filterStream(vocabularyOf(ledger), 250, 20261017)
 })
 
-const expected = (filter: TxnFilter): Transaction[] =>
-  filterTransactions(all, filter).map(withSortedLabels)
+const expected = (filter: TxnFilter): Transaction[] => filterTransactions(all, filter).map(withSortedLabels)
 
-const pagesOf = async (filter: TxnFilter, limit: number): Promise<Transaction[]> =>
-  (await allPages(repo, OWNER, filter, limit)).map(withSortedLabels)
+const pagesOf = async (
+  filter: TxnFilter,
+  limit: number,
+): Promise<Transaction[]> => (await allPages(repo, OWNER, filter, limit)).map(withSortedLabels)
 
 /** Page sizes worth trying for a result of `n` rows, including one that divides it exactly. */
 function limitsFor(n: number): number[] {
@@ -68,22 +69,29 @@ describe('the test ledger', () => {
 })
 
 describe('pages put end to end equal filterTransactions', () => {
-  it('for 250 random filters at several page sizes', async () => {
-    const empty: string[] = []
-    let withRows = 0
-    for (const filter of filters) {
-      const want = expected(filter)
-      if (want.length > 0) withRows += 1
-      else empty.push(JSON.stringify(filter))
-      for (const limit of limitsFor(want.length)) {
-        const got = await pagesOf(filter, limit)
-        expect(got.map((t) => t.id), `${JSON.stringify(filter)} at ${limit}`).toEqual(want.map((t) => t.id))
-        expect(got).toEqual(want)
+  it(
+    'for 250 random filters at several page sizes',
+    async () => {
+      const empty: string[] = []
+      let withRows = 0
+      for (const filter of filters) {
+        const want = expected(filter)
+        if (want.length > 0) withRows += 1
+        else empty.push(JSON.stringify(filter))
+        for (const limit of limitsFor(want.length)) {
+          const got = await pagesOf(filter, limit)
+          expect(
+            got.map((t) => t.id),
+            `${JSON.stringify(filter)} at ${limit}`,
+          ).toEqual(want.map((t) => t.id))
+          expect(got).toEqual(want)
+        }
       }
-    }
-    expect(withRows).toBeGreaterThan(140)
-    expect(empty.length).toBeGreaterThan(5)
-  }, SLOW)
+      expect(withRows).toBeGreaterThan(140)
+      expect(empty.length).toBeGreaterThan(5)
+    },
+    SLOW,
+  )
 
   it('with no filter at all, at page size 1 over a stretch and 200 over everything', async () => {
     const want = expected({})
@@ -125,13 +133,13 @@ describe('pages put end to end equal filterTransactions', () => {
     const page = await repo.queryTransactions(OWNER, { month: '2026-03' }, { limit: 200 })
     const byId = new Map(all.map((t) => [t.id, t]))
     expect(page.items.length).toBeGreaterThan(50)
-    for (const item of page.items) expect(withSortedLabels(item)).toEqual(withSortedLabels(byId.get(item.id) as Transaction))
+    for (const item of page.items)
+      expect(withSortedLabels(item)).toEqual(withSortedLabels(byId.get(item.id) as Transaction))
   })
 })
 
 describe('text search', () => {
-  const search = async (query: string): Promise<string[]> =>
-    (await pagesOf({ query }, 200)).map((t) => t.description)
+  const search = async (query: string): Promise<string[]> => (await pagesOf({ query }, 200)).map((t) => t.description)
 
   it('ignores case, including accents and non-Latin letters', async () => {
     expect(await search('café')).toEqual(expect.arrayContaining(['CAFÉ ÑANDÚ', 'café con leche']))
@@ -230,17 +238,21 @@ describe('labels and flags', () => {
 })
 
 describe('summary', () => {
-  it('matches the pure functions for every random filter', async () => {
-    for (const filter of filters) {
-      const matching = filterTransactions(all, filter)
-      const summary = await repo.summarizeTransactions(OWNER, filter)
-      expect(summary, JSON.stringify(filter)).toEqual({
-        count: Math.min(matching.length, SUMMARY_COUNT_CAP),
-        capped: matching.length > SUMMARY_COUNT_CAP,
-        netSpendCents: netSpendCents(matching),
-      })
-    }
-  }, SLOW)
+  it(
+    'matches the pure functions for every random filter',
+    async () => {
+      for (const filter of filters) {
+        const matching = filterTransactions(all, filter)
+        const summary = await repo.summarizeTransactions(OWNER, filter)
+        expect(summary, JSON.stringify(filter)).toEqual({
+          count: Math.min(matching.length, SUMMARY_COUNT_CAP),
+          capped: matching.length > SUMMARY_COUNT_CAP,
+          netSpendCents: netSpendCents(matching),
+        })
+      }
+    },
+    SLOW,
+  )
 
   it('stops counting at the cap but still sums every row', async () => {
     const summary = await repo.summarizeTransactions(OWNER, {})
@@ -270,18 +282,22 @@ describe('summary', () => {
 })
 
 describe('the in-memory repository answers the same as the SQL', () => {
-  it('on every random filter, page by page', async () => {
-    const memory = inMemoryExpenseRepository(await dataset(), OWNER)
-    for (const filter of filters.slice(0, 80)) {
-      for (const limit of [13, 200]) {
-        const fromMemory = (await allPages(memory, OWNER, filter, limit)).map(withSortedLabels)
-        expect(fromMemory.map((t) => t.id)).toEqual((await pagesOf(filter, limit)).map((t) => t.id))
+  it(
+    'on every random filter, page by page',
+    async () => {
+      const memory = inMemoryExpenseRepository(await dataset(), OWNER)
+      for (const filter of filters.slice(0, 80)) {
+        for (const limit of [13, 200]) {
+          const fromMemory = (await allPages(memory, OWNER, filter, limit)).map(withSortedLabels)
+          expect(fromMemory.map((t) => t.id)).toEqual((await pagesOf(filter, limit)).map((t) => t.id))
+        }
+        expect(await memory.summarizeTransactions(OWNER, filter)).toEqual(
+          await repo.summarizeTransactions(OWNER, filter),
+        )
       }
-      expect(await memory.summarizeTransactions(OWNER, filter)).toEqual(
-        await repo.summarizeTransactions(OWNER, filter),
-      )
-    }
-  }, SLOW)
+    },
+    SLOW,
+  )
 
   it('and for one row by id', async () => {
     const memory = inMemoryExpenseRepository(await dataset(), OWNER)

@@ -65,10 +65,7 @@ describe('FlagPickerPopover', () => {
   it('marks the applied flag as pressed and the others as not', () => {
     renderPicker({ value: 1 })
 
-    expect(screen.getByRole('button', { name: /Work travel/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByRole('button', { name: /Work travel/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /No flag/ })).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -107,7 +104,6 @@ describe('FlagPickerPopover', () => {
 
     expect(screen.getByText(/Settings/)).toBeInTheDocument()
   })
-
 })
 
 describe('FlagPickerPopover — creating a flag in place', () => {

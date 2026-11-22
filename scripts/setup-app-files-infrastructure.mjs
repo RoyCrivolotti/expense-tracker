@@ -59,8 +59,15 @@ export function planBinding(project) {
   return { patch: Object.keys(patch.deployment_configs).length ? patch : null, changes }
 }
 
-export function cloudflareApi(token, accountId, fetchImpl = fetch) {
-  return async function cf(path, init = {}) {
+export function cloudflareApi(
+  token,
+  accountId,
+  fetchImpl = fetch,
+) {
+  return async function cf(
+    path,
+    init = {},
+  ) {
     const res = await fetchImpl(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`, {
       ...init,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers },
@@ -88,7 +95,10 @@ function createBucket(accountId) {
   }
 }
 
-export async function main(argv, deps = {}) {
+export async function main(
+  argv,
+  deps = {},
+) {
   const { apply } = parseArgs(argv)
   const log = deps.log ?? console.log
   const accountId = deps.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID
@@ -101,7 +111,9 @@ export async function main(argv, deps = {}) {
   const project = await api(`/pages/projects/${PAGES_PROJECT}`)
   const { patch, changes } = planBinding(project)
   for (const c of changes) {
-    log(`${c.env}: ${c.change === 'bind' ? `bind ${BINDING} to ${BUCKET}, keeping ${c.keeps.join(', ') || 'no other R2 bindings'}` : c.change}`)
+    log(
+      `${c.env}: ${c.change === 'bind' ? `bind ${BINDING} to ${BUCKET}, keeping ${c.keeps.join(', ') || 'no other R2 bindings'}` : c.change}`,
+    )
   }
   if (!apply) {
     log(`Dry run. The bucket ${BUCKET} would be created if missing. Nothing was changed; pass --apply to do it.`)

@@ -39,14 +39,19 @@ async function openScenarioMenu(user: User) {
 }
 
 /** Renames the open scenario from its menu, as an edit to save; the menu is closed again after. */
-async function renameScenario(user: User, name: string) {
+async function renameScenario(
+  user: User,
+  name: string,
+) {
   await openScenarioMenu(user)
   fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: name } })
   await user.keyboard('{Escape}')
 }
 
-const scenarioTab = (name: string | RegExp, selected?: boolean) =>
-  screen.getByRole('tab', { name, ...(selected === undefined ? {} : { selected }) })
+const scenarioTab = (
+  name: string | RegExp,
+  selected?: boolean,
+) => screen.getByRole('tab', { name, ...(selected === undefined ? {} : { selected }) })
 
 describe('GoalsTab levers', () => {
   afterEach(() => {
@@ -76,7 +81,13 @@ describe('GoalsTab levers', () => {
     expect(scrollBy).toHaveBeenCalledTimes(1)
   })
 
-  const DEFAULTS = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']
+  const DEFAULTS = [
+    'monthlyContributionCents',
+    'expectedRealReturn',
+    'horizonYears',
+    'housePurchaseYear',
+    'startInvestedCents',
+  ]
 
   it('takes an input out of the bar with its star, saves the choice, and gives the input back to the panel', async () => {
     const user = userEvent.setup()
@@ -171,9 +182,7 @@ describe('GoalsTab', () => {
 
   it('keeps milestones and accounts in Assumptions, out of Progress', async () => {
     const user = userEvent.setup()
-    const model = buildExpenseModel(
-      makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
-    )
+    const model = buildExpenseModel(makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
@@ -202,9 +211,7 @@ describe('GoalsTab', () => {
   })
 
   it('opens on Progress with the check-in form up when sent for a check-in', () => {
-    const model = buildExpenseModel(
-      makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
-    )
+    const model = buildExpenseModel(makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }))
     render(<GoalsTab model={model} actions={makeActions()} entry="checkin" />)
 
     expect(screen.getByRole('tab', { name: 'Progress' })).toHaveAttribute('aria-selected', 'true')
@@ -213,9 +220,7 @@ describe('GoalsTab', () => {
 
   it('opens the check-in form once, not again after a trip to Plan and back', async () => {
     const user = userEvent.setup()
-    const model = buildExpenseModel(
-      makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
-    )
+    const model = buildExpenseModel(makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }))
     render(<GoalsTab model={model} actions={makeActions()} entry="checkin" />)
     expect(screen.getByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
 
@@ -401,7 +406,10 @@ describe('GoalsTab', () => {
     const actions = makeActions()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
@@ -416,7 +424,10 @@ describe('GoalsTab', () => {
     // It asks first, since it writes the plan straight away.
     expect(actions.updateScenario).not.toHaveBeenCalled()
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
-    const patch = { startInvestedCents: planValueAtDate(plan, '2026-07-15', DEFAULT_INFLATION_RATE)! - 50_000_00, planStartDate: '2026-07-15' }
+    const patch = {
+      startInvestedCents: planValueAtDate(plan, '2026-07-15', DEFAULT_INFLATION_RATE)! - 50_000_00,
+      planStartDate: '2026-07-15',
+    }
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining(patch))
 
     // The write lands and the dataset refreshes; the draft must already agree with it,
@@ -437,7 +448,10 @@ describe('GoalsTab', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
     // The button comes with the gap's explanation, which needs two check-ins a month apart and a gap the start explains.
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
@@ -466,14 +480,19 @@ describe('GoalsTab', () => {
     const actions = makeActions()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
         entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
-    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
+    const model = buildExpenseModel(
+      makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }),
+    )
     render(<GoalsTab model={model} actions={actions} />)
 
     await renameScenario(user, 'Path A, tweaked')
@@ -507,7 +526,10 @@ describe('GoalsTab', () => {
       ],
     })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
@@ -538,7 +560,9 @@ describe('GoalsTab', () => {
       }),
     )
     const patch = vi.mocked(actions.updateScenario).mock.calls[0]![1]
-    rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, ...patch }] })} actions={actions} />)
+    rerender(
+      <GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, ...patch }] })} actions={actions} />,
+    )
     await user.click(screen.getByRole('tab', { name: 'Plan' }))
 
     // The draft moved from its own values: the gift carries over, and the car stays taken out
@@ -564,14 +588,19 @@ describe('GoalsTab', () => {
       ],
     })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
         entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
-    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
+    const model = buildExpenseModel(
+      makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }),
+    )
     render(<GoalsTab model={model} actions={actions} />)
 
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
@@ -771,7 +800,7 @@ describe('GoalsTab', () => {
     expect(asked()).toBe(false)
   })
 
-  it('puts the view switch in the title\'s own row on a wide screen, and under it on a phone', () => {
+  it("puts the view switch in the title's own row on a wide screen, and under it on a phone", () => {
     const { unmount } = render(<GoalsTab model={makeModel()} />)
     const title = screen.getByRole('heading', { name: 'Goals' })
     // One row, so the page spends one line, not two, above the chart.
@@ -788,7 +817,9 @@ describe('GoalsTab', () => {
   describe('the hero card', () => {
     it('has the display switch in its header and a line for FI and the milestone on a wide screen, with no summary box', () => {
       render(<GoalsTab model={makeModel()} />)
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
+      const header = screen
+        .getByRole('heading', { name: 'Invested portfolio projection' })
+        .closest<HTMLElement>('[class*="chartHeaderRow"]')!
 
       // Beside the window buttons, where it is always in sight, not at the foot of the card.
       expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
@@ -805,7 +836,13 @@ describe('GoalsTab', () => {
       expect(screen.getByText('Financial independence').closest('p')).toHaveTextContent('Financial independence Year 0')
       unmount()
 
-      const never = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 900_000_000_000 })
+      const never = makeScenario({
+        id: 1,
+        name: 'Path A',
+        sortOrder: 0,
+        isActive: true,
+        annualSpendCents: 900_000_000_000,
+      })
       const dataset = makeDataset({ goalScenarios: [never] })
       dataset.settings = { ...dataset.settings, milestones: [] }
       render(<GoalsTab model={buildExpenseModel(dataset)} />)
@@ -814,7 +851,16 @@ describe('GoalsTab', () => {
 
     it('says in a line when the plan crosses its next milestone', () => {
       const dataset = makeDataset({
-        goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, startInvestedCents: 100_000, monthlyContributionCents: 100_000 })],
+        goalScenarios: [
+          makeScenario({
+            id: 1,
+            name: 'Path A',
+            sortOrder: 0,
+            isActive: true,
+            startInvestedCents: 100_000,
+            monthlyContributionCents: 100_000,
+          }),
+        ],
       })
       dataset.settings = { ...dataset.settings, milestones: [{ amountCents: 50_000_000, label: 'Coast FI' }] }
       render(<GoalsTab model={buildExpenseModel(dataset)} />)
@@ -828,16 +874,24 @@ describe('GoalsTab', () => {
       expect(screen.queryByText(/Select a year on the chart for values/)).not.toBeInTheDocument()
       const note = screen.getByText(/Dashed vertical lines mark purchase years/)
       // The 5% a new plan starts at, three points either side.
-      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.')
+      expect(note).toHaveTextContent(
+        'The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.',
+      )
       expect(note).toHaveTextContent('return and contributions apply before the down payment comes out')
     })
 
     it('says up to three points when the return is under three, since the band stops at zero', () => {
-      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      const dataset = makeDataset({
+        goalScenarios: [
+          makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 }),
+        ],
+      })
       render(<GoalsTab model={buildExpenseModel(dataset)} />)
 
       // A plan at 2% has no plan at -1% to draw: the band's low edge is the 0% plan, two points down, not three.
-      expect(screen.getByText(/Dashed vertical lines mark purchase years/)).toHaveTextContent('at a real return of 0,0% to 5,0%, up to three points either side.')
+      expect(screen.getByText(/Dashed vertical lines mark purchase years/)).toHaveTextContent(
+        'at a real return of 0,0% to 5,0%, up to three points either side.',
+      )
     })
 
     it('has no em dash in the explanation above the phone chart, in either view of it', () => {
@@ -845,16 +899,26 @@ describe('GoalsTab', () => {
       render(<GoalsTab model={makeModel()} />)
 
       const hint = screen.getByText(/Select a year on the chart for values/)
-      expect(hint.textContent).toContain('is withdrawn. Select a year on the chart for values and the purchase breakdown.')
+      expect(hint.textContent).toContain(
+        'is withdrawn. Select a year on the chart for values and the purchase breakdown.',
+      )
       expect(hint.textContent).not.toContain('—')
     })
 
     it('says it on a phone too, above the chart', () => {
       mockPhoneWidth()
-      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      const dataset = makeDataset({
+        goalScenarios: [
+          makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 }),
+        ],
+      })
       render(<GoalsTab model={buildExpenseModel(dataset)} />)
 
-      expect(screen.getByText(/The shaded band is the edited plan at a return up to three points lower and three points higher/)).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          /The shaded band is the edited plan at a return up to three points lower and three points higher/,
+        ),
+      ).toBeInTheDocument()
     })
 
     it('keeps the summary box, the switch under it and the explanation above the chart on a phone', () => {
@@ -862,12 +926,16 @@ describe('GoalsTab', () => {
       render(<GoalsTab model={makeModel()} />)
 
       expect(screen.getByText('Scenario summary')).toBeInTheDocument()
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
+      const header = screen
+        .getByRole('heading', { name: 'Invested portfolio projection' })
+        .closest<HTMLElement>('[class*="chartHeaderRow"]')!
       expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.getByText(/Select a year on the chart for values/)).toBeInTheDocument()
       expect(screen.queryByText(/The shaded band is the line you are editing/)).not.toBeInTheDocument()
-      expect(screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/),
+      ).toBeInTheDocument()
     })
 
     it('says what is flat and what rises in the Nominal view', async () => {
@@ -876,7 +944,9 @@ describe('GoalsTab', () => {
 
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-      expect(screen.getByText(/Milestones are amounts on your account, so they stay put in this view/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Milestones are amounts on your account, so they stay put in this view/),
+      ).toBeInTheDocument()
       expect(screen.getByText(/the FI target is in .* euros, so it rises with the inflation/)).toBeInTheDocument()
     })
   })
@@ -886,12 +956,11 @@ describe('GoalsTab', () => {
     const { container } = render(<GoalsTab model={makeModel()} />)
 
     const row = screen.getByRole('tablist', { name: 'Goals view' })
-    expect(within(row).getAllByRole('tab').map((r) => r.textContent)).toEqual([
-      'Chart',
-      'Progress',
-      'Scenarios',
-      'Assumptions',
-    ])
+    expect(
+      within(row)
+        .getAllByRole('tab')
+        .map((r) => r.textContent),
+    ).toEqual(['Chart', 'Progress', 'Scenarios', 'Assumptions'])
     expect(screen.queryByRole('tab', { name: 'Plan' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="chart"]')).not.toBeNull()
@@ -909,7 +978,7 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
-  it('makes one copy for a double tap on the phone\'s Duplicate, and holds the button while it is made', async () => {
+  it("makes one copy for a double tap on the phone's Duplicate, and holds the button while it is made", async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     let land!: () => void
@@ -995,14 +1064,15 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
     await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     const row = () => screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })
-    const button = (name: string) =>
-      within(row()!).getByRole('button', { name, hidden: true })
+    const button = (name: string) => within(row()!).getByRole('button', { name, hidden: true })
 
     expect(row()).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     // The scenario card has a Save changes and a Discard of its own, so the row's say whose they are.
-    expect(screen.getByRole('button', { name: 'Save changes', hidden: true })).not.toBe(button('Save changes to Path A, tweaked'))
+    expect(screen.getByRole('button', { name: 'Save changes', hidden: true })).not.toBe(
+      button('Save changes to Path A, tweaked'),
+    )
     expect(screen.getByRole('button', { name: 'Discard', hidden: true })).not.toBe(button('Discard changes'))
     await user.click(button('Save changes to Path A, tweaked'))
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Path A, tweaked' }))
@@ -1084,7 +1154,10 @@ describe('GoalsTab', () => {
 
   it('leads the outputs with the projection chart on a wide screen, ahead of the snapshot and the detail charts', () => {
     render(<GoalsTab model={makeModel()} />)
-    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const before = (
+      a: Node,
+      b: Node,
+    ) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
     const chart = screen.getByRole('heading', { name: 'Invested portfolio projection' })
 
     expect(before(chart, screen.getByText('Where you are today'))).toBe(true)
@@ -1095,7 +1168,10 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
     const anchor = () => document.getElementById('goals-content-top')!
-    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const before = (
+      a: Node,
+      b: Node,
+    ) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 
     expect(before(anchor(), screen.getByLabelText('Monthly investing'))).toBe(true)
     expect(before(anchor(), screen.getByRole('heading', { name: 'Invested portfolio projection' }))).toBe(true)
@@ -1112,8 +1188,7 @@ describe('GoalsTab', () => {
     const { container } = render(<GoalsTab model={makeModel()} />)
     // The block is display:none outside the phone breakpoint, which jsdom cannot match, so
     // this asks the DOM rather than the accessibility tree.
-    const mini = () =>
-      container.querySelector('svg[aria-label^="Projection of the scenario being edited"]')
+    const mini = () => container.querySelector('svg[aria-label^="Projection of the scenario being edited"]')
 
     expect(mini()).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
@@ -1172,7 +1247,10 @@ describe('GoalsTab', () => {
     const actions = makeActions()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,
@@ -1236,9 +1314,7 @@ describe('GoalsTab', () => {
 
   it('starts the preview from the saved rate', async () => {
     const user = userEvent.setup()
-    const model = buildExpenseModel(
-      makeDataset({ settings: { ...defaultExpenseSettings(), assumedInflation: 0.04 } }),
-    )
+    const model = buildExpenseModel(makeDataset({ settings: { ...defaultExpenseSettings(), assumedInflation: 0.04 } }))
     render(<GoalsTab model={model} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 

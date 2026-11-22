@@ -25,10 +25,7 @@ export function AnalyticsTab({
     return (
       <div className={styles.stack}>
         <SectionTitle>Analytics</SectionTitle>
-        <EmptyState
-          actionLabel={actions?.onAdd ? 'Add transaction' : undefined}
-          onAction={actions?.onAdd}
-        >
+        <EmptyState actionLabel={actions?.onAdd ? 'Add transaction' : undefined} onAction={actions?.onAdd}>
           No data yet — add transactions to get started.
         </EmptyState>
       </div>

@@ -33,8 +33,13 @@ afterEach(() => {
 
 const count = (): number => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 
-const send = (handler: Handler, method: string, path: string, body: unknown, params?: Record<string, string>) =>
-  world.call(handler, { method, path, body, ...(params ? { params } : {}) })
+const send = (
+  handler: Handler,
+  method: string,
+  path: string,
+  body: unknown,
+  params?: Record<string, string>,
+) => world.call(handler, { method, path, body, ...(params ? { params } : {}) })
 
 describe('a body of JSON null', () => {
   const routes: Array<[string, Handler, string, string]> = [
@@ -70,7 +75,10 @@ describe('a filter that names a member every object has', () => {
   ]
   it.each(filters)('is a 400 as the filter of an edit: %s', async (_name, filter) => {
     const summary = await world.call(getSummary, { path: '/transactions/summary' })
-    const { count: expectedCount, revision: expectedRevision } = (await summary.json()) as { count: number; revision: string }
+    const { count: expectedCount, revision: expectedRevision } = (await summary.json()) as {
+      count: number
+      revision: string
+    }
 
     const response = await send(patchBulk, 'PATCH', '/transactions/bulk', {
       filter,
@@ -80,7 +88,9 @@ describe('a filter that names a member every object has', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM transactions WHERE description = 'changed'").get()).toEqual({ n: 0 })
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM transactions WHERE description = 'changed'").get()).toEqual({
+      n: 0,
+    })
   })
 })
 
@@ -94,15 +104,21 @@ describe('ids that would have to be coerced', () => {
     expect(count()).toBe(before)
   })
 
-  it.each([{}, { ids: 'x' }, { ids: [] }, { ids: { length: 1 } }])('delete nothing when there is no list of them: %j', async (body) => {
-    const before = count()
+  it.each([{}, { ids: 'x' }, { ids: [] }, { ids: { length: 1 } }])(
+    'delete nothing when there is no list of them: %j',
+    async (body) => {
+      const before = count()
 
-    expect((await send(deleteBulk, 'DELETE', '/transactions/bulk', body)).status).toBe(400)
-    expect(count()).toBe(before)
-  })
+      expect((await send(deleteBulk, 'DELETE', '/transactions/bulk', body)).status).toBe(400)
+      expect(count()).toBe(before)
+    },
+  )
 
   it('edit nothing either', async () => {
-    const response = await send(patchBulk, 'PATCH', '/transactions/bulk', { ids: [true], patch: { description: 'changed' } })
+    const response = await send(patchBulk, 'PATCH', '/transactions/bulk', {
+      ids: [true],
+      patch: { description: 'changed' },
+    })
 
     expect(response.status).toBe(400)
   })
@@ -111,9 +127,19 @@ describe('ids that would have to be coerced', () => {
 describe('sizes', () => {
   it('a bulk create of more than the cap is a 400 and writes nothing', async () => {
     const before = count()
-    const row = { date: '2026-10-03', budgetMonth: '2026-10', description: 'x', accountId: ids.debit, categoryId: ids.groceries, type: 'expense', amountCents: 100 }
+    const row = {
+      date: '2026-10-03',
+      budgetMonth: '2026-10',
+      description: 'x',
+      accountId: ids.debit,
+      categoryId: ids.groceries,
+      type: 'expense',
+      amountCents: 100,
+    }
 
-    const response = await send(postBulk, 'POST', '/transactions/bulk', { transactions: Array.from({ length: MAX_BULK_CREATE + 1 }, () => row) })
+    const response = await send(postBulk, 'POST', '/transactions/bulk', {
+      transactions: Array.from({ length: MAX_BULK_CREATE + 1 }, () => row),
+    })
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: `Too many transactions (max ${MAX_BULK_CREATE})` })
@@ -144,7 +170,9 @@ describe('sizes', () => {
   })
 
   it('names the row of a bulk create whose note is too long', async () => {
-    const response = await send(postBulk, 'POST', '/transactions/bulk', { transactions: [created('ok'), created('n'.repeat(MAX_NOTES_LENGTH + 1))] })
+    const response = await send(postBulk, 'POST', '/transactions/bulk', {
+      transactions: [created('ok'), created('n'.repeat(MAX_NOTES_LENGTH + 1))],
+    })
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: `Row 2: notes must be ${MAX_NOTES_LENGTH} characters or fewer` })

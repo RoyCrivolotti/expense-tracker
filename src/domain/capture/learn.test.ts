@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { IGNORE_AFTER_DISMISSALS, chooseAmountSlot, learnFromAccept, learnFromDismiss, outcomeOf, pushHadDigits, storedSlots } from './learn'
+import {
+  IGNORE_AFTER_DISMISSALS,
+  chooseAmountSlot,
+  learnFromAccept,
+  learnFromDismiss,
+  outcomeOf,
+  pushHadDigits,
+  storedSlots,
+} from './learn'
 import type { TemplateFacts } from './learn'
 import { readPushSlots } from './slots'
 import type { Slot } from './slots'
@@ -20,7 +28,10 @@ const SAVED = { amountCents: 3340, type: 'expense', accountId: 4 }
 
 describe('chooseAmountSlot', () => {
   it('picks the one number slot that reads the saved amount, with the mark that reading assumed', () => {
-    expect(chooseAmountSlot(slots('You paid 33,40 EUR at Example Shop, balance 1.020,00 EUR'), 3340)).toEqual({ index: 4, mark: 'comma' })
+    expect(chooseAmountSlot(slots('You paid 33,40 EUR at Example Shop, balance 1.020,00 EUR'), 3340)).toEqual({
+      index: 4,
+      mark: 'comma',
+    })
     expect(chooseAmountSlot(slots('You paid 12.50 at Example Shop'), 1250)).toEqual({ index: 4, mark: 'dot' })
   })
 
@@ -39,32 +50,68 @@ describe('chooseAmountSlot', () => {
 
   it('answers nothing when one slot has two readings of the same cents', () => {
     const twice: Slot[] = [
-      { kind: 'number', index: 2, raw: '1.234', currency: null, negative: false, candidates: [{ cents: 123400, mark: 'comma' }, { cents: 123400, mark: 'none' }] },
+      {
+        kind: 'number',
+        index: 2,
+        raw: '1.234',
+        currency: null,
+        negative: false,
+        candidates: [
+          { cents: 123400, mark: 'comma' },
+          { cents: 123400, mark: 'none' },
+        ],
+      },
     ]
     expect(chooseAmountSlot(twice, 123400)).toBeNull()
   })
 
   it('ignores slots that are not numbers, and a number slot stored without candidates', () => {
-    const odd = [{ kind: 'masked-digits', index: 1, digits: '3340' }, { kind: 'number', index: 3 }] as unknown as Slot[]
+    const odd = [
+      { kind: 'masked-digits', index: 1, digits: '3340' },
+      { kind: 'number', index: 3 },
+    ] as unknown as Slot[]
     expect(chooseAmountSlot(odd, 3340)).toBeNull()
   })
 })
 
 describe('learnFromAccept', () => {
   it('counts the accept, learns slot, mark and type, and ends the streak', () => {
-    const learned = learnFromAccept({ ...FRESH, dismissals: 2, dismissStreak: 2 }, slots('You paid 33,40 EUR'), SAVED, true)
-    expect(learned).toEqual({ ...FRESH, accepts: 1, dismissals: 2, dismissStreak: 0, amountSlot: 4, amountMark: 'comma', type: 'expense' })
+    const learned = learnFromAccept(
+      { ...FRESH, dismissals: 2, dismissStreak: 2 },
+      slots('You paid 33,40 EUR'),
+      SAVED,
+      true,
+    )
+    expect(learned).toEqual({
+      ...FRESH,
+      accepts: 1,
+      dismissals: 2,
+      dismissStreak: 0,
+      amountSlot: 4,
+      amountMark: 'comma',
+      type: 'expense',
+    })
   })
 
   it('keeps the slot it had when the saved amount matches no reading', () => {
     const before = { ...FRESH, accepts: 1, amountSlot: 4, amountMark: 'comma' as const, type: 'expense' }
-    const learned = learnFromAccept(before, slots('You paid 33,40 EUR'), { ...SAVED, amountCents: 3000, type: 'refund' }, true)
+    const learned = learnFromAccept(
+      before,
+      slots('You paid 33,40 EUR'),
+      { ...SAVED, amountCents: 3000, type: 'refund' },
+      true,
+    )
     expect(learned).toMatchObject({ accepts: 2, amountSlot: 4, amountMark: 'comma', type: 'refund' })
   })
 
   it('keeps the slot it had on a tie', () => {
     const before = { ...FRESH, amountSlot: 9, amountMark: 'dot' as const }
-    const learned = learnFromAccept(before, slots('You paid 10,00 EUR of 10,00 EUR'), { ...SAVED, amountCents: 1000 }, false)
+    const learned = learnFromAccept(
+      before,
+      slots('You paid 10,00 EUR of 10,00 EUR'),
+      { ...SAVED, amountCents: 1000 },
+      false,
+    )
     expect(learned).toMatchObject({ amountSlot: 9, amountMark: 'dot' })
   })
 
@@ -74,12 +121,18 @@ describe('learnFromAccept', () => {
   })
 
   it('brings an ignored template back', () => {
-    expect(learnFromAccept({ ...FRESH, ignoredAt: NOW, dismissStreak: 3 }, [], SAVED, false)).toMatchObject({ ignoredAt: null, dismissStreak: 0 })
+    expect(learnFromAccept({ ...FRESH, ignoredAt: NOW, dismissStreak: 3 }, [], SAVED, false)).toMatchObject({
+      ignoredAt: null,
+      dismissStreak: 0,
+    })
   })
 })
 
 describe('learnFromDismiss', () => {
-  const dismissTimes = (n: number, from: TemplateFacts = FRESH) => {
+  const dismissTimes = (
+    n: number,
+    from: TemplateFacts = FRESH,
+  ) => {
     let facts = from
     for (let i = 0; i < n; i++) facts = learnFromDismiss(facts, NOW)
     return facts
@@ -119,13 +172,17 @@ describe('outcomeOf', () => {
   })
 
   it('compares the amount without its sign, so an investment taken back out matches', () => {
-    expect(outcomeOf({ ...shown, suggestedType: 'investment' }, { ...saved, type: 'investment', amountCents: -3340 })).toBe('added-as-is')
+    expect(
+      outcomeOf({ ...shown, suggestedType: 'investment' }, { ...saved, type: 'investment', amountCents: -3340 }),
+    ).toBe('added-as-is')
   })
 
   it('names each field the person changed, in a fixed order', () => {
     expect(outcomeOf(shown, { ...saved, amountCents: 3000 })).toBe('edited:amount')
     expect(outcomeOf(shown, { ...saved, description: 'coffee' })).toBe('edited:description')
-    expect(outcomeOf(shown, { amountCents: 1, type: 'refund', accountId: 5, description: 'Tea', categoryId: 3 })).toBe('edited:amount,type,account,description,category')
+    expect(outcomeOf(shown, { amountCents: 1, type: 'refund', accountId: 5, description: 'Tea', categoryId: 3 })).toBe(
+      'edited:amount,type,account,description,category',
+    )
   })
 
   it('counts a field the card left empty as changed', () => {

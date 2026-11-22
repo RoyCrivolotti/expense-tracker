@@ -17,7 +17,10 @@
 const FAILS = 'abs(-9223372036854775808)'
 
 /** `prefix` is a leading `WITH` clause the condition reads from, when it needs one. */
-export function guardSql(condition: string, prefix = ''): string {
+export function guardSql(
+  condition: string,
+  prefix = '',
+): string {
   return `${prefix}SELECT CASE WHEN ${condition} THEN 1 ELSE ${FAILS} END AS ok`
 }
 

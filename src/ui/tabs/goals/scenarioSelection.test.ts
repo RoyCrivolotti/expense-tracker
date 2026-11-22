@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../../testing/factories'
 import { activePlan, initialEditorScenario, lastAddedScenario } from './scenarioSelection'
 
-const scenario = (id: number, sortOrder: number, isActive = false) =>
-  makeScenario({ id, name: `Plan ${id}`, sortOrder, isActive })
+const scenario = (
+  id: number,
+  sortOrder: number,
+  isActive = false,
+) => makeScenario({ id, name: `Plan ${id}`, sortOrder, isActive })
 
 describe('lastAddedScenario', () => {
   it('returns null when empty', () => {

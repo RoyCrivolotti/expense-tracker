@@ -29,7 +29,10 @@ function fixtureDatabase(): DatabaseSync {
 /** A wrangler that answers from `deployed`, and keeps the commands it was given. */
 function wranglerOver(deployed: DatabaseSync) {
   const commands: string[][] = []
-  const exec = ((file: string, args: string[]) => {
+  const exec = ((
+    file: string,
+    args: string[],
+  ) => {
     commands.push([file, ...args])
     const results = deployed.prepare(args[args.indexOf('--command') + 1]).all()
     return `wrangler 4.0.0\n${JSON.stringify([{ results, success: true, meta: {} }])}`
@@ -44,7 +47,8 @@ describe('a trigger in a migration', () => {
   })
 
   it('is not read as a backfill when its body updates without a WHERE', () => {
-    const sql = 'CREATE TRIGGER IF NOT EXISTS bump AFTER INSERT ON items BEGIN UPDATE meta SET version = version + 1; END;'
+    const sql =
+      'CREATE TRIGGER IF NOT EXISTS bump AFTER INSERT ON items BEGIN UPDATE meta SET version = version + 1; END;'
 
     expect(lintMigration('0032_bump.sql', sql)).toEqual([])
   })
@@ -144,7 +148,9 @@ describe('the schema check, reading a database through a stand-in for wrangler',
 
     expect(result.code).toBe(0)
     expect(result.err).toEqual([])
-    expect(result.warn).toEqual([expect.stringMatching(/^WARNING index idx_by_hand {2}\(in the database, in no migration/)])
+    expect(result.warn).toEqual([
+      expect.stringMatching(/^WARNING index idx_by_hand {2}\(in the database, in no migration/),
+    ])
     expect(result.out.at(-1)).toBe('No drift, apart from the warnings.')
   })
 
@@ -181,7 +187,7 @@ describe('the schema check, reading a database through a stand-in for wrangler',
     expect(result.warn).toHaveLength(1)
   })
 
-  it('leaves out D1\'s own _cf_KV table, and any index or trigger on it', async () => {
+  it("leaves out D1's own _cf_KV table, and any index or trigger on it", async () => {
     const deployed = fixtureDatabase()
     deployed.exec('CREATE TABLE _cf_KV (key TEXT, value BLOB, PRIMARY KEY (key)) WITHOUT ROWID')
     deployed.exec('CREATE INDEX idx_cf_kv_value ON _cf_KV (value)')
@@ -195,7 +201,9 @@ describe('the schema check, reading a database through a stand-in for wrangler',
 
   it('says so when the database cannot be read', async () => {
     const exec = (() => {
-      throw Object.assign(new Error('Command failed'), { stdout: JSON.stringify({ error: { text: 'no such database' } }) })
+      throw Object.assign(new Error('Command failed'), {
+        stdout: JSON.stringify({ error: { text: 'no such database' } }),
+      })
     }) as unknown as typeof execFileSync
 
     const result = await checkSchema('demo-db', { exec, dir: FIXTURES })
@@ -205,7 +213,7 @@ describe('the schema check, reading a database through a stand-in for wrangler',
   })
 })
 
-describe('the schema check on this repo\'s own migrations', () => {
+describe("the schema check on this repo's own migrations", () => {
   it('passes for a database they made', async () => {
     const result = await checkSchema('demo-db', { exec: wranglerOver(migratedDatabase()).exec })
 
@@ -219,6 +227,8 @@ describe('the schema check on this repo\'s own migrations', () => {
     const result = await checkSchema('demo-db', { exec: wranglerOver(deployed).exec })
 
     expect(result.code).toBe(1)
-    expect(result.err[0]).toMatch(/^MISSING index idx_txn_pinned {2}\(added by migrations\/0037_pinned_rows_index\.sql\)$/)
+    expect(result.err[0]).toMatch(
+      /^MISSING index idx_txn_pinned {2}\(added by migrations\/0037_pinned_rows_index\.sql\)$/,
+    )
   })
 })

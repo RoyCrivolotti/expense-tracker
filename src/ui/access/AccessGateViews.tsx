@@ -6,18 +6,10 @@ import { RequestAccessScreen } from './RequestAccessScreen'
 import { lacksExpenseAccess } from '../../hubNavItems'
 import { allGroupsGranted } from '../../domain/accessGroups'
 
-export function AllowedAccessView({
-  access,
-  source,
-}: {
-  access: AccessStatusResponse
-  source: ExpenseDataSource
-}) {
+export function AllowedAccessView({ access, source }: { access: AccessStatusResponse; source: ExpenseDataSource }) {
   if (lacksExpenseAccess(access)) return <NoExpenseAccessScreen email={access.email} />
   const ownerAccess =
-    access.isOwner && access.pendingCount !== undefined
-      ? { pendingCount: access.pendingCount }
-      : undefined
+    access.isOwner && access.pendingCount !== undefined ? { pendingCount: access.pendingCount } : undefined
   return (
     <ExpensesApp
       source={source}

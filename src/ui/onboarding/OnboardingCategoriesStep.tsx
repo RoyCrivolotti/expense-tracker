@@ -18,9 +18,7 @@ export function OnboardingCategoriesStep({
 
   return (
     <div className={styles.stepBody}>
-      <p className={styles.lead}>
-        Untick what you don't need. The amount is a monthly limit you can change any time.
-      </p>
+      <p className={styles.lead}>Untick what you don't need. The amount is a monthly limit you can change any time.</p>
       <ul className={styles.categoryList}>
         {drafts.map((draft, index) => {
           const preset = CATEGORY_PRESETS[index]

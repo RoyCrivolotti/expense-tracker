@@ -71,13 +71,20 @@ function routeFetch(world: World) {
     ['/api/expenses/attachments', 'GET', getAttachments],
     ['/api/expenses/transactions/bulk', 'PATCH', patchBulk],
   ]
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     const method = init?.method ?? 'GET'
     const handler = handlers.find(([path, verb]) => path === url.pathname && verb === method)?.[2]
     if (!handler) return new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } })
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined
-    return world.call(handler, { method, path: `${url.pathname.slice('/api/expenses'.length)}${url.search}`, ...(body ? { body } : {}) })
+    return world.call(handler, {
+      method,
+      path: `${url.pathname.slice('/api/expenses'.length)}${url.search}`,
+      ...(body ? { body } : {}),
+    })
   }
 }
 
@@ -86,14 +93,30 @@ function withReceipts(ds: ExpenseDataset): ExpenseDataset {
   const payments = new Set(ds.transactions.filter((t) => t.settledBy != null).map((t) => t.settledBy))
   let next = Math.max(0, ...ds.attachments.map((a) => a.id)) + 1
   const extra: TransactionAttachment[] = ds.transactions
-    .filter((t) => (t.flagId != null || t.settledBy != null || payments.has(t.id) || (t.reportCount ?? 0) > 0) && t.id % 3 === 0)
+    .filter(
+      (t) =>
+        (t.flagId != null || t.settledBy != null || payments.has(t.id) || (t.reportCount ?? 0) > 0) && t.id % 3 === 0,
+    )
     .filter((t) => !ds.attachments.some((a) => a.transactionId === t.id))
-    .map((t) => ({ id: next++, transactionId: t.id, contentType: 'image/jpeg', byteSize: 90_000, createdAt: `${t.date}T11:00:00Z`, hasThumb: true }))
-  return { ...ds, attachments: [...ds.attachments, ...extra].sort((a, b) => a.transactionId - b.transactionId || a.id - b.id) }
+    .map((t) => ({
+      id: next++,
+      transactionId: t.id,
+      contentType: 'image/jpeg',
+      byteSize: 90_000,
+      createdAt: `${t.date}T11:00:00Z`,
+      hasThumb: true,
+    }))
+  return {
+    ...ds,
+    attachments: [...ds.attachments, ...extra].sort((a, b) => a.transactionId - b.transactionId || a.id - b.id),
+  }
 }
 
 /** A row without some of its optional fields, as the generators leave them out rather than set them to nothing. */
-function without<T extends object>(row: T, keys: readonly string[]): T {
+function without<T extends object>(
+  row: T,
+  keys: readonly string[],
+): T {
   return Object.fromEntries(Object.entries(row).filter(([key]) => !keys.includes(key))) as T
 }
 
@@ -105,7 +128,13 @@ function without<T extends object>(row: T, keys: readonly string[]): T {
  */
 function withOldPayments(ds: ExpenseDataset): ExpenseDataset {
   const plainRows = ds.transactions.filter(
-    (t) => t.type === 'expense' && !t.cancelled && t.planId == null && t.flagId == null && t.settledBy == null && (t.reportCount ?? 0) === 0,
+    (t) =>
+      t.type === 'expense' &&
+      !t.cancelled &&
+      t.planId == null &&
+      t.flagId == null &&
+      t.settledBy == null &&
+      (t.reportCount ?? 0) === 0,
   )
   const months = sortedMonths(plainRows.map((t) => t.budgetMonth))
   const oldest = months[0]
@@ -115,9 +144,30 @@ function withOldPayments(ds: ExpenseDataset): ExpenseDataset {
   const base = covered[0]!
   const nextId = Math.max(...ds.transactions.map((t) => t.id)) + 1
   const total = covered.reduce((sum, t) => sum + t.amountCents, 0)
-  const payment = (id: number, month: string, extra: { reportCount?: number; reportCoveredCents?: number }) => {
-    const row = without(base, ['flagId', 'settledBy', 'planId', 'installmentIndex', 'reportCount', 'reportCoveredCents'])
-    return { ...row, id, date: `${month}-27`, budgetMonth: month, description: 'Reimbursement', type: 'refund' as const, amountCents: total, labelIds: [], ...extra }
+  const payment = (
+    id: number,
+    month: string,
+    extra: { reportCount?: number; reportCoveredCents?: number },
+  ) => {
+    const row = without(base, [
+      'flagId',
+      'settledBy',
+      'planId',
+      'installmentIndex',
+      'reportCount',
+      'reportCoveredCents',
+    ])
+    return {
+      ...row,
+      id,
+      date: `${month}-27`,
+      budgetMonth: month,
+      description: 'Reimbursement',
+      type: 'refund' as const,
+      amountCents: total,
+      labelIds: [],
+      ...extra,
+    }
   }
   const legacy = payment(nextId, oldest, {})
   const orphan = payment(nextId + 1, middle, { reportCount: 2, reportCoveredCents: total })
@@ -135,7 +185,13 @@ function withOldPayments(ds: ExpenseDataset): ExpenseDataset {
  */
 function withDanglingLinks(ds: ExpenseDataset): ExpenseDataset {
   const plainRows = ds.transactions.filter(
-    (t) => t.type === 'expense' && !t.cancelled && t.planId == null && t.flagId == null && t.settledBy == null && (t.reportCount ?? 0) === 0,
+    (t) =>
+      t.type === 'expense' &&
+      !t.cancelled &&
+      t.planId == null &&
+      t.flagId == null &&
+      t.settledBy == null &&
+      (t.reportCount ?? 0) === 0,
   )
   const oldest = sortedMonths(plainRows.map((t) => t.budgetMonth))[0]
   const [settled, flagged] = plainRows.filter((t) => t.budgetMonth === oldest)
@@ -151,7 +207,10 @@ function withDanglingLinks(ds: ExpenseDataset): ExpenseDataset {
   }
 }
 
-async function serve(name: string, source: ExpenseDataset): Promise<Served> {
+async function serve(
+  name: string,
+  source: ExpenseDataset,
+): Promise<Served> {
   const sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
   seedDataset(sqlite, OWNER, withReceipts(withDanglingLinks(withOldPayments(source))))
@@ -185,7 +244,9 @@ afterEach(() => {
 /** The model the app builds from what the session holds, with the receipts of every pinned row that has any read. */
 async function windowedModel(session: LedgerSession): Promise<{ model: ExpenseModel; held: HeldLedger }> {
   const pinned = new Set(session.getState().held!.pinned.map((row) => row.id))
-  const wanted = Object.keys(session.getState().held!.attachmentCounts).map(Number).filter((id) => pinned.has(id))
+  const wanted = Object.keys(session.getState().held!.attachmentCounts)
+    .map(Number)
+    .filter((id) => pinned.has(id))
   session.loadReceipts(wanted)
   await vi.waitFor(() => expect(receiptsToRead(session.getState().held!, wanted)).toEqual([]))
   const held = session.getState().held!
@@ -193,7 +254,10 @@ async function windowedModel(session: LedgerSession): Promise<{ model: ExpenseMo
 }
 
 /** What the screens that follow rows across months show, as values that can be compared. */
-function readings(model: ExpenseModel, viewed: string): Record<string, unknown> {
+function readings(
+  model: ExpenseModel,
+  viewed: string,
+): Record<string, unknown> {
   const { transactions: tx, flags, accounts, attachments, installmentPlans, settings } = model.dataset
   const out: Record<string, unknown> = {}
   const linked = linkedOutputs({ ds: model.dataset, real: tx, viewed } as unknown as Context)
@@ -201,7 +265,9 @@ function readings(model: ExpenseModel, viewed: string): Record<string, unknown> 
 
   const groups = groupTransactionsByFlag(tx, flags)
   out.flaggedSummary = summarizeFlagGroups(groups)
-  out.drafts = plain(groups.map((g) => buildReimbursementDraft(g, accounts, settings.defaultAccountId ?? accounts[0]?.id ?? 0)))
+  out.drafts = plain(
+    groups.map((g) => buildReimbursementDraft(g, accounts, settings.defaultAccountId ?? accounts[0]?.id ?? 0)),
+  )
   // An archived flag builds a report too, and so does one with no flagged row left (null).
   for (const flag of flags) {
     out[`group ${flag.id}`] = plain(buildFlagGroup(flag.id, tx, flags))
@@ -212,7 +278,9 @@ function readings(model: ExpenseModel, viewed: string): Record<string, unknown> 
       out[`receiptsOnly ${flag.id}`] = plain(receiptsOnlyReport(report))
     }
   }
-  const payments = [...new Set(tx.filter((t) => t.settledBy != null).map((t) => t.settledBy as number))].sort((a, b) => a - b)
+  const payments = [...new Set(tx.filter((t) => t.settledBy != null).map((t) => t.settledBy as number))].sort(
+    (a, b) => a - b,
+  )
   for (const id of payments) {
     out[`settled ${id}`] = plain(buildSettledReport(id, tx, flags, attachments))
     out[`drifted ${id}`] = pastReportDrifted(id, tx)
@@ -241,150 +309,193 @@ function pinnedOutsideWindow(held: HeldLedger) {
 }
 
 describe('what follows rows across months, read from a window over the real routes', () => {
-  it('equals the readings over the whole dataset, whichever month the screen is on and whichever months were let go', async () => {
-    const seen = { flagged: 0, covered: 0, payments: 0, reports: 0, planRows: 0, investments: 0, compared: 0, withReports: 0, withGroups: 0, withReceipts: 0 }
-    for (const c of cases) {
-      vi.stubGlobal('fetch', routeFetch(c.world))
-      const whole = buildExpenseModel(c.dataset)
-      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
-      const viewed = [months.at(-1)!, months[0]!, months[Math.floor(months.length / 2)]!, '2031-01', months.at(-1)!]
-      const session = new LedgerSession(apiLedgerParts, { policy: WINDOWED, maxHeldMonths: HELD_MONTHS })
-      await session.open(viewed[0])
-      for (const month of viewed) {
-        await session.view(month)
-        const { model, held } = await windowedModel(session)
-        const label = `${c.name} viewed ${month}`
-        const expected = readings(whole, month)
-        const actual = readings(model, month)
-        expect(Object.keys(actual).sort(), label).toEqual(Object.keys(expected).sort())
-        for (const key of Object.keys(expected)) expect(actual[key], `${label} ${key}`).toEqual(expected[key])
-        seen.compared += 1
-        if (Object.keys(expected).some((key) => key.startsWith('report ') && expected[key] !== null)) seen.withReports += 1
-        if ((expected.flaggedSummary as { count: number }).count > 0) seen.withGroups += 1
-        if (Object.keys(expected).some((key) => key.startsWith('receipts ') && (expected[key] as unknown[]).length > 0)) seen.withReceipts += 1
-        if (month === months[0] || month === months.at(-1)) {
-          for (const [kind, n] of Object.entries(pinnedOutsideWindow(held))) seen[kind as keyof typeof seen] += n
+  it(
+    'equals the readings over the whole dataset, whichever month the screen is on and whichever months were let go',
+    async () => {
+      const seen = {
+        flagged: 0,
+        covered: 0,
+        payments: 0,
+        reports: 0,
+        planRows: 0,
+        investments: 0,
+        compared: 0,
+        withReports: 0,
+        withGroups: 0,
+        withReceipts: 0,
+      }
+      for (const c of cases) {
+        vi.stubGlobal('fetch', routeFetch(c.world))
+        const whole = buildExpenseModel(c.dataset)
+        const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+        const viewed = [months.at(-1)!, months[0]!, months[Math.floor(months.length / 2)]!, '2031-01', months.at(-1)!]
+        const session = new LedgerSession(apiLedgerParts, { policy: WINDOWED, maxHeldMonths: HELD_MONTHS })
+        await session.open(viewed[0])
+        for (const month of viewed) {
+          await session.view(month)
+          const { model, held } = await windowedModel(session)
+          const label = `${c.name} viewed ${month}`
+          const expected = readings(whole, month)
+          const actual = readings(model, month)
+          expect(Object.keys(actual).sort(), label).toEqual(Object.keys(expected).sort())
+          for (const key of Object.keys(expected)) expect(actual[key], `${label} ${key}`).toEqual(expected[key])
+          seen.compared += 1
+          if (Object.keys(expected).some((key) => key.startsWith('report ') && expected[key] !== null))
+            seen.withReports += 1
+          if ((expected.flaggedSummary as { count: number }).count > 0) seen.withGroups += 1
+          if (
+            Object.keys(expected).some((key) => key.startsWith('receipts ') && (expected[key] as unknown[]).length > 0)
+          )
+            seen.withReceipts += 1
+          if (month === months[0] || month === months.at(-1)) {
+            for (const [kind, n] of Object.entries(pinnedOutsideWindow(held))) seen[kind as keyof typeof seen] += n
+          }
         }
       }
-    }
-    // The test has teeth: pinned rows of every kind did lie in months that were not held, and the readings were not empty.
-    expect(seen.flagged).toBeGreaterThan(20)
-    expect(seen.covered).toBeGreaterThan(20)
-    expect(seen.payments).toBeGreaterThan(5)
-    expect(seen.reports).toBeGreaterThan(5)
-    expect(seen.planRows).toBeGreaterThan(5)
-    expect(seen.investments).toBeGreaterThan(20)
-    expect(seen.withReports).toBeGreaterThan(20)
-    expect(seen.withGroups).toBeGreaterThan(20)
-    expect(seen.withReceipts).toBeGreaterThan(10)
-    expect(seen.compared).toBe(cases.length * 5)
-  }, SLOW)
+      // The test has teeth: pinned rows of every kind did lie in months that were not held, and the readings were not empty.
+      expect(seen.flagged).toBeGreaterThan(20)
+      expect(seen.covered).toBeGreaterThan(20)
+      expect(seen.payments).toBeGreaterThan(5)
+      expect(seen.reports).toBeGreaterThan(5)
+      expect(seen.planRows).toBeGreaterThan(5)
+      expect(seen.investments).toBeGreaterThan(20)
+      expect(seen.withReports).toBeGreaterThan(20)
+      expect(seen.withGroups).toBeGreaterThan(20)
+      expect(seen.withReceipts).toBeGreaterThan(10)
+      expect(seen.compared).toBe(cases.length * 5)
+    },
+    SLOW,
+  )
 })
 
 describe('a write that changes which rows are pinned', () => {
-  it('leaves the readings equal to the whole dataset after each write and after the months it was made in are let go', async () => {
-    const seen = { checked: 0, letGo: 0, steps: new Set<string>() }
-    for (const [name, source] of sources(3)) {
-      const c = await serve(name, source)
-      vi.stubGlobal('fetch', routeFetch(c.world))
-      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
-      const newest = months.at(-1)!
-      const oldest = months[0]!
-      const flag = c.dataset.flags[0]
-      const payment = [...settlementPaymentIds(c.dataset.transactions)][0]
-      if (!flag || payment === undefined) continue
-      const session = new LedgerSession(apiLedgerParts, { policy: WINDOWED, maxHeldMonths: HELD_MONTHS })
-      await session.open(newest)
+  it(
+    'leaves the readings equal to the whole dataset after each write and after the months it was made in are let go',
+    async () => {
+      const seen = { checked: 0, letGo: 0, steps: new Set<string>() }
+      for (const [name, source] of sources(3)) {
+        const c = await serve(name, source)
+        vi.stubGlobal('fetch', routeFetch(c.world))
+        const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+        const newest = months.at(-1)!
+        const oldest = months[0]!
+        const flag = c.dataset.flags[0]
+        const payment = [...settlementPaymentIds(c.dataset.transactions)][0]
+        if (!flag || payment === undefined) continue
+        const session = new LedgerSession(apiLedgerParts, { policy: WINDOWED, maxHeldMonths: HELD_MONTHS })
+        await session.open(newest)
 
-      const held = () => session.getState().held!
-      /** Rows held as rows that nothing pins now, oldest month first: a window always holds the newest months, so the old ones are the ones that get let go. */
-      const plainRows = (fromOldest: boolean) =>
-        [...held().rows.values()]
-          .flat()
-          .filter((t) => t.type === 'expense' && t.flagId == null && t.settledBy == null && t.planId == null && !t.cancelled && !(t.reportCount ?? 0))
-          .sort((a, b) => (fromOldest ? 1 : -1) * (a.budgetMonth.localeCompare(b.budgetMonth) || a.id - b.id))
-          .map((t) => t.id)
-      const unheldPinned = (keep: (t: { flagId?: number | undefined }) => boolean) => {
-        const months = new Set(held().rows.keys())
-        return held().pinned.filter((t) => !months.has(t.budgetMonth) && keep(t)).map((t) => t.id)
-      }
-      const write = async (ids: number[], patch: BulkTransactionPatch) => {
-        const result = await apiDataSource.updateTransactions!(ids, patch)
-        expect(result.updated, `${name} ${JSON.stringify(patch)}`).toBe(ids.length)
-        session.patch((d) => patchAfterBulkUpdate(d, result.transactions), { ids, patch })
-      }
-      const same = async (step: string, viewed: string, settles = false) => {
-        const whole = buildExpenseModel((await (await c.world.call(getDataset)).json()) as ExpenseDataset)
-        const compare = async () => {
-          const { model } = await windowedModel(session)
-          expect(readings(model, viewed), `${name} ${step}`).toEqual(readings(whole, viewed))
+        const held = () => session.getState().held!
+        /** Rows held as rows that nothing pins now, oldest month first: a window always holds the newest months, so the old ones are the ones that get let go. */
+        const plainRows = (fromOldest: boolean) =>
+          [...held().rows.values()]
+            .flat()
+            .filter(
+              (t) =>
+                t.type === 'expense' &&
+                t.flagId == null &&
+                t.settledBy == null &&
+                t.planId == null &&
+                !t.cancelled &&
+                !(t.reportCount ?? 0),
+            )
+            .sort((a, b) => (fromOldest ? 1 : -1) * (a.budgetMonth.localeCompare(b.budgetMonth) || a.id - b.id))
+            .map((t) => t.id)
+        const unheldPinned = (keep: (t: { flagId?: number | undefined }) => boolean) => {
+          const months = new Set(held().rows.keys())
+          return held()
+            .pinned.filter((t) => !months.has(t.budgetMonth) && keep(t))
+            .map((t) => t.id)
         }
-        // At once, with no read in between: every row these writes name is held (pinned, or in a month held), so the
-        // patch alone has to show them. A settlement also changes the figures of the payment it names, which the patch
-        // cannot show, so the session reads the ledger again (`cascadeOf`) and the readings are given until it has.
-        if (settles) await vi.waitFor(compare, { timeout: 10_000 })
-        else await compare()
-        seen.checked += 1
-        seen.steps.add(step)
-      }
+        const write = async (
+          ids: number[],
+          patch: BulkTransactionPatch,
+        ) => {
+          const result = await apiDataSource.updateTransactions!(ids, patch)
+          expect(result.updated, `${name} ${JSON.stringify(patch)}`).toBe(ids.length)
+          session.patch((d) => patchAfterBulkUpdate(d, result.transactions), { ids, patch })
+        }
+        const same = async (
+          step: string,
+          viewed: string,
+          settles = false,
+        ) => {
+          const whole = buildExpenseModel((await (await c.world.call(getDataset)).json()) as ExpenseDataset)
+          const compare = async () => {
+            const { model } = await windowedModel(session)
+            expect(readings(model, viewed), `${name} ${step}`).toEqual(readings(whole, viewed))
+          }
+          // At once, with no read in between: every row these writes name is held (pinned, or in a month held), so the
+          // patch alone has to show them. A settlement also changes the figures of the payment it names, which the patch
+          // cannot show, so the session reads the ledger again (`cascadeOf`) and the readings are given until it has.
+          if (settles) await vi.waitFor(compare, { timeout: 10_000 })
+          else await compare()
+          seen.checked += 1
+          seen.steps.add(step)
+        }
 
-      const recent = plainRows(false).slice(0, 3)
-      expect(recent.length, name).toBeGreaterThan(0)
-      await write(recent, { flagId: flag.id })
-      await same('flagged three rows of the newest months', newest)
+        const recent = plainRows(false).slice(0, 3)
+        expect(recent.length, name).toBeGreaterThan(0)
+        await write(recent, { flagId: flag.id })
+        await same('flagged three rows of the newest months', newest)
 
-      await session.view(oldest)
-      await same('looked at the oldest month', oldest)
-      const old = plainRows(true)
-      const [flagged, settled, invested] = [old.slice(0, 2), old.slice(2, 4), old.slice(4, 6)]
-      if (flagged.length > 0) {
-        await write(flagged, { flagId: flag.id })
-        await same('flagged two rows of the oldest months', oldest)
-      }
-      if (settled.length > 0) {
-        await write(settled, { settledBy: payment })
-        await same('settled two rows of the oldest months', oldest, true)
-      }
-      if (invested.length > 0) {
-        await write(invested, { type: 'investment' })
-        await same('turned two rows of the oldest months into investments', oldest)
-      }
+        await session.view(oldest)
+        await same('looked at the oldest month', oldest)
+        const old = plainRows(true)
+        const [flagged, settled, invested] = [old.slice(0, 2), old.slice(2, 4), old.slice(4, 6)]
+        if (flagged.length > 0) {
+          await write(flagged, { flagId: flag.id })
+          await same('flagged two rows of the oldest months', oldest)
+        }
+        if (settled.length > 0) {
+          await write(settled, { settledBy: payment })
+          await same('settled two rows of the oldest months', oldest, true)
+        }
+        if (invested.length > 0) {
+          await write(invested, { type: 'investment' })
+          await same('turned two rows of the oldest months into investments', oldest)
+        }
 
-      await session.view(newest)
-      const touched = [...flagged, ...settled, ...invested]
-      const rowsHeld = new Set(held().rows.keys())
-      const letGo = touched.filter((id) => !rowsHeld.has(held().pinned.find((t) => t.id === id)!.budgetMonth))
-      expect(letGo.length === 0 || letGo.length === touched.length, name).toBe(true)
-      if (months.length > 2 * HELD_MONTHS) expect(letGo.length, `${name}: the months of the written rows are let go`).toBe(touched.length)
-      seen.letGo += letGo.length
-      await same('looked at the newest month, so the written rows lost their months', newest, true)
+        await session.view(newest)
+        const touched = [...flagged, ...settled, ...invested]
+        const rowsHeld = new Set(held().rows.keys())
+        const letGo = touched.filter((id) => !rowsHeld.has(held().pinned.find((t) => t.id === id)!.budgetMonth))
+        expect(letGo.length === 0 || letGo.length === touched.length, name).toBe(true)
+        if (months.length > 2 * HELD_MONTHS)
+          expect(letGo.length, `${name}: the months of the written rows are let go`).toBe(touched.length)
+        seen.letGo += letGo.length
+        await same('looked at the newest month, so the written rows lost their months', newest, true)
 
-      if (flagged.length > 0) {
-        await write(flagged, { flagId: null })
-        await same('cleared the flag of rows in months not held', newest)
+        if (flagged.length > 0) {
+          await write(flagged, { flagId: null })
+          await same('cleared the flag of rows in months not held', newest)
+        }
+        if (settled.length > 0) {
+          await write(settled, { settledBy: null })
+          await same('un-settled rows in months not held', newest, true)
+        }
+        if (invested.length > 0) {
+          await write(invested, { type: 'expense' })
+          await same('turned investments in months not held back into expenses', newest)
+        }
+        const oldFlagged = unheldPinned((t) => t.flagId != null).slice(0, 2)
+        if (oldFlagged.length > 0) {
+          const category = c.dataset.categories.find(
+            (x) => x.id !== c.dataset.transactions.find((t) => t.id === oldFlagged[0])?.categoryId,
+          )!
+          await write(oldFlagged, { categoryId: category.id })
+          await same('moved flagged rows in months not held to another category', newest)
+          await write(oldFlagged, { flagId: null })
+          await same('cleared their flags', newest)
+        }
+        await write(recent, { flagId: null })
+        await same('cleared the flag of the three newest rows', newest)
       }
-      if (settled.length > 0) {
-        await write(settled, { settledBy: null })
-        await same('un-settled rows in months not held', newest, true)
-      }
-      if (invested.length > 0) {
-        await write(invested, { type: 'expense' })
-        await same('turned investments in months not held back into expenses', newest)
-      }
-      const oldFlagged = unheldPinned((t) => t.flagId != null).slice(0, 2)
-      if (oldFlagged.length > 0) {
-        const category = c.dataset.categories.find((x) => x.id !== c.dataset.transactions.find((t) => t.id === oldFlagged[0])?.categoryId)!
-        await write(oldFlagged, { categoryId: category.id })
-        await same('moved flagged rows in months not held to another category', newest)
-        await write(oldFlagged, { flagId: null })
-        await same('cleared their flags', newest)
-      }
-      await write(recent, { flagId: null })
-      await same('cleared the flag of the three newest rows', newest)
-    }
-    expect(seen.checked).toBeGreaterThan(30)
-    expect(seen.letGo).toBeGreaterThan(10)
-    // Every kind of step ran for some ledger.
-    expect(seen.steps.size).toBe(12)
-  }, SLOW)
+      expect(seen.checked).toBeGreaterThan(30)
+      expect(seen.letGo).toBeGreaterThan(10)
+      // Every kind of step ran for some ledger.
+      expect(seen.steps.size).toBe(12)
+    },
+    SLOW,
+  )
 })

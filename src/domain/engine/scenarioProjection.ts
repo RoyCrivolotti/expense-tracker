@@ -9,7 +9,10 @@ type ScenarioInput = NewGoalScenario | GoalScenario
  * Map a persisted or draft scenario to engine projection params. The inflation is the
  * owner's, not the scenario's, so it is given and never defaulted.
  */
-export function scenarioToParams(scenario: ScenarioInput, inflationRate: number): ProjectionParams {
+export function scenarioToParams(
+  scenario: ScenarioInput,
+  inflationRate: number,
+): ProjectionParams {
   // Absent on a scenario from before the field, which a cached snapshot can still hold.
   const steps = scheduleSteps(scenario.planStartDate, scenario.contributionSchedule)
   return {

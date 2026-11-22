@@ -7,7 +7,10 @@ import { scenarioToParams } from './scenarioProjection'
 const project = (over = {}) => projectNetWorth(scenarioToParams(samplePlan(over), SAMPLE_INFLATION))
 
 /** The line the app drew before: a straight chord between the year-end values. Kept here as the oracle for plans with no step. */
-function oldChord(points: { year: number; investedCents: number }[], t: number): number {
+function oldChord(
+  points: { year: number; investedCents: number }[],
+  t: number,
+): number {
   const i = Math.floor(t)
   const here = points[i]!.investedCents
   if (i >= points.length - 1) return here
@@ -41,14 +44,21 @@ describe('planLineOf and planValueAt', () => {
   })
 
   it('steps up on the anniversary of an inflow', () => {
-    const points = project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 3_000_000, label: 'Bonus' }] })
+    const points = project({
+      housePurchaseYear: null,
+      lifeEvents: [{ year: 5, amountCents: 3_000_000, label: 'Bonus' }],
+    })
     const line = planLineOf(points)
     expect(planValueAt(line, 5)).toBe(points[5]!.investedCents)
     expect(planValueAt(line, 5)! - planValueAt(line, 5 - 1 / 365)!).toBeGreaterThan(2_900_000)
   })
 
   it('has the value after the step at the last year too', () => {
-    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 10, amountCents: -1_000_000, label: 'Car' }] })
+    const points = project({
+      housePurchaseYear: null,
+      horizonYears: 10,
+      lifeEvents: [{ year: 10, amountCents: -1_000_000, label: 'Car' }],
+    })
     const line = planLineOf(points)
     expect(planValueAt(line, 10)).toBe(points[10]!.investedCents)
   })
@@ -72,7 +82,13 @@ describe('planLineOf and planValueAt', () => {
   it.each([
     ['no points', []],
     ['points that do not start at year 0', [{ year: 2, investedCents: 1000 }]],
-    ['a year missing', [{ year: 0, investedCents: 1000 }, { year: 2, investedCents: 3000 }]],
+    [
+      'a year missing',
+      [
+        { year: 0, investedCents: 1000 },
+        { year: 2, investedCents: 3000 },
+      ],
+    ],
   ])('is no line for %s', (_name, points) => {
     expect(planValueAt(planLineOf(points), 0)).toBeNull()
     expect(planValueAt(planLineOf(points), 1)).toBeNull()
@@ -127,9 +143,13 @@ describe('planValueBefore', () => {
     expect(planValueBefore(line, 3)).toBe(planValueAt(line, 3))
   })
 
-  it('is the value before the step on the plan\'s last anniversary too, where there is no year after it', () => {
+  it("is the value before the step on the plan's last anniversary too, where there is no year after it", () => {
     // A 50.000 euro payment in the plan's last year: the day before it the portfolio still holds it.
-    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 10, amountCents: -5_000_000, label: 'Car' }] })
+    const points = project({
+      housePurchaseYear: null,
+      horizonYears: 10,
+      lifeEvents: [{ year: 10, amountCents: -5_000_000, label: 'Car' }],
+    })
     const line = planLineOf(points)
     expect(points[10]!.preEventInvestedCents).toBeGreaterThan(points[10]!.investedCents)
     expect(planValueBefore(line, 10)).toBe(points[10]!.preEventInvestedCents)
@@ -166,7 +186,9 @@ describe('stretchAround and small steps', () => {
   })
 
   it('counts a 2.000 euro bonus as part of the stretch it is in, and a house payment as the end of it', () => {
-    const bonus = planLineOf(project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }))
+    const bonus = planLineOf(
+      project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }),
+    )
     expect(stretchAround(bonus, 3)).toEqual({ from: 0, to: 30 })
     expect(stretchAround(planLineOf(project()), 3)).toEqual({ from: 0, to: 8 })
   })

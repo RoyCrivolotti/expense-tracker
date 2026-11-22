@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { findIbans, hasValidIbanChecksum } from './iban.mjs'
 
 /** An IBAN with correct check digits for an invented account, built here so no real-looking number sits in the repo. */
-function ibanFor(country: string, bban: string): string {
+function ibanFor(
+  country: string,
+  bban: string,
+): string {
   const digits = (s: string) => [...s].map((c) => (/\d/.test(c) ? c : String(c.charCodeAt(0) - 55))).join('')
   let remainder = 0
   for (const d of digits(bban + country + '00')) remainder = (remainder * 10 + Number(d)) % 97
@@ -23,7 +26,10 @@ describe('findIbans', () => {
   })
 
   it('ignores something shaped like an IBAN with the wrong check digits', () => {
-    const wrong = VALID.slice(0, 2) + (VALID.slice(2, 4) === '99' ? '98' : String(Number(VALID.slice(2, 4)) + 1).padStart(2, '0')) + VALID.slice(4)
+    const wrong =
+      VALID.slice(0, 2) +
+      (VALID.slice(2, 4) === '99' ? '98' : String(Number(VALID.slice(2, 4)) + 1).padStart(2, '0')) +
+      VALID.slice(4)
     expect(hasValidIbanChecksum(wrong)).toBe(false)
     expect(findIbans(`id ${wrong}`)).toEqual([])
   })

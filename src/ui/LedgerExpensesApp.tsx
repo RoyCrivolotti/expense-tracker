@@ -26,13 +26,20 @@ function LedgerApp({
   // Shadow mode reads the whole dataset after the ledger settles and holds the two to each other.
   const settled = useCallback(
     (held: HeldLedger) => {
-      if (mode === 'shadow') void ledger.load().then((dataset) => reportShadow(shadowDifferences(held, dataset)), () => undefined)
+      if (mode === 'shadow')
+        void ledger.load().then(
+          (dataset) => reportShadow(shadowDifferences(held, dataset)),
+          () => undefined,
+        )
     },
     [ledger, mode],
   )
   const data = useLedgerData(ledger, { owner: props.accountEmail, onSettled: settled })
   // The lists of a ledger read in pages are longer than a request may name, so its writes to the API are the ones that split them.
-  const source = useMemo(() => (props.source === apiDataSource ? withLedgerWrites(props.source) : props.source), [props.source])
+  const source = useMemo(
+    () => (props.source === apiDataSource ? withLedgerWrites(props.source) : props.source),
+    [props.source],
+  )
   useBackgroundErrorToast(data.backgroundError, data.reload)
   return <View {...props} source={source} data={data} />
 }

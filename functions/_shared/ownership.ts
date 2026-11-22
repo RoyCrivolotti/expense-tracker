@@ -23,14 +23,22 @@ export async function assertOwnedCategory(
   if (!row) throw new HttpError(400, 'Invalid categoryId')
 }
 
-export async function assertOwnedFlag(env: Env, owner: string, flagId: number): Promise<void> {
+export async function assertOwnedFlag(
+  env: Env,
+  owner: string,
+  flagId: number,
+): Promise<void> {
   const row = await env.DB.prepare('SELECT 1 AS ok FROM flags WHERE id = ? AND owner = ?')
     .bind(flagId, owner)
     .first<{ ok: number }>()
   if (!row) throw new HttpError(400, 'Invalid flagId')
 }
 
-export async function assertOwnedLabel(env: Env, owner: string, labelId: number): Promise<void> {
+export async function assertOwnedLabel(
+  env: Env,
+  owner: string,
+  labelId: number,
+): Promise<void> {
   const row = await env.DB.prepare('SELECT 1 AS ok FROM labels WHERE id = ? AND owner = ?')
     .bind(labelId, owner)
     .first<{ ok: number }>()
@@ -56,7 +64,11 @@ export async function assertOwnedTransaction(
   if (!row) throw new HttpError(400, `Invalid ${field}`)
 }
 
-export async function assertOwnedPlan(env: Env, owner: string, planId: number): Promise<void> {
+export async function assertOwnedPlan(
+  env: Env,
+  owner: string,
+  planId: number,
+): Promise<void> {
   const row = await env.DB.prepare('SELECT 1 AS ok FROM installment_plans WHERE id = ? AND owner = ?')
     .bind(planId, owner)
     .first<{ ok: number }>()

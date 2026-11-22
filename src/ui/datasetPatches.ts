@@ -27,16 +27,20 @@ function redriveTransactions(d: ExpenseDataset): void {
   d.transactions = deriveTransactions(d.transactions, d.accounts, d.accountStatements)
 }
 
-function upsertById<T extends { id: number }>(list: T[], row: T): void {
+function upsertById<T extends { id: number }>(
+  list: T[],
+  row: T,
+): void {
   const i = list.findIndex((r) => r.id === row.id)
   if (i >= 0) list[i] = row
   else list.push(row)
 }
 
-function upsertStatement(list: AccountStatement[], row: AccountStatement): void {
-  const i = list.findIndex(
-    (s) => s.accountId === row.accountId && s.yearMonth === row.yearMonth,
-  )
+function upsertStatement(
+  list: AccountStatement[],
+  row: AccountStatement,
+): void {
+  const i = list.findIndex((s) => s.accountId === row.accountId && s.yearMonth === row.yearMonth)
   if (i >= 0) list[i] = row
   else list.push(row)
 }
@@ -59,9 +63,7 @@ export function patchAfterTransactionCreate(
   txn: Transaction,
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.transactions = [...d.transactions, txn].sort(
-    (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
-  )
+  d.transactions = [...d.transactions, txn].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
   reconcileInstallmentPlanCompletion(d)
   return d
 }
@@ -93,9 +95,7 @@ export function patchAfterBulkCreate(
   txns: Transaction[],
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.transactions = [...d.transactions, ...txns].sort(
-    (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
-  )
+  d.transactions = [...d.transactions, ...txns].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
   reconcileInstallmentPlanCompletion(d)
   return d
 }
@@ -171,7 +171,10 @@ export function patchAfterAttachmentDelete(
   return d
 }
 
-export function patchAfterFlag(dataset: ExpenseDataset, flag: Flag): ExpenseDataset {
+export function patchAfterFlag(
+  dataset: ExpenseDataset,
+  flag: Flag,
+): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.flags, flag)
   d.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
@@ -184,14 +187,20 @@ export function patchAfterFlag(dataset: ExpenseDataset, flag: Flag): ExpenseData
  * destructure: `exactOptionalPropertyTypes` forbids assigning `undefined` to an
  * optional field, so the key has to be omitted.
  */
-export function patchAfterFlagDelete(dataset: ExpenseDataset, id: number): ExpenseDataset {
+export function patchAfterFlagDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.flags = d.flags.filter((f) => f.id !== id)
   d.transactions = d.transactions.map((t) => (t.flagId === id ? withoutFlag(t) : t))
   return d
 }
 
-export function patchAfterLabel(dataset: ExpenseDataset, label: Label): ExpenseDataset {
+export function patchAfterLabel(
+  dataset: ExpenseDataset,
+  label: Label,
+): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.labels, label)
   d.labels.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
@@ -204,7 +213,10 @@ export function patchAfterLabel(dataset: ExpenseDataset, label: Label): ExpenseD
  * single flagId, a label id has to be filtered out of each transaction's
  * array rather than cleared outright, since other labels on the same row survive.
  */
-export function patchAfterLabelDelete(dataset: ExpenseDataset, id: number): ExpenseDataset {
+export function patchAfterLabelDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.labels = d.labels.filter((l) => l.id !== id)
   d.transactions = d.transactions.map((t) =>
@@ -213,7 +225,10 @@ export function patchAfterLabelDelete(dataset: ExpenseDataset, id: number): Expe
   return d
 }
 
-export function patchAfterAccount(dataset: ExpenseDataset, account: Account): ExpenseDataset {
+export function patchAfterAccount(
+  dataset: ExpenseDataset,
+  account: Account,
+): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.accounts, account)
   redriveTransactions(d)
@@ -231,12 +246,8 @@ export function patchAfterCategoryDelete(
   d.categories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
   const targetId = result.reassignedToId
   if (targetId != null) {
-    d.transactions = d.transactions.map((t) =>
-      t.categoryId === id ? { ...t, categoryId: targetId } : t,
-    )
-    d.installmentPlans = d.installmentPlans.map((p) =>
-      p.categoryId === id ? { ...p, categoryId: targetId } : p,
-    )
+    d.transactions = d.transactions.map((t) => (t.categoryId === id ? { ...t, categoryId: targetId } : t))
+    d.installmentPlans = d.installmentPlans.map((p) => (p.categoryId === id ? { ...p, categoryId: targetId } : p))
   }
   return d
 }
@@ -256,17 +267,11 @@ export function patchAfterAccountDelete(
     d.settings = { ...d.settings, defaultAccountId: targetId }
   }
   if (targetId != null) {
-    d.transactions = d.transactions.map((t) =>
-      t.accountId === id ? { ...t, accountId: targetId } : t,
-    )
-    d.installmentPlans = d.installmentPlans.map((p) =>
-      p.accountId === id ? { ...p, accountId: targetId } : p,
-    )
+    d.transactions = d.transactions.map((t) => (t.accountId === id ? { ...t, accountId: targetId } : t))
+    d.installmentPlans = d.installmentPlans.map((p) => (p.accountId === id ? { ...p, accountId: targetId } : p))
     // Mirror the D1/in-memory adapters: drop the source's statement for any month
     // the target already has one for, then move the rest.
-    const targetMonths = new Set(
-      d.accountStatements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth),
-    )
+    const targetMonths = new Set(d.accountStatements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth))
     d.accountStatements = d.accountStatements
       .filter((s) => !(s.accountId === id && targetMonths.has(s.yearMonth)))
       .map((s) => (s.accountId === id ? { ...s, accountId: targetId } : s))
@@ -275,7 +280,11 @@ export function patchAfterAccountDelete(
   return d
 }
 
-function copySetting<K extends keyof ExpenseSettings>(to: ExpenseSettings, from: ExpenseSettings, key: K): void {
+function copySetting<K extends keyof ExpenseSettings>(
+  to: ExpenseSettings,
+  from: ExpenseSettings,
+  key: K,
+): void {
   to[key] = from[key]
 }
 
@@ -306,7 +315,10 @@ function sortScenarios(scenarios: GoalScenario[]): GoalScenario[] {
 }
 
 /** The server keeps one plan per owner; mirror that so no reload is needed to see it. */
-function withOnlyPlan(scenarios: GoalScenario[], plan: GoalScenario): GoalScenario[] {
+function withOnlyPlan(
+  scenarios: GoalScenario[],
+  plan: GoalScenario,
+): GoalScenario[] {
   return scenarios.map((s) => (s.id === plan.id ? plan : { ...s, isActive: false }))
 }
 
@@ -394,9 +406,7 @@ export function patchAfterWealthAccountCreate(
   account: WealthAccount,
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.wealthAccounts = [...d.wealthAccounts, account].sort(
-    (a, b) => a.sortOrder - b.sortOrder || a.id - b.id,
-  )
+  d.wealthAccounts = [...d.wealthAccounts, account].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
   return d
 }
 

@@ -6,10 +6,22 @@ import { makeDataset, makeTransaction } from './factories'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /** The phone's own clock as the Worker writes it (an hour ahead of UTC), the same in any zone the test runs in. */
-export const pushAt = (y: number, m: number, d: number, h = 9, min = 41): string => `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(min)}:07+01:00`
+export const pushAt = (
+  y: number,
+  m: number,
+  d: number,
+  h = 9,
+  min = 41,
+): string => `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(min)}:07+01:00`
 
 /** When a push dated `pushAt(...)` reaches the server, as a UTC instant. */
-export const arrivedAt = (y: number, m: number, d: number, h = 9, min = 41): string => new Date(Date.UTC(y, m - 1, d, h - 1, min, 8)).toISOString()
+export const arrivedAt = (
+  y: number,
+  m: number,
+  d: number,
+  h = 9,
+  min = 41,
+): string => new Date(Date.UTC(y, m - 1, d, h - 1, min, 8)).toISOString()
 
 /** A recommendation for a known merchant on an ordinary mid-month morning, with anything overridden. Invented data. */
 export function makeRecommendation(over: Partial<RecommendationInfo> = {}): RecommendationInfo {

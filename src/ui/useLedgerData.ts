@@ -40,7 +40,10 @@ type Phase = 'loading' | 'ready' | 'error'
  * Opens the session if the browser is online. Null when it is open, otherwise why it is not, and whether the server
  * refused the person, in which case nothing kept on this device is shown in its place.
  */
-async function openOnline(session: LedgerSession, opened: () => void): Promise<{ message: string; denied: boolean } | null> {
+async function openOnline(
+  session: LedgerSession,
+  opened: () => void,
+): Promise<{ message: string; denied: boolean } | null> {
   if (!isOnline()) return { message: 'You are offline and no saved data is available.', denied: false }
   try {
     await session.open()
@@ -52,7 +55,11 @@ async function openOnline(session: LedgerSession, opened: () => void): Promise<{
 }
 
 /** Keeps what is held as the owner's snapshot (it never throws and nothing waits for it) and says it settled. */
-function keep(session: LedgerSession, owner: string | undefined, settled: LedgerDataOptions['onSettled']): void {
+function keep(
+  session: LedgerSession,
+  owner: string | undefined,
+  settled: LedgerDataOptions['onSettled'],
+): void {
   const { held, viewed } = session.getState()
   if (!held) return
   if (owner) void saveLedgerSnapshot(owner, held, viewed)
@@ -60,13 +67,17 @@ function keep(session: LedgerSession, owner: string | undefined, settled: Ledger
 }
 
 const HISTORY_WORDS = {
-  loading: 'Reading the recurring charges. Until they arrive, the fixed and flexible figures use only the months loaded.',
+  loading:
+    'Reading the recurring charges. Until they arrive, the fixed and flexible figures use only the months loaded.',
   failed: "Couldn't read the recurring charges, so the fixed and flexible figures use only the months loaded.",
   offline: "You're offline, so the fixed and flexible figures use only the months saved on this device.",
 } as const
 
 /** What a windowed model says about having no history: it is being read, the read failed, or there is no one to ask. */
-function historyNoteOf(missing: boolean, { offline, seriesFailed }: SessionState): string | undefined {
+function historyNoteOf(
+  missing: boolean,
+  { offline, seriesFailed }: SessionState,
+): string | undefined {
   if (!missing) return undefined
   return HISTORY_WORDS[offline ? 'offline' : seriesFailed ? 'failed' : 'loading']
 }
@@ -80,7 +91,13 @@ interface Shown {
 }
 
 /** What the screens are given of the model: nothing while it loads, after a failure, or when a read was kept out. */
-function shown({ phase, model, offline, snapshotAt, failure }: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
+function shown({
+  phase,
+  model,
+  offline,
+  snapshotAt,
+  failure,
+}: Shown): Pick<ExpenseData, 'status' | 'model' | 'fromCache' | 'snapshotAt' | 'error'> {
   if (phase === 'ready' && model !== undefined) {
     return { status: 'ready', model, fromCache: offline, ...(offline && snapshotAt ? { snapshotAt } : {}) }
   }
@@ -97,7 +114,10 @@ function shown({ phase, model, offline, snapshotAt, failure }: Shown): Pick<Expe
  * Offline, or when the read fails, the owner's snapshot is shown instead and the session is read-only until a
  * refresh reads. Every read that works replaces the snapshot.
  */
-export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOptions): ExpenseData {
+export function useLedgerData(
+  source: LedgerPartsSource,
+  options?: LedgerDataOptions,
+): ExpenseData {
   const owner = options?.owner
   const settled = useRef(options?.onSettled)
   useEffect(() => {
@@ -168,7 +188,12 @@ export function useLedgerData(source: LedgerPartsSource, options?: LedgerDataOpt
       watchHistory: session.watchSeries,
       useUsage: ledgerUsageHook(usage, held.revision),
       pagedList,
-      ...(windowed ? { exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) }, recent: recentActivityOf(source) } : {}),
+      ...(windowed
+        ? {
+            exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) },
+            recent: recentActivityOf(source),
+          }
+        : {}),
       ...(windowed && series ? { newestCharges: newestChargesOfSeries(series) } : {}),
       ...(windowed && offline ? { savedMonths: new Set(held.rows.keys()) } : {}),
       ...(note ? { historyNote: note } : {}),

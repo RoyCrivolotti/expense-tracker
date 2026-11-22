@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ExpenseSettings, Transaction } from '../types'
 import { defaultExpenseSettings } from './defaults'
 import type { CashRow } from './cashReconciliation'
-import {
-  balancesAtCost,
-  cashBridge,
-  firstCountedMonth,
-  monthCloseStatus,
-  readyToCountMonth,
-} from './cashClose'
+import { balancesAtCost, cashBridge, firstCountedMonth, monthCloseStatus, readyToCountMonth } from './cashClose'
 
 function row(partial: Partial<CashRow>): CashRow {
   return {
@@ -112,23 +106,14 @@ describe('readyToCountMonth', () => {
 describe('cashBridge', () => {
   it('walks from opening cash to expected cash, and the walk adds up', () => {
     const segments = cashBridge(row({}))
-    expect(segments.map((s) => s.key)).toEqual([
-      'opening',
-      'income',
-      'debit',
-      'cards',
-      'invested',
-      'expected',
-    ])
+    expect(segments.map((s) => s.key)).toEqual(['opening', 'income', 'debit', 'cards', 'invested', 'expected'])
     const opening = segments[0]!.cents
     const moves = segments.slice(1, -1).reduce((s, seg) => s + seg.cents, 0)
     expect(opening + moves).toBe(segments[segments.length - 1]!.cents)
   })
 
   it('leaves unpaid statements out of the walk', () => {
-    const segments = cashBridge(
-      row({ cardCharges: new Map([[2, { chargeCents: 30000, paid: false }]]) }),
-    )
+    const segments = cashBridge(row({ cardCharges: new Map([[2, { chargeCents: 30000, paid: false }]]) }))
     expect(segments.find((s) => s.key === 'cards')?.cents).toBe(0)
   })
 })
@@ -139,7 +124,10 @@ describe('balancesAtCost', () => {
     openingCashCents: 800000,
     openingInvestmentCents: 1200000,
   }
-  const invest = (m: string, cents: number): Transaction => ({
+  const invest = (
+    m: string,
+    cents: number,
+  ): Transaction => ({
     id: Math.random(),
     date: `${m}-03`,
     budgetMonth: m,

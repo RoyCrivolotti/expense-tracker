@@ -43,7 +43,10 @@ export function newestChargeBySeries(transactions: Transaction[]): Map<string, s
   return newest
 }
 
-function byDateThenId(a: Transaction, b: Transaction): number {
+function byDateThenId(
+  a: Transaction,
+  b: Transaction,
+): number {
   return a.date.localeCompare(b.date) || a.id - b.id
 }
 

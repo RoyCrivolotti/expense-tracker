@@ -13,7 +13,10 @@ interface UseEntityFormSaveOptions<TEntity extends SortableEntity, TDraft extend
   existing: TEntity[]
   onDone: () => void
   create: (draft: TDraft & { sortOrder: number; active: true }) => Promise<unknown>
-  update: (id: number, draft: TDraft) => Promise<unknown>
+  update: (
+    id: number,
+    draft: TDraft,
+  ) => Promise<unknown>
   /** Resolves to how many transactions were affected, for the delete toast. */
   remove: (id: number) => Promise<{ affected: number }>
   /** e.g. "unflagged" / "unlabeled" — the word that goes with the affected count. */

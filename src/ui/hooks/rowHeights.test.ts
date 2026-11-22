@@ -3,7 +3,10 @@ import type { Transaction } from '../../types'
 import type { TransactionListRow } from '../../engine'
 import { createRowHeights, rowKey, rowShape } from './rowHeights'
 
-function txnRow(id: number, labelIds?: number[]): TransactionListRow {
+function txnRow(
+  id: number,
+  labelIds?: number[],
+): TransactionListRow {
   const txn: Transaction = {
     id,
     date: '2026-07-15',

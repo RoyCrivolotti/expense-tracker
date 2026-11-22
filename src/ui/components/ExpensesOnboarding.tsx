@@ -25,7 +25,10 @@ interface Props {
 }
 
 /** Writes the empty tip list for a person who has just left their first run. A failure leaves them without tips, which is harmless. */
-async function startTips(source: ExpenseDataSource, applyPatch: Props['applyPatch']): Promise<void> {
+async function startTips(
+  source: ExpenseDataSource,
+  applyPatch: Props['applyPatch'],
+): Promise<void> {
   try {
     const settings = await source.updateSettings?.({ tipsSeen: [] })
     if (settings) applyPatch((d) => patchAfterSettings(d, settings, ['tipsSeen']))
@@ -34,15 +37,7 @@ async function startTips(source: ExpenseDataSource, applyPatch: Props['applyPatc
   }
 }
 
-export function ExpensesOnboarding({
-  open,
-  source,
-  dataset,
-  firstRun,
-  applyPatch,
-  onAdd,
-  onClose,
-}: Props) {
+export function ExpensesOnboarding({ open, source, dataset, firstRun, applyPatch, onAdd, onClose }: Props) {
   const owner = useAccountOwner()
   return (
     <Presence show={open} exitMs={EXIT_MS.sheet}>

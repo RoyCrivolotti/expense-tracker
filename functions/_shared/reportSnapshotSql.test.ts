@@ -25,9 +25,10 @@ beforeEach(() => {
 })
 
 function snapshotOf(id: number) {
-  return db
-    .prepare('SELECT report_count, report_covered_cents FROM transactions WHERE id = ?')
-    .get(id) as { report_count: number | null; report_covered_cents: number | null }
+  return db.prepare('SELECT report_count, report_covered_cents FROM transactions WHERE id = ?').get(id) as {
+    report_count: number | null
+    report_covered_cents: number | null
+  }
 }
 
 describe('the report snapshot statement, against real SQLite', () => {

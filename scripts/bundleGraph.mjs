@@ -12,7 +12,11 @@
 const STATIC_IMPORT = /(?:from|import)\s*["']\.\/([A-Za-z0-9_.-]+\.js)["']/g
 const DYNAMIC_IMPORT = /import\(\s*["'`]\.\/([A-Za-z0-9_.-]+\.js)["'`]\s*\)/g
 
-function edgesOf(files, read, patterns) {
+function edgesOf(
+  files,
+  read,
+  patterns,
+) {
   return new Map(
     files.map((file) => {
       const source = read(file)
@@ -22,7 +26,11 @@ function edgesOf(files, read, patterns) {
   )
 }
 
-function reach(starts, edges, stop = new Set()) {
+function reach(
+  starts,
+  edges,
+  stop = new Set(),
+) {
   const seen = new Set(starts)
   const queue = [...starts]
   while (queue.length > 0) {
@@ -39,7 +47,9 @@ function reach(starts, edges, stop = new Set()) {
 function graphOf({ files, read, indexHtml }) {
   const staticEdges = edgesOf(files, read, [STATIC_IMPORT])
   const allEdges = edgesOf(files, read, [STATIC_IMPORT, DYNAMIC_IMPORT])
-  const entry = [...indexHtml.matchAll(/assets\/([A-Za-z0-9_.-]+\.js)/g)].map((m) => m[1]).filter((name) => files.includes(name))
+  const entry = [...indexHtml.matchAll(/assets\/([A-Za-z0-9_.-]+\.js)/g)]
+    .map((m) => m[1])
+    .filter((name) => files.includes(name))
   const eager = reach(entry, staticEdges)
   const named = (...prefixes) => files.filter((file) => prefixes.some((prefix) => file.startsWith(prefix)))
   return { allEdges, eager, named }
@@ -82,7 +92,17 @@ export function ledgerOnlyChunks(build) {
  */
 export function captureOnlyChunks(build) {
   const { allEdges, eager, named } = graphOf(build)
-  const roots = named('CaptureKeySetting', 'CaptureCardsSetting', 'CaptureMutedSetting', 'CaptureDiagnosticsSetting', 'PushSetting', 'ReviewCard', 'CardQuestion', 'DuplicateNotice', 'CaptureSetupSetting')
+  const roots = named(
+    'CaptureKeySetting',
+    'CaptureCardsSetting',
+    'CaptureMutedSetting',
+    'CaptureDiagnosticsSetting',
+    'PushSetting',
+    'ReviewCard',
+    'CardQuestion',
+    'DuplicateNotice',
+    'CaptureSetupSetting',
+  )
   const defaultPath = reach([...eager], allEdges, new Set(roots))
   return [...reach(roots, allEdges, eager)].filter((file) => !defaultPath.has(file)).sort()
 }

@@ -6,8 +6,14 @@ import { TipCard } from './TipCard'
 export function TransactionsTips({ model, phone }: { model: ExpenseModel; phone: boolean }) {
   return (
     <TipCard id={TIP_IDS.transactions} title="Transactions" when={model.months.length > 0}>
-      <p>{phone ? 'Tap a payment to change it. Swipe it left to copy or delete it.' : 'Click a payment to change it.'}</p>
-      <p>{phone ? 'Hold one to select several and change them together.' : 'Use Select to pick several and change them together.'}</p>
+      <p>
+        {phone ? 'Tap a payment to change it. Swipe it left to copy or delete it.' : 'Click a payment to change it.'}
+      </p>
+      <p>
+        {phone
+          ? 'Hold one to select several and change them together.'
+          : 'Use Select to pick several and change them together.'}
+      </p>
       <p>Use Filters to find payments by category, account, flag, label or amount.</p>
     </TipCard>
   )

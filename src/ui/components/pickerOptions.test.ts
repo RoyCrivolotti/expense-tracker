@@ -75,4 +75,3 @@ describe('selectableOptions with an empty label', () => {
     expect(selectableOptions(items, 0).map((i) => i.name)).toEqual(['Main'])
   })
 })
-

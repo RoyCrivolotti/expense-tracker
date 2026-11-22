@@ -28,7 +28,10 @@ function Probe({ track = false }: { track?: boolean }) {
 
 const size = () => screen.getByTestId('size').textContent
 
-function resizeTo(width: number, height: number) {
+function resizeTo(
+  width: number,
+  height: number,
+) {
   box.width = width
   box.height = height
   act(() => resizeObservers.at(-1)?.trigger())

@@ -109,10 +109,7 @@ export async function invokePagesRoute(
     headers.set('content-type', 'application/json')
     init.body = JSON.stringify(options.body)
   }
-  const request = new Request(
-    onLocalHost(options.url ?? 'https://expenses.test/api/expenses/transactions'),
-    init,
-  )
+  const request = new Request(onLocalHost(options.url ?? 'https://expenses.test/api/expenses/transactions'), init)
   const env = withAccessTableMocks(defaultTestEnv(options.env))
   const data: ExpensesData = {
     owner: '',
@@ -123,11 +120,7 @@ export async function invokePagesRoute(
   const params = options.params ?? {}
   const routeNext: HandlerContext['next'] = () =>
     Promise.resolve(
-      handler(
-        handlerContext(request, env, params, data, () =>
-          Promise.resolve(new Response(null, { status: 404 })),
-        ),
-      ),
+      handler(handlerContext(request, env, params, data, () => Promise.resolve(new Response(null, { status: 404 })))),
     )
   return authMiddleware(handlerContext(request, env, params, data, routeNext))
 }

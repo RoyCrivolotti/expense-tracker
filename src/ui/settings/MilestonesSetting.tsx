@@ -42,7 +42,10 @@ function MilestoneRow({
   format: MoneyFormat
   formatted: string
   isAmountTaken: (amountCents: number) => boolean
-  onCommit: (amountCents: number, next: Milestone) => void
+  onCommit: (
+    amountCents: number,
+    next: Milestone,
+  ) => void
   onRemove: () => void
   /** The row whose save last failed, and a count so the same row can fail twice. */
   failed: { amountCents: number; n: number } | null
@@ -178,7 +181,10 @@ export function MilestonesSetting({ settings, onChange }: Props) {
     if (inFlight.current === 0) workingRef.current = milestones
   }, [milestones])
 
-  const save = async (next: Milestone[], origin: number | null = null) => {
+  const save = async (
+    next: Milestone[],
+    origin: number | null = null,
+  ) => {
     const previous = workingRef.current
     workingRef.current = next
     inFlight.current += 1
@@ -203,9 +209,16 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   // from the rendered one while a save is in flight. A row addresses itself by the
   // amount it last committed; after a failed save that amount is gone from the working
   // list again, so the row falls back to its saved one and the retry carries the edit.
-  const replaceAmount = (key: number, savedAmountCents: number, next: Milestone) => {
+  const replaceAmount = (
+    key: number,
+    savedAmountCents: number,
+    next: Milestone,
+  ) => {
     const known = workingRef.current.some((m) => m.amountCents === key) ? key : savedAmountCents
-    void save(workingRef.current.map((m) => (m.amountCents === known ? next : m)), savedAmountCents)
+    void save(
+      workingRef.current.map((m) => (m.amountCents === known ? next : m)),
+      savedAmountCents,
+    )
   }
   const removeAmount = (amountCents: number) =>
     void save(workingRef.current.filter((m) => m.amountCents !== amountCents))
@@ -217,11 +230,11 @@ export function MilestonesSetting({ settings, onChange }: Props) {
         <h3 className={goalStyles.sectionTitle}>Milestones</h3>
         <div className={styles.settingGroup}>
           <p className={styles.settingHint}>
-            Amounts you want to see on your account, shown on the Goals charts and the years-to-milestone
-            matrix and measured against your invested portfolio. The plan is counted after inflation to
-            date them: {currencyWord(format)} on the account in ten years buy less than {currencyWord(format)} today. Names are optional,
-            and a named milestone is shown with its amount alongside; an unnamed one shows the amount
-            on its own. Give one a target date and Progress will say whether the plan reaches it in time.
+            Amounts you want to see on your account, shown on the Goals charts and the years-to-milestone matrix and
+            measured against your invested portfolio. The plan is counted after inflation to date them:{' '}
+            {currencyWord(format)} on the account in ten years buy less than {currencyWord(format)} today. Names are
+            optional, and a named milestone is shown with its amount alongside; an unnamed one shows the amount on its
+            own. Give one a target date and Progress will say whether the plan reaches it in time.
           </p>
           {error ? (
             <p ref={errorRef} className={styles.settingError} role="alert">
@@ -238,8 +251,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
                   format={format}
                   formatted={formatCents(m.amountCents, format)}
                   isAmountTaken={(cents) =>
-                    cents !== m.amountCents &&
-                    workingRef.current.some((other) => other.amountCents === cents)
+                    cents !== m.amountCents && workingRef.current.some((other) => other.amountCents === cents)
                   }
                   onCommit={(key, next) => replaceAmount(key, m.amountCents, next)}
                   failed={failed}
@@ -249,8 +261,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             </ul>
           ) : (
             <p className={styles.settingHint}>
-              No milestones. The Goals matrix and chart reference lines stay empty until you add
-              one.
+              No milestones. The Goals matrix and chart reference lines stay empty until you add one.
             </p>
           )}
 
@@ -260,26 +271,18 @@ export function MilestonesSetting({ settings, onChange }: Props) {
               className={styles.milestoneAddBtn}
               disabled={milestones.length >= MILESTONE_MAX_COUNT}
               onClick={() =>
-                void save([
-                  ...workingRef.current,
-                  { amountCents: suggestedAmountCents(workingRef.current), label: '' },
-                ])
+                void save([...workingRef.current, { amountCents: suggestedAmountCents(workingRef.current), label: '' }])
               }
             >
               + Add milestone
             </button>
-            <button
-              type="button"
-              className={styles.milestoneResetBtn}
-              onClick={() => void save(defaultMilestones())}
-            >
+            <button type="button" className={styles.milestoneResetBtn} onClick={() => void save(defaultMilestones())}>
               Reset to defaults
             </button>
           </div>
           {milestones.length >= MILESTONE_MAX_COUNT ? (
             <p className={styles.settingHint}>
-              {MILESTONE_MAX_COUNT} is the most the matrix can show legibly. Remove one to add
-              another.
+              {MILESTONE_MAX_COUNT} is the most the matrix can show legibly. Remove one to add another.
             </p>
           ) : null}
         </div>

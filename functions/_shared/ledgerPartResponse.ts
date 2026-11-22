@@ -65,7 +65,10 @@ export async function serveList<T>(options: ServeList<T>): Promise<Response> {
   return withHeaders(json(await options.read()), etag)
 }
 
-function withHeaders(response: Response, etag: string): Response {
+function withHeaders(
+  response: Response,
+  etag: string,
+): Response {
   response.headers.set('ETag', etag)
   response.headers.set('Cache-Control', 'private, no-cache')
   return response

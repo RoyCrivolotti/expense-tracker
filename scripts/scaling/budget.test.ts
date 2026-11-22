@@ -25,13 +25,19 @@ interface IndexRow {
 }
 
 /** Entries an index holds, read from the schema itself: all rows, or those its WHERE clause keeps. */
-function indexEntries(db: ReturnType<typeof migratedDatabase>, table: string): number {
+function indexEntries(
+  db: ReturnType<typeof migratedDatabase>,
+  table: string,
+): number {
   const indexes = db.prepare(`PRAGMA index_list(${table})`).all() as unknown as IndexRow[]
   let entries = 0
   for (const index of indexes) {
-    const sql = (db.prepare('SELECT sql FROM sqlite_master WHERE name = ?').get(index.name) as { sql: string | null }).sql
+    const sql = (db.prepare('SELECT sql FROM sqlite_master WHERE name = ?').get(index.name) as { sql: string | null })
+      .sql
     const where = index.partial ? /\bWHERE\b([\s\S]*)$/i.exec(sql ?? '')?.[1] : undefined
-    const count = db.prepare(`SELECT count(*) AS n FROM ${table}${where ? ` WHERE ${where}` : ''}`).get() as { n: number }
+    const count = db.prepare(`SELECT count(*) AS n FROM ${table}${where ? ` WHERE ${where}` : ''}`).get() as {
+      n: number
+    }
     entries += count.n
   }
   return entries
@@ -64,7 +70,14 @@ describe('what an insert costs', () => {
 
   it('puts an ordinary expense at 8 rows and a row in every partial index at 13', () => {
     expect(insertWrites({ type: 'expense' })).toBe(8)
-    const everything = { type: 'investment' as const, planId: 1, installmentIndex: 2, flagId: 3, settledBy: 4, reportCount: 1 }
+    const everything = {
+      type: 'investment' as const,
+      planId: 1,
+      installmentIndex: 2,
+      flagId: 3,
+      settledBy: 4,
+      reportCount: 1,
+    }
     expect(partialIndexHits(everything)).toBe(5)
     expect(insertWrites(everything)).toBe(13)
   })

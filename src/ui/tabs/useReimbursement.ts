@@ -12,7 +12,10 @@ export interface Reimbursement {
   error: string | null
   open: (group: FlagGroup) => void
   cancel: () => void
-  record: (input: Omit<NewTransaction, 'type' | 'cancelled'>, transactionIds: number[]) => void
+  record: (
+    input: Omit<NewTransaction, 'type' | 'cancelled'>,
+    transactionIds: number[],
+  ) => void
 }
 
 /**
@@ -32,7 +35,10 @@ export function useReimbursement(actions: ExpenseActions | undefined): Reimburse
     setError(null)
   }
 
-  const record: Reimbursement['record'] = (input, transactionIds) => {
+  const record: Reimbursement['record'] = (
+    input,
+    transactionIds,
+  ) => {
     if (!actions) return
     setBusy(true)
     setError(null)

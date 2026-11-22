@@ -36,7 +36,7 @@ describe('the schema the migrations produce', () => {
     expect(columns.has('transactions.description')).toBe(true)
   })
 
-  it('leave out SQLite\'s own tables', () => {
+  it("leave out SQLite's own tables", () => {
     expect([...schemaOf(migrated())].some((column) => column.startsWith('sqlite_'))).toBe(false)
   })
 
@@ -101,7 +101,8 @@ describe('migrationAdding', () => {
   })
 
   it('names the file that created a trigger, however the name is quoted', () => {
-    const sql = 'CREATE UNIQUE INDEX IF NOT EXISTS "idx_a" ON t (a);\nCREATE TRIGGER IF NOT EXISTS `trg_b` AFTER INSERT ON t BEGIN SELECT 1; END;'
+    const sql =
+      'CREATE UNIQUE INDEX IF NOT EXISTS "idx_a" ON t (a);\nCREATE TRIGGER IF NOT EXISTS `trg_b` AFTER INSERT ON t BEGIN SELECT 1; END;'
     const file = [{ name: '0040_x.sql', sql }]
 
     expect(migrationAdding('index idx_a', file)).toBe('0040_x.sql')
@@ -124,7 +125,7 @@ describe('migrationAdding', () => {
     expect(migrationAdding('not-a-column', files())).toBeNull()
   })
 
-  it('does not take a name that appears elsewhere in a file for the table\'s column', () => {
+  it("does not take a name that appears elsewhere in a file for the table's column", () => {
     const sql = [
       'CREATE TABLE things (id INTEGER PRIMARY KEY, label TEXT);',
       'CREATE TABLE others (id INTEGER PRIMARY KEY, colour TEXT);',

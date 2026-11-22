@@ -10,7 +10,9 @@ describe('useHeldValue', () => {
   })
 
   it('keeps the last value it was live for while it is not, and takes the newest one when it is live again', () => {
-    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), { initialProps: { v: 1, live: true } })
+    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), {
+      initialProps: { v: 1, live: true },
+    })
     rerender({ v: 2, live: false })
     rerender({ v: 3, live: false })
     expect(result.current).toBe(1)
@@ -19,14 +21,18 @@ describe('useHeldValue', () => {
   })
 
   it('keeps the last value it was live for, not the first: what it held at the start must not stay when it was live for a later one', () => {
-    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), { initialProps: { v: 1, live: true } })
+    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), {
+      initialProps: { v: 1, live: true },
+    })
     rerender({ v: 2, live: true })
     rerender({ v: 3, live: false })
     expect(result.current).toBe(2)
   })
 
   it('has nothing to give if it was never live', () => {
-    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), { initialProps: { v: 1, live: false } })
+    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), {
+      initialProps: { v: 1, live: false },
+    })
     expect(result.current).toBeUndefined()
     rerender({ v: 2, live: true })
     expect(result.current).toBe(2)

@@ -10,12 +10,19 @@ import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { LeversBar } from './LeversBar'
 
 function makeDraft(overrides = {}) {
-  const { id, ...rest } = makeScenario({ startInvestedCents: 100_000_000, monthlyContributionCents: 50_000, ...overrides })
+  const { id, ...rest } = makeScenario({
+    startInvestedCents: 100_000_000,
+    monthlyContributionCents: 50_000,
+    ...overrides,
+  })
   void id
   return rest
 }
 
-function renderBar(overrides: Partial<Parameters<typeof LeversBar>[0]> = {}, draftOverrides = {}) {
+function renderBar(
+  overrides: Partial<Parameters<typeof LeversBar>[0]> = {},
+  draftOverrides = {},
+) {
   const draft = makeDraft(draftOverrides)
   const onChange = vi.fn()
   const onToggle = vi.fn()
@@ -69,7 +76,15 @@ describe('LeversBar', () => {
     const draft = makeDraft()
     render(
       <MoneyFormatContext.Provider value={usd}>
-        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />
+        <LeversBar
+          draft={draft}
+          resultDraft={draft}
+          keys={DEFAULT_LEVERS}
+          expanded={false}
+          panelId="p"
+          onChange={vi.fn()}
+          onToggle={vi.fn()}
+        />
       </MoneyFormatContext.Provider>,
     )
     const order = (label: string) => {
@@ -133,7 +148,15 @@ describe('LeversBar', () => {
     const onChange = vi.fn()
     render(
       <MoneyFormatContext.Provider value={usd}>
-        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={onChange} onToggle={vi.fn()} />
+        <LeversBar
+          draft={draft}
+          resultDraft={draft}
+          keys={DEFAULT_LEVERS}
+          expanded={false}
+          panelId="p"
+          onChange={onChange}
+          onToggle={vi.fn()}
+        />
       </MoneyFormatContext.Provider>,
     )
     const field = screen.getByLabelText('Monthly investing')
@@ -323,7 +346,9 @@ describe('LeversBar', () => {
 
   it('moves a percentage with its slider', () => {
     const { onChange } = renderBar()
-    fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), { target: { value: '0.05' } })
+    fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), {
+      target: { value: '0.05' },
+    })
     expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.05 })
   })
 
@@ -365,7 +390,10 @@ describe('LeversBar', () => {
 
   it('reads a percentage slider out as a percentage rather than a bare fraction', () => {
     renderBar()
-    expect(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })).toHaveAttribute('aria-valuetext', '7,0%')
+    expect(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })).toHaveAttribute(
+      'aria-valuetext',
+      '7,0%',
+    )
   })
 
   it('shows the net worth the plan ends at, from the draft the charts read', () => {
@@ -548,7 +576,15 @@ describe('LeversBar', () => {
     document.head.append(style)
     try {
       const { unmount } = render(
-        <LeversBar draft={makeDraft()} resultDraft={makeDraft()} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />,
+        <LeversBar
+          draft={makeDraft()}
+          resultDraft={makeDraft()}
+          keys={DEFAULT_LEVERS}
+          onChange={vi.fn()}
+          expanded={false}
+          panelId="p"
+          onToggle={vi.fn()}
+        />,
       )
       // In the page, a toast has nothing to clear.
       expect(root.style.getPropertyValue('--exp-selection-bar')).toBe('')
@@ -584,7 +620,15 @@ describe('LeversBar', () => {
     const page = (
       <>
         <button type="button">Outside</button>
-        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />
+        <LeversBar
+          draft={draft}
+          resultDraft={draft}
+          keys={DEFAULT_LEVERS}
+          onChange={vi.fn()}
+          expanded={false}
+          panelId="p"
+          onToggle={vi.fn()}
+        />
       </>
     )
     try {
@@ -629,7 +673,15 @@ describe('LeversBar', () => {
     const { unmount } = render(
       <>
         <button type="button">Outside</button>
-        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />
+        <LeversBar
+          draft={draft}
+          resultDraft={draft}
+          keys={DEFAULT_LEVERS}
+          onChange={vi.fn()}
+          expanded={false}
+          panelId="p"
+          onToggle={vi.fn()}
+        />
       </>,
     )
     expect(root.style.scrollPaddingTop).toBe('18px')
@@ -732,12 +784,27 @@ describe('LeversBar', () => {
 describe('LeversBar result', () => {
   // No return, no saving and no house: the net worth stays 100.000 euros, so what it comes to on the account
   // is that grown by the inflation for the ten years.
-  const flat = { startInvestedCents: 10_000_000, monthlyContributionCents: 0, expectedRealReturn: 0, horizonYears: 10, housePurchaseYear: null, planStartDate: '2026-01-01' }
+  const flat = {
+    startInvestedCents: 10_000_000,
+    monthlyContributionCents: 0,
+    expectedRealReturn: 0,
+    horizonYears: 10,
+    housePurchaseYear: null,
+    planStartDate: '2026-01-01',
+  }
   const renderWith = (inflation: number) => {
     const draft = makeDraft(flat)
     return render(
       <AssumedInflationContext.Provider value={inflation}>
-        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />
+        <LeversBar
+          draft={draft}
+          resultDraft={draft}
+          keys={DEFAULT_LEVERS}
+          expanded={false}
+          panelId="p"
+          onChange={vi.fn()}
+          onToggle={vi.fn()}
+        />
       </AssumedInflationContext.Provider>,
     )
   }
@@ -751,12 +818,25 @@ describe('LeversBar result', () => {
   it('puts both in full in the hover text of the figure too', () => {
     renderWith(0.02)
     const value = screen.getByText(formatCentsCompact(10_000_000, EU_MONEY_FORMAT))
-    expect(value).toHaveAttribute('title', `${formatCentsCompact(10_000_000, EU_MONEY_FORMAT)} in 2026 euros, about ${formatCentsCompact(12_189_944, EU_MONEY_FORMAT)} on your account in 2036`)
+    expect(value).toHaveAttribute(
+      'title',
+      `${formatCentsCompact(10_000_000, EU_MONEY_FORMAT)} in 2026 euros, about ${formatCentsCompact(12_189_944, EU_MONEY_FORMAT)} on your account in 2036`,
+    )
   })
 
-  it('names a plan with no start date\'s money today\'s euros and its year by the plan year', () => {
+  it("names a plan with no start date's money today's euros and its year by the plan year", () => {
     const draft = makeDraft({ ...flat, planStartDate: null })
-    render(<LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />)
+    render(
+      <LeversBar
+        draft={draft}
+        resultDraft={draft}
+        keys={DEFAULT_LEVERS}
+        expanded={false}
+        panelId="p"
+        onChange={vi.fn()}
+        onToggle={vi.fn()}
+      />,
+    )
     expect(screen.getByText("today's euros")).toBeInTheDocument()
     expect(screen.getByTitle(/on your account in year 10$/)).toBeInTheDocument()
   })

@@ -55,8 +55,6 @@ describe('deleteInstallmentPlan', () => {
   it('still reports a plan that was not there', async () => {
     const { env } = envForDelete({ deleted: 0 })
 
-    await expect(deleteInstallmentPlan(env, 'a@b.com', 7)).rejects.toThrow(
-      'Installment plan not found',
-    )
+    await expect(deleteInstallmentPlan(env, 'a@b.com', 7)).rejects.toThrow('Installment plan not found')
   })
 })

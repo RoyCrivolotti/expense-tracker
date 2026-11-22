@@ -10,7 +10,13 @@ export interface MoneyDraft {
 }
 
 /** What amounts will look like, with the number format kept behind "Change": almost nobody needs it. */
-function NumberFormatPreview({ money, onChange }: { money: MoneyDraft; onChange: (patch: Partial<MoneyDraft>) => void }) {
+function NumberFormatPreview({
+  money,
+  onChange,
+}: {
+  money: MoneyDraft
+  onChange: (patch: Partial<MoneyDraft>) => void
+}) {
   const [changing, setChanging] = useState(false)
   const preview = formatCents(123456, resolveMoneyFormat(money.currencyCode, money.numberLocale))
   return (
@@ -59,10 +65,7 @@ export function OnboardingMoneyStep({
 
       <label className={styles.field}>
         <span className={styles.fieldLabel}>Currency</span>
-        <select
-          value={money.currencyCode}
-          onChange={(e) => onChange({ currencyCode: e.target.value })}
-        >
+        <select value={money.currencyCode} onChange={(e) => onChange({ currencyCode: e.target.value })}>
           {CURRENCIES.map((c) => (
             <option key={c.code} value={c.code}>
               {c.label}

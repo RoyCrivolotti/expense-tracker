@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Category, Transaction } from '../types'
 import { computeSpendingGroupDetail } from './spendingGroupDetail'
 
-const categories: Category[] = [
-  { id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true },
-]
+const categories: Category[] = [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }]
 
 let nextId = 1
 function txn(partial: Partial<Transaction>): Transaction {

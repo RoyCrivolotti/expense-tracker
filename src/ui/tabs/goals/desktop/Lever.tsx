@@ -1,6 +1,12 @@
 import { useCallback, useRef, useState, type MouseEvent } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatMoneyInput, formatPercent, formatPercentInput, tryParseDecimal, tryParseMoneyToCents } from '../../../../engine'
+import {
+  formatMoneyInput,
+  formatPercent,
+  formatPercentInput,
+  tryParseDecimal,
+  tryParseMoneyToCents,
+} from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
@@ -19,7 +25,10 @@ interface LeverProps {
 }
 
 /** Whole amounts without the cents, so a seven-figure balance fits a bar column. */
-function moneyText(cents: number, format: MoneyFormat): string {
+function moneyText(
+  cents: number,
+  format: MoneyFormat,
+): string {
   return cents % 100 === 0 ? Math.round(cents / 100).toLocaleString(format.locale) : formatMoneyInput(cents, format)
 }
 
@@ -101,7 +110,11 @@ function toFraction(percent: number): number {
   return Math.round(percent * 1e4) / 1e6
 }
 
-function clamp(value: number, min: number, max: number): number {
+function clamp(
+  value: number,
+  min: number,
+  max: number,
+): number {
   return Math.min(max, Math.max(min, value))
 }
 
@@ -246,7 +259,9 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
   return (
     <div className={styles.lever}>
       <div className={styles.leverHead}>
-        <span className={styles.leverLabel} title={short}>{short}</span>
+        <span className={styles.leverLabel} title={short}>
+          {short}
+        </span>
         {onUnstar ? <StarButton filled label={`Remove ${short} from the bar`} onClick={onUnstar} /> : null}
       </div>
       {body}

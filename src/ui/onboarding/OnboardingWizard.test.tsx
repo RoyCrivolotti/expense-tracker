@@ -43,7 +43,14 @@ function goToStep(targetStep: number) {
 describe('OnboardingWizard', () => {
   it('has three pages, the first being the welcome with the money choices', () => {
     render(
-      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={vi.fn()} onSkip={vi.fn()} />,
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={datasetWith()}
+        applyPatch={vi.fn()}
+        firstRun
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
     )
     expect(screen.getByRole('heading', { name: 'Welcome' })).toBeInTheDocument()
     expect(screen.getByLabelText('Currency')).toBeInTheDocument()
@@ -52,7 +59,14 @@ describe('OnboardingWizard', () => {
 
   it('on a re-run, the first page is not a welcome and does not promise a first payment', () => {
     render(
-      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun={false} onDone={vi.fn()} onSkip={vi.fn()} />,
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={datasetWith()}
+        applyPatch={vi.fn()}
+        firstRun={false}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
     )
     expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull()
     expect(screen.getByRole('heading', { name: 'Setup' })).toBeInTheDocument()
@@ -61,7 +75,14 @@ describe('OnboardingWizard', () => {
 
   it('on a first run, says the ledger is private and that a first payment comes next', () => {
     render(
-      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={vi.fn()} onSkip={vi.fn()} />,
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={datasetWith()}
+        applyPatch={vi.fn()}
+        firstRun
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
     )
     expect(screen.getByText(/then you add your first payment/)).toBeInTheDocument()
   })
@@ -70,12 +91,25 @@ describe('OnboardingWizard', () => {
     const updateSettings = vi.fn().mockResolvedValue(defaultExpenseSettings())
     const source: ExpenseDataSource = {
       ...noopSource(),
-      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
-      createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main account', kind: 'debit', settlement: 'immediate', active: true }),
+      createCategory: vi
+        .fn()
+        .mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createAccount: vi
+        .fn()
+        .mockResolvedValue({ id: 2, name: 'Main account', kind: 'debit', settlement: 'immediate', active: true }),
       updateSettings,
     }
     const onDone = vi.fn()
-    render(<OnboardingWizard source={source} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={onDone} onSkip={vi.fn()} />)
+    render(
+      <OnboardingWizard
+        source={source}
+        dataset={datasetWith()}
+        applyPatch={vi.fn()}
+        firstRun
+        onDone={onDone}
+        onSkip={vi.fn()}
+      />,
+    )
     const before = screen.getByText(/^(\d|[^\d\s]).*[,.]\d\d/, { selector: 'strong' }).textContent
     fireEvent.click(screen.getByRole('button', { name: 'Change' }))
     fireEvent.change(screen.getByLabelText('Number format'), { target: { value: 'en-US' } })
@@ -90,12 +124,23 @@ describe('OnboardingWizard', () => {
     const onDone = vi.fn()
     const source: ExpenseDataSource = {
       ...noopSource(),
-      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
-      createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
+      createCategory: vi
+        .fn()
+        .mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createAccount: vi
+        .fn()
+        .mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
       updateSettings: vi.fn().mockResolvedValue(defaultExpenseSettings()),
     }
     render(
-      <OnboardingWizard source={source} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={onDone} onSkip={vi.fn()} />,
+      <OnboardingWizard
+        source={source}
+        dataset={datasetWith()}
+        applyPatch={vi.fn()}
+        firstRun
+        onDone={onDone}
+        onSkip={vi.fn()}
+      />,
     )
     goToStep(2)
     fireEvent.click(screen.getByText('Finish setup'))
@@ -110,7 +155,14 @@ describe('OnboardingWizard', () => {
       accounts: [{ id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }],
     })
     render(
-      <OnboardingWizard source={noopSource()} dataset={dataset} applyPatch={vi.fn()} firstRun={false} onDone={onDone} onSkip={vi.fn()} />,
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={dataset}
+        applyPatch={vi.fn()}
+        firstRun={false}
+        onDone={onDone}
+        onSkip={vi.fn()}
+      />,
     )
     goToStep(2)
     fireEvent.click(screen.getByText('Finish setup'))
@@ -118,7 +170,7 @@ describe('OnboardingWizard', () => {
     expect(onDone).not.toHaveBeenCalled()
   })
 
-  it('seeds the Money step from the tenant\'s real settings instead of hardcoded defaults', () => {
+  it("seeds the Money step from the tenant's real settings instead of hardcoded defaults", () => {
     const dataset = datasetWith({
       settings: {
         ...defaultExpenseSettings(),
@@ -273,7 +325,9 @@ describe('OnboardingWizard', () => {
   })
 
   it('requires a credit card name once "Add a credit card" is checked, so Finish never silently drops it', () => {
-    const dataset = datasetWith({ accounts: [{ id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }] })
+    const dataset = datasetWith({
+      accounts: [{ id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }],
+    })
     render(
       <OnboardingWizard
         source={noopSource()}
@@ -301,7 +355,9 @@ describe('OnboardingWizard', () => {
     const source: ExpenseDataSource = {
       canWrite: true,
       load: vi.fn(),
-      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'x', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createCategory: vi
+        .fn()
+        .mockResolvedValue({ id: 1, name: 'x', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
       createAccount,
       updateSettings: vi.fn().mockResolvedValue(defaultExpenseSettings()),
     }
@@ -399,7 +455,9 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText(/new categories:/)).toBeTruthy()
       expect(screen.getByText('1 new account: Main account')).toBeTruthy()
       expect(
-        screen.getByText("This adds to what you already have — it doesn't check for or merge duplicate categories or accounts."),
+        screen.getByText(
+          "This adds to what you already have — it doesn't check for or merge duplicate categories or accounts.",
+        ),
       ).toBeTruthy()
       expect(createAccount).not.toHaveBeenCalled()
     })

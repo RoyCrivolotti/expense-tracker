@@ -95,9 +95,7 @@ describe('computeCashReconciliation', () => {
   })
 
   it('includes months that only have a cash actual recorded', () => {
-    const rows = computeCashReconciliation([], accounts, settings, [
-      { yearMonth: '2026-02', actualCashCents: 150000 },
-    ])
+    const rows = computeCashReconciliation([], accounts, settings, [{ yearMonth: '2026-02', actualCashCents: 150000 }])
     expect(rows).toHaveLength(1)
     expect(rows[0]!.month).toBe('2026-02')
     expect(rows[0]!.gapCents).toBe(50000)
@@ -123,27 +121,18 @@ describe('computeCashReconciliation', () => {
     const actual = [{ yearMonth: '2026-01', actualCashCents: 70000 }]
 
     // Cash entered + statement paid -> reconciled.
-    expect(computeCashReconciliation([paidCard], accounts, settings, actual)[0]!.reconciled).toBe(
-      true,
-    )
+    expect(computeCashReconciliation([paidCard], accounts, settings, actual)[0]!.reconciled).toBe(true)
     // Statement still unpaid -> not reconciled even with cash entered.
-    expect(
-      computeCashReconciliation([unpaidCard], accounts, settings, actual)[0]!.reconciled,
-    ).toBe(false)
+    expect(computeCashReconciliation([unpaidCard], accounts, settings, actual)[0]!.reconciled).toBe(false)
     // No actual cash entered -> not reconciled.
     expect(computeCashReconciliation([paidCard], accounts, settings, [])[0]!.reconciled).toBe(false)
   })
 
   it('splits gap into carryover and this-month drift', () => {
-    const rows = computeCashReconciliation(
-      [],
-      accounts,
-      settings,
-      [
-        { yearMonth: '2026-05', actualCashCents: 90000 },
-        { yearMonth: '2026-06', actualCashCents: 85000 },
-      ],
-    )
+    const rows = computeCashReconciliation([], accounts, settings, [
+      { yearMonth: '2026-05', actualCashCents: 90000 },
+      { yearMonth: '2026-06', actualCashCents: 85000 },
+    ])
     expect(rows).toHaveLength(2)
     expect(rows[0]!.gapCents).toBe(-10000)
     expect(rows[0]!.carryoverGapCents).toBeNull()

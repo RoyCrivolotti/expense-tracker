@@ -80,10 +80,10 @@ describe('PastReportsModal', () => {
 
 describe('PastReportsModal — a report whose rows have changed', () => {
   /** The same report, but the payment carries the figures the settle stamped on it. */
-  const stampedSettled = (count: number, coveredCents: number) =>
-    settled.map((t) =>
-      t.id === 99 ? { ...t, reportCount: count, reportCoveredCents: coveredCents } : t,
-    )
+  const stampedSettled = (
+    count: number,
+    coveredCents: number,
+  ) => settled.map((t) => (t.id === 99 ? { ...t, reportCount: count, reportCoveredCents: coveredCents } : t))
 
   it('shows what was submitted and says the rows no longer match', () => {
     // Recorded as 3 rows totalling 20,000; only two rows worth 14,000 remain.
@@ -120,8 +120,7 @@ describe('PastReportsModal — nothing left of a report', () => {
 
     expect(screen.getByText('Alicante expenses, September 2026')).toBeInTheDocument()
     expect(screen.getByText(/2 transactions/)).toBeInTheDocument()
-    expect(screen.getByText(/none of the transactions this covered are still here/i))
-      .toBeInTheDocument()
+    expect(screen.getByText(/none of the transactions this covered are still here/i)).toBeInTheDocument()
   })
 
   it('offers the payment but not a report there is nothing to rebuild', () => {

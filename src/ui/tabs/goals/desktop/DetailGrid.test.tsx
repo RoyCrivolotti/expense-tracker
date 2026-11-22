@@ -35,10 +35,12 @@ describe('DetailGrid', () => {
     const grid = document.querySelector('[class*="detailGrid"]')!
     expect(grid.compareDocumentPosition(spread) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(grid.contains(spread)).toBe(false)
-    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 })).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 }),
+    ).toBeInTheDocument()
   })
 
-  it('splits the other six cards three and three, so the columns end within a card\'s height of each other', () => {
+  it("splits the other six cards three and three, so the columns end within a card's height of each other", () => {
     renderGrid()
     const columns = document.querySelectorAll('[class*="detailColumn"]')
     expect([...columns].map((c) => c.querySelectorAll('h3').length)).toEqual([3, 3])
@@ -82,7 +84,9 @@ describe('DetailGrid', () => {
       expect(screen.queryByText(/the money lasts all 30 years in/)).not.toBeInTheDocument()
 
       act(() => io.emit(0.3))
-      expect(await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 })).toBeInTheDocument()
+      expect(
+        await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 }),
+      ).toBeInTheDocument()
       expect(screen.getByText(/the money lasts all 30 years in/)).toBeInTheDocument()
     })
   })

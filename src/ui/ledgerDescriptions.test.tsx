@@ -17,20 +17,39 @@ const SETTLE = 250
  * `expected(text)` is what the window should list once the server has answered: its own matches merged with the
  * descriptions starting with the text among the older rows, as `mergeDescriptionMatches` joins them.
  */
-function windowOf(dataset: ExpenseDataset, from: string, source: TestSource = memorySource(dataset)) {
+function windowOf(
+  dataset: ExpenseDataset,
+  from: string,
+  source: TestSource = memorySource(dataset),
+) {
   const held = dataset.transactions.filter((t) => t.budgetMonth >= from)
   const own = buildDescriptionIndex(held, { locale: BROWSER_LOCALE })
-  const server = keyed(dataset.transactions.filter((t) => t.budgetMonth < from), { locale: BROWSER_LOCALE })
+  const server = keyed(
+    dataset.transactions.filter((t) => t.budgetMonth < from),
+    { locale: BROWSER_LOCALE },
+  )
   const index = withOlderDescriptions(own, source, { before: from, locale: BROWSER_LOCALE })
-  const expected = (text: string, limit = DEFAULT_SUGGEST_LIMIT) =>
-    labels(mergeDescriptionMatches(own.searchEntries(text, limit), server.searchEntries(normalizeDescriptionKey(text), limit), { text, limit }))
+  const expected = (
+    text: string,
+    limit = DEFAULT_SUGGEST_LIMIT,
+  ) =>
+    labels(
+      mergeDescriptionMatches(
+        own.searchEntries(text, limit),
+        server.searchEntries(normalizeDescriptionKey(text), limit),
+        { text, limit },
+      ),
+    )
   /** The server's finds for `text` that the rows held do not list on their own. */
   const olderOnly = (text: string) => expected(text).filter((label) => !labels(own.search(text)).includes(label))
   return { index, source, own, expected, olderOnly }
 }
 
 /** The suggestions for `value`, as a combobox that is typed into would take them. */
-function typing(index: ReturnType<typeof windowOf>['index'], first = '') {
+function typing(
+  index: ReturnType<typeof windowOf>['index'],
+  first = '',
+) {
   return renderHook(({ value }) => index.useSuggestions!(index, value), { initialProps: { value: first } })
 }
 
@@ -87,7 +106,10 @@ describe('the suggestions of a window', () => {
     const { index, source } = windowOf(descriptionDataset(5), '2026-01')
     const signals: AbortSignal[] = []
     const read = source.readDescriptionSuggest.bind(source)
-    source.readDescriptionSuggest = (request, options) => {
+    source.readDescriptionSuggest = (
+      request,
+      options,
+    ) => {
       if (options?.signal) signals.push(options.signal)
       return read(request, options)
     }
@@ -184,7 +206,10 @@ describe('the suggestions of a window', () => {
   it('take nothing from the items of an answer that says the prefix is too broad, which are not all its matches', async () => {
     const { index, expected, source } = windowOf(descriptionDataset(6), '2026-04')
     const answer = source.readDescriptionSuggest.bind(source)
-    source.readDescriptionSuggest = async (request, options) => ({ ...(await answer(request, options)), tooBroad: true })
+    source.readDescriptionSuggest = async (
+      request,
+      options,
+    ) => ({ ...(await answer(request, options)), tooBroad: true })
     const view = typing(index, 'ca')
     const own = view.result.current
     await settle()
@@ -196,7 +221,12 @@ describe('the suggestions of a window', () => {
   it('treat a prefix the server calls too broad as the rows held, as the server counts', async () => {
     const wide = makeDataset({
       transactions: Array.from({ length: MAX_SUGGEST_KEYS + 5 }, (_, i) =>
-        makeTransaction({ id: i + 1, description: `Wide ${i}`, budgetMonth: i < 3 ? '2026-02' : '2025-01', date: i < 3 ? '2026-02-01' : '2025-01-01' }),
+        makeTransaction({
+          id: i + 1,
+          description: `Wide ${i}`,
+          budgetMonth: i < 3 ? '2026-02' : '2025-01',
+          date: i < 3 ? '2026-02-01' : '2025-01-01',
+        }),
       ),
     })
     const { index, source } = windowOf(wide, '2026-01')
@@ -209,15 +239,21 @@ describe('the suggestions of a window', () => {
 })
 
 describe('where the rows held stop', () => {
-  const held = (months: string[], withRows: string[]): HeldLedger =>
-    ({ months, rows: new Map(withRows.map((m) => [m, []])) }) as unknown as HeldLedger
+  const held = (
+    months: string[],
+    withRows: string[],
+  ): HeldLedger => ({ months, rows: new Map(withRows.map((m) => [m, []])) }) as unknown as HeldLedger
 
   it('is the oldest month of the run of months held up to the newest', () => {
-    expect(olderThan(held(['2025-01', '2025-02', '2025-03', '2025-04'], ['2025-03', '2025-04']))).toEqual({ before: '2025-03' })
+    expect(olderThan(held(['2025-01', '2025-02', '2025-03', '2025-04'], ['2025-03', '2025-04']))).toEqual({
+      before: '2025-03',
+    })
   })
 
   it('leaves out what is held beyond a gap, which the server answers for as well', () => {
-    expect(olderThan(held(['2025-01', '2025-02', '2025-03', '2025-04'], ['2025-01', '2025-02', '2025-04']))).toEqual({ before: '2025-04' })
+    expect(olderThan(held(['2025-01', '2025-02', '2025-03', '2025-04'], ['2025-01', '2025-02', '2025-04']))).toEqual({
+      before: '2025-04',
+    })
   })
 
   it('has no month when the newest is not held, so the server answers for every row', () => {

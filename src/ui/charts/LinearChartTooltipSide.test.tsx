@@ -21,7 +21,10 @@ function phone() {
   }))
 }
 
-function chartAt(top: number, bottom: number) {
+function chartAt(
+  top: number,
+  bottom: number,
+) {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top, bottom, height: 0 } as DOMRect)
 }
 

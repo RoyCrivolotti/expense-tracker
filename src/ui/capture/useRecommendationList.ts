@@ -70,11 +70,14 @@ export function useRecommendationList() {
     }
   }, [next, book])
 
-  const remove = useCallback((id: string) => {
-    book.decided(id)
-    setItems((held) => (held ? held.filter((r) => r.id !== id) : held))
-    setOpenCount((n) => Math.max(0, n - 1))
-  }, [book])
+  const remove = useCallback(
+    (id: string) => {
+      book.decided(id)
+      setItems((held) => (held ? held.filter((r) => r.id !== id) : held))
+      setOpenCount((n) => Math.max(0, n - 1))
+    },
+    [book],
+  )
 
   return {
     items,

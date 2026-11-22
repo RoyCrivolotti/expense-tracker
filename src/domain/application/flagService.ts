@@ -62,7 +62,11 @@ function normalizeNewFlag(input: NewFlag): NewFlag {
   }
 }
 
-export async function createFlag(repo: ExpenseRepository, owner: string, input: NewFlag) {
+export async function createFlag(
+  repo: ExpenseRepository,
+  owner: string,
+  input: NewFlag,
+) {
   return repo.createFlag(owner, normalizeNewFlag(input))
 }
 
@@ -90,6 +94,10 @@ export async function patchFlag(
   return repo.updateFlag(owner, id, next)
 }
 
-export async function removeFlag(repo: ExpenseRepository, owner: string, id: number) {
+export async function removeFlag(
+  repo: ExpenseRepository,
+  owner: string,
+  id: number,
+) {
   return repo.deleteFlag(owner, id)
 }

@@ -24,7 +24,11 @@ afterEach(() => {
 })
 
 /** The row's place on screen is read twice per update: just before React changes the DOM, and after. */
-function moveRow(container: HTMLElement, before: number, after: number) {
+function moveRow(
+  container: HTMLElement,
+  before: number,
+  after: number,
+) {
   const row = container.querySelector<HTMLElement>('[data-vrow]')!
   vi.spyOn(row, 'getBoundingClientRect').mockReturnValueOnce(rect(before)).mockReturnValueOnce(rect(after))
 }

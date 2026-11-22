@@ -30,20 +30,31 @@ interface ViewOptions {
   filter?: object
 }
 
-function viewOf({ matching = target, partial = true, held, filter = { categoryId: 4 } }: ViewOptions = {}): SelectionView {
+function viewOf({
+  matching = target,
+  partial = true,
+  held,
+  filter = { categoryId: 4 },
+}: ViewOptions = {}): SelectionView {
   const dataset = { transactions: (held ?? []).map((id) => ({ id })) }
   const model = { dataset, ...(held === undefined ? { sums: dataset } : {}) } as unknown as ExpenseModel
   return { model, list: { matching, partial } as ListView, filter }
 }
 
-function render(actions: ExpenseActions, view: SelectionView = viewOf()) {
+function render(
+  actions: ExpenseActions,
+  view: SelectionView = viewOf(),
+) {
   const showToast = vi.fn()
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(ToastContext.Provider, { value: { showToast } }, children)
-  const hook = renderHook(({ view: now }: { view: SelectionView }) => usePagedSelection(actions, LOADED, [], undefined, [], now), {
-    wrapper,
-    initialProps: { view },
-  })
+  const hook = renderHook(
+    ({ view: now }: { view: SelectionView }) => usePagedSelection(actions, LOADED, [], undefined, [], now),
+    {
+      wrapper,
+      initialProps: { view },
+    },
+  )
   return { ...hook, showToast }
 }
 type Rendered = ReturnType<typeof render>['result']
@@ -101,7 +112,12 @@ describe('the select button, which goes on to every row the filter matches', () 
     expect(result.current.selectedCount).toBe(342)
     expect(result.current.selected.size).toBe(3)
     expect(result.current.describable).toBe(false)
-    expect(result.current.bar).toEqual({ allLabel: 'Deselect all', matching: false, note: 'edit only', deleteBlocked: true })
+    expect(result.current.bar).toEqual({
+      allLabel: 'Deselect all',
+      matching: false,
+      note: 'edit only',
+      deleteBlocked: true,
+    })
   })
 
   it('keeps the count it was shown while the list reads again, because the server checks that count', async () => {
@@ -230,7 +246,9 @@ describe('editing what the selection names', () => {
   })
 
   it('lets go of the choice and closes the sheet when the server refuses, because the count it was shown cannot be trusted', async () => {
-    const refused = new Error('The ledger changed since you looked at these transactions. Nothing was changed; look again and retry')
+    const refused = new Error(
+      'The ledger changed since you looked at these transactions. Nothing was changed; look again and retry',
+    )
     const actions = actionsOf({ updateMatching: vi.fn().mockRejectedValue(refused) })
     const { result, showToast } = render(actions)
     enter(result)

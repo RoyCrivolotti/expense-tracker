@@ -36,7 +36,10 @@ export function revokeStaged(items: PendingReceipt[]): void {
 }
 
 /** Drop one staged receipt by index, revoking just its blob. */
-export function removeStaged(items: PendingReceipt[], index: number): PendingReceipt[] {
+export function removeStaged(
+  items: PendingReceipt[],
+  index: number,
+): PendingReceipt[] {
   const target = items[index]
   if (!target) return items
   revokeStaged([target])

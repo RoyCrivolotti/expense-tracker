@@ -47,9 +47,21 @@ function routeFetch() {
     ['/api/expenses/reference', getReference],
     ['/api/expenses/cube', getCube],
   ]
-  const call = (handler: Handler, url: URL, method: string, params?: Record<string, string>) =>
-    world.call(handler, { method, path: `${url.pathname.slice('/api/expenses'.length)}${url.search}`, ...(params ? { params } : {}) })
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  const call = (
+    handler: Handler,
+    url: URL,
+    method: string,
+    params?: Record<string, string>,
+  ) =>
+    world.call(handler, {
+      method,
+      path: `${url.pathname.slice('/api/expenses'.length)}${url.search}`,
+      ...(params ? { params } : {}),
+    })
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     const method = init?.method ?? 'GET'
     const id = /^\/api\/expenses\/transactions\/(\d+)$/.exec(url.pathname)?.[1]
@@ -87,11 +99,18 @@ const byId = (ids: number[]): number[] => [...ids].sort((a, b) => a - b)
 async function classicClient(): Promise<Client> {
   let held = await apiDataSource.load()
   const { result } = renderHook(() =>
-    useExpenseActions(apiDataSource, (patch) => {
-      held = patch(held)
-    }, vi.fn()),
+    useExpenseActions(
+      apiDataSource,
+      (patch) => {
+        held = patch(held)
+      },
+      vi.fn(),
+    ),
   )
-  const of = (dataset: ExpenseDataset): Shown => ({ ids: byId(dataset.transactions.map((t) => t.id)), count: dataset.transactions.length })
+  const of = (dataset: ExpenseDataset): Shown => ({
+    ids: byId(dataset.transactions.map((t) => t.id)),
+    count: dataset.transactions.length,
+  })
   return {
     remove: (id) => act(() => result.current!.deleteTransaction(id)),
     shown: () => Promise.resolve(of(held)),
@@ -170,25 +189,28 @@ describe.each([
   ['classic', () => classicClient()],
   ['ledger mode', () => ledgerClient(FILTER)],
 ] as const)('a delete repeated after its answer was lost, in %s', (_mode, connect) => {
-  it.each(['repeated by the browser', 'answer lost'] as const)('leaves what the screen shows as a fresh read does when it is %s', async (lost) => {
-    const client = await connect()
-    const before = await client.shown()
-    expect(before.count).toBeGreaterThan(1)
-    const id = before.ids[0]!
+  it.each(['repeated by the browser', 'answer lost'] as const)(
+    'leaves what the screen shows as a fresh read does when it is %s',
+    async (lost) => {
+      const client = await connect()
+      const before = await client.shown()
+      expect(before.count).toBeGreaterThan(1)
+      const id = before.ids[0]!
 
-    fate = lost
-    if (lost === 'answer lost') {
-      await expect(client.remove(id)).rejects.toThrow('Load failed')
-      // The server has the delete, the screen was never told: it still lists the row until the person tries again.
-      expect((await client.shown()).ids).toContain(id)
-    }
-    await client.remove(id)
+      fate = lost
+      if (lost === 'answer lost') {
+        await expect(client.remove(id)).rejects.toThrow('Load failed')
+        // The server has the delete, the screen was never told: it still lists the row until the person tries again.
+        expect((await client.shown()).ids).toContain(id)
+      }
+      await client.remove(id)
 
-    const shown = await client.shown()
-    expect(shown.ids).toEqual(before.ids.filter((other) => other !== id))
-    expect(shown.count).toBe(before.count - 1)
-    expect(shown).toEqual(await client.fresh())
-  })
+      const shown = await client.shown()
+      expect(shown.ids).toEqual(before.ids.filter((other) => other !== id))
+      expect(shown.count).toBe(before.count - 1)
+      expect(shown).toEqual(await client.fresh())
+    },
+  )
 
   it('does not count the row twice when the delete is made again after the screen has dropped it', async () => {
     const client = await connect()

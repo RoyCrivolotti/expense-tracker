@@ -23,13 +23,28 @@ const seriesCalls = (source: TestSource) => source.calls.filter((c) => c === 'se
 const flush = () => new Promise((resolve) => setTimeout(resolve, 5))
 
 /** A monthly charge for a description nothing else uses, so that it is a series of its own. */
-const charge = (id: number, month: number): Transaction =>
-  makeTransaction({ id, description: 'Cloud backup', date: `2026-0${month}-04`, budgetMonth: `2026-0${month}`, amountCents: 900 })
+const charge = (
+  id: number,
+  month: number,
+): Transaction =>
+  makeTransaction({
+    id,
+    description: 'Cloud backup',
+    date: `2026-0${month}-04`,
+    budgetMonth: `2026-0${month}`,
+    amountCents: 900,
+  })
 
 /** The ledger after `added`, which is what the server holds once a write has landed. */
-const after = (...added: Transaction[]): ExpenseDataset => ({ ...dataset, transactions: [...dataset.transactions, ...added] })
+const after = (...added: Transaction[]): ExpenseDataset => ({
+  ...dataset,
+  transactions: [...dataset.transactions, ...added],
+})
 
-async function open(source = memorySource(dataset), policy = WINDOWED) {
+async function open(
+  source = memorySource(dataset),
+  policy = WINDOWED,
+) {
   const session = new LedgerSession(source, { policy })
   await session.open()
   source.calls.length = 0
@@ -84,9 +99,18 @@ describe('LedgerSession, the recurring series', () => {
 
   it.each([
     ['a category renamed', (d: ExpenseDataset) => patchAfterCategory(d, { ...d.categories[0]!, name: 'Renamed' })],
-    ['a flag put on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, flagId: d.flags[0]!.id })],
-    ['labels set on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, labelIds: [d.labels[0]!.id] })],
-    ['a note written on a row', (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, notes: 'noted' })],
+    [
+      'a flag put on a row',
+      (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, flagId: d.flags[0]!.id }),
+    ],
+    [
+      'labels set on a row',
+      (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, labelIds: [d.labels[0]!.id] }),
+    ],
+    [
+      'a note written on a row',
+      (d: ExpenseDataset) => patchAfterTransactionUpdate(d, { ...d.transactions[0]!, notes: 'noted' }),
+    ],
   ])('treats the series as current after %s', async (_name, write) => {
     const { session, source } = await open()
     session.watchSeries()

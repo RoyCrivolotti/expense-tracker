@@ -3,7 +3,10 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import { planMoneyLabel } from './planMoneyLabel'
 
 /** The price the house will cost on the day it is bought, in the plan's euros, or null when there is no purchase to price. */
-function priceAtPurchase(draft: NewGoalScenario, inflationRate: number): { year: number; real: number } | null {
+function priceAtPurchase(
+  draft: NewGoalScenario,
+  inflationRate: number,
+): { year: number; real: number } | null {
   const year = draft.housePurchaseYear
   if (year === null || year <= 0 || draft.housePriceCents <= 0) return null
   return { year, real: housePriceAtPurchaseCents({ ...draft, inflationRate }) }
@@ -15,7 +18,11 @@ function priceAtPurchase(draft: NewGoalScenario, inflationRate: number): { year:
  * start, which the plan counts in. Nothing for a house not bought, or owned already (its price is what it is worth now),
  * or no price yet.
  */
-export function housePriceHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function housePriceHint(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   const bought = priceAtPurchase(draft, inflationRate)
   if (!bought) return null
   const money = (cents: number) => formatCentsCompact(cents, format)
@@ -26,7 +33,11 @@ export function housePriceHint(draft: NewGoalScenario, inflationRate: number, fo
  * The same cost in euros as paid on the day, so the number a buyer will actually see is there too, and the rates it was
  * worked out from. For whoever opens the note, not for a first read.
  */
-export function housePriceDetail(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+export function housePriceDetail(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   const bought = priceAtPurchase(draft, inflationRate)
   if (!bought) return null
   const paid = Math.round(bought.real * Math.pow(1 + inflationRate, bought.year))

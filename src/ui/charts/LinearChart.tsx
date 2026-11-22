@@ -29,14 +29,7 @@ import { ChartStartMarks, type StartMark } from './ChartStartMarks'
 import { drawnValuesOf, placeX, placesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
-import {
-  collectDomain,
-  linePath,
-  makeScale,
-  niceScale,
-  stackAreas,
-  type ScatterPoint,
-} from './linearScale'
+import { collectDomain, linePath, makeScale, niceScale, stackAreas, type ScatterPoint } from './linearScale'
 import type { ValueTagSpec } from './valueTags'
 import styles from './charts.module.css'
 
@@ -168,21 +161,14 @@ function useGeometry(
     // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
     // path a negative height and draw nothing, and a negative one pushes the plot off the top.
     const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
-    const n = Math.max(
-      places,
-      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf),
-    )
+    const n = Math.max(places, ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf))
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
     const areaSeries = series.filter((s) => s.kind === 'area')
     const stackedBands = stackAreas(areaSeries.map((a) => a.values))
     const stackedValues = stackedBands.flatMap((b) => [...b.lo, ...b.hi])
-    const envelopeValues = series
-      .filter((s) => s.kind === 'band')
-      .flatMap(envelopeOf)
-    const scatterValues = series
-      .filter((s) => s.kind === 'scatter')
-      .flatMap((s) => s.points?.map((p) => p.value) ?? [])
+    const envelopeValues = series.filter((s) => s.kind === 'band').flatMap(envelopeOf)
+    const scatterValues = series.filter((s) => s.kind === 'scatter').flatMap((s) => s.points?.map((p) => p.value) ?? [])
     const lineValues = series
       .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
       .flatMap(drawnValuesOf)
@@ -202,8 +188,7 @@ function useGeometry(
     const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
     const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }), 5, maxTicksFor(innerH))
     const scaleY = makeScale(nice.min, nice.max, padTop + innerH, padTop)
-    const xForIndex = (i: number) =>
-      n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
+    const xForIndex = (i: number) => (n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW)
     return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
   }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp, places])
 }
@@ -212,7 +197,11 @@ function useGeometry(
  * The size the chart is drawn at: its wrapper's width, and its height prop, or the wrapper's own
  * once it has been measured when the chart fills its box (never so little that the plot is gone).
  */
-function useChartBox(ref: RefObject<HTMLElement | null>, height: number, fillHeight: boolean | undefined) {
+function useChartBox(
+  ref: RefObject<HTMLElement | null>,
+  height: number,
+  fillHeight: boolean | undefined,
+) {
   const size = useElementSize(ref, { width: FALLBACK_W, height }, fillHeight)
   const measured = fillHeight && size.height > 0
   return { width: size.width, height: measured ? Math.max(MIN_FILL_H, size.height) : height }
@@ -330,27 +319,24 @@ export function LinearChart({
           <rect x={PAD.left - 1} y={geo.padTop} width={geo.innerW + 2} height={geo.innerH + 1} />
         </clipPath>
         <g clipPath={`url(#${plotClipId})`}>
-          {series.filter((s) => s.kind === 'band').map((s) =>
-            s.band ? (
-              <ChartBandLayer
-                key={s.id}
-                color={s.color}
-                lo={s.band.lo}
-                hi={s.band.hi}
-                loPre={s.band.loPre}
-                hiPre={s.band.hiPre}
-                xForIndex={placeX(s, geo.xForIndex)}
-                scaleY={geo.scaleY}
-                fillOpacity={0.18}
-              />
-            ) : null,
-          )}
-          <ChartRefCurves
-            curves={refCurves}
-            xForIndex={geo.xForIndex}
-            scaleY={geo.scaleY}
-            highlight={refHighlight}
-          />
+          {series
+            .filter((s) => s.kind === 'band')
+            .map((s) =>
+              s.band ? (
+                <ChartBandLayer
+                  key={s.id}
+                  color={s.color}
+                  lo={s.band.lo}
+                  hi={s.band.hi}
+                  loPre={s.band.loPre}
+                  hiPre={s.band.hiPre}
+                  xForIndex={placeX(s, geo.xForIndex)}
+                  scaleY={geo.scaleY}
+                  fillOpacity={0.18}
+                />
+              ) : null,
+            )}
+          <ChartRefCurves curves={refCurves} xForIndex={geo.xForIndex} scaleY={geo.scaleY} highlight={refHighlight} />
         </g>
         {lineSeries.map((s) => (
           <path
@@ -362,18 +348,20 @@ export function LinearChart({
             strokeDasharray={s.dashed ? '6 4' : undefined}
           />
         ))}
-        {series.filter((s) => s.kind === 'scatter').map((s) => (
-          <ChartScatterLayer
-            key={s.id}
-            color={s.color}
-            points={s.points ?? []}
-            xForIndex={geo.xForIndex}
-            scaleY={geo.scaleY}
-            connect={s.connect ?? false}
-            dashed={s.dashed ?? false}
-            dots={s.dots ?? true}
-          />
-        ))}
+        {series
+          .filter((s) => s.kind === 'scatter')
+          .map((s) => (
+            <ChartScatterLayer
+              key={s.id}
+              color={s.color}
+              points={s.points ?? []}
+              xForIndex={geo.xForIndex}
+              scaleY={geo.scaleY}
+              connect={s.connect ?? false}
+              dashed={s.dashed ?? false}
+              dots={s.dots ?? true}
+            />
+          ))}
         <ChartRefLines
           values={refLines}
           scaleY={geo.scaleY}
@@ -382,7 +370,14 @@ export function LinearChart({
           minGap={REF_LINE_MIN_GAP}
           highlight={refHighlight}
         />
-        <ChartStartMarks marks={startMarks} geo={geo} left={PAD.left} right={width - PAD.right} active={active} annotations={annotations} />
+        <ChartStartMarks
+          marks={startMarks}
+          geo={geo}
+          left={PAD.left}
+          right={width - PAD.right}
+          active={active}
+          annotations={annotations}
+        />
         <ChartAnnotationLayer
           annotations={annotations}
           xForIndex={geo.xForIndex}
@@ -391,11 +386,7 @@ export function LinearChart({
           right={width - PAD.right}
         />
         {todayIndex !== undefined && (
-          <ChartTodayMarker
-            x={geo.xForIndex(todayIndex)}
-            yTop={geo.padTop}
-            yBottom={geo.padTop + geo.innerH}
-          />
+          <ChartTodayMarker x={geo.xForIndex(todayIndex)} yTop={geo.padTop} yBottom={geo.padTop + geo.innerH} />
         )}
         <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={drawnHeight - 8} />
         <ChartPurchaseMarkers
@@ -404,11 +395,7 @@ export function LinearChart({
           yTop={geo.padTop}
           innerH={geo.innerH}
         />
-        <ChartLifeEventMarkers
-          markers={lifeEventMarkers}
-          xForIndex={geo.xForIndex}
-          yTop={geo.padTop}
-        />
+        <ChartLifeEventMarkers markers={lifeEventMarkers} xForIndex={geo.xForIndex} yTop={geo.padTop} />
         <ChartLabeledMarkers
           markers={labeledMarkers}
           xForIndex={geo.xForIndex}
@@ -437,7 +424,9 @@ export function LinearChart({
           scaleY={geo.scaleY}
           lines={lineSeries}
           bands={series.filter((s) => s.kind === 'band')}
-          pointLines={series.flatMap((s) => (s.tagged && s.points ? [{ id: s.id, color: s.color, points: s.points }] : []))}
+          pointLines={series.flatMap((s) =>
+            s.tagged && s.points ? [{ id: s.id, color: s.color, points: s.points }] : [],
+          )}
         />
       </svg>
       <StepKeysHint id={keysId} show={steppable} />

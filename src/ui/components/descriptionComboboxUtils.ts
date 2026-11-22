@@ -1,7 +1,11 @@
 import { useEffect, useRef, type KeyboardEvent, type RefObject } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 
-export function moveHighlight(current: number, delta: number, max: number): number {
+export function moveHighlight(
+  current: number,
+  delta: number,
+  max: number,
+): number {
   if (max <= 0) return -1
   if (current < 0) return 0
   return (current + delta + max) % max
@@ -62,7 +66,10 @@ export function scheduleBlurDismiss(
  * `scheduleBlurDismiss` for a component: the pending timer is cleared when the field goes away, so it cannot fire on
  * something that is no longer there (a form closed within 120ms of leaving the field).
  */
-export function useBlurDismiss(rootRef: RefObject<HTMLDivElement | null>, dismiss: () => void): () => void {
+export function useBlurDismiss(
+  rootRef: RefObject<HTMLDivElement | null>,
+  dismiss: () => void,
+): () => void {
   const timer = useRef<number | null>(null)
   useEffect(
     () => () => {

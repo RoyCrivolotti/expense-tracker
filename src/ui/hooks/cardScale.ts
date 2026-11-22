@@ -20,7 +20,12 @@ interface Share {
  * The scale at which a card of `natural` size, under `chrome` pixels of controls that do not scale,
  * takes `share` of the box in each direction. As large as it can be without going over either.
  */
-function fit(box: Size, natural: Size, chrome: number, share: Share): number {
+function fit(
+  box: Size,
+  natural: Size,
+  chrome: number,
+  share: Share,
+): number {
   if (!(natural.width > 0) || !(natural.height > 0)) return 1
   const byWidth = (box.width * share.width) / natural.width
   const byHeight = (box.height * share.height - chrome) / natural.height
@@ -35,14 +40,23 @@ function fit(box: Size, natural: Size, chrome: number, share: Share): number {
  * is as large as it may be made, so that it can still be moved), and a card that has more to say than
  * it had is made smaller to keep fitting rather than larger than its box.
  */
-export function effectiveScale(choice: number | null, box: Size, natural: Size, chrome: number): number {
+export function effectiveScale(
+  choice: number | null,
+  box: Size,
+  natural: Size,
+  chrome: number,
+): number {
   if (choice === null) return Math.min(1, fit(box, natural, chrome, COMFORT))
   const most = fit(box, natural, chrome, LIMIT)
   return Math.min(most, Math.max(MIN_SCALE, choice))
 }
 
 /** The size of the card: its content scaled, and the controls above it as they are. */
-export function scaledSize(natural: Size, chrome: number, scale: number): Size {
+export function scaledSize(
+  natural: Size,
+  chrome: number,
+  scale: number,
+): Size {
   return { width: natural.width * scale, height: chrome + natural.height * scale }
 }
 
@@ -50,7 +64,11 @@ export function scaledSize(natural: Size, chrome: number, scale: number): Size {
  * The scale a pointer dragging the bottom right corner makes: the movement along the card's diagonal
  * is the growth, so the corner follows the pointer and the card keeps its proportions.
  */
-export function scaleFromDrag(scale: number, content: Size, delta: Point): number {
+export function scaleFromDrag(
+  scale: number,
+  content: Size,
+  delta: Point,
+): number {
   const along = delta.x * content.width + delta.y * content.height
   const diagonal = content.width * content.width + content.height * content.height
   if (!(diagonal > 0)) return scale
@@ -58,6 +76,9 @@ export function scaleFromDrag(scale: number, content: Size, delta: Point): numbe
 }
 
 /** One step larger or smaller, for the keys. */
-export function stepScale(scale: number, direction: 1 | -1): number {
+export function stepScale(
+  scale: number,
+  direction: 1 | -1,
+): number {
   return direction === 1 ? scale * STEP : scale / STEP
 }

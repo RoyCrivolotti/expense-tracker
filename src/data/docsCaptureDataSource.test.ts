@@ -81,10 +81,9 @@ describe('docsCaptureDataSource.updateTransactions', () => {
     const dataset = await docsCaptureDataSource.load()
     const [a, b] = dataset.transactions
 
-    const { updated, transactions } = await docsCaptureDataSource.updateTransactions!(
-      [a!.id, b!.id],
-      { description: 'One common name' },
-    )
+    const { updated, transactions } = await docsCaptureDataSource.updateTransactions!([a!.id, b!.id], {
+      description: 'One common name',
+    })
 
     expect(updated).toBe(2)
     expect(transactions.map((t) => t.id)).toEqual([a!.id, b!.id])
@@ -351,9 +350,7 @@ describe('docsCaptureDataSource.setTransactionLabels', () => {
   it('rejects rather than fabricating a row for an id nothing loaded', async () => {
     await docsCaptureDataSource.load()
 
-    await expect(docsCaptureDataSource.setTransactionLabels!(999_999, [1])).rejects.toThrow(
-      'Transaction not found',
-    )
+    await expect(docsCaptureDataSource.setTransactionLabels!(999_999, [1])).rejects.toThrow('Transaction not found')
   })
 })
 
@@ -470,7 +467,13 @@ describe('docsCaptureDataSource ledger parts', () => {
 
     await docsCaptureDataSource.load()
     const base = (await source.readReferencePart()).revision
-    await docsCaptureDataSource.createFlag!({ name: 'Another', color: '#000000', reimbursable: false, sortOrder: 9, active: true })
+    await docsCaptureDataSource.createFlag!({
+      name: 'Another',
+      color: '#000000',
+      reimbursable: false,
+      sortOrder: 9,
+      active: true,
+    })
     const afterFlag = await source.readReferencePart()
     expect(afterFlag.revision).not.toBe(base)
     expect(afterFlag.reference.flags.map((f) => f.name)).toContain('Another')

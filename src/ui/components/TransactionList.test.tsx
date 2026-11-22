@@ -9,12 +9,8 @@ import { TransactionList } from './TransactionList'
 
 const lookup = buildLookup(
   makeDataset({
-    categories: [
-      { id: 1, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 0, active: true },
-    ],
-    accounts: [
-      { id: 1, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true },
-    ],
+    categories: [{ id: 1, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+    accounts: [{ id: 1, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true }],
   }),
 )
 
@@ -75,12 +71,7 @@ describe('TransactionList budget month pill', () => {
   })
 
   it('names the budget month, not the calendar month the date falls in', () => {
-    render(
-      <TransactionList
-        rows={rows(txn({ date: '2026-07-31', budgetMonth: '2026-08' }))}
-        lookup={lookup}
-      />,
-    )
+    render(<TransactionList rows={rows(txn({ date: '2026-07-31', budgetMonth: '2026-08' }))} lookup={lookup} />)
     expect(screen.getByText("Aug '26")).toHaveAttribute('title', 'Budget month: August 2026')
     expect(screen.queryByText("Jul '26")).toBeNull()
   })
@@ -177,9 +168,7 @@ describe('TransactionList onClearFlag', () => {
     // steal the other's click.
     const onSelect = vi.fn()
     const row = txn({ id: 1, description: 'Madrid hotel' })
-    render(
-      <TransactionList rows={rows(row)} lookup={lookup} flat onClearFlag={vi.fn()} onSelect={onSelect} />,
-    )
+    render(<TransactionList rows={rows(row)} lookup={lookup} flat onClearFlag={vi.fn()} onSelect={onSelect} />)
 
     await userEvent.click(screen.getByText('Madrid hotel'))
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
@@ -193,12 +182,8 @@ describe('TransactionList label chips', () => {
 
   const labelLookup = buildLookup(
     makeDataset({
-      categories: [
-        { id: 1, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 0, active: true },
-      ],
-      accounts: [
-        { id: 1, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true },
-      ],
+      categories: [{ id: 1, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true }],
       labels: [trip, work, move],
     }),
   )
@@ -293,7 +278,7 @@ describe('TransactionList collapsible date groups', () => {
     expect(screen.getByText('Earlier txn')).toBeVisible()
   })
 
-  it("lets the add button open its own flow without toggling collapse", async () => {
+  it('lets the add button open its own flow without toggling collapse', async () => {
     const onAddForDate = vi.fn()
     render(
       <TransactionList
@@ -307,7 +292,7 @@ describe('TransactionList collapsible date groups', () => {
     expect(screen.getByText('Degiro')).toBeVisible()
   })
 
-  it("keeps the day select-all control and its indicator working while collapsed", async () => {
+  it('keeps the day select-all control and its indicator working while collapsed', async () => {
     const onToggleDate = vi.fn()
     const { container } = render(
       <TransactionList

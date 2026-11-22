@@ -8,7 +8,10 @@ import { useDuplicateOffer } from './useDuplicateOffer'
 import { saveTransaction } from './transactionSaveIntent'
 
 /** Nothing is saved for a card until it is answered, and the question is shown where it is. */
-function refuseUnanswered(card: SeedCard | undefined, input: NewTransaction): void {
+function refuseUnanswered(
+  card: SeedCard | undefined,
+  input: NewTransaction,
+): void {
   if (!card || (card.answer.accountId !== null && input.accountId !== 0)) return
   // The question says it itself when it is on screen, so the form does not say it a second time.
   throw new Error(card.ask?.() ? '' : card.unanswered)
@@ -41,7 +44,11 @@ export function useQueueAdvance(
   })
   return {
     /** Saves the form. After a create it asks the queue what comes next. */
-    submit: async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
+    submit: async (
+      input: NewTransaction,
+      id?: number,
+      intent?: InstallmentIntent,
+    ) => {
       const card = seed?.card
       // A card is asked about so that the account is never a guess: nothing is saved until it is answered.
       if (id == null) refuseUnanswered(card, input)

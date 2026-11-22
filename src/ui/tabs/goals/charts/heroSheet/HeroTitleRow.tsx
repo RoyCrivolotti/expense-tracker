@@ -7,7 +7,13 @@ export function HeroTitleRow({ onOpen }: { onOpen: () => void }) {
   return (
     <div className={styles.titleRow}>
       <h3 className={goalsStyles.chartTitle}>Invested portfolio projection</h3>
-      <button type="button" className={styles.open} aria-label="Open the chart full screen" aria-haspopup="dialog" onClick={onOpen}>
+      <button
+        type="button"
+        className={styles.open}
+        aria-label="Open the chart full screen"
+        aria-haspopup="dialog"
+        onClick={onOpen}
+      >
         <ExpandIcon aria-hidden="true" />
       </button>
     </div>

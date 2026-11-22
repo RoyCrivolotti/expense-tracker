@@ -23,8 +23,11 @@ beforeAll(() => {
 
 const reached: PagesFunction = () => Promise.resolve(Response.json({ reached: true }))
 /** `world.call` prefixes /api/expenses, so `/..` steps back out to /api/access. */
-const as = (email: string, path: string, handler: Parameters<World['call']>[0] = reached) =>
-  world.call(handler, { path: `/../access${path}`, email })
+const as = (
+  email: string,
+  path: string,
+  handler: Parameters<World['call']>[0] = reached,
+) => world.call(handler, { path: `/../access${path}`, email })
 
 describe('a person Access has signed in but nobody approved', () => {
   it.each([

@@ -1,7 +1,4 @@
-import type {
-  AccessRequest,
-  AllowedUser,
-} from '../../domain/ports/accessRepository'
+import type { AccessRequest, AllowedUser } from '../../domain/ports/accessRepository'
 
 interface AllowedUserRow {
   email: string
@@ -42,13 +39,14 @@ function toAccessRequest(row: AccessRequestRow): AccessRequest {
 }
 
 export async function countActiveUsers(db: D1Database): Promise<number> {
-  const row = await db
-    .prepare("SELECT COUNT(*) AS n FROM allowed_users WHERE status = 'active'")
-    .first<{ n: number }>()
+  const row = await db.prepare("SELECT COUNT(*) AS n FROM allowed_users WHERE status = 'active'").first<{ n: number }>()
   return row?.n ?? 0
 }
 
-export async function isAllowedUser(db: D1Database, email: string): Promise<boolean> {
+export async function isAllowedUser(
+  db: D1Database,
+  email: string,
+): Promise<boolean> {
   const row = await db
     .prepare("SELECT 1 AS ok FROM allowed_users WHERE email = ? AND status = 'active'")
     .bind(email)
@@ -60,10 +58,7 @@ export async function getAllowedUserRow(
   db: D1Database,
   email: string,
 ): Promise<AllowedUser | null> {
-  const row = await db
-    .prepare('SELECT * FROM allowed_users WHERE email = ?')
-    .bind(email)
-    .first<AllowedUserRow>()
+  const row = await db.prepare('SELECT * FROM allowed_users WHERE email = ?').bind(email).first<AllowedUserRow>()
   return row ? toAllowedUser(row) : null
 }
 
@@ -97,9 +92,7 @@ export async function findPendingRequestRow(
   email: string,
 ): Promise<AccessRequest | null> {
   const row = await db
-    .prepare(
-      "SELECT * FROM access_requests WHERE email = ? AND status = 'pending' ORDER BY requested_at DESC LIMIT 1",
-    )
+    .prepare("SELECT * FROM access_requests WHERE email = ? AND status = 'pending' ORDER BY requested_at DESC LIMIT 1")
     .bind(email)
     .first<AccessRequestRow>()
   return row ? toAccessRequest(row) : null
@@ -123,10 +116,7 @@ export async function findRequestByIdRow(
   db: D1Database,
   id: string,
 ): Promise<AccessRequest | null> {
-  const row = await db
-    .prepare('SELECT * FROM access_requests WHERE id = ?')
-    .bind(id)
-    .first<AccessRequestRow>()
+  const row = await db.prepare('SELECT * FROM access_requests WHERE id = ?').bind(id).first<AccessRequestRow>()
   return row ? toAccessRequest(row) : null
 }
 
@@ -143,18 +133,18 @@ export async function insertAccessRequest(
     .run()
 }
 
-export async function markRequestApprovedRow(db: D1Database, id: string): Promise<void> {
-  await db
-    .prepare("UPDATE access_requests SET status = 'approved' WHERE id = ?")
-    .bind(id)
-    .run()
+export async function markRequestApprovedRow(
+  db: D1Database,
+  id: string,
+): Promise<void> {
+  await db.prepare("UPDATE access_requests SET status = 'approved' WHERE id = ?").bind(id).run()
 }
 
-export async function markRequestRejectedRow(db: D1Database, id: string): Promise<void> {
-  await db
-    .prepare("UPDATE access_requests SET status = 'rejected' WHERE id = ?")
-    .bind(id)
-    .run()
+export async function markRequestRejectedRow(
+  db: D1Database,
+  id: string,
+): Promise<void> {
+  await db.prepare("UPDATE access_requests SET status = 'rejected' WHERE id = ?").bind(id).run()
 }
 
 export async function findLatestRequestByEmailRow(
@@ -168,7 +158,10 @@ export async function findLatestRequestByEmailRow(
   return row ? toAccessRequest(row) : null
 }
 
-export async function revokeAllowedUserRow(db: D1Database, email: string): Promise<boolean> {
+export async function revokeAllowedUserRow(
+  db: D1Database,
+  email: string,
+): Promise<boolean> {
   const result = await db
     .prepare("UPDATE allowed_users SET status = 'revoked' WHERE email = ? AND status = 'active'")
     .bind(email)
@@ -181,13 +174,13 @@ export async function touchLastSeenRow(
   email: string,
   seenAt: string,
 ): Promise<void> {
-  await db
-    .prepare('UPDATE allowed_users SET last_seen_at = ? WHERE email = ?')
-    .bind(seenAt, email)
-    .run()
+  await db.prepare('UPDATE allowed_users SET last_seen_at = ? WHERE email = ?').bind(seenAt, email).run()
 }
 
-export async function listGroupGrantIds(db: D1Database, email: string): Promise<string[]> {
+export async function listGroupGrantIds(
+  db: D1Database,
+  email: string,
+): Promise<string[]> {
   const result = await db
     .prepare('SELECT group_id FROM user_group_grants WHERE email = ?')
     .bind(email)
@@ -225,6 +218,9 @@ export async function revokeGroupRow(
   return (result.meta.changes ?? 0) > 0
 }
 
-export async function revokeAllGroupRows(db: D1Database, email: string): Promise<void> {
+export async function revokeAllGroupRows(
+  db: D1Database,
+  email: string,
+): Promise<void> {
   await db.prepare('DELETE FROM user_group_grants WHERE email = ?').bind(email).run()
 }

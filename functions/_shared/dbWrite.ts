@@ -35,7 +35,11 @@ import {
  * the alternative (each write path re-deriving labelIds itself) is exactly the
  * kind of drift that would let one of them silently keep returning `[]`.
  */
-export async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
+export async function deriveOne(
+  env: Env,
+  owner: string,
+  stored: StoredTransaction,
+): Promise<Transaction> {
   const acc = await env.DB.prepare('SELECT * FROM accounts WHERE id = ? AND owner = ?')
     .bind(stored.accountId, owner)
     .first<AccountRow>()
@@ -50,12 +54,11 @@ export async function deriveOne(env: Env, owner: string, stored: StoredTransacti
   // Joined to labels, not read off transaction_labels alone: a row whose label
   // was since deleted is dropped here rather than returned, matching loadDataset
   // (db.ts) and the tolerance flagGroups.ts already gives a dangling flagId.
-  const { results } = await env.DB
-    .prepare(
-      `SELECT tl.label_id FROM transaction_labels tl
+  const { results } = await env.DB.prepare(
+    `SELECT tl.label_id FROM transaction_labels tl
        JOIN labels l ON l.id = tl.label_id
        WHERE tl.transaction_id = ?`,
-    )
+  )
     .bind(stored.id)
     .all<{ label_id: number }>()
   const labelIds = (results ?? []).map((r) => r.label_id)
@@ -97,9 +100,7 @@ async function resolvePlanLink(
   const nextIndex = max?.m != null ? max.m + 1 : (start?.s ?? 1)
   const installmentIndex = input.installmentIndex ?? nextIndex
   const dupArgs =
-    excludeId != null
-      ? [owner, input.planId, installmentIndex, excludeId]
-      : [owner, input.planId, installmentIndex]
+    excludeId != null ? [owner, input.planId, installmentIndex, excludeId] : [owner, input.planId, installmentIndex]
   const dup = await env.DB.prepare(
     `SELECT 1 AS ok FROM transactions WHERE owner = ? AND plan_id = ? AND installment_index = ?${guard}`,
   )
@@ -116,7 +117,11 @@ async function resolvePlanLink(
  * re-link, and an un-cancel alike (an update can flip `cancelled` back to false
  * with no `planId` in the patch at all).
  */
-export async function maybeCompletePlan(env: Env, owner: string, planId: number | null): Promise<void> {
+export async function maybeCompletePlan(
+  env: Env,
+  owner: string,
+  planId: number | null,
+): Promise<void> {
   if (planId == null) return
   const plan = await env.DB.prepare(
     'SELECT total_count AS t, active AS a FROM installment_plans WHERE id = ? AND owner = ?',
@@ -144,7 +149,12 @@ export async function maybeCompletePlan(env: Env, owner: string, planId: number 
  * `INSERT OR IGNORE` plus the `auto_label_id IS NOT NULL` filter make this a safe
  * no-op both for a flag with no auto-label and for a row that already has it.
  */
-function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: number, flagId: number) {
+function maybeApplyAutoLabelStatement(
+  env: Env,
+  owner: string,
+  transactionId: number,
+  flagId: number,
+) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
      SELECT t.id, f.auto_label_id
@@ -159,7 +169,12 @@ function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: nu
  * filters it to `owner`: an id in the list is not checked against the owner anywhere else, and the
  * UPDATE it runs beside excludes a foreign id only for itself.
  */
-function maybeApplyAutoLabelToIdsStatement(env: Env, owner: string, ids: number[], flagId: number) {
+function maybeApplyAutoLabelToIdsStatement(
+  env: Env,
+  owner: string,
+  ids: number[],
+  flagId: number,
+) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
      SELECT t.id, f.auto_label_id
@@ -228,7 +243,10 @@ const COLUMN: Record<PatchableTxnKey, string> = {
   settledBy: 'settled_by',
 }
 
-function patchValue(key: PatchableTxnKey, value: unknown): unknown {
+function patchValue(
+  key: PatchableTxnKey,
+  value: unknown,
+): unknown {
   if (key === 'cancelled') return value ? 1 : 0
   return value ?? null
 }
@@ -347,7 +365,12 @@ async function assertNoWithdrawalLeavingInvestment(
  * The statements a bulk update batches alongside its own UPDATE: the report
  * snapshot when settling, and the flag's auto-label when assigning a flag.
  */
-function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: BulkTransactionPatch) {
+function bulkFollowUpStatements(
+  env: Env,
+  owner: string,
+  ids: number[],
+  patch: BulkTransactionPatch,
+) {
   const statements = []
   if (patch.settledBy != null) statements.push(reportSnapshotStatement(env, owner, patch.settledBy))
   if (patch.flagId != null) statements.push(maybeApplyAutoLabelToIdsStatement(env, owner, ids, patch.flagId))
@@ -360,7 +383,12 @@ function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: B
  * written; this covers a payment that settled one of the rows between that check and the batch, which
  * the UPDATE's guard clause would otherwise skip over while the rest of the rows were committed.
  */
-function settledGuardStatement(env: Env, owner: string, ids: number[], settledBy: number) {
+function settledGuardStatement(
+  env: Env,
+  owner: string,
+  ids: number[],
+  settledBy: number,
+) {
   return env.DB.prepare(
     guardSql(
       `NOT EXISTS (SELECT 1 FROM transactions
@@ -370,7 +398,11 @@ function settledGuardStatement(env: Env, owner: string, ids: number[], settledBy
 }
 
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
-async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
+async function assertPatchOwnership(
+  env: Env,
+  owner: string,
+  patch: TxnPatch,
+): Promise<void> {
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
   if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
@@ -400,7 +432,11 @@ export const REPORT_SNAPSHOT_SQL = `UPDATE transactions
          )
      WHERE id = ?2 AND owner = ?1`
 
-function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
+function reportSnapshotStatement(
+  env: Env,
+  owner: string,
+  paymentId: number,
+) {
   return env.DB.prepare(REPORT_SNAPSHOT_SQL).bind(owner, paymentId)
 }
 
@@ -416,9 +452,7 @@ export async function updateTransaction(
   await assertPatchOwnership(env, owner, patch)
   await assertAmountSignAgainstRow(env, owner, id, patch)
   const norm = descriptionNormSets(keys, patch)
-  const sets = keys
-    .map((k) => `${COLUMN[k]} = ?`)
-    .concat(norm.sets, link.sets, "updated_at = datetime('now')")
+  const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat(norm.sets, link.sets, "updated_at = datetime('now')")
   const values = keys.map((k) => patchValue(k, patch[k])).concat(norm.values, link.values)
   const guard = settleGuard(patch.settledBy)
   const row = await env.DB.prepare(
@@ -430,8 +464,7 @@ export async function updateTransaction(
     // The guard and a genuinely missing row both return zero rows. Tell them apart
     // rather than reporting "not found" for a row the caller can see.
     if (patch.settledBy != null) {
-      const exists = await env.DB
-        .prepare('SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?')
+      const exists = await env.DB.prepare('SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?')
         .bind(id, owner)
         .first<{ ok: number }>()
       if (exists) throw new HttpError(409, 'Transaction is already settled by another reimbursement')
@@ -459,28 +492,26 @@ export async function updateTransaction(
  * A row that is missing or not the owner's is not an error: the two cannot be told apart, and a delete whose answer was
  * lost is repeated by the browser, so the repeat has to end the way the first one did.
  */
-export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
+export async function deleteTransaction(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<void> {
   await env.DB.batch([
-    env.DB
-      .prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?')
-      .bind(id, owner),
+    env.DB.prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?').bind(id, owner),
     // Belt-and-suspenders alongside transaction_labels' own ON DELETE CASCADE
     // (migration 0028) — see that migration's comment on why the cascade alone
     // is not trusted. Scoped through a subquery rather than a bare
     // `transaction_id = ?`: transaction_labels carries no owner column of its
     // own, and an unscoped delete here would let a caller who does not own this
     // id still wipe another owner's label links for it.
-    env.DB
-      .prepare(
-        'DELETE FROM transaction_labels WHERE transaction_id IN (SELECT id FROM transactions WHERE id = ? AND owner = ?)',
-      )
-      .bind(id, owner),
+    env.DB.prepare(
+      'DELETE FROM transaction_labels WHERE transaction_id IN (SELECT id FROM transactions WHERE id = ? AND owner = ?)',
+    ).bind(id, owner),
     // Releasing what this row reimbursed, if it was a reimbursement. Without it
     // the rows it covered keep pointing at a transaction that no longer exists
     // and stay out of the Flagged card — silently un-owed.
-    env.DB
-      .prepare('UPDATE transactions SET settled_by = NULL WHERE settled_by = ? AND owner = ?')
-      .bind(id, owner),
+    env.DB.prepare('UPDATE transactions SET settled_by = NULL WHERE settled_by = ? AND owner = ?').bind(id, owner),
     env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?').bind(id, owner),
   ])
 }
@@ -528,7 +559,11 @@ export async function bulkInsertTransactions(
 }
 
 /** Delete many rows in one statement; only ids owned by `owner` are removed. */
-export async function deleteTransactions(env: Env, owner: string, ids: number[]): Promise<number> {
+export async function deleteTransactions(
+  env: Env,
+  owner: string,
+  ids: number[],
+): Promise<number> {
   if (ids.length === 0) return 0
   const list = idList(ids)
   // Same cascade as the single delete, same reasons.
@@ -537,20 +572,22 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
   // number includes the rows the rollup triggers write (docs/decisions/ledger-rollup.md), about three per row.
   const [counted] = await env.DB.batch([
     env.DB.prepare(`SELECT COUNT(*) AS n FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`).bind(owner, list),
-    env.DB.prepare(`DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id ${IN_ID_LIST}`).bind(owner, list),
+    env.DB.prepare(`DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id ${IN_ID_LIST}`).bind(
+      owner,
+      list,
+    ),
     // Scoped through a subquery, same reason as the single delete: transaction_labels
     // has no owner column, so a bare `transaction_id IN (...)` would let a caller
     // wipe another owner's label links for an id that is not theirs.
-    env.DB
-      .prepare(
-        `DELETE FROM transaction_labels WHERE transaction_id IN (
+    env.DB.prepare(
+      `DELETE FROM transaction_labels WHERE transaction_id IN (
            SELECT id FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}
          )`,
-      )
-      .bind(owner, list),
-    env.DB
-      .prepare(`UPDATE transactions SET settled_by = NULL WHERE owner = ? AND settled_by ${IN_ID_LIST}`)
-      .bind(owner, list),
+    ).bind(owner, list),
+    env.DB.prepare(`UPDATE transactions SET settled_by = NULL WHERE owner = ? AND settled_by ${IN_ID_LIST}`).bind(
+      owner,
+      list,
+    ),
     env.DB.prepare(`DELETE FROM transactions WHERE owner = ? AND id ${IN_ID_LIST}`).bind(owner, list),
   ])
   return (counted?.results?.[0] as { n: number } | undefined)?.n ?? 0
@@ -589,7 +626,10 @@ export async function planBulkUpdate(
 }
 
 /** Runs a planned bulk batch; a guard in it that does not hold is a 409 and nothing was written. */
-export async function runBulkBatch(env: Env, statements: D1PreparedStatement[]): Promise<D1Result[]> {
+export async function runBulkBatch(
+  env: Env,
+  statements: D1PreparedStatement[],
+): Promise<D1Result[]> {
   try {
     return await env.DB.batch(statements)
   } catch (error) {
@@ -659,8 +699,10 @@ export async function setCashActual(
 }
 
 /** Remove a recorded actual-cash balance (empty input in the UI). */
-export async function clearCashActual(env: Env, owner: string, yearMonth: string): Promise<void> {
-  await env.DB.prepare('DELETE FROM cash_actuals WHERE year_month = ? AND owner = ?')
-    .bind(yearMonth, owner)
-    .run()
+export async function clearCashActual(
+  env: Env,
+  owner: string,
+  yearMonth: string,
+): Promise<void> {
+  await env.DB.prepare('DELETE FROM cash_actuals WHERE year_month = ? AND owner = ?').bind(yearMonth, owner).run()
 }

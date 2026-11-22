@@ -17,8 +17,14 @@ import type { Env } from './env'
  * the in-memory repository, so the real SQL only gets exercised here.
  */
 function stubEnv(opts: {
-  first?: (sql: string, args: unknown[]) => unknown
-  all?: (sql: string, args: unknown[]) => { results: unknown[] }
+  first?: (
+    sql: string,
+    args: unknown[],
+  ) => unknown
+  all?: (
+    sql: string,
+    args: unknown[],
+  ) => { results: unknown[] }
   batch?: (stmts: { sql: string; args: unknown[] }[]) => unknown[]
 }) {
   const first = opts.first ?? (() => null)
@@ -281,7 +287,12 @@ describe('deleting a transaction takes its attachments with it', () => {
 describe('attachmentKeysForTransactions', () => {
   it('returns both keys per attachment, owner-scoped', async () => {
     const { env, calls } = stubEnv({
-      all: () => ({ results: [{ object_key: 'a', thumb_key: 'a_t' }, { object_key: 'b', thumb_key: null }] }),
+      all: () => ({
+        results: [
+          { object_key: 'a', thumb_key: 'a_t' },
+          { object_key: 'b', thumb_key: null },
+        ],
+      }),
     })
 
     await expect(attachmentKeysForTransactions(env, OWNER, [7, 8])).resolves.toEqual(['a', 'a_t', 'b'])

@@ -15,9 +15,7 @@ describe('LazyViewportDebug', () => {
   })
 
   it('lazy-loads the debug panel when ?viewportDebug=1 is set', async () => {
-    vi.spyOn(URLSearchParams.prototype, 'get').mockImplementation((key) =>
-      key === 'viewportDebug' ? '1' : null,
-    )
+    vi.spyOn(URLSearchParams.prototype, 'get').mockImplementation((key) => (key === 'viewportDebug' ? '1' : null))
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
       value: {

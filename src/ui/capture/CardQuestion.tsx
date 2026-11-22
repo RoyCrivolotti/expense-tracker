@@ -5,7 +5,10 @@ import { otherCardsOf, useCardLinks } from './cardLinks'
 import styles from './Review.module.css'
 
 /** Hands the form a way to show this question's message and move the cursor here, outside render. */
-function offerAsk(card: SeedCard, ask: (() => boolean) | undefined) {
+function offerAsk(
+  card: SeedCard,
+  ask: (() => boolean) | undefined,
+) {
   card.ask = ask
 }
 
@@ -29,7 +32,10 @@ function useAsk(card: SeedCard) {
 }
 
 /** Writes the answer where the form's save reads it, outside render. */
-function answer(card: SeedCard, patch: Partial<SeedCard['answer']>) {
+function answer(
+  card: SeedCard,
+  patch: Partial<SeedCard['answer']>,
+) {
   Object.assign(card.answer, patch)
 }
 
@@ -38,7 +44,15 @@ function answer(card: SeedCard, patch: Partial<SeedCard['answer']>) {
  * chosen for the person. An account that has a card already says so, and choosing it adds this card without touching
  * the old one, since a bank reissues a card and the old one can still appear on subscriptions and refunds.
  */
-export default function CardQuestion({ card, accounts, onPick }: { card: SeedCard; accounts: readonly Account[]; onPick: (id: number) => void }) {
+export default function CardQuestion({
+  card,
+  accounts,
+  onPick,
+}: {
+  card: SeedCard
+  accounts: readonly Account[]
+  onPick: (id: number) => void
+}) {
   const links = useCardLinks()
   const [picked, setPicked] = useState<number | null>(null)
   const [remember, setRemember] = useState(true)
@@ -92,7 +106,8 @@ export default function CardQuestion({ card, accounts, onPick }: { card: SeedCar
       </label>
       {remember && others.length > 0 ? (
         <p className={styles.hint}>
-          This adds the card ending {card.digits} and keeps the one ending {others.join(', ')}. Remove the old one in Settings when it is no longer used.
+          This adds the card ending {card.digits} and keeps the one ending {others.join(', ')}. Remove the old one in
+          Settings when it is no longer used.
         </p>
       ) : null}
     </fieldset>

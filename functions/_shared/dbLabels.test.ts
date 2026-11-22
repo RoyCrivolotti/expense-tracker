@@ -9,15 +9,19 @@ interface StatementStub {
 
 /** Same shape as the stub in dbFlags.test.ts. */
 function stubEnv(opts: {
-  first?: (sql: string, args: unknown[]) => unknown
-  all?: (sql: string, args: unknown[]) => { results: unknown[] }
+  first?: (
+    sql: string,
+    args: unknown[],
+  ) => unknown
+  all?: (
+    sql: string,
+    args: unknown[],
+  ) => { results: unknown[] }
   batch?: (stmts: StatementStub[]) => unknown[]
 }) {
   const first = opts.first ?? (() => null)
   const all = opts.all ?? (() => ({ results: [] }))
-  const batch = vi.fn(
-    opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))),
-  )
+  const batch = vi.fn(opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))))
   const prepare = vi.fn((sql: string) => ({
     bind: (...args: unknown[]) => ({
       sql,
@@ -80,7 +84,10 @@ describe('createLabel', () => {
   it('inserts an owner-scoped row and maps it back to a Label', () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return { ...LABEL_ROW, description: 'Spring trip' }
       },
@@ -111,7 +118,10 @@ describe('createLabel', () => {
   it('binds a missing description as NULL and an inactive label as 0', async () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return { ...LABEL_ROW, active: 0 }
       },
@@ -155,7 +165,10 @@ describe('updateLabel', () => {
   it('stores an empty description as NULL', async () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return LABEL_ROW
       },

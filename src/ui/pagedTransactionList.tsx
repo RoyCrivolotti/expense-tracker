@@ -15,7 +15,11 @@ import type { ExpenseModel } from './useExpenseData'
 type Figures = Pick<ListView, 'count' | 'capped' | 'totalCents' | 'totalsStale'>
 
 /** How many rows match: null with nothing read and no figures, a lower bound when only part of the list was read. */
-function countOf({ rows, summary }: PagerState, own: boolean, payments: number): number | null {
+function countOf(
+  { rows, summary }: PagerState,
+  own: boolean,
+  payments: number,
+): number | null {
   if (!own && !summary && rows.length === 0) return null
   return own || !summary ? rows.length + payments : summary.count + (summary.capped ? 0 : payments)
 }
@@ -26,7 +30,10 @@ function countOf({ rows, summary }: PagerState, own: boolean, payments: number):
  * one stay, marked, until the new ones come; with none at all the count is what has been read so far, as a bound,
  * and there is no net spend to give. With no row and no figures there is no count either, and the header says so.
  */
-function figuresOf(state: PagerState, payments: number): Figures {
+function figuresOf(
+  state: PagerState,
+  payments: number,
+): Figures {
   const { rows, complete, stale, summary, summaryStale } = state
   const own = complete && !stale
   const held = rows as ListView['results']
@@ -38,7 +45,11 @@ function figuresOf(state: PagerState, payments: number): Figures {
   }
 }
 
-function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnFilter): ListView {
+function usePagedRows(
+  pager: TransactionPager,
+  model: ExpenseModel,
+  filter: TxnFilter,
+): ListView {
   const { readOnly } = useConnectivityState()
   const { dataset } = model
   const sums = sumsOf(model)
@@ -50,7 +61,12 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
   const state = useSyncExternalStore(pager.subscribe, pager.getState)
   const { rows, complete, error, stale, loading } = state
   const payments = useMemo(() => {
-    const cashRows = computeCashReconciliation(sums.transactions, dataset.accounts, dataset.settings, dataset.cashActuals)
+    const cashRows = computeCashReconciliation(
+      sums.transactions,
+      dataset.accounts,
+      dataset.settings,
+      dataset.cashActuals,
+    )
     return filteredStatementPayments(dataset.accountStatements, cashRows, dataset.accounts, dataset.settings, filter)
   }, [dataset.accountStatements, dataset.accounts, dataset.settings, dataset.cashActuals, sums, filter])
   const listRows = useMemo(() => pagedListRows(rows, payments, complete), [rows, payments, complete])
@@ -65,7 +81,8 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
   }, [readOnly, model, sums, filter])
   if (held) return held
   // A first page that failed has no rows to show, and saying so is not the same as saying nothing matches.
-  const failed = error !== null && rows.length === 0 && !loading ? <ListFailed onRetry={() => pager.loadMore()} /> : undefined
+  const failed =
+    error !== null && rows.length === 0 && !loading ? <ListFailed onRetry={() => pager.loadMore()} /> : undefined
   return {
     results: rows as ListView['results'],
     listRows,
@@ -82,5 +99,12 @@ function usePagedRows(pager: TransactionPager, model: ExpenseModel, filter: TxnF
 
 /** The pager as the Transactions tab takes it: its filter set from the screen's, its rows and count read back. */
 export function pagedListOf(pager: TransactionPager): PagedList {
-  return { pager, useList: (model, filter) => usePagedRows(pager, model, filter), useSelection: usePagedSelection }
+  return {
+    pager,
+    useList: (
+      model,
+      filter,
+    ) => usePagedRows(pager, model, filter),
+    useSelection: usePagedSelection,
+  }
 }

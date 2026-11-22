@@ -75,8 +75,19 @@ describe('sampleViewport', () => {
 })
 
 describe('verdict', () => {
-  const base = { buildId: 'x', innerHeight: 844, innerWidth: 390, safeAreaTop: 0, bodyPosition: '', bodyTop: '', elements: {} }
-  const withPan = (offsetTop: number, fixedTopRect: number) => ({
+  const base = {
+    buildId: 'x',
+    innerHeight: 844,
+    innerWidth: 390,
+    safeAreaTop: 0,
+    bodyPosition: '',
+    bodyTop: '',
+    elements: {},
+  }
+  const withPan = (
+    offsetTop: number,
+    fixedTopRect: number,
+  ) => ({
     ...base,
     visual: { offsetTop, offsetLeft: 0, height: 424, width: 390, pageTop: offsetTop },
     fixedTopRect,

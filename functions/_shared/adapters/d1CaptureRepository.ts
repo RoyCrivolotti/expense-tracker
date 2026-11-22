@@ -58,8 +58,15 @@ function keys(db: D1Database): Statements {
       return row ? toKey(row) : null
     },
     listKeys: async (owner) => (await rows<KeyRow>(db, LIST_KEYS_SQL, owner)).map(toSummary),
-    revokeKey: (owner, keyId, at) => changed(db, REVOKE_KEY_SQL, owner, keyId, at),
-    touchKey: async (keyId, at) => {
+    revokeKey: (
+      owner,
+      keyId,
+      at,
+    ) => changed(db, REVOKE_KEY_SQL, owner, keyId, at),
+    touchKey: async (
+      keyId,
+      at,
+    ) => {
       await changed(db, TOUCH_KEY_SQL, keyId, at, touchCutoff(at))
     },
   }
@@ -79,27 +86,58 @@ function events(
   | 'readCounters'
 > {
   return {
-    recordEvent: (event, caps) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null, caps)),
-    recordCapture: (event, rec, caps, template = { kind: 'none' }) => recordCapture(db, event, rec, caps, template),
-    hasEvent: async (keyId, source, replayKey) =>
-      (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
-    admit: async (owner, source, day, caps) => {
-      if (await changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global, caps.sourcesPerOwner)) return 'admitted'
+    recordEvent: (
+      event,
+      caps,
+    ) => changed(db, RECORD_EVENT_SQL, ...eventParams(event, null, caps)),
+    recordCapture: (
+      event,
+      rec,
+      caps,
+      template = { kind: 'none' },
+    ) => recordCapture(db, event, rec, caps, template),
+    hasEvent: async (
+      keyId,
+      source,
+      replayKey,
+    ) => (await db.prepare(HAS_EVENT_SQL).bind(keyId, source, replayKey).first()) !== null,
+    admit: async (
+      owner,
+      source,
+      day,
+      caps,
+    ) => {
+      if (await changed(db, ADMIT_SQL, owner, source, day, caps.perOwner, caps.global, caps.sourcesPerOwner))
+        return 'admitted'
       const full = await db.prepare(SOURCE_FULL_SQL).bind(owner, source, caps.sourcesPerOwner).first()
       return full === null ? 'limited' : 'sources'
     },
-    eventsSince: async (keyId, since) => {
+    eventsSince: async (
+      keyId,
+      since,
+    ) => {
       const row = await db.prepare(EVENTS_SINCE_SQL).bind(keyId, since).first<{ n: number }>()
       return row?.n ?? 0
     },
-    lastCaptureAt: async (owner, source) => {
+    lastCaptureAt: async (
+      owner,
+      source,
+    ) => {
       const row = await db.prepare(LAST_CAPTURE_SQL).bind(owner, source).first<{ at: string | null }>()
       return row?.at ?? null
     },
-    bumpCounter: async (owner, source, day, field) => {
+    bumpCounter: async (
+      owner,
+      source,
+      day,
+      field,
+    ) => {
       await changed(db, BUMP_COUNTER_SQL[field], owner, source, day)
     },
-    readCounters: async (owner, fromDay) =>
+    readCounters: async (
+      owner,
+      fromDay,
+    ) =>
       (
         await rows<{ source: string; day: string; received: number; unrecognised: number; malformed: number }>(
           db,
@@ -118,7 +156,11 @@ function events(
 }
 
 /** Adds the card each recommendation of a page came from, in one read. */
-async function withCards(db: D1Database, owner: string, page: Recommendation[]): Promise<Recommendation[]> {
+async function withCards(
+  db: D1Database,
+  owner: string,
+  page: Recommendation[],
+): Promise<Recommendation[]> {
   if (page.length === 0) return page
   const found = await rows<{ rec_id: string; source: string; last4: string }>(
     db,
@@ -134,17 +176,30 @@ function recommendations(
   db: D1Database,
 ): Pick<
   CaptureRepository,
-  'createRecommendation' | 'getRecommendation' | 'listOpenRecommendations' | 'countOpenRecommendations' | 'summarizeOpen' | 'decideRecommendation' | 'findPossibleMatch'
+  | 'createRecommendation'
+  | 'getRecommendation'
+  | 'listOpenRecommendations'
+  | 'countOpenRecommendations'
+  | 'summarizeOpen'
+  | 'decideRecommendation'
+  | 'findPossibleMatch'
 > {
   return {
     createRecommendation: async (rec) => {
       await changed(db, CREATE_RECOMMENDATION_SQL, ...createParams(rec))
     },
-    getRecommendation: async (owner, id) => {
+    getRecommendation: async (
+      owner,
+      id,
+    ) => {
       const row = await db.prepare(GET_RECOMMENDATION_SQL).bind(owner, id).first<RecommendationRow>()
       return row ? toRecommendation(row) : null
     },
-    listOpenRecommendations: async (owner, limit, after) => {
+    listOpenRecommendations: async (
+      owner,
+      limit,
+      after,
+    ) => {
       const page = (
         after
           ? await rows<RecommendationRow>(db, LIST_OPEN_AFTER_SQL, owner, limit, after.localDate, after.id)
@@ -153,11 +208,19 @@ function recommendations(
       // The suggestion first, so the duplicate check looks for the amount and direction the person will see.
       return withMatches(db, owner, await withSuggestions(db, owner, await withCards(db, owner, page)))
     },
-    findPossibleMatch: (owner, payment) => findMatch(db, owner, payment),
+    findPossibleMatch: (
+      owner,
+      payment,
+    ) => findMatch(db, owner, payment),
     countOpenRecommendations: async (owner) =>
       (await db.prepare(COUNT_OPEN_SQL).bind(owner).first<{ n: number }>())?.n ?? 0,
-    summarizeOpen: async (owner) => toOpenSummary(await db.prepare(SUMMARIZE_OPEN_SQL).bind(owner).first<OpenSummaryRow>()),
-    decideRecommendation: (owner, id, d) => decide(db, owner, id, d),
+    summarizeOpen: async (owner) =>
+      toOpenSummary(await db.prepare(SUMMARIZE_OPEN_SQL).bind(owner).first<OpenSummaryRow>()),
+    decideRecommendation: (
+      owner,
+      id,
+      d,
+    ) => decide(db, owner, id, d),
   }
 }
 
@@ -165,9 +228,17 @@ function templates(
   db: D1Database,
 ): Pick<CaptureRepository, 'findTemplates' | 'countIgnoredPush' | 'listIgnoredTemplates' | 'unignoreTemplate'> {
   return {
-    listIgnoredTemplates: async (owner) => (await rows<IgnoredRow>(db, LIST_IGNORED_SQL, owner, MAX_IGNORED_LISTED)).map(toIgnored),
-    unignoreTemplate: (owner, templateId) => changed(db, UNIGNORE_SQL, owner, templateId),
-    findTemplates: async (owner, source, title) =>
+    listIgnoredTemplates: async (owner) =>
+      (await rows<IgnoredRow>(db, LIST_IGNORED_SQL, owner, MAX_IGNORED_LISTED)).map(toIgnored),
+    unignoreTemplate: (
+      owner,
+      templateId,
+    ) => changed(db, UNIGNORE_SQL, owner, templateId),
+    findTemplates: async (
+      owner,
+      source,
+      title,
+    ) =>
       (await rows<TemplateRow>(db, FIND_TEMPLATES_SQL, owner, source, title, TEMPLATE_LOOKUP_LIMIT)).map((r) => ({
         templateId: r.template_id,
         skeleton: r.skeleton,
@@ -175,22 +246,48 @@ function templates(
         merchantEnd: r.merchant_end,
         ignoredAt: r.ignored_at,
       })),
-    countIgnoredPush: (owner, source, day, templateId, at) => countIgnoredPush(db, owner, source, day, templateId, at),
+    countIgnoredPush: (
+      owner,
+      source,
+      day,
+      templateId,
+      at,
+    ) => countIgnoredPush(db, owner, source, day, templateId, at),
   }
 }
 
-function learning(db: D1Database): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning' | 'merchantRows'> {
+function learning(
+  db: D1Database,
+): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning' | 'merchantRows'> {
   return {
-    merchantRows: async (owner, key) => (await merchantRows(db, owner, [key])).get(key) ?? [],
-    eventOfRecommendation: async (owner, recId) => {
+    merchantRows: async (
+      owner,
+      key,
+    ) => (await merchantRows(db, owner, [key])).get(key) ?? [],
+    eventOfRecommendation: async (
+      owner,
+      recId,
+    ) => {
       const row = await db.prepare(EVENT_OF_RECOMMENDATION_SQL).bind(owner, recId).first<EventRow>()
       return row ? toEvent(row) : null
     },
-    applyDecisionLearning: (owner, recId, learning) => applyDecisionLearning(db, owner, recId, learning),
+    applyDecisionLearning: (
+      owner,
+      recId,
+      learning,
+    ) => applyDecisionLearning(db, owner, recId, learning),
   }
 }
 
 export function createD1CaptureRepository(env: Pick<Env, 'DB'>): CaptureRepository {
   const db = env.DB
-  return { ...keys(db), ...events(db), ...cards(db), ...status(db), ...recommendations(db), ...templates(db), ...learning(db) }
+  return {
+    ...keys(db),
+    ...events(db),
+    ...cards(db),
+    ...status(db),
+    ...recommendations(db),
+    ...templates(db),
+    ...learning(db),
+  }
 }

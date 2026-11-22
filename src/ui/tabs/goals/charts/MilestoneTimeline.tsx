@@ -44,9 +44,16 @@ interface Frame {
   onRead: (text: string) => void
 }
 
-const at = (t: number, span: number): CSSProperties => ({ '--t': t / span }) as CSSProperties
+const at = (
+  t: number,
+  span: number,
+): CSSProperties => ({ '--t': t / span }) as CSSProperties
 
-function clusterSentence(row: MilestoneRow, cluster: DotCluster, frame: Frame): string {
+function clusterSentence(
+  row: MilestoneRow,
+  cluster: DotCluster,
+  frame: Frame,
+): string {
   const first = cluster.indices[0] ?? 0
   if (cluster.indices.length === 1) {
     return describeCell({
@@ -57,7 +64,11 @@ function clusterSentence(row: MilestoneRow, cluster: DotCluster, frame: Frame): 
       plan: null,
     })
   }
-  return describeCluster(row, cluster, cluster.indices.map((i) => frame.full[i] ?? ''))
+  return describeCluster(
+    row,
+    cluster,
+    cluster.indices.map((i) => frame.full[i] ?? ''),
+  )
 }
 
 function Reading({
@@ -88,7 +99,11 @@ function Reading({
   )
 }
 
-function dotClass(row: MilestoneRow, cluster: DotCluster, picked: boolean): string {
+function dotClass(
+  row: MilestoneRow,
+  cluster: DotCluster,
+  picked: boolean,
+): string {
   const classes = [styles.tlDot]
   if (cluster.indices.length > 1) classes.push(styles.tlDotMulti)
   if (row.kind === 'draft') classes.push(styles.tlDotDraft)
@@ -98,7 +113,9 @@ function dotClass(row: MilestoneRow, cluster: DotCluster, picked: boolean): stri
 
 function Dots({ row, layout, frame }: { row: MilestoneRow; layout: RowLayout; frame: Frame }) {
   const picks = layout.clusters.map((c) => frame.follow !== null && c.indices.includes(frame.follow))
-  const texts = layout.clusters.map((c, i) => (picks[i] ? `${c.years}y` : rangeLabel(c.indices.map((j) => frame.bare[j] ?? ''))))
+  const texts = layout.clusters.map((c, i) =>
+    picks[i] ? `${c.years}y` : rangeLabel(c.indices.map((j) => frame.bare[j] ?? '')),
+  )
   const levels = placeLabels(
     layout.clusters.map((c, i) => ({ at: c.years, text: texts[i] ?? '', pick: picks[i] === true })),
     frame.span,
@@ -141,13 +158,21 @@ function Badges({ row, layout, end, frame }: { row: MilestoneRow; layout: RowLay
   return (
     <>
       {layout.gutter.length > 0 ? (
-        <Reading text={describeGutter(row, amounts(layout.gutter), how)} frame={frame} className={`${styles.tlBadge} ${styles.tlBadgeLeft}`}>
+        <Reading
+          text={describeGutter(row, amounts(layout.gutter), how)}
+          frame={frame}
+          className={`${styles.tlBadge} ${styles.tlBadgeLeft}`}
+        >
           <span aria-hidden="true">✓ {layout.gutter.length}</span>
         </Reading>
       ) : null}
       {layout.beyond.length > 0 ? (
         <span className={styles.tlPos} style={at(end, frame.span)}>
-          <Reading text={describeBeyond(row, amounts(layout.beyond))} frame={frame} className={`${styles.tlBadge} ${styles.tlBadgeRight}`}>
+          <Reading
+            text={describeBeyond(row, amounts(layout.beyond))}
+            frame={frame}
+            className={`${styles.tlBadge} ${styles.tlBadgeRight}`}
+          >
             <span aria-hidden="true">→ {layout.beyond.length}</span>
           </Reading>
         </span>
@@ -183,7 +208,11 @@ function Names({ rows }: { rows: MilestoneRow[] }) {
   return (
     <div className={styles.tlNames}>
       {rows.map((row) => (
-        <div key={row.id} className={row.kind === 'fromToday' ? `${styles.tlName} ${styles.matrixFromToday}` : styles.tlName} title={row.name}>
+        <div
+          key={row.id}
+          className={row.kind === 'fromToday' ? `${styles.tlName} ${styles.matrixFromToday}` : styles.tlName}
+          title={row.name}
+        >
           <span className={styles.milestoneScenarioNameRow}>
             <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} />
             <span className={styles.milestoneScenarioName}>{row.name}</span>
@@ -194,7 +223,17 @@ function Names({ rows }: { rows: MilestoneRow[] }) {
   )
 }
 
-function Axis({ ticks, span, label, bottom }: { ticks: number[]; span: number; label: (t: number) => string; bottom?: boolean }) {
+function Axis({
+  ticks,
+  span,
+  label,
+  bottom,
+}: {
+  ticks: number[]
+  span: number
+  label: (t: number) => string
+  bottom?: boolean
+}) {
   return (
     <div className={bottom ? `${styles.tlAxis} ${styles.tlAxisBottom}` : styles.tlAxis} aria-hidden="true">
       {ticks.map((t) => (
@@ -207,7 +246,17 @@ function Axis({ ticks, span, label, bottom }: { ticks: number[]; span: number; l
 }
 
 /** The dashed line through the dots of the milestone being followed, from the top path down. */
-function Connector({ rows, layouts, follow, span }: { rows: MilestoneRow[]; layouts: RowLayout[]; follow: number | null; span: number }) {
+function Connector({
+  rows,
+  layouts,
+  follow,
+  span,
+}: {
+  rows: MilestoneRow[]
+  layouts: RowLayout[]
+  follow: number | null
+  span: number
+}) {
   if (follow === null) return null
   const points = layouts.flatMap((layout, i) => {
     const cluster = layout.clusters.find((c) => c.indices.includes(follow))
@@ -272,7 +321,8 @@ function Legend({ rows, layouts }: { rows: MilestoneRow[]; layouts: RowLayout[] 
     <ul className={styles.matrixLegend}>
       {gutter > 0 ? (
         <li>
-          <span aria-hidden="true">✓ {gutter}</span> milestones already there: reached by a check-in, or met by the path before today
+          <span aria-hidden="true">✓ {gutter}</span> milestones already there: reached by a check-in, or met by the path
+          before today
         </li>
       ) : null}
       {beyond > 0 ? (
@@ -281,7 +331,8 @@ function Legend({ rows, layouts }: { rows: MilestoneRow[]; layouts: RowLayout[] 
         </li>
       ) : null}
       <li>
-        <span className={`${styles.matrixKey} ${styles.matrixKeyBeyond}`} aria-hidden="true" />A shorter horizon ends in hatching
+        <span className={`${styles.matrixKey} ${styles.matrixKeyBeyond}`} aria-hidden="true" />A shorter horizon ends in
+        hatching
       </li>
       <li>A number in a dot: milestones that fall in the same year</li>
       {rows.some((r) => r.kind === 'draft') ? <li>Dashed ring: the path you are editing</li> : null}
@@ -344,10 +395,20 @@ export function MilestoneTimeline({
         <div ref={tracks} className={styles.tlTracks}>
           <Axis ticks={ticks} span={span} label={(t) => (t === 0 ? 'now' : `${t}y`)} />
           {ticks.map((t) => (
-            <span key={t} className={`${styles.tlGrid} ${styles.tlPos} ${t === 0 ? styles.tlGridZero : ''}`} style={at(t, span)} aria-hidden="true" />
+            <span
+              key={t}
+              className={`${styles.tlGrid} ${styles.tlPos} ${t === 0 ? styles.tlGridZero : ''}`}
+              style={at(t, span)}
+              aria-hidden="true"
+            />
           ))}
           {rows.map((row, i) => (
-            <TimelineRow key={row.id} row={row} layout={layouts[i] ?? { gutter: [], beyond: [], clusters: [] }} frame={frame} />
+            <TimelineRow
+              key={row.id}
+              row={row}
+              layout={layouts[i] ?? { gutter: [], beyond: [], clusters: [] }}
+              frame={frame}
+            />
           ))}
           <Axis ticks={ticks} span={span} label={(t) => String(startYear + t)} bottom />
           <Connector rows={rows} layouts={layouts} follow={follow} span={span} />

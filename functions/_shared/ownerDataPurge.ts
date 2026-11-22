@@ -11,7 +11,10 @@ import { receiptStore } from './receiptStoreFactory'
  *
  * The D1 half is private so that ordering cannot be bypassed by a new call site.
  */
-export async function purgeOwnerData(env: Env, ownerEmail: string): Promise<void> {
+export async function purgeOwnerData(
+  env: Env,
+  ownerEmail: string,
+): Promise<void> {
   const owner = ownerEmail.trim().toLowerCase()
   if (!owner) return
   await purgeOwnerReceipts(env, owner)
@@ -26,7 +29,10 @@ export async function purgeOwnerData(env: Env, ownerEmail: string): Promise<void
  * is the only thing that will ever ask for it, so it logs the prefix and the count
  * rather than just the fact.
  */
-async function purgeOwnerReceipts(env: Env, owner: string): Promise<void> {
+async function purgeOwnerReceipts(
+  env: Env,
+  owner: string,
+): Promise<void> {
   const store = receiptStore(env)
   if (!store) return
   const keys = await ownerAttachmentKeys(env, owner)
@@ -42,7 +48,10 @@ async function purgeOwnerReceipts(env: Env, owner: string): Promise<void> {
 }
 
 /** Delete all expense-tracker rows for one owner. Private: see purgeOwnerData. */
-async function purgeOwnerExpenseData(db: D1Database, owner: string): Promise<void> {
+async function purgeOwnerExpenseData(
+  db: D1Database,
+  owner: string,
+): Promise<void> {
   // wealth_checkin_entries is deleted via ON DELETE CASCADE from wealth_checkins, and
   // transaction_labels from transactions, so labels goes after transactions.
   await db.batch([

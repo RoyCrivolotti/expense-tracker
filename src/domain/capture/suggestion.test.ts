@@ -15,7 +15,11 @@ const facts = (over: Partial<TemplateFacts> = {}): TemplateFacts => ({
   ...over,
 })
 
-const amount = (index: number, candidates: NumberSlot['candidates'], currency: string | null = 'EUR'): NumberSlot => ({
+const amount = (
+  index: number,
+  candidates: NumberSlot['candidates'],
+  currency: string | null = 'EUR',
+): NumberSlot => ({
   kind: 'number',
   index,
   raw: '',
@@ -32,7 +36,11 @@ const rec = (over: Partial<SuggestionInput> = {}): SuggestionInput => ({
   ...over,
 })
 
-const row = (description: string, votes: number, over: Partial<MerchantRow> = {}): MerchantRow => ({
+const row = (
+  description: string,
+  votes: number,
+  over: Partial<MerchantRow> = {},
+): MerchantRow => ({
   amountCents: -1,
   description,
   categoryId: 1,
@@ -43,8 +51,17 @@ const row = (description: string, votes: number, over: Partial<MerchantRow> = {}
 
 describe('suggestFor, the description and category', () => {
   it('prefers the rows at the payment’s price over the rows at any price', () => {
-    const rows = [row('Music', 5, { categoryId: 2 }), row('Video', 2, { amountCents: 1250, categoryId: 3 }), row('Video', 2, { categoryId: 3 })]
-    expect(suggestFor(rec(), facts(), rows)).toMatchObject({ description: 'Video', categoryId: 3, sightings: 2, settled: true })
+    const rows = [
+      row('Music', 5, { categoryId: 2 }),
+      row('Video', 2, { amountCents: 1250, categoryId: 3 }),
+      row('Video', 2, { categoryId: 3 }),
+    ]
+    expect(suggestFor(rec(), facts(), rows)).toMatchObject({
+      description: 'Video',
+      categoryId: 3,
+      sightings: 2,
+      settled: true,
+    })
   })
 
   it('lets a thin price row that agrees with the settled history give way to every price', () => {
@@ -54,12 +71,24 @@ describe('suggestFor, the description and category', () => {
 
   it('keeps a thin price row that names something else, but never settles on it', () => {
     const rows = [row('Coffee', 10), row('Cake', 1, { amountCents: 1250, categoryId: 5 })]
-    expect(suggestFor(rec(), facts(), rows)).toMatchObject({ description: 'Cake', categoryId: 5, sightings: 1, settled: false })
+    expect(suggestFor(rec(), facts(), rows)).toMatchObject({
+      description: 'Cake',
+      categoryId: 5,
+      sightings: 1,
+      settled: false,
+    })
   })
 
   it('uses every price when neither is settled, and the price row when every price has none', () => {
-    expect(suggestFor(rec(), facts(), [row('Coffee', 1), row('Cake', 1, { amountCents: 1250 })])).toMatchObject({ description: 'Coffee', sightings: 1 })
-    expect(suggestFor(rec(), facts(), [row('Cake', 1, { amountCents: 1250 })])).toMatchObject({ description: 'Cake', sightings: 1, settled: false })
+    expect(suggestFor(rec(), facts(), [row('Coffee', 1), row('Cake', 1, { amountCents: 1250 })])).toMatchObject({
+      description: 'Coffee',
+      sightings: 1,
+    })
+    expect(suggestFor(rec(), facts(), [row('Cake', 1, { amountCents: 1250 })])).toMatchObject({
+      description: 'Cake',
+      sightings: 1,
+      settled: false,
+    })
   })
 
   it('falls back to the rows at any price when the price has none', () => {
@@ -69,24 +98,47 @@ describe('suggestFor, the description and category', () => {
 
   it('settles only on a strict lead of at least two votes', () => {
     expect(suggestFor(rec(), facts(), [row('Coffee', 2), row('Lunch', 2)]).settled).toBe(false)
-    expect(suggestFor(rec(), facts(), [row('Coffee', 1)])).toMatchObject({ description: 'Coffee', sightings: 1, settled: false })
+    expect(suggestFor(rec(), facts(), [row('Coffee', 1)])).toMatchObject({
+      description: 'Coffee',
+      sightings: 1,
+      settled: false,
+    })
     expect(suggestFor(rec(), facts(), [row('Coffee', 3), row('Lunch', 2)]).settled).toBe(true)
   })
 
   it('breaks a tie to the more recently used description', () => {
-    const rows = [row('Coffee', 2, { lastSeen: '2026-10-01' }), row('Lunch', 2, { lastSeen: '2026-11-01', categoryId: 9 })]
+    const rows = [
+      row('Coffee', 2, { lastSeen: '2026-10-01' }),
+      row('Lunch', 2, { lastSeen: '2026-11-01', categoryId: 9 }),
+    ]
     expect(suggestFor(rec(), facts(), rows)).toMatchObject({ description: 'Lunch', categoryId: 9, settled: false })
   })
 
   it('sums the votes of spellings that fold alike and shows the latest spelling with its category', () => {
-    const rows = [row('cafe', 1, { lastSeen: '2026-10-01', categoryId: 1 }), row('Café', 1, { lastSeen: '2026-11-01', categoryId: 4 }), row('Lunch', 1)]
-    expect(suggestFor(rec(), facts(), rows)).toMatchObject({ description: 'Café', categoryId: 4, sightings: 3, settled: true })
+    const rows = [
+      row('cafe', 1, { lastSeen: '2026-10-01', categoryId: 1 }),
+      row('Café', 1, { lastSeen: '2026-11-01', categoryId: 4 }),
+      row('Lunch', 1),
+    ]
+    expect(suggestFor(rec(), facts(), rows)).toMatchObject({
+      description: 'Café',
+      categoryId: 4,
+      sightings: 3,
+      settled: true,
+    })
   })
 
   it('suggests no description with no history, and none at a price for a payment of no amount', () => {
-    expect(suggestFor(rec(), facts(), [])).toMatchObject({ description: null, categoryId: null, sightings: 0, settled: false })
+    expect(suggestFor(rec(), facts(), [])).toMatchObject({
+      description: null,
+      categoryId: null,
+      sightings: 0,
+      settled: false,
+    })
     const noAmount = rec({ amountCents: null, slots: [] })
-    expect(suggestFor(noAmount, facts(), [row('Video', 3, { amountCents: 1250 }), row('Music', 1)]).description).toBe('Music')
+    expect(suggestFor(noAmount, facts(), [row('Video', 3, { amountCents: 1250 }), row('Music', 1)]).description).toBe(
+      'Music',
+    )
   })
 })
 
@@ -109,7 +161,13 @@ describe('suggestFor, the type and account', () => {
 })
 
 describe('suggestFor, the amount', () => {
-  const two: Slot[] = [amount(2, [{ cents: 1250, mark: 'comma' }]), amount(6, [{ cents: 123400, mark: 'comma' }, { cents: 123, mark: 'dot', ambiguous: true }])]
+  const two: Slot[] = [
+    amount(2, [{ cents: 1250, mark: 'comma' }]),
+    amount(6, [
+      { cents: 123400, mark: 'comma' },
+      { cents: 123, mark: 'dot', ambiguous: true },
+    ]),
+  ]
 
   it('reads the slot and mark the template learned, and says the amount was re-read', () => {
     const s = suggestFor(rec({ slots: two }), facts({ amountSlot: 6, amountMark: 'dot' }), [])
@@ -122,18 +180,28 @@ describe('suggestFor, the amount', () => {
   })
 
   it('keeps the first reading when the learned slot reads the same', () => {
-    expect(suggestFor(rec({ slots: two }), facts({ amountSlot: 2, amountMark: 'comma' }), [])).toMatchObject({ amountCents: 1250, reasons: [] })
+    expect(suggestFor(rec({ slots: two }), facts({ amountSlot: 2, amountMark: 'comma' }), [])).toMatchObject({
+      amountCents: 1250,
+      reasons: [],
+    })
   })
 
   it('keeps the first reading when the learned position holds no number with a currency marker', () => {
-    const moved: Slot[] = [amount(2, [{ cents: 1250, mark: 'comma' }]), amount(6, [{ cents: 4200, mark: 'none' }], null), { kind: 'masked-digits', index: 7, digits: '1234' }]
+    const moved: Slot[] = [
+      amount(2, [{ cents: 1250, mark: 'comma' }]),
+      amount(6, [{ cents: 4200, mark: 'none' }], null),
+      { kind: 'masked-digits', index: 7, digits: '1234' },
+    ]
     expect(suggestFor(rec({ slots: moved }), facts({ amountSlot: 6, amountMark: 'none' }), []).amountCents).toBe(1250)
     expect(suggestFor(rec({ slots: moved }), facts({ amountSlot: 7, amountMark: 'none' }), []).amountCents).toBe(1250)
     expect(suggestFor(rec({ slots: moved }), facts({ amountSlot: 9, amountMark: 'none' }), []).amountCents).toBe(1250)
   })
 
   it('looks up the price rows at the re-read amount', () => {
-    const s = suggestFor(rec({ slots: two }), facts({ amountSlot: 6, amountMark: 'dot' }), [row('Parking', 2, { amountCents: 123 }), row('Coffee', 5)])
+    const s = suggestFor(rec({ slots: two }), facts({ amountSlot: 6, amountMark: 'dot' }), [
+      row('Parking', 2, { amountCents: 123 }),
+      row('Coffee', 5),
+    ])
     expect(s.description).toBe('Parking')
   })
 })

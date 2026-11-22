@@ -19,7 +19,12 @@ describe('queryDb', () => {
   it('is the D1 stand-in, which refuses more than 100 bound values, and records the statements it is given', async () => {
     const kit = queryDb(small())
     const tooMany = Array.from({ length: D1_MAX_BOUND_PARAMETERS + 1 }, () => 1)
-    await expect(kit.d1.prepare('SELECT 1').bind(...tooMany).first()).rejects.toThrow('too many SQL variables')
+    await expect(
+      kit.d1
+        .prepare('SELECT 1')
+        .bind(...tooMany)
+        .first(),
+    ).rejects.toThrow('too many SQL variables')
     await kit.d1.prepare('SELECT ? AS n').bind(7).first()
     expect(kit.statements.at(-1)).toEqual({ sql: 'SELECT ? AS n', params: [7] })
   })
@@ -94,8 +99,7 @@ describe('filterStream', () => {
 describe('allPages', () => {
   it('follows the cursor to the end, and gives up on a repository that never ends', async () => {
     const endless = {
-      queryTransactions: () =>
-        Promise.resolve({ items: [{ id: 1, date: '2026-01-01' }], hasMore: true }),
+      queryTransactions: () => Promise.resolve({ items: [{ id: 1, date: '2026-01-01' }], hasMore: true }),
     } as unknown as ExpenseRepository
     await expect(allPages(endless, OWNER, {}, 1)).rejects.toThrow('paging did not end')
     const once = {

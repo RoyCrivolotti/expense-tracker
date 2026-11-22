@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
-import { nearestScatter,
-  nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
+import { nearestScatter, nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { formatMoneyShort } from '../chartTheme'
@@ -30,61 +29,53 @@ function makeAccount(id: number): WealthAccount {
   return { id, name: `Broker ${id}`, kind: 'investment', sortOrder: id, archived: false }
 }
 
-function makeCheckin(id: number, date: string, valueCents: number, accountId = 1): WealthCheckin {
+function makeCheckin(
+  id: number,
+  date: string,
+  valueCents: number,
+  accountId = 1,
+): WealthCheckin {
   return { id, checkinDate: date, createdAt: `${date}T00:00:00.000Z`, entries: [{ accountId, valueCents }] }
 }
 
 describe('CheckinHistoryChart', () => {
   it('renders nothing when scenario has no planStartDate', () => {
     const { container } = render(
-      <CheckinHistoryChart
-        checkins={[]}
-        accounts={[]}
-        plan={makeScenario({ planStartDate: null })}
-      />,
+      <CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: null })} />,
     )
     expect(container.firstChild).toBeNull()
   })
 
   it('renders nothing when plan is null', () => {
-    const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} plan={null} />,
-    )
+    const { container } = render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={null} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('says which euros it is in: the plan\'s, to which each check-in is brought back at the inflation', () => {
+  it("says which euros it is in: the plan's, to which each check-in is brought back at the inflation", () => {
     render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
-    expect(screen.getByText(/^In 2020 euros: each check-in is brought back at 2,0% a year to sit against the plan\.$/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/^In 2020 euros: each check-in is brought back at 2,0% a year to sit against the plan\.$/),
+    ).toBeInTheDocument()
   })
 
   it('renders chart when scenario has planStartDate', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
-    const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />,
-    )
+    const { container } = render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
   it('renders scatter points for check-ins within the plan horizon', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01', horizonYears: 30 })
     const accounts = [makeAccount(1)]
-    const checkins = [
-      makeCheckin(1, '2022-06-01', 50_000_000),
-      makeCheckin(2, '2023-06-01', 80_000_000),
-    ]
-    const { container } = render(
-      <CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />,
-    )
+    const checkins = [makeCheckin(1, '2022-06-01', 50_000_000), makeCheckin(2, '2023-06-01', 80_000_000)]
+    const { container } = render(<CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />)
     const circles = container.querySelectorAll('circle')
     expect(circles.length).toBeGreaterThanOrEqual(2)
   })
 
   it('renders a today marker line', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
-    const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />,
-    )
+    const { container } = render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
@@ -111,7 +102,7 @@ describe('CheckinHistoryChart', () => {
     expect(screen.getByRole('radio', { name: '10Y' })).toBeChecked()
   })
 
-  it('writes the inflation in the owner\'s number style in the line under the title', () => {
+  it("writes the inflation in the owner's number style in the line under the title", () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const usd = resolveMoneyFormat('USD', 'en-US')
     const { container } = render(
@@ -127,9 +118,7 @@ describe('CheckinHistoryChart', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2022-06-01', 50_000_000)]
-    const { container } = render(
-      <CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />,
-    )
+    const { container } = render(<CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />)
     const legendItems = container.querySelectorAll('ul li')
     const labels = [...legendItems].map((li) => li.textContent)
     expect(labels).toContain('Plan')
@@ -190,14 +179,32 @@ describe('buildCheckinTooltip', () => {
   })
 
   it('gives the plan on both sides of a payment where the plan steps, so a reading before it is not set against the value after it', () => {
-    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 40_000], [{ xIndex: 1, value: 95_000 }], format, undefined, undefined, [100_000, 90_000])
+    const result = buildCheckinTooltip(
+      1,
+      ['Year 0', 'Year 1'],
+      [100_000, 40_000],
+      [{ xIndex: 1, value: 95_000 }],
+      format,
+      undefined,
+      undefined,
+      [100_000, 90_000],
+    )
     expect(result.lines.map((l) => l.label)).toEqual(['Plan, the day before', 'Plan, that day', 'Actual'])
     expect(result.lines[0]!.value).toBe(formatMoneyShort(90_000, format))
     expect(result.lines[1]!.value).toBe(formatMoneyShort(40_000, format))
   })
 
   it('has one Plan line where the plan does not step', () => {
-    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], [], format, undefined, undefined, [100_000, 200_000])
+    const result = buildCheckinTooltip(
+      1,
+      ['Year 0', 'Year 1'],
+      [100_000, 200_000],
+      [],
+      format,
+      undefined,
+      undefined,
+      [100_000, 200_000],
+    )
     expect(result.lines.map((l) => l.label)).toEqual(['Plan'])
   })
 
@@ -208,7 +215,7 @@ describe('buildCheckinTooltip', () => {
 })
 
 describe('nearestScatter', () => {
-  it('is the step\'s own reading within half a step, and the nearest one, dated, beyond', () => {
+  it("is the step's own reading within half a step, and the nearest one, dated, beyond", () => {
     const points = [
       { xIndex: 2.3, value: 100, label: '3 Mar 2026' },
       { xIndex: 5.1, value: 200, label: '1 Jun 2026' },
@@ -222,9 +229,16 @@ describe('nearestScatter', () => {
 describe('realCheckinPoints', () => {
   const accounts = [makeAccount(1)]
 
-  it('brings a balance to the plan\'s money, so one exactly on plan sits on the line', () => {
+  it("brings a balance to the plan's money, so one exactly on plan sits on the line", () => {
     // Two years at the assumed 2% inflation: 104.040 in the money of the day is 100.000 of the start's.
-    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1, DEFAULT_INFLATION_RATE)
+    const points = realCheckinPoints(
+      [makeCheckin(1, '2027-01-01', 104_040_00)],
+      accounts,
+      '2025-01-01',
+      10,
+      1,
+      DEFAULT_INFLATION_RATE,
+    )
     expect(points).toHaveLength(1)
     expect(points[0]!.value).toBeGreaterThan(99_900_00)
     expect(points[0]!.value).toBeLessThan(100_100_00)
@@ -233,8 +247,15 @@ describe('realCheckinPoints', () => {
     expect(points[0]!.xIndex).toBeCloseTo(2, 1)
   })
 
-  it('carries each check-in\'s date, for a tooltip read from a step it does not sit on', () => {
-    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1, DEFAULT_INFLATION_RATE)
+  it("carries each check-in's date, for a tooltip read from a step it does not sit on", () => {
+    const points = realCheckinPoints(
+      [makeCheckin(1, '2027-01-01', 104_040_00)],
+      accounts,
+      '2025-01-01',
+      10,
+      1,
+      DEFAULT_INFLATION_RATE,
+    )
     expect(points[0]!.label).toBe('1 Jan 2027')
   })
 

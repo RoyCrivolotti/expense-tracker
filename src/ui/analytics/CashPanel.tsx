@@ -15,8 +15,7 @@ function YearlySection({ model }: { model: ExpenseModel }) {
     <section className={tabStyles.analyticsSection}>
       <SectionTitle>Yearly overview</SectionTitle>
       <p className={tableStyles.note}>
-        Paid flows per month — unpaid card charges sit in the Forecast column until their
-        statement is paid.
+        Paid flows per month — unpaid card charges sit in the Forecast column until their statement is paid.
       </p>
       {isMobile ? <YearlyOverviewMobile model={model} /> : <YearlyOverviewTable model={model} />}
     </section>

@@ -35,14 +35,21 @@ describe('useSheetExit', () => {
   const sheetOf = (height: number) => ({ current: { offsetHeight: height } as HTMLElement })
 
   /** The owner takes a swipe by starting the exit in the update the swipe made. */
-  function swipe(result: { current: ReturnType<typeof useSheetExit> }, rerender: (props: { leaving: boolean }) => void, from: number) {
+  function swipe(
+    result: { current: ReturnType<typeof useSheetExit> },
+    rerender: (props: { leaving: boolean }) => void,
+    from: number,
+  ) {
     act(() => {
       result.current.requestClose(from)
       rerender({ leaving: true })
     })
   }
 
-  const setup = (sheet: { current: HTMLElement | null }, onClose = vi.fn()) => ({
+  const setup = (
+    sheet: { current: HTMLElement | null },
+    onClose = vi.fn(),
+  ) => ({
     onClose,
     ...renderHook(({ leaving }) => useSheetExit(sheet, onClose, leaving), { initialProps: { leaving: false } }),
   })

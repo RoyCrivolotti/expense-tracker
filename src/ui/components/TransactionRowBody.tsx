@@ -18,9 +18,7 @@ function LabelRow({ labelIds, lookup }: { labelIds: number[]; lookup: Lookup }) 
   // Undefined when a label was deleted in another tab, or the row came from a
   // stale offline snapshot — dropped rather than rendered as a broken chip,
   // the same tolerance FlagGlyph already has for a missing flag.
-  const resolved = labelIds
-    .map((id) => lookup.label(id))
-    .filter((l): l is Label => l != null)
+  const resolved = labelIds.map((id) => lookup.label(id)).filter((l): l is Label => l != null)
   if (resolved.length === 0) return null
   const visible = resolved.slice(0, VISIBLE_LABEL_LIMIT)
   const hidden = resolved.length - visible.length
@@ -34,7 +32,10 @@ function LabelRow({ labelIds, lookup }: { labelIds: number[]; lookup: Lookup }) 
   )
 }
 
-function installmentMeta(txn: Transaction, lookup: Lookup): string | null {
+function installmentMeta(
+  txn: Transaction,
+  lookup: Lookup,
+): string | null {
   if (txn.planId == null || txn.installmentIndex == null) return null
   const plan = lookup.installmentPlan(txn.planId)
   return plan ? `Payment ${txn.installmentIndex}/${plan.totalCount}` : null
@@ -92,9 +93,7 @@ export function TransactionRowBody({
         <Money cents={txn.amountCents} type={txn.type} className={styles.amount} />
         <span className={styles.railMeta}>
           <StatusPill status={txn.status} />
-          <Pill title={`Budget month: ${fullMonthLabel(txn.budgetMonth)}`}>
-            {shortMonthYearLabel(txn.budgetMonth)}
-          </Pill>
+          <Pill title={`Budget month: ${fullMonthLabel(txn.budgetMonth)}`}>{shortMonthYearLabel(txn.budgetMonth)}</Pill>
         </span>
       </span>
     </>

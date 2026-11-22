@@ -17,7 +17,9 @@ describe('useReplayInput', () => {
   })
 
   it('keeps what it last read while paused, even after the wait, and reads the newest again when it is live', () => {
-    const { result, rerender } = renderHook(({ v, paused }) => useReplayInput(v, paused), { initialProps: { v: 'a', paused: false } })
+    const { result, rerender } = renderHook(({ v, paused }) => useReplayInput(v, paused), {
+      initialProps: { v: 'a', paused: false },
+    })
     rerender({ v: 'b', paused: true })
     act(() => void vi.advanceTimersByTime(1_000))
     expect(result.current).toBe('a')

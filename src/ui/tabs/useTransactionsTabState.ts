@@ -77,8 +77,7 @@ function useTxnListFilters(
    * id leaves the select showing "Flag" while the list renders nothing.
    */
   const flagId = useMemo(
-    () =>
-      typeof rawFlagId === 'number' && !flags.some((f) => f.id === rawFlagId) ? 'all' : rawFlagId,
+    () => (typeof rawFlagId === 'number' && !flags.some((f) => f.id === rawFlagId) ? 'all' : rawFlagId),
     [rawFlagId, flags],
   )
 
@@ -88,10 +87,7 @@ function useTxnListFilters(
    * render rather than stored, keeping the list, the chip and the picker in
    * agreement.
    */
-  const labelIds = useMemo(
-    () => rawLabelIds.filter((id) => labels.some((l) => l.id === id)),
-    [rawLabelIds, labels],
-  )
+  const labelIds = useMemo(() => rawLabelIds.filter((id) => labels.some((l) => l.id === id)), [rawLabelIds, labels])
 
   /**
    * Resolved rather than stored, for the same reason as `flagId`: moving the month after
@@ -221,7 +217,11 @@ function useTxnListFilters(
 }
 
 /** The list when the model holds every row it can show: filtered here, in one go. */
-export function listOfHeldRows(model: ExpenseModel, sums: ExpenseModel['dataset'], filter: TxnFilter): ListView {
+export function listOfHeldRows(
+  model: ExpenseModel,
+  sums: ExpenseModel['dataset'],
+  filter: TxnFilter,
+): ListView {
   const { dataset } = model
   const results = filterTransactions(dataset.transactions, filter)
   const cashRows = computeCashReconciliation(sums.transactions, dataset.accounts, dataset.settings, dataset.cashActuals)
@@ -236,7 +236,10 @@ export function listOfHeldRows(model: ExpenseModel, sums: ExpenseModel['dataset'
   return { results, listRows, totalCents: netSpendCents(results), count: listRows.length }
 }
 
-function useHeldList(model: ExpenseModel, filter: TxnFilter): ListView {
+function useHeldList(
+  model: ExpenseModel,
+  filter: TxnFilter,
+): ListView {
   const sums = sumsOf(model)
   return useMemo(() => listOfHeldRows(model, sums, filter), [model.dataset, sums, filter]) // eslint-disable-line react-hooks/exhaustive-deps -- the model's dataset and sums are the inputs
 }
@@ -275,19 +278,23 @@ export function useTransactionsTabState(
     [list.listRows],
   )
 
-  const existingIds = useMemo(
-    () => model.dataset.transactions.map((t) => t.id),
-    [model.dataset.transactions],
-  )
+  const existingIds = useMemo(() => model.dataset.transactions.map((t) => t.id), [model.dataset.transactions])
 
   // This tab does not remount on a filter or month change, so the selection is told what
   // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
   const useSelection: SelectionHook = model.pagedList?.useSelection ?? useTransactionSelection
-  const selection = useSelection(actions, visibleIds, existingIds, shell.onSelectModeChange, model.dataset.transactions, {
-    model,
-    list,
-    filter: filters.filter,
-  })
+  const selection = useSelection(
+    actions,
+    visibleIds,
+    existingIds,
+    shell.onSelectModeChange,
+    model.dataset.transactions,
+    {
+      model,
+      list,
+      filter: filters.filter,
+    },
+  )
 
   return {
     ...filters,

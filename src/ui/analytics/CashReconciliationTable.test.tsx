@@ -26,7 +26,10 @@ function txn(partial: Partial<Transaction> & Pick<Transaction, 'budgetMonth' | '
   }
 }
 
-function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cashActuals']): ExpenseModel {
+function modelWith(
+  transactions: Transaction[],
+  cashActuals: ExpenseDataset['cashActuals'],
+): ExpenseModel {
   return {
     dataset: {
       flags: [],

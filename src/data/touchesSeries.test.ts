@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { makeTransaction } from '../testing/factories'
 import { touchesSeries } from './touchesSeries'
 
-const row = (over: Parameters<typeof makeTransaction>[0] = {}) => makeTransaction({ id: 1, description: 'Gym', ...over })
+const row = (over: Parameters<typeof makeTransaction>[0] = {}) =>
+  makeTransaction({ id: 1, description: 'Gym', ...over })
 
 describe('touchesSeries', () => {
   const rows = [row({ id: 1 }), row({ id: 2, description: 'Rent' })]
-  const edit = (id: number, over: Parameters<typeof makeTransaction>[0]) =>
-    rows.map((r) => (r.id === id ? { ...r, ...over } : r))
+  const edit = (
+    id: number,
+    over: Parameters<typeof makeTransaction>[0],
+  ) => rows.map((r) => (r.id === id ? { ...r, ...over } : r))
 
   it.each([
     ['a flag put on a row', { flagId: 3 }],

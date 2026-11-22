@@ -25,9 +25,7 @@ export default function GuideSheet({ onClose }: { onClose: () => void }) {
       <div className={styles.guide}>
         {GUIDE_SECTIONS.map((section) => (
           <div key={section.id} className={styles.section}>
-            <h3 className={styles.heading}>
-              {section.title}
-            </h3>
+            <h3 className={styles.heading}>{section.title}</h3>
             {section.blocks.map((block, i) => (
               <Block key={i} block={block} />
             ))}

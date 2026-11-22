@@ -189,7 +189,12 @@ const HELD_FROM = { width: 1200, height: 800 }
 const failures = []
 
 /** `detail` is only read when the check fails, and says what was measured instead. */
-function check(where, what, ok, detail = '') {
+function check(
+  where,
+  what,
+  ok,
+  detail = '',
+) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
 }
@@ -250,13 +255,20 @@ function settled(page) {
   )
 }
 
-async function scrollTo(page, y) {
+async function scrollTo(
+  page,
+  y,
+) {
   await page.evaluate((top) => window.scrollTo(0, top), y)
   return settled(page)
 }
 
 /** A fresh page on the demo instance, on Goals' Plan. The rail's labels are hidden below 1024px, so it is found by place there. */
-async function openPlan(browser, { width, height }, { scheme = 'dark', zoom = null, touch = false } = {}) {
+async function openPlan(
+  browser,
+  { width, height },
+  { scheme = 'dark', zoom = null, touch = false } = {},
+) {
   const context = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: 1,
@@ -279,7 +291,11 @@ async function openPlan(browser, { width, height }, { scheme = 'dark', zoom = nu
   return { page, context }
 }
 
-const near = (a, b, tolerance = 1) => Math.abs(a - b) <= tolerance
+const near = (
+  a,
+  b,
+  tolerance = 1,
+) => Math.abs(a - b) <= tolerance
 const px = (n) => `${Math.round(n * 10) / 10}px`
 
 /** Where the page's blocks are, measured in the page. */
@@ -330,36 +346,98 @@ function nestedScrollers(page) {
   })
 }
 
-async function checkLayout(page, screen, where) {
+async function checkLayout(
+  page,
+  screen,
+  where,
+) {
   const m = await measure(page)
-  check(where, '(a) nothing in the page scrolls on its own', (await nestedScrollers(page)).length === 0, (await nestedScrollers(page)).join(', '))
-  check(where, '(b) the page does not scroll sideways', m.pageScrollWidth <= m.iw, `scrollWidth ${m.pageScrollWidth}, window ${m.iw}`)
+  check(
+    where,
+    '(a) nothing in the page scrolls on its own',
+    (await nestedScrollers(page)).length === 0,
+    (await nestedScrollers(page)).join(', '),
+  )
+  check(
+    where,
+    '(b) the page does not scroll sideways',
+    m.pageScrollWidth <= m.iw,
+    `scrollWidth ${m.pageScrollWidth}, window ${m.iw}`,
+  )
   const expected = Math.min(1168, m.iw - (m.iw >= 1024 ? 240 : 72) - 32)
-  check(where, '(c) the page is as wide as the column beside the rail allows, up to 76rem', m.page.width >= expected - 40, `page ${px(m.page.width)}, wanted about ${expected}`)
-  check(where, '(d) the chart is wider than the 588px it had beside the side panel', m.page.width - 36 > 640, px(m.page.width))
-  check(where, '(d) every milestone column of the years-to-milestone table is in sight', m.milestoneHidden <= 1, `${px(m.milestoneHidden)} scrolled out of sight`)
+  check(
+    where,
+    '(c) the page is as wide as the column beside the rail allows, up to 76rem',
+    m.page.width >= expected - 40,
+    `page ${px(m.page.width)}, wanted about ${expected}`,
+  )
+  check(
+    where,
+    '(d) the chart is wider than the 588px it had beside the side panel',
+    m.page.width - 36 > 640,
+    px(m.page.width),
+  )
+  check(
+    where,
+    '(d) every milestone column of the years-to-milestone table is in sight',
+    m.milestoneHidden <= 1,
+    `${px(m.milestoneHidden)} scrolled out of sight`,
+  )
   if (screen.width >= 1250) {
     // The five levers and the result block, which has a label of its own.
     const row = new Set(m.labelTops)
-    check(where, '(e) the five levers and the result are on one row', row.size === 1 && m.labelTops.length === 6, `tops ${m.labelTops.join(', ')}`)
+    check(
+      where,
+      '(e) the five levers and the result are on one row',
+      row.size === 1 && m.labelTops.length === 6,
+      `tops ${m.labelTops.join(', ')}`,
+    )
   }
   if (screen.width < ONE_ROW_FROM) {
-    check(where, '(g) below 75rem the bar goes by with the page instead of sticking over it', m.barPosition === 'static', `position ${m.barPosition}`)
+    check(
+      where,
+      '(g) below 75rem the bar goes by with the page instead of sticking over it',
+      m.barPosition === 'static',
+      `position ${m.barPosition}`,
+    )
   }
   if (screen.width >= HELD_FROM.width && screen.height >= HELD_FROM.height) {
-    check(where, '(f) the bar is on screen on first load, held to the bottom edge', m.bar.bottom <= m.ih + 0.5 && m.bar.top >= 0, `bar ${px(m.bar.top)} to ${px(m.bar.bottom)} in ${m.ih}px`)
+    check(
+      where,
+      '(f) the bar is on screen on first load, held to the bottom edge',
+      m.bar.bottom <= m.ih + 0.5 && m.bar.top >= 0,
+      `bar ${px(m.bar.top)} to ${px(m.bar.bottom)} in ${m.ih}px`,
+    )
     check(where, '(f) the bar is not so tall it leaves little of the chart', m.bar.height < 140, px(m.bar.height))
-    check(where, '(f) held to the bottom edge, the bar does not cover the chart or its legend', m.bar.top >= m.legendBottom, `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+    check(
+      where,
+      '(f) held to the bottom edge, the bar does not cover the chart or its legend',
+      m.bar.top >= m.legendBottom,
+      `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`,
+    )
   } else if (screen.width >= ONE_ROW_FROM) {
-    check(where, '(f) on a shorter screen the bar stays in the page, so it does not cover the chart', m.barBottom === 'auto' && m.bar.top >= m.legendBottom, `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+    check(
+      where,
+      '(f) on a shorter screen the bar stays in the page, so it does not cover the chart',
+      m.barBottom === 'auto' && m.bar.top >= m.legendBottom,
+      `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`,
+    )
   }
 }
 
-async function checkSticky(page, where) {
+async function checkSticky(
+  page,
+  where,
+) {
   await scrollTo(page, 1400)
   const m = await measure(page)
   const wantTop = m.header.bottom + 3
-  check(where, '(g) once the page has scrolled past it the bar sticks under the header with 3px of air', near(m.bar.top, wantTop, 1.5), `bar top ${px(m.bar.top)}, header bottom ${px(m.header.bottom)}`)
+  check(
+    where,
+    '(g) once the page has scrolled past it the bar sticks under the header with 3px of air',
+    near(m.bar.top, wantTop, 1.5),
+    `bar top ${px(m.bar.top)}, header bottom ${px(m.header.bottom)}`,
+  )
   const covered = await page.evaluate(() => {
     const bar = document.querySelector('[class*="leversBar"]')
     const r = bar.getBoundingClientRect()
@@ -381,12 +459,20 @@ async function checkSticky(page, where) {
     inBar: document.querySelector('[class*="leversBar"]').contains(document.activeElement),
   }))
   check(where, '(g) Tab inside the stuck bar stays in the bar', after.inBar)
-  check(where, '(g) Tab inside the stuck bar does not scroll the page', near(after.y, before, 1), `scrolled from ${before} to ${after.y}`)
+  check(
+    where,
+    '(g) Tab inside the stuck bar does not scroll the page',
+    near(after.y, before, 1),
+    `scrolled from ${before} to ${after.y}`,
+  )
   await page.evaluate(() => document.activeElement?.blur())
   await scrollTo(page, 0)
 }
 
-async function checkPanel(page, where) {
+async function checkPanel(
+  page,
+  where,
+) {
   const before = (await measure(page)).scrollHeight
   const button = page.getByRole('button', { name: 'All inputs' })
   check(where, '(h) the inputs panel is closed to begin with', (await button.getAttribute('aria-expanded')) === 'false')
@@ -396,23 +482,47 @@ async function checkPanel(page, where) {
   await page.waitForTimeout(300)
   const open = await region.boundingBox()
   const grown = (await measure(page)).scrollHeight
-  check(where, '(h) the panel opens in columns under the bar and makes the page longer', open !== null && open.height > 200 && grown > before + 150, `panel ${px(open?.height ?? 0)}, page ${before} to ${grown}`)
+  check(
+    where,
+    '(h) the panel opens in columns under the bar and makes the page longer',
+    open !== null && open.height > 200 && grown > before + 150,
+    `panel ${px(open?.height ?? 0)}, page ${before} to ${grown}`,
+  )
   const columns = await page.evaluate(() => {
-    const tops = [...document.querySelectorAll('[role="region"] [class*="columns"] > *')].map((c) => Math.round(c.getBoundingClientRect().top))
+    const tops = [...document.querySelectorAll('[role="region"] [class*="columns"] > *')].map((c) =>
+      Math.round(c.getBoundingClientRect().top),
+    )
     return new Set(tops).size
   })
-  check(where, '(h) the panel has its columns across the page where there is room', (await page.viewportSize()).width < 1250 || columns === 1, `${columns} rows of columns`)
+  check(
+    where,
+    '(h) the panel has its columns across the page where there is room',
+    (await page.viewportSize()).width < 1250 || columns === 1,
+    `${columns} rows of columns`,
+  )
   await button.click()
   await region.waitFor({ state: 'detached', timeout: 5000 })
   await page.waitForTimeout(200)
-  check(where, '(h) the panel closes and the page goes back to its length', near((await measure(page)).scrollHeight, before, 3), `page ${before}, then ${(await measure(page)).scrollHeight}`)
+  check(
+    where,
+    '(h) the panel closes and the page goes back to its length',
+    near((await measure(page)).scrollHeight, before, 3),
+    `page ${before}, then ${(await measure(page)).scrollHeight}`,
+  )
 }
 
 /** Stars: out of the bar and back to the panel, in from the panel, and the way back to the five. */
-async function checkStars(page, where) {
+async function checkStars(
+  page,
+  where,
+) {
   const bar = page.getByRole('group', { name: 'Key inputs' })
   const count = () => bar.locator('[class*="leverLabel"]').count()
-  check(where, '(m) the bar starts with five levers, each with a star to take it out', (await count()) === 5 && (await bar.getByRole('button', { name: /^Remove .* from the bar$/ }).count()) === 5)
+  check(
+    where,
+    '(m) the bar starts with five levers, each with a star to take it out',
+    (await count()) === 5 && (await bar.getByRole('button', { name: /^Remove .* from the bar$/ }).count()) === 5,
+  )
 
   await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
   await page.waitForTimeout(300)
@@ -420,12 +530,25 @@ async function checkStars(page, where) {
 
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor({ timeout: 5000 })
-  check(where, '(m) the input is back in the panel', (await page.getByLabel('Horizon (years)', { exact: true }).count()) === 1)
+  check(
+    where,
+    '(m) the input is back in the panel',
+    (await page.getByLabel('Horizon (years)', { exact: true }).count()) === 1,
+  )
   const star = page.getByRole('button', { name: 'Add House price to the bar' })
   const box = await star.boundingBox()
   const field = await page.getByLabel('House price', { exact: true }).boundingBox()
-  check(where, '(m) the star hangs clear of its input, to the left', box !== null && field !== null && box.x + box.width <= field.x && box.width >= 12, JSON.stringify({ box, field: field && { x: field.x } }))
-  check(where, '(m) a star says what it does when the pointer rests on it', (await star.getAttribute('title')) === 'Add House price to the bar')
+  check(
+    where,
+    '(m) the star hangs clear of its input, to the left',
+    box !== null && field !== null && box.x + box.width <= field.x && box.width >= 12,
+    JSON.stringify({ box, field: field && { x: field.x } }),
+  )
+  check(
+    where,
+    '(m) a star says what it does when the pointer rests on it',
+    (await star.getAttribute('title')) === 'Add House price to the bar',
+  )
   const hit = await star.evaluate((el) => Number.parseFloat(getComputedStyle(el, '::after').width))
   check(where, '(m) the area that takes a click on a star is 24px wide', near(hit, 24, 1), px(hit))
   const offCentre = await star.evaluate((el) => {
@@ -439,17 +562,31 @@ async function checkStars(page, where) {
   check(where, "(m) the star is on the middle of its label's first line", Math.abs(offCentre) <= 1, px(offCentre))
   await star.click()
   await page.waitForTimeout(300)
-  check(where, '(m) starring an input puts it in the bar, which is full again', (await count()) === 5 && (await bar.getByLabel('House price', { exact: true }).count()) === 1)
-  const live = await page.getByRole('button', { name: /^Add .* to the bar$/ }).evaluateAll((els) => els.filter((e) => !e.disabled).length)
+  check(
+    where,
+    '(m) starring an input puts it in the bar, which is full again',
+    (await count()) === 5 && (await bar.getByLabel('House price', { exact: true }).count()) === 1,
+  )
+  const live = await page
+    .getByRole('button', { name: /^Add .* to the bar$/ })
+    .evaluateAll((els) => els.filter((e) => !e.disabled).length)
   check(where, '(m) a full bar leaves no star open to press', live === 0, `${live} open`)
 
   await page.getByRole('button', { name: 'Reset to defaults' }).click()
   await page.waitForTimeout(300)
-  check(where, '(m) Reset puts the five back', (await count()) === 5 && (await bar.getByLabel('Horizon (years)', { exact: true }).count()) === 1)
+  check(
+    where,
+    '(m) Reset puts the five back',
+    (await count()) === 5 && (await bar.getByLabel('Horizon (years)', { exact: true }).count()) === 1,
+  )
 
   // The panel is still open, with the five: taking one out brings "Reset to defaults" in, and
   // nothing under its row may move for it.
-  const columnsTop = () => page.locator('[class*="columns"]').first().evaluate((el) => el.getBoundingClientRect().top)
+  const columnsTop = () =>
+    page
+      .locator('[class*="columns"]')
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().top)
   const restingTop = await columnsTop()
   // A click at the star's centre, not locator.click(): that scrolls the element clear of the page's
   // scroll padding first, which in WebKit moves the page for a star of the stuck bar (a person with
@@ -458,29 +595,53 @@ async function checkStars(page, where) {
   await page.mouse.click(horizonStar.x + horizonStar.width / 2, horizonStar.y + horizonStar.height / 2)
   await page.waitForTimeout(300)
   const movedTop = await columnsTop()
-  check(where, '(m) the columns do not move when "Reset to defaults" comes in', near(movedTop, restingTop, 0.5), `${px(movedTop)} against ${px(restingTop)}`)
+  check(
+    where,
+    '(m) the columns do not move when "Reset to defaults" comes in',
+    near(movedTop, restingTop, 0.5),
+    `${px(movedTop)} against ${px(restingTop)}`,
+  )
   await page.getByRole('button', { name: 'Reset to defaults' }).click()
   await page.waitForTimeout(300)
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor({ state: 'detached', timeout: 5000 })
 }
 
-async function checkMenu(page, where) {
+async function checkMenu(
+  page,
+  where,
+) {
   const trigger = page.getByRole('button', { name: 'Scenario options' })
   await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'Scenario options' })
   await dialog.waitFor({ timeout: 5000 })
   const box = await dialog.boundingBox()
   const vp = page.viewportSize()
-  check(where, '(i) the scenario menu opens inside the window', box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, JSON.stringify(box))
+  check(
+    where,
+    '(i) the scenario menu opens inside the window',
+    box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height,
+    JSON.stringify(box),
+  )
   await page.waitForTimeout(150)
-  check(where, '(i) the menu puts focus inside itself', await dialog.evaluate((el) => el.contains(document.activeElement)))
+  check(
+    where,
+    '(i) the menu puts focus inside itself',
+    await dialog.evaluate((el) => el.contains(document.activeElement)),
+  )
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached', timeout: 5000 })
-  check(where, '(i) Escape closes the menu and gives focus back to its button', await trigger.evaluate((el) => el === document.activeElement))
+  check(
+    where,
+    '(i) Escape closes the menu and gives focus back to its button',
+    await trigger.evaluate((el) => el === document.activeElement),
+  )
 }
 
-async function checkEdit(page, where) {
+async function checkEdit(
+  page,
+  where,
+) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   const before = await monthly.inputValue()
   await monthly.fill('750')
@@ -489,7 +650,12 @@ async function checkEdit(page, where) {
   check(where, '(j) typing over a lever marks the scenario as edited', true)
   await page.getByRole('button', { name: /^Discard changes$/ }).click()
   await page.waitForTimeout(300)
-  check(where, '(j) Discard puts the lever back and clears the mark', (await monthly.inputValue()) === before && (await page.getByText('Unsaved changes').count()) === 0, `value ${await monthly.inputValue()}`)
+  check(
+    where,
+    '(j) Discard puts the lever back and clears the mark',
+    (await monthly.inputValue()) === before && (await page.getByText('Unsaved changes').count()) === 0,
+    `value ${await monthly.inputValue()}`,
+  )
 
   // The figure only: the line under it (leverResultNote) has "leverResult" in its class too.
   const result = page.locator('[class*="leverResult"]:not([class*="leverResultNote"])')
@@ -499,22 +665,42 @@ async function checkEdit(page, where) {
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
   await page.waitForTimeout(500)
-  check(where, '(j) moving a slider with the keyboard moves the net worth at the horizon', (await result.textContent()) !== resultBefore, `still ${resultBefore}`)
+  check(
+    where,
+    '(j) moving a slider with the keyboard moves the net worth at the horizon',
+    (await result.textContent()) !== resultBefore,
+    `still ${resultBefore}`,
+  )
   await page.getByRole('button', { name: 'Discard changes' }).click()
 }
 
-async function checkHover(page, where) {
-  const svg = page.locator('svg[role="img"], svg').filter({ has: page.locator('path') }).first()
+async function checkHover(
+  page,
+  where,
+) {
+  const svg = page
+    .locator('svg[role="img"], svg')
+    .filter({ has: page.locator('path') })
+    .first()
   const box = await svg.boundingBox()
   await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
   await page.waitForTimeout(300)
-  const header = await page.getByText(/^Year \d+$/).first().isVisible().catch(() => false)
+  const header = await page
+    .getByText(/^Year \d+$/)
+    .first()
+    .isVisible()
+    .catch(() => false)
   check(where, '(k) hovering the chart shows the values for a year in the legend', header)
   await page.mouse.move(0, 0)
 }
 
 /** Tab through the page from the view switch: the order is top to bottom, and nothing is under the bar. */
-async function checkTabWalk(page, where, open, engine) {
+async function checkTabWalk(
+  page,
+  where,
+  open,
+  engine,
+) {
   if (open) {
     await page.getByRole('button', { name: 'All inputs' }).click()
     // The panel scrolls itself into view a frame or two after it opens. Focusing the first tab
@@ -554,7 +740,9 @@ async function checkTabWalk(page, where, open, engine) {
         inBar: bar?.contains(el) ?? false,
         columnId: (() => {
           const col = el.closest('[class*="detailColumn"], [class*="columns"] > *')
-          return col ? [...document.querySelectorAll('[class*="detailColumn"], [class*="columns"] > *')].indexOf(col) : -1
+          return col
+            ? [...document.querySelectorAll('[class*="detailColumn"], [class*="columns"] > *')].indexOf(col)
+            : -1
         })(),
         underHeader: r.top < header.getBoundingClientRect().bottom - 1,
         inView: r.bottom > 0 && r.top < window.innerHeight,
@@ -563,15 +751,36 @@ async function checkTabWalk(page, where, open, engine) {
     if (!stop) break
     stops.push(stop)
   }
-  check(where, `(l) Tab from the view switch reaches the scenario tabs first${open ? ' (inputs open)' : ''}`, stops[0]?.name.startsWith('Path'), `it reached "${stops[0]?.name}"`)
+  check(
+    where,
+    `(l) Tab from the view switch reaches the scenario tabs first${open ? ' (inputs open)' : ''}`,
+    stops[0]?.name.startsWith('Path'),
+    `it reached "${stops[0]?.name}"`,
+  )
   // Safari's Tab does not stop at every kind of control, so it is held to fewer.
   const least = engine === 'webkit' ? (open ? 20 : 10) : open ? 40 : 18
-  check(where, `(l) Tab visits the whole page (${stops.length} stops)`, stops.length >= least, `${stops.length} stops, at least ${least} wanted`)
+  check(
+    where,
+    `(l) Tab visits the whole page (${stops.length} stops)`,
+    stops.length >= least,
+    `${stops.length} stops, at least ${least} wanted`,
+  )
   const covered = stops.filter((s) => (s.covered && !s.inBar) || (s.underHeader && !s.inBar))
-  const where_ = (s) => `"${s.name}" (stop ${stops.indexOf(s) + 1} of ${stops.length}, top ${s.top}px with the page at ${s.scrollY}px)`
-  check(where, '(l) no control Tab reaches is under the bar or the header', covered.length === 0, covered.map(where_).join('; '))
+  const where_ = (s) =>
+    `"${s.name}" (stop ${stops.indexOf(s) + 1} of ${stops.length}, top ${s.top}px with the page at ${s.scrollY}px)`
+  check(
+    where,
+    '(l) no control Tab reaches is under the bar or the header',
+    covered.length === 0,
+    covered.map(where_).join('; '),
+  )
   const hiddenOffscreen = stops.filter((s) => !s.inView)
-  check(where, '(l) every control Tab reaches is scrolled into view', hiddenOffscreen.length === 0, hiddenOffscreen.map(where_).join('; '))
+  check(
+    where,
+    '(l) every control Tab reaches is scrolled into view',
+    hiddenOffscreen.length === 0,
+    hiddenOffscreen.map(where_).join('; '),
+  )
   // The detail charts and the panel are columns, read one column and then the next, so a stop may
   // go back up when it crosses from one column to another; anywhere else it only goes down.
   const outOfOrder = stops.findIndex((s, i) => {
@@ -580,7 +789,12 @@ async function checkTabWalk(page, where, open, engine) {
     if (s.columnId !== prev.columnId && s.columnId !== -1 && prev.columnId !== -1) return false
     return s.y < prev.y - 2
   })
-  check(where, '(l) no Tab stop sits above the one before it, but across columns', outOfOrder === -1, `"${stops[outOfOrder]?.name}" is above "${stops[outOfOrder - 1]?.name}"`)
+  check(
+    where,
+    '(l) no Tab stop sits above the one before it, but across columns',
+    outOfOrder === -1,
+    `"${stops[outOfOrder]?.name}" is above "${stops[outOfOrder - 1]?.name}"`,
+  )
 }
 
 /**
@@ -590,7 +804,10 @@ async function checkTabWalk(page, where, open, engine) {
  * (Chromium scrolled the page 366px for a star on 1280x800), nor leave the panel under the bar
  * when it is opened from the keyboard (the padding is lifted while focus is in the bar).
  */
-async function checkBarFocus(page, where) {
+async function checkBarFocus(
+  page,
+  where,
+) {
   await scrollTo(page, 0)
   // A plan with a house has a second figure in the bar (the invested part of the net worth), so it
   // is the taller bar: it must still clear the legend where it is held to the bottom edge.
@@ -599,7 +816,12 @@ async function checkBarFocus(page, where) {
     await page.getByRole('tab', { name: /Path B/ }).click()
     await page.waitForTimeout(500)
     const m = await measure(page)
-    check(where, '(n) with a house in the plan the held bar, a line taller, still clears the legend', m.bar.top >= m.legendBottom, `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+    check(
+      where,
+      '(n) with a house in the plan the held bar, a line taller, still clears the legend',
+      m.bar.top >= m.legendBottom,
+      `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`,
+    )
   }
   const bar = page.locator('[class*="leversBar"]')
   const scrollY = () => page.evaluate(() => Math.round(window.scrollY))
@@ -613,7 +835,12 @@ async function checkBarFocus(page, where) {
     await page.mouse.click(starBox.x + starBox.width / 2, starBox.y + starBox.height / 2)
     await page.waitForTimeout(400)
     const afterStar = await scrollY()
-    check(where, '(n) pressing a star in the bar does not scroll the page', near(afterStar, before, 1), `scrolled from ${before} to ${afterStar}`)
+    check(
+      where,
+      '(n) pressing a star in the bar does not scroll the page',
+      near(afterStar, before, 1),
+      `scrolled from ${before} to ${afterStar}`,
+    )
   }
 
   const open = async (how) => {
@@ -638,7 +865,12 @@ async function checkBarFocus(page, where) {
     })
     // Only where the bar is over the panel's place (stuck under the header) is there anything to be under.
     const clear = m.barTop > 100 || m.panelTop >= m.barBottom - 0.5
-    check(where, `(n) the panel opened with the ${how} is not left under the bar`, clear, `panel top ${m.panelTop}, bar ${m.barTop} to ${m.barBottom}`)
+    check(
+      where,
+      `(n) the panel opened with the ${how} is not left under the bar`,
+      clear,
+      `panel top ${m.panelTop}, bar ${m.barTop} to ${m.barBottom}`,
+    )
     await button.focus()
     await page.keyboard.press('Enter')
     await region.waitFor({ state: 'detached', timeout: 5000 })
@@ -654,23 +886,45 @@ async function checkBarFocus(page, where) {
  * purchase year, shows a breakdown. Each used to push the page down (the row wrapped by 40px at
  * 1280px, the breakdown added 144px, the legend wrapped and slid under the bar held at the bottom).
  */
-async function checkStability(page, where, held) {
+async function checkStability(
+  page,
+  where,
+  held,
+) {
   const geometry = () =>
     page.evaluate(() => {
       const row = document.querySelector('[role="tablist"][aria-label="Scenarios"]').getBoundingClientRect()
       const legend = document.querySelector('[data-goals-plan-wide] ul[class*="chips"]').getBoundingClientRect()
       const bar = document.querySelector('[data-levers-bar]').getBoundingClientRect()
-      return { rowHeight: row.height, rowBottom: row.bottom + scrollY, legendBottom: legend.bottom + scrollY, barTop: bar.top + scrollY, docHeight: document.documentElement.scrollHeight, scrolled: scrollY }
+      return {
+        rowHeight: row.height,
+        rowBottom: row.bottom + scrollY,
+        legendBottom: legend.bottom + scrollY,
+        barTop: bar.top + scrollY,
+        docHeight: document.documentElement.scrollHeight,
+        scrolled: scrollY,
+      }
     })
   const rest = await geometry()
-  if (held) check(where, '(r) at rest the legend clears the bar held at the bottom', rest.legendBottom <= rest.barTop + 0.5, `legend ends ${px(rest.legendBottom)}, bar starts ${px(rest.barTop)}`)
+  if (held)
+    check(
+      where,
+      '(r) at rest the legend clears the bar held at the bottom',
+      rest.legendBottom <= rest.barTop + 0.5,
+      `legend ends ${px(rest.legendBottom)}, bar starts ${px(rest.barTop)}`,
+    )
 
   const svg = page.locator('[data-goals-plan-wide] [role="img"]').first()
   const box = await svg.boundingBox()
   await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
   await page.waitForTimeout(250)
   const pointed = await geometry()
-  check(where, '(r) pointing at the chart does not move the page', near(pointed.docHeight, rest.docHeight, 1) && near(pointed.legendBottom, rest.legendBottom, 1), `page ${rest.docHeight} to ${pointed.docHeight}, legend ${px(rest.legendBottom)} to ${px(pointed.legendBottom)}`)
+  check(
+    where,
+    '(r) pointing at the chart does not move the page',
+    near(pointed.docHeight, rest.docHeight, 1) && near(pointed.legendBottom, rest.legendBottom, 1),
+    `page ${rest.docHeight} to ${pointed.docHeight}, legend ${px(rest.legendBottom)} to ${px(pointed.legendBottom)}`,
+  )
   await page.mouse.move(0, 0)
 
   const monthly = page.getByLabel('Monthly investing', { exact: true })
@@ -679,8 +933,19 @@ async function checkStability(page, where, held) {
   await page.getByText('Unsaved changes').waitFor({ state: 'attached', timeout: 5000 })
   await page.waitForTimeout(300)
   const edited = await geometry()
-  check(where, '(r) the first edit does not move the chips', near(edited.rowHeight, rest.rowHeight, 1) && near(edited.rowBottom, rest.rowBottom, 1), `chips ${px(rest.rowHeight)} to ${px(edited.rowHeight)}, ending ${px(rest.rowBottom)} to ${px(edited.rowBottom)}`)
-  if (held) check(where, '(r) with an edit the legend still clears the bar', edited.legendBottom <= edited.barTop + 0.5, `legend ends ${px(edited.legendBottom)}, bar starts ${px(edited.barTop)}`)
+  check(
+    where,
+    '(r) the first edit does not move the chips',
+    near(edited.rowHeight, rest.rowHeight, 1) && near(edited.rowBottom, rest.rowBottom, 1),
+    `chips ${px(rest.rowHeight)} to ${px(edited.rowHeight)}, ending ${px(rest.rowBottom)} to ${px(edited.rowBottom)}`,
+  )
+  if (held)
+    check(
+      where,
+      '(r) with an edit the legend still clears the bar',
+      edited.legendBottom <= edited.barTop + 0.5,
+      `legend ends ${px(edited.legendBottom)}, bar starts ${px(edited.barTop)}`,
+    )
   await page.getByRole('button', { name: 'Discard changes' }).click()
   await page.waitForTimeout(300)
 
@@ -708,11 +973,18 @@ async function checkStability(page, where, held) {
     // covers neither the lines nor the axis labels.
     const where_ = await page.evaluate(() => {
       const chart = document.querySelector('[data-goals-plan-wide] [role="img"]').getBoundingClientRect()
-      const title = [...document.querySelectorAll('[data-goals-plan-wide] *')].find((e) => e.children.length === 0 && e.textContent.trim() === 'Down payment + fees')
+      const title = [...document.querySelectorAll('[data-goals-plan-wide] *')].find(
+        (e) => e.children.length === 0 && e.textContent.trim() === 'Down payment + fees',
+      )
       const t = title.getBoundingClientRect()
       return { chartBottom: chart.bottom, breakdownTop: t.top }
     })
-    check(where, '(r) the breakdown is under the chart, not over it', where_.breakdownTop >= where_.chartBottom - 0.5, JSON.stringify(where_))
+    check(
+      where,
+      '(r) the breakdown is under the chart, not over it',
+      where_.breakdownTop >= where_.chartBottom - 0.5,
+      JSON.stringify(where_),
+    )
   }
   await page.mouse.move(0, 0)
 }
@@ -722,13 +994,20 @@ async function checkStability(page, where, held) {
  * (it is the line being edited), and the saved line it is measured against has no chip of its own;
  * after Discard nothing is left over from that.
  */
-async function checkLegendAfterDiscard(page, where) {
+async function checkLegendAfterDiscard(
+  page,
+  where,
+) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('900')
   await monthly.press('Enter')
   await page.getByText('Unsaved changes').waitFor({ timeout: 5000 })
   const eyesOfA = () => page.getByRole('button', { name: /^(Hide|Show) Path A: Invest only on chart$/ }).count()
-  check(where, '(u) the open scenario has no eye while it is edited, and its saved line no chip', (await eyesOfA()) === 0)
+  check(
+    where,
+    '(u) the open scenario has no eye while it is edited, and its saved line no chip',
+    (await eyesOfA()) === 0,
+  )
   await page.getByRole('button', { name: /^Discard changes$/ }).click()
   await page.waitForTimeout(400)
   check(where, '(u) after Discard the open scenario still has no eye', (await eyesOfA()) === 0)
@@ -740,7 +1019,11 @@ async function checkLegendAfterDiscard(page, where) {
  * none over another, none while nothing is pointed at, and on the left of the dots in the last
  * years, where the right has no room.
  */
-async function checkValueTags(page, where, svg) {
+async function checkValueTags(
+  page,
+  where,
+  svg,
+) {
   const box = await svg.boundingBox()
   const read = () =>
     page.evaluate(() => {
@@ -749,33 +1032,86 @@ async function checkValueTags(page, where, svg) {
       // the line, which is not part of the chip and is no clash with the chips beside it.
       const tags = [...document.querySelectorAll('[data-goals-plan-wide] [class*="valueTags"] > g')].map((g) => {
         const r = (g.querySelector('rect') ?? g).getBoundingClientRect()
-        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: g.textContent ?? '', dots: g.querySelectorAll('circle').length }
+        return {
+          left: r.left,
+          right: r.right,
+          top: r.top,
+          bottom: r.bottom,
+          text: g.textContent ?? '',
+          dots: g.querySelectorAll('circle').length,
+        }
       })
-      const focusDots = [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] circle')].filter((c) => !c.closest('[class*="valueTags"]'))
+      const focusDots = [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] circle')].filter(
+        (c) => !c.closest('[class*="valueTags"]'),
+      )
       const dotX = focusDots.length ? Math.max(...focusDots.map((c) => c.getBoundingClientRect().left)) : null
       return { chart: { left: chart.left, right: chart.right, top: chart.top, bottom: chart.bottom }, tags, dotX }
     })
-  const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+  const overlap = (
+    a,
+    b,
+  ) =>
+    Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
 
   await page.mouse.move(0, 0)
   await page.waitForTimeout(200)
   check(where, '(v1) with nothing pointed at there are no value chips on the chart', (await read()).tags.length === 0)
 
-  for (const [name, f] of [['in the middle', 0.5], ['in the last years', 0.97]]) {
+  for (const [name, f] of [
+    ['in the middle', 0.5],
+    ['in the last years', 0.97],
+  ]) {
     await page.mouse.move(box.x + box.width * f, box.y + box.height * 0.5)
     await page.waitForTimeout(300)
     const m = await read()
-    check(where, `(v1) pointing ${name} puts value chips on the chart`, m.tags.length >= 3 && m.tags.every((t) => /\d/.test(t.text)), JSON.stringify(m.tags.map((t) => t.text)))
-    const outside = m.tags.filter((t) => t.left < m.chart.left - 0.5 || t.right > m.chart.right + 0.5 || t.top < m.chart.top - 0.5 || t.bottom > m.chart.bottom + 0.5)
-    check(where, `(v1) pointing ${name} keeps every value chip inside the chart`, outside.length === 0, JSON.stringify(outside))
-    const clashes = m.tags.flatMap((a, i) => m.tags.slice(i + 1).filter((b) => overlap(a, b)).map((b) => `${a.text} / ${b.text}`))
+    check(
+      where,
+      `(v1) pointing ${name} puts value chips on the chart`,
+      m.tags.length >= 3 && m.tags.every((t) => /\d/.test(t.text)),
+      JSON.stringify(m.tags.map((t) => t.text)),
+    )
+    const outside = m.tags.filter(
+      (t) =>
+        t.left < m.chart.left - 0.5 ||
+        t.right > m.chart.right + 0.5 ||
+        t.top < m.chart.top - 0.5 ||
+        t.bottom > m.chart.bottom + 0.5,
+    )
+    check(
+      where,
+      `(v1) pointing ${name} keeps every value chip inside the chart`,
+      outside.length === 0,
+      JSON.stringify(outside),
+    )
+    const clashes = m.tags.flatMap((a, i) =>
+      m.tags
+        .slice(i + 1)
+        .filter((b) => overlap(a, b))
+        .map((b) => `${a.text} / ${b.text}`),
+    )
     check(where, `(v1) pointing ${name} leaves no value chip over another`, clashes.length === 0, clashes.join('; '))
     // The demo has a latest check-in, so the plan has its from-today line: a chip of its own with
     // a dotted edge, not one more solid chip the same colour as the plan's.
-    const today = await page.evaluate(() => [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] rect')].filter((r) => /valueTagToday/.test(r.getAttribute('class') ?? '')).length)
-    check(where, `(v2) pointing ${name} puts one chip on the plan's dotted from-today line`, today === 1, `${today} chips`)
+    const today = await page.evaluate(
+      () =>
+        [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] rect')].filter((r) =>
+          /valueTagToday/.test(r.getAttribute('class') ?? ''),
+        ).length,
+    )
+    check(
+      where,
+      `(v2) pointing ${name} puts one chip on the plan's dotted from-today line`,
+      today === 1,
+      `${today} chips`,
+    )
     if (f > 0.9 && m.dotX !== null) {
-      check(where, '(v1) in the last years the chips are on the left of the dots', m.tags.every((t) => t.right <= m.dotX + 4), JSON.stringify({ dotX: m.dotX, rights: m.tags.map((t) => t.right) }))
+      check(
+        where,
+        '(v1) in the last years the chips are on the left of the dots',
+        m.tags.every((t) => t.right <= m.dotX + 4),
+        JSON.stringify({ dotX: m.dotX, rights: m.tags.map((t) => t.right) }),
+      )
     }
   }
   await page.mouse.move(0, 0)
@@ -786,7 +1122,11 @@ async function checkValueTags(page, where, svg) {
  * at, an eye that hides a line and takes its value away, and the Plan and Edited tags on the top
  * edge of the open one, so the name has the whole chip.
  */
-async function checkChips(page, where, screen) {
+async function checkChips(
+  page,
+  where,
+  screen,
+) {
   const chips = () =>
     page.evaluate(() => {
       const list = document.querySelector('[role="tablist"][aria-label="Scenarios"]')
@@ -795,23 +1135,56 @@ async function checkChips(page, where, screen) {
         const tab = chip.querySelector('[role="tab"]')
         const name = chip.querySelector('[class*="chipName"]')
         const value = chip.querySelector('[class*="chipValue"]')
-        return { w: Math.round(r.width * 10) / 10, top: Math.round(r.top), h: Math.round(r.height), name: name.textContent, value: value.textContent, selected: tab.getAttribute('aria-selected') === 'true', cut: name.scrollHeight > name.clientHeight + 1, over: chip.scrollWidth > chip.clientWidth + 1 }
+        return {
+          w: Math.round(r.width * 10) / 10,
+          top: Math.round(r.top),
+          h: Math.round(r.height),
+          name: name.textContent,
+          value: value.textContent,
+          selected: tab.getAttribute('aria-selected') === 'true',
+          cut: name.scrollHeight > name.clientHeight + 1,
+          over: chip.scrollWidth > chip.clientWidth + 1,
+        }
       })
     })
   const rest = await chips()
-  check(where, '(c) every chip is one width', rest.length >= 3 && rest.every((c) => near(c.w, rest[0].w, 1.5)), JSON.stringify(rest.map((c) => c.w)))
-  check(where, '(c) no chip overflows itself', rest.every((c) => !c.over), JSON.stringify(rest.filter((c) => c.over)))
+  check(
+    where,
+    '(c) every chip is one width',
+    rest.length >= 3 && rest.every((c) => near(c.w, rest[0].w, 1.5)),
+    JSON.stringify(rest.map((c) => c.w)),
+  )
+  check(
+    where,
+    '(c) no chip overflows itself',
+    rest.every((c) => !c.over),
+    JSON.stringify(rest.filter((c) => c.over)),
+  )
   const rows = new Map()
   for (const c of rest) rows.set(c.top, [...(rows.get(c.top) ?? []), c.h])
-  check(where, '(c) the chips in a row are as tall as each other', [...rows.values()].every((hs) => hs.every((h) => near(h, hs[0], 1))), JSON.stringify([...rows]))
-  check(where, '(c) at rest every chip shows the value of its last year', rest.every((c) => /\d/.test(c.value)), JSON.stringify(rest.map((c) => c.value)))
+  check(
+    where,
+    '(c) the chips in a row are as tall as each other',
+    [...rows.values()].every((hs) => hs.every((h) => near(h, hs[0], 1))),
+    JSON.stringify([...rows]),
+  )
+  check(
+    where,
+    '(c) at rest every chip shows the value of its last year',
+    rest.every((c) => /\d/.test(c.value)),
+    JSON.stringify(rest.map((c) => c.value)),
+  )
 
   const svg = page.locator('[data-goals-plan-wide] [role="img"]').first()
   const box = await svg.boundingBox()
   await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5)
   await page.waitForTimeout(300)
   const pointed = await chips()
-  check(where, '(c) pointing at the chart changes the values in the chips', pointed.some((c, i) => c.value !== rest[i].value))
+  check(
+    where,
+    '(c) pointing at the chart changes the values in the chips',
+    pointed.some((c, i) => c.value !== rest[i].value),
+  )
   await page.mouse.move(0, 0)
   await checkValueTags(page, where, svg)
 
@@ -821,7 +1194,12 @@ async function checkChips(page, where, screen) {
   const shown = page.getByRole('button', { name: `Show ${label} on chart` })
   await shown.waitFor({ timeout: 5000 })
   const hidden = (await chips()).find((c) => c.name === label)
-  check(where, '(c) the eye hides a line: the chip is dimmed with no value', hidden.value === '', JSON.stringify(hidden))
+  check(
+    where,
+    '(c) the eye hides a line: the chip is dimmed with no value',
+    hidden.value === '',
+    JSON.stringify(hidden),
+  )
   await shown.dispatchEvent('click')
   await page.getByRole('button', { name: `Hide ${label} on chart` }).waitFor({ timeout: 5000 })
 
@@ -839,7 +1217,12 @@ async function checkChips(page, where, screen) {
       clearOfName: t.left >= name.right - 0.5 || t.right <= name.left + 0.5,
     }
   })
-  check(where, '(c) the Plan tag is inside the open chip, under its value and clear of its name', tags?.inside === true && tags.underValue === true && tags.clearOfName === true, JSON.stringify(tags))
+  check(
+    where,
+    '(c) the Plan tag is inside the open chip, under its value and clear of its name',
+    tags?.inside === true && tags.underValue === true && tags.clearOfName === true,
+    JSON.stringify(tags),
+  )
 
   // The actions are in the title row, beside the view switch: at the same height as "Goals".
   const row = await page.evaluate(() => {
@@ -848,7 +1231,12 @@ async function checkChips(page, where, screen) {
     const chip = document.querySelector('[role="tablist"][aria-label="Scenarios"]').getBoundingClientRect()
     return { h2Mid: h2.top + h2.height / 2, dup: [dup.top, dup.bottom], chipsTop: chip.top }
   })
-  check(where, `(c) Duplicate is in the title row, above the chips${screen.width < 1100 ? ' (it may wrap)' : ''}`, screen.width < 1100 || (row.dup[0] - 4 <= row.h2Mid && row.h2Mid <= row.dup[1] + 4 && row.dup[1] < row.chipsTop), JSON.stringify(row))
+  check(
+    where,
+    `(c) Duplicate is in the title row, above the chips${screen.width < 1100 ? ' (it may wrap)' : ''}`,
+    screen.width < 1100 || (row.dup[0] - 4 <= row.h2Mid && row.h2Mid <= row.dup[1] + 4 && row.dup[1] < row.chipsTop),
+    JSON.stringify(row),
+  )
 }
 
 /**
@@ -856,7 +1244,10 @@ async function checkChips(page, where, screen) {
  * Edited (nothing can be saved), and one note on a line of its own under the tabs says what the
  * edit is worth.
  */
-async function checkReadOnlyEdit(page, where) {
+async function checkReadOnlyEdit(
+  page,
+  where,
+) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('900')
   await monthly.press('Enter')
@@ -880,16 +1271,34 @@ async function checkReadOnlyEdit(page, where) {
       iw: window.innerWidth,
     }
   })
-  check(where, '(v) read-only with an edit: the note is on screen under the scenario chips', m.noteVisible && m.noteTop >= m.tabsBottom - 0.5 && m.noteRight <= m.iw, JSON.stringify(m))
-  check(where, '(v) read-only with an edit: no tab says Edited, and the page does not scroll sideways', !m.edited && m.scrollWidth <= m.iw, JSON.stringify(m))
+  check(
+    where,
+    '(v) read-only with an edit: the note is on screen under the scenario chips',
+    m.noteVisible && m.noteTop >= m.tabsBottom - 0.5 && m.noteRight <= m.iw,
+    JSON.stringify(m),
+  )
+  check(
+    where,
+    '(v) read-only with an edit: no tab says Edited, and the page does not scroll sideways',
+    !m.edited && m.scrollWidth <= m.iw,
+    JSON.stringify(m),
+  )
   check(where, '(v) read-only with an edit: the lever keeps the typed value', (await monthly.inputValue()) === '900')
   await page.getByRole('tab', { name: /^Path B/ }).click()
   const sheet = page.getByRole('alertdialog')
   await sheet.waitFor({ timeout: 5000 })
-  check(where, '(v) read-only with an edit: the discard question does not offer to save', !/Save changes first/.test(await sheet.innerText()))
+  check(
+    where,
+    '(v) read-only with an edit: the discard question does not offer to save',
+    !/Save changes first/.test(await sheet.innerText()),
+  )
 }
 
-async function checkScreen(browser, screen, engine) {
+async function checkScreen(
+  browser,
+  screen,
+  engine,
+) {
   const where = `${engine} ${screen.name}`
   const { page, context } = await openPlan(browser, screen)
   await checkLayout(page, screen, where)
@@ -920,7 +1329,10 @@ async function checkScreen(browser, screen, engine) {
   }
 }
 
-async function checkTabs(browser, engine) {
+async function checkTabs(
+  browser,
+  engine,
+) {
   for (const open of [false, true]) {
     const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
     await checkTabWalk(page, `${engine} 1440x900`, open, engine)
@@ -948,7 +1360,13 @@ function leverState(page) {
   return page.evaluate(() => {
     const bar = document.querySelector('[data-levers-bar]').getBoundingClientRect()
     const legend = document.querySelector('[data-goals-plan-wide] ul[class*="chips"]').getBoundingClientRect()
-    return { y: Math.round(window.scrollY), barTop: bar.top, barHeight: bar.height, legendBottom: legend.bottom, active: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName }
+    return {
+      y: Math.round(window.scrollY),
+      barTop: bar.top,
+      barHeight: bar.height,
+      legendBottom: legend.bottom,
+      active: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName,
+    }
   })
 }
 
@@ -968,15 +1386,24 @@ async function resetLevers(page) {
  * it), and a 15-character net worth in the result widened its column until the five levers
  * wrapped onto a second row at 1200px, which put the held bar over the legend.
  */
-async function checkLeverFocus(browser, engine) {
+async function checkLeverFocus(
+  browser,
+  engine,
+) {
   for (const screen of LEVER_SCREENS) {
     const where = `${engine} ${screen.width}x${screen.height}`
     const { page, context } = await openPlan(browser, screen)
     await scrollTo(page, 0)
     const rest = await leverState(page)
     const clear = (s) => s.legendBottom <= s.barTop + 0.5
-    const detail = (s) => `page at ${s.y}px, bar ${px(s.barTop)} to ${px(s.barTop + s.barHeight)}, legend ends ${px(s.legendBottom)}`
-    check(where, '(z1) at rest the bar is one row and the legend is clear of it', clear(rest) && rest.barHeight < 140, detail(rest))
+    const detail = (s) =>
+      `page at ${s.y}px, bar ${px(s.barTop)} to ${px(s.barTop + s.barHeight)}, legend ends ${px(s.legendBottom)}`
+    check(
+      where,
+      '(z1) at rest the bar is one row and the legend is clear of it',
+      clear(rest) && rest.barHeight < 140,
+      detail(rest),
+    )
 
     for (const { label, typed } of LEVER_FIELDS) {
       const field = page.getByRole('textbox', { name: label, exact: true })
@@ -996,8 +1423,18 @@ async function checkLeverFocus(browser, engine) {
         await page.keyboard.press('Enter')
         await page.waitForTimeout(350)
         const after = await leverState(page)
-        check(where, `(z1) typing ${typed} in ${label} (${how === 'fill' ? 'filled' : `a click on its ${how}`}) does not move the page`, near(after.y, 0, 1), detail(after))
-        check(where, `(z1) after typing in ${label} the legend is still clear of the bar`, clear(after) && near(after.barHeight, rest.barHeight, 1), detail(after))
+        check(
+          where,
+          `(z1) typing ${typed} in ${label} (${how === 'fill' ? 'filled' : `a click on its ${how}`}) does not move the page`,
+          near(after.y, 0, 1),
+          detail(after),
+        )
+        check(
+          where,
+          `(z1) after typing in ${label} the legend is still clear of the bar`,
+          clear(after) && near(after.barHeight, rest.barHeight, 1),
+          detail(after),
+        )
         await resetLevers(page)
       }
     }
@@ -1011,7 +1448,12 @@ async function checkLeverFocus(browser, engine) {
       await page.keyboard.press('ArrowRight')
       await page.waitForTimeout(350)
       const after = await leverState(page)
-      check(where, `(z1) a press and the arrow keys on the ${name} slider do not move the page`, near(after.y, 0, 1) && clear(after), detail(after))
+      check(
+        where,
+        `(z1) a press and the arrow keys on the ${name} slider do not move the page`,
+        near(after.y, 0, 1) && clear(after),
+        detail(after),
+      )
       await resetLevers(page)
     }
     const real = page.getByRole('textbox', { name: 'Real return (%/yr, after inflation)', exact: true })
@@ -1020,7 +1462,12 @@ async function checkLeverFocus(browser, engine) {
     await page.keyboard.press('Tab')
     await page.waitForTimeout(350)
     const tabbed = await leverState(page)
-    check(where, '(z1) Tab from a figure to the slider beside it does not move the page', near(tabbed.y, 0, 1) && clear(tabbed), detail(tabbed))
+    check(
+      where,
+      '(z1) Tab from a figure to the slider beside it does not move the page',
+      near(tabbed.y, 0, 1) && clear(tabbed),
+      detail(tabbed),
+    )
     await resetLevers(page)
 
     // A figure the result has no room for: it is the result that takes the room, not the levers.
@@ -1029,7 +1476,12 @@ async function checkLeverFocus(browser, engine) {
     await wide.press('Enter')
     await page.waitForTimeout(400)
     const grown = await leverState(page)
-    check(where, '(z1) a 15-character net worth leaves the bar one row high and the legend clear', near(grown.barHeight, rest.barHeight, 1) && clear(grown), detail(grown))
+    check(
+      where,
+      '(z1) a 15-character net worth leaves the bar one row high and the legend clear',
+      near(grown.barHeight, rest.barHeight, 1) && clear(grown),
+      detail(grown),
+    )
     await resetLevers(page)
 
     // A star pressed from the keyboard hands focus to the next one, which must not scroll the page.
@@ -1038,7 +1490,12 @@ async function checkLeverFocus(browser, engine) {
     await page.keyboard.press('Enter')
     await page.waitForTimeout(500)
     const starred = await leverState(page)
-    check(where, '(z1) pressing a star with the keyboard does not move the page', near(starred.y, 0, 1) && clear(starred), detail(starred))
+    check(
+      where,
+      '(z1) pressing a star with the keyboard does not move the page',
+      near(starred.y, 0, 1) && clear(starred),
+      detail(starred),
+    )
     await resetLevers(page)
 
     // The bar stuck under the header, which is where it is for most of the page (the star above
@@ -1055,7 +1512,10 @@ async function checkLeverFocus(browser, engine) {
     check(
       where,
       '(z1) a click in a lever of the bar stuck under the header does not move the page',
-      stuck.barTop < 100 && clicked.active === 'Horizon (years)' && near(clicked.y, down, 1) && near(clicked.barTop, stuck.barTop, 1),
+      stuck.barTop < 100 &&
+        clicked.active === 'Horizon (years)' &&
+        near(clicked.y, down, 1) &&
+        near(clicked.barTop, stuck.barTop, 1),
       `bar ${px(stuck.barTop)}, page ${down} to ${clicked.y}px, focus on ${clicked.active}`,
     )
     // The page only gives up the browser's scroll anchoring while focus is in the bar: the rest
@@ -1082,7 +1542,12 @@ async function checkLeverFocus(browser, engine) {
   const { page, context } = await openPlan(browser, short)
   await scrollTo(page, 0)
   const m = await measure(page)
-  check(`${engine} 1366x768`, '(z1) on a 768px screen the bar is not held to the bottom edge, and the legend is clear of it', m.barBottom === 'auto' && m.bar.top >= m.legendBottom, `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+  check(
+    `${engine} 1366x768`,
+    '(z1) on a 768px screen the bar is not held to the bottom edge, and the legend is clear of it',
+    m.barBottom === 'auto' && m.bar.top >= m.legendBottom,
+    `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`,
+  )
   for (const how of ['digits', 'unit']) {
     // Scrolled so the whole bar is on screen, with some air under it. A fixed offset did not
     // do that: how far down the bar sits depends on the font (a few dozen pixels between Linux
@@ -1108,21 +1573,43 @@ async function checkLeverFocus(browser, engine) {
     const after = await leverState(page)
     const stayed = near(after.y, at, 1) && after.legendBottom <= after.barTop + 0.5
     const detail = `page ${at} to ${after.y}px, bar ${px(after.barTop)}, legend ends ${px(after.legendBottom)}`
-    check(`${engine} 1366x768`, `(z1) typing in a lever there (a click on its ${how}) does not move the page, and the legend is clear of the bar`, stayed, detail)
+    check(
+      `${engine} 1366x768`,
+      `(z1) typing in a lever there (a click on its ${how}) does not move the page, and the legend is clear of the bar`,
+      stayed,
+      detail,
+    )
     await resetLevers(page)
   }
   await context.close()
 }
 
-async function checkThemesAndZoom(browser, engine) {
+async function checkThemesAndZoom(
+  browser,
+  engine,
+) {
   const light = await openPlan(browser, { width: 1440, height: 900 }, { scheme: 'light' })
   const m = await measure(light.page)
-  check(`${engine} light`, 'the page lays out the same in the light theme', m.pageScrollWidth <= m.iw && m.bar.bottom <= m.ih)
+  check(
+    `${engine} light`,
+    'the page lays out the same in the light theme',
+    m.pageScrollWidth <= m.iw && m.bar.bottom <= m.ih,
+  )
   await light.context.close()
   const big = await openPlan(browser, { width: 1440, height: 900 }, { zoom: '150%' })
   const z = await measure(big.page)
-  check(`${engine} 150% text`, 'large text does not push the page sideways', z.pageScrollWidth <= z.iw, `scrollWidth ${z.pageScrollWidth}, window ${z.iw}`)
-  check(`${engine} 150% text`, 'large text leaves the chart some of the screen above the bar', z.bar.top > 300 || z.bar.height < z.ih * 0.4, `bar ${px(z.bar.top)} to ${px(z.bar.bottom)}`)
+  check(
+    `${engine} 150% text`,
+    'large text does not push the page sideways',
+    z.pageScrollWidth <= z.iw,
+    `scrollWidth ${z.pageScrollWidth}, window ${z.iw}`,
+  )
+  check(
+    `${engine} 150% text`,
+    'large text leaves the chart some of the screen above the bar',
+    z.bar.top > 300 || z.bar.height < z.ih * 0.4,
+    `bar ${px(z.bar.top)} to ${px(z.bar.bottom)}`,
+  )
   await big.context.close()
 }
 
@@ -1131,7 +1618,10 @@ async function checkThemesAndZoom(browser, engine) {
  * floor for a graphical object, and the pale presets (amber, lime, cyan, emerald) were under it in
  * the light theme. Read from what the browser drew, so it covers light-dark() as well as hex.
  */
-async function checkLineColours(browser, engine) {
+async function checkLineColours(
+  browser,
+  engine,
+) {
   for (const scheme of ['light', 'dark']) {
     const { page, context } = await openPlan(browser, { width: 1440, height: 900 }, { scheme })
     const found = await page.evaluate(() => {
@@ -1148,7 +1638,10 @@ async function checkLineColours(browser, engine) {
         const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
         return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
       }
-      const ratio = (a, b) => {
+      const ratio = (
+        a,
+        b,
+      ) => {
         const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
         return (hi + 0.05) / (lo + 0.05)
       }
@@ -1164,29 +1657,58 @@ async function checkLineColours(browser, engine) {
     })
     const worstLine = Math.min(...found.lines)
     const worstDot = found.dots.length ? Math.min(...found.dots) : Infinity
-    check(`${engine} ${scheme}`, '(s) every line on the hero chart has 3:1 against the card', found.lines.length >= 3 && worstLine >= 2.95, `${found.lines.length} lines, worst ${worstLine.toFixed(2)}:1 on ${found.ground}`)
-    check(`${engine} ${scheme}`, '(s) the check-in dots have 3:1 against the card', found.dots.length > 0 && worstDot >= 2.95, `${found.dots.length} dots, worst ${worstDot.toFixed(2)}:1`)
+    check(
+      `${engine} ${scheme}`,
+      '(s) every line on the hero chart has 3:1 against the card',
+      found.lines.length >= 3 && worstLine >= 2.95,
+      `${found.lines.length} lines, worst ${worstLine.toFixed(2)}:1 on ${found.ground}`,
+    )
+    check(
+      `${engine} ${scheme}`,
+      '(s) the check-in dots have 3:1 against the card',
+      found.dots.length > 0 && worstDot >= 2.95,
+      `${found.dots.length} dots, worst ${worstDot.toFixed(2)}:1`,
+    )
     await context.close()
   }
 }
 
 /** 899px is the phone's layout and 900px the wide one, with no width in between that shows both. */
-async function checkBreakpoint(browser, engine) {
-  for (const [width, wide] of [[899, false], [900, true]]) {
+async function checkBreakpoint(
+  browser,
+  engine,
+) {
+  for (const [width, wide] of [
+    [899, false],
+    [900, true],
+  ]) {
     const { page, context } = await openPlan(browser, { width, height: 800 })
     const has = await page.evaluate(() => document.querySelector('[data-goals-plan-wide]') !== null)
     const m = await measure(page)
     check(`${engine} ${width}px`, wide ? 'has the wide page' : 'has the phone layout', has === wide)
-    check(`${engine} ${width}px`, 'does not scroll sideways', m.pageScrollWidth <= m.iw, `scrollWidth ${m.pageScrollWidth}`)
+    check(
+      `${engine} ${width}px`,
+      'does not scroll sideways',
+      m.pageScrollWidth <= m.iw,
+      `scrollWidth ${m.pageScrollWidth}`,
+    )
     await context.close()
   }
 }
 
 /** An iPad on its side takes the wide page, on a touch screen: vertical swipes on the chart must reach the page. */
-async function checkTouch(browser, engine) {
+async function checkTouch(
+  browser,
+  engine,
+) {
   const { page, context } = await openPlan(browser, { width: 1133, height: 744 }, { touch: true })
   const action = await page.evaluate(() => getComputedStyle(document.querySelector('[class*="hero"] svg')).touchAction)
-  check(`${engine} touch`, 'the chart leaves vertical swipes to the page', action === 'pan-y', `touch-action: ${action}`)
+  check(
+    `${engine} touch`,
+    'the chart leaves vertical swipes to the page',
+    action === 'pan-y',
+    `touch-action: ${action}`,
+  )
   await context.close()
 }
 
@@ -1194,24 +1716,42 @@ async function checkTouch(browser, engine) {
 const FINGER = 43.5
 
 /** The boxes of every element the selector finds, as heights and widths, in the page. */
-function sizesOf(page, selector) {
+function sizesOf(
+  page,
+  selector,
+) {
   return page.evaluate(
     (sel) =>
       [...document.querySelectorAll(sel)]
         .filter((el) => el.getBoundingClientRect().width > 0)
         .map((el) => {
           const r = el.getBoundingClientRect()
-          return { name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30), w: r.width, h: r.height }
+          return {
+            name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30),
+            w: r.width,
+            h: r.height,
+          }
         }),
     selector,
   )
 }
 
 /** Fails with the names of the ones under 44px, or says there were none to measure. */
-async function checkSizes(page, where, what, selector, { w = false, min = FINGER } = {}) {
+async function checkSizes(
+  page,
+  where,
+  what,
+  selector,
+  { w = false, min = FINGER } = {},
+) {
   const found = await sizesOf(page, selector)
   const small = found.filter((s) => s.h < min || (w && s.w < min))
-  check(where, `${what} (${found.length} measured)`, found.length > 0 && small.length === 0, found.length === 0 ? `nothing matches ${selector}` : small.map((s) => `${s.name} ${px(s.w)}x${px(s.h)}`).join('; '))
+  check(
+    where,
+    `${what} (${found.length} measured)`,
+    found.length > 0 && small.length === 0,
+    found.length === 0 ? `nothing matches ${selector}` : small.map((s) => `${s.name} ${px(s.w)}x${px(s.h)}`).join('; '),
+  )
 }
 
 /**
@@ -1219,14 +1759,21 @@ async function checkSizes(page, where, what, selector, { w = false, min = FINGER
  * uses is 44px, or has a tap area that is, and the way the stars, the bar and the toast behave
  * with it. The phone's layout and a fine pointer keep their sizes.
  */
-async function checkTouchTargets(browser, engine) {
+async function checkTouchTargets(
+  browser,
+  engine,
+) {
   const where = `${engine} iPad 1032`
   const { page, context } = await openPlan(browser, { width: 1032, height: 1376 }, { touch: true })
-  check(where, '(t) the emulated screen has a coarse pointer', await page.evaluate(() => matchMedia('(pointer: coarse)').matches))
+  check(
+    where,
+    '(t) the emulated screen has a coarse pointer',
+    await page.evaluate(() => matchMedia('(pointer: coarse)').matches),
+  )
 
   // The bar: the whole row of a lever's digits is 44px and the slider has a 44px box that takes
   // 28px of the layout, and the bar is no taller for it than the result column beside the levers.
-  await checkSizes(page, where, '(t) a lever\'s row of digits is 44px', '[class*="leverValue"]')
+  await checkSizes(page, where, "(t) a lever's row of digits is 44px", '[class*="leverValue"]')
   await checkSizes(page, where, '(t) a slider in the bar has a 44px box', '[class*="leversBar"] input[type="range"]')
   const footprint = await page.evaluate(() => {
     const r = document.querySelector('[class*="leversBar"] input[type="range"]')
@@ -1238,16 +1785,31 @@ async function checkTouchTargets(browser, engine) {
     const r = document.querySelector('[class*="leversBar"] input[type="range"]').getBoundingClientRect()
     const x = r.left + r.width / 4
     const range = (y) => document.elementFromPoint(x, y)?.matches('input[type="range"]') ?? false
-    const label = document.querySelector('[class*="leversBar"] input[type="range"]').closest('[class*="leverTrack"]').previousElementSibling.getBoundingClientRect()
+    const label = document
+      .querySelector('[class*="leversBar"] input[type="range"]')
+      .closest('[class*="leverTrack"]')
+      .previousElementSibling.getBoundingClientRect()
     const onDigits = document.elementFromPoint(label.left + 4, label.bottom - 3)
     return {
       above: range(r.top + r.height / 2 - 12),
       below: range(r.top + r.height / 2 + 18),
-      digitsRow: onDigits?.closest('[class*="leverValue"]') !== null && !(onDigits instanceof HTMLInputElement && onDigits.type === 'range'),
+      digitsRow:
+        onDigits?.closest('[class*="leverValue"]') !== null &&
+        !(onDigits instanceof HTMLInputElement && onDigits.type === 'range'),
     }
   })
-  check(where, '(t) a press 12px above a slider\'s track and 18px below it is the slider\'s', reach.above && reach.below, JSON.stringify(reach))
-  check(where, '(t) a press on the lower part of a lever\'s digits row is not the slider\'s', reach.digitsRow, JSON.stringify(reach))
+  check(
+    where,
+    "(t) a press 12px above a slider's track and 18px below it is the slider's",
+    reach.above && reach.below,
+    JSON.stringify(reach),
+  )
+  check(
+    where,
+    "(t) a press on the lower part of a lever's digits row is not the slider's",
+    reach.digitsRow,
+    JSON.stringify(reach),
+  )
 
   // The scenario chips are 44px with a finger, and so is the eye beside the name: a press on either
   // half of a chip is that half's.
@@ -1257,18 +1819,42 @@ async function checkTouchTargets(browser, engine) {
       const eye = chip.querySelector('[class*="chipEye"]')
       const e = eye?.getBoundingClientRect()
       const onName = document.elementFromPoint(r.left + 20, r.top + r.height / 2)
-      return { h: r.height, eyeW: e?.width ?? null, eyeH: e?.height ?? null, nameOpens: onName?.closest('[role="tab"]') !== null, eyeToggles: eye ? eye.contains(document.elementFromPoint(e.left + e.width / 2, e.top + e.height / 2)) : null }
+      return {
+        h: r.height,
+        eyeW: e?.width ?? null,
+        eyeH: e?.height ?? null,
+        nameOpens: onName?.closest('[role="tab"]') !== null,
+        eyeToggles: eye ? eye.contains(document.elementFromPoint(e.left + e.width / 2, e.top + e.height / 2)) : null,
+      }
     }),
   )
-  check(where, '(t) a scenario chip and its eye are 44px with a finger', chips.length > 0 && chips.every((c) => c.h >= FINGER - 0.5 && (c.eyeW === null || (c.eyeW >= FINGER - 0.5 && c.eyeH >= FINGER - 0.5))), JSON.stringify(chips.slice(0, 3)))
-  check(where, '(t) a press on a chip\'s name opens it, and one on its eye toggles', chips.every((c) => c.nameOpens && c.eyeToggles !== false), JSON.stringify(chips.slice(0, 3)))
+  check(
+    where,
+    '(t) a scenario chip and its eye are 44px with a finger',
+    chips.length > 0 &&
+      chips.every(
+        (c) => c.h >= FINGER - 0.5 && (c.eyeW === null || (c.eyeW >= FINGER - 0.5 && c.eyeH >= FINGER - 0.5)),
+      ),
+    JSON.stringify(chips.slice(0, 3)),
+  )
+  check(
+    where,
+    "(t) a press on a chip's name opens it, and one on its eye toggles",
+    chips.every((c) => c.nameOpens && c.eyeToggles !== false),
+    JSON.stringify(chips.slice(0, 3)),
+  )
 
   // The save buttons, and the words beside Save while the scenario has no name.
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('750')
   await monthly.press('Enter')
   await page.getByText('Unsaved changes').first().waitFor()
-  await checkSizes(page, where, '(t) Save changes and Discard are 44px', '[role="group"][aria-label="Unsaved changes"] button')
+  await checkSizes(
+    page,
+    where,
+    '(t) Save changes and Discard are 44px',
+    '[role="group"][aria-label="Unsaved changes"] button',
+  )
   await page.getByRole('button', { name: 'Scenario options' }).click()
   const dialog = page.getByRole('dialog', { name: 'Scenario options' })
   await dialog.waitFor()
@@ -1294,18 +1880,48 @@ async function checkTouchTargets(browser, engine) {
       inside: box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight,
     }
   })
-  check(where, '(t) the colour dots are 28px in one row, inside the window', menu.count === 9 && menu.oneRow && near(menu.size[0], 28, 0.5) && menu.inside, JSON.stringify(menu))
-  check(where, '(t) a colour dot has a 36 by 44px tap area, with no overlap with the next', near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5), JSON.stringify(menu))
-  check(where, '(t) a press 7px above or below a colour dot is that dot\'s', menu.overIsSwatch && menu.underIsSwatch, JSON.stringify(menu))
-  await checkSizes(page, where, '(t) the scenario menu\'s rows and name field are 44px', '[role="dialog"][aria-label="Scenario options"] button:not([aria-label^="Use color"]):not([aria-label="Pick custom color"]), [role="dialog"][aria-label="Scenario options"] input[type="text"]')
+  check(
+    where,
+    '(t) the colour dots are 28px in one row, inside the window',
+    menu.count === 9 && menu.oneRow && near(menu.size[0], 28, 0.5) && menu.inside,
+    JSON.stringify(menu),
+  )
+  check(
+    where,
+    '(t) a colour dot has a 36 by 44px tap area, with no overlap with the next',
+    near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5),
+    JSON.stringify(menu),
+  )
+  check(
+    where,
+    "(t) a press 7px above or below a colour dot is that dot's",
+    menu.overIsSwatch && menu.underIsSwatch,
+    JSON.stringify(menu),
+  )
+  await checkSizes(
+    page,
+    where,
+    "(t) the scenario menu's rows and name field are 44px",
+    '[role="dialog"][aria-label="Scenario options"] button:not([aria-label^="Use color"]):not([aria-label="Pick custom color"]), [role="dialog"][aria-label="Scenario options"] input[type="text"]',
+  )
   // With no name Save is off but still takes a press, to say why (group s2 has the rest), and no words are put in the page.
   await page.getByLabel('Scenario name').fill('')
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached' })
-  check(where, '(t) with no name, no words are written in the page for what Save needs', (await writtenCopies(page, 'Give the scenario a name to save it')) === 0)
+  check(
+    where,
+    '(t) with no name, no words are written in the page for what Save needs',
+    (await writtenCopies(page, 'Give the scenario a name to save it')) === 0,
+  )
   check(where, '(t) the page does not scroll sideways', (await measure(page)).pageScrollWidth <= 1032)
   const off = page.getByRole('button', { name: 'Save changes' })
-  check(where, '(t) Save changes is aria-disabled, not disabled, and says why to a screen reader', (await off.getAttribute('aria-disabled')) === 'true' && (await off.getAttribute('disabled')) === null && (await off.getAttribute('aria-describedby')) !== null)
+  check(
+    where,
+    '(t) Save changes is aria-disabled, not disabled, and says why to a screen reader',
+    (await off.getAttribute('aria-disabled')) === 'true' &&
+      (await off.getAttribute('disabled')) === null &&
+      (await off.getAttribute('aria-describedby')) !== null,
+  )
   await page.getByRole('button', { name: 'Discard changes' }).click()
   await page.waitForTimeout(300)
 
@@ -1315,21 +1931,42 @@ async function checkTouchTargets(browser, engine) {
   await page.getByRole('button', { name: 'Remove Real return from the bar' }).click()
   const toast = page.getByRole('status')
   await page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
-  check(where, '(t) taking a star out says which input left, with Undo', /^Removed Real return from the bar\. Press Alt\+Z to undo\.Undo/.test((await toast.textContent()) ?? '') && (await labels()).length === before.length - 1)
+  check(
+    where,
+    '(t) taking a star out says which input left, with Undo',
+    /^Removed Real return from the bar\. Press Alt\+Z to undo\.Undo/.test((await toast.textContent()) ?? '') &&
+      (await labels()).length === before.length - 1,
+  )
   const undo = page.getByRole('button', { name: 'Undo' })
-  check(where, '(t) the Undo button is 44px tall', (await undo.boundingBox()).height >= FINGER, px((await undo.boundingBox()).height))
+  check(
+    where,
+    '(t) the Undo button is 44px tall',
+    (await undo.boundingBox()).height >= FINGER,
+    px((await undo.boundingBox()).height),
+  )
   await undo.click()
   await page.waitForTimeout(300)
-  check(where, '(t) Undo puts the input back where it was and takes the toast away', JSON.stringify(await labels()) === JSON.stringify(before) && (await page.getByRole('status').count()) === 0, JSON.stringify(await labels()))
+  check(
+    where,
+    '(t) Undo puts the input back where it was and takes the toast away',
+    JSON.stringify(await labels()) === JSON.stringify(before) && (await page.getByRole('status').count()) === 0,
+    JSON.stringify(await labels()),
+  )
 
   // The inputs panel.
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor()
   await page.waitForTimeout(500)
   const panel = '[role="region"][aria-label="All inputs"]'
-  await checkSizes(page, where, '(t) the steppers\' - and + buttons are 44px square', `${panel} [aria-label^="Decrease "], ${panel} [aria-label^="Increase "]`, { w: true })
-  await checkSizes(page, where, '(t) the panel\'s fields are 44px', `${panel} input[type="text"]`)
-  await checkSizes(page, where, '(t) the panel\'s sliders have a 44px box', `${panel} input[type="range"]`)
+  await checkSizes(
+    page,
+    where,
+    "(t) the steppers' - and + buttons are 44px square",
+    `${panel} [aria-label^="Decrease "], ${panel} [aria-label^="Increase "]`,
+    { w: true },
+  )
+  await checkSizes(page, where, "(t) the panel's fields are 44px", `${panel} input[type="text"]`)
+  await checkSizes(page, where, "(t) the panel's sliders have a 44px box", `${panel} input[type="range"]`)
   const stars = await page.evaluate((sel) => {
     return [...document.querySelectorAll(`${sel} [class*="starrable"]`)].map((s) => {
       const star = s.querySelector('[data-star]')
@@ -1341,22 +1978,40 @@ async function checkTouchTargets(browser, engine) {
       return r.top + r.height / 2 - (line.top + line.height / 2)
     })
   }, panel)
-  check(where, '(t) every star is on the middle of its label\'s first line, wrapped or not', stars.length > 5 && stars.every((d) => Math.abs(d) <= 1.5), JSON.stringify(stars))
+  check(
+    where,
+    "(t) every star is on the middle of its label's first line, wrapped or not",
+    stars.length > 5 && stars.every((d) => Math.abs(d) <= 1.5),
+    JSON.stringify(stars),
+  )
   await page.getByRole('button', { name: '+ Add life event' }).scrollIntoViewIfNeeded()
   await checkSizes(page, where, '(t) + Add life event is 44px', 'button[class*="addLifeEventBtn"]')
   await page.getByRole('button', { name: '+ Add life event' }).click()
   await page.waitForTimeout(300)
-  await checkSizes(page, where, '(t) the life event form\'s buttons and sign labels are 44px', '[class*="lifeEventActions"] button, [class*="lifeEventSignLabel"]')
+  await checkSizes(
+    page,
+    where,
+    "(t) the life event form's buttons and sign labels are 44px",
+    '[class*="lifeEventActions"] button, [class*="lifeEventSignLabel"]',
+  )
   await page.getByLabel('Life event label').fill('Test event')
   await page.locator('[class*="lifeEventActions"] button').first().click()
   await page.waitForTimeout(300)
-  await checkSizes(page, where, '(t) the life event\'s remove cross is 44px square', '[class*="lifeEventRemove"]', { w: true })
+  await checkSizes(page, where, "(t) the life event's remove cross is 44px square", '[class*="lifeEventRemove"]', {
+    w: true,
+  })
   await checkSizes(page, where, '(t) the help line under the page is 44px', 'summary')
   // Taking a star out brings Reset to defaults in, and the row it is in is already as tall as the button.
   await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
   await page.waitForTimeout(300)
   const reset = page.getByRole('button', { name: 'Reset to defaults' })
-  check(where, '(t) Reset to defaults is 44px in a row that is the same height', near((await reset.boundingBox()).height, 44, 0.5) && (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)), px((await reset.boundingBox()).height))
+  check(
+    where,
+    '(t) Reset to defaults is 44px in a row that is the same height',
+    near((await reset.boundingBox()).height, 44, 0.5) &&
+      (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)),
+    px((await reset.boundingBox()).height),
+  )
   await context.close()
 
   // From 1376px a bar of one row is about as tall as its result column, so the lever rows cost no
@@ -1366,7 +2021,12 @@ async function checkTouchTargets(browser, engine) {
     levers: document.querySelector('[class*="leverGrid"]').getBoundingClientRect().height,
     side: document.querySelector('[class*="leverSide"]').getBoundingClientRect().height,
   }))
-  check(`${engine} iPad 1376`, '(t) in one row the levers are within 4px of the result column beside them', bar.levers <= bar.side + 4, JSON.stringify(bar))
+  check(
+    `${engine} iPad 1376`,
+    '(t) in one row the levers are within 4px of the result column beside them',
+    bar.levers <= bar.side + 4,
+    JSON.stringify(bar),
+  )
   await wide.context.close()
 
   // A fine pointer and the phone's layout keep the sizes they had.
@@ -1376,23 +2036,52 @@ async function checkTouchTargets(browser, engine) {
   await fine.page.waitForTimeout(400)
   const small = await fine.page.evaluate(() => {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
-    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[aria-label="Mortgage rate (%/yr)"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+    return {
+      stepper: h('[aria-label^="Decrease "]'),
+      field: h('[role="region"] input[aria-label="Mortgage rate (%/yr)"]'),
+      chip: Math.min(
+        ...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map(
+          (c) => c.getBoundingClientRect().height,
+        ),
+      ),
+      range: h('input[type="range"]'),
+      digits: h('[class*="leverValue"]'),
+    }
   })
-  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 44.6, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  check(
+    `${engine} mouse`,
+    '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)',
+    near(small.stepper, 25.6, 0.7) &&
+      near(small.chip, 44.6, 1.5) &&
+      near(small.range, 16.5, 1) &&
+      near(small.field, 26, 0.5) &&
+      small.digits < 40,
+    JSON.stringify(small),
+  )
   await fine.context.close()
   const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
   const phoneStyle = await phone.page.evaluate(() => ({
     wide: document.querySelector('[data-goals-plan-wide]') !== null,
     coarse: matchMedia('(pointer: coarse)').matches,
-    stepperSize: getComputedStyle(document.querySelector('[class*="_stack_"]')).getPropertyValue('--stepper-size').trim(),
+    stepperSize: getComputedStyle(document.querySelector('[class*="_stack_"]'))
+      .getPropertyValue('--stepper-size')
+      .trim(),
     rangeMargin: getComputedStyle(document.querySelector('input[type="range"]')).marginTop,
   }))
-  check(`${engine} phone touch`, '(t) the phone layout on a touch screen keeps the small steppers and sliders', !phoneStyle.wide && phoneStyle.coarse && phoneStyle.stepperSize === '' && phoneStyle.rangeMargin !== '-8px', JSON.stringify(phoneStyle))
+  check(
+    `${engine} phone touch`,
+    '(t) the phone layout on a touch screen keeps the small steppers and sliders',
+    !phoneStyle.wide && phoneStyle.coarse && phoneStyle.stepperSize === '' && phoneStyle.rangeMargin !== '-8px',
+    JSON.stringify(phoneStyle),
+  )
   await phone.context.close()
 }
 
 /** The overlap of two boxes, in px squared. */
-function overlap(a, b) {
+function overlap(
+  a,
+  b,
+) {
   if (!a || !b) return 0
   const w = Math.min(a.right, b.right) - Math.max(a.left, b.left)
   const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
@@ -1417,7 +2106,10 @@ const TOAST_SCREENS = [
  * over the bar, which at 1280x800 put it over the legend chips for six seconds (10092px squared
  * of them), and at 1366x1024 on a touch screen over the bar itself.
  */
-async function checkToastPlace(browser, engine) {
+async function checkToastPlace(
+  browser,
+  engine,
+) {
   for (const screen of TOAST_SCREENS) {
     const where = `${engine} ${screen.width}x${screen.height}${screen.touch ? ' touch' : ''}`
     const { page, context } = await openPlan(browser, screen, { touch: screen.touch === true })
@@ -1448,7 +2140,11 @@ async function checkToastPlace(browser, engine) {
         key: rect(document.querySelector('[data-goals-plan-wide] [class*="chartKeys"]')),
         bar: rect(bar),
         controls: [...bar.querySelectorAll('input, button')].map(rect),
-        menu: rect([...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Navigate' && b.getBoundingClientRect().left < 240)),
+        menu: rect(
+          [...document.querySelectorAll('button')].find(
+            (b) => b.textContent?.trim() === 'Navigate' && b.getBoundingClientRect().left < 240,
+          ),
+        ),
         links: rect(document.querySelector('[class*="railList"]')),
         undoReachable: hit === undo || undo.contains(hit),
         w: innerWidth,
@@ -1456,10 +2152,29 @@ async function checkToastPlace(browser, engine) {
       }
     })
     const t = found.toast
-    const names = { legend: overlap(t, found.legend), 'check-in key': overlap(t, found.key), bar: overlap(t, found.bar), 'bar controls': found.controls.reduce((sum, c) => sum + overlap(t, c), 0), "rail's menu button": overlap(t, found.menu), "rail's links": overlap(t, found.links) }
-    const covered = Object.entries(names).filter(([, n]) => n > 0).map(([what, n]) => `${what} ${n}px2`)
-    check(where, '(z2) the Undo toast covers neither the legend, the bar and its controls, nor the rail', covered.length === 0, `${covered.join(', ')}; toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)}`)
-    check(where, '(z2) the toast is inside the window and its Undo is what a press at its centre reaches', t.left >= 0 && t.right <= found.w && t.top >= 0 && t.bottom <= found.h && found.undoReachable, `toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)} in ${found.w}x${found.h}, undo reachable ${found.undoReachable}`)
+    const names = {
+      legend: overlap(t, found.legend),
+      'check-in key': overlap(t, found.key),
+      bar: overlap(t, found.bar),
+      'bar controls': found.controls.reduce((sum, c) => sum + overlap(t, c), 0),
+      "rail's menu button": overlap(t, found.menu),
+      "rail's links": overlap(t, found.links),
+    }
+    const covered = Object.entries(names)
+      .filter(([, n]) => n > 0)
+      .map(([what, n]) => `${what} ${n}px2`)
+    check(
+      where,
+      '(z2) the Undo toast covers neither the legend, the bar and its controls, nor the rail',
+      covered.length === 0,
+      `${covered.join(', ')}; toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)}`,
+    )
+    check(
+      where,
+      '(z2) the toast is inside the window and its Undo is what a press at its centre reaches',
+      t.left >= 0 && t.right <= found.w && t.top >= 0 && t.bottom <= found.h && found.undoReachable,
+      `toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)} in ${found.w}x${found.h}, undo reachable ${found.undoReachable}`,
+    )
     await context.close()
   }
 
@@ -1471,11 +2186,23 @@ async function checkToastPlace(browser, engine) {
   await narrow.page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
   await narrow.page.waitForTimeout(400)
   const mid = await narrow.page.locator('[role="status"] > div').boundingBox()
-  check(`${engine} 1023x800`, '(z2) under 1024px the toast stays in the middle, clear of the 72px rail', mid !== null && mid.x >= 72 && Math.abs(mid.x + mid.width / 2 - 511.5) < 2, JSON.stringify(mid))
+  check(
+    `${engine} 1023x800`,
+    '(z2) under 1024px the toast stays in the middle, clear of the 72px rail',
+    mid !== null && mid.x >= 72 && Math.abs(mid.x + mid.width / 2 - 511.5) < 2,
+    JSON.stringify(mid),
+  )
   await narrow.context.close()
 
   // The phone has no stars, but a toast is still one: it is above the bottom bar, not on it.
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    deviceScaleFactor: 1,
+    colorScheme: 'dark',
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
   await page.goto(`${BASE}/`)
@@ -1486,25 +2213,43 @@ async function checkToastPlace(browser, engine) {
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await page.getByRole('button', { name: /^Save/ }).first().click()
-  await page.getByRole('status').getByText(/^Saved/).waitFor({ timeout: 6000 })
+  await page
+    .getByRole('status')
+    .getByText(/^Saved/)
+    .waitFor({ timeout: 6000 })
   await page.waitForTimeout(400)
   const phone = await page.evaluate(() => ({
     toast: document.querySelector('[role="status"] > div').getBoundingClientRect().toJSON(),
     bar: document.querySelector('[class*="bottomBar"]').getBoundingClientRect().toJSON(),
     aside: document.documentElement.hasAttribute('data-toast-aside'),
   }))
-  check(`${engine} phone 375x812`, '(z2) on the phone the toast is above the bottom bar, in the middle, and is not asked to go aside', phone.bar.top - phone.toast.bottom >= 8 && !phone.aside && Math.abs(phone.toast.left + phone.toast.width / 2 - 187.5) < 2, JSON.stringify(phone))
+  check(
+    `${engine} phone 375x812`,
+    '(z2) on the phone the toast is above the bottom bar, in the middle, and is not asked to go aside',
+    phone.bar.top - phone.toast.bottom >= 8 &&
+      !phone.aside &&
+      Math.abs(phone.toast.left + phone.toast.width / 2 - 187.5) < 2,
+    JSON.stringify(phone),
+  )
   await context.close()
 }
 
-async function checkOtherViews(browser, engine) {
+async function checkOtherViews(
+  browser,
+  engine,
+) {
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   for (const name of ['Progress', 'Assumptions']) {
     await page.getByRole('tab', { name, exact: true }).click()
     await page.waitForTimeout(500)
     const wide = await page.evaluate(() => document.querySelector('[data-goals-plan-wide]') !== null)
     const width = await page.evaluate(() => document.querySelector('main')?.getBoundingClientRect().width ?? 0)
-    check(`${engine} ${name}`, 'keeps the narrower page it was laid out for', !wide && width < 1000, `main is ${px(width)}`)
+    check(
+      `${engine} ${name}`,
+      'keeps the narrower page it was laid out for',
+      !wide && width < 1000,
+      `main is ${px(width)}`,
+    )
   }
   await context.close()
 }
@@ -1514,7 +2259,10 @@ async function checkOtherViews(browser, engine) {
  * guard behind another button). Stay keeps the edit and gives the keyboard back to the button it
  * came from; Leave goes where the user pressed, and opening Goals again finds the saved value.
  */
-async function checkLeaveGuard(browser, engine) {
+async function checkLeaveGuard(
+  browser,
+  engine,
+) {
   const where = `${engine} leave guard`
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   const rail = (i) => page.locator('[class*="rail"] button').nth(i)
@@ -1536,26 +2284,56 @@ async function checkLeaveGuard(browser, engine) {
   await page.waitForTimeout(300)
   const box = await dialog.boundingBox()
   const vp = page.viewportSize()
-  check(where, '(q) leaving with an unsaved edit asks first, inside the window', box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, JSON.stringify(box))
-  check(where, '(q) the question has put focus on Stay', await dialog.getByRole('button', { name: 'Stay' }).evaluate((el) => el === document.activeElement))
-  check(where, '(q) the page is still Goals, with the edit', (await monthly.inputValue()) === '750' && (await rail(3).getAttribute('aria-current')) === 'page', await monthly.inputValue())
+  check(
+    where,
+    '(q) leaving with an unsaved edit asks first, inside the window',
+    box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height,
+    JSON.stringify(box),
+  )
+  check(
+    where,
+    '(q) the question has put focus on Stay',
+    await dialog.getByRole('button', { name: 'Stay' }).evaluate((el) => el === document.activeElement),
+  )
+  check(
+    where,
+    '(q) the page is still Goals, with the edit',
+    (await monthly.inputValue()) === '750' && (await rail(3).getAttribute('aria-current')) === 'page',
+    await monthly.inputValue(),
+  )
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached', timeout: 5000 })
-  check(where, '(q) Escape stays, keeps the edit and gives focus back to the button pressed', (await monthly.inputValue()) === '750' && (await rail(0).evaluate((el) => el === document.activeElement)))
+  check(
+    where,
+    '(q) Escape stays, keeps the edit and gives focus back to the button pressed',
+    (await monthly.inputValue()) === '750' && (await rail(0).evaluate((el) => el === document.activeElement)),
+  )
 
   await rail(1).click()
   await dialog.waitFor({ timeout: 5000 })
   await dialog.getByRole('button', { name: 'Leave' }).click()
   await dialog.waitFor({ state: 'detached', timeout: 5000 })
-  check(where, '(q) Leave goes to the place pressed, not to a default', (await rail(1).getAttribute('aria-current')) === 'page')
+  check(
+    where,
+    '(q) Leave goes to the place pressed, not to a default',
+    (await rail(1).getAttribute('aria-current')) === 'page',
+  )
   await rail(3).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
-  check(where, '(q) opening Goals again finds the saved value', (await monthly.inputValue()) === saved, `value ${await monthly.inputValue()}`)
+  check(
+    where,
+    '(q) opening Goals again finds the saved value',
+    (await monthly.inputValue()) === saved,
+    `value ${await monthly.inputValue()}`,
+  )
   await context.close()
 }
 
 /** A closed tab with an unsaved edit gets the browser's own prompt, and a clean page does not. */
-async function checkBrowserPrompt(browser, engine) {
+async function checkBrowserPrompt(
+  browser,
+  engine,
+) {
   const where = `${engine} leave guard`
   for (const edited of [true, false]) {
     const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
@@ -1572,7 +2350,9 @@ async function checkBrowserPrompt(browser, engine) {
     })
     await page.close({ runBeforeUnload: true })
     await new Promise((resolve) => setTimeout(resolve, 500))
-    const what = edited ? "closing the tab with an unsaved edit asks (the browser's own prompt)" : 'closing the tab with nothing unsaved does not ask'
+    const what = edited
+      ? "closing the tab with an unsaved edit asks (the browser's own prompt)"
+      : 'closing the tab with nothing unsaved does not ask'
     check(where, `(q) ${what}`, edited ? asked === 'beforeunload' : asked === null, `dialog: ${asked}`)
     if (!page.isClosed()) await page.close()
     await context.close()
@@ -1580,7 +2360,10 @@ async function checkBrowserPrompt(browser, engine) {
 }
 
 /** Goals' typed amounts and percentages in a format that writes its decimals with a point (the other mark than the demo's). */
-async function checkPointDecimal(browser, engine) {
+async function checkPointDecimal(
+  browser,
+  engine,
+) {
   const where = `${engine} point-decimal format`
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   // Through the app's own Settings, as a person would: the demo instance is writable.
@@ -1593,25 +2376,58 @@ async function checkPointDecimal(browser, engine) {
   await settled(page)
 
   const monthly = page.getByLabel('Monthly investing', { exact: true })
-  const typeInto = async (field, text) => {
+  const typeInto = async (
+    field,
+    text,
+  ) => {
     await field.fill(text)
     await field.press('Enter')
     await page.waitForTimeout(250)
     return field.inputValue()
   }
-  check(where, '(y1) the demo now writes its amounts with a point', (await typeInto(monthly, '12.5')) === '12.50', await monthly.inputValue())
-  check(where, '(y1) a comma typed into "Monthly investing" is the decimal mark: 12,5 is 12.50', (await typeInto(monthly, '12,5')) === '12.50', await monthly.inputValue())
+  check(
+    where,
+    '(y1) the demo now writes its amounts with a point',
+    (await typeInto(monthly, '12.5')) === '12.50',
+    await monthly.inputValue(),
+  )
+  check(
+    where,
+    '(y1) a comma typed into "Monthly investing" is the decimal mark: 12,5 is 12.50',
+    (await typeInto(monthly, '12,5')) === '12.50',
+    await monthly.inputValue(),
+  )
   check(where, '(y1) 1,5 is 1.50', (await typeInto(monthly, '1,5')) === '1.50', await monthly.inputValue())
-  check(where, '(y1) 1,500 is still a thousand and a half', (await typeInto(monthly, '1,500')) === '1,500', await monthly.inputValue())
+  check(
+    where,
+    '(y1) 1,500 is still a thousand and a half',
+    (await typeInto(monthly, '1,500')) === '1,500',
+    await monthly.inputValue(),
+  )
   const ret = page.getByRole('textbox', { name: 'Real return (%/yr, after inflation)' })
-  check(where, '(y1) a comma typed into a percentage lever is its decimal mark: 5,5 is 5.5', (await typeInto(ret, '5,5')) === '5.5', await ret.inputValue())
+  check(
+    where,
+    '(y1) a comma typed into a percentage lever is its decimal mark: 5,5 is 5.5',
+    (await typeInto(ret, '5,5')) === '5.5',
+    await ret.inputValue(),
+  )
 
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor({ timeout: 5000 })
   const price = page.getByLabel('House price', { exact: true })
-  check(where, '(y1) a comma typed into an amount in the inputs panel is the decimal mark', (await typeInto(price, '250000,5')) === '250,000.50', await price.inputValue())
+  check(
+    where,
+    '(y1) a comma typed into an amount in the inputs panel is the decimal mark',
+    (await typeInto(price, '250000,5')) === '250,000.50',
+    await price.inputValue(),
+  )
   const mortgage = page.getByRole('textbox', { name: 'Mortgage rate (%/yr)', exact: true })
-  check(where, '(y1) a comma typed into the percentage stepper is its decimal mark, not 0%', (await typeInto(mortgage, '3,5')) === '3.5', await mortgage.inputValue())
+  check(
+    where,
+    '(y1) a comma typed into the percentage stepper is its decimal mark, not 0%',
+    (await typeInto(mortgage, '3,5')) === '3.5',
+    await mortgage.inputValue(),
+  )
   await context.close()
 }
 
@@ -1620,7 +2436,10 @@ async function checkPointDecimal(browser, engine) {
  * through the menu first: what is on screen is then the draft of a scenario that is gone, which is
  * the same editor state as a first-time user's (nothing saved to measure the edits against).
  */
-async function checkFirstDraft(browser, engine) {
+async function checkFirstDraft(
+  browser,
+  engine,
+) {
   const where = `${engine} first draft`
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   const rail = (i) => page.locator('[class*="rail"] button').nth(i)
@@ -1635,12 +2454,21 @@ async function checkFirstDraft(browser, engine) {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click()
     await page.waitForTimeout(400)
   }
-  check(where, '(y2) every scenario is deleted: only the unsaved draft is left', (await saved.count()) === 0 && (await tabs.count()) === 1, `${await saved.count()} saved, ${await tabs.count()} tabs`)
+  check(
+    where,
+    '(y2) every scenario is deleted: only the unsaved draft is left',
+    (await saved.count()) === 0 && (await tabs.count()) === 1,
+    `${await saved.count()} saved, ${await tabs.count()} tabs`,
+  )
 
   await rail(0).focus()
   await page.keyboard.press('Enter')
   await page.waitForTimeout(400)
-  check(where, '(y2) a draft nobody has touched is left without a question', (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page')
+  check(
+    where,
+    '(y2) a draft nobody has touched is left without a question',
+    (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page',
+  )
   await rail(3).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
   // The first draft is seeded again on every visit, and it is the first-time user's.
@@ -1655,8 +2483,17 @@ async function checkFirstDraft(browser, engine) {
   await dialog.waitFor({ timeout: 5000 })
   await page.waitForTimeout(300)
   const words = await dialog.innerText()
-  check(where, '(y2) editing a lever of that draft makes leaving ask first, in the words for a draft', /unsaved draft will be lost/i.test(words) && /save it as a new scenario/i.test(words), words)
-  check(where, '(y2) the page is still Goals with the edit', (await monthly.inputValue()) !== start && (await rail(3).getAttribute('aria-current')) === 'page')
+  check(
+    where,
+    '(y2) editing a lever of that draft makes leaving ask first, in the words for a draft',
+    /unsaved draft will be lost/i.test(words) && /save it as a new scenario/i.test(words),
+    words,
+  )
+  check(
+    where,
+    '(y2) the page is still Goals with the edit',
+    (await monthly.inputValue()) !== start && (await rail(3).getAttribute('aria-current')) === 'page',
+  )
   await dialog.getByRole('button', { name: 'Stay' }).click()
   await dialog.waitFor({ state: 'detached', timeout: 5000 })
 
@@ -1666,7 +2503,12 @@ async function checkFirstDraft(browser, engine) {
   await rail(0).focus()
   await page.keyboard.press('Enter')
   await page.waitForTimeout(400)
-  check(where, '(y2) putting the edit back by hand makes leaving free again', (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page', `question asked: ${(await dialog.count()) > 0}`)
+  check(
+    where,
+    '(y2) putting the edit back by hand makes leaving free again',
+    (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page',
+    `question asked: ${(await dialog.count()) > 0}`,
+  )
 
   // And a reload or a closed tab: the browser's own prompt.
   await rail(3).click()
@@ -1682,7 +2524,12 @@ async function checkFirstDraft(browser, engine) {
   })
   await page.close({ runBeforeUnload: true })
   await new Promise((resolve) => setTimeout(resolve, 500))
-  check(where, "(y2) closing the tab with an edited draft asks (the browser's own prompt)", asked === 'beforeunload', `dialog: ${asked}`)
+  check(
+    where,
+    "(y2) closing the tab with an edited draft asks (the browser's own prompt)",
+    asked === 'beforeunload',
+    `dialog: ${asked}`,
+  )
   if (!page.isClosed()) await page.close()
   await context.close()
 }
@@ -1704,12 +2551,18 @@ const saveToast = (page) => page.locator('[role="status"]', { hasText: SAVE_HINT
 const centre = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
 
 /** A real touch at the middle of the button (Playwright's own tap and click refuse an aria-disabled one). */
-async function touchTap(page, button) {
+async function touchTap(
+  page,
+  button,
+) {
   const c = centre(await button.boundingBox())
   await page.touchscreen.tap(c.x, c.y)
 }
 
-async function mouseClick(page, button) {
+async function mouseClick(
+  page,
+  button,
+) {
   const c = centre(await button.boundingBox())
   await page.mouse.click(c.x, c.y)
 }
@@ -1732,10 +2585,18 @@ function saveState(button) {
 
 /** Off as a disabled button looks (the same opacity and cursor, no hover or press effect), yet enabled to a press, and described. */
 const isOffButAnswers = (s) =>
-  s.ariaDisabled === 'true' && !s.disabled && s.described === SAVE_HINT && near(s.opacity, 0.45, 0.01) && s.cursor === 'not-allowed' && s.filter === 'none'
+  s.ariaDisabled === 'true' &&
+  !s.disabled &&
+  s.described === SAVE_HINT &&
+  near(s.opacity, 0.45, 0.01) &&
+  s.cursor === 'not-allowed' &&
+  s.filter === 'none'
 
 /** How many places show `text` to someone who can see: holders of it more than a pixel across, outside the toast. */
-function writtenCopies(page, text) {
+function writtenCopies(
+  page,
+  text,
+) {
   return page.evaluate(
     (words) =>
       [...document.querySelectorAll('body *')].filter((el) => {
@@ -1747,23 +2608,38 @@ function writtenCopies(page, text) {
   )
 }
 
-function insideWindow(box, width, height) {
-  return box !== null && box.x >= 0 && box.y >= 0 && box.x + box.width <= width + 0.5 && box.y + box.height <= height + 0.5
+function insideWindow(
+  box,
+  width,
+  height,
+) {
+  return (
+    box !== null && box.x >= 0 && box.y >= 0 && box.x + box.width <= width + 0.5 && box.y + box.height <= height + 0.5
+  )
 }
 
 /** Waits for the toast to be on screen, and says whether it is whole inside the window and the only one. */
-async function toastShown(page, size) {
+async function toastShown(
+  page,
+  size,
+) {
   const toast = saveToast(page)
   await toast.first().waitFor({ state: 'visible', timeout: 3000 })
   await page.waitForTimeout(250)
-  return { one: (await toast.count()) === 1, inside: insideWindow(await toast.first().boundingBox(), size.width, size.height) }
+  return {
+    one: (await toast.count()) === 1,
+    inside: insideWindow(await toast.first().boundingBox(), size.width, size.height),
+  }
 }
 
 async function toastGone(page) {
   await saveToast(page).first().waitFor({ state: 'detached', timeout: 7000 })
 }
 
-async function openPhone(browser, phone) {
+async function openPhone(
+  browser,
+  phone,
+) {
   const context = await browser.newContext({
     viewport: { width: phone.width, height: phone.height },
     screen: { width: phone.width, height: phone.height },
@@ -1805,48 +2681,93 @@ function watchStack(page) {
   return page.evaluate(() => {
     const stack = document.getElementById('goals-adjust-stack')
     window.__stackHeights = [stack.getBoundingClientRect().height]
-    new ResizeObserver(() => window.__stackHeights.push(stack.getBoundingClientRect().height)).observe(stack, { box: 'border-box' })
+    new ResizeObserver(() => window.__stackHeights.push(stack.getBoundingClientRect().height)).observe(stack, {
+      box: 'border-box',
+    })
   })
 }
 
 const stackHeights = (page) => page.evaluate(() => window.__stackHeights)
 
 /** The pinned row, with the name cleared: Save is off but answers, the words are nowhere, and a tap shows the toast. */
-async function checkPinnedRow(page, where, phone) {
+async function checkPinnedRow(
+  page,
+  where,
+  phone,
+) {
   const stack = page.locator('#goals-adjust-stack')
   const save = stack.getByRole('button', { name: 'Save changes', exact: true })
-  check(where, '(s2) the pinned Save is aria-disabled, not disabled, looks as off as a disabled one, and is described by the words', isOffButAnswers(await saveState(save)), JSON.stringify(await saveState(save)))
-  check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0, `${await writtenCopies(page, SAVE_HINT)} copies`)
+  check(
+    where,
+    '(s2) the pinned Save is aria-disabled, not disabled, looks as off as a disabled one, and is described by the words',
+    isOffButAnswers(await saveState(save)),
+    JSON.stringify(await saveState(save)),
+  )
+  check(
+    where,
+    '(s2) no words are written in the page for it',
+    (await writtenCopies(page, SAVE_HINT)) === 0,
+    `${await writtenCopies(page, SAVE_HINT)} copies`,
+  )
   check(where, '(s2) before it is pressed there is no toast', (await saveToast(page).count()) === 0)
   await touchTap(page, save)
   const first = await toastShown(page, phone)
-  check(where, '(s2) a tap on the pinned Save shows the toast, whole inside the screen', first.one && first.inside, JSON.stringify(first))
+  check(
+    where,
+    '(s2) a tap on the pinned Save shows the toast, whole inside the screen',
+    first.one && first.inside,
+    JSON.stringify(first),
+  )
   await touchTap(page, save)
   await page.waitForTimeout(300)
   const second = await toastShown(page, phone)
-  check(where, '(s2) a second tap while it is up leaves one toast, not two', second.one && second.inside, JSON.stringify(second))
+  check(
+    where,
+    '(s2) a second tap while it is up leaves one toast, not two',
+    second.one && second.inside,
+    JSON.stringify(second),
+  )
   const m = await measure(page)
   check(where, '(s2) the page does not scroll sideways', m.pageScrollWidth <= m.iw, `scrollWidth ${m.pageScrollWidth}`)
 }
 
 /** The scenario card's two buttons that need a name. */
-async function checkCardSaves(page, where, phone) {
+async function checkCardSaves(
+  page,
+  where,
+  phone,
+) {
   const header = page.locator('[class*="activeHeader"]')
   const card = header.getByRole('button', { name: 'Save changes', exact: true })
   await card.scrollIntoViewIfNeeded()
   await settled(page)
-  check(where, "(s2) the scenario card's Save changes is aria-disabled and described", isOffButAnswers(await saveState(card)), JSON.stringify(await saveState(card)))
+  check(
+    where,
+    "(s2) the scenario card's Save changes is aria-disabled and described",
+    isOffButAnswers(await saveState(card)),
+    JSON.stringify(await saveState(card)),
+  )
   await toastGone(page)
   await touchTap(page, card)
   const shown = await toastShown(page, phone)
-  check(where, "(s2) a tap on the card's Save changes shows the toast", shown.one && shown.inside, JSON.stringify(shown))
+  check(
+    where,
+    "(s2) a tap on the card's Save changes shows the toast",
+    shown.one && shown.inside,
+    JSON.stringify(shown),
+  )
 
   await toastGone(page)
   await header.getByRole('button', { name: 'Save as new scenario…' }).tap()
   const copy = header.getByLabel('Name for new scenario')
   await copy.fill('')
   const asNew = header.getByRole('button', { name: 'Save as new', exact: true })
-  check(where, '(s2) Save as new with an empty name is aria-disabled and described', isOffButAnswers(await saveState(asNew)), JSON.stringify(await saveState(asNew)))
+  check(
+    where,
+    '(s2) Save as new with an empty name is aria-disabled and described',
+    isOffButAnswers(await saveState(asNew)),
+    JSON.stringify(await saveState(asNew)),
+  )
   await asNew.scrollIntoViewIfNeeded()
   await touchTap(page, asNew)
   const again = await toastShown(page, phone)
@@ -1854,7 +2775,10 @@ async function checkCardSaves(page, where, phone) {
   await header.getByRole('button', { name: 'Cancel', exact: true }).tap()
 }
 
-async function checkPhoneSaveReason(browser, engine) {
+async function checkPhoneSaveReason(
+  browser,
+  engine,
+) {
   for (const phone of [
     { name: '375x812', width: 375, height: 812 },
     { name: '320x568', width: 320, height: 568 },
@@ -1864,7 +2788,8 @@ async function checkPhoneSaveReason(browser, engine) {
     const name = page.getByLabel('Scenario name', { exact: true })
     await name.fill('Path A, edited')
     await settled(page)
-    const sticky = (await page.locator('#goals-adjust-stack').evaluate((el) => getComputedStyle(el).position)) === 'sticky'
+    const sticky =
+      (await page.locator('#goals-adjust-stack').evaluate((el) => getComputedStyle(el).position)) === 'sticky'
     // Far enough down for the stack to be held under the view row, which is where it must not move.
     const HELD_AT = 1600
     const at = async (y) => {
@@ -1877,22 +2802,44 @@ async function checkPhoneSaveReason(browser, engine) {
     await name.fill('')
     await settled(page)
     const cleared = [await at(0), await at(HELD_AT)]
-    check(where, '(s2) clearing the name does not change the pinned stack at the top or held', near(named[0].height, cleared[0].height, 0.5) && near(named[1].height, cleared[1].height, 0.5), `${named[0].height} and ${named[1].height} against ${cleared[0].height} and ${cleared[1].height}`)
+    check(
+      where,
+      '(s2) clearing the name does not change the pinned stack at the top or held',
+      near(named[0].height, cleared[0].height, 0.5) && near(named[1].height, cleared[1].height, 0.5),
+      `${named[0].height} and ${named[1].height} against ${cleared[0].height} and ${cleared[1].height}`,
+    )
     if (sticky) {
       const [a, b] = [named[1], cleared[1]]
-      check(where, '(s2) the chart, the chips and the view row do not move', near(a.chart, b.chart, 0.5) && near(a.chips, b.chips, 0.5) && near(a.view, b.view, 0.5) && a.stackTop < 200, `${JSON.stringify(a)} against ${JSON.stringify(b)}`)
+      check(
+        where,
+        '(s2) the chart, the chips and the view row do not move',
+        near(a.chart, b.chart, 0.5) && near(a.chips, b.chips, 0.5) && near(a.view, b.view, 0.5) && a.stackTop < 200,
+        `${JSON.stringify(a)} against ${JSON.stringify(b)}`,
+      )
     }
     await checkPinnedRow(page, where, phone)
     await checkCardSaves(page, where, phone)
     const heights = await stackHeights(page)
-    check(where, '(s2) the pinned stack never had another height, through the clearing and every tap', heights.every((h) => near(h, named[0].height, 0.5) || near(h, named[1].height, 0.5)), `${JSON.stringify(heights)}, it is ${named[0].height} at the top and ${named[1].height} held`)
+    check(
+      where,
+      '(s2) the pinned stack never had another height, through the clearing and every tap',
+      heights.every((h) => near(h, named[0].height, 0.5) || near(h, named[1].height, 0.5)),
+      `${JSON.stringify(heights)}, it is ${named[0].height} at the top and ${named[1].height} held`,
+    )
 
     await name.fill('Path A, edited')
     await settled(page)
     await scrollTo(page, HELD_AT)
-    const save = page.locator('#goals-adjust-stack').getByRole('button', { name: 'Save changes to Path A, edited', exact: true })
+    const save = page
+      .locator('#goals-adjust-stack')
+      .getByRole('button', { name: 'Save changes to Path A, edited', exact: true })
     const state = await saveState(save)
-    check(where, '(s2) with a name typed Save is on again, with no reason attached', state.ariaDisabled === null && !state.disabled && state.described === null && state.title === null, JSON.stringify(state))
+    check(
+      where,
+      '(s2) with a name typed Save is on again, with no reason attached',
+      state.ariaDisabled === null && !state.disabled && state.described === null && state.title === null,
+      JSON.stringify(state),
+    )
     await touchTap(page, save)
     await page.getByRole('group', { name: 'Unsaved changes' }).waitFor({ state: 'detached', timeout: 5000 })
     check(where, '(s2) a tap on it saves: the unsaved row goes', true)
@@ -1901,7 +2848,11 @@ async function checkPhoneSaveReason(browser, engine) {
 }
 
 /** Save changes in the scenario row of the wide layout: off with no name, answers a mouse and the keys. */
-async function checkWideSaveChanges(page, where, size) {
+async function checkWideSaveChanges(
+  page,
+  where,
+  size,
+) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('750')
   await monthly.press('Enter')
@@ -1915,7 +2866,12 @@ async function checkWideSaveChanges(page, where, size) {
         return b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null
       }
       const g = document.querySelector('[role="group"][aria-label="Unsaved changes"]')
-      return { row: r(document.querySelector('[class*="scenarioBar"]')), group: r(g), save: r(g?.lastElementChild), scrollHeight: document.documentElement.scrollHeight }
+      return {
+        row: r(document.querySelector('[class*="scenarioBar"]')),
+        group: r(g),
+        save: r(g?.lastElementChild),
+        scrollHeight: document.documentElement.scrollHeight,
+      }
     })
   const named = await rowBoxes()
   await page.getByRole('button', { name: 'Scenario options' }).click()
@@ -1924,8 +2880,19 @@ async function checkWideSaveChanges(page, where, size) {
   await page.getByRole('dialog', { name: 'Scenario options' }).waitFor({ state: 'detached' })
   await page.waitForTimeout(250)
   const cleared = await rowBoxes()
-  const same = (a, b) => near(a.x, b.x, 0.5) && near(a.y, b.y, 0.5) && near(a.w, b.w, 0.5) && near(a.h, b.h, 0.5)
-  check(where, '(s2) clearing the name changes nothing in the scenario row: the row, the Save and Discard group and Save keep their boxes, and the page its height', same(named.row, cleared.row) && same(named.group, cleared.group) && same(named.save, cleared.save) && named.scrollHeight === cleared.scrollHeight, `${JSON.stringify(named)} against ${JSON.stringify(cleared)}`)
+  const same = (
+    a,
+    b,
+  ) => near(a.x, b.x, 0.5) && near(a.y, b.y, 0.5) && near(a.w, b.w, 0.5) && near(a.h, b.h, 0.5)
+  check(
+    where,
+    '(s2) clearing the name changes nothing in the scenario row: the row, the Save and Discard group and Save keep their boxes, and the page its height',
+    same(named.row, cleared.row) &&
+      same(named.group, cleared.group) &&
+      same(named.save, cleared.save) &&
+      named.scrollHeight === cleared.scrollHeight,
+    `${JSON.stringify(named)} against ${JSON.stringify(cleared)}`,
+  )
   check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0)
 
   await page.mouse.move(0, 0)
@@ -1933,14 +2900,33 @@ async function checkWideSaveChanges(page, where, size) {
   await page.mouse.move(c.x, c.y)
   await page.waitForTimeout(150)
   const state = await saveState(save)
-  check(where, '(s2) Save changes is aria-disabled, not disabled, and looks off with the pointer over it, with the words as its tooltip', isOffButAnswers(state) && state.title === SAVE_HINT, JSON.stringify(state))
+  check(
+    where,
+    '(s2) Save changes is aria-disabled, not disabled, and looks off with the pointer over it, with the words as its tooltip',
+    isOffButAnswers(state) && state.title === SAVE_HINT,
+    JSON.stringify(state),
+  )
   check(where, '(s2) the pointer over it does not lift or press it', state.transform === 'none', state.transform)
   await mouseClick(page, save)
   const clicked = await toastShown(page, size)
-  check(where, '(s2) a click shows the toast, whole inside the window', clicked.one && clicked.inside, JSON.stringify(clicked))
-  check(where, '(s2) the click saved nothing: the scenario is still unsaved', (await page.getByText('Unsaved changes').count()) > 0)
+  check(
+    where,
+    '(s2) a click shows the toast, whole inside the window',
+    clicked.one && clicked.inside,
+    JSON.stringify(clicked),
+  )
+  check(
+    where,
+    '(s2) the click saved nothing: the scenario is still unsaved',
+    (await page.getByText('Unsaved changes').count()) > 0,
+  )
   const shown = await rowBoxes()
-  check(where, '(s2) the toast moved nothing in the row', same(cleared.row, shown.row) && same(cleared.save, shown.save), JSON.stringify(shown))
+  check(
+    where,
+    '(s2) the toast moved nothing in the row',
+    same(cleared.row, shown.row) && same(cleared.save, shown.save),
+    JSON.stringify(shown),
+  )
 
   await toastGone(page)
   await save.focus()
@@ -1959,14 +2945,23 @@ async function checkWideSaveChanges(page, where, size) {
   await page.keyboard.press('Escape')
   await page.getByRole('dialog', { name: 'Scenario options' }).waitFor({ state: 'detached' })
   const on = await saveState(save)
-  check(where, '(s2) with a name typed Save is on again, with no reason attached', on.ariaDisabled === null && !on.disabled && on.described === null && on.title === null, JSON.stringify(on))
+  check(
+    where,
+    '(s2) with a name typed Save is on again, with no reason attached',
+    on.ariaDisabled === null && !on.disabled && on.described === null && on.title === null,
+    JSON.stringify(on),
+  )
   await save.click()
   await group.waitFor({ state: 'detached', timeout: 5000 })
   check(where, '(s2) a click on it saves: the unsaved row goes', true)
 }
 
 /** The draft's Save scenario in the scenario row. */
-async function checkWideDraftSave(page, where, size) {
+async function checkWideDraftSave(
+  page,
+  where,
+  size,
+) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('800')
   await monthly.press('Enter')
@@ -1978,11 +2973,21 @@ async function checkWideDraftSave(page, where, size) {
   await save.waitFor()
   await page.waitForTimeout(300)
   const state = await saveState(save)
-  check(where, "(s2) the draft's Save scenario is aria-disabled, not disabled, with the words as its tooltip and description", isOffButAnswers(state) && state.title === SAVE_HINT, JSON.stringify(state))
+  check(
+    where,
+    "(s2) the draft's Save scenario is aria-disabled, not disabled, with the words as its tooltip and description",
+    isOffButAnswers(state) && state.title === SAVE_HINT,
+    JSON.stringify(state),
+  )
   check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0)
   await mouseClick(page, save)
   const shown = await toastShown(page, size)
-  check(where, "(s2) a click on the draft's Save scenario shows the toast", shown.one && shown.inside, JSON.stringify(shown))
+  check(
+    where,
+    "(s2) a click on the draft's Save scenario shows the toast",
+    shown.one && shown.inside,
+    JSON.stringify(shown),
+  )
   await toastGone(page)
 
   await page.getByRole('button', { name: 'Scenario options' }).click()
@@ -1994,7 +2999,10 @@ async function checkWideDraftSave(page, where, size) {
   check(where, "(s2) with a name typed the draft's Save scenario saves it as a scenario", true)
 }
 
-async function checkWideSaveReason(browser, engine) {
+async function checkWideSaveReason(
+  browser,
+  engine,
+) {
   const size = SCREENS[3]
   const { page, context } = await openPlan(browser, size, { scheme: 'light' })
   const where = `${engine} wide ${size.name} mouse`
@@ -2003,7 +3011,10 @@ async function checkWideSaveReason(browser, engine) {
   await context.close()
 }
 
-async function checkSaveReason(browser, engine) {
+async function checkSaveReason(
+  browser,
+  engine,
+) {
   await checkPhoneSaveReason(browser, engine)
   await checkWideSaveReason(browser, engine)
 }
@@ -2013,12 +3024,18 @@ async function checkSaveReason(browser, engine) {
  * milestones are all reached by check-ins, so the editing draft is set low to have cells that are
  * years away; its row is the one with tint, hatching and gaps to read.
  */
-const matrixCard = (page) => page.getByRole('heading', { name: 'Years to milestone' }).locator('xpath=ancestor::*[contains(@class,"chartCard")][1]')
+const matrixCard = (page) =>
+  page
+    .getByRole('heading', { name: 'Years to milestone' })
+    .locator('xpath=ancestor::*[contains(@class,"chartCard")][1]')
 
 async function lowDraft(page) {
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
-  for (const [label, value] of [['Monthly investing', '180'], ['Starting invested', '5000']]) {
+  for (const [label, value] of [
+    ['Monthly investing', '180'],
+    ['Starting invested', '5000'],
+  ]) {
     const input = page.getByLabel(label, { exact: true }).last()
     await input.fill(value)
     await input.press('Enter')
@@ -2042,7 +3059,10 @@ function readTints(page) {
       const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
       return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
     }
-    const ratio = (a, b) => {
+    const ratio = (
+      a,
+      b,
+    ) => {
       const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
       return (hi + 0.05) / (lo + 0.05)
     }
@@ -2054,12 +3074,22 @@ function readTints(page) {
       const [r, g, b, a] = rgba(cs.backgroundColor)
       const alpha = a / 255
       const over = [r, g, b].map((v, i) => v * alpha + ground[i] * (1 - alpha))
-      return { text: el.textContent, tint: parseInt(el.style.getPropertyValue('--tint')), alpha: Math.round(alpha * 100), contrast: ratio(rgba(cs.color), over) }
+      return {
+        text: el.textContent,
+        tint: parseInt(el.style.getPropertyValue('--tint')),
+        alpha: Math.round(alpha * 100),
+        contrast: ratio(rgba(cs.color), over),
+      }
     })
   })
 }
 
-async function checkMilestoneWide(browser, engine, screen, scheme) {
+async function checkMilestoneWide(
+  browser,
+  engine,
+  screen,
+  scheme,
+) {
   const where = `${engine} ${screen.name} ${scheme}`
   const { page, context } = await openPlan(browser, screen, { scheme })
   await lowDraft(page)
@@ -2071,22 +3101,66 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
     const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
     const c = region.closest('[class*="chartCard"]').getBoundingClientRect()
     const r = region.getBoundingClientRect()
-    return { scroll: region.scrollWidth, client: region.clientWidth, inCard: r.left >= c.left - 0.5 && r.right <= c.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth }
+    return {
+      scroll: region.scrollWidth,
+      client: region.clientWidth,
+      inCard: r.left >= c.left - 0.5 && r.right <= c.right + 0.5,
+      page: document.documentElement.scrollWidth,
+      iw: innerWidth,
+    }
   })
-  check(where, '(w) the table is inside its card and the page does not scroll sideways', fit.inCard && fit.page <= fit.iw, JSON.stringify(fit))
-  if (screen.width >= 1280) check(where, '(w) all seven milestones fit the table without its own scroll', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+  check(
+    where,
+    '(w) the table is inside its card and the page does not scroll sideways',
+    fit.inCard && fit.page <= fit.iw,
+    JSON.stringify(fit),
+  )
+  if (screen.width >= 1280)
+    check(
+      where,
+      '(w) all seven milestones fit the table without its own scroll',
+      fit.scroll <= fit.client + 1,
+      JSON.stringify(fit),
+    )
 
   const tints = await readTints(page)
   // The nearest and the furthest cell shown, whatever years the plans reach their milestones in.
-  const byYears = tints.map((t) => ({ ...t, years: parseInt(t.text, 10) })).filter((t) => Number.isFinite(t.years)).sort((a, b) => a.years - b.years)
+  const byYears = tints
+    .map((t) => ({ ...t, years: parseInt(t.text, 10) }))
+    .filter((t) => Number.isFinite(t.years))
+    .sort((a, b) => a.years - b.years)
   const shallow = byYears[0]
   const deep = byYears[byYears.length - 1]
-  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep.years > shallow.years && deep.alpha > shallow.alpha, JSON.stringify(tints))
+  check(
+    where,
+    '(w) cells that are years away are tinted, deeper the further',
+    tints.length >= 3 && shallow !== undefined && deep.years > shallow.years && deep.alpha > shallow.alpha,
+    JSON.stringify(tints),
+  )
   const worst = Math.min(...tints.map((t) => t.contrast))
-  check(where, '(w) the text on every tint keeps 4.5:1', tints.length >= 3 && worst >= 4.5, `worst ${worst.toFixed(2)}:1`)
-  const hatched = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixBeyond"]')].map((el) => ({ text: el.textContent, border: getComputedStyle(el).borderTopStyle })))
-  check(where, '(w) a milestone not within the horizon is a hatched dashed box showing the horizon with a plus', hatched.length >= 1 && hatched.every((h) => /^\d+\+$/.test(h.text) && h.border === 'dashed'), JSON.stringify(hatched))
-  check(where, '(w) a milestone already reached is a tick', (await page.locator('[class*="matrixDone"]').first().textContent()) === '✓')
+  check(
+    where,
+    '(w) the text on every tint keeps 4.5:1',
+    tints.length >= 3 && worst >= 4.5,
+    `worst ${worst.toFixed(2)}:1`,
+  )
+  const hatched = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="matrixBeyond"]')].map((el) => ({
+      text: el.textContent,
+      border: getComputedStyle(el).borderTopStyle,
+    })),
+  )
+  check(
+    where,
+    '(w) a milestone not within the horizon is a hatched dashed box showing the horizon with a plus',
+    hatched.length >= 1 && hatched.every((h) => /^\d+\+$/.test(h.text) && h.border === 'dashed'),
+    JSON.stringify(hatched),
+  )
+  check(
+    where,
+    '(w) a milestone already reached is a tick',
+    (await page.locator('[class*="matrixDone"]').first().textContent()) === '✓',
+  )
 
   // Nothing under the card moves when the first cell is pointed at.
   const before = (await card.boundingBox()).height
@@ -2095,33 +3169,88 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
   await draftCell.hover()
   await page.waitForTimeout(150)
   const after = (await card.boundingBox()).height
-  check(where, '(w) reading a cell does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
+  check(
+    where,
+    "(w) reading a cell does not change the card's height",
+    near(before, after, 1),
+    `${px(before)} then ${px(after)}`,
+  )
   const sentence = await page.locator('[class*="matrixReadout"]').textContent()
-  check(where, '(w) pointing at a cell writes its sentence under the table', sentence === (await draftCell.getAttribute('aria-label')) && /by 20\d\d\./.test(sentence), sentence)
-  const marked = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className)).length)
-  const dims = await page.evaluate(() => ({ rows: document.querySelectorAll('[role="grid"] tbody tr').length, cols: document.querySelectorAll('[role="grid"] thead th[scope="col"]').length }))
-  check(where, '(w) the row and the column of that cell are marked', marked === dims.rows + dims.cols - 1, `${marked} marked of ${dims.rows} rows by ${dims.cols} columns`)
+  check(
+    where,
+    '(w) pointing at a cell writes its sentence under the table',
+    sentence === (await draftCell.getAttribute('aria-label')) && /by 20\d\d\./.test(sentence),
+    sentence,
+  )
+  const marked = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className))
+        .length,
+  )
+  const dims = await page.evaluate(() => ({
+    rows: document.querySelectorAll('[role="grid"] tbody tr').length,
+    cols: document.querySelectorAll('[role="grid"] thead th[scope="col"]').length,
+  }))
+  check(
+    where,
+    '(w) the row and the column of that cell are marked',
+    marked === dims.rows + dims.cols - 1,
+    `${marked} marked of ${dims.rows} rows by ${dims.cols} columns`,
+  )
   await page.mouse.move(2, 2)
   await page.waitForTimeout(150)
-  const left = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className)).length)
-  check(where, '(w) the marks go when the pointer leaves, the sentence stays', left === 0 && (await page.locator('[class*="matrixReadout"]').filter({ hasText: /by 20\d\d\./ }).count()) === 1, `${left} still marked`)
+  const left = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className))
+        .length,
+  )
+  check(
+    where,
+    '(w) the marks go when the pointer leaves, the sentence stays',
+    left === 0 &&
+      (await page
+        .locator('[class*="matrixReadout"]')
+        .filter({ hasText: /by 20\d\d\./ })
+        .count()) === 1,
+    `${left} still marked`,
+  )
 
   // The two toggles.
   await page.getByRole('radio', { name: 'Calendar year' }).click()
   const years = (await readTints(page)).map((t) => t.text)
-  check(where, '(w) calendar year shows the year in each cell', years.length >= 3 && years.every((y) => /^20\d\d$/.test(y)), JSON.stringify(years))
+  check(
+    where,
+    '(w) calendar year shows the year in each cell',
+    years.length >= 3 && years.every((y) => /^20\d\d$/.test(y)),
+    JSON.stringify(years),
+  )
   await page.getByRole('radio', { name: 'Years from now' }).click()
   const vs = page.getByRole('button', { name: 'vs plan' })
   await vs.click()
-  const gaps = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixGap"]')].map((g) => g.textContent.trim()).filter(Boolean))
-  check(where, '(w) vs plan is pressed and says how many years later each path is', (await vs.getAttribute('aria-pressed')) === 'true' && gaps.some((g) => /^\+\d+y$/.test(g)), JSON.stringify(gaps))
+  const gaps = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="matrixGap"]')].map((g) => g.textContent.trim()).filter(Boolean),
+  )
+  check(
+    where,
+    '(w) vs plan is pressed and says how many years later each path is',
+    (await vs.getAttribute('aria-pressed')) === 'true' && gaps.some((g) => /^\+\d+y$/.test(g)),
+    JSON.stringify(gaps),
+  )
   const green = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixSooner"]')].length)
-  check(where, '(w) a path that is no sooner than the plan is not in green', green === 0 || gaps.some((g) => /^−/.test(g) || g === 'sooner'), `${green} green`)
+  check(
+    where,
+    '(w) a path that is no sooner than the plan is not in green',
+    green === 0 || gaps.some((g) => /^−/.test(g) || g === 'sooner'),
+    `${green} green`,
+  )
 
   // The keyboard: one tab stop, arrows, Home and End.
-  const stops = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => c.tabIndex === 0).length)
+  const stops = await page.evaluate(
+    () => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => c.tabIndex === 0).length,
+  )
   check(where, '(w) the grid is one tab stop', stops === 1, `${stops} stops`)
-  const at = () => page.evaluate(() => [document.activeElement.dataset.row, document.activeElement.dataset.col].join(','))
+  const at = () =>
+    page.evaluate(() => [document.activeElement.dataset.row, document.activeElement.dataset.col].join(','))
   await page.locator('td[role="gridcell"][tabindex="0"]').focus()
   const start = await at()
   await page.keyboard.press('ArrowRight')
@@ -2133,7 +3262,12 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
   await page.keyboard.press('Home')
   const home = await at()
   const [r0, c0] = start.split(',').map(Number)
-  check(where, '(w) arrow keys, End and Home move between cells', right === `${r0},${c0 + 1}` && up === `${r0 - 1},${c0 + 1}` && end === `${r0 - 1},6` && home === `${r0 - 1},0`, JSON.stringify({ start, right, up, end, home }))
+  check(
+    where,
+    '(w) arrow keys, End and Home move between cells',
+    right === `${r0},${c0 + 1}` && up === `${r0 - 1},${c0 + 1}` && end === `${r0 - 1},6` && home === `${r0 - 1},0`,
+    JSON.stringify({ start, right, up, end, home }),
+  )
 
   if (engine === 'chromium' && scheme === 'dark') {
     await page.emulateMedia({ forcedColors: 'active' })
@@ -2142,13 +3276,28 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
       const cs = getComputedStyle(el)
       return { style: cs.borderTopStyle, color: cs.borderTopColor, width: cs.borderTopWidth }
     })
-    check(where, '(w) in forced colours a tinted cell is still drawn as a box', box.style === 'solid' && box.color !== 'rgba(0, 0, 0, 0)' && parseFloat(box.width) >= 1, JSON.stringify(box))
+    check(
+      where,
+      '(w) in forced colours a tinted cell is still drawn as a box',
+      box.style === 'solid' && box.color !== 'rgba(0, 0, 0, 0)' && parseFloat(box.width) >= 1,
+      JSON.stringify(box),
+    )
   }
   await context.close()
 }
 
-async function openPhoneMilestones(browser, width, engine) {
-  const context = await browser.newContext({ viewport: { width, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+async function openPhoneMilestones(
+  browser,
+  width,
+  engine,
+) {
+  const context = await browser.newContext({
+    viewport: { width, height: 812 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -2161,16 +3310,30 @@ async function openPhoneMilestones(browser, width, engine) {
   return { page, context, where: `${engine} phone ${width}` }
 }
 
-async function checkMilestonePhone(browser, engine) {
+async function checkMilestonePhone(
+  browser,
+  engine,
+) {
   for (const width of [375, 320]) {
     const { page, context, where } = await openPhoneMilestones(browser, width, engine)
     const fit = await page.evaluate(() => {
       const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
-      return { scroll: region.scrollWidth, client: region.clientWidth, page: document.documentElement.scrollWidth, iw: innerWidth }
+      return {
+        scroll: region.scrollWidth,
+        client: region.clientWidth,
+        page: document.documentElement.scrollWidth,
+        iw: innerWidth,
+      }
     })
     check(where, '(w) the page does not scroll sideways', fit.page <= fit.iw, JSON.stringify(fit))
     // Seven milestones fit 375px; at 320px the table may scroll in its own box, with the names held.
-    if (width === 375) check(where, '(w) the columns of the page fit the table without scrolling', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+    if (width === 375)
+      check(
+        where,
+        '(w) the columns of the page fit the table without scrolling',
+        fit.scroll <= fit.client + 1,
+        JSON.stringify(fit),
+      )
     if (width === 375) {
       // The longest sentence there is: a path against the plan, with the check-ins' date. The
       // card keeps the room for it from the start, so reading it moves nothing.
@@ -2184,10 +3347,24 @@ async function checkMilestonePhone(browser, engine) {
       await page.waitForTimeout(150)
       const text = await page.locator('[class*="matrixReadout"]').textContent()
       const after = (await matrixCard(page).boundingBox()).height
-      check(where, '(w) tapping a cell writes its sentence', text === (await tapped.getAttribute('aria-label')) && /later than Path A \(the plan\)/.test(text), text)
-      check(where, '(w) the sentence takes the room kept for it, the card does not grow', near(before, after, 1), `${px(before)} then ${px(after)}`)
+      check(
+        where,
+        '(w) tapping a cell writes its sentence',
+        text === (await tapped.getAttribute('aria-label')) && /later than Path A \(the plan\)/.test(text),
+        text,
+      )
+      check(
+        where,
+        '(w) the sentence takes the room kept for it, the card does not grow',
+        near(before, after, 1),
+        `${px(before)} then ${px(after)}`,
+      )
       const toggles = await page.evaluate(() => {
-        const t = [...document.querySelectorAll('[role="radiogroup"][aria-label="Show each milestone as"], button[aria-pressed]')].map((e) => e.getBoundingClientRect())
+        const t = [
+          ...document.querySelectorAll(
+            '[role="radiogroup"][aria-label="Show each milestone as"], button[aria-pressed]',
+          ),
+        ].map((e) => e.getBoundingClientRect())
         return { inside: t.every((r) => r.left >= 0 && r.right <= innerWidth) }
       })
       check(where, '(w) the toggles fit the screen', toggles.inside, JSON.stringify(toggles))
@@ -2201,7 +3378,10 @@ async function checkMilestonePhone(browser, engine) {
  * sign radios of a life event, and (with a keyboard, so on a mouse's screen) taking back a removed
  * star without tabbing to the end of the page.
  */
-async function checkTouchLeftovers(browser, engine) {
+async function checkTouchLeftovers(
+  browser,
+  engine,
+) {
   const where = `${engine} iPad leftovers`
   const { page, context } = await openPlan(browser, { width: 1032, height: 1376 }, { touch: true })
 
@@ -2222,9 +3402,24 @@ async function checkTouchLeftovers(browser, engine) {
       below7IsFigure: document.elementFromPoint(cx, r.bottom + 7)?.closest('[class*="leverValue"]') !== null,
     }
   })
-  check(where, '(y4) a star in the bar has a tap area 44px high', bar.height >= FINGER && near(bar.height, 44, 0.5), JSON.stringify(bar))
-  check(where, '(y4) a press 7px above a bar star, and at the top of its area, is the star\'s', bar.above7 && bar.topOfArea, JSON.stringify(bar))
-  check(where, '(y4) a press 7px below a bar star is still the figure\'s, so a tap on the digits does not take the lever out', bar.below7IsFigure, JSON.stringify(bar))
+  check(
+    where,
+    '(y4) a star in the bar has a tap area 44px high',
+    bar.height >= FINGER && near(bar.height, 44, 0.5),
+    JSON.stringify(bar),
+  )
+  check(
+    where,
+    "(y4) a press 7px above a bar star, and at the top of its area, is the star's",
+    bar.above7 && bar.topOfArea,
+    JSON.stringify(bar),
+  )
+  check(
+    where,
+    "(y4) a press 7px below a bar star is still the figure's, so a tap on the digits does not take the lever out",
+    bar.below7IsFigure,
+    JSON.stringify(bar),
+  )
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor()
   await page.waitForTimeout(500)
@@ -2236,12 +3431,32 @@ async function checkTouchLeftovers(browser, engine) {
       const cx = r.left + r.width / 2
       const is = (y) => document.elementFromPoint(cx, y)?.closest('button[data-star]') === star
       const areaTop = r.top + parseFloat(after.top)
-      return { height: parseFloat(after.height), above7: is(r.top - 7), below7: is(r.bottom + 7), reachesUp: areaTop < wrap.top - 0.5 }
+      return {
+        height: parseFloat(after.height),
+        above7: is(r.top - 7),
+        below7: is(r.bottom + 7),
+        reachesUp: areaTop < wrap.top - 0.5,
+      }
     }),
   )
-  check(where, `(y4) every star in the panel has a 44px tap area (${panel.length} measured)`, panel.length > 5 && panel.every((s) => near(s.height, 44, 0.5)), JSON.stringify(panel[0]))
-  check(where, '(y4) a press 7px above or below a panel star is the star\'s', panel.every((s) => s.above7 && s.below7), JSON.stringify(panel.filter((s) => !(s.above7 && s.below7))))
-  check(where, '(y4) the area stays inside the row of its own input, so it takes nothing from the row above', panel.every((s) => !s.reachesUp), JSON.stringify(panel.filter((s) => s.reachesUp)))
+  check(
+    where,
+    `(y4) every star in the panel has a 44px tap area (${panel.length} measured)`,
+    panel.length > 5 && panel.every((s) => near(s.height, 44, 0.5)),
+    JSON.stringify(panel[0]),
+  )
+  check(
+    where,
+    "(y4) a press 7px above or below a panel star is the star's",
+    panel.every((s) => s.above7 && s.below7),
+    JSON.stringify(panel.filter((s) => !(s.above7 && s.below7))),
+  )
+  check(
+    where,
+    '(y4) the area stays inside the row of its own input, so it takes nothing from the row above',
+    panel.every((s) => !s.reachesUp),
+    JSON.stringify(panel.filter((s) => s.reachesUp)),
+  )
 
   // (d) The sign of a life event is a radio 12px across: a press anywhere on its 44px label picks it.
   await page.getByRole('button', { name: '+ Add life event' }).scrollIntoViewIfNeeded()
@@ -2264,13 +3479,26 @@ async function checkTouchLeftovers(browser, engine) {
     }
     return { misses, radio: el.querySelector('input').getBoundingClientRect().width }
   })
-  check(where, '(y4) the sign radio is small but every point of its 44px label is the label\'s', label.height >= FINGER && grid.radio < 20 && grid.misses.length === 0, JSON.stringify({ height: label.height, ...grid }))
+  check(
+    where,
+    "(y4) the sign radio is small but every point of its 44px label is the label's",
+    label.height >= FINGER && grid.radio < 20 && grid.misses.length === 0,
+    JSON.stringify({ height: label.height, ...grid }),
+  )
   const checked = (loc) => loc.locator('input').isChecked()
-  for (const [name, fx, fy] of [['far right end', 0.97, 0.9], ['top left corner', 0.03, 0.08], ['the text', 0.6, 0.5]]) {
+  for (const [name, fx, fy] of [
+    ['far right end', 0.97, 0.9],
+    ['top left corner', 0.03, 0.08],
+    ['the text', 0.6, 0.5],
+  ]) {
     await inflow.locator('input').check()
     await page.touchscreen.tap(label.x + label.width * fx, label.y + label.height * fy)
     await page.waitForTimeout(150)
-    check(where, `(y4) a tap on ${name} of the Outflow label picks it`, (await checked(outflow)) && !(await checked(inflow)))
+    check(
+      where,
+      `(y4) a tap on ${name} of the Outflow label picks it`,
+      (await checked(outflow)) && !(await checked(inflow)),
+    )
   }
   await page.getByRole('button', { name: 'Cancel' }).click()
   await context.close()
@@ -2280,9 +3508,17 @@ async function checkTouchLeftovers(browser, engine) {
   // that is not an iPad has a button that opens the app's calendar, measured as well. A mouse keeps 40.8px.
   const { devices } = await import('playwright')
   for (const [what, options, expected] of [
-    ['an iPad (the pill over the native control)', { ...devices['iPad Pro 11 landscape'], reducedMotion: 'reduce' }, 44],
-    ['a touch screen without the iPad\'s browser (the app\'s calendar button)', { viewport: { width: 1032, height: 1376 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' }, 44],
-    ['a mouse (the app\'s calendar button)', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }, 40.8],
+    [
+      'an iPad (the pill over the native control)',
+      { ...devices['iPad Pro 11 landscape'], reducedMotion: 'reduce' },
+      44,
+    ],
+    [
+      "a touch screen without the iPad's browser (the app's calendar button)",
+      { viewport: { width: 1032, height: 1376 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' },
+      44,
+    ],
+    ["a mouse (the app's calendar button)", { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }, 40.8],
   ]) {
     const ctx = await browser.newContext(options)
     const p = await ctx.newPage()
@@ -2296,12 +3532,23 @@ async function checkTouchLeftovers(browser, engine) {
     await p.getByRole('region', { name: 'All inputs' }).waitFor()
     await p.waitForTimeout(500)
     const date = await p.evaluate(() => {
-      const field = document.querySelector('input[type="date"][aria-label="Plan start date"], button[aria-label="Plan start date"]')
+      const field = document.querySelector(
+        'input[type="date"][aria-label="Plan start date"], button[aria-label="Plan start date"]',
+      )
       const pill = field.tagName === 'INPUT' ? field.nextElementSibling : field
       const input = field.tagName === 'INPUT' ? field : null
-      return { native: field.tagName === 'INPUT', pill: pill.getBoundingClientRect().height, input: input?.getBoundingClientRect().height ?? null }
+      return {
+        native: field.tagName === 'INPUT',
+        pill: pill.getBoundingClientRect().height,
+        input: input?.getBoundingClientRect().height ?? null,
+      }
     })
-    check(`${engine} ${what}`, `(y4) the plan start date is ${expected}px tall`, near(date.pill, expected, 0.5) && (date.input === null || near(date.input, expected, 0.5)), JSON.stringify(date))
+    check(
+      `${engine} ${what}`,
+      `(y4) the plan start date is ${expected}px tall`,
+      near(date.pill, expected, 0.5) && (date.input === null || near(date.input, expected, 0.5)),
+      JSON.stringify(date),
+    )
     await ctx.close()
   }
 
@@ -2316,19 +3563,43 @@ async function checkTouchLeftovers(browser, engine) {
   await kp.getByText('Removed Horizon from the bar').waitFor({ timeout: 3000 })
   await kp.waitForTimeout(200)
   const toastText = await kp.getByRole('status').textContent()
-  check(where, '(y4) the toast says Alt+Z undoes it, in the words a screen reader reads', /Press Alt\+Z to undo\./.test(toastText ?? ''), toastText ?? '')
-  check(where, '(y4) the toast shows the key beside Undo for a mouse', await kp.locator('kbd', { hasText: 'Alt+Z' }).isVisible())
-  const focused = () => kp.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
+  check(
+    where,
+    '(y4) the toast says Alt+Z undoes it, in the words a screen reader reads',
+    /Press Alt\+Z to undo\./.test(toastText ?? ''),
+    toastText ?? '',
+  )
+  check(
+    where,
+    '(y4) the toast shows the key beside Undo for a mouse',
+    await kp.locator('kbd', { hasText: 'Alt+Z' }).isVisible(),
+  )
+  const focused = () =>
+    kp.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
   const heldBefore = await focused()
   await kp.keyboard.press('Z')
   check(where, '(y4) Z alone does nothing', (await labels()).length === before.length - 1)
   await kp.keyboard.press('Alt+KeyZ')
   await kp.waitForTimeout(300)
-  check(where, '(y4) Alt+Z puts the input back where it was and takes the toast away', JSON.stringify(await labels()) === JSON.stringify(before) && (await kp.getByRole('status').count()) === 0, JSON.stringify(await labels()))
-  check(where, '(y4) and does not move the keyboard from where it was', (await focused()) === heldBefore, `${heldBefore} then ${await focused()}`)
+  check(
+    where,
+    '(y4) Alt+Z puts the input back where it was and takes the toast away',
+    JSON.stringify(await labels()) === JSON.stringify(before) && (await kp.getByRole('status').count()) === 0,
+    JSON.stringify(await labels()),
+  )
+  check(
+    where,
+    '(y4) and does not move the keyboard from where it was',
+    (await focused()) === heldBefore,
+    `${heldBefore} then ${await focused()}`,
+  )
   await kp.keyboard.press('Alt+KeyZ')
   await kp.waitForTimeout(200)
-  check(where, '(y4) Alt+Z again, with no toast, does nothing', JSON.stringify(await labels()) === JSON.stringify(before))
+  check(
+    where,
+    '(y4) Alt+Z again, with no toast, does nothing',
+    JSON.stringify(await labels()) === JSON.stringify(before),
+  )
 
   // From a field, where the key would otherwise type a letter (Option+Z is an omega on a Mac).
   await kp.getByRole('button', { name: 'Remove Horizon from the bar' }).focus()
@@ -2341,8 +3612,18 @@ async function checkTouchLeftovers(browser, engine) {
   await monthly.focus()
   await kp.keyboard.press('Alt+KeyZ')
   await kp.waitForTimeout(300)
-  const inField = { restored: JSON.stringify(await labels()) === JSON.stringify(before), value: await monthly.inputValue(), typed, focused: await monthly.evaluate((el) => el === document.activeElement) }
-  check(where, '(y4) Alt+Z in a field undoes the removal and types nothing', inField.restored && inField.value === typed && inField.focused, JSON.stringify(inField))
+  const inField = {
+    restored: JSON.stringify(await labels()) === JSON.stringify(before),
+    value: await monthly.inputValue(),
+    typed,
+    focused: await monthly.evaluate((el) => el === document.activeElement),
+  }
+  check(
+    where,
+    '(y4) Alt+Z in a field undoes the removal and types nothing',
+    inField.restored && inField.value === typed && inField.focused,
+    JSON.stringify(inField),
+  )
   await keys.context.close()
 }
 
@@ -2353,7 +3634,8 @@ async function checkTouchLeftovers(browser, engine) {
  * middle of the window first, so the bar is where a reader would find it.
  */
 function starAreas() {
-  const sel = 'input:not([type="hidden"]), select, textarea, button, a[href], [role="slider"], [role="radio"], [role="tab"], [role="button"], label'
+  const sel =
+    'input:not([type="hidden"]), select, textarea, button, a[href], [role="slider"], [role="radio"], [role="tab"], [role="button"], label'
   const ofStar = (el) => (el ? el.closest('button[data-star]') : null)
   const stolen = []
   const controls = [...document.querySelectorAll(sel)].filter((el) => !ofStar(el))
@@ -2361,7 +3643,14 @@ function starAreas() {
   for (const c of controls) {
     c.scrollIntoView({ block: 'center', behavior: 'instant' })
     const box = c.getBoundingClientRect()
-    if (box.width < 2 || box.height < 2 || box.bottom < 0 || box.top > innerHeight || getComputedStyle(c).visibility === 'hidden') continue
+    if (
+      box.width < 2 ||
+      box.height < 2 ||
+      box.bottom < 0 ||
+      box.top > innerHeight ||
+      getComputedStyle(c).visibility === 'hidden'
+    )
+      continue
     measured++
     let taken = 0
     for (let a = 0; a <= 8; a++) {
@@ -2372,7 +3661,9 @@ function starAreas() {
       }
     }
     if (taken > 0) {
-      const name = (c.getAttribute('aria-label') || c.getAttribute('name') || c.textContent || c.tagName).trim().slice(0, 30)
+      const name = (c.getAttribute('aria-label') || c.getAttribute('name') || c.textContent || c.tagName)
+        .trim()
+        .slice(0, 30)
       stolen.push(`${name} (${c.tagName.toLowerCase()}) ${taken}/45`)
     }
   }
@@ -2417,7 +3708,10 @@ function starAreas() {
  * be the control's, the stars must keep an area they can be hit by, and a stepper must not reach
  * into the gutter its star hangs in. A mouse is measured as well.
  */
-async function checkStarOverlap(browser, engine) {
+async function checkStarOverlap(
+  browser,
+  engine,
+) {
   const where = `${engine} stars over controls`
   const screens = [
     { name: 'iPad 1032x1376', width: 1032, height: 1376, touch: true },
@@ -2431,21 +3725,36 @@ async function checkStarOverlap(browser, engine) {
     await page.getByRole('button', { name: /All inputs/ }).click()
     await page.getByRole('region', { name: 'All inputs' }).waitFor()
     await page.waitForTimeout(500)
-    for (const state of ['the bar full, the panel\'s stars held back', 'room in the bar, the panel\'s stars live']) {
+    for (const state of ["the bar full, the panel's stars held back", "room in the bar, the panel's stars live"]) {
       if (state.startsWith('room')) {
         await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
         await page.waitForTimeout(500)
       }
       const r = await page.evaluate(starAreas)
       const label = `${screen.name}, ${state}`
-      check(where, `(k2) no control loses a press to a star at ${label} (${r.measured} measured)`, r.measured > 60 && r.stolen.length === 0, JSON.stringify(r.stolen))
+      check(
+        where,
+        `(k2) no control loses a press to a star at ${label} (${r.measured} measured)`,
+        r.measured > 60 && r.stolen.length === 0,
+        JSON.stringify(r.stolen),
+      )
       const panel = r.areas.filter((a) => a.inPanel)
       const bar = r.areas.filter((a) => !a.inPanel)
       // 23, not 24: the gap between two columns is 24px and a pixel is counted when its middle is inside it.
       const wide = screen.touch ? panel.filter((a) => a.w < 23 || a.h < 43) : panel.filter((a) => a.w < 23 || a.h < 23)
-      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 9 && wide.length === 0, JSON.stringify(wide))
+      check(
+        where,
+        `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`,
+        panel.length >= 9 && wide.length === 0,
+        JSON.stringify(wide),
+      )
       const short = screen.touch ? bar.filter((a) => a.w < 40 || a.h < 43) : bar.filter((a) => a.w < 23 || a.h < 23)
-      check(where, `(k2) every bar star keeps its tap area at ${label} (${bar.length} measured)`, bar.length >= 4 && short.length === 0, JSON.stringify(short))
+      check(
+        where,
+        `(k2) every bar star keeps its tap area at ${label} (${bar.length} measured)`,
+        bar.length >= 4 && short.length === 0,
+        JSON.stringify(short),
+      )
     }
     // The stepper's + button is the control that used to be under a star: it must end inside its column.
     const reach = await page.evaluate(() => {
@@ -2460,14 +3769,30 @@ async function checkStarOverlap(browser, engine) {
       }
       return { columns: columns.length, over }
     })
-    check(where, `(k2) a stepper's + button ends inside its column at ${screen.name}`, reach.columns >= 3 && reach.over.length === 0, JSON.stringify(reach))
+    check(
+      where,
+      `(k2) a stepper's + button ends inside its column at ${screen.name}`,
+      reach.columns >= 3 && reach.over.length === 0,
+      JSON.stringify(reach),
+    )
     await context.close()
   }
 }
 
 /** A phone on the demo instance with the milestone list set to `count` entries, on the table's card. */
-async function openPhoneWithMilestones(browser, engine, width, count) {
-  const context = await browser.newContext({ viewport: { width, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+async function openPhoneWithMilestones(
+  browser,
+  engine,
+  width,
+  count,
+) {
+  const context = await browser.newContext({
+    viewport: { width, height: 812 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -2484,7 +3809,10 @@ async function openPhoneWithMilestones(browser, engine, width, count) {
     await page.waitForTimeout(120)
   }
   while ((await have()) > count) {
-    await page.getByRole('button', { name: /^Remove milestone/ }).first().click()
+    await page
+      .getByRole('button', { name: /^Remove milestone/ })
+      .first()
+      .click()
     await page.waitForTimeout(120)
   }
   await page.getByRole('tab', { name: 'Chart' }).click()
@@ -2501,16 +3829,22 @@ function phoneTable(page) {
     const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
     const table = region.querySelector('table')
     const heads = [...table.querySelectorAll('thead th')].slice(1)
-    const names = [...table.querySelectorAll('tbody th')].map((th) => th.querySelector('[class*="milestoneScenarioName_"]'))
+    const names = [...table.querySelectorAll('tbody th')].map((th) =>
+      th.querySelector('[class*="milestoneScenarioName_"]'),
+    )
     return {
       page: document.documentElement.scrollWidth - innerWidth,
       scrolls: region.scrollWidth - region.clientWidth,
       width: table.getBoundingClientRect().width,
       nameWidth: table.querySelector('thead th').getBoundingClientRect().width,
-      heads: heads.map((h) => ({ text: h.textContent.replace(/\s+/g, ' ').trim(), width: h.getBoundingClientRect().width })),
+      heads: heads.map((h) => ({
+        text: h.textContent.replace(/\s+/g, ' ').trim(),
+        width: h.getBoundingClientRect().width,
+      })),
       cut: names.filter((n) => n.scrollHeight > n.clientHeight + 1 || getComputedStyle(n).overflow === 'hidden').length,
       rows: names.length,
-      boxes: [...table.querySelectorAll('[class*="matrixBox"]')].filter((b) => b.scrollWidth > b.clientWidth + 1).length,
+      boxes: [...table.querySelectorAll('[class*="matrixBox"]')].filter((b) => b.scrollWidth > b.clientWidth + 1)
+        .length,
     }
   })
 }
@@ -2522,7 +3856,10 @@ const pageChips = (page) => matrixCard(page).getByRole('radiogroup', { name: 'Mi
  * a page away, every path's whole name, and the other way to read it, by goal. Twelve milestones is
  * the most the list allows; three is a short one.
  */
-async function checkMilestonePhoneView(browser, engine) {
+async function checkMilestonePhoneView(
+  browser,
+  engine,
+) {
   // The columns a card of that width holds (38% for the names, 46px at least for a column) is 4, 3
   // and 5; the seven milestones left once 100k is folded are split as evenly as can be, so the
   // first page has 4, 3 and 4.
@@ -2531,11 +3868,36 @@ async function checkMilestonePhoneView(browser, engine) {
     const { page, context, where } = await openPhoneWithMilestones(browser, engine, width, 12)
     const first = await phoneTable(page)
     const open = (await pageChips(page).count()) === 0 ? first.heads.length : null
-    check(where, '(p1) the page does not scroll sideways, nor does the table', first.page <= 0 && first.scrolls <= 1, JSON.stringify({ page: first.page, scrolls: first.scrolls }))
-    check(where, `(p1) a page holds ${expected[width]} columns`, first.heads.length === expected[width], JSON.stringify(first.heads))
-    check(where, '(p1) every column is at least 46px wide, and they are all the same width', first.heads.every((h) => h.width >= 45.5 && near(h.width, first.heads[0].width, 1)), JSON.stringify(first.heads))
-    check(where, '(p1) the names take about 38% of the table', near(first.nameWidth / first.width, 0.38, 0.02), `${px(first.nameWidth)} of ${px(first.width)}`)
-    check(where, '(p1) no path\'s name is cut', first.cut === 0 && first.rows >= 3, JSON.stringify({ cut: first.cut, rows: first.rows }))
+    check(
+      where,
+      '(p1) the page does not scroll sideways, nor does the table',
+      first.page <= 0 && first.scrolls <= 1,
+      JSON.stringify({ page: first.page, scrolls: first.scrolls }),
+    )
+    check(
+      where,
+      `(p1) a page holds ${expected[width]} columns`,
+      first.heads.length === expected[width],
+      JSON.stringify(first.heads),
+    )
+    check(
+      where,
+      '(p1) every column is at least 46px wide, and they are all the same width',
+      first.heads.every((h) => h.width >= 45.5 && near(h.width, first.heads[0].width, 1)),
+      JSON.stringify(first.heads),
+    )
+    check(
+      where,
+      '(p1) the names take about 38% of the table',
+      near(first.nameWidth / first.width, 0.38, 0.02),
+      `${px(first.nameWidth)} of ${px(first.width)}`,
+    )
+    check(
+      where,
+      "(p1) no path's name is cut",
+      first.cut === 0 && first.rows >= 3,
+      JSON.stringify({ cut: first.cut, rows: first.rows }),
+    )
     check(where, '(p1) no figure is wider than its box', first.boxes === 0, `${first.boxes} boxes`)
 
     // Every milestone is on some page, once.
@@ -2548,7 +3910,12 @@ async function checkMilestonePhoneView(browser, engine) {
       await page.waitForTimeout(150)
       seen.push(...(await phoneTable(page)).heads.map((h) => h.text))
     }
-    check(where, '(p1) the pages together hold each milestone once', new Set(seen).size === seen.length && seen.length >= 6, JSON.stringify(seen))
+    check(
+      where,
+      '(p1) the pages together hold each milestone once',
+      new Set(seen).size === seen.length && seen.length >= 6,
+      JSON.stringify(seen),
+    )
     const chipsFit = await page.evaluate(() => {
       const g = document.querySelector('[role="radiogroup"][aria-label="Milestones shown"]').getBoundingClientRect()
       return g.left >= 0 && g.right <= innerWidth
@@ -2578,17 +3945,38 @@ async function checkMilestonePhoneView(browser, engine) {
         arrows: arrows.map((r) => Math.round(Math.min(r.width, r.height))),
       }
     })
-    check(where, '(p2) by goal: a row per path, whole names, nothing off the screen', list.items >= 3 && list.cut === 0 && list.inside && list.page <= 0, JSON.stringify(list))
-    check(where, '(p2) by goal: the previous and next buttons are 44px', list.arrows.length === 2 && list.arrows.every((a) => a >= 44), JSON.stringify(list.arrows))
+    check(
+      where,
+      '(p2) by goal: a row per path, whole names, nothing off the screen',
+      list.items >= 3 && list.cut === 0 && list.inside && list.page <= 0,
+      JSON.stringify(list),
+    )
+    check(
+      where,
+      '(p2) by goal: the previous and next buttons are 44px',
+      list.arrows.length === 2 && list.arrows.every((a) => a >= 44),
+      JSON.stringify(list.arrows),
+    )
     // Stepping to the end brings the chip of that milestone into view.
-    for (let i = 0; i < 12; i++) await matrixCard(page).getByRole('button', { name: 'Next milestone' }).tap({ timeout: 2000 }).catch(() => {})
+    for (let i = 0; i < 12; i++)
+      await matrixCard(page)
+        .getByRole('button', { name: 'Next milestone' })
+        .tap({ timeout: 2000 })
+        .catch(() => {})
     await page.waitForTimeout(300)
     const chip = await page.evaluate(() => {
       const group = document.querySelector('[role="radiogroup"][aria-label="Milestone"]').getBoundingClientRect()
-      const on = document.querySelector('[role="radiogroup"][aria-label="Milestone"] [aria-checked="true"]').getBoundingClientRect()
+      const on = document
+        .querySelector('[role="radiogroup"][aria-label="Milestone"] [aria-checked="true"]')
+        .getBoundingClientRect()
       return { inside: on.left >= group.left - 1 && on.right <= group.right + 1 }
     })
-    check(where, '(p2) by goal: the milestone picked with the arrows is in view in the chips', chip.inside, JSON.stringify(chip))
+    check(
+      where,
+      '(p2) by goal: the milestone picked with the arrows is in view in the chips',
+      chip.inside,
+      JSON.stringify(chip),
+    )
     void open
     await context.close()
   }
@@ -2597,8 +3985,17 @@ async function checkMilestonePhoneView(browser, engine) {
   for (const count of [3, 1]) {
     const { page, context, where } = await openPhoneWithMilestones(browser, engine, 375, count)
     const t = await phoneTable(page)
-    check(where, '(p3) no page chips for a list that fits', (await pageChips(page).count()) === 0 && t.heads.length >= 1)
-    check(where, '(p3) the columns are wide, none cut and nothing scrolls', t.cut === 0 && t.scrolls <= 1 && t.page <= 0, JSON.stringify(t))
+    check(
+      where,
+      '(p3) no page chips for a list that fits',
+      (await pageChips(page).count()) === 0 && t.heads.length >= 1,
+    )
+    check(
+      where,
+      '(p3) the columns are wide, none cut and nothing scrolls',
+      t.cut === 0 && t.scrolls <= 1 && t.page <= 0,
+      JSON.stringify(t),
+    )
     await context.close()
   }
 }
@@ -2608,8 +4005,18 @@ async function checkMilestonePhoneView(browser, engine) {
  * folded and the card is paged at any phone width: the five the demo has already passed go, and
  * five more above them are added.
  */
-async function openPhoneUnreached(browser, engine, size) {
-  const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+async function openPhoneUnreached(
+  browser,
+  engine,
+  size,
+) {
+  const context = await browser.newContext({
+    viewport: size,
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -2621,7 +4028,10 @@ async function openPhoneUnreached(browser, engine, size) {
   await page.getByRole('button', { name: 'Reset to defaults' }).last().click()
   await page.waitForTimeout(300)
   for (let i = 0; i < 5; i++) {
-    await page.getByRole('button', { name: /^Remove milestone/ }).first().click()
+    await page
+      .getByRole('button', { name: /^Remove milestone/ })
+      .first()
+      .click()
     await page.waitForTimeout(120)
   }
   while ((await page.getByLabel('Milestone name', { exact: true }).count()) < 12) {
@@ -2642,7 +4052,10 @@ async function openPhoneUnreached(browser, engine, size) {
  * button and by Escape with the focus back where it was. Upright it says to turn the phone; on
  * its side the bar is one row.
  */
-async function checkMilestoneSheet(browser, engine) {
+async function checkMilestoneSheet(
+  browser,
+  engine,
+) {
   const open = (page) => page.getByRole('button', { name: 'All milestones' })
   const dialog = (page) => page.getByRole('dialog', { name: /every milestone/ })
   const measures = (page) =>
@@ -2669,7 +4082,10 @@ async function checkMilestoneSheet(browser, engine) {
       }
     })
 
-  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 667x375', { width: 667, height: 375 }]]) {
+  for (const [name, size] of [
+    ['upright 375x812', { width: 375, height: 812 }],
+    ['on its side 667x375', { width: 667, height: 375 }],
+  ]) {
     const { page, context } = await openPhoneUnreached(browser, engine, size)
     const where = `${engine} phone ${name}`
     check(where, '(s1) the card offers the sheet, as its table is paged', (await open(page).count()) === 1)
@@ -2678,9 +4094,24 @@ async function checkMilestoneSheet(browser, engine) {
     await dialog(page).waitFor()
     await page.waitForTimeout(400)
     const m = await measures(page)
-    check(where, '(s1) the sheet covers the whole screen', m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih, JSON.stringify(m.box))
-    check(where, '(s1) every milestone is a column, with the currency sign', m.heads === 12 && m.sign, JSON.stringify({ heads: m.heads, sign: m.sign }))
-    check(where, '(s1) the table scrolls in the sheet, and the page behind does not scroll sideways', m.scrollW > m.clientW && m.page <= 0, JSON.stringify(m))
+    check(
+      where,
+      '(s1) the sheet covers the whole screen',
+      m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih,
+      JSON.stringify(m.box),
+    )
+    check(
+      where,
+      '(s1) every milestone is a column, with the currency sign',
+      m.heads === 12 && m.sign,
+      JSON.stringify({ heads: m.heads, sign: m.sign }),
+    )
+    check(
+      where,
+      '(s1) the table scrolls in the sheet, and the page behind does not scroll sideways',
+      m.scrollW > m.clientW && m.page <= 0,
+      JSON.stringify(m),
+    )
     check(where, '(s1) the close button is 44px', m.close >= 44, `${m.close}px`)
     check(where, '(s1) the heads are held', m.stickyHead === 'sticky', m.stickyHead)
     if (size.width === 375) {
@@ -2688,11 +4119,27 @@ async function checkMilestoneSheet(browser, engine) {
       // A quarter turn: laid out as wide as the screen is tall and as tall as it is wide.
       const turn = await page.evaluate(() => {
         const d = document.querySelector('[role="dialog"]')
-        return { layout: [d.offsetWidth, d.offsetHeight], screen: [innerWidth, innerHeight], matrix: getComputedStyle(d).transform }
+        return {
+          layout: [d.offsetWidth, d.offsetHeight],
+          screen: [innerWidth, innerHeight],
+          matrix: getComputedStyle(d).transform,
+        }
       })
-      check(where, '(s1) held upright the sheet is turned a quarter turn, to be read with the phone turned to the left', turn.layout[0] === turn.screen[1] && turn.layout[1] === turn.screen[0] && /^matrix\(0, 1, -1, 0/.test(turn.matrix), JSON.stringify(turn))
+      check(
+        where,
+        '(s1) held upright the sheet is turned a quarter turn, to be read with the phone turned to the left',
+        turn.layout[0] === turn.screen[1] &&
+          turn.layout[1] === turn.screen[0] &&
+          /^matrix\(0, 1, -1, 0/.test(turn.matrix),
+        JSON.stringify(turn),
+      )
     } else {
-      check(where, '(s1) on its side it does not, and the bar is one row', !m.hint && m.bar <= 60, JSON.stringify({ hint: m.hint, bar: m.bar }))
+      check(
+        where,
+        '(s1) on its side it does not, and the bar is one row',
+        !m.hint && m.bar <= 60,
+        JSON.stringify({ hint: m.hint, bar: m.bar }),
+      )
     }
 
     // The names stay while the figures scroll under them.
@@ -2706,7 +4153,12 @@ async function checkMilestoneSheet(browser, engine) {
       const after = place()
       return { before, after, moved: region.scrollLeft, turned }
     })
-    check(where, '(s1) the names are held while the columns scroll', held.moved > 50 && near(held.before, held.after, 1), JSON.stringify(held))
+    check(
+      where,
+      '(s1) the names are held while the columns scroll',
+      held.moved > 50 && near(held.before, held.after, 1),
+      JSON.stringify(held),
+    )
 
     // A tap lands on the cell it is on, turned or not, and writes its sentence under the table.
     // (The pointer the emulation leaves behind is moved off the table first, as the browser would
@@ -2721,7 +4173,12 @@ async function checkMilestoneSheet(browser, engine) {
     await dialog(page).getByRole('radio', { name: 'Calendar year' }).tap()
     await dialog(page).getByRole('button', { name: 'Close' }).tap()
     await page.waitForTimeout(300)
-    check(where, '(s2) the sheet is gone after Close, and the card kept the calendar year', (await dialog(page).count()) === 0 && (await matrixCard(page).getByRole('radio', { name: 'Calendar year' }).getAttribute('aria-checked')) === 'true')
+    check(
+      where,
+      '(s2) the sheet is gone after Close, and the card kept the calendar year',
+      (await dialog(page).count()) === 0 &&
+        (await matrixCard(page).getByRole('radio', { name: 'Calendar year' }).getAttribute('aria-checked')) === 'true',
+    )
 
     // Opened from the keyboard (a tap on a button does not focus it in Safari, so there would be
     // nothing to give back), Escape closes it and the focus goes back to the button.
@@ -2731,7 +4188,11 @@ async function checkMilestoneSheet(browser, engine) {
     await page.keyboard.press('Escape')
     await page.waitForTimeout(300)
     check(where, '(s2) Escape closes it', (await dialog(page).count()) === 0)
-    check(where, '(s2) the focus is back on the button that opened it', await open(page).evaluate((el) => el === document.activeElement))
+    check(
+      where,
+      '(s2) the focus is back on the button that opened it',
+      await open(page).evaluate((el) => el === document.activeElement),
+    )
     await context.close()
   }
 
@@ -2747,9 +4208,18 @@ async function checkMilestoneSheet(browser, engine) {
     const head = region.querySelector('thead th:nth-child(2)')
     region.scrollTop = 60
     const r = region.getBoundingClientRect()
-    return { scrolled: region.scrollTop, headTop: Math.round(head.getBoundingClientRect().top - r.top), canScroll: region.scrollHeight > region.clientHeight }
+    return {
+      scrolled: region.scrollTop,
+      headTop: Math.round(head.getBoundingClientRect().top - r.top),
+      canScroll: region.scrollHeight > region.clientHeight,
+    }
   })
-  check(where, '(s3) with more rows than the screen holds the table scrolls down with its heads held', rows.canScroll && rows.scrolled > 0 && rows.headTop <= 1, JSON.stringify(rows))
+  check(
+    where,
+    '(s3) with more rows than the screen holds the table scrolls down with its heads held',
+    rows.canScroll && rows.scrolled > 0 && rows.headTop <= 1,
+    JSON.stringify(rows),
+  )
   await context.close()
 }
 
@@ -2759,8 +4229,17 @@ async function checkMilestoneSheet(browser, engine) {
  * a hundred and fifty thousand, which a number field read as 150. The cash reserve is whole months
  * and does not take "1e1" for ten.
  */
-async function checkSettingsNumbers(browser, engine) {
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+async function checkSettingsNumbers(
+  browser,
+  engine,
+) {
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -2772,15 +4251,30 @@ async function checkSettingsNumbers(browser, engine) {
   const where = `${engine} settings numbers`
 
   const amount = page.getByLabel(/Milestone amount in/).first()
-  const shown = () => amount.evaluate((el) => ({ value: el.value, type: el.type, formatted: el.parentElement.querySelector('[class*="milestoneFormatted"]').textContent }))
+  const shown = () =>
+    amount.evaluate((el) => ({
+      value: el.value,
+      type: el.type,
+      formatted: el.parentElement.querySelector('[class*="milestoneFormatted"]').textContent,
+    }))
   const before = await shown()
-  check(where, '(n1) the milestone amount is a text field, written as the currency writes it', before.type === 'text' && /^\d{1,3}(\.\d{3})*,\d{2}$/.test(before.value), JSON.stringify(before))
+  check(
+    where,
+    '(n1) the milestone amount is a text field, written as the currency writes it',
+    before.type === 'text' && /^\d{1,3}(\.\d{3})*,\d{2}$/.test(before.value),
+    JSON.stringify(before),
+  )
 
   await amount.fill('150.000')
   await amount.blur()
   await page.waitForTimeout(400)
   const after = await shown()
-  check(where, '(n1) "150.000" is a hundred and fifty thousand euros, not 150', /^150\.000,00$/.test(after.value) && /150[.\u00a0]?000/.test(after.formatted), JSON.stringify(after))
+  check(
+    where,
+    '(n1) "150.000" is a hundred and fifty thousand euros, not 150',
+    /^150\.000,00$/.test(after.value) && /150[.\u00a0]?000/.test(after.formatted),
+    JSON.stringify(after),
+  )
 
   await amount.fill('nothing')
   await amount.blur()
@@ -2795,11 +4289,19 @@ async function checkSettingsNumbers(browser, engine) {
   await page.keyboard.type('1e1')
   await page.keyboard.press('Tab')
   await page.waitForTimeout(400)
-  check(where, '(n1) "1e1" is not ten months of cash reserve', (await months.inputValue()) === saved, `${saved} then ${await months.inputValue()}`)
+  check(
+    where,
+    '(n1) "1e1" is not ten months of cash reserve',
+    (await months.inputValue()) === saved,
+    `${saved} then ${await months.inputValue()}`,
+  )
   await context.close()
 }
 
-async function checkMilestoneTable(browser, engine) {
+async function checkMilestoneTable(
+  browser,
+  engine,
+) {
   for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
     for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
   }
@@ -2818,7 +4320,11 @@ async function checkMilestoneTable(browser, engine) {
 async function denseDraft(page) {
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
-  for (const [label, value] of [['Monthly investing', '20000'], ['Starting invested', '5000'], ['Horizon (years)', '20']]) {
+  for (const [label, value] of [
+    ['Monthly investing', '20000'],
+    ['Starting invested', '5000'],
+    ['Horizon (years)', '20'],
+  ]) {
     const input = page.getByLabel(label, { exact: true }).last()
     await input.fill(value)
     await input.press('Enter')
@@ -2828,17 +4334,30 @@ async function denseDraft(page) {
 
 const timelineSwitch = (page) => page.getByRole('radiogroup', { name: 'Show years to milestone as' })
 
-async function checkTimelineAt(browser, engine, screen, scheme) {
+async function checkTimelineAt(
+  browser,
+  engine,
+  screen,
+  scheme,
+) {
   const where = `${engine} ${screen.name} ${scheme}`
   const { page, context } = await openPlan(browser, screen, { scheme })
   await denseDraft(page)
   const card = matrixCard(page)
   await card.scrollIntoViewIfNeeded()
-  check(where, '(x) the switch is in the card, with the table showing', (await timelineSwitch(page).isVisible()) && (await timelineSwitch(page).getByRole('radio', { name: 'Table' }).getAttribute('aria-checked')) === 'true')
+  check(
+    where,
+    '(x) the switch is in the card, with the table showing',
+    (await timelineSwitch(page).isVisible()) &&
+      (await timelineSwitch(page).getByRole('radio', { name: 'Table' }).getAttribute('aria-checked')) === 'true',
+  )
   const tableHeight = (await card.boundingBox()).height
   // A cell is read out in the table before the switch, so the table, which stays in the page
   // hidden, holds a sentence while the timeline is shown: the state a pointer left by chance in CI.
-  await card.getByRole('gridcell', { name: /^Path A.*reaches/ }).first().hover()
+  await card
+    .getByRole('gridcell', { name: /^Path A.*reaches/ })
+    .first()
+    .hover()
   await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
   await page.waitForTimeout(300)
 
@@ -2846,14 +4365,27 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
     const body = document.querySelector('[class*="tlBody"]')
     const c = body.closest('[class*="chartCard"]').getBoundingClientRect()
     const b = body.getBoundingClientRect()
-    return { inCard: b.left >= c.left - 0.5 && b.right <= c.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth, tracks: document.querySelector('[class*="tlTracks"]').getBoundingClientRect().width }
+    return {
+      inCard: b.left >= c.left - 0.5 && b.right <= c.right + 0.5,
+      page: document.documentElement.scrollWidth,
+      iw: innerWidth,
+      tracks: document.querySelector('[class*="tlTracks"]').getBoundingClientRect().width,
+    }
   })
-  check(where, '(x) the timeline is inside its card and the page does not scroll sideways', fit.inCard && fit.page <= fit.iw, JSON.stringify(fit))
+  check(
+    where,
+    '(x) the timeline is inside its card and the page does not scroll sideways',
+    fit.inCard && fit.page <= fit.iw,
+    JSON.stringify(fit),
+  )
   check(where, '(x) the axis has room to draw in', fit.tracks >= 450, JSON.stringify(fit))
 
   // Every dot is in its row, and no label overlaps another label, a badge or the edge of the card.
   const layout = await page.evaluate(() => {
-    const overlap = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
+    const overlap = (
+      a,
+      b,
+    ) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
     const card = document.querySelector('[class*="tlBody"]').closest('[class*="chartCard"]').getBoundingClientRect()
     const out = { dots: 0, outside: [], collisions: [], labelsOut: 0, labels: 0, hatched: 0 }
     for (const row of document.querySelectorAll('[class*="tlRow"]')) {
@@ -2862,31 +4394,58 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
       for (const d of dots) {
         const b = d.getBoundingClientRect()
         out.dots += 1
-        if (b.left < r.left || b.right > r.right || b.top < r.top || b.bottom > r.bottom) out.outside.push([Math.round(b.left - r.left), Math.round(b.top - r.top)])
+        if (b.left < r.left || b.right > r.right || b.top < r.top || b.bottom > r.bottom)
+          out.outside.push([Math.round(b.left - r.left), Math.round(b.top - r.top)])
       }
       const labels = [...row.querySelectorAll('[class*="tlLabel"]')].map((l) => l.getBoundingClientRect())
       out.labels += labels.length
-      const others = [...labels, ...[...row.querySelectorAll('[class*="tlBadge"]')].map((e) => e.getBoundingClientRect())]
+      const others = [
+        ...labels,
+        ...[...row.querySelectorAll('[class*="tlBadge"]')].map((e) => e.getBoundingClientRect()),
+      ]
       labels.forEach((l, i) => {
         if (l.left < card.left || l.right > card.right) out.labelsOut += 1
-        others.forEach((o, j) => { if (i !== j && overlap(l, o)) out.collisions.push([i, j]) })
+        others.forEach((o, j) => {
+          if (i !== j && overlap(l, o)) out.collisions.push([i, j])
+        })
         for (const d of dots) if (overlap(l, d.getBoundingClientRect())) out.collisions.push(['dot', i])
       })
       if (row.querySelector('[class*="tlHatch"]')) out.hatched += 1
     }
     return out
   })
-  check(where, '(x) every dot is inside its row', layout.dots >= 5 && layout.outside.length === 0, JSON.stringify(layout.outside))
-  check(where, '(x) no label runs into another label, a badge or a dot, and none is outside the card', layout.labels >= 4 && layout.collisions.length === 0 && layout.labelsOut === 0, JSON.stringify(layout))
+  check(
+    where,
+    '(x) every dot is inside its row',
+    layout.dots >= 5 && layout.outside.length === 0,
+    JSON.stringify(layout.outside),
+  )
+  check(
+    where,
+    '(x) no label runs into another label, a badge or a dot, and none is outside the card',
+    layout.labels >= 4 && layout.collisions.length === 0 && layout.labelsOut === 0,
+    JSON.stringify(layout),
+  )
   check(where, '(x) the path with the shorter horizon ends in hatching', layout.hatched === 1, JSON.stringify(layout))
 
   // Tab goes row by row: the buttons in the timeline are in the order of the rows.
   const order = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('[class*="tlRow"]')]
-    const seen = [...document.querySelectorAll('[class*="tlRow"] button')].map((b) => rows.indexOf(b.closest('[class*="tlRow"]')))
-    return { seen, sorted: seen.every((v, i) => i === 0 || v >= seen[i - 1]), tabbable: [...document.querySelectorAll('[class*="tlRow"] button')].every((b) => b.tabIndex === 0) }
+    const seen = [...document.querySelectorAll('[class*="tlRow"] button')].map((b) =>
+      rows.indexOf(b.closest('[class*="tlRow"]')),
+    )
+    return {
+      seen,
+      sorted: seen.every((v, i) => i === 0 || v >= seen[i - 1]),
+      tabbable: [...document.querySelectorAll('[class*="tlRow"] button')].every((b) => b.tabIndex === 0),
+    }
   })
-  check(where, '(x) Tab reaches the dots in row order, every one of them a stop', order.seen.length >= 8 && order.sorted && order.tabbable, JSON.stringify(order))
+  check(
+    where,
+    '(x) Tab reaches the dots in row order, every one of them a stop',
+    order.seen.length >= 8 && order.sorted && order.tabbable,
+    JSON.stringify(order),
+  )
 
   // A dot reads out its sentence, and nothing moves.
   const before = (await card.boundingBox()).height
@@ -2897,9 +4456,23 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   // The table is still in the page, hidden, with its own readout and the last sentence a cell
   // read out. Whether a cell was under the pointer when the page scrolled to this card depends on
   // where the pointer was, so the readout read here is the one that can be seen: the timeline's.
-  const text = await card.locator('[class*="matrixReadout"]:visible').filter({ hasText: /reaches/ }).first().textContent()
-  check(where, '(x) pointing at a dot writes its sentence under the timeline', text === (await dot.getAttribute('aria-label')), text)
-  check(where, '(x) reading it does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
+  const text = await card
+    .locator('[class*="matrixReadout"]:visible')
+    .filter({ hasText: /reaches/ })
+    .first()
+    .textContent()
+  check(
+    where,
+    '(x) pointing at a dot writes its sentence under the timeline',
+    text === (await dot.getAttribute('aria-label')),
+    text,
+  )
+  check(
+    where,
+    "(x) reading it does not change the card's height",
+    near(before, after, 1),
+    `${px(before)} then ${px(after)}`,
+  )
 
   // Follow one milestone: the dots of it are marked, the others dim, the year is labelled on each
   // path and a dashed line joins them, at the dots (the line is drawn from the data, not measured).
@@ -2907,48 +4480,114 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   await page.mouse.move(2, 2)
   await page.waitForTimeout(250)
   const follow = await page.evaluate(() => {
-    const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2] }
+    const centre = (el) => {
+      const r = el.getBoundingClientRect()
+      return [r.left + r.width / 2, r.top + r.height / 2]
+    }
     const picked = [...document.querySelectorAll('button[class*="tlDotPick"]')]
     const svg = document.querySelector('svg[class*="tlConnector"]')
     const poly = svg?.querySelector('polyline')
     const s = svg?.getBoundingClientRect()
-    const pts = poly ? poly.getAttribute('points').split(' ').map((p) => p.split(',').map(Number)) : []
-    const drawn = pts.map(([x, y]) => [s.left + (x / 1000) * s.width, s.top + (y / svg.viewBox.baseVal.height) * s.height])
+    const pts = poly
+      ? poly
+          .getAttribute('points')
+          .split(' ')
+          .map((p) => p.split(',').map(Number))
+      : []
+    const drawn = pts.map(([x, y]) => [
+      s.left + (x / 1000) * s.width,
+      s.top + (y / svg.viewBox.baseVal.height) * s.height,
+    ])
     const off = drawn.map((p, i) => Math.hypot(p[0] - centre(picked[i])[0], p[1] - centre(picked[i])[1]))
-    const dimmed = [...document.querySelectorAll('button[class*="tlDot"]')].filter((d) => !d.className.includes('tlDotPick')).map((d) => getComputedStyle(d).opacity)
-    return { picked: picked.length, points: pts.length, off, dimmed, labels: [...document.querySelectorAll('[class*="tlLabelPick"]')].map((l) => l.textContent), pressed: document.querySelector('[class*="tl"] button[aria-pressed="true"]')?.textContent }
+    const dimmed = [...document.querySelectorAll('button[class*="tlDot"]')]
+      .filter((d) => !d.className.includes('tlDotPick'))
+      .map((d) => getComputedStyle(d).opacity)
+    return {
+      picked: picked.length,
+      points: pts.length,
+      off,
+      dimmed,
+      labels: [...document.querySelectorAll('[class*="tlLabelPick"]')].map((l) => l.textContent),
+      pressed: document.querySelector('[class*="tl"] button[aria-pressed="true"]')?.textContent,
+    }
   })
-  check(where, '(x) following 750k marks its dot on each path that reaches it and labels the year', follow.picked >= 2 && follow.pressed === '750k' && follow.labels.length === follow.picked && follow.labels.every((l) => /^\d+y$/.test(l)), JSON.stringify(follow))
-  check(where, '(x) the other dots are dimmed', follow.dimmed.length > 0 && follow.dimmed.every((o) => Number(o) < 0.4), JSON.stringify(follow.dimmed))
-  check(where, '(x) the dashed line goes through each of those dots', follow.points === follow.picked && follow.off.every((d) => d <= 1.5), JSON.stringify(follow))
+  check(
+    where,
+    '(x) following 750k marks its dot on each path that reaches it and labels the year',
+    follow.picked >= 2 &&
+      follow.pressed === '750k' &&
+      follow.labels.length === follow.picked &&
+      follow.labels.every((l) => /^\d+y$/.test(l)),
+    JSON.stringify(follow),
+  )
+  check(
+    where,
+    '(x) the other dots are dimmed',
+    follow.dimmed.length > 0 && follow.dimmed.every((o) => Number(o) < 0.4),
+    JSON.stringify(follow.dimmed),
+  )
+  check(
+    where,
+    '(x) the dashed line goes through each of those dots',
+    follow.points === follow.picked && follow.off.every((d) => d <= 1.5),
+    JSON.stringify(follow),
+  )
   await page.getByRole('button', { name: 'Clear' }).click()
-  check(where, '(x) Clear takes the line and the dimming away', (await page.locator('svg[class*="tlConnector"]').count()) === 0 && (await page.locator('[class*="tlDim"]').count()) === 0)
+  check(
+    where,
+    '(x) Clear takes the line and the dimming away',
+    (await page.locator('svg[class*="tlConnector"]').count()) === 0 &&
+      (await page.locator('[class*="tlDim"]').count()) === 0,
+  )
 
   // Back to the table, which is as it was.
   await timelineSwitch(page).getByRole('radio', { name: 'Table' }).click()
   await page.waitForTimeout(200)
-  check(where, '(x) the table comes back at the height it had', near((await card.boundingBox()).height, tableHeight, 1), `${px(tableHeight)} then ${px((await card.boundingBox()).height)}`)
+  check(
+    where,
+    '(x) the table comes back at the height it had',
+    near((await card.boundingBox()).height, tableHeight, 1),
+    `${px(tableHeight)} then ${px((await card.boundingBox()).height)}`,
+  )
   await context.close()
 }
 
-async function checkTimelineSwitchAbsent(browser, engine) {
+async function checkTimelineSwitchAbsent(
+  browser,
+  engine,
+) {
   // 899px is the phone's layout: the table alone, with no switch. 900px is the wide page, which has it.
-  for (const [width, has] of [[899, false], [900, true]]) {
+  for (const [width, has] of [
+    [899, false],
+    [900, true],
+  ]) {
     const { page, context } = await openPlan(browser, { width, height: 800 })
     if (width === 899) {
       await page.getByRole('radio', { name: 'Milestones' }).click()
       await page.waitForTimeout(300)
     }
-    check(`${engine} ${width}px`, has ? '(x) the switch is there' : '(x) there is no switch, only the table', (await timelineSwitch(page).count()) === (has ? 1 : 0) && (await page.getByRole('grid').count()) === 1)
+    check(
+      `${engine} ${width}px`,
+      has ? '(x) the switch is there' : '(x) there is no switch, only the table',
+      (await timelineSwitch(page).count()) === (has ? 1 : 0) && (await page.getByRole('grid').count()) === 1,
+    )
     await context.close()
   }
   const { page, context, where } = await openPhoneMilestones(browser, 375, engine)
-  check(where, '(x) there is no switch on a phone, only the table', (await timelineSwitch(page).count()) === 0 && (await page.getByRole('grid').count()) === 1)
+  check(
+    where,
+    '(x) there is no switch on a phone, only the table',
+    (await timelineSwitch(page).count()) === 0 && (await page.getByRole('grid').count()) === 1,
+  )
   await context.close()
 }
 
-async function checkTimeline(browser, engine) {
-  for (const screen of [{ name: '900x800', width: 900, height: 800 }, SCREENS[0], SCREENS[1], SCREENS[3]]) await checkTimelineAt(browser, engine, screen, 'dark')
+async function checkTimeline(
+  browser,
+  engine,
+) {
+  for (const screen of [{ name: '900x800', width: 900, height: 800 }, SCREENS[0], SCREENS[1], SCREENS[3]])
+    await checkTimelineAt(browser, engine, screen, 'dark')
   await checkTimelineAt(browser, engine, SCREENS[3], 'light')
   await checkTimelineSwitchAbsent(browser, engine)
 }
@@ -2985,30 +4624,64 @@ async function nameMilestones(page) {
  * Returns what that makes the date, for the numbers to be checked against: the year it starts in
  * and the years it has run, read from the date the field then shows.
  */
-async function setDraftStart(page, monthsBack) {
-  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+async function setDraftStart(
+  page,
+  monthsBack,
+) {
+  const MONTHS = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ]
   await page.getByRole('button', { name: 'Plan start date' }).click()
   const dialog = page.getByRole('dialog', { name: 'Choose a date' })
   const behind = async () => {
     const [, month, year] = /^([A-Za-z]+) (\d{4})/.exec((await dialog.textContent()) ?? '') ?? []
-    return page.evaluate(([m, y, months]) => {
-      const now = new Date()
-      return (now.getFullYear() - Number(y)) * 12 + now.getMonth() - months.indexOf(m)
-    }, [month, year, MONTHS])
+    return page.evaluate(
+      ([m, y, months]) => {
+        const now = new Date()
+        return (now.getFullYear() - Number(y)) * 12 + now.getMonth() - months.indexOf(m)
+      },
+      [month, year, MONTHS],
+    )
   }
-  for (let i = 0; i < 60 && (await behind()) < monthsBack; i += 1) await dialog.getByRole('button', { name: 'Previous month' }).click()
+  for (let i = 0; i < 60 && (await behind()) < monthsBack; i += 1)
+    await dialog.getByRole('button', { name: 'Previous month' }).click()
   await dialog.getByRole('button', { name: /^15 / }).click()
   await page.waitForTimeout(500)
   const label = await page.getByRole('button', { name: 'Plan start date' }).textContent()
   return page.evaluate((text) => {
     const [day, month, year] = text.split(' ')
-    const start = new Date(Number(year), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month), Number(day), 12)
-    return { label: text, startYear: start.getFullYear(), elapsed: (Date.now() - start.getTime()) / (365.25 * 86_400_000) }
+    const start = new Date(
+      Number(year),
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month),
+      Number(day),
+      12,
+    )
+    return {
+      label: text,
+      startYear: start.getFullYear(),
+      elapsed: (Date.now() - start.getTime()) / (365.25 * 86_400_000),
+    }
   }, label)
 }
 
 /** A path with start dates that differ, and milestones with names, as the situation to check. */
-async function openFromToday(browser, screen, scheme = 'dark', { names = true } = {}) {
+async function openFromToday(
+  browser,
+  screen,
+  scheme = 'dark',
+  { names = true } = {},
+) {
   const opened = await openPlan(browser, screen, { scheme })
   if (names) await nameMilestones(opened.page)
   await lowDraft(opened.page)
@@ -3041,7 +4714,10 @@ function cellYears(shown) {
 }
 
 /** What the line under a cell should say for these two figures: the difference of what is shown. */
-function expectedGap(mine, theirs) {
+function expectedGap(
+  mine,
+  theirs,
+) {
   if (mine === null && theirs === null) return '='
   if (mine === null) return 'later'
   if (theirs === null) return 'sooner'
@@ -3052,7 +4728,12 @@ function expectedGap(mine, theirs) {
 
 const spread = (list) => (list.length === 0 ? 0 : Math.max(...list) - Math.min(...list))
 
-async function checkFromTodayTable(browser, engine, screen, scheme) {
+async function checkFromTodayTable(
+  browser,
+  engine,
+  screen,
+  scheme,
+) {
   const where = `${engine} ${screen.name} ${scheme}`
   const { page, context, start } = await openFromToday(browser, screen, scheme)
 
@@ -3063,24 +4744,64 @@ async function checkFromTodayTable(browser, engine, screen, scheme) {
   const calendar = await readRows(page)
   await page.getByRole('radio', { name: 'Years from now' }).click()
   const draftAt = years.findIndex((r) => r.name.endsWith('(editing)'))
-  const counted = years[draftAt].cells.map((c, i) => ({ n: Number(calendar[draftAt].cells[i].shown) - start.startYear, shown: c.shown }))
+  const counted = years[draftAt].cells.map((c, i) => ({
+    n: Number(calendar[draftAt].cells[i].shown) - start.startYear,
+    shown: c.shown,
+  }))
   const stepped = counted.filter((c) => cellYears(c.shown) !== null && cellYears(c.shown) > 0)
-  check(where, '(w2) the editing path, started over a year ago, counts its years from today: its own step less the years it has run', stepped.length >= 2 && stepped.every((c) => cellYears(c.shown) === Math.ceil(c.n - start.elapsed) && c.n - cellYears(c.shown) >= 1), JSON.stringify({ start, counted }))
+  check(
+    where,
+    '(w2) the editing path, started over a year ago, counts its years from today: its own step less the years it has run',
+    stepped.length >= 2 &&
+      stepped.every((c) => cellYears(c.shown) === Math.ceil(c.n - start.elapsed) && c.n - cellYears(c.shown) >= 1),
+    JSON.stringify({ start, counted }),
+  )
 
   // Same widths: one for every milestone column and every tinted box, though one name is long.
-  const heads = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] thead th[scope="col"]')].map((t) => ({ w: t.getBoundingClientRect().width, text: t.textContent })))
-  const boxes = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] [class*="matrixBox"]')].map((b) => b.getBoundingClientRect().width))
-  check(where, '(w2) every milestone column is the same width, whatever its name', heads.length === 7 && spread(heads.map((h) => h.w)) <= 1, JSON.stringify(heads))
-  check(where, '(w2) every box in the table is the same width', boxes.length >= 28 && spread(boxes) <= 1, `${px(spread(boxes))} apart over ${boxes.length}`)
+  const heads = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="grid"] thead th[scope="col"]')].map((t) => ({
+      w: t.getBoundingClientRect().width,
+      text: t.textContent,
+    })),
+  )
+  const boxes = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="grid"] [class*="matrixBox"]')].map((b) => b.getBoundingClientRect().width),
+  )
+  check(
+    where,
+    '(w2) every milestone column is the same width, whatever its name',
+    heads.length === 7 && spread(heads.map((h) => h.w)) <= 1,
+    JSON.stringify(heads),
+  )
+  check(
+    where,
+    '(w2) every box in the table is the same width',
+    boxes.length >= 28 && spread(boxes) <= 1,
+    `${px(spread(boxes))} apart over ${boxes.length}`,
+  )
   const longHead = await page.getByRole('columnheader', { name: /3rd goal/ }).getAttribute('title')
-  check(where, '(w2) the long name is cut to the column and keeps all of it in the title', /3rd goal \(phase 1\)/.test(longHead ?? ''), longHead ?? '')
+  check(
+    where,
+    '(w2) the long name is cut to the column and keeps all of it in the title',
+    /3rd goal \(phase 1\)/.test(longHead ?? ''),
+    longHead ?? '',
+  )
   const inRegion = await page.evaluate(() => {
     const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
     const card = region.closest('[class*="chartCard"]').getBoundingClientRect()
     const r = region.getBoundingClientRect()
-    return { in: r.left >= card.left - 0.5 && r.right <= card.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth }
+    return {
+      in: r.left >= card.left - 0.5 && r.right <= card.right + 0.5,
+      page: document.documentElement.scrollWidth,
+      iw: innerWidth,
+    }
   })
-  check(where, '(w2) the table is inside its card and the page does not scroll sideways', inRegion.in && inRegion.page <= inRegion.iw, JSON.stringify(inRegion))
+  check(
+    where,
+    '(w2) the table is inside its card and the page does not scroll sideways',
+    inRegion.in && inRegion.page <= inRegion.iw,
+    JSON.stringify(inRegion),
+  )
 
   // vs plan: a figure in every row that is not the plan, whatever day it started on, and it is the
   // difference of the two cells as shown.
@@ -3094,42 +4815,86 @@ async function checkFromTodayTable(browser, engine, screen, scheme) {
     if (row === plan) continue
     row.cells.forEach((c, i) => {
       const want = expectedGap(cellYears(c.shown), cellYears(plan.cells[i].shown))
-      if ((c.gap ?? '') !== want) wrong.push({ row: row.name, col: i, shown: c.shown, plan: plan.cells[i].shown, gap: c.gap, want })
+      if ((c.gap ?? '') !== want)
+        wrong.push({ row: row.name, col: i, shown: c.shown, plan: plan.cells[i].shown, gap: c.gap, want })
       if (want !== '' && want !== '=') figures += 1
     })
   }
-  check(where, '(w2) vs plan gives every path that does not start on the plan\'s day its figure, the difference of the cells shown', plan !== undefined && wrong.length === 0 && figures >= 3, JSON.stringify({ wrong: wrong.slice(0, 4), figures }))
+  check(
+    where,
+    "(w2) vs plan gives every path that does not start on the plan's day its figure, the difference of the cells shown",
+    plan !== undefined && wrong.length === 0 && figures >= 3,
+    JSON.stringify({ wrong: wrong.slice(0, 4), figures }),
+  )
   const draftRow = against[draftAt]
-  check(where, '(w2) including the editing path, which started over a year before the plan', draftRow.cells.some((c) => /^[+−]\d+y$|^later$|^sooner$/.test(c.gap ?? '')), JSON.stringify(draftRow.cells))
+  check(
+    where,
+    '(w2) including the editing path, which started over a year before the plan',
+    draftRow.cells.some((c) => /^[+−]\d+y$|^later$|^sooner$/.test(c.gap ?? '')),
+    JSON.stringify(draftRow.cells),
+  )
   const fromToday = against.find((r) => /, from today$/.test(r.name))
-  check(where, '(w2) and the plan from today, which is on the same footing', fromToday !== undefined && fromToday.cells.every((c, i) => (c.gap ?? '') === expectedGap(cellYears(c.shown), cellYears(plan.cells[i].shown))), JSON.stringify(fromToday))
+  check(
+    where,
+    '(w2) and the plan from today, which is on the same footing',
+    fromToday !== undefined &&
+      fromToday.cells.every(
+        (c, i) => (c.gap ?? '') === expectedGap(cellYears(c.shown), cellYears(plan.cells[i].shown)),
+      ),
+    JSON.stringify(fromToday),
+  )
   const planNow = against.find((r) => r.plan)
-  check(where, '(w2) the plan itself has no line and is no taller than without vs plan', planNow.cells.every((c) => c.gap === null) && near(planNow.height, years[against.indexOf(planNow)].height, 0.5), `${px(planNow.height)} against ${px(years[against.indexOf(planNow)].height)}`)
+  check(
+    where,
+    '(w2) the plan itself has no line and is no taller than without vs plan',
+    planNow.cells.every((c) => c.gap === null) && near(planNow.height, years[against.indexOf(planNow)].height, 0.5),
+    `${px(planNow.height)} against ${px(years[against.indexOf(planNow)].height)}`,
+  )
   await context.close()
 }
 
-async function checkFromTodayPhone(browser, engine) {
+async function checkFromTodayPhone(
+  browser,
+  engine,
+) {
   for (const width of [375, 320]) {
     const { page, context, where } = await openPhoneMilestones(browser, width, engine)
     await page.getByRole('button', { name: 'vs plan' }).tap()
     await page.waitForTimeout(200)
     const fit = await page.evaluate(() => {
       const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
-      return { scroll: region.scrollWidth, client: region.clientWidth, page: document.documentElement.scrollWidth, iw: innerWidth }
+      return {
+        scroll: region.scrollWidth,
+        client: region.clientWidth,
+        page: document.documentElement.scrollWidth,
+        iw: innerWidth,
+      }
     })
     check(where, '(w2) with vs plan on the page does not scroll sideways', fit.page <= fit.iw, JSON.stringify(fit))
-    if (width === 375) check(where, '(w2) and all seven milestones still fit the table', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+    if (width === 375)
+      check(
+        where,
+        '(w2) and all seven milestones still fit the table',
+        fit.scroll <= fit.client + 1,
+        JSON.stringify(fit),
+      )
     await context.close()
   }
 }
 
-async function checkFromTodayMilestones(browser, engine) {
+async function checkFromTodayMilestones(
+  browser,
+  engine,
+) {
   for (const screen of [SCREENS[3], SCREENS[1], SCREENS[0]]) await checkFromTodayTable(browser, engine, screen, 'dark')
   await checkFromTodayTable(browser, engine, SCREENS[3], 'light')
   await checkFromTodayPhone(browser, engine)
 }
 
-async function checkFromTodayTimeline(browser, engine) {
+async function checkFromTodayTimeline(
+  browser,
+  engine,
+) {
   const screen = SCREENS[3]
   const where = `${engine} ${screen.name}`
   const { page, context, start } = await openFromToday(browser, screen, 'dark', { names: false })
@@ -3139,31 +4904,66 @@ async function checkFromTodayTimeline(browser, engine) {
   await page.getByRole('radio', { name: 'Calendar year' }).click()
   const calendar = await readRows(page)
   await page.getByRole('radio', { name: 'Years from now' }).click()
-  const draftYears = calendar[draftAt].cells.map((c, i) => (cellYears(rows[draftAt].cells[i].shown) === null || cellYears(rows[draftAt].cells[i].shown) === 0 ? null : Math.ceil(Number(c.shown) - start.startYear - start.elapsed)))
+  const draftYears = calendar[draftAt].cells.map((c, i) =>
+    cellYears(rows[draftAt].cells[i].shown) === null || cellYears(rows[draftAt].cells[i].shown) === 0
+      ? null
+      : Math.ceil(Number(c.shown) - start.startYear - start.elapsed),
+  )
   await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
   await page.waitForTimeout(300)
 
   const axis = await page.evaluate(() => {
     const ticks = (selector) => [...document.querySelectorAll(selector)].map((t) => t.textContent)
-    return { top: ticks('[class*="tlAxis"]:not([class*="tlAxisBottom"]) [class*="tlTick"]'), bottom: ticks('[class*="tlAxisBottom"] [class*="tlTick"]') }
+    return {
+      top: ticks('[class*="tlAxis"]:not([class*="tlAxisBottom"]) [class*="tlTick"]'),
+      bottom: ticks('[class*="tlAxisBottom"] [class*="tlTick"]'),
+    }
   })
-  check(where, '(x2) the axis starts at now, with the calendar year of today under it', axis.top[0] === 'now' && !axis.top.includes('start') && axis.top[1] === '5y' && axis.bottom[0] === String(new Date().getFullYear()), JSON.stringify(axis))
+  check(
+    where,
+    '(x2) the axis starts at now, with the calendar year of today under it',
+    axis.top[0] === 'now' &&
+      !axis.top.includes('start') &&
+      axis.top[1] === '5y' &&
+      axis.bottom[0] === String(new Date().getFullYear()),
+    JSON.stringify(axis),
+  )
 
   // The editing path started over a year back: its line starts at now, not off the left edge
   // of the axis, and every dot is where the table's cell, counted from today, says.
   const line = await page.evaluate((at) => {
     const row = document.querySelectorAll('[class*="tlRow"]')[at]
     const bar = row.querySelector('[class*="tlLine"]')
-    const dots = [...row.querySelectorAll('button[class*="tlDot"]')].map((d) => ({ t: Number(d.style.getPropertyValue('--t')), years: Number(/ in (\d+) years?/.exec(d.getAttribute('aria-label'))?.[1]) }))
+    const dots = [...row.querySelectorAll('button[class*="tlDot"]')].map((d) => ({
+      t: Number(d.style.getPropertyValue('--t')),
+      years: Number(/ in (\d+) years?/.exec(d.getAttribute('aria-label'))?.[1]),
+    }))
     return { from: bar.style.getPropertyValue('--from'), to: Number(bar.style.getPropertyValue('--to')), dots }
   }, draftAt)
   const span = 30
   const horizon = Math.ceil(30 - start.elapsed)
   const wanted = draftYears.filter((y) => y !== null && y > 0)
-  check(where, '(x2) the editing path\'s line starts at now and ends where its horizon, counted from today, does', Number(line.from) === 0 && near(line.to * span, horizon, 0.01), JSON.stringify({ line, horizon }))
-  check(where, '(x2) each of its dots is where its cell in the table, counted from today, says', line.dots.length >= 1 && line.dots.every((d) => wanted.includes(d.years) && near(d.t * span, d.years, 0.01)), JSON.stringify({ dots: line.dots, wanted }))
-  const ahead = await page.evaluate(() => [...document.querySelectorAll('[class*="tlLine"]')].map((b) => b.style.getPropertyValue('--from')))
-  check(where, '(x2) no path\'s line starts anywhere but at now', ahead.every((f) => f === '0'), JSON.stringify(ahead))
+  check(
+    where,
+    "(x2) the editing path's line starts at now and ends where its horizon, counted from today, does",
+    Number(line.from) === 0 && near(line.to * span, horizon, 0.01),
+    JSON.stringify({ line, horizon }),
+  )
+  check(
+    where,
+    '(x2) each of its dots is where its cell in the table, counted from today, says',
+    line.dots.length >= 1 && line.dots.every((d) => wanted.includes(d.years) && near(d.t * span, d.years, 0.01)),
+    JSON.stringify({ dots: line.dots, wanted }),
+  )
+  const ahead = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="tlLine"]')].map((b) => b.style.getPropertyValue('--from')),
+  )
+  check(
+    where,
+    "(x2) no path's line starts anywhere but at now",
+    ahead.every((f) => f === '0'),
+    JSON.stringify(ahead),
+  )
   await context.close()
 }
 
@@ -3176,8 +4976,24 @@ async function checkFromTodayTimeline(browser, engine) {
  */
 const LATER_MONTHS = 20
 
-async function setLaterStart(page, monthsAhead = LATER_MONTHS) {
-  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+async function setLaterStart(
+  page,
+  monthsAhead = LATER_MONTHS,
+) {
+  const MONTHS = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ]
   const target = await page.evaluate((months) => {
     const d = new Date()
     d.setDate(1)
@@ -3201,7 +5017,10 @@ async function setLaterStart(page, monthsAhead = LATER_MONTHS) {
   }, target)
 }
 
-async function checkLaterStartMilestones(browser, engine) {
+async function checkLaterStartMilestones(
+  browser,
+  engine,
+) {
   const where = `${engine} 1280x800`
   const { page, context } = await openPlan(browser, SCREENS[1])
   await page.getByRole('button', { name: 'All inputs' }).click()
@@ -3217,15 +5036,40 @@ async function checkLaterStartMilestones(browser, engine) {
   const draftAt = rows.findIndex((r) => r.name.endsWith('(editing)'))
   const draft = rows[draftAt]
   const first = draft?.cells.slice(0, 2).map((c) => c.shown)
-  check(where, `(w3) a path that starts in ${start.years} years has what is in its starting balance then, not already`, JSON.stringify(first) === JSON.stringify([`${start.years}y`, `${start.years}y`]), JSON.stringify(draft))
-  const sentence = await page.locator('[role="grid"] tbody tr').nth(draftAt).locator('td[role="gridcell"]').first().getAttribute('aria-label')
-  check(where, '(w3) and its sentence says it has it when it starts', /has 100k € when it starts, in [A-Z][a-z]{2} '\d\d\./.test(sentence ?? ''), sentence)
+  check(
+    where,
+    `(w3) a path that starts in ${start.years} years has what is in its starting balance then, not already`,
+    JSON.stringify(first) === JSON.stringify([`${start.years}y`, `${start.years}y`]),
+    JSON.stringify(draft),
+  )
+  const sentence = await page
+    .locator('[role="grid"] tbody tr')
+    .nth(draftAt)
+    .locator('td[role="gridcell"]')
+    .first()
+    .getAttribute('aria-label')
+  check(
+    where,
+    '(w3) and its sentence says it has it when it starts',
+    /has 100k € when it starts, in [A-Z][a-z]{2} '\d\d\./.test(sentence ?? ''),
+    sentence,
+  )
   const started = rows.filter((r, i) => i !== draftAt)
-  check(where, '(w3) the paths that have started keep their ticks', started.length > 0 && started.every((r) => r.cells[0].shown === '✓'), JSON.stringify(started.map((r) => r.cells[0])))
+  check(
+    where,
+    '(w3) the paths that have started keep their ticks',
+    started.length > 0 && started.every((r) => r.cells[0].shown === '✓'),
+    JSON.stringify(started.map((r) => r.cells[0])),
+  )
 
   await page.getByRole('radio', { name: 'Calendar year' }).click()
   const calendar = (await readRows(page))[draftAt]
-  check(where, '(w3) in calendar years it has them in the year it starts', calendar.cells[0].shown === String(start.year), JSON.stringify(calendar.cells[0]))
+  check(
+    where,
+    '(w3) in calendar years it has them in the year it starts',
+    calendar.cells[0].shown === String(start.year),
+    JSON.stringify(calendar.cells[0]),
+  )
   await page.getByRole('radio', { name: 'Years from now' }).click()
 
   await page.getByRole('button', { name: 'vs plan' }).click()
@@ -3233,7 +5077,12 @@ async function checkLaterStartMilestones(browser, engine) {
   const against = await readRows(page)
   const plan = against.find((r) => r.plan)
   const gap = against[draftAt].cells[0]
-  check(where, '(w3) vs plan is the difference of the cells shown', plan !== undefined && gap.gap === expectedGap(cellYears(gap.shown), cellYears(plan.cells[0].shown)), JSON.stringify({ gap, plan: plan?.cells[0] }))
+  check(
+    where,
+    '(w3) vs plan is the difference of the cells shown',
+    plan !== undefined && gap.gap === expectedGap(cellYears(gap.shown), cellYears(plan.cells[0].shown)),
+    JSON.stringify({ gap, plan: plan?.cells[0] }),
+  )
   await page.getByRole('button', { name: 'vs plan' }).click()
 
   // The same page at a phone's width keeps the edit; By goal reads the same cell.
@@ -3252,7 +5101,12 @@ async function checkLaterStartMilestones(browser, engine) {
     })),
   )
   const editing = byGoal.find((r) => r.name.endsWith('(editing)'))
-  check(`${engine} 375`, '(w3) By goal on a phone gives the path that starts later the same years', editing?.value === `${start.years}y`, JSON.stringify(byGoal))
+  check(
+    `${engine} 375`,
+    '(w3) By goal on a phone gives the path that starts later the same years',
+    editing?.value === `${start.years}y`,
+    JSON.stringify(byGoal),
+  )
   const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
   check(`${engine} 375`, '(w3) and the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
   await context.close()
@@ -3269,7 +5123,10 @@ const parseAmount = (text) => {
   return n ? Number(n.replace(',', '.')) * (unit === 'M' ? 1_000_000 : 1000) : NaN
 }
 
-async function checkLaterStartTimeline(browser, engine) {
+async function checkLaterStartTimeline(
+  browser,
+  engine,
+) {
   const where = `${engine} 1280x800`
   const { page, context } = await openPlan(browser, SCREENS[1])
   await page.getByRole('button', { name: 'All inputs' }).click()
@@ -3282,7 +5139,11 @@ async function checkLaterStartTimeline(browser, engine) {
   await page.getByRole('radio', { name: 'Calendar year' }).click()
   const rows = await readRows(page)
   const draftAt = rows.findIndex((r) => r.name.endsWith('(editing)'))
-  const heads = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] thead th')].slice(1).map((th) => th.querySelector('[class*="milestoneHeadAmount"]')?.textContent ?? ''))
+  const heads = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="grid"] thead th')]
+      .slice(1)
+      .map((th) => th.querySelector('[class*="milestoneHeadAmount"]')?.textContent ?? ''),
+  )
   const yearOf = new Map(heads.map((h, i) => [parseAmount(h), rows[draftAt].cells[i]?.shown]))
   await page.getByRole('radio', { name: 'Years from now' }).click()
   const fromNow = (await readRows(page))[draftAt].cells
@@ -3290,7 +5151,13 @@ async function checkLaterStartTimeline(browser, engine) {
   const shared = fromNow[heads.findIndex((h) => parseAmount(h) === 500_000)]?.shown === fromNow[0]?.shown
   await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
   await page.waitForTimeout(300)
-  const labels = await page.evaluate((at) => [...document.querySelectorAll('[class*="tlRow"]')[at].querySelectorAll('button[class*="tlDot"]')].map((d) => d.getAttribute('aria-label') ?? ''), draftAt)
+  const labels = await page.evaluate(
+    (at) =>
+      [...document.querySelectorAll('[class*="tlRow"]')[at].querySelectorAll('button[class*="tlDot"]')].map(
+        (d) => d.getAttribute('aria-label') ?? '',
+      ),
+    draftAt,
+  )
   const wrong = []
   let mixed = 0
   for (const label of labels) {
@@ -3300,16 +5167,30 @@ async function checkLaterStartTimeline(browser, engine) {
     const laterAmounts = reaches ? reaches.split(/, | and /).map(parseAmount) : []
     if (hasAmounts.some((a) => !(a <= 480_000))) wrong.push({ label, why: 'has more than it starts with' })
     if (laterAmounts.some((a) => !(a > 480_000))) wrong.push({ label, why: 'reaches what it starts with' })
-    if (laterAmounts.some((a) => yearOf.get(a) !== by)) wrong.push({ label, why: 'a year other than the table', table: laterAmounts.map((a) => yearOf.get(a)) })
+    if (laterAmounts.some((a) => yearOf.get(a) !== by))
+      wrong.push({ label, why: 'a year other than the table', table: laterAmounts.map((a) => yearOf.get(a)) })
     if (has && reaches) mixed += 1
   }
-  check(where, '(w3) the timeline says a path that starts later has only what is in its starting balance, and the table\'s year for the rest', labels.length > 0 && wrong.length === 0, JSON.stringify({ wrong, labels }))
-  check(where, '(w3) including a dot that holds both, when they share a year', mixed === (shared ? 1 : 0), JSON.stringify({ shared, labels }))
+  check(
+    where,
+    "(w3) the timeline says a path that starts later has only what is in its starting balance, and the table's year for the rest",
+    labels.length > 0 && wrong.length === 0,
+    JSON.stringify({ wrong, labels }),
+  )
+  check(
+    where,
+    '(w3) including a dot that holds both, when they share a year',
+    mixed === (shared ? 1 : 0),
+    JSON.stringify({ shared, labels }),
+  )
   await context.close()
 }
 
 /** A touch device on the Goals chart tab, where the hero chart is. */
-async function openChartTab(browser, size) {
+async function openChartTab(
+  browser,
+  size,
+) {
   const context = await browser.newContext({
     viewport: size,
     screen: size,
@@ -3340,7 +5221,10 @@ async function openChartTab(browser, size) {
  * are in the bar; a row of the rail can be tapped without losing the year; Escape closes it with
  * the focus back on the button. Logs how many pixels a year gets, which is why it is there.
  */
-async function checkHeroSheet(browser, engine) {
+async function checkHeroSheet(
+  browser,
+  engine,
+) {
   const open = (page) => page.getByRole('button', { name: 'Open the chart full screen' })
   const dialog = (page) => page.getByRole('dialog', { name: /full screen/ })
   const yearOf = async (page) => {
@@ -3349,12 +5233,25 @@ async function checkHeroSheet(browser, engine) {
     return m ? Number(m[1]) : null
   }
 
-  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 812x375', { width: 812, height: 375 }]]) {
+  for (const [name, size] of [
+    ['upright 375x812', { width: 375, height: 812 }],
+    ['on its side 812x375', { width: 812, height: 375 }],
+  ]) {
     const { page, context } = await openChartTab(browser, size)
     const where = `${engine} phone ${name}`
-    check(where, '(h1) the card has the button, and it is 44px', (await open(page).count()) === 1 && (await open(page).boundingBox()).width >= 44, '')
+    check(
+      where,
+      '(h1) the card has the button, and it is 44px',
+      (await open(page).count()) === 1 && (await open(page).boundingBox()).width >= 44,
+      '',
+    )
     const titleBefore = await page.getByRole('heading', { name: 'Invested portfolio projection' }).first().boundingBox()
-    check(where, '(h1) the title and the button are one line', titleBefore !== null && near(titleBefore.y + titleBefore.height / 2, (await open(page).boundingBox()).y + 22, 8), JSON.stringify(titleBefore))
+    check(
+      where,
+      '(h1) the title and the button are one line',
+      titleBefore !== null && near(titleBefore.y + titleBefore.height / 2, (await open(page).boundingBox()).y + 22, 8),
+      JSON.stringify(titleBefore),
+    )
     await open(page).tap()
     await dialog(page).waitFor()
     await page.waitForTimeout(500)
@@ -3378,17 +5275,37 @@ async function checkHeroSheet(browser, engine) {
         tools: d.querySelector('[class*="sheetBar"]').textContent,
       }
     })
-    check(where, '(h1) the sheet covers the whole screen', m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih, JSON.stringify(m.box))
+    check(
+      where,
+      '(h1) the sheet covers the whole screen',
+      m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih,
+      JSON.stringify(m.box),
+    )
     if (size.width === 375) {
-      check(where, '(h1) held upright it is turned a quarter turn', m.layout[0] === m.ih && m.layout[1] === m.iw && /^matrix\(0, 1, -1, 0/.test(m.matrix), JSON.stringify({ layout: m.layout, matrix: m.matrix }))
+      check(
+        where,
+        '(h1) held upright it is turned a quarter turn',
+        m.layout[0] === m.ih && m.layout[1] === m.iw && /^matrix\(0, 1, -1, 0/.test(m.matrix),
+        JSON.stringify({ layout: m.layout, matrix: m.matrix }),
+      )
     } else {
       check(where, '(h1) on its side it is not turned', m.matrix === 'none', m.matrix)
     }
-    check(where, '(h1) the rail is 168 to 192px wide, and nothing in it runs out of it', m.rail >= 167 && m.rail <= 193 && m.railOverflow <= 1, JSON.stringify({ rail: m.rail, over: m.railOverflow }))
+    check(
+      where,
+      '(h1) the rail is 168 to 192px wide, and nothing in it runs out of it',
+      m.rail >= 167 && m.rail <= 193 && m.railOverflow <= 1,
+      JSON.stringify({ rail: m.rail, over: m.railOverflow }),
+    )
     console.log(`  info ${where}: a year gets ${px(m.plotW / 30)} across, and the plot is ${px(m.plotH)} tall`)
     check(where, '(h1) a year gets at least 12px across', m.plotW / 30 >= 12, px(m.plotW / 30))
     check(where, '(h1) the page behind does not scroll sideways', m.page <= 0, String(m.page))
-    check(where, '(h1) the bar has the display switch and the window buttons', /Nominal/.test(m.tools) && /Purchasing power/.test(m.tools) && /5Y/.test(m.tools) && /All/.test(m.tools), m.tools)
+    check(
+      where,
+      '(h1) the bar has the display switch and the window buttons',
+      /Nominal/.test(m.tools) && /Purchasing power/.test(m.tools) && /5Y/.test(m.tools) && /All/.test(m.tools),
+      m.tools,
+    )
 
     // A tap along the chart picks the year it is on, whichever way the chart runs on the screen.
     const svg = dialog(page).locator('svg[role="img"]').first()
@@ -3404,20 +5321,37 @@ async function checkHeroSheet(browser, engine) {
       const expected = Math.round(((f * length - 56) / (length - 72)) * 30)
       years.push({ f, year, expected })
     }
-    check(where, '(h1) a tap along the chart picks the year it is on', years.every((y) => y.year !== null && near(y.year, y.expected, 1)) && years[0].year < years[1].year && years[1].year < years[2].year, JSON.stringify(years))
+    check(
+      where,
+      '(h1) a tap along the chart picks the year it is on',
+      years.every((y) => y.year !== null && near(y.year, y.expected, 1)) &&
+        years[0].year < years[1].year &&
+        years[1].year < years[2].year,
+      JSON.stringify(years),
+    )
 
     // Tapping a row of the rail changes what is drawn and keeps the year.
     const before = await yearOf(page)
     await dialog(page).getByLabel('Values for the year').getByRole('button').first().tap()
     await page.waitForTimeout(250)
-    check(where, '(h1) tapping a scenario in the rail keeps the year', (await yearOf(page)) === before, `${before} then ${await yearOf(page)}`)
+    check(
+      where,
+      '(h1) tapping a scenario in the rail keeps the year',
+      (await yearOf(page)) === before,
+      `${before} then ${await yearOf(page)}`,
+    )
 
     // The card's window buttons, in the bar, change the card too.
     await dialog(page).getByRole('radio', { name: '5Y' }).tap()
     await page.waitForTimeout(250)
     await dialog(page).getByRole('button', { name: 'Close' }).tap()
     await page.waitForTimeout(300)
-    check(where, '(h1) the sheet is gone after Close, and the card has the window it was given', (await dialog(page).count()) === 0 && (await page.getByRole('radio', { name: '5Y' }).first().getAttribute('aria-checked')) === 'true')
+    check(
+      where,
+      '(h1) the sheet is gone after Close, and the card has the window it was given',
+      (await dialog(page).count()) === 0 &&
+        (await page.getByRole('radio', { name: '5Y' }).first().getAttribute('aria-checked')) === 'true',
+    )
 
     // From the keyboard (a tap does not focus a button in Safari): Escape closes it, focus goes back.
     await open(page).focus()
@@ -3425,7 +5359,11 @@ async function checkHeroSheet(browser, engine) {
     await dialog(page).waitFor()
     await page.keyboard.press('Escape')
     await page.waitForTimeout(300)
-    check(where, '(h1) Escape closes it and the focus is back on the button', (await dialog(page).count()) === 0 && (await open(page).evaluate((el) => el === document.activeElement)))
+    check(
+      where,
+      '(h1) Escape closes it and the focus is back on the button',
+      (await dialog(page).count()) === 0 && (await open(page).evaluate((el) => el === document.activeElement)),
+    )
     await context.close()
   }
 
@@ -3444,7 +5382,12 @@ async function checkHeroSheet(browser, engine) {
  * round trips of a driver. Returns, per frame, the time since the last, the card's box, and the
  * pointer; and how many nodes were added or removed under the dialog while it was held.
  */
-function dragInPage(page, selector, cardSelector, path) {
+function dragInPage(
+  page,
+  selector,
+  cardSelector,
+  path,
+) {
   return page.evaluate(
     ({ selector, cardSelector, path }) =>
       new Promise((resolve) => {
@@ -3456,8 +5399,21 @@ function dragInPage(page, selector, cardSelector, path) {
           for (const r of records) if (r.type === 'childList' || r.type === 'characterData') structural += 1
         })
         watcher.observe(dialog, { childList: true, characterData: true, subtree: true })
-        const fire = (type, [x, y]) =>
-          handle.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y }))
+        const fire = (
+          type,
+          [x, y],
+        ) =>
+          handle.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 7,
+              pointerType: 'touch',
+              isPrimary: true,
+              clientX: x,
+              clientY: y,
+            }),
+          )
         const frames = []
         let last = performance.now()
         let i = 0
@@ -3467,7 +5423,14 @@ function dragInPage(page, selector, cardSelector, path) {
           if (i < path.length) {
             fire('pointermove', path[i])
             const r = card.getBoundingClientRect()
-            frames.push({ dt: now - last, left: r.left, top: r.top, right: r.right, bottom: r.bottom, pointer: path[i] })
+            frames.push({
+              dt: now - last,
+              left: r.left,
+              top: r.top,
+              right: r.right,
+              bottom: r.bottom,
+              pointer: path[i],
+            })
             last = now
             i += 1
             requestAnimationFrame(step)
@@ -3492,11 +5455,17 @@ function dragInPage(page, selector, cardSelector, path) {
  * move it; its cross puts the rail back with the focus on the control; its place survives the
  * screen changing size; Escape closes the sheet.
  */
-async function checkHeroSheetFloat(browser, engine) {
+async function checkHeroSheetFloat(
+  browser,
+  engine,
+) {
   const open = (page) => page.getByRole('button', { name: 'Open the chart full screen' })
   const dialog = (page) => page.getByRole('dialog', { name: /full screen/ })
   const FLOAT = { name: 'Float the values over the chart' }
-  const rect = (page, selector) =>
+  const rect = (
+    page,
+    selector,
+  ) =>
     page.evaluate((s) => {
       const r = document.querySelector(s).getBoundingClientRect()
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }
@@ -3505,13 +5474,18 @@ async function checkHeroSheetFloat(browser, engine) {
   const cardBox = '[role="dialog"] [role="group"][aria-label="Values for the year"]'
   const grip = '[role="dialog"] button[aria-label^="Move the values"]'
 
-  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 812x375', { width: 812, height: 375 }]]) {
+  for (const [name, size] of [
+    ['upright 375x812', { width: 375, height: 812 }],
+    ['on its side 812x375', { width: 812, height: 375 }],
+  ]) {
     const { page, context } = await openChartTab(browser, size)
     const where = `${engine} phone ${name}`
     await open(page).tap()
     await dialog(page).waitFor()
     await page.waitForTimeout(400)
-    const chartBefore = await page.evaluate(() => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width)
+    const chartBefore = await page.evaluate(
+      () => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width,
+    )
     const rail = await page.evaluate(() => document.querySelector('[role="dialog"] aside').offsetWidth)
 
     // What would be painted across the change: a resize observer made after the chart's own runs after it
@@ -3529,10 +5503,24 @@ async function checkHeroSheetFloat(browser, engine) {
     await dialog(page).getByRole('button', FLOAT).tap()
     await page.waitForTimeout(600)
     const painted = await page.evaluate(() => window.__painted)
-    check(where, '(h2) the chart is drawn at its box\'s width in every frame it is painted, never one frame at the old width', painted.length >= 1 && painted.every(([drawn, box]) => Math.abs(drawn - box) <= 1), JSON.stringify(painted))
+    check(
+      where,
+      "(h2) the chart is drawn at its box's width in every frame it is painted, never one frame at the old width",
+      painted.length >= 1 && painted.every(([drawn, box]) => Math.abs(drawn - box) <= 1),
+      JSON.stringify(painted),
+    )
 
-    const chartAfter = await page.evaluate(() => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width)
-    check(where, '(h2) the rail is gone and the chart is wider by about its width', (await dialog(page).locator('aside').count()) === 0 && chartAfter - chartBefore >= rail - 2 && chartAfter - chartBefore <= rail + 24, JSON.stringify({ chartBefore, chartAfter, rail }))
+    const chartAfter = await page.evaluate(
+      () => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width,
+    )
+    check(
+      where,
+      '(h2) the rail is gone and the chart is wider by about its width',
+      (await dialog(page).locator('aside').count()) === 0 &&
+        chartAfter - chartBefore >= rail - 2 &&
+        chartAfter - chartBefore <= rail + 24,
+      JSON.stringify({ chartBefore, chartAfter, rail }),
+    )
     const turned = size.width === 375
     const box = await rect(page, stage)
     const card = await rect(page, cardBox)
@@ -3540,8 +5528,21 @@ async function checkHeroSheetFloat(browser, engine) {
     const cornerOk = turned
       ? Math.abs(card.left - box.left) <= 2 && Math.abs(box.bottom - card.bottom) <= 2
       : Math.abs(box.right - card.right) <= 2 && Math.abs(box.bottom - card.bottom) <= 2
-    check(where, '(h2) the card is in the corner of the chart it starts in, and inside the chart', cornerOk && card.left >= box.left - 1 && card.right <= box.right + 1 && card.top >= box.top - 1 && card.bottom <= box.bottom + 1, JSON.stringify({ box, card }))
-    check(where, '(h2) the card has the focus on its grip', await page.evaluate(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move the values')))
+    check(
+      where,
+      '(h2) the card is in the corner of the chart it starts in, and inside the chart',
+      cornerOk &&
+        card.left >= box.left - 1 &&
+        card.right <= box.right + 1 &&
+        card.top >= box.top - 1 &&
+        card.bottom <= box.bottom + 1,
+      JSON.stringify({ box, card }),
+    )
+    check(
+      where,
+      '(h2) the card has the focus on its grip',
+      await page.evaluate(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move the values')),
+    )
 
     // A purchase year's breakdown is a column beside the rows: the card is wider there, and no taller.
     const local = (r) => (turned ? { w: r.height, h: r.width } : { w: r.width, h: r.height })
@@ -3557,7 +5558,12 @@ async function checkHeroSheetFloat(browser, engine) {
     const plain = local(await rect(page, cardBox))
     await tapYear(5)
     const buys = local(await rect(page, cardBox))
-    check(where, '(h2) at a purchase year the card is wider for the breakdown beside the rows, and no taller', buys.w > plain.w + 40 && buys.h <= plain.h + 4, JSON.stringify({ plain, buys }))
+    check(
+      where,
+      '(h2) at a purchase year the card is wider for the breakdown beside the rows, and no taller',
+      buys.w > plain.w + 40 && buys.h <= plain.h + 4,
+      JSON.stringify({ plain, buys }),
+    )
     const whole = await page.evaluate((sel) => {
       const c = document.querySelector(sel)
       const content = c.querySelector('[class*="floatContent"]')
@@ -3565,10 +5571,21 @@ async function checkHeroSheetFloat(browser, engine) {
       const bar = c.querySelector('[class*="floatBar"]').offsetHeight
       const r = c.getBoundingClientRect()
       const overflow = Math.max(content.scrollWidth - content.offsetWidth, content.scrollHeight - content.offsetHeight)
-      return { scale, wide: content.offsetWidth * scale, high: bar + content.offsetHeight * scale, box: [r.width, r.height], overflow }
+      return {
+        scale,
+        wide: content.offsetWidth * scale,
+        high: bar + content.offsetHeight * scale,
+        box: [r.width, r.height],
+        overflow,
+      }
     }, cardBox)
     const [boxW, boxH] = turned ? [whole.box[1], whole.box[0]] : whole.box
-    check(where, '(h2) the card is exactly as large as its content at the scale it is drawn at, with nothing running out of it, so all of it is shown', Math.abs(boxW - whole.wide) <= 1.5 && Math.abs(boxH - whole.high) <= 1.5 && whole.overflow <= 1, JSON.stringify(whole))
+    check(
+      where,
+      '(h2) the card is exactly as large as its content at the scale it is drawn at, with nothing running out of it, so all of it is shown',
+      Math.abs(boxW - whole.wide) <= 1.5 && Math.abs(boxH - whole.high) <= 1.5 && whole.overflow <= 1,
+      JSON.stringify(whole),
+    )
 
     // Seven scenarios' worth of rows in the card: it must be held under the chart's height, since a card
     // as tall as its box has no room to move up or down in (which is what seven scenarios did).
@@ -3580,13 +5597,23 @@ async function checkHeroSheetFloat(browser, engine) {
     const tall = await rect(page, cardBox)
     const chartBox = await rect(page, stage)
     const alongHeight = (r) => (turned ? r.width : r.height)
-    check(where, '(h2) a card with many rows is held under two thirds of the chart\'s height, so it has room on both axes', alongHeight(tall) <= alongHeight(chartBox) * 0.66 + 1, JSON.stringify({ card: alongHeight(tall), chart: alongHeight(chartBox) }))
+    check(
+      where,
+      "(h2) a card with many rows is held under two thirds of the chart's height, so it has room on both axes",
+      alongHeight(tall) <= alongHeight(chartBox) * 0.66 + 1,
+      JSON.stringify({ card: alongHeight(tall), chart: alongHeight(chartBox) }),
+    )
     const upBefore = await rect(page, cardBox)
     await page.locator(grip).focus()
     await page.keyboard.press('ArrowUp')
     const upAfter = await rect(page, cardBox)
     const upMoved = Math.hypot(upAfter.left - upBefore.left, upAfter.top - upBefore.top)
-    check(where, '(h2) such a card moves on the chart\'s height axis too (an arrow up from the lower corner)', upMoved >= 8, `${upMoved}px`)
+    check(
+      where,
+      "(h2) such a card moves on the chart's height axis too (an arrow up from the lower corner)",
+      upMoved >= 8,
+      `${upMoved}px`,
+    )
 
     // The corner resizes the whole card, from its top left: smaller, then larger than the box allows.
     const cornerSel = '[role="dialog"] button[aria-label^="Resize the values"]'
@@ -3597,25 +5624,45 @@ async function checkHeroSheetFloat(browser, engine) {
     const cx = cn.left + cn.width / 2
     const cy = cn.top + cn.height / 2
     // A step of (x, y) in the chart's own frame is a step on the screen that depends on how the chart is turned.
-    const onScreen = (x, y) => (turned ? [-y, x] : [x, y])
+    const onScreen = (
+      x,
+      y,
+    ) => (turned ? [-y, x] : [x, y])
     const shrink = []
     for (let i = 0; i <= 30; i++) shrink.push([cx + onScreen(-i * 4, -i * 3)[0], cy + onScreen(-i * 4, -i * 3)[1]])
     const small = await dragInPage(page, cornerSel, cardBox, shrink)
     const smaller = local(await rect(page, cardBox))
-    check(where, '(h2) the corner makes the card smaller, all of it, and adds and removes no nodes', smaller.w < sizeBefore.w - 20 && smaller.h < sizeBefore.h - 10 && small.structural === 0, JSON.stringify({ sizeBefore, smaller, structural: small.structural }))
+    check(
+      where,
+      '(h2) the corner makes the card smaller, all of it, and adds and removes no nodes',
+      smaller.w < sizeBefore.w - 20 && smaller.h < sizeBefore.h - 10 && small.structural === 0,
+      JSON.stringify({ sizeBefore, smaller, structural: small.structural }),
+    )
     const cn2 = await rect(page, cornerSel)
     const grow = []
-    for (let i = 0; i <= 60; i++) grow.push([cn2.left + cn2.width / 2 + onScreen(i * 14, i * 10)[0], cn2.top + cn2.height / 2 + onScreen(i * 14, i * 10)[1]])
+    for (let i = 0; i <= 60; i++)
+      grow.push([
+        cn2.left + cn2.width / 2 + onScreen(i * 14, i * 10)[0],
+        cn2.top + cn2.height / 2 + onScreen(i * 14, i * 10)[1],
+      ])
     await dragInPage(page, cornerSel, cardBox, grow)
     await page.waitForTimeout(80)
     const largest = local(await rect(page, cardBox))
     const chartNow = local(await rect(page, stage))
-    check(where, '(h2) the corner makes it larger, but never past 90% of the chart, so it can still be moved', largest.w > smaller.w && largest.w <= chartNow.w * 0.9 + 1 && largest.h <= chartNow.h * 0.9 + 1, JSON.stringify({ smaller, largest, chartNow }))
+    check(
+      where,
+      '(h2) the corner makes it larger, but never past 90% of the chart, so it can still be moved',
+      largest.w > smaller.w && largest.w <= chartNow.w * 0.9 + 1 && largest.h <= chartNow.h * 0.9 + 1,
+      JSON.stringify({ smaller, largest, chartNow }),
+    )
     const back = await rect(page, cornerSel)
     const reset = []
-    for (let i = 0; i <= 40; i++) reset.push([back.left + back.width / 2 + onScreen(-i * 14, -i * 10)[0], back.top + back.height / 2 + onScreen(-i * 14, -i * 10)[1]])
+    for (let i = 0; i <= 40; i++)
+      reset.push([
+        back.left + back.width / 2 + onScreen(-i * 14, -i * 10)[0],
+        back.top + back.height / 2 + onScreen(-i * 14, -i * 10)[1],
+      ])
     await dragInPage(page, cornerSel, cardBox, reset)
-
 
     // Drag: from the grip, a frame at a time, past the edges and back.
     const g = await rect(page, grip)
@@ -3625,36 +5672,86 @@ async function checkHeroSheetFloat(browser, engine) {
     for (let i = 0; i <= 60; i++) path.push([gx - i * 5, gy - i * 3])
     for (let i = 1; i <= 40; i++) path.push([path[60][0] + i * 9, path[60][1] + i * 6])
     const run = await dragInPage(page, grip, cardBox, path)
-    const dts = run.frames.map((f) => f.dt).slice(1).sort((a, b) => a - b)
+    const dts = run.frames
+      .map((f) => f.dt)
+      .slice(1)
+      .sort((a, b) => a - b)
     const p95 = dts[Math.floor(dts.length * 0.95)]
-    console.log(`  info ${where}: ${run.frames.length} frames, p95 ${Math.round(p95)}ms, worst ${Math.round(dts[dts.length - 1])}ms, ${run.structural} nodes added or removed while held`)
-    check(where, '(h2) a drag adds and removes no nodes, which a render would', run.structural === 0, String(run.structural))
-    check(where, '(h2) the page\'s frames in a drag are not long (p95 under 50ms)', p95 < 50, `p95 ${p95}ms`)
+    console.log(
+      `  info ${where}: ${run.frames.length} frames, p95 ${Math.round(p95)}ms, worst ${Math.round(dts[dts.length - 1])}ms, ${run.structural} nodes added or removed while held`,
+    )
+    check(
+      where,
+      '(h2) a drag adds and removes no nodes, which a render would',
+      run.structural === 0,
+      String(run.structural),
+    )
+    check(where, "(h2) the page's frames in a drag are not long (p95 under 50ms)", p95 < 50, `p95 ${p95}ms`)
 
     const start = run.frames[0]
     const stageBox = await rect(page, stage)
     let worst = 0
     let reversals = 0
     for (const f of run.frames) {
-      const inside = f.left >= stageBox.left - 1 && f.right <= stageBox.right + 1 && f.top >= stageBox.top - 1 && f.bottom <= stageBox.bottom + 1
+      const inside =
+        f.left >= stageBox.left - 1 &&
+        f.right <= stageBox.right + 1 &&
+        f.top >= stageBox.top - 1 &&
+        f.bottom <= stageBox.bottom + 1
       if (!inside) worst = Math.max(worst, 1000)
-      const atEdge = f.left <= stageBox.left + 0.5 || f.right >= stageBox.right - 0.5 || f.top <= stageBox.top + 0.5 || f.bottom >= stageBox.bottom - 0.5
-      if (!atEdge) worst = Math.max(worst, Math.max(Math.abs(f.left - start.left - (f.pointer[0] - path[0][0])), Math.abs(f.top - start.top - (f.pointer[1] - path[0][1]))))
+      const atEdge =
+        f.left <= stageBox.left + 0.5 ||
+        f.right >= stageBox.right - 0.5 ||
+        f.top <= stageBox.top + 0.5 ||
+        f.bottom >= stageBox.bottom - 0.5
+      if (!atEdge)
+        worst = Math.max(
+          worst,
+          Math.max(
+            Math.abs(f.left - start.left - (f.pointer[0] - path[0][0])),
+            Math.abs(f.top - start.top - (f.pointer[1] - path[0][1])),
+          ),
+        )
     }
     for (let i = 1; i < run.frames.length; i++) {
       // Along the first leg the pointer only goes one way on each axis, so the card must not turn back.
-      if (i <= 60 && (run.frames[i].left > run.frames[i - 1].left + 0.5 || run.frames[i].top > run.frames[i - 1].top + 0.5)) reversals += 1
+      if (
+        i <= 60 &&
+        (run.frames[i].left > run.frames[i - 1].left + 0.5 || run.frames[i].top > run.frames[i - 1].top + 0.5)
+      )
+        reversals += 1
     }
-    check(where, '(h2) the card is under the pointer to within a pixel until it meets an edge, and never outside the chart', worst <= 1, `worst ${Math.round(worst * 10) / 10}`)
+    check(
+      where,
+      '(h2) the card is under the pointer to within a pixel until it meets an edge, and never outside the chart',
+      worst <= 1,
+      `worst ${Math.round(worst * 10) / 10}`,
+    )
     check(where, '(h2) the card never turns back along a drag that does not', reversals === 0, String(reversals))
 
     // A corner at a time: dragged well past it, the card is against it and inside.
-    for (const [label, dx, dy] of [['upper left', -900, -900], ['upper right', 900, -900], ['lower right', 900, 900], ['lower left', -900, 900]]) {
+    for (const [label, dx, dy] of [
+      ['upper left', -900, -900],
+      ['upper right', 900, -900],
+      ['lower right', 900, 900],
+      ['lower left', -900, 900],
+    ]) {
       const now = await rect(page, grip)
-      await dragInPage(page, grip, cardBox, [[now.left + now.width / 2, now.top + now.height / 2], [now.left + now.width / 2 + dx, now.top + now.height / 2 + dy]])
+      await dragInPage(page, grip, cardBox, [
+        [now.left + now.width / 2, now.top + now.height / 2],
+        [now.left + now.width / 2 + dx, now.top + now.height / 2 + dy],
+      ])
       await page.waitForTimeout(60)
       const c = await rect(page, cardBox)
-      check(where, `(h2) dragged past the ${label} corner the card is inside the chart`, c.left >= stageBox.left - 1 && c.right <= stageBox.right + 1 && c.top >= stageBox.top - 1 && c.bottom <= stageBox.bottom + 1, JSON.stringify({ c, stageBox }))
+      check(
+        where,
+        `(h2) dragged past the ${label} corner the card is inside the chart`,
+        c.left >= stageBox.left - 1 &&
+          c.right <= stageBox.right + 1 &&
+          c.top >= stageBox.top - 1 &&
+          c.bottom <= stageBox.bottom + 1,
+        JSON.stringify({ c, stageBox }),
+      )
     }
 
     // Keys: a step along the chart's own axes, and a larger one with Shift.
@@ -3663,7 +5760,12 @@ async function checkHeroSheetFloat(browser, engine) {
     await page.keyboard.press('ArrowLeft')
     const after = await rect(page, cardBox)
     const moved = Math.hypot(after.left - before.left, after.top - before.top)
-    check(where, '(h2) an arrow key moves the card a step, or none at an edge', Math.abs(moved - 16) <= 1 || moved === 0, `${moved}px`)
+    check(
+      where,
+      '(h2) an arrow key moves the card a step, or none at an edge',
+      Math.abs(moved - 16) <= 1 || moved === 0,
+      `${moved}px`,
+    )
 
     // The screen changing size: the card is still inside the chart, in the same part of it.
     if (!turned) {
@@ -3672,7 +5774,12 @@ async function checkHeroSheetFloat(browser, engine) {
       await page.waitForTimeout(400)
       const s = await rect(page, stage)
       const c = await rect(page, cardBox)
-      check(where, '(h2) a screen that changes size keeps the card inside the chart', c.left >= s.left - 1 && c.right <= s.right + 1 && c.top >= s.top - 1 && c.bottom <= s.bottom + 1, JSON.stringify({ s, c, sharedBefore }))
+      check(
+        where,
+        '(h2) a screen that changes size keeps the card inside the chart',
+        c.left >= s.left - 1 && c.right <= s.right + 1 && c.top >= s.top - 1 && c.bottom <= s.bottom + 1,
+        JSON.stringify({ s, c, sharedBefore }),
+      )
       await page.setViewportSize(size)
       await page.waitForTimeout(300)
     }
@@ -3680,7 +5787,13 @@ async function checkHeroSheetFloat(browser, engine) {
     // The cross puts the rail back with the focus on the control; Escape closes the sheet.
     await dialog(page).getByRole('button', { name: 'Put the values back beside the chart' }).tap()
     await page.waitForTimeout(400)
-    check(where, '(h2) the cross puts the rail back, with the focus on the control that floats it', (await dialog(page).locator('aside').count()) === 1 && (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) === 'Float the values over the chart')
+    check(
+      where,
+      '(h2) the cross puts the rail back, with the focus on the control that floats it',
+      (await dialog(page).locator('aside').count()) === 1 &&
+        (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) ===
+          'Float the values over the chart',
+    )
     await page.keyboard.press('Escape')
     await page.waitForTimeout(300)
     check(where, '(h2) Escape closes the sheet', (await dialog(page).count()) === 0)
@@ -3694,7 +5807,10 @@ async function checkHeroSheetFloat(browser, engine) {
  * text at 200% its table scrolls inside the card, like the milestone table: it spilled out of the card, and the
  * right-hand column was cut off at the page's edge with nothing to scroll to it.
  */
-async function checkSpreadCard(browser, engine) {
+async function checkSpreadCard(
+  browser,
+  engine,
+) {
   const TITLE = 'How far luck could move the plan'
   const TABLE = { name: 'When the runs first reach each amount' }
   {
@@ -3710,18 +5826,47 @@ async function checkSpreadCard(browser, engine) {
         const cols = [...document.querySelectorAll('[class*="detailColumn"]')].map(rect)
         const spread = rect(heading(title).closest('[class*="detailWide"]'))
         const matrix = rect(heading('Years to milestone').closest('[class*="detailWide"]'))
-        return { spreadTop: spread.top, spreadWidth: spread.width, matrixWidth: matrix.width, colsBottom: cols.map((c) => c.bottom), cols: cols.length }
+        return {
+          spreadTop: spread.top,
+          spreadWidth: spread.width,
+          matrixWidth: matrix.width,
+          colsBottom: cols.map((c) => c.bottom),
+          cols: cols.length,
+        }
       }, TITLE)
-      check(where, '(sp) the spread card is under both columns', m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1, JSON.stringify(m))
-      check(where, '(sp) it has the whole width the milestone table has', near(m.spreadWidth, m.matrixWidth, 2), JSON.stringify(m))
-      check(where, '(sp) the two columns end within 150px of each other', Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150, JSON.stringify(m))
+      check(
+        where,
+        '(sp) the spread card is under both columns',
+        m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1,
+        JSON.stringify(m),
+      )
+      check(
+        where,
+        '(sp) it has the whole width the milestone table has',
+        near(m.spreadWidth, m.matrixWidth, 2),
+        JSON.stringify(m),
+      )
+      check(
+        where,
+        '(sp) the two columns end within 150px of each other',
+        Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150,
+        JSON.stringify(m),
+      )
     } catch (e) {
-      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} sp spread card`,
+        '(sp) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
   }
-  for (const size of [{ name: '320x640', width: 320, height: 640 }, { name: '375x812', width: 375, height: 812 }]) {
+  for (const size of [
+    { name: '320x640', width: 320, height: 640 },
+    { name: '375x812', width: 375, height: 812 },
+  ]) {
     const { page, context } = await openChartTab(browser, size)
     const where = `${engine} phone ${size.name} text at 200%`
     try {
@@ -3744,11 +5889,26 @@ async function checkSpreadCard(browser, engine) {
           iw: window.innerWidth,
         }
       })
-      check(where, '(sp) the table is in a scroller that stays inside the card, not spilling out of it', m.regionRight <= m.cardInnerRight + 1, JSON.stringify(m))
-      check(where, '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column', m.regionTabIndex === 0, JSON.stringify(m))
+      check(
+        where,
+        '(sp) the table is in a scroller that stays inside the card, not spilling out of it',
+        m.regionRight <= m.cardInnerRight + 1,
+        JSON.stringify(m),
+      )
+      check(
+        where,
+        '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column',
+        m.regionTabIndex === 0,
+        JSON.stringify(m),
+      )
       check(where, '(sp) the page does not scroll sideways', m.pageScrollWidth <= m.iw, JSON.stringify(m))
     } catch (e) {
-      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} sp spread card`,
+        '(sp) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
@@ -3762,7 +5922,10 @@ async function checkSpreadCard(browser, engine) {
  * 360px phone; the last chip of the Chart tab was focused with only a sliver of it on screen when arrowed to; and
  * the stepper under the spending moved down a line away from a thumb when the figure above it gained a digit.
  */
-async function checkLayoutFaults(browser, engine) {
+async function checkLayoutFaults(
+  browser,
+  engine,
+) {
   // The amounts are the ones the second review found the cross stranded alone at: an ordinary one at 1280 and 1024, and a
   // five-figure one where the row wraps at 1366.
   for (const size of [
@@ -3782,19 +5945,40 @@ async function checkLayoutFaults(browser, engine) {
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await settled(page)
       const labels = await page.evaluate(() =>
-        [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({ text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth })),
+        [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({
+          text: el.textContent,
+          scroll: el.scrollWidth,
+          client: el.clientWidth,
+        })),
       )
       const cut = labels.filter((l) => l.scroll > l.client + 1)
-      check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
+      check(
+        where,
+        '(ly) the month a change in the monthly investing starts in is not cut off',
+        labels.length >= 2 && cut.length === 0,
+        JSON.stringify(labels),
+      )
       const apart = await page.evaluate(() =>
         [...document.querySelectorAll('[class*="lifeEventRowButtons"]')].map((group) => {
           const [edit, remove] = [...group.querySelectorAll('button')].map((b) => b.getBoundingClientRect())
-          return edit && remove ? Math.round(Math.abs(edit.top + edit.height / 2 - (remove.top + remove.height / 2))) : null
+          return edit && remove
+            ? Math.round(Math.abs(edit.top + edit.height / 2 - (remove.top + remove.height / 2)))
+            : null
         }),
       )
-      check(where, '(ly) Edit and the remove cross of a change stay on one line', apart.length >= 1 && apart.every((n) => n !== null && n <= 4), `centres apart by ${apart.join(', ')}px`)
+      check(
+        where,
+        '(ly) Edit and the remove cross of a change stay on one line',
+        apart.length >= 1 && apart.every((n) => n !== null && n <= 4),
+        `centres apart by ${apart.join(', ')}px`,
+      )
     } catch (e) {
-      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} ly layout faults`,
+        '(ly) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
@@ -3802,7 +5986,15 @@ async function checkLayoutFaults(browser, engine) {
 
   {
     const size = { width: 360, height: 800 }
-    const context = await browser.newContext({ viewport: size, screen: size, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: 'light', reducedMotion: 'reduce' })
+    const context = await browser.newContext({
+      viewport: size,
+      screen: size,
+      deviceScaleFactor: 1,
+      isMobile: true,
+      hasTouch: true,
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
     const page = await context.newPage()
     try {
       page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
@@ -3818,11 +6010,23 @@ async function checkLayoutFaults(browser, engine) {
       const out = await page.evaluate(() => {
         const ul = document.querySelector('[class*="gapRows"]')
         const box = ul.parentElement.getBoundingClientRect()
-        return [...ul.querySelectorAll('li')].map((li) => Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right))
+        return [...ul.querySelectorAll('li')].map((li) =>
+          Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right),
+        )
       })
-      check(`${engine} phone 360x800 text at 200%`, '(ly) the amounts in the gap split stay inside their box', out.length > 0 && out.every((n) => n <= 0), `past the box by ${out.join(', ')}px`)
+      check(
+        `${engine} phone 360x800 text at 200%`,
+        '(ly) the amounts in the gap split stay inside their box',
+        out.length > 0 && out.every((n) => n <= 0),
+        `past the box by ${out.join(', ')}px`,
+      )
     } catch (e) {
-      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} ly layout faults`,
+        '(ly) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
@@ -3838,11 +6042,24 @@ async function checkLayoutFaults(browser, engine) {
         const el = document.activeElement
         const group = el.closest('[role="radiogroup"]').getBoundingClientRect()
         const r = el.getBoundingClientRect()
-        return { name: el.textContent, share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width }
+        return {
+          name: el.textContent,
+          share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width,
+        }
       })
-      check(`${engine} phone ${width}px`, '(ly) the chip arrowed to is wholly in view', seen.name === 'Spread' && seen.share > 0.98, JSON.stringify(seen))
+      check(
+        `${engine} phone ${width}px`,
+        '(ly) the chip arrowed to is wholly in view',
+        seen.name === 'Spread' && seen.share > 0.98,
+        JSON.stringify(seen),
+      )
     } catch (e) {
-      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} ly layout faults`,
+        '(ly) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
@@ -3870,9 +6087,19 @@ async function checkLayoutFaults(browser, engine) {
         await page.waitForTimeout(250)
         tops.push(Math.round((await plus.boundingBox()).y))
       }
-      check(`${engine} phone 375x812`, '(ly) the + under the spending does not move down when the line above it gains a digit', new Set(tops).size === 1, `the + was at ${tops.join(', ')}px after each tap from 33`)
+      check(
+        `${engine} phone 375x812`,
+        '(ly) the + under the spending does not move down when the line above it gains a digit',
+        new Set(tops).size === 1,
+        `the + was at ${tops.join(', ')}px after each tap from 33`,
+      )
     } catch (e) {
-      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+      check(
+        `${engine} ly layout faults`,
+        '(ly) the section ran',
+        false,
+        String(e instanceof Error ? e.message : e).split('\n')[0],
+      )
     } finally {
       await context.close()
     }
@@ -3903,8 +6130,12 @@ function readCompare(page) {
     if (!region) return null
     let shell = region.parentElement
     while (shell && !shell.querySelector('p')) shell = shell.parentElement
-    const rows = [...region.querySelectorAll('tr')].map((tr) => [...tr.querySelectorAll('th, td')].map((c) => c.textContent))
-    const clipped = [...region.querySelectorAll('th, td')].filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => c.textContent)
+    const rows = [...region.querySelectorAll('tr')].map((tr) =>
+      [...tr.querySelectorAll('th, td')].map((c) => c.textContent),
+    )
+    const clipped = [...region.querySelectorAll('th, td')]
+      .filter((c) => c.scrollWidth > c.clientWidth + 1)
+      .map((c) => c.textContent)
     return { hint: shell?.querySelector('p')?.textContent ?? '', rows, clipped }
   })
 }
@@ -3923,23 +6154,45 @@ async function compareWindows(page) {
 }
 
 /** The month that is `years` whole years and `months` months from the first of the current month, as the table writes it. */
-function monthFromNow(months, years = 0) {
+function monthFromNow(
+  months,
+  years = 0,
+) {
   const d = new Date()
   d.setDate(1)
   d.setMonth(d.getMonth() + months + years * 12)
   return `${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`
 }
 
-async function checkComparisonTable(browser, engine) {
+async function checkComparisonTable(
+  browser,
+  engine,
+) {
   const where = `${engine} 1280x800`
   const { page, context } = await openPlan(browser, SCREENS[1])
   const same = await compareWindows(page)
-  if (process.env.TABLE_DUMP) (await import('node:fs')).writeFileSync(`${process.env.TABLE_DUMP}.${engine}.json`, JSON.stringify(same, null, 2))
+  if (process.env.TABLE_DUMP)
+    (await import('node:fs')).writeFileSync(`${process.env.TABLE_DUMP}.${engine}.json`, JSON.stringify(same, null, 2))
   const cells = Object.values(same).flatMap((t) => t.rows.slice(1).flatMap((r) => r.slice(1)))
-  check(where, '(compare-table) with one start day every window reads after N years or at the horizon', Object.values(same).every((t) => /^Net worth and invested are (after \d+ years|at each path’s horizon)/.test(t.hint)), JSON.stringify(Object.values(same).map((t) => t.hint)))
-  check(where, '(compare-table) and no cell says a path starts or ended, or gives a month for the house', cells.length > 0 && !cells.some((c) => /starts|ended|^[A-Z][a-z]{2} \d{4}$/.test(c)), JSON.stringify(cells))
+  check(
+    where,
+    '(compare-table) with one start day every window reads after N years or at the horizon',
+    Object.values(same).every((t) =>
+      /^Net worth and invested are (after \d+ years|at each path’s horizon)/.test(t.hint),
+    ),
+    JSON.stringify(Object.values(same).map((t) => t.hint)),
+  )
+  check(
+    where,
+    '(compare-table) and no cell says a path starts or ended, or gives a month for the house',
+    cells.length > 0 && !cells.some((c) => /starts|ended|^[A-Z][a-z]{2} \d{4}$/.test(c)),
+    JSON.stringify(cells),
+  )
 
-  await page.getByRole('tablist', { name: 'Scenarios' }).getByRole('tab', { name: /Path C/ }).click()
+  await page
+    .getByRole('tablist', { name: 'Scenarios' })
+    .getByRole('tab', { name: /Path C/ })
+    .click()
   await page.waitForTimeout(400)
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
@@ -3949,12 +6202,48 @@ async function checkComparisonTable(browser, engine) {
   const startsAt = monthFromNow(COMPARE_LATER_MONTHS)
   const draftRow = (t) => t.rows.find((r) => r[0].endsWith('(editing)'))
   const at5 = later['5Y']
-  check(where, '(compare-table) a path that has not started by the date says when it starts', JSON.stringify(draftRow(at5)?.slice(2, 4)) === JSON.stringify([`starts ${startsAt}`, `starts ${startsAt}`]), JSON.stringify(draftRow(at5)))
-  check(where, '(compare-table) the hint names the one date and the earliest start\'s euros', at5.hint.startsWith(`Net worth and invested are on the same date for every path, ${monthFromNow(origin, 5)}, in ${monthFromNow(origin).slice(4)} euros;`), at5.hint)
-  check(where, '(compare-table) with no window, the last year every path reaches', later.Horizon.hint.includes(`${monthFromNow(origin, 30)}, the last year every scenario reaches`), later.Horizon.hint)
-  check(where, '(compare-table) the later path buys its house in a month of its own calendar', draftRow(later.Horizon)?.[4] === monthFromNow(COMPARE_LATER_MONTHS, 5), JSON.stringify(draftRow(later.Horizon)))
-  check(where, '(compare-table) every figure on the date is a figure', draftRow(later.Horizon)?.slice(2, 4).every((c) => /€$/.test(c)), JSON.stringify(draftRow(later.Horizon)))
-  check(where, '(compare-table) and the hint says why it can show more net worth', /can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./.test(later.Horizon.hint), later.Horizon.hint)
+  check(
+    where,
+    '(compare-table) a path that has not started by the date says when it starts',
+    JSON.stringify(draftRow(at5)?.slice(2, 4)) === JSON.stringify([`starts ${startsAt}`, `starts ${startsAt}`]),
+    JSON.stringify(draftRow(at5)),
+  )
+  check(
+    where,
+    "(compare-table) the hint names the one date and the earliest start's euros",
+    at5.hint.startsWith(
+      `Net worth and invested are on the same date for every path, ${monthFromNow(origin, 5)}, in ${monthFromNow(origin).slice(4)} euros;`,
+    ),
+    at5.hint,
+  )
+  check(
+    where,
+    '(compare-table) with no window, the last year every path reaches',
+    later.Horizon.hint.includes(`${monthFromNow(origin, 30)}, the last year every scenario reaches`),
+    later.Horizon.hint,
+  )
+  check(
+    where,
+    '(compare-table) the later path buys its house in a month of its own calendar',
+    draftRow(later.Horizon)?.[4] === monthFromNow(COMPARE_LATER_MONTHS, 5),
+    JSON.stringify(draftRow(later.Horizon)),
+  )
+  check(
+    where,
+    '(compare-table) every figure on the date is a figure',
+    draftRow(later.Horizon)
+      ?.slice(2, 4)
+      .every((c) => /€$/.test(c)),
+    JSON.stringify(draftRow(later.Horizon)),
+  )
+  check(
+    where,
+    '(compare-table) and the hint says why it can show more net worth',
+    /can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./.test(
+      later.Horizon.hint,
+    ),
+    later.Horizon.hint,
+  )
 
   for (const width of [375, 320]) {
     await page.setViewportSize({ width, height: 812 })
@@ -3963,8 +6252,18 @@ async function checkComparisonTable(browser, engine) {
     await page.waitForTimeout(400)
     const phone = await compareWindows(page)
     const here = `${engine} ${width}`
-    check(here, '(compare-table) the phone shows the desktop\'s cells at every window', Object.keys(later).every((k) => JSON.stringify(phone[k]?.rows) === JSON.stringify(later[k].rows)), JSON.stringify({ phone: phone['5Y']?.rows, desk: at5.rows }))
-    check(here, '(compare-table) no cell is cut off', Object.values(phone).every((t) => t.clipped.length === 0), JSON.stringify(Object.values(phone).map((t) => t.clipped)))
+    check(
+      here,
+      "(compare-table) the phone shows the desktop's cells at every window",
+      Object.keys(later).every((k) => JSON.stringify(phone[k]?.rows) === JSON.stringify(later[k].rows)),
+      JSON.stringify({ phone: phone['5Y']?.rows, desk: at5.rows }),
+    )
+    check(
+      here,
+      '(compare-table) no cell is cut off',
+      Object.values(phone).every((t) => t.clipped.length === 0),
+      JSON.stringify(Object.values(phone).map((t) => t.clipped)),
+    )
     const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
     check(here, '(compare-table) and the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
   }
@@ -3980,7 +6279,10 @@ const LATER_COPY = 'Later copy'
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** The copy's start ("Jul 2028"), and its years from the demo's start (the first of the month six months back). */
-function laterStartOf(page, monthsAhead) {
+function laterStartOf(
+  page,
+  monthsAhead,
+) {
   return page.evaluate((m) => {
     const now = new Date()
     const start = new Date(now.getFullYear(), now.getMonth() + m, 15, 12)
@@ -3989,7 +6291,10 @@ function laterStartOf(page, monthsAhead) {
   }, monthsAhead)
 }
 
-async function saveLaterCopy(page, { phone }) {
+async function saveLaterCopy(
+  page,
+  { phone },
+) {
   if (phone) {
     await page.locator('button:not([aria-label])', { hasText: 'Path B: House now' }).first().click()
     await page.getByRole('tab', { name: 'Scenarios', exact: true }).click()
@@ -4007,7 +6312,10 @@ async function saveLaterCopy(page, { phone }) {
   }
   await page.getByRole('button', { name: 'Save as new scenario…' }).click()
   await page.getByLabel('Name for new scenario').fill(LATER_COPY)
-  await page.getByRole('button', { name: /^Save as new$/ }).last().click()
+  await page
+    .getByRole('button', { name: /^Save as new$/ })
+    .last()
+    .click()
   await page.waitForTimeout(600)
   if (phone) {
     await page.getByRole('tab', { name: 'Chart', exact: true }).click()
@@ -4020,14 +6328,21 @@ async function saveLaterCopy(page, { phone }) {
 
 const heroSvg = (page) => page.locator('[class*="heroChart"] svg[role="img"]').first()
 
-async function pointAtYear(page, svg, year) {
+async function pointAtYear(
+  page,
+  svg,
+  year,
+) {
   await svg.focus()
   await page.keyboard.press('Home')
   for (let i = 0; i < year; i += 1) await page.keyboard.press('ArrowRight')
   await page.waitForTimeout(150)
 }
 
-async function checkLaterChartWide(browser, engine) {
+async function checkLaterChartWide(
+  browser,
+  engine,
+) {
   const where = `${engine} 1280x800`
   const { page, context } = await openPlan(browser, SCREENS[1])
   await saveLaterCopy(page, { phone: false })
@@ -4040,28 +6355,59 @@ async function checkLaterChartWide(browser, engine) {
     dots: [...el.querySelectorAll('circle[class*="annotationDot"]')].map((c) => Number(c.getAttribute('cx'))),
     label: [...el.querySelectorAll('text')].find((t) => /^starts /.test(t.textContent ?? ''))?.textContent ?? null,
   }))
-  check(where, '(later-chart) the bottom axis names calendar years', drawn.years.length >= 3 && drawn.years.every((y) => /^20\d\d$/.test(y)), JSON.stringify(drawn.years))
+  check(
+    where,
+    '(later-chart) the bottom axis names calendar years',
+    drawn.years.length >= 3 && drawn.years.every((y) => /^20\d\d$/.test(y)),
+    JSON.stringify(drawn.years),
+  )
   // The axis runs to the last whole year a line reaches: the copy's 30 years from its start, rounded up.
   const last = Math.ceil(start.offset + 30)
   const expected = 56 + (start.offset / last) * (drawn.width - 72)
-  check(where, '(later-chart) the copy’s line starts at its date, right of the axis’ start', drawn.dots.some((x) => near(x, expected, 2)), JSON.stringify({ dots: drawn.dots, expected }))
+  check(
+    where,
+    '(later-chart) the copy’s line starts at its date, right of the axis’ start',
+    drawn.dots.some((x) => near(x, expected, 2)),
+    JSON.stringify({ dots: drawn.dots, expected }),
+  )
   check(where, '(later-chart) and says when it starts there', drawn.label === `starts ${starts}`, drawn.label)
   const chip = page.getByRole('tab', { name: new RegExp(`^${LATER_COPY}`) }).locator('..')
-  check(where, '(later-chart) its chip carries when it starts', (await chip.textContent())?.includes(`from ${starts}`) === true, await chip.textContent())
-  const hint = await page.getByText(/The values in the chips above are for \d{4}, the last year every scenario reaches/).count()
+  check(
+    where,
+    '(later-chart) its chip carries when it starts',
+    (await chip.textContent())?.includes(`from ${starts}`) === true,
+    await chip.textContent(),
+  )
+  const hint = await page
+    .getByText(/The values in the chips above are for \d{4}, the last year every scenario reaches/)
+    .count()
   check(where, '(later-chart) the hint names the year the chips are for', hint === 1, String(hint))
   await pointAtYear(page, svg, 1)
   const before = (await chip.textContent()) ?? ''
-  check(where, '(later-chart) a year before it starts reads when it does in its chip', before.includes(`starts ${starts}`) && !/\d €/.test(before.replace(`from ${starts}`, '')), before)
+  check(
+    where,
+    '(later-chart) a year before it starts reads when it does in its chip',
+    before.includes(`starts ${starts}`) && !/\d €/.test(before.replace(`from ${starts}`, '')),
+    before,
+  )
   await pointAtYear(page, svg, 10)
   const inside = (await chip.textContent()) ?? ''
   check(where, '(later-chart) a year after it starts reads its figure', /\d €/.test(inside), inside)
   await context.close()
 }
 
-async function checkLaterChartPhone(browser, engine) {
+async function checkLaterChartPhone(
+  browser,
+  engine,
+) {
   const where = `${engine} 375`
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -4074,7 +6420,12 @@ async function checkLaterChartPhone(browser, engine) {
   const rest = await page.getByText(/The values are for \d{4}, the last year every scenario reaches\./).count()
   check(where, '(later-chart) the rows show the resting year’s figures and say which year', rest === 1, String(rest))
   const row = page.locator('[class*="heroChart"] li', { hasText: LATER_COPY }).first()
-  check(where, '(later-chart) its row carries when it starts', ((await row.textContent()) ?? '').includes(`from ${MONTH_NAMES[start.month]} ${start.year}`), await row.textContent())
+  check(
+    where,
+    '(later-chart) its row carries when it starts',
+    ((await row.textContent()) ?? '').includes(`from ${MONTH_NAMES[start.month]} ${start.year}`),
+    await row.textContent(),
+  )
   const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
   check(where, '(later-chart) the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
   await pointAtYear(page, heroSvg(page), 10)
@@ -4087,12 +6438,22 @@ async function checkLaterChartPhone(browser, engine) {
   await dialog.waitFor()
   await page.waitForTimeout(400)
   await pointAtYear(page, dialog.locator('svg[role="img"]').first(), 10)
-  const sheetRow = ((await dialog.locator('li', { hasText: LATER_COPY }).first().textContent()) ?? '').match(/[\d.,]+[kM]? €/)?.[0] ?? null
-  check(where, '(later-chart) full screen reads the copy’s figure the card reads, at the same year', card !== null && card === sheetRow, JSON.stringify({ card, sheetRow }))
+  const sheetRow =
+    ((await dialog.locator('li', { hasText: LATER_COPY }).first().textContent()) ?? '').match(/[\d.,]+[kM]? €/)?.[0] ??
+    null
+  check(
+    where,
+    '(later-chart) full screen reads the copy’s figure the card reads, at the same year',
+    card !== null && card === sheetRow,
+    JSON.stringify({ card, sheetRow }),
+  )
   await context.close()
 }
 
-async function checkLaterChart(browser, engine) {
+async function checkLaterChart(
+  browser,
+  engine,
+) {
   await checkLaterChartWide(browser, engine)
   await checkLaterChartPhone(browser, engine)
 }
@@ -4107,7 +6468,11 @@ async function checkLaterChart(browser, engine) {
 const SHEET_MONTHS = 24
 
 /** Picks the sheet's start date `monthsAhead` from today, on the 15th: the popover where there is one, else the native field. */
-async function pickSheetDate(page, sheet, monthsAhead) {
+async function pickSheetDate(
+  page,
+  sheet,
+  monthsAhead,
+) {
   const target = await page.evaluate((months) => {
     const d = new Date()
     d.setDate(1)
@@ -4118,7 +6483,20 @@ async function pickSheetDate(page, sheet, monthsAhead) {
   if (await native.count()) {
     await native.fill(`${target.year}-${String(target.month + 1).padStart(2, '0')}-15`)
   } else {
-    const LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const LONG = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]
     await sheet.getByRole('button', { name: 'Start date', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Choose a date' })
     for (let i = 0; i < 120; i += 1) {
@@ -4133,7 +6511,10 @@ async function pickSheetDate(page, sheet, monthsAhead) {
   return `${MONTH_NAMES[target.month]} ${target.year}`
 }
 
-async function openStartLaterWide(page, source) {
+async function openStartLaterWide(
+  page,
+  source,
+) {
   await page.getByRole('tab', { name: source }).click()
   await page.waitForTimeout(300)
   await page.getByRole('button', { name: 'Scenario options' }).click()
@@ -4143,25 +6524,58 @@ async function openStartLaterWide(page, source) {
   return sheet
 }
 
-async function checkStartLaterWide(browser, engine) {
+async function checkStartLaterWide(
+  browser,
+  engine,
+) {
   const where = `${engine} 1280x800`
   const { page, context } = await openPlan(browser, SCREENS[1])
   let sheet = await openStartLaterWide(page, /^Path B/)
-  check(where, '(start-later) the sheet opens on the latest check-in and says so', ((await sheet.textContent()) ?? '').includes('Your investments in your check-in of'), await sheet.textContent())
+  check(
+    where,
+    '(start-later) the sheet opens on the latest check-in and says so',
+    ((await sheet.textContent()) ?? '').includes('Your investments in your check-in of'),
+    await sheet.textContent(),
+  )
   const starts = await pickSheetDate(page, sheet, SHEET_MONTHS)
   let text = (await sheet.textContent()) ?? ''
-  check(where, '(start-later) two years ahead the check-in is carried on to the date', /carried on from your check-in of .+ has about [\d.]+ € on that date/.test(text), text)
-  check(where, '(start-later) a house owned from day one is said, with its own line offered (year-0 house)', text.includes('This counts your check-in as after buying the house'), text)
+  check(
+    where,
+    '(start-later) two years ahead the check-in is carried on to the date',
+    /carried on from your check-in of .+ has about [\d.]+ € on that date/.test(text),
+    text,
+  )
+  check(
+    where,
+    '(start-later) a house owned from day one is said, with its own line offered (year-0 house)',
+    text.includes('This counts your check-in as after buying the house'),
+    text,
+  )
   const before = await sheet.getByRole('textbox', { name: 'Starting balance' }).inputValue()
   await sheet.getByRole('button', { name: /^Use / }).last().click()
   const own = await sheet.getByRole('textbox', { name: 'Starting balance' }).inputValue()
-  check(where, '(start-later) Use puts the own line’s figure in, which is less than the check-in’s', own !== before, JSON.stringify({ before, own }))
-  check(where, '(start-later) and offers the check-in’s back', (await sheet.getByRole('button', { name: /^Use / }).count()) >= 1, String(await sheet.getByRole('button', { name: /^Use / }).count()))
+  check(
+    where,
+    '(start-later) Use puts the own line’s figure in, which is less than the check-in’s',
+    own !== before,
+    JSON.stringify({ before, own }),
+  )
+  check(
+    where,
+    '(start-later) and offers the check-in’s back',
+    (await sheet.getByRole('button', { name: /^Use / }).count()) >= 1,
+    String(await sheet.getByRole('button', { name: /^Use / }).count()),
+  )
   check(where, '(start-later) it says what the copy comes to', /In short: /.test(text), text)
   await sheet.getByRole('button', { name: 'Create scenario' }).click()
   await page.waitForTimeout(800)
   const chips = (await page.locator('[role="tablist"][aria-label="Scenarios"]').textContent()) ?? ''
-  check(where, '(start-later) the copy is made, its chip saying when it starts', chips.includes(`from ${starts}`), chips)
+  check(
+    where,
+    '(start-later) the copy is made, its chip saying when it starts',
+    chips.includes(`from ${starts}`),
+    chips,
+  )
   check(where, '(start-later) and Path B is still there under its own name', chips.includes('Path B: House now'), chips)
   const table = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Monthly' }) })
   const rows = await table.getByRole('row', { name: /Path B: House now, from/ }).count()
@@ -4170,22 +6584,47 @@ async function checkStartLaterWide(browser, engine) {
   sheet = await openStartLaterWide(page, /^Path C/)
   await pickSheetDate(page, sheet, 72)
   text = (await sheet.textContent()) ?? ''
-  check(where, '(start-later) a house behind the start makes the balance after buying it', text.includes('euros, after buying the house') && text.includes('is behind the new start, so the plan holds the house as owned'), text)
+  check(
+    where,
+    '(start-later) a house behind the start makes the balance after buying it',
+    text.includes('euros, after buying the house') &&
+      text.includes('is behind the new start, so the plan holds the house as owned'),
+    text,
+  )
   await sheet.getByRole('button', { name: 'Create scenario' }).click()
   await page.waitForTimeout(800)
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
   const notes = (await page.locator('[role="region"][aria-label="All inputs"]').textContent()) ?? ''
-  check(where, '(start-later) the editor says what a future start’s balance is', /The balance you expect to have invested on .+ euros\./.test(notes), notes)
-  check(where, '(start-later) and offers no figure from a plan without a house (year-0 house)', !notes.includes('Your plan, carried on'), notes)
+  check(
+    where,
+    '(start-later) the editor says what a future start’s balance is',
+    /The balance you expect to have invested on .+ euros\./.test(notes),
+    notes,
+  )
+  check(
+    where,
+    '(start-later) and offers no figure from a plan without a house (year-0 house)',
+    !notes.includes('Your plan, carried on'),
+    notes,
+  )
   const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth])
   check(where, '(start-later) the page does not scroll sideways', wide[0] <= wide[1], JSON.stringify(wide))
   await context.close()
 }
 
-async function checkStartLaterPhone(browser, engine) {
+async function checkStartLaterPhone(
+  browser,
+  engine,
+) {
   const where = `${engine} 375`
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+    hasTouch: true,
+    isMobile: true,
+  })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
@@ -4201,9 +6640,19 @@ async function checkStartLaterPhone(browser, engine) {
   await page.waitForTimeout(400)
   const starts = await pickSheetDate(page, sheet, SHEET_MONTHS)
   const box = await sheet.boundingBox()
-  check(where, '(start-later) the sheet fits the screen’s width', box !== null && box.x >= 0 && box.x + box.width <= 375.5, JSON.stringify(box))
+  check(
+    where,
+    '(start-later) the sheet fits the screen’s width',
+    box !== null && box.x >= 0 && box.x + box.width <= 375.5,
+    JSON.stringify(box),
+  )
   const text = (await sheet.textContent()) ?? ''
-  check(where, '(start-later) it says the house is bought sooner, with both dates', /House \(.+\) is bought on .+ earlier, because the copy counts its years from its own start\./.test(text), text)
+  check(
+    where,
+    '(start-later) it says the house is bought sooner, with both dates',
+    /House \(.+\) is bought on .+ earlier, because the copy counts its years from its own start\./.test(text),
+    text,
+  )
   await sheet.getByRole('button', { name: 'Create scenario' }).click()
   await page.waitForTimeout(800)
   await page.getByRole('tab', { name: 'Chart', exact: true }).click()
@@ -4213,7 +6662,10 @@ async function checkStartLaterPhone(browser, engine) {
   await context.close()
 }
 
-async function checkStartLater(browser, engine) {
+async function checkStartLater(
+  browser,
+  engine,
+) {
   await checkStartLaterWide(browser, engine)
   await checkStartLaterPhone(browser, engine)
 }
@@ -4222,7 +6674,10 @@ const SECTIONS = [
   ...SCREENS.map((screen) => ({
     name: `screen ${screen.name}`,
     weight: screen.width === 1024 ? 2 : 18,
-    run: (browser, engine) => checkScreen(browser, screen, engine),
+    run: (
+      browser,
+      engine,
+    ) => checkScreen(browser, screen, engine),
   })),
   { name: 'Tabs', weight: 15, run: checkTabs },
   { name: 'LeverFocus', weight: 50, run: checkLeverFocus },
@@ -4371,7 +6826,11 @@ async function main() {
   } finally {
     stopDev(dev)
   }
-  console.log(failures.length === 0 ? '\nAll checks passed.' : `\n${failures.length} check(s) failed:\n${failures.map((f) => ` - ${f}`).join('\n')}`)
+  console.log(
+    failures.length === 0
+      ? '\nAll checks passed.'
+      : `\n${failures.length} check(s) failed:\n${failures.map((f) => ` - ${f}`).join('\n')}`,
+  )
   process.exit(failures.length === 0 ? 0 : 1)
 }
 

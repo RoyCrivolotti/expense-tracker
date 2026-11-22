@@ -92,7 +92,11 @@ describe('StartLaterSheet', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'House later' } })
     await user.dblClick(screen.getByRole('button', { name: 'Create scenario' }))
     expect(onCreate).toHaveBeenCalledTimes(1)
-    expect(onCreate.mock.calls[0]![0]).toMatchObject({ name: 'House later', planStartDate: '2026-10-01', startInvestedCents: 9_000_000 })
+    expect(onCreate.mock.calls[0]![0]).toMatchObject({
+      name: 'House later',
+      planStartDate: '2026-10-01',
+      startInvestedCents: 9_000_000,
+    })
     expect(onCreate.mock.calls[0]![0]).not.toHaveProperty('isActive')
     expect(onClose).toHaveBeenCalled()
   })
@@ -123,7 +127,12 @@ describe('StartLaterSheet', () => {
 
   it('names the source it opened on while it leaves, though the editor has moved on to the copy', () => {
     const { rerender } = render(<StartLaterSheet {...later()} onClose={vi.fn()} />)
-    rerender(<StartLaterSheet {...later({ source: scenarioToDraft(samplePlan({ name: 'Path B, from 2026' })) })} onClose={vi.fn()} />)
+    rerender(
+      <StartLaterSheet
+        {...later({ source: scenarioToDraft(samplePlan({ name: 'Path B, from 2026' })) })}
+        onClose={vi.fn()}
+      />,
+    )
     expect(screen.getByRole('dialog', { name: 'Start a copy of "Path B" later' })).toBeInTheDocument()
   })
 })

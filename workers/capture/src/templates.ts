@@ -17,7 +17,10 @@ export interface TemplateMatch {
  * exactly at its `<M>`, and one whose merchant is not yet known learns it from the push. The push's own run of that
  * pair is its merchant. Null when none is.
  */
-export function matchTemplate(rows: readonly CaptureTemplate[], skeleton: readonly string[]): TemplateMatch | null {
+export function matchTemplate(
+  rows: readonly CaptureTemplate[],
+  skeleton: readonly string[],
+): TemplateMatch | null {
   const joined = skeleton.join(' ')
   const same = rows.find((row) => row.skeleton === joined)
   if (same) return { decision: { kind: 'existing', templateId: same.templateId }, merchant: null }
@@ -27,7 +30,10 @@ export function matchTemplate(rows: readonly CaptureTemplate[], skeleton: readon
     if (!runs) continue
     const existing = { kind: 'existing', templateId: row.templateId } as const
     if (row.merchantStart !== null) {
-      const atWildcard = runs.a.start === row.merchantStart && runs.a.end === row.merchantStart + 1 && tokens[row.merchantStart] === WILDCARD
+      const atWildcard =
+        runs.a.start === row.merchantStart &&
+        runs.a.end === row.merchantStart + 1 &&
+        tokens[row.merchantStart] === WILDCARD
       if (atWildcard) return { decision: existing, merchant: runs.b }
       continue
     }
@@ -46,7 +52,10 @@ export function matchTemplate(rows: readonly CaptureTemplate[], skeleton: readon
  * still holds the first merchant's words, so a sibling that differs there is another merchant: it is stored, and it
  * teaches the template its run.
  */
-export function mutes(row: CaptureTemplate, skeleton: string): boolean {
+export function mutes(
+  row: CaptureTemplate,
+  skeleton: string,
+): boolean {
   return row.ignoredAt !== null && (row.skeleton === skeleton || row.merchantStart !== null)
 }
 
@@ -57,7 +66,11 @@ const NONE: TemplateMatch = { decision: { kind: 'none' }, merchant: null }
  * since a template keeps the push's words and such a push keeps no text. So does one whose text is too large to keep
  * (the title is part of the skeleton, so the skeleton's length covers it).
  */
-export function decideTemplate(rows: readonly CaptureTemplate[], reading: PushReading, newId: () => string): TemplateMatch {
+export function decideTemplate(
+  rows: readonly CaptureTemplate[],
+  reading: PushReading,
+  newId: () => string,
+): TemplateMatch {
   if (reading.currencyAmount === null) return NONE
   const found = matchTemplate(rows, reading.skeletonTokens)
   if (found) return found

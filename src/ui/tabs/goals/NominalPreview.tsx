@@ -50,10 +50,9 @@ export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions, p
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        The net worth figure stays in {planMoneyLabel(planStartDate, format)}. Milestones are amounts on your account, so
-        they stay put in this view, and the FI target is in {planMoneyLabel(planStartDate, format)}, so it rises with the
-        inflation. The
-        preview is not saved: the rest of Goals uses the saved {formatPercent(saved, format)}
+        The net worth figure stays in {planMoneyLabel(planStartDate, format)}. Milestones are amounts on your account,
+        so they stay put in this view, and the FI target is in {planMoneyLabel(planStartDate, format)}, so it rises with
+        the inflation. The preview is not saved: the rest of Goals uses the saved {formatPercent(saved, format)}
         {onOpenAssumptions ? (
           <>
             , which you change in Assumptions.{' '}

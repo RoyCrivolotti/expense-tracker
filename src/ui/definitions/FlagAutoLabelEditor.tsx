@@ -47,8 +47,8 @@ export function FlagAutoLabelEditor({ flag, labels, actions, onDone }: Props) {
   return (
     <div className={formStyles.form}>
       <p className={formStyles.hint}>
-        Applied to every transaction flagged {flag.name}, including ones already flagged when you
-        save this — not just ones flagged from now on.
+        Applied to every transaction flagged {flag.name}, including ones already flagged when you save this — not just
+        ones flagged from now on.
       </p>
       <ul className={pickerStyles.list}>
         <li>
@@ -87,9 +87,7 @@ export function FlagAutoLabelEditor({ flag, labels, actions, onDone }: Props) {
                   {label.name}
                   {!label.active ? <span className={pickerStyles.archived}> · archived</span> : null}
                 </span>
-                {label.description ? (
-                  <span className={pickerStyles.optionDesc}>{label.description}</span>
-                ) : null}
+                {label.description ? <span className={pickerStyles.optionDesc}>{label.description}</span> : null}
               </span>
               {value === label.id ? (
                 <span className={pickerStyles.tick} aria-hidden>
@@ -117,12 +115,7 @@ export function FlagAutoLabelEditor({ flag, labels, actions, onDone }: Props) {
       )}
       {err ? <p className={formStyles.error}>{err}</p> : null}
       <div className={formStyles.actions}>
-        <button
-          type="button"
-          className={formStyles.saveBtn}
-          disabled={busy}
-          onClick={() => void save()}
-        >
+        <button type="button" className={formStyles.saveBtn} disabled={busy} onClick={() => void save()}>
           {busy ? 'Saving…' : 'Save'}
         </button>
         <button type="button" className={formStyles.cancelBtn} disabled={busy} onClick={onDone}>

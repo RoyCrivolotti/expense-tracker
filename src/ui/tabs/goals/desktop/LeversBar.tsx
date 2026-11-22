@@ -1,11 +1,6 @@
 import { memo, useMemo, useRef } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import {
-  formatCentsCompact,
-  projectNetWorth,
-  scenarioToParams,
-  type LeverKey,
-} from '../../../../engine'
+import { formatCentsCompact, projectNetWorth, scenarioToParams, type LeverKey } from '../../../../engine'
 import { ChevronIcon } from '../../../icons'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -89,7 +84,16 @@ interface LeversBarProps {
  * the keyboard is not left behind it. The rest of the inputs open from the button in the result
  * block.
  */
-export function LeversBar({ draft, resultDraft, keys, onChange, onUnstar, expanded, panelId, onToggle }: LeversBarProps) {
+export function LeversBar({
+  draft,
+  resultDraft,
+  keys,
+  onChange,
+  onUnstar,
+  expanded,
+  panelId,
+  onToggle,
+}: LeversBarProps) {
   const bar = useRef<HTMLDivElement>(null)
   useBarScrollPadding(bar)
   return (

@@ -32,7 +32,10 @@ interface CallOptions {
   rawBody?: BodyInit
 }
 
-function call(handler: Handler, o: CallOptions = {}): Promise<Response> {
+function call(
+  handler: Handler,
+  o: CallOptions = {},
+): Promise<Response> {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -47,11 +50,15 @@ function call(handler: Handler, o: CallOptions = {}): Promise<Response> {
   })
 }
 
-const makeKey = (label?: unknown, email = OWNER) =>
-  call(create, { method: 'POST', body: label === undefined ? {} : { label }, email })
+const makeKey = (
+  label?: unknown,
+  email = OWNER,
+) => call(create, { method: 'POST', body: label === undefined ? {} : { label }, email })
 
 const rows = () =>
-  sqlite.prepare('SELECT key_id, owner, label, secret_hash, revoked_at FROM capture_keys ORDER BY created_at').all() as Array<{
+  sqlite
+    .prepare('SELECT key_id, owner, label, secret_hash, revoked_at FROM capture_keys ORDER BY created_at')
+    .all() as Array<{
     key_id: string
     owner: string
     label: string
@@ -149,7 +156,11 @@ describe('POST /api/capture-keys', () => {
   })
 
   it('refuses a body that is not JSON-typed with a 415', async () => {
-    const response = await call(create, { method: 'POST', rawBody: '{"label":"x"}', headers: { 'content-type': 'text/plain' } })
+    const response = await call(create, {
+      method: 'POST',
+      rawBody: '{"label":"x"}',
+      headers: { 'content-type': 'text/plain' },
+    })
 
     expect(response.status).toBe(415)
     expect(rows()).toEqual([])
@@ -229,11 +240,18 @@ describe('who may call', () => {
   it('refuses a request with no sign-in, a stranger, and a bearer key, on every method', async () => {
     const { key, keyId } = (await (await makeKey()).json()) as { key: string; keyId: string }
     const attempts = [
-      (email: string | false, headers?: Record<string, string>) => call(list, { email, ...(headers ? { headers } : {}) }),
-      (email: string | false, headers?: Record<string, string>) =>
-        call(create, { method: 'POST', body: {}, email, ...(headers ? { headers } : {}) }),
-      (email: string | false, headers?: Record<string, string>) =>
-        call(revoke, { method: 'DELETE', id: keyId, email, ...(headers ? { headers } : {}) }),
+      (
+        email: string | false,
+        headers?: Record<string, string>,
+      ) => call(list, { email, ...(headers ? { headers } : {}) }),
+      (
+        email: string | false,
+        headers?: Record<string, string>,
+      ) => call(create, { method: 'POST', body: {}, email, ...(headers ? { headers } : {}) }),
+      (
+        email: string | false,
+        headers?: Record<string, string>,
+      ) => call(revoke, { method: 'DELETE', id: keyId, email, ...(headers ? { headers } : {}) }),
     ]
 
     for (const attempt of attempts) {

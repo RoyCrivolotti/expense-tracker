@@ -33,7 +33,10 @@ export interface QueryDb {
 }
 
 /** Wraps the stand-in so that a test can look at exactly the statements the code ran. */
-function recording(inner: D1Database, statements: RecordedStatement[]): D1Database {
+function recording(
+  inner: D1Database,
+  statements: RecordedStatement[],
+): D1Database {
   const prepare = (sql: string) => {
     const statement = inner.prepare(sql)
     return Object.assign(Object.create(statement) as object, {
@@ -63,7 +66,10 @@ export function queryDb(
 }
 
 /** Ids are global in D1, so each further owner's rows are moved up by `by` to keep clear of the others'. */
-export function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
+export function shifted(
+  dataset: ExpenseDataset,
+  by: number,
+): ExpenseDataset {
   const lift = (t: Transaction): Transaction => {
     const moved: Transaction = {
       ...t,
@@ -93,7 +99,10 @@ export function shifted(dataset: ExpenseDataset, by: number): ExpenseDataset {
 
 const EDGE_START = '2026-05-15'
 
-function edge(id: number, over: Partial<Transaction>): Transaction {
+function edge(
+  id: number,
+  over: Partial<Transaction>,
+): Transaction {
   return {
     id,
     date: '2026-04-10',
@@ -178,8 +187,14 @@ export function withSortedLabels(t: Transaction): Transaction {
 }
 
 type Rng = () => number
-const pick = <T>(items: readonly T[], rnd: Rng): T => items[Math.floor(rnd() * items.length)] as T
-const chance = (p: number, rnd: Rng): boolean => rnd() < p
+const pick = <T>(
+  items: readonly T[],
+  rnd: Rng,
+): T => items[Math.floor(rnd() * items.length)] as T
+const chance = (
+  p: number,
+  rnd: Rng,
+): boolean => rnd() < p
 
 export interface FilterVocabulary {
   transactions: Transaction[]
@@ -197,7 +212,10 @@ export function vocabularyOf(dataset: ExpenseDataset): FilterVocabulary {
   }
 }
 
-function recase(text: string, rnd: Rng): string {
+function recase(
+  text: string,
+  rnd: Rng,
+): string {
   const roll = rnd()
   if (roll < 0.3) return text.toUpperCase()
   if (roll < 0.6) return text.toLowerCase()
@@ -205,7 +223,10 @@ function recase(text: string, rnd: Rng): string {
 }
 
 /** A piece of a real row's text, often a different case, sometimes one that spans description and notes. */
-function searchText(v: FilterVocabulary, rnd: Rng): string {
+function searchText(
+  v: FilterVocabulary,
+  rnd: Rng,
+): string {
   const fixed = ['%', '_', '100%', 'a_b', 'é', 'CAFÉ', 'ñ', 'москва', ' ', 'plain needle', 'plain ', 'x', 'zzzz']
   if (chance(0.25, rnd)) return pick(fixed, rnd)
   const t = pick(v.transactions, rnd)
@@ -215,7 +236,10 @@ function searchText(v: FilterVocabulary, rnd: Rng): string {
   return recase(t.description.slice(start, end), rnd)
 }
 
-function period(v: FilterVocabulary, rnd: Rng): Pick<TxnFilter, 'month' | 'dateFrom' | 'dateTo'> {
+function period(
+  v: FilterVocabulary,
+  rnd: Rng,
+): Pick<TxnFilter, 'month' | 'dateFrom' | 'dateTo'> {
   const roll = rnd()
   if (roll < 0.4) return {}
   if (roll < 0.7) return { month: pick(v.months, rnd) }
@@ -232,7 +256,10 @@ const TYPES: Array<TxnType | 'all'> = ['expense', 'income', 'investment', 'refun
 const STATUSES: Array<TxnStatus | 'all'> = ['posted', 'forecast', 'cancelled', 'all']
 const AMOUNTS = [0, 1, 299, 450, 1_000, 5_000, 6_400, 6_499, 20_000, 250_000, 10_000_000]
 
-function dimensions(v: FilterVocabulary, rnd: Rng): TxnFilter {
+function dimensions(
+  v: FilterVocabulary,
+  rnd: Rng,
+): TxnFilter {
   const out: TxnFilter = {}
   if (chance(0.2, rnd)) out.categoryId = chance(0.1, rnd) ? 999 : pick(v.categoryIds, rnd)
   if (chance(0.15, rnd)) out.accountId = chance(0.1, rnd) ? 99 : pick(v.accountIds, rnd)
@@ -245,7 +272,10 @@ function dimensions(v: FilterVocabulary, rnd: Rng): TxnFilter {
   return out
 }
 
-function amounts(rnd: Rng, text: string | undefined): TxnFilter {
+function amounts(
+  rnd: Rng,
+  text: string | undefined,
+): TxnFilter {
   const out: TxnFilter = {}
   if (chance(0.2, rnd)) out.amountMinCents = pick(AMOUNTS, rnd)
   if (chance(0.2, rnd)) out.amountMaxCents = pick(AMOUNTS, rnd)
@@ -257,7 +287,10 @@ function amounts(rnd: Rng, text: string | undefined): TxnFilter {
 }
 
 /** One random filter; every field of `TxnFilter` can appear, alone or with others. */
-export function randomFilter(v: FilterVocabulary, rnd: Rng): TxnFilter {
+export function randomFilter(
+  v: FilterVocabulary,
+  rnd: Rng,
+): TxnFilter {
   const text = chance(0.35, rnd) ? searchText(v, rnd) : undefined
   return {
     ...period(v, rnd),
@@ -267,13 +300,20 @@ export function randomFilter(v: FilterVocabulary, rnd: Rng): TxnFilter {
   }
 }
 
-export function filterStream(vocabulary: FilterVocabulary, count: number, seed: number): TxnFilter[] {
+export function filterStream(
+  vocabulary: FilterVocabulary,
+  count: number,
+  seed: number,
+): TxnFilter[] {
   const rnd = mulberry32(seed)
   return Array.from({ length: count }, () => randomFilter(vocabulary, rnd))
 }
 
 /** `EXPLAIN QUERY PLAN` lines for a statement the code under test ran. */
-export function planOf(sqlite: DatabaseSync, { sql, params }: RecordedStatement): string[] {
+export function planOf(
+  sqlite: DatabaseSync,
+  { sql, params }: RecordedStatement,
+): string[] {
   const rows = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...(params as SQLInputValue[]))
   return rows.map((row) => String(row.detail))
 }

@@ -10,11 +10,7 @@ import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
 import { OnboardingMoneyStep, type MoneyDraft } from './OnboardingMoneyStep'
 import { OnboardingCategoriesStep } from './OnboardingCategoriesStep'
 import { OnboardingAccountsStep } from './OnboardingAccountsStep'
-import {
-  buildSelectedPresets,
-  useAccountsDraft,
-  useCategoryDrafts,
-} from './onboardingDrafts'
+import { buildSelectedPresets, useAccountsDraft, useCategoryDrafts } from './onboardingDrafts'
 import { runOnboardingSetup } from './runOnboardingSetup'
 import { buildOnboardingConfirmSummary, ONBOARDING_CONFIRM_FOOTNOTE } from './onboardingConfirmSummary'
 import styles from './OnboardingWizard.module.css'
@@ -56,7 +52,10 @@ function canFinishAccountsStep(
  * First run must produce at least one category; re-entry may legitimately pass
  * through with none selected (e.g. just revisiting currency or accounts).
  */
-function canNextCategoriesStep(selectedCount: number, hasExistingCategories: boolean): boolean {
+function canNextCategoriesStep(
+  selectedCount: number,
+  hasExistingCategories: boolean,
+): boolean {
   return selectedCount > 0 || hasExistingCategories
 }
 
@@ -66,12 +65,19 @@ function canNextCategoriesStep(selectedCount: number, hasExistingCategories: boo
  * tab, or via Settings), `hasExistingAccounts` goes stale — but a debit is still
  * mandatory whenever there are zero accounts, regardless of that checkbox's last value.
  */
-function effectiveAddDebit(hasExistingAccounts: boolean, addDebit: boolean): boolean {
+function effectiveAddDebit(
+  hasExistingAccounts: boolean,
+  addDebit: boolean,
+): boolean {
   return hasExistingAccounts ? addDebit : true
 }
 
 /** While the confirm popup is open, dismissing the wizard chrome (Escape / backdrop) should close just the popup, not skip the whole wizard. */
-function dismissHandler(showConfirm: boolean, closeConfirm: () => void, onSkip: () => void): () => void {
+function dismissHandler(
+  showConfirm: boolean,
+  closeConfirm: () => void,
+  onSkip: () => void,
+): () => void {
   return showConfirm ? closeConfirm : onSkip
 }
 
@@ -178,7 +184,11 @@ export function OnboardingWizard({ source, dataset, applyPatch, firstRun, onDone
     >
       <OnboardingProgress step={step} />
       {step === 0 ? (
-        <OnboardingMoneyStep firstRun={firstRun} money={money} onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))} />
+        <OnboardingMoneyStep
+          firstRun={firstRun}
+          money={money}
+          onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))}
+        />
       ) : null}
       {step === 1 ? (
         <OnboardingCategoriesStep

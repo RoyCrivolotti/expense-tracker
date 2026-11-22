@@ -12,6 +12,9 @@ export function onLocalHost(url: string): string {
 
 export type HostChoice = 'local' | 'as-given'
 
-export function requestUrl(url: string, host: HostChoice | undefined): string {
+export function requestUrl(
+  url: string,
+  host: HostChoice | undefined,
+): string {
   return host === 'as-given' ? url : onLocalHost(url)
 }

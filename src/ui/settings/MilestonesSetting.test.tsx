@@ -26,9 +26,7 @@ describe('MilestonesSetting', () => {
 
   it('saves a target date, and clears it again', () => {
     const onChange = vi.fn()
-    const { rerender } = render(
-      <MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />,
-    )
+    const { rerender } = render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
 
     fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
       target: { value: '2028-06-01' },
@@ -59,10 +57,7 @@ describe('MilestonesSetting', () => {
   })
 
   it('still addresses the row after a failed amount save, and says the save failed', async () => {
-    const onChange = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('Network down'))
-      .mockResolvedValue(undefined)
+    const onChange = vi.fn().mockRejectedValueOnce(new Error('Network down')).mockResolvedValue(undefined)
     render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
     const amount = screen.getByLabelText(/Milestone amount/)
     fireEvent.change(amount, { target: { value: '250000' } })
@@ -84,7 +79,12 @@ describe('MilestonesSetting', () => {
     let failFirst: (e: Error) => void = () => {}
     const onChange = vi
       .fn()
-      .mockImplementationOnce(() => new Promise<void>((_, reject) => { failFirst = reject }))
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_, reject) => {
+            failFirst = reject
+          }),
+      )
       .mockResolvedValue(undefined)
     render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
     const amount = screen.getByLabelText(/Milestone amount/)
@@ -190,7 +190,9 @@ describe('MilestonesSetting', () => {
       fireEvent.change(input, { target: { value: '99999999999999' } })
       fireEvent.blur(input)
 
-      expect(onChange).toHaveBeenCalledWith({ milestones: [{ amountCents: MILESTONE_MAX_CENTS, label: 'House deposit' }] })
+      expect(onChange).toHaveBeenCalledWith({
+        milestones: [{ amountCents: MILESTONE_MAX_CENTS, label: 'House deposit' }],
+      })
     })
   })
 

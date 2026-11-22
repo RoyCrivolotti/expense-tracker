@@ -10,8 +10,8 @@ export function NoExpenseAccessScreen({ email }: { email: string }) {
     <div className={styles.center}>
       <h1 className={styles.title}>No expense tracker access</h1>
       <p className={styles.body}>
-        Signed in as <strong>{email}</strong>. Your account does not include the expense tracker.
-        Other private resources may still be available from the admin hub.
+        Signed in as <strong>{email}</strong>. Your account does not include the expense tracker. Other private
+        resources may still be available from the admin hub.
       </p>
       <p className={styles.body}>
         <a className={styles.backLink} href={hubUrl}>

@@ -61,7 +61,12 @@ export interface FactsRow {
 }
 
 /** One row of `EVENT_OF_RECOMMENDATION_SQL`. */
-export type EventRow = { template_id: string | null; slots: string | null; last4: string | null; known: string | null } & {
+export type EventRow = {
+  template_id: string | null
+  slots: string | null
+  last4: string | null
+  known: string | null
+} & {
   [K in keyof FactsRow]: FactsRow[K] | null
 }
 
@@ -88,11 +93,33 @@ export function toFacts(row: FactsRow): TemplateFacts {
 }
 
 /** The values of `VOTE_MERCHANT_SQL`, in order. */
-export function voteParams(owner: string, recId: string, v: MerchantVote, at: string): Array<string | number | null> {
+export function voteParams(
+  owner: string,
+  recId: string,
+  v: MerchantVote,
+  at: string,
+): Array<string | number | null> {
   return [owner, recId, v.key, v.amountCents, v.description, v.categoryId, v.type, v.accountId, at]
 }
 
 /** The values of `LEARN_DECISION_SQL`, in order. */
-export function learnParams(owner: string, recId: string, templateId: string, f: TemplateFacts): Array<string | number | null> {
-  return [owner, templateId, f.accepts, f.dismissals, f.dismissStreak, f.amountSlot, f.amountMark, f.type, f.accountId, f.ignoredAt, recId]
+export function learnParams(
+  owner: string,
+  recId: string,
+  templateId: string,
+  f: TemplateFacts,
+): Array<string | number | null> {
+  return [
+    owner,
+    templateId,
+    f.accepts,
+    f.dismissals,
+    f.dismissStreak,
+    f.amountSlot,
+    f.amountMark,
+    f.type,
+    f.accountId,
+    f.ignoredAt,
+    recId,
+  ]
 }

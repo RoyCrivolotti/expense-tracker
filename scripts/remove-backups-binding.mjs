@@ -7,7 +7,10 @@ const TOKEN = resolveCloudflareToken()
 const PAGES_PROJECT = 'expense-tracker'
 const DB_ID = '3dcefc85-e172-4fd0-a623-f2f15120c9d9'
 
-async function cf(path, init = {}) {
+async function cf(
+  path,
+  init = {},
+) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...init,
     headers: {

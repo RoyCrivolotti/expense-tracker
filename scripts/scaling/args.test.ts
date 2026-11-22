@@ -4,8 +4,26 @@ import { parseArgs } from './args'
 
 describe('the command line', () => {
   it('reads a command and its flags', () => {
-    expect(parseArgs(['seed', '--database', 'roy-expenses-dev', '--write', '--confirm', 'roy-expenses-dev', '--snapshot', 'a.json', '--transactions', '600'])).toMatchObject({
-      command: 'seed', database: 'roy-expenses-dev', write: true, confirm: 'roy-expenses-dev', snapshot: 'a.json', transactions: 600,
+    expect(
+      parseArgs([
+        'seed',
+        '--database',
+        'roy-expenses-dev',
+        '--write',
+        '--confirm',
+        'roy-expenses-dev',
+        '--snapshot',
+        'a.json',
+        '--transactions',
+        '600',
+      ]),
+    ).toMatchObject({
+      command: 'seed',
+      database: 'roy-expenses-dev',
+      write: true,
+      confirm: 'roy-expenses-dev',
+      snapshot: 'a.json',
+      transactions: 600,
     })
   })
 
@@ -14,7 +32,10 @@ describe('the command line', () => {
   })
 
   it('takes what the maintainer read off the dashboard', () => {
-    expect(parseArgs(['measure', '--account-written-today', '1200', '--account-read-today', '5000'])).toMatchObject({ accountWrittenToday: 1200, accountReadToday: 5000 })
+    expect(parseArgs(['measure', '--account-written-today', '1200', '--account-read-today', '5000'])).toMatchObject({
+      accountWrittenToday: 1200,
+      accountReadToday: 5000,
+    })
   })
 
   it('takes files for compare', () => {

@@ -13,7 +13,14 @@ import type { ExpenseDataset, Transaction } from '../../src/domain/types'
 import { randomLedger } from '../../src/testing/randomLedger'
 import { CAT, VISA } from '../../src/testing/syntheticReference'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
-import { OTHER_OWNER, OWNER, awkwardLedger, queryDb, shifted, type QueryDb } from '../../src/testing/transactionQueryKit'
+import {
+  OTHER_OWNER,
+  OWNER,
+  awkwardLedger,
+  queryDb,
+  shifted,
+  type QueryDb,
+} from '../../src/testing/transactionQueryKit'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { toStoredTxn, type TxnRow } from './rows'
 import { COLUMNS, LABEL_IDS_SQL, STATUS_JOINS, STATUS_SQL } from './transactionQuerySql'
@@ -36,8 +43,15 @@ interface OldRow extends TxnRow {
   receipts: number
 }
 
-async function oldRead(kit: QueryDb, range: { from: string; to: string }, maxRows: number): Promise<MonthRowsRead | null> {
-  const { results } = await kit.d1.prepare(OLD_SQL).bind(OWNER, range.from, range.to, maxRows + 1).all<OldRow>()
+async function oldRead(
+  kit: QueryDb,
+  range: { from: string; to: string },
+  maxRows: number,
+): Promise<MonthRowsRead | null> {
+  const { results } = await kit.d1
+    .prepare(OLD_SQL)
+    .bind(OWNER, range.from, range.to, maxRows + 1)
+    .all<OldRow>()
   const rows = results ?? []
   if (rows.length > maxRows) return null
   const attachmentCounts: Record<number, number> = {}
@@ -98,7 +112,10 @@ const ledgers: Array<[string, ExpenseDataset]> = [
   ...Array.from({ length: 30 }, (_, seed): [string, ExpenseDataset] => [`orphaned ${seed}`, orphanedLedger(seed)]),
 ]
 
-const hasOrphan = (d: ExpenseDataset, test: (t: Transaction) => boolean = () => true): boolean => {
+const hasOrphan = (
+  d: ExpenseDataset,
+  test: (t: Transaction) => boolean = () => true,
+): boolean => {
   const known = new Set(d.accounts.map((a) => a.id))
   return d.transactions.some((t) => !known.has(t.accountId) && test(t))
 }
@@ -148,16 +165,32 @@ describe('the rows of a range of months, against the statement they replaced', (
     expect(ledgers.some(([, d]) => hasOrphan(d, (t) => t.cancelled))).toBe(true)
     expect(ledgers.some(([, d]) => d.transactions.some((t) => (t.labelIds?.length ?? 0) > 1))).toBe(true)
     expect(ledgers.some(([, d]) => d.attachments.length > 0)).toBe(true)
-    const tied = ledgers.filter(([name]) => name.startsWith('tied')).map(([, d]) => Map.groupBy(d.transactions, (t) => t.date))
-    expect(tied.some((byDate) => [...byDate.values()].some((rows) => new Set(rows.map((t) => t.budgetMonth)).size > 1))).toBe(true)
+    const tied = ledgers
+      .filter(([name]) => name.startsWith('tied'))
+      .map(([, d]) => Map.groupBy(d.transactions, (t) => t.date))
+    expect(
+      tied.some((byDate) => [...byDate.values()].some((rows) => new Set(rows.map((t) => t.budgetMonth)).size > 1)),
+    ).toBe(true)
   })
 })
 
 describe('another owner’s accounts and statements', () => {
   const MONTH = '2030-01'
-  const cross = (id: number, accountId: number): Transaction => ({
-    id, date: `${MONTH}-10`, budgetMonth: MONTH, description: 'Cross owner', accountId, categoryId: CAT.other,
-    type: 'expense', amountCents: 1_000, cancelled: false, status: 'forecast', labelIds: [],
+  const cross = (
+    id: number,
+    accountId: number,
+  ): Transaction => ({
+    id,
+    date: `${MONTH}-10`,
+    budgetMonth: MONTH,
+    description: 'Cross owner',
+    accountId,
+    categoryId: CAT.other,
+    type: 'expense',
+    amountCents: 1_000,
+    cancelled: false,
+    status: 'forecast',
+    labelIds: [],
   })
 
   it('never reach the status of a row, as the join on the owner kept them out before', async () => {
@@ -166,11 +199,16 @@ describe('another owner’s accounts and statements', () => {
     const mine = { ...base, transactions: [...base.transactions, cross(900_001, VISA), cross(900_002, theirCard)] }
     const kit = queryDb(mine, [{ owner: OTHER_OWNER, dataset: base }])
     // They have paid this month for the card id this owner also has; this owner has not.
-    kit.sqlite.prepare('INSERT INTO account_statements (owner, account_id, year_month, paid) VALUES (?, ?, ?, 1)').run(OTHER_OWNER, VISA, MONTH)
+    kit.sqlite
+      .prepare('INSERT INTO account_statements (owner, account_id, year_month, paid) VALUES (?, ?, ?, 1)')
+      .run(OTHER_OWNER, VISA, MONTH)
     const range = { from: MONTH, to: MONTH }
     const now = await createD1ExpenseRepository({ DB: kit.d1 }).readMonthRows(OWNER, range, EVERY_ROW)
     const old = await oldRead(kit, range, EVERY_ROW)
-    const statusOf = (read: MonthRowsRead | null, id: number) => read?.transactions.find((t) => t.id === id)?.status
+    const statusOf = (
+      read: MonthRowsRead | null,
+      id: number,
+    ) => read?.transactions.find((t) => t.id === id)?.status
     expect([statusOf(now, 900_001), statusOf(now, 900_002)]).toEqual(['forecast', 'posted'])
     expect(JSON.stringify(now) === JSON.stringify(old)).toBe(true)
   })

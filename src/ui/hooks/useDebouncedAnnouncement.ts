@@ -10,7 +10,10 @@ import { useEffect, useState } from 'react'
  * Starts empty and stays empty until the first change, so the region is present
  * and silent on load rather than reading the count at every mount.
  */
-export function useDebouncedAnnouncement(message: string, delayMs = 700): string {
+export function useDebouncedAnnouncement(
+  message: string,
+  delayMs = 700,
+): string {
   const [announced, setAnnounced] = useState('')
   const [previous, setPrevious] = useState(message)
 

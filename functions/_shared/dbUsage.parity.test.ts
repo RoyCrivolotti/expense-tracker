@@ -14,7 +14,12 @@ import { inMemoryExpenseRepository } from '../../src/testing/inMemoryExpenseRepo
 import { randomLedger } from '../../src/testing/randomLedger'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
 import { OTHER_OWNER, OWNER, awkwardLedger, queryDb } from '../../src/testing/transactionQueryKit'
-import { syntheticAccounts, syntheticCategories, syntheticFlags, syntheticLabels } from '../../src/testing/syntheticReference'
+import {
+  syntheticAccounts,
+  syntheticCategories,
+  syntheticFlags,
+  syntheticLabels,
+} from '../../src/testing/syntheticReference'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { loadDataset } from './db'
 
@@ -40,7 +45,11 @@ describe('the counts the SQL serves equal the dataset’s', () => {
   }, 60_000)
 
   it('on the adversarial ledger, a large regular one and the paged-read ledger', async () => {
-    for (const ledger of [adversarialLedger(), syntheticLedger({ months: 36, perMonth: 25, seed: 4 }), awkwardLedger()]) {
+    for (const ledger of [
+      adversarialLedger(),
+      syntheticLedger({ months: 36, perMonth: 25, seed: 4 }),
+      awkwardLedger(),
+    ]) {
       const { dataset, usage } = await served(ledger)
       expect(usage).toEqual(usageFromDataset(dataset))
       expect(usage.categories.some((c) => c.transactions > 0 && c.plans > 0)).toBe(true)
@@ -52,19 +61,30 @@ describe('the counts the SQL serves equal the dataset’s', () => {
       const { kit, usage } = await served(ledger)
       const loaded = await loadDataset({ DB: kit.d1 }, OWNER)
       // The in-memory repository keeps label links apart from the rows.
-      const transactionLabels = loaded.transactions.flatMap((t) => (t.labelIds ?? []).map((labelId) => ({ transactionId: t.id, labelId })))
+      const transactionLabels = loaded.transactions.flatMap((t) =>
+        (t.labelIds ?? []).map((labelId) => ({ transactionId: t.id, labelId })),
+      )
       const memory = inMemoryExpenseRepository({ ...loaded, transactionLabels }, OWNER)
       expect(await memory.readUsage(OWNER)).toEqual(usage)
     }
   })
 
   it('and lists every record, with zero where nothing names it, in ascending order of id', async () => {
-    const empty = makeDataset({ categories: syntheticCategories(), accounts: syntheticAccounts(), flags: syntheticFlags(), labels: syntheticLabels() })
+    const empty = makeDataset({
+      categories: syntheticCategories(),
+      accounts: syntheticAccounts(),
+      flags: syntheticFlags(),
+      labels: syntheticLabels(),
+    })
     const { usage } = await served(empty)
     expect(usage.categories).toHaveLength(syntheticCategories().length)
     expect(usage.categories.every((c) => c.transactions === 0 && c.plans === 0)).toBe(true)
     expect(usage.accounts.every((a) => a.transactions === 0 && a.plans === 0 && a.statements === 0)).toBe(true)
-    expect(usage.flags.map((f) => f.id)).toEqual(syntheticFlags().map((f) => f.id).sort((a, b) => a - b))
+    expect(usage.flags.map((f) => f.id)).toEqual(
+      syntheticFlags()
+        .map((f) => f.id)
+        .sort((a, b) => a - b),
+    )
     for (const list of [usage.categories, usage.accounts, usage.flags, usage.labels]) {
       expect(list.map((r) => r.id)).toEqual(list.map((r) => r.id).sort((a, b) => a - b))
     }
@@ -76,15 +96,24 @@ describe('the counts the Settings lists show today', () => {
     for (const ledger of [randomLedger(2), randomLedger(21), adversarialLedger()]) {
       const { dataset, usage } = await served(ledger)
       for (const c of usage.categories) expect(c.transactions + c.plans).toBe(heldCount(dataset, 'category', c.id))
-      for (const a of usage.accounts) expect(a.transactions + a.plans + a.statements).toBe(heldCount(dataset, 'account', a.id))
+      for (const a of usage.accounts)
+        expect(a.transactions + a.plans + a.statements).toBe(heldCount(dataset, 'account', a.id))
       for (const f of usage.flags) expect(f.transactions).toBe(heldCount(dataset, 'flag', f.id))
       for (const l of usage.labels) expect(l.transactions).toBe(heldCount(dataset, 'label', l.id))
     }
   })
 
   it('count a cancelled row, which the lists do too', async () => {
-    const cancelled = makeTransaction({ id: 1, categoryId: 1, accountId: 1, cancelled: true, createdAt: '2025-01-01T00:00:00Z' })
-    const { usage } = await served(makeDataset({ categories: syntheticCategories(), accounts: syntheticAccounts(), transactions: [cancelled] }))
+    const cancelled = makeTransaction({
+      id: 1,
+      categoryId: 1,
+      accountId: 1,
+      cancelled: true,
+      createdAt: '2025-01-01T00:00:00Z',
+    })
+    const { usage } = await served(
+      makeDataset({ categories: syntheticCategories(), accounts: syntheticAccounts(), transactions: [cancelled] }),
+    )
     expect(usage.categories.find((c) => c.id === 1)?.transactions).toBe(1)
     expect(usage.accounts.find((a) => a.id === 1)?.transactions).toBe(1)
   })
@@ -95,12 +124,23 @@ describe('delete against reassign', () => {
     let checked = { unused: 0, used: 0 }
     for (const ledger of [randomLedger(5), randomLedger(17), randomLedger(33)]) {
       const probe = await served(ledger)
-      const ofCategories = probe.usage.categories.map((c) => ({ kind: 'category' as const, id: c.id, used: c.transactions + c.plans > 0 }))
-      const ofAccounts = probe.usage.accounts.map((a) => ({ kind: 'account' as const, id: a.id, used: a.transactions + a.plans + a.statements > 0 }))
-      const sample = [...ofCategories, ...ofAccounts].filter((r, _i, all) => all.filter((x) => x.kind === r.kind && x.used === r.used).indexOf(r) < 2)
+      const ofCategories = probe.usage.categories.map((c) => ({
+        kind: 'category' as const,
+        id: c.id,
+        used: c.transactions + c.plans > 0,
+      }))
+      const ofAccounts = probe.usage.accounts.map((a) => ({
+        kind: 'account' as const,
+        id: a.id,
+        used: a.transactions + a.plans + a.statements > 0,
+      }))
+      const sample = [...ofCategories, ...ofAccounts].filter(
+        (r, _i, all) => all.filter((x) => x.kind === r.kind && x.used === r.used).indexOf(r) < 2,
+      )
       for (const record of sample) {
         const { repo } = await served(ledger)
-        const attempt = record.kind === 'category' ? repo.deleteCategory!(OWNER, record.id) : repo.deleteAccount!(OWNER, record.id)
+        const attempt =
+          record.kind === 'category' ? repo.deleteCategory!(OWNER, record.id) : repo.deleteAccount!(OWNER, record.id)
         if (record.used) {
           await expect(attempt).rejects.toMatchObject({ status: 409 })
           checked = { ...checked, used: checked.used + 1 }
@@ -122,22 +162,46 @@ describe('whose rows are counted', () => {
       accounts: syntheticAccounts(),
       flags: syntheticFlags(),
       labels: syntheticLabels(),
-      transactions: [makeTransaction({ id: 1, categoryId: 1, accountId: 1, createdAt: '2025-01-01T00:00:00Z', labelIds: [1], flagId: 1 })],
+      transactions: [
+        makeTransaction({
+          id: 1,
+          categoryId: 1,
+          accountId: 1,
+          createdAt: '2025-01-01T00:00:00Z',
+          labelIds: [1],
+          flagId: 1,
+        }),
+      ],
     })
     const theirs = makeDataset({
       categories: syntheticCategories(),
       accounts: syntheticAccounts(),
-      transactions: [2, 3, 4].map((id) => makeTransaction({ id, categoryId: 1, accountId: 1, createdAt: '2025-01-01T00:00:00Z', labelIds: [1], flagId: 1 })),
+      transactions: [2, 3, 4].map((id) =>
+        makeTransaction({
+          id,
+          categoryId: 1,
+          accountId: 1,
+          createdAt: '2025-01-01T00:00:00Z',
+          labelIds: [1],
+          flagId: 1,
+        }),
+      ),
     })
     const kit = queryDb(mine, [{ owner: OTHER_OWNER, dataset: theirs }])
     // Their rows are given this owner's own ids to name, which the API never allows but a test can.
-    kit.sqlite.exec(`UPDATE transactions SET category_id = 1, account_id = 1, flag_id = 1 WHERE owner = '${OTHER_OWNER}'`)
-    kit.sqlite.exec(`INSERT INTO transaction_labels (transaction_id, label_id) SELECT id, 1 FROM transactions WHERE owner = '${OTHER_OWNER}'`)
+    kit.sqlite.exec(
+      `UPDATE transactions SET category_id = 1, account_id = 1, flag_id = 1 WHERE owner = '${OTHER_OWNER}'`,
+    )
+    kit.sqlite.exec(
+      `INSERT INTO transaction_labels (transaction_id, label_id) SELECT id, 1 FROM transactions WHERE owner = '${OTHER_OWNER}'`,
+    )
     kit.sqlite.exec(
       `INSERT INTO installment_plans (id, owner, description, total_count, amount_cents, account_id, category_id, type, anchor_budget_month, start_installment_index, active)
        VALUES (900, '${OTHER_OWNER}', 'Their sofa', 3, 100, 1, 1, 'expense', '2026-01', 1, 1)`,
     )
-    kit.sqlite.exec(`INSERT INTO account_statements (owner, account_id, year_month, paid) VALUES ('${OTHER_OWNER}', 1, '2026-01', 1)`)
+    kit.sqlite.exec(
+      `INSERT INTO account_statements (owner, account_id, year_month, paid) VALUES ('${OTHER_OWNER}', 1, '2026-01', 1)`,
+    )
     const repo = createD1ExpenseRepository({ DB: kit.d1 })
     const usage = await repo.readUsage(OWNER)
     expect(usage.categories.find((c) => c.id === 1)).toEqual({ id: 1, transactions: 1, plans: 0 })

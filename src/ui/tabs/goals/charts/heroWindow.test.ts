@@ -5,8 +5,23 @@ import type { ChartSeries } from '../../../charts/LinearChart'
 const years = [0, 1, 2, 3, 4, 5, 6]
 const series: ChartSeries[] = [
   { id: 'line', color: '#000', values: [0, 1, 2, 3, 4, 5, 6] },
-  { id: 'band', color: '#000', values: [], kind: 'band', band: { lo: [0, 1, 2, 3, 4, 5, 6], hi: [1, 2, 3, 4, 5, 6, 7] } },
-  { id: 'dots', color: '#000', values: [], kind: 'scatter', points: [{ xIndex: 1.5, value: 1 }, { xIndex: 5.5, value: 5 }] },
+  {
+    id: 'band',
+    color: '#000',
+    values: [],
+    kind: 'band',
+    band: { lo: [0, 1, 2, 3, 4, 5, 6], hi: [1, 2, 3, 4, 5, 6, 7] },
+  },
+  {
+    id: 'dots',
+    color: '#000',
+    values: [],
+    kind: 'scatter',
+    points: [
+      { xIndex: 1.5, value: 1 },
+      { xIndex: 5.5, value: 5 },
+    ],
+  },
 ]
 
 describe('clipToWindow', () => {
@@ -45,7 +60,12 @@ describe('clipToWindow through a step', () => {
       color: '#000',
       values: [],
       kind: 'band',
-      band: { lo: [0, 1, 2, 3, 4, 5, 6], hi: [1, 2, 3, 4, 5, 6, 7], loPre: [0, 1, 2, 8, 4, 5, 6], hiPre: [1, 2, 3, 10, 5, 6, 7] },
+      band: {
+        lo: [0, 1, 2, 3, 4, 5, 6],
+        hi: [1, 2, 3, 4, 5, 6, 7],
+        loPre: [0, 1, 2, 8, 4, 5, 6],
+        hiPre: [1, 2, 3, 10, 5, 6, 7],
+      },
     },
   ]
 

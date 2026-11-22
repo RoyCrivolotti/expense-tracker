@@ -9,13 +9,7 @@
  * row's `settled_by` is a lookup in the same table, so it sits beside them in `PAYMENT_SQL`.
  */
 import type { MonthRange } from '../domain/data/ledgerParts'
-import {
-  COLUMNS,
-  LABEL_IDS_SQL,
-  STATUS_JOINS,
-  STATUS_SQL,
-  type Sql,
-} from './transactionQuerySql'
+import { COLUMNS, LABEL_IDS_SQL, STATUS_JOINS, STATUS_SQL, type Sql } from './transactionQuerySql'
 
 /**
  * Must stay the predicate of `idx_txn_pinned` (migration 0037), word for word, or SQLite stops reading
@@ -72,7 +66,11 @@ export function paymentsSql(owner: string): Sql {
  * months in the order the API returns rows and derives each status from {@link accountsSql} and
  * {@link paidStatementsSql}, which is why this statement selects no `status`.
  */
-export function monthRowsSql(owner: string, range: MonthRange, maxRows: number): Sql {
+export function monthRowsSql(
+  owner: string,
+  range: MonthRange,
+  maxRows: number,
+): Sql {
   return {
     sql: `SELECT ${COLUMNS}, ${LABEL_IDS_SQL} AS label_ids, ${RECEIPTS_SQL} AS receipts
       FROM transactions t
@@ -93,7 +91,10 @@ export function accountsSql(owner: string): Sql {
  * the key `(owner, account_id, year_month)`, so the unpaid statements of the range are visited too. Listing the
  * owner's accounts first lets SQLite seek the months inside each account's statements and not walk all of them.
  */
-export function paidStatementsSql(owner: string, range: MonthRange): Sql {
+export function paidStatementsSql(
+  owner: string,
+  range: MonthRange,
+): Sql {
   return {
     sql: `SELECT * FROM account_statements
       WHERE owner = ? AND paid = 1 AND year_month >= ? AND year_month <= ?
@@ -107,7 +108,11 @@ export function paidStatementsSql(owner: string, range: MonthRange): Sql {
  * range, in the order `buildCells` returns them. `maxCells + 1` groups at most, so the caller can tell
  * the range holds too many.
  */
-export function cubeSql(owner: string, range: MonthRange, maxCells: number): Sql {
+export function cubeSql(
+  owner: string,
+  range: MonthRange,
+  maxCells: number,
+): Sql {
   return {
     sql: `SELECT t.budget_month, t.account_id, t.category_id, t.type, t.cancelled,
         CASE WHEN t.amount_cents > 0 THEN 1 WHEN t.amount_cents < 0 THEN -1 ELSE 0 END AS sign,

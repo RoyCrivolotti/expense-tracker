@@ -78,11 +78,26 @@ export function captureEndpointOf(setting: string | undefined): string | null {
   }
 }
 
-const total = (rows: readonly CaptureCounter[], field: 'received' | 'unrecognised' | 'malformed') => rows.reduce((n, c) => n + c[field], 0)
+const total = (
+  rows: readonly CaptureCounter[],
+  field: 'received' | 'unrecognised' | 'malformed',
+) => rows.reduce((n, c) => n + c[field], 0)
 
-const NO_OUTCOMES: Omit<SourceOutcomes, 'source'> = { recommended: 0, grouped: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0 }
+const NO_OUTCOMES: Omit<SourceOutcomes, 'source'> = {
+  recommended: 0,
+  grouped: 0,
+  addedAsIs: 0,
+  edited: 0,
+  linked: 0,
+  dismissed: 0,
+  open: 0,
+}
 
-function diagnosticsOf(counters: readonly CaptureCounter[], outcomes: SourceOutcomes | undefined, muted: MutedCount | undefined): SourceDiagnostics {
+function diagnosticsOf(
+  counters: readonly CaptureCounter[],
+  outcomes: SourceOutcomes | undefined,
+  muted: MutedCount | undefined,
+): SourceDiagnostics {
   const { recommended, grouped, addedAsIs, edited, linked, dismissed, open } = outcomes ?? NO_OUTCOMES
   return {
     received: total(counters, 'received'),
@@ -139,5 +154,10 @@ export async function captureStatus(
     counters.filter((c) => c.day >= weekFrom),
     'malformed',
   )
-  return { sources, malformed, endpoint: captureEndpointOf(setting), shortcutUrl: captureShortcutUrlOf(shortcutSetting) }
+  return {
+    sources,
+    malformed,
+    endpoint: captureEndpointOf(setting),
+    shortcutUrl: captureShortcutUrlOf(shortcutSetting),
+  }
 }

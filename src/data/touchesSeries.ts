@@ -12,7 +12,10 @@ export function reshapesSeries(patch: object): boolean {
 }
 
 /** Whether a row, edited from `was` to `now`, could be a different row to a series. */
-function reshaped(was: Transaction, now: Transaction): boolean {
+function reshaped(
+  was: Transaction,
+  now: Transaction,
+): boolean {
   if (!countsAsOccurrence(was) && !countsAsOccurrence(now)) return false
   return countsAsOccurrence(was) !== countsAsOccurrence(now) || FIELDS.some((field) => was[field] !== now[field])
 }
@@ -24,7 +27,10 @@ function reshaped(was: Transaction, now: Transaction): boolean {
  * series out from every row, so a read costs a row per transaction: it is made for a write that could have
  * changed them and not for one that could not.
  */
-export function touchesSeries(before: readonly Transaction[], after: readonly Transaction[]): boolean {
+export function touchesSeries(
+  before: readonly Transaction[],
+  after: readonly Transaction[],
+): boolean {
   const was = new Map(before.map((row) => [row.id, row]))
   for (const row of after) {
     const old = was.get(row.id)

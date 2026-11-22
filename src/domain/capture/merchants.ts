@@ -56,7 +56,10 @@ export interface SavedForMerchant {
  * the saved price, so a merchant whose one name stands for several fixed prices can tell them apart. None when the
  * text is not a merchant (`merchantKeyOf`) or the description is empty or longer than the table keeps.
  */
-export function merchantVotes(merchantRaw: string | null, saved: SavedForMerchant): MerchantVote[] {
+export function merchantVotes(
+  merchantRaw: string | null,
+  saved: SavedForMerchant,
+): MerchantVote[] {
   const key = merchantKeyOf(merchantRaw)
   const description = saved.description.trim()
   if (key === null || description === '' || description.length > MAX_MERCHANT_DESCRIPTION) return []

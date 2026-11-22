@@ -21,9 +21,7 @@ describe('buildInstallmentIntent', () => {
   })
 
   it('builds a new-plan intent from valid fields', () => {
-    const result = buildInstallmentIntent(
-      draft({ mode: 'new', totalCount: '24', installmentIndex: '8' }),
-    )
+    const result = buildInstallmentIntent(draft({ mode: 'new', totalCount: '24', installmentIndex: '8' }))
     expect(result).toEqual({
       ok: true,
       intent: { kind: 'new', totalCount: 24, installmentIndex: 8, splitTotal: undefined },
@@ -48,21 +46,13 @@ describe('buildInstallmentIntent', () => {
   })
 
   it('rejects a non-integer or sub-1 total', () => {
-    expect(buildInstallmentIntent(draft({ mode: 'new', totalCount: '0', installmentIndex: '1' })).ok).toBe(
-      false,
-    )
-    expect(
-      buildInstallmentIntent(draft({ mode: 'new', totalCount: '2.5', installmentIndex: '1' })).ok,
-    ).toBe(false)
+    expect(buildInstallmentIntent(draft({ mode: 'new', totalCount: '0', installmentIndex: '1' })).ok).toBe(false)
+    expect(buildInstallmentIntent(draft({ mode: 'new', totalCount: '2.5', installmentIndex: '1' })).ok).toBe(false)
   })
 
   it('rejects an index outside 1..total', () => {
-    expect(
-      buildInstallmentIntent(draft({ mode: 'new', totalCount: '12', installmentIndex: '13' })).ok,
-    ).toBe(false)
-    expect(
-      buildInstallmentIntent(draft({ mode: 'new', totalCount: '12', installmentIndex: '0' })).ok,
-    ).toBe(false)
+    expect(buildInstallmentIntent(draft({ mode: 'new', totalCount: '12', installmentIndex: '13' })).ok).toBe(false)
+    expect(buildInstallmentIntent(draft({ mode: 'new', totalCount: '12', installmentIndex: '0' })).ok).toBe(false)
   })
 
   it('rejects an existing-plan intent with no plan selected', () => {

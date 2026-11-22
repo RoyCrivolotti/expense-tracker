@@ -52,7 +52,10 @@ function Host({ model, actions }: { model: ExpenseModel; actions?: ExpenseAction
 }
 
 /** `actions` null is a read-only session, which has none. */
-function renderGoals(model: ExpenseModel, actions: ExpenseActions | null = makeActions()) {
+function renderGoals(
+  model: ExpenseModel,
+  actions: ExpenseActions | null = makeActions(),
+) {
   return render(
     <LeaveGuardProvider>
       <Host model={model} actions={actions ?? undefined} />
@@ -65,7 +68,10 @@ const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
 const twoScenarios = () => buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
 
 /** Renames the open scenario from its menu: an edit to a saved scenario, not yet saved. */
-async function rename(user: ReturnType<typeof userEvent.setup>, name: string) {
+async function rename(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
   await user.click(screen.getByRole('button', { name: 'Scenario options' }))
   fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: name } })
   await user.keyboard('{Escape}')

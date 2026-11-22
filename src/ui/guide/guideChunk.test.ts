@@ -20,7 +20,9 @@ describe('the guide stays out of the code that loads with the app', () => {
   })
 
   it('has its text imported by the sheet alone: any other importer pulls the whole guide into the main chunk', () => {
-    const importers = all.filter((f) => !/\.test\.tsx?$/.test(f.path) && /from '[./]*(?:\.\.\/)*guide\/gettingStarted'/.test(f.text)).map((f) => f.path)
+    const importers = all
+      .filter((f) => !/\.test\.tsx?$/.test(f.path) && /from '[./]*(?:\.\.\/)*guide\/gettingStarted'/.test(f.text))
+      .map((f) => f.path)
     expect(importers).toEqual([join('src', 'ui', 'guide', 'GuideSheet.tsx')])
   })
 })

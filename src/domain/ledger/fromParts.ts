@@ -19,7 +19,10 @@ export interface LedgerFromParts {
   attachmentCounts: AttachmentCounts
 }
 
-const within = (month: string, range: { from: string; to: string }): boolean => month >= range.from && month <= range.to
+const within = (
+  month: string,
+  range: { from: string; to: string },
+): boolean => month >= range.from && month <= range.to
 
 /**
  * Puts the parts the server hands out together into a ledger, with the shape `buildLedger` makes from a

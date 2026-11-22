@@ -29,9 +29,7 @@ describe('differsFrom', () => {
     expect(differsFrom({ ...draft, name: 'Renamed' }, saved)).toBe(true)
     expect(differsFrom({ ...draft, monthlyContributionCents: draft.monthlyContributionCents + 1 }, saved)).toBe(true)
     expect(differsFrom({ ...draft, color: '#000000' }, saved)).toBe(true)
-    expect(
-      differsFrom({ ...draft, lifeEvents: [{ year: 3, amountCents: 1, label: 'Windfall' }] }, saved),
-    ).toBe(true)
+    expect(differsFrom({ ...draft, lifeEvents: [{ year: 3, amountCents: 1, label: 'Windfall' }] }, saved)).toBe(true)
   })
 })
 
@@ -85,7 +83,12 @@ describe('editedKeys and editedPatch', () => {
     void _omitted
 
     expect(differsFrom(scenarioToDraft(saved), cached as typeof saved)).toBe(false)
-    expect(differsFrom({ ...scenarioToDraft(saved), contributionSchedule: [{ from: '2028-03', monthlyCents: 1 }] }, cached as typeof saved)).toBe(true)
+    expect(
+      differsFrom(
+        { ...scenarioToDraft(saved), contributionSchedule: [{ from: '2028-03', monthlyCents: 1 }] },
+        cached as typeof saved,
+      ),
+    ).toBe(true)
   })
 
   it('are empty for a draft straight from its scenario', () => {

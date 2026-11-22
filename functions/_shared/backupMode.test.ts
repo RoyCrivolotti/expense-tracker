@@ -23,7 +23,12 @@ import {
 import type { Env } from './env'
 
 const OWNER = 'a@b.com'
-const policy: BackupPolicy = { retentionDays: 14, maxBucketBytes: 512 * 1024 * 1024, maxSnapshotBytes: 5 * 1024 * 1024, bucketAlertThresholdFraction: 0.8 }
+const policy: BackupPolicy = {
+  retentionDays: 14,
+  maxBucketBytes: 512 * 1024 * 1024,
+  maxSnapshotBytes: 5 * 1024 * 1024,
+  bucketAlertThresholdFraction: 0.8,
+}
 const alerts: BackupAlerts = {
   onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
   onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
@@ -36,7 +41,11 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('resolveChunkedBackup', () => {
   it('is off, with the defaults, when nothing is set', () => {
-    expect(resolveChunkedBackup({})).toEqual({ enabled: false, maxOperations: DEFAULT_STEP_OPERATIONS, maxRows: DEFAULT_STEP_ROWS })
+    expect(resolveChunkedBackup({})).toEqual({
+      enabled: false,
+      maxOperations: DEFAULT_STEP_OPERATIONS,
+      maxRows: DEFAULT_STEP_ROWS,
+    })
     expect(DEFAULT_STEP_ROWS).toBe(3_000)
   })
 
@@ -54,7 +63,10 @@ describe('resolveChunkedBackup', () => {
   })
 
   it('takes a budget that is a whole number within the bounds, and ignores one that is not', () => {
-    expect(resolveChunkedBackup({ BACKUP_STEP_MAX_OPERATIONS: '30', BACKUP_STEP_MAX_ROWS: '2500' })).toMatchObject({ maxOperations: 30, maxRows: 2_500 })
+    expect(resolveChunkedBackup({ BACKUP_STEP_MAX_OPERATIONS: '30', BACKUP_STEP_MAX_ROWS: '2500' })).toMatchObject({
+      maxOperations: 30,
+      maxRows: 2_500,
+    })
     for (const bad of ['nope', '-4', '0', String(MIN_STEP_OPERATIONS - 1), String(MAX_STEP_OPERATIONS + 1), '']) {
       expect(resolveChunkedBackup({ BACKUP_STEP_MAX_OPERATIONS: bad }).maxOperations, bad).toBe(DEFAULT_STEP_OPERATIONS)
     }
@@ -72,7 +84,14 @@ function depsWith(chunked: BackupDeps['chunked']) {
   const store = memoryBackupStore()
   const dataset = syntheticLedger({ months: 2, perMonth: 6, seed: 3 })
   const repo = inMemoryExpenseRepository(dataset, OWNER)
-  const deps = { repo, store, alerts, policy, ...(chunked ? { chunked } : {}), readRevision: () => Promise.resolve('r') }
+  const deps = {
+    repo,
+    store,
+    alerts,
+    policy,
+    ...(chunked ? { chunked } : {}),
+    readRevision: () => Promise.resolve('r'),
+  }
   return { store, deps }
 }
 
@@ -104,7 +123,9 @@ describe('runScheduledBackup', () => {
 
     expect(store.objects.has(manifestKey(OWNER, today))).toBe(true)
     expect(keysOf(store).some((k) => k.endsWith('.json') && !k.includes('/' + today + '/'))).toBe(false)
-    expect(line).toMatch(/^backup \(chunked\): 1 owner\(s\) for \d{4}-\d{2}-\d{2}, complete; pruned 0; \d+ bytes stored$/)
+    expect(line).toMatch(
+      /^backup \(chunked\): 1 owner\(s\) for \d{4}-\d{2}-\d{2}, complete; pruned 0; \d+ bytes stored$/,
+    )
   })
 
   it('says when the day continues in the next invocation', async () => {
@@ -138,12 +159,18 @@ describe('the cron worker', () => {
   function bucket() {
     const memory = memoryBackupStore()
     const fake = {
-      put: (key: string, body: string) => memory.put(key, body),
+      put: (
+        key: string,
+        body: string,
+      ) => memory.put(key, body),
       get: async (key: string) => {
         const text = await memory.get(key)
         return text === null ? null : { text: () => Promise.resolve(text) }
       },
-      list: async () => ({ objects: (await memory.list()).map((o) => ({ key: o.key, size: o.size })), truncated: false }),
+      list: async () => ({
+        objects: (await memory.list()).map((o) => ({ key: o.key, size: o.size })),
+        truncated: false,
+      }),
       delete: (keys: string | string[]) => memory.deleteMany!(Array.isArray(keys) ? keys : [keys]),
     }
     return { memory, binding: fake as unknown as R2Bucket }

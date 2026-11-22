@@ -68,7 +68,9 @@ const ledgerOnly = new Set(
   }),
 )
 if (ledgerOnly.size === 0) {
-  console.error('check-bundle-budget: found no ledger-only chunk in dist/assets, so the ledger limit would count nothing')
+  console.error(
+    'check-bundle-budget: found no ledger-only chunk in dist/assets, so the ledger limit would count nothing',
+  )
   process.exit(1)
 }
 
@@ -80,7 +82,9 @@ const captureOnly = new Set(
   }),
 )
 if (captureOnly.size === 0) {
-  console.error('check-bundle-budget: found no capture-only chunk in dist/assets, so the capture limit would count nothing')
+  console.error(
+    'check-bundle-budget: found no capture-only chunk in dist/assets, so the capture limit would count nothing',
+  )
   process.exit(1)
 }
 
@@ -116,7 +120,10 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-const bytes = (n, max) => `${n.toLocaleString('en-US')} of ${max.toLocaleString('en-US')}`
+const bytes = (
+  n,
+  max,
+) => `${n.toLocaleString('en-US')} of ${max.toLocaleString('en-US')}`
 console.log(
   `bundle budget OK (${bytes(total, TOTAL_MAX_GZIP)} bytes gzip without the ledger chunks, ` +
     `ledger-only ${bytes(ledger, LEDGER_MAX_GZIP)}, capture-only ${bytes(capture, CAPTURE_MAX_GZIP)}, Goals-only ${bytes(goals, GOALS_MAX_GZIP)})`,

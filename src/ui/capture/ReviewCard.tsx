@@ -12,7 +12,15 @@ import { ReviewSheet } from './ReviewSheet'
 import { useReviewApi, type ReviewApi } from './useReviewApi'
 import styles from './Review.module.css'
 
-function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (open: boolean) => void; onReview: (view: ReviewView) => void }) {
+function CardBody({
+  review,
+  onSheet,
+  onReview,
+}: {
+  review: ReviewApi
+  onSheet: (open: boolean) => void
+  onReview: (view: ReviewView) => void
+}) {
   const { views, count } = review
   // The shell's own breakpoint: below 768px it is a phone layout.
   const shown = rowsShown(views.length, useIsMobile() ? SHOWN_PHONE : SHOWN_WIDE)
@@ -26,7 +34,10 @@ function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (
           </button>
         ) : null}
       </div>
-      <p className={styles.hint}>From your bank pushes. Nothing is added until you add it. &ldquo;Don&apos;t add&rdquo; only removes that one suggestion.</p>
+      <p className={styles.hint}>
+        From your bank pushes. Nothing is added until you add it. &ldquo;Don&apos;t add&rdquo; only removes that one
+        suggestion.
+      </p>
       {review.error ? (
         <p role="alert" className={styles.error}>
           {review.error}{' '}
@@ -50,7 +61,10 @@ function CardBody({ review, onSheet, onReview }: { review: ReviewApi; onSheet: (
  * The id is looked for in the rows loaded, the newest page, which is where a payment just notified is; with nothing
  * waiting at all the card never mounts and the parameter stays, harmless, until the next load.
  */
-function useLanding(review: ReviewApi, loads: number) {
+function useLanding(
+  review: ReviewApi,
+  loads: number,
+) {
   const landed = useRef(false)
   useEffect(() => {
     if (landed.current || loads === 0) return
@@ -64,7 +78,15 @@ function useLanding(review: ReviewApi, loads: number) {
 }
 
 /** The card at the top of the Dashboard: the payments waiting for a look, the newest few, each with its buttons. */
-export default function ReviewCard({ core, sheet, onSheet }: { core: ReviewCore; sheet: boolean; onSheet: (open: boolean) => void }) {
+export default function ReviewCard({
+  core,
+  sheet,
+  onSheet,
+}: {
+  core: ReviewCore
+  sheet: boolean
+  onSheet: (open: boolean) => void
+}) {
   const review = useReviewApi(core)
   useLanding(review, core.loads)
   const open = (view: ReviewView) => {

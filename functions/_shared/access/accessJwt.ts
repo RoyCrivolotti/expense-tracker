@@ -9,7 +9,10 @@ export interface AccessJwtConfig {
 }
 
 /** The key a token names, or null when the team publishes none by that id. */
-export type KeyForId = (teamDomain: string, keyId: string) => Promise<CryptoKey | null>
+export type KeyForId = (
+  teamDomain: string,
+  keyId: string,
+) => Promise<CryptoKey | null>
 
 /** A token is accepted this long after `exp` and this long before `nbf`, for clocks that disagree a little. */
 const LEEWAY_SECONDS = 60
@@ -22,7 +25,10 @@ function refuse(reason: string): never {
 
 function decodeBase64Url(part: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9_-]*$/.test(part)) refuse('token is not base64url')
-  const padded = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=')
+  const padded = part
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(Math.ceil(part.length / 4) * 4, '=')
   let binary: string
   try {
     binary = atob(padded)
@@ -50,7 +56,11 @@ function audiences(aud: unknown): string[] {
   return Array.isArray(aud) ? aud.filter((a): a is string => typeof a === 'string') : []
 }
 
-function checkClaims(claims: Record<string, unknown>, config: AccessJwtConfig, nowSeconds: number): string {
+function checkClaims(
+  claims: Record<string, unknown>,
+  config: AccessJwtConfig,
+  nowSeconds: number,
+): string {
   if (claims.iss !== `https://${config.teamDomain}`) refuse('wrong issuer')
   if (!audiences(claims.aud).includes(config.audience)) refuse('wrong audience')
   if (typeof claims.exp !== 'number' || claims.exp + LEEWAY_SECONDS < nowSeconds) refuse('token expired')

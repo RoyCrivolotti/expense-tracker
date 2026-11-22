@@ -19,7 +19,9 @@ export function rentVsBuyHeadline(
     case 'rent-takes-over': {
       // The last year buying led is not a run of leading years from the first: the buyer starts behind by the
       // fees and can trail in the opening years, so what is always true is when renting took over for good.
-      const by = last ? `, by ${formatGap(last.rentNetWorthCents - last.buyNetWorthCents)} after ${years(last.year)}` : ''
+      const by = last
+        ? `, by ${formatGap(last.rentNetWorthCents - last.buyNetWorthCents)} after ${years(last.year)}`
+        : ''
       return `Renting overtakes buying ${years(verdict.buyAheadThrough + 1)} after you buy and stays ahead to the end${by}.`
     }
     default:

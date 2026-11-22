@@ -7,10 +7,7 @@ describe('ReceiptViewer', () => {
   it('shows an image at full size', () => {
     render(<ReceiptViewer attachment={makeAttachment({ id: 7, originalName: 'hotel.jpg' })} onClose={vi.fn()} />)
 
-    expect(screen.getByRole('img', { name: 'hotel.jpg' })).toHaveAttribute(
-      'src',
-      '/api/expenses/attachments/7',
-    )
+    expect(screen.getByRole('img', { name: 'hotel.jpg' })).toHaveAttribute('src', '/api/expenses/attachments/7')
   })
 
   it('offers a PDF as a link, and says why it does not render inline', () => {
@@ -23,10 +20,7 @@ describe('ReceiptViewer', () => {
       />,
     )
 
-    expect(screen.getByRole('link', { name: /Open the PDF/ })).toHaveAttribute(
-      'href',
-      '/api/expenses/attachments/9',
-    )
+    expect(screen.getByRole('link', { name: /Open the PDF/ })).toHaveAttribute('href', '/api/expenses/attachments/9')
     expect(screen.getByText(/cannot run scripts in the app/)).toBeInTheDocument()
   })
 

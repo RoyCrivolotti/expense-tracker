@@ -8,7 +8,10 @@ import styles from './analytics.module.css'
 
 interface Props {
   model: ExpenseModel
-  onSetCashActual?: (yearMonth: string, actualCashCents: number | null) => Promise<void>
+  onSetCashActual?: (
+    yearMonth: string,
+    actualCashCents: number | null,
+  ) => Promise<void>
 }
 
 function shortAccountLabel(name: string): string {
@@ -31,10 +34,7 @@ function CashReconRow({
       <td>
         {fullMonthLabel(row.month)}
         {row.reconciled ? (
-          <span
-            className={styles.reconciled}
-            title="Reconciled: all card statements paid and cash entered"
-          >
+          <span className={styles.reconciled} title="Reconciled: all card statements paid and cash entered">
             ✓
           </span>
         ) : null}
@@ -50,16 +50,10 @@ function CashReconRow({
         )
       })}
       <td>{money(row.investmentsCents)}</td>
-      <td className={row.cashMovementCents < 0 ? styles.neg : styles.pos}>
-        {moneyAlways(row.cashMovementCents)}
-      </td>
+      <td className={row.cashMovementCents < 0 ? styles.neg : styles.pos}>{moneyAlways(row.cashMovementCents)}</td>
       <td>{moneyAlways(row.expectedCashCents)}</td>
       <td>
-        <ActualCashCell
-          month={row.month}
-          valueCents={row.actualCashCents}
-          onSave={onSetCashActual}
-        />
+        <ActualCashCell month={row.month} valueCents={row.actualCashCents} onSave={onSetCashActual} />
       </td>
       <td className={gapCellClass(row.carryoverGapCents, styles.over)}>
         {row.carryoverGapCents === null ? '—' : moneyAlways(row.carryoverGapCents)}
@@ -70,9 +64,7 @@ function CashReconRow({
       <td className={gapCellClass(row.gapCents, styles.over)}>
         {row.gapCents === null ? '—' : moneyAlways(row.gapCents)}
       </td>
-      <td className={row.unpaidLiabilityCents !== 0 ? styles.warn : undefined}>
-        {money(row.unpaidLiabilityCents)}
-      </td>
+      <td className={row.unpaidLiabilityCents !== 0 ? styles.warn : undefined}>{money(row.unpaidLiabilityCents)}</td>
     </tr>
   )
 }
@@ -104,12 +96,7 @@ export function CashReconciliationTable({ model, onSetCashActual }: Props) {
   const summed = sumsOf(model).transactions
   const cards = dataset.accounts.filter((a) => a.settlement === 'deferred')
   const cardIds = cards.map((c) => c.id)
-  const rows = computeCashReconciliation(
-    summed,
-    dataset.accounts,
-    dataset.settings,
-    dataset.cashActuals,
-  )
+  const rows = computeCashReconciliation(summed, dataset.accounts, dataset.settings, dataset.cashActuals)
   if (rows.length === 0) return null
 
   return (
@@ -137,12 +124,7 @@ export function CashReconciliationTable({ model, onSetCashActual }: Props) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <CashReconRow
-              key={r.month}
-              row={r}
-              cardIds={cardIds}
-              onSetCashActual={onSetCashActual}
-            />
+            <CashReconRow key={r.month} row={r} cardIds={cardIds} onSetCashActual={onSetCashActual} />
           ))}
           <TotalsRow rows={rows} cardIds={cardIds} />
         </tbody>

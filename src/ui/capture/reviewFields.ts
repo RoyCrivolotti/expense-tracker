@@ -50,7 +50,11 @@ export interface ReviewView {
 }
 
 /** The category and account the person's own history and settings give a payment, each null unless still in use. */
-function knownReferences(categoryIdFromHistory: number | null, accountId: number | null, model: ExpenseModel) {
+function knownReferences(
+  categoryIdFromHistory: number | null,
+  accountId: number | null,
+  model: ExpenseModel,
+) {
   const category = categoryIdFromHistory === null ? undefined : model.lookup.category(categoryIdFromHistory)
   const account = accountId === null ? undefined : model.lookup.account(accountId)
   return {
@@ -66,16 +70,28 @@ function knownReferences(categoryIdFromHistory: number | null, accountId: number
  * remembers what the person added this merchant with whatever they typed; else the rows the app holds, which match only
  * when a typed description equals the bank's text.
  */
-function historyOf(rec: RecommendationInfo, merchants: MerchantIndex, bankText: string | null): MerchantHistory {
+function historyOf(
+  rec: RecommendationInfo,
+  merchants: MerchantIndex,
+  bankText: string | null,
+): MerchantHistory {
   const s = rec.suggestion
-  if (s?.description != null) return { sightings: s.sightings, label: s.description, categoryId: s.categoryId, settled: s.settled }
+  if (s?.description != null)
+    return { sightings: s.sightings, label: s.description, categoryId: s.categoryId, settled: s.settled }
   return merchantHistory(merchants, bankText)
 }
 
 /** The amount, type and account the push's wording taught, and its flags; without a suggestion, the push's first reading. */
 function taught(rec: RecommendationInfo) {
   const s = rec.suggestion
-  if (!s) return { amountCents: rec.amountCents, type: rec.suggestedType, accountId: rec.accountId, newShape: false, amountRelearned: false }
+  if (!s)
+    return {
+      amountCents: rec.amountCents,
+      type: rec.suggestedType,
+      accountId: rec.accountId,
+      newShape: false,
+      amountRelearned: false,
+    }
   return {
     amountCents: s.amountCents,
     type: s.type,
@@ -86,7 +102,11 @@ function taught(rec: RecommendationInfo) {
 }
 
 /** Works out what a recommendation would become and whether one tap may add it. */
-export function describeRecommendation(rec: RecommendationInfo, model: ExpenseModel, merchants: MerchantIndex): ReviewView {
+export function describeRecommendation(
+  rec: RecommendationInfo,
+  model: ExpenseModel,
+  merchants: MerchantIndex,
+): ReviewView {
   const bankText = rec.merchantRaw === null ? null : cleanText(rec.merchantRaw)
   const history = historyOf(rec, merchants, bankText)
   const { amountCents, type, accountId, newShape, amountRelearned } = taught(rec)
@@ -132,7 +152,10 @@ const noticeOf = (view: ReviewView) => {
 }
 
 /** What the add form opens with. Nothing the push could not say is filled in, and the form shows the rest. */
-export function seedOf(view: ReviewView, remember?: SeedCard['remember']): TransactionSeed {
+export function seedOf(
+  view: ReviewView,
+  remember?: SeedCard['remember'],
+): TransactionSeed {
   const foreign = view.reasons.includes('foreign')
   return {
     recommendationId: view.rec.id,
@@ -150,14 +173,31 @@ export function seedOf(view: ReviewView, remember?: SeedCard['remember']): Trans
     categoryId: view.categoryId ?? 0,
     ...noticeOf(view),
     ...(view.rec.possibleMatch ? { possibleMatch: view.rec.possibleMatch } : {}),
-    ...(view.askCard && remember ? { card: { ...view.askCard, answer: { accountId: null, remember: true }, unanswered: `Choose the account for the card ending ${view.askCard.digits} first`, remember } } : {}),
+    ...(view.askCard && remember
+      ? {
+          card: {
+            ...view.askCard,
+            answer: { accountId: null, remember: true },
+            unanswered: `Choose the account for the card ending ${view.askCard.digits} first`,
+            remember,
+          },
+        }
+      : {}),
   }
 }
 
 /** The transaction one tap adds. Null unless one tap is allowed, so a caller cannot add a payment in doubt. */
 export function transactionOf(view: ReviewView): NewTransaction | null {
   const { type, amountCents, accountId, categoryId } = view
-  if (!view.oneTap || type === null || type === 'investment' || amountCents === null || accountId === null || categoryId === null) return null
+  if (
+    !view.oneTap ||
+    type === null ||
+    type === 'investment' ||
+    amountCents === null ||
+    accountId === null ||
+    categoryId === null
+  )
+    return null
   return {
     date: view.date,
     budgetMonth: view.budgetMonth,

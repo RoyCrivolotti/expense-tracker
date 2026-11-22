@@ -60,7 +60,10 @@ function resolveName<T extends { name: string; id: number }>(
   return { id: match.id }
 }
 
-function parseAmount(raw: string | undefined, line: number): number | ParseExportError {
+function parseAmount(
+  raw: string | undefined,
+  line: number,
+): number | ParseExportError {
   const amountCents = Number(raw)
   if (!Number.isFinite(amountCents) || amountCents === 0) {
     return { line, message: 'Skipped zero or invalid amount' }
@@ -71,7 +74,10 @@ function parseAmount(raw: string | undefined, line: number): number | ParseExpor
   return amountCents
 }
 
-function parseType(raw: string | undefined, line: number): TxnType | ParseExportError {
+function parseType(
+  raw: string | undefined,
+  line: number,
+): TxnType | ParseExportError {
   const type = (raw ?? '').toLowerCase() as TxnType
   if (!VALID_TYPES.has(type)) return { line, message: `Invalid type: ${raw}` }
   return type
@@ -134,7 +140,10 @@ function parseRow(
 }
 
 /** Parse export-format CSV text into new-transaction inputs. */
-export function parseExportCsv(text: string, dataset: ExpenseDataset): ParseExportResult {
+export function parseExportCsv(
+  text: string,
+  dataset: ExpenseDataset,
+): ParseExportResult {
   const lines = text.trim().split(/\r?\n/)
   if (lines.length === 0) return { rows: [], errors: [] }
   const header = lines[0]?.trim()

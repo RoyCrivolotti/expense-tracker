@@ -58,7 +58,10 @@ export function planLineOf(points: readonly PlanPoint[]): PlanLine {
  * The plan's value `years` after its start, in cents. On an anniversary it is the value after that
  * year's payment or event. Null before the start, after the last year, or for a date that is not one.
  */
-export function planValueAt(line: PlanLine, years: number): number | null {
+export function planValueAt(
+  line: PlanLine,
+  years: number,
+): number | null {
   if (!(years >= 0) || years > line.horizon) return null
   const whole = Math.floor(years)
   if (years === whole) return whole === 0 ? line.first : (line.segments[whole - 1]?.after ?? line.first)
@@ -80,7 +83,10 @@ export function isBoundary(segment: PlanSegment): boolean {
   return step >= Math.max(1, (BOUNDARY_MONTHS * Math.abs(segment.end - segment.start)) / 12)
 }
 
-function stepsAt(line: PlanLine, anniversary: number): boolean {
+function stepsAt(
+  line: PlanLine,
+  anniversary: number,
+): boolean {
   const segment = line.segments[anniversary - 1]
   return segment !== undefined && isBoundary(segment)
 }
@@ -90,7 +96,10 @@ function stepsAt(line: PlanLine, anniversary: number): boolean {
  * where it begins (that day's value is already after the step) to the next anniversary with one, or
  * the last year. Months along the line are only measured inside one.
  */
-export function stretchAround(line: PlanLine, years: number): { from: number; to: number } {
+export function stretchAround(
+  line: PlanLine,
+  years: number,
+): { from: number; to: number } {
   let from = Math.floor(years)
   while (from > 0 && !stepsAt(line, from)) from -= 1
   let to = Math.floor(years) + 1
@@ -112,7 +121,10 @@ export function lineValues(points: readonly PlanPoint[]): { values: number[]; pr
  * The value on the day before `years`: on an anniversary with a step, what the year reached before
  * the payment or event landed; on any other day the same as `planValueAt`.
  */
-export function planValueBefore(line: PlanLine, years: number): number | null {
+export function planValueBefore(
+  line: PlanLine,
+  years: number,
+): number | null {
   const whole = Math.floor(years)
   if (years === whole && whole >= 1 && whole <= line.horizon) return line.segments[whole - 1]?.end ?? null
   return planValueAt(line, years)

@@ -1,11 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import {
-  buildImportCsvTemplate,
-  describeExportCsvColumns,
-  EXPORT_CSV_TYPES,
-} from '../../domain/data/exportCsvFormat'
+import { buildImportCsvTemplate, describeExportCsvColumns, EXPORT_CSV_TYPES } from '../../domain/data/exportCsvFormat'
 import { parseExportCsv, type ParseExportResult } from '../../domain/data/parseExportCsv'
 import { Money } from '../components/Money'
 import styles from '../definitions/definitions.module.css'
@@ -41,9 +37,7 @@ function PreviewTable({ result }: { result: ParseExportResult }) {
           ))}
         </tbody>
       </table>
-      {result.rows.length > 8 && (
-        <p className={importStyles.more}>+ {result.rows.length - 8} more rows</p>
-      )}
+      {result.rows.length > 8 && <p className={importStyles.more}>+ {result.rows.length - 8} more rows</p>}
     </div>
   )
 }
@@ -77,11 +71,10 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
   return (
     <div className={importStyles.root}>
       <p className={importStyles.guide}>
-        Set up your categories and accounts first: the file must use their names. CSV must match
-        the export format exactly. Columns: {describeExportCsvColumns()}.{' '}
-        <code>type</code> is one of {types}. <code>amount_cents</code> is integer cents, positive
-        except on an <code>investment</code> row, where a negative amount is a withdrawal. Easiest
-        path: export from Settings first, edit, then re-import.
+        Set up your categories and accounts first: the file must use their names. CSV must match the export format
+        exactly. Columns: {describeExportCsvColumns()}. <code>type</code> is one of {types}. <code>amount_cents</code>{' '}
+        is integer cents, positive except on an <code>investment</code> row, where a negative amount is a withdrawal.
+        Easiest path: export from Settings first, edit, then re-import.
       </p>
       <div className={importStyles.actions}>
         <button type="button" className={styles.addBtn} disabled={busy} onClick={() => inputRef.current?.click()}>

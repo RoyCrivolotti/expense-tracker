@@ -50,7 +50,14 @@ export async function resolveGroupGrants(
 
 function parseEnvAllowlist(raw: string | undefined): string[] {
   if (!raw?.trim()) return []
-  return [...new Set(raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  return [
+    ...new Set(
+      raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ]
 }
 
 export async function getAccessStatus(
@@ -142,7 +149,10 @@ export async function listActiveAccessUsers(
   )
 }
 
-async function loadPendingRequest(deps: AccessServiceDeps, requestId: string) {
+async function loadPendingRequest(
+  deps: AccessServiceDeps,
+  requestId: string,
+) {
   const request = await deps.repo.findRequestById(requestId)
   if (!request || request.status !== 'pending') {
     throw new HttpError(400, 'Request not found or already handled')

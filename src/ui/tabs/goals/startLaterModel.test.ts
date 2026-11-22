@@ -6,11 +6,23 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import { scenarioToDraft } from './scenarioDraft'
 import { startLater } from '../../../engine'
 import { comparisonRows } from './charts/comparisonRows'
-import { checkinOnOrBefore, copyName, defaultStartDate, outcomeOnTable, ownsHouseBy, startLaterView, startRefusal, type StartLaterInputs } from './startLaterModel'
+import {
+  checkinOnOrBefore,
+  copyName,
+  defaultStartDate,
+  outcomeOnTable,
+  ownsHouseBy,
+  startLaterView,
+  startRefusal,
+  type StartLaterInputs,
+} from './startLaterModel'
 
 const iso = (d: string) => d
 
-function inputs(source: NewGoalScenario, over: Partial<StartLaterInputs> = {}): StartLaterInputs {
+function inputs(
+  source: NewGoalScenario,
+  over: Partial<StartLaterInputs> = {},
+): StartLaterInputs {
   return {
     source,
     checkins: [],
@@ -24,11 +36,17 @@ function inputs(source: NewGoalScenario, over: Partial<StartLaterInputs> = {}): 
 }
 
 const plan = scenarioToDraft(samplePlan({ housePurchaseYear: null }))
-const choose = (date: string, typedCents: number | null = null, typedName: string | null = null) => ({ date, typedCents, typedName })
+const choose = (
+  date: string,
+  typedCents: number | null = null,
+  typedName: string | null = null,
+) => ({ date, typedCents, typedName })
 
 describe('startRefusal', () => {
   it('refuses a source with no start, a date before it, and a date past its last year, naming the year', () => {
-    expect(startRefusal({ ...plan, planStartDate: null }, '2028-01-01', iso)).toBe('Sample plan has no start date. Set one under Plan start first.')
+    expect(startRefusal({ ...plan, planStartDate: null }, '2028-01-01', iso)).toBe(
+      'Sample plan has no start date. Set one under Plan start first.',
+    )
     expect(startRefusal(plan, '2025-12-31', iso)).toBe("Pick a date on or after Sample plan's start, 2026-01-01.")
     expect(startRefusal(plan, '2056-01-02', iso)).toBe("Pick a date before Sample plan's last year, 2056.")
     expect(startRefusal(plan, '2056-01-01', iso)).toBeNull()
@@ -64,7 +82,9 @@ describe('startLaterView', () => {
     expect(onDay.sourceLine).toBe('Your investments in your check-in of 2028-01-01.')
     expect(onDay.balanceCents).toBe(9_000_000)
     const carried = startLaterView(inputs(plan, { checkins: [checkin] }), choose('2029-07-01'))
-    expect(carried.sourceLine).toMatch(/^Sample plan, carried on from your check-in of 2028-01-01, has about [\d.]+ € on that date\.$/)
+    expect(carried.sourceLine).toMatch(
+      /^Sample plan, carried on from your check-in of 2028-01-01, has about [\d.]+ € on that date\.$/,
+    )
     const own = startLaterView(inputs(plan), choose('2029-07-01'))
     expect(own.sourceLine).toBe("Sample plan's own line on that date.")
     expect(own.balanceHint).toBe('in 2029 euros')
@@ -102,9 +122,13 @@ describe('startLaterView', () => {
 
   it('says how far under the line the suggestion is only when it is more than a few euros', () => {
     // A heavy saver started half way through a year needs a lowering worth saying.
-    const saver = scenarioToDraft(samplePlan({ housePurchaseYear: null, startInvestedCents: 100_000, monthlyContributionCents: 500_000 }))
+    const saver = scenarioToDraft(
+      samplePlan({ housePurchaseYear: null, startInvestedCents: 100_000, monthlyContributionCents: 500_000 }),
+    )
     const lowered = startLaterView(inputs(saver), choose('2026-07-03'))
-    expect(lowered.lowerLine).toMatch(/^That's [\d.]+ € less than Sample plan has on that date\. A copy that starts part way through Sample plan's year/)
+    expect(lowered.lowerLine).toMatch(
+      /^That's [\d.]+ € less than Sample plan has on that date\. A copy that starts part way through Sample plan's year/,
+    )
     expect(startLaterView(inputs(plan), choose('2027-01-01')).lowerLine).toBeNull()
   })
 
@@ -121,14 +145,24 @@ describe('startLaterView', () => {
   it('says a check-in is taken as after buying for a source that owns its house by then, and offers its own line', () => {
     const owner = scenarioToDraft(samplePlan({ housePurchaseYear: 0, startInvestedCents: 2_000_000 }))
     for (const inflationRate of TEST_INFLATION_RATES) {
-      const view = startLaterView(inputs(owner, { inflationRate, checkins: [{ investedCents: 9_000_000, date: '2026-06-01' }] }), choose('2028-01-01'))
+      const view = startLaterView(
+        inputs(owner, { inflationRate, checkins: [{ investedCents: 9_000_000, date: '2026-06-01' }] }),
+        choose('2028-01-01'),
+      )
       const own = suggestedStart(owner, null, '2028-01-01', inflationRate)!.cents
       expect(view.houseNote?.cents).toBe(own)
-      expect(view.houseNote?.text).toMatch(/^This counts your check-in as after buying the house, as Sample plan has it\. If you have not bought it, Sample plan's own line has about [\d.]+ € on that date\.$/)
+      expect(view.houseNote?.text).toMatch(
+        /^This counts your check-in as after buying the house, as Sample plan has it\. If you have not bought it, Sample plan's own line has about [\d.]+ € on that date\.$/,
+      )
       expect(view.balanceCents).toBeGreaterThan(own)
     }
     // Not for a source that buys after the check-in, nor for one read off its own line.
-    expect(startLaterView(inputs(scenarioToDraft(samplePlan()), { checkins: [{ investedCents: 9_000_000, date: '2026-06-01' }] }), choose('2028-01-01')).houseNote).toBeNull()
+    expect(
+      startLaterView(
+        inputs(scenarioToDraft(samplePlan()), { checkins: [{ investedCents: 9_000_000, date: '2026-06-01' }] }),
+        choose('2028-01-01'),
+      ).houseNote,
+    ).toBeNull()
     expect(startLaterView(inputs(owner), choose('2028-01-01')).houseNote).toBeNull()
   })
 
@@ -151,7 +185,14 @@ describe('ownsHouseBy', () => {
 
 describe('the sum-up, read where the table reads', () => {
   it('quotes the gap the table shows once the copy is made, with an earlier scenario setting the calendar and the year', () => {
-    const a = samplePlan({ id: 1, name: 'Path A', planStartDate: '2024-06-01', horizonYears: 28, housePurchaseYear: null, color: '#6366f1' })
+    const a = samplePlan({
+      id: 1,
+      name: 'Path A',
+      planStartDate: '2024-06-01',
+      horizonYears: 28,
+      housePurchaseYear: null,
+      color: '#6366f1',
+    })
     const b = samplePlan({ id: 2, name: 'Path B', isActive: false, color: '#10b981' })
     for (const inflationRate of TEST_INFLATION_RATES) {
       const view = inputs(scenarioToDraft(b), { scenarios: [a, b], inflationRate })
@@ -180,7 +221,9 @@ describe('the sum-up, read where the table reads', () => {
 
   it('says the balance is after buying for a house owned from day one too', () => {
     const owner = scenarioToDraft(samplePlan({ housePurchaseYear: 0 }))
-    expect(startLaterView(inputs(owner), choose('2028-03-01')).balanceHint).toBe('in 2028 euros, after buying the house')
+    expect(startLaterView(inputs(owner), choose('2028-03-01')).balanceHint).toBe(
+      'in 2028 euros, after buying the house',
+    )
     expect(startLaterView(inputs(plan), choose('2028-03-01')).balanceHint).toBe('in 2028 euros')
   })
 })

@@ -10,7 +10,10 @@ import goalStyles from './goals.module.css'
 
 // The server keeps an account that check-ins refer to, marking it archived instead, so the
 // question has to say which of the two is about to happen.
-function deleteMessage(account: WealthAccount, checkins: WealthCheckin[]): string {
+function deleteMessage(
+  account: WealthAccount,
+  checkins: WealthCheckin[],
+): string {
   const inHistory = checkins.some((c) => c.entries.some((e) => e.accountId === account.id))
   return inHistory
     ? 'It appears in past check-ins, so it is archived rather than deleted: those balances stay and it leaves this list.'
@@ -67,10 +70,13 @@ export function WealthAccountsManager({ accounts, checkins = [], actions }: Prop
               <span
                 className={[
                   styles.accountKindBadge,
-                  acc.kind === 'investment' ? styles.accountKindInvestment
-                    : acc.kind === 'cash' ? styles.accountKindCash
-                    : acc.kind === 'debt' ? styles.accountKindDebt
-                    : '',
+                  acc.kind === 'investment'
+                    ? styles.accountKindInvestment
+                    : acc.kind === 'cash'
+                      ? styles.accountKindCash
+                      : acc.kind === 'debt'
+                        ? styles.accountKindDebt
+                        : '',
                 ].join(' ')}
               >
                 {KIND_LABELS[acc.kind]}
@@ -100,7 +106,11 @@ export function WealthAccountsManager({ accounts, checkins = [], actions }: Prop
               placeholder="Account name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { void handleAdd() } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  void handleAdd()
+                }
+              }}
               autoFocus
             />
             <select
@@ -109,29 +119,37 @@ export function WealthAccountsManager({ accounts, checkins = [], actions }: Prop
               onChange={(e) => setKind(e.target.value as WealthAccountKind)}
             >
               {(Object.keys(KIND_LABELS) as WealthAccountKind[]).map((k) => (
-                <option key={k} value={k}>{KIND_LABELS[k]}</option>
+                <option key={k} value={k}>
+                  {KIND_LABELS[k]}
+                </option>
               ))}
             </select>
           </div>
           <div className={styles.formActions}>
-            <button className={goalStyles.btn} onClick={() => { void handleAdd() }} disabled={submitting || !name.trim()}>
+            <button
+              className={goalStyles.btn}
+              onClick={() => {
+                void handleAdd()
+              }}
+              disabled={submitting || !name.trim()}
+            >
               Add
             </button>
             <button
               className={goalStyles.btn}
               style={{ background: 'none', color: 'var(--color-text-muted)' }}
-              onClick={() => { setShowForm(false); setName(''); setKind('investment') }}
+              onClick={() => {
+                setShowForm(false)
+                setName('')
+                setKind('investment')
+              }}
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <button
-          className={goalStyles.btn}
-          style={{ alignSelf: 'flex-start' }}
-          onClick={() => setShowForm(true)}
-        >
+        <button className={goalStyles.btn} style={{ alignSelf: 'flex-start' }} onClick={() => setShowForm(true)}>
           + Add account
         </button>
       )}

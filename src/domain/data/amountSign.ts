@@ -8,6 +8,9 @@ import type { TxnType } from '../types'
  */
 export const AMOUNT_SIGN_MESSAGE = 'Amounts must be positive, except a withdrawal from an investment'
 
-export function amountSignAllowed(amountCents: number, type: TxnType): boolean {
+export function amountSignAllowed(
+  amountCents: number,
+  type: TxnType,
+): boolean {
   return amountCents >= 0 || type === 'investment'
 }

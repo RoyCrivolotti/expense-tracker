@@ -47,9 +47,7 @@ const TRACKED: Record<string, string> = {
 function rectOf(selector: string): string {
   // First match with a real box: the batch-add pane stays mounted but collapsed,
   // so several of these selectors also hit a zero-height twin.
-  const el = [...document.querySelectorAll(selector)].find(
-    (candidate) => candidate.getBoundingClientRect().height > 0,
-  )
+  const el = [...document.querySelectorAll(selector)].find((candidate) => candidate.getBoundingClientRect().height > 0)
   if (!el) return '—'
   const r = el.getBoundingClientRect()
   return `${Math.round(r.top)}..${Math.round(r.bottom)} (h${Math.round(r.height)})`
@@ -63,11 +61,9 @@ function rectOf(selector: string): string {
 export function sampleViewport(): ViewportSample {
   const probe = document.createElement('div')
   probe.style.cssText =
-    'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
-    'visibility:hidden;pointer-events:none'
+    'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' + 'visibility:hidden;pointer-events:none'
   const pinned = document.createElement('div')
-  pinned.style.cssText =
-    'position:fixed;top:0;left:0;width:1px;height:1px;visibility:hidden;pointer-events:none'
+  pinned.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;visibility:hidden;pointer-events:none'
   document.body.append(probe, pinned)
   const safeAreaTop = probe.getBoundingClientRect().height
   const fixedTopRect = pinned.getBoundingClientRect().top

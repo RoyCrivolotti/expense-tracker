@@ -14,35 +14,21 @@ const xForIndex = (i: number) => i * 10
 const scaleY = (v: number) => 100 - v
 
 function renderInSvg(children: React.ReactNode) {
-  const { container } = render(
-    <svg viewBox="0 0 200 200">{children}</svg>,
-  )
+  const { container } = render(<svg viewBox="0 0 200 200">{children}</svg>)
   return container.querySelector('svg')!
 }
 
 describe('ChartBandLayer', () => {
   it('renders a path element', () => {
     const svg = renderInSvg(
-      <ChartBandLayer
-        color="#6366f1"
-        lo={[0, 0, 0]}
-        hi={[10, 20, 30]}
-        xForIndex={xForIndex}
-        scaleY={scaleY}
-      />,
+      <ChartBandLayer color="#6366f1" lo={[0, 0, 0]} hi={[10, 20, 30]} xForIndex={xForIndex} scaleY={scaleY} />,
     )
     expect(svg.querySelector('path')).not.toBeNull()
   })
 
   it('applies fill color via style prop', () => {
     const svg = renderInSvg(
-      <ChartBandLayer
-        color="#ff0000"
-        lo={[0, 0]}
-        hi={[5, 5]}
-        xForIndex={xForIndex}
-        scaleY={scaleY}
-      />,
+      <ChartBandLayer color="#ff0000" lo={[0, 0]} hi={[5, 5]} xForIndex={xForIndex} scaleY={scaleY} />,
     )
     const path = svg.querySelector('path')!
     const style = path.getAttribute('style') ?? ''
@@ -99,12 +85,7 @@ describe('ChartScatterLayer', () => {
 
   it('positions circles using xForIndex and scaleY', () => {
     const svg = renderInSvg(
-      <ChartScatterLayer
-        color="#22c55e"
-        points={[{ xIndex: 3, value: 40 }]}
-        xForIndex={xForIndex}
-        scaleY={scaleY}
-      />,
+      <ChartScatterLayer color="#22c55e" points={[{ xIndex: 3, value: 40 }]} xForIndex={xForIndex} scaleY={scaleY} />,
     )
     const circle = svg.querySelector('circle')!
     expect(circle.getAttribute('cx')).toBe('30')
@@ -112,14 +93,7 @@ describe('ChartScatterLayer', () => {
   })
 
   it('renders nothing when points is empty', () => {
-    const svg = renderInSvg(
-      <ChartScatterLayer
-        color="#22c55e"
-        points={[]}
-        xForIndex={xForIndex}
-        scaleY={scaleY}
-      />,
-    )
+    const svg = renderInSvg(<ChartScatterLayer color="#22c55e" points={[]} xForIndex={xForIndex} scaleY={scaleY} />)
     expect(svg.querySelectorAll('circle')).toHaveLength(0)
   })
 })
@@ -150,9 +124,7 @@ describe('ChartPurchaseMarkers', () => {
   })
 
   it('renders nothing when markerYears is empty', () => {
-    const svg = renderInSvg(
-      <ChartPurchaseMarkers markerYears={[]} xForIndex={xForIndex} yTop={10} innerH={80} />,
-    )
+    const svg = renderInSvg(<ChartPurchaseMarkers markerYears={[]} xForIndex={xForIndex} yTop={10} innerH={80} />)
     expect(svg.querySelectorAll('line')).toHaveLength(0)
   })
 })
@@ -188,28 +160,17 @@ describe('ChartLifeEventMarkers', () => {
   })
 
   it('renders nothing when markers array is empty', () => {
-    const svg = renderInSvg(
-      <ChartLifeEventMarkers markers={[]} xForIndex={xForIndex} yTop={10} />,
-    )
+    const svg = renderInSvg(<ChartLifeEventMarkers markers={[]} xForIndex={xForIndex} yTop={10} />)
     expect(svg.querySelectorAll('polygon')).toHaveLength(0)
   })
 })
 
 describe('ChartFocusIndicator', () => {
-  const lineSeries = [
-    { id: 's1', color: '#6366f1', values: [0, 100, 200, 300] },
-  ]
+  const lineSeries = [{ id: 's1', color: '#6366f1', values: [0, 100, 200, 300] }]
 
   it('returns null when active is null', () => {
     const svg = renderInSvg(
-      <ChartFocusIndicator
-        active={null}
-        focusX={50}
-        yTop={10}
-        innerH={80}
-        scaleY={scaleY}
-        lineSeries={lineSeries}
-      />,
+      <ChartFocusIndicator active={null} focusX={50} yTop={10} innerH={80} scaleY={scaleY} lineSeries={lineSeries} />,
     )
     expect(svg.querySelectorAll('line')).toHaveLength(0)
     expect(svg.querySelectorAll('circle')).toHaveLength(0)
@@ -217,14 +178,7 @@ describe('ChartFocusIndicator', () => {
 
   it('renders crosshair line and one circle per series when active', () => {
     const svg = renderInSvg(
-      <ChartFocusIndicator
-        active={2}
-        focusX={50}
-        yTop={10}
-        innerH={80}
-        scaleY={scaleY}
-        lineSeries={lineSeries}
-      />,
+      <ChartFocusIndicator active={2} focusX={50} yTop={10} innerH={80} scaleY={scaleY} lineSeries={lineSeries} />,
     )
     expect(svg.querySelector('line')).not.toBeNull()
     expect(svg.querySelectorAll('circle')).toHaveLength(1)
@@ -256,9 +210,7 @@ describe('ChartLabeledMarkers', () => {
   const place = { xForIndex, yTop: 10, innerH: 100, left: 0, right: 200 }
 
   it('draws a dashed line the height of the plot and a label beside it, for each marker', () => {
-    const svg = renderInSvg(
-      <ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />,
-    )
+    const svg = renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />)
     const line = svg.querySelector('line')!
     expect(line.getAttribute('x1')).toBe('50')
     expect(line.getAttribute('y1')).toBe('10')
@@ -270,9 +222,7 @@ describe('ChartLabeledMarkers', () => {
   })
 
   it('puts a label that would run off the right edge on the left of its line', () => {
-    const svg = renderInSvg(
-      <ChartLabeledMarkers {...place} markers={[{ index: 19, label: 'Loan paid off' }]} />,
-    )
+    const svg = renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 19, label: 'Loan paid off' }]} />)
     const text = svg.querySelector('text')!
     expect(text.getAttribute('text-anchor')).toBe('end')
     expect(Number(text.getAttribute('x'))).toBeLessThan(190)
@@ -321,7 +271,12 @@ describe('ChartLabeledMarkers', () => {
 
   it('keeps a label that fits on neither side of its line inside the plot, from its left edge', () => {
     const svg = renderInSvg(
-      <ChartLabeledMarkers {...place} left={56} right={200} markers={[{ index: 10, label: 'Owning costs less than renting' }]} />,
+      <ChartLabeledMarkers
+        {...place}
+        left={56}
+        right={200}
+        markers={[{ index: 10, label: 'Owning costs less than renting' }]}
+      />,
     )
     const text = svg.querySelector('text')!
     expect(text.getAttribute('text-anchor')).toBe('start')
@@ -330,9 +285,16 @@ describe('ChartLabeledMarkers', () => {
 
   it('gives a marker the long form of its label as a title', () => {
     const svg = renderInSvg(
-      <ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off', title: 'The loan is paid off here.' }]} />,
+      <ChartLabeledMarkers
+        {...place}
+        markers={[{ index: 5, label: 'Loan paid off', title: 'The loan is paid off here.' }]}
+      />,
     )
     expect(svg.querySelector('title')!.textContent).toBe('The loan is paid off here.')
-    expect(renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />).querySelector('title')).toBeNull()
+    expect(
+      renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />).querySelector(
+        'title',
+      ),
+    ).toBeNull()
   })
 })

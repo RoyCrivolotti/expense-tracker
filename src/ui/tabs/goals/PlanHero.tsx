@@ -124,7 +124,8 @@ export function PlanHero({
           planStartDate={deferredDraft.planStartDate}
         />
       ) : null
-    const twoMoneys = mode === 'nominal' ? null : <TwoMoneys chartStart={origin} draftStart={deferredDraft.planStartDate} />
+    const twoMoneys =
+      mode === 'nominal' ? null : <TwoMoneys chartStart={origin} draftStart={deferredDraft.planStartDate} />
     return narrow ? (
       <div>
         {twoMoneys}
@@ -143,7 +144,18 @@ export function PlanHero({
         {nominalPreview}
       </>
     )
-  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting, origin])
+  }, [
+    narrow,
+    deferredDraft,
+    milestones,
+    displaySwitch,
+    mode,
+    assumedInflation,
+    preview,
+    onPreview,
+    onOpenSetting,
+    origin,
+  ])
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate || !origin) return undefined

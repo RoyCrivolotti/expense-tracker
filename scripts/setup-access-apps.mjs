@@ -13,7 +13,10 @@ import {
 } from './access-api.mjs'
 import { loadStagingAccessConfig } from './staging-access-config.mjs'
 
-function printManualSteps(config, err) {
+function printManualSteps(
+  config,
+  err,
+) {
   console.error(`
 Could not update Access via API (${err?.message ?? 'auth error'}).
 
@@ -29,7 +32,11 @@ Use the same Google Allow policy on both apps. Token needs Zero Trust → Access
 `)
 }
 
-async function ensureAccessApp(token, name, hostnames) {
+async function ensureAccessApp(
+  token,
+  name,
+  hostnames,
+) {
   let app = await findAccessApp(token, name)
   if (!app) {
     const primary = hostnames[0]

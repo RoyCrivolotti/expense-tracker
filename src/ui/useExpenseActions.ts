@@ -59,11 +59,13 @@ export function useExpenseActions(
     const bulkWrite = bulkWriteOf(applyPatch)
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
-      onDuplicate: (txn) =>
-        openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
+      onDuplicate: (txn) => openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       ...createWrites(source, applyPatch, readAgain),
-      updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
+      updateTransaction: async (
+        id: number,
+        patch: Partial<NewTransaction>,
+      ) => {
         const txn = await source.updateTransaction!(id, patch)
         applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [id], patch })
       },
@@ -79,34 +81,55 @@ export function useExpenseActions(
           () => applyPatch((d) => patchAfterBulkDelete(d, ids), { ids }),
           ({ deleted }) => deleted,
         ),
-      updateTransactions: (ids: number[], patch: BulkTransactionPatch) =>
+      updateTransactions: (
+        ids: number[],
+        patch: BulkTransactionPatch,
+      ) =>
         bulkWrite(
           () => source.updateTransactions!(ids, patch),
           (result) => applyPatch((d) => patchAfterBulkUpdate(d, result.transactions), { ids, patch }),
           ({ updated }) => updated,
         ),
       // The server answers with counts and not the rows, so a ledger that shows them reads them again.
-      addLabels: (ids, labelIds) =>
+      addLabels: (
+        ids,
+        labelIds,
+      ) =>
         bulkWrite(
           () => source.addLabelsToTransactions!(ids, labelIds),
           () => applyPatch(unchanged, { patch: {} }),
           ({ matched }) => matched,
         ),
-      updateMatching: (target, patch, labelIds) =>
+      updateMatching: (
+        target,
+        patch,
+        labelIds,
+      ) =>
         bulkWrite(
           () => source.updateMatchingTransactions!(target, patch, labelIds),
           () => applyPatch(unchanged, { patch }),
           ({ updated }) => updated,
         ),
-      setStatementPaid: async (accountId, yearMonth, paid, paidOn) => {
+      setStatementPaid: async (
+        accountId,
+        yearMonth,
+        paid,
+        paidOn,
+      ) => {
         const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)
         applyPatch((d) => patchAfterStatementPaid(d, stmt))
       },
-      setCashActual: async (yearMonth, actualCashCents) => {
+      setCashActual: async (
+        yearMonth,
+        actualCashCents,
+      ) => {
         const row = await source.setCashActual!(yearMonth, actualCashCents)
         applyPatch((d) => patchAfterCashActual(d, row, yearMonth))
       },
-      uploadAttachment: async (transactionId, file) => {
+      uploadAttachment: async (
+        transactionId,
+        file,
+      ) => {
         const attachment = await source.uploadAttachment!(transactionId, file)
         applyPatch((d) => patchAfterAttachmentAdd(d, attachment))
       },
@@ -119,7 +142,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterFlag(d, flag))
         return flag
       },
-      updateFlag: async (id, patch) => {
+      updateFlag: async (
+        id,
+        patch,
+      ) => {
         const flag = await source.updateFlag!(id, patch)
         applyPatch((d) => patchAfterFlag(d, flag))
       },
@@ -133,7 +159,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterLabel(d, label))
         return label
       },
-      updateLabel: async (id, patch) => {
+      updateLabel: async (
+        id,
+        patch,
+      ) => {
         const label = await source.updateLabel!(id, patch)
         applyPatch((d) => patchAfterLabel(d, label))
       },
@@ -142,7 +171,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterLabelDelete(d, id))
         return result
       },
-      setTransactionLabels: async (transactionId, labelIds) => {
+      setTransactionLabels: async (
+        transactionId,
+        labelIds,
+      ) => {
         const txn = await source.setTransactionLabels!(transactionId, labelIds)
         applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [transactionId], patch: {} })
       },
@@ -150,11 +182,17 @@ export function useExpenseActions(
         const category = await source.createCategory!(input)
         applyPatch((d) => patchAfterCategory(d, category))
       },
-      updateCategory: async (id, patch) => {
+      updateCategory: async (
+        id,
+        patch,
+      ) => {
         const category = await source.updateCategory!(id, patch)
         applyPatch((d) => patchAfterCategory(d, category))
       },
-      deleteCategory: async (id, options) => {
+      deleteCategory: async (
+        id,
+        options,
+      ) => {
         const result = await source.deleteCategory!(id, options)
         applyPatch((d) => patchAfterCategoryDelete(d, id, result))
         return result
@@ -163,11 +201,17 @@ export function useExpenseActions(
         const account = await source.createAccount!(input)
         applyPatch((d) => patchAfterAccount(d, account))
       },
-      updateAccount: async (id, patch) => {
+      updateAccount: async (
+        id,
+        patch,
+      ) => {
         const account = await source.updateAccount!(id, patch)
         applyPatch((d) => patchAfterAccount(d, account))
       },
-      deleteAccount: async (id, options) => {
+      deleteAccount: async (
+        id,
+        options,
+      ) => {
         const result = await source.deleteAccount!(id, options)
         applyPatch((d) => patchAfterAccountDelete(d, id, result))
         return result
@@ -177,7 +221,9 @@ export function useExpenseActions(
         const turn = ++order.issued
         const settings = await source.updateSettings!(patch)
         // Only what this write changed, and only if no later write to it has been taken already.
-        const keys = (Object.keys(patch) as (keyof ExpenseSettings)[]).filter((key) => (order.applied.get(key) ?? 0) < turn)
+        const keys = (Object.keys(patch) as (keyof ExpenseSettings)[]).filter(
+          (key) => (order.applied.get(key) ?? 0) < turn,
+        )
         for (const key of keys) order.applied.set(key, turn)
         applyPatch((d) => patchAfterSettings(d, settings, keys))
       },
@@ -186,7 +232,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterScenarioCreate(d, scenario))
         return scenario
       },
-      updateScenario: async (id, patch) => {
+      updateScenario: async (
+        id,
+        patch,
+      ) => {
         const scenario = await source.updateScenario!(id, patch)
         applyPatch((d) => patchAfterScenarioUpdate(d, scenario))
       },
@@ -203,7 +252,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterInstallmentPlanCreate(d, plan))
         return plan
       },
-      updateInstallmentPlan: async (id, patch) => {
+      updateInstallmentPlan: async (
+        id,
+        patch,
+      ) => {
         const plan = await source.updateInstallmentPlan!(id, patch)
         applyPatch((d) => patchAfterInstallmentPlanUpdate(d, plan))
       },
@@ -216,7 +268,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterWealthAccountCreate(d, account))
         return account
       },
-      updateWealthAccount: async (id, patch) => {
+      updateWealthAccount: async (
+        id,
+        patch,
+      ) => {
         const account = await source.updateWealthAccount!(id, patch)
         applyPatch((d) => patchAfterWealthAccountUpdate(d, account))
       },
@@ -230,7 +285,10 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterWealthCheckinCreate(d, checkin))
         return checkin
       },
-      updateWealthCheckin: async (id, patch) => {
+      updateWealthCheckin: async (
+        id,
+        patch,
+      ) => {
         const checkin = await source.updateWealthCheckin!(id, patch)
         applyPatch((d) => patchAfterWealthCheckinUpdate(d, checkin))
       },

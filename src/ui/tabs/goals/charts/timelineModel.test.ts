@@ -54,7 +54,11 @@ describe('the axis', () => {
   })
 
   it('runs as far as the furthest horizon reaches from today', () => {
-    const rows = [row({ horizonYears: 30, horizonFromNow: 27 }), row({ horizonYears: 25, horizonFromNow: 25 }), row({ horizonYears: 40, horizonFromNow: 38 })]
+    const rows = [
+      row({ horizonYears: 30, horizonFromNow: 27 }),
+      row({ horizonYears: 25, horizonFromNow: 25 }),
+      row({ horizonYears: 40, horizonFromNow: 38 }),
+    ]
     expect(axisSpan(rows)).toBe(38)
     expect(axisSpan([])).toBe(1)
   })
@@ -97,7 +101,12 @@ describe('layoutRow', () => {
   })
 
   it('puts what a path that starts later has at its start on its first day, not in the left badge, unless a check-in reached it', () => {
-    const later = row({ cells: [2, 2, 6, 9, null], sinceStart: [0, 0, 4, 7, null], startDate: '2028-05-10', elapsedYears: -1.6 })
+    const later = row({
+      cells: [2, 2, 6, 9, null],
+      sinceStart: [0, 0, 4, 7, null],
+      startDate: '2028-05-10',
+      elapsedYears: -1.6,
+    })
     const layout = layoutRow(later, milestones, none)
 
     expect(rowOffset(later)).toBe(2)
@@ -179,7 +188,7 @@ describe('labels', () => {
 describe('sentences', () => {
   const r = row({ name: 'Path A', horizonYears: 25 })
 
-  it('counts the calendar year of a dot from the path\'s own step, not from today', () => {
+  it("counts the calendar year of a dot from the path's own step, not from today", () => {
     const old = row({ name: 'Path A', startDate: '2023-07-01', elapsedYears: 3.2 })
     expect(describeCluster(old, { years: 4, sinceStart: 7, indices: [0] }, ['300k €'])).toBe(
       'Path A reaches 300k € in 4 years, by 2030.',
@@ -187,17 +196,31 @@ describe('sentences', () => {
   })
 
   it('says a path that starts later has what is in its starting balance when it starts', () => {
-    const later = row({ name: 'Path A', cells: [2, 2, 6], sinceStart: [0, 0, 4], startDate: '2028-05-10', elapsedYears: -1.6 })
+    const later = row({
+      name: 'Path A',
+      cells: [2, 2, 6],
+      sinceStart: [0, 0, 4],
+      startDate: '2028-05-10',
+      elapsedYears: -1.6,
+    })
     expect(describeCluster(later, { years: 2, sinceStart: 0, indices: [0, 1] }, ['100k €', '200k €'])).toBe(
       "Path A has 100k € and 200k € when it starts, in May '28.",
     )
-    expect(describeCluster(later, { years: 6, sinceStart: 4, indices: [2] }, ['300k €'])).toBe('Path A reaches 300k € in 6 years, by 2032.')
+    expect(describeCluster(later, { years: 6, sinceStart: 4, indices: [2] }, ['300k €'])).toBe(
+      'Path A reaches 300k € in 6 years, by 2032.',
+    )
   })
 
   it('says which milestones of a dot a path that starts later has at its start, and which it reaches after', () => {
     // Starting 14 months from today with 480k: 100k to 400k are in its starting balance, 500k comes in its
     // first year, and both round up to the same year from today, so they share a dot.
-    const later = row({ name: 'Path A', cells: [2, 2, 2, 2, 2], sinceStart: [0, 0, 0, 0, 1], startDate: '2028-01-15', elapsedYears: -1.15 })
+    const later = row({
+      name: 'Path A',
+      cells: [2, 2, 2, 2, 2],
+      sinceStart: [0, 0, 0, 0, 1],
+      startDate: '2028-01-15',
+      elapsedYears: -1.15,
+    })
     const [dot] = layoutRow(later, ms(1, 2, 3, 4, 5), none).clusters
     expect(dot!.indices).toEqual([0, 1, 2, 3, 4])
     expect(describeCluster(later, dot!, ['100k €', '200k €', '300k €', '400k €', '500k €'])).toBe(
@@ -209,9 +232,13 @@ describe('sentences', () => {
     expect(describeCluster(r, { years: 6, sinceStart: 6, indices: [0, 1] }, ['300k €', '400k €'])).toBe(
       'Path A reaches 300k € and 400k € in 6 years, by 2032.',
     )
-    expect(describeCluster(r, { years: 1, sinceStart: 1, indices: [0, 1, 2] }, ['300k €', 'House deposit (400k €)', '500k €'])).toBe(
-      'Path A reaches 300k €, House deposit (400k €) and 500k € in 1 year, by 2027.',
-    )
+    expect(
+      describeCluster(r, { years: 1, sinceStart: 1, indices: [0, 1, 2] }, [
+        '300k €',
+        'House deposit (400k €)',
+        '500k €',
+      ]),
+    ).toBe('Path A reaches 300k €, House deposit (400k €) and 500k € in 1 year, by 2027.')
   })
 
   it('says why each milestone in the left badge is already there', () => {
@@ -230,7 +257,15 @@ describe('sentences', () => {
 
 describe('the table and the timeline agree for a path that starts later', () => {
   it('names the same year for a milestone it reaches soon after it starts, which shares a dot with what it starts with', () => {
-    const later = makeScenario({ id: 1, name: 'Later', planStartDate: '2028-01-15', startInvestedCents: 48_000_000, monthlyContributionCents: 200_000, expectedRealReturn: 0.05, housePurchaseYear: null })
+    const later = makeScenario({
+      id: 1,
+      name: 'Later',
+      planStartDate: '2028-01-15',
+      startInvestedCents: 48_000_000,
+      monthlyContributionCents: 200_000,
+      expectedRealReturn: 0.05,
+      housePurchaseYear: null,
+    })
     const ladder = ms(100, 200, 300, 400, 500)
     const [r] = buildRows([later], later, ladder, 0, false, null, '2026-11-20')
     const amounts = ['100k €', '200k €', '300k €', '400k €', '500k €']
@@ -240,6 +275,8 @@ describe('the table and the timeline agree for a path that starts later', () => 
     const timeline = describeCluster(r!, dot, amounts)
     const table = describeCell({ row: r!, index: 4, amount: '500k €', reachedOn: undefined, plan: null })
     expect(table).toBe('Later reaches 500k € in 2 years, by 2029.')
-    expect(timeline).toBe("Later has 100k €, 200k €, 300k € and 400k € when it starts, in Jan '28, and reaches 500k € in 2 years, by 2029.")
+    expect(timeline).toBe(
+      "Later has 100k €, 200k €, 300k € and 400k € when it starts, in Jan '28, and reaches 500k € in 2 years, by 2029.",
+    )
   })
 })

@@ -56,7 +56,10 @@ describe('installment plan auto-completion via transaction patches', () => {
     active: true,
   }
 
-  const installment = (index: number, id: number): Transaction => ({
+  const installment = (
+    index: number,
+    id: number,
+  ): Transaction => ({
     id,
     date: '2026-01-01',
     budgetMonth: '2026-01',
@@ -114,19 +117,21 @@ describe('installment plan auto-completion via transaction patches', () => {
 
 describe('patchAfterBulkUpdate', () => {
   it('replaces matched transactions and re-sorts by date', () => {
-    const txn = (id: number, date: string) =>
-      ({
-        id,
-        date,
-        budgetMonth: date.slice(0, 7),
-        description: `t${id}`,
-        accountId: 1,
-        categoryId: 1,
-        type: 'expense' as const,
-        amountCents: 100,
-        cancelled: false,
-        status: 'posted' as const,
-      })
+    const txn = (
+      id: number,
+      date: string,
+    ) => ({
+      id,
+      date,
+      budgetMonth: date.slice(0, 7),
+      description: `t${id}`,
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense' as const,
+      amountCents: 100,
+      cancelled: false,
+      status: 'posted' as const,
+    })
     const ds = dataset({
       transactions: [txn(3, '2026-03-01'), txn(2, '2026-02-01'), txn(1, '2026-01-01')],
     })
@@ -330,7 +335,13 @@ describe('patchAfterAccountDelete', () => {
         },
       ],
     })
-    const createdAccount = { id: 2, name: 'New checking', kind: 'debit' as const, settlement: 'immediate' as const, active: true }
+    const createdAccount = {
+      id: 2,
+      name: 'New checking',
+      kind: 'debit' as const,
+      settlement: 'immediate' as const,
+      active: true,
+    }
 
     const patched = patchAfterAccountDelete(ds, 1, { reassignedToId: 2, createdAccount })
 
@@ -398,7 +409,10 @@ describe('flag patches', () => {
   const work = { id: 1, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 1, active: true }
   const tax = { id: 2, name: 'Tax', color: '#10b981', reimbursable: true, sortOrder: 0, active: true }
 
-  function txn(id: number, flagId?: number): Transaction {
+  function txn(
+    id: number,
+    flagId?: number,
+  ): Transaction {
     return {
       id,
       date: '2026-05-01',
@@ -450,14 +464,16 @@ describe('flag patches', () => {
 
     expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
   })
-
 })
 
 describe('label patches', () => {
   const trip = { id: 1, name: 'Japan trip', color: '#6366f1', sortOrder: 1, active: true }
   const move = { id: 2, name: 'Moving', color: '#10b981', sortOrder: 0, active: true }
 
-  function txn(id: number, labelIds?: number[]): Transaction {
+  function txn(
+    id: number,
+    labelIds?: number[],
+  ): Transaction {
     return {
       id,
       date: '2026-05-01',
@@ -606,10 +622,7 @@ describe('deleting a transaction drops its receipts from the dataset', () => {
 describe('the plan after scenario patches', () => {
   it('moves to the activated scenario without a reload', () => {
     const before = dataset({
-      goalScenarios: [
-        makeScenario({ id: 1, sortOrder: 0, isActive: true }),
-        makeScenario({ id: 2, sortOrder: 1 }),
-      ],
+      goalScenarios: [makeScenario({ id: 1, sortOrder: 0, isActive: true }), makeScenario({ id: 2, sortOrder: 1 })],
     })
 
     const next = patchAfterScenarioActivate(before, makeScenario({ id: 2, sortOrder: 1, isActive: true }))
@@ -676,14 +689,19 @@ describe('patches for answers that carry more than their write changed', () => {
   it('adds an edited scenario it has not seen', () => {
     const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
 
-    expect(patchAfterScenarioUpdate(before, makeScenario({ id: 2, sortOrder: 1 })).goalScenarios.map((s) => s.id)).toEqual([1, 2])
+    expect(
+      patchAfterScenarioUpdate(before, makeScenario({ id: 2, sortOrder: 1 })).goalScenarios.map((s) => s.id),
+    ).toEqual([1, 2])
   })
 
   it('still moves the plan off the others when the activated scenario is one it has not seen', () => {
     const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
 
     expect(
-      patchAfterScenarioActivate(before, makeScenario({ id: 2, isActive: true })).goalScenarios.map((s) => [s.id, s.isActive]),
+      patchAfterScenarioActivate(before, makeScenario({ id: 2, isActive: true })).goalScenarios.map((s) => [
+        s.id,
+        s.isActive,
+      ]),
     ).toEqual([[1, false]])
   })
 })

@@ -34,7 +34,10 @@ interface BulkEditSheetProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   busy: boolean
-  onApply: (patch: BulkTransactionPatch, labelIdsToAdd: number[]) => void
+  onApply: (
+    patch: BulkTransactionPatch,
+    labelIdsToAdd: number[],
+  ) => void
   onCancel: () => void
 }
 
@@ -84,8 +87,10 @@ export function BulkEditSheet({
     description: '',
   })
 
-  const set = <K extends keyof BulkEditFieldState>(key: K, value: BulkEditFieldState[K]) =>
-    setFields((prev) => ({ ...prev, [key]: value }))
+  const set = <K extends keyof BulkEditFieldState>(
+    key: K,
+    value: BulkEditFieldState[K],
+  ) => setFields((prev) => ({ ...prev, [key]: value }))
 
   const canApply = canApplyBulkEdit(fields)
 
@@ -96,12 +101,7 @@ export function BulkEditSheet({
   const noun = count === 1 ? 'transaction' : 'transactions'
 
   return (
-    <Modal
-      title="Edit selected"
-      subtitle={`${count} ${noun}`}
-      onClose={onCancel}
-      trapPaused={popoverOpen}
-    >
+    <Modal title="Edit selected" subtitle={`${count} ${noun}`} onClose={onCancel} trapPaused={popoverOpen}>
       <OffScreenNote hiddenCount={hiddenCount} />
       <div className={styles.fields}>
         <ToggleField
@@ -117,15 +117,8 @@ export function BulkEditSheet({
           />
         </ToggleField>
 
-        <ToggleField
-          label="Category"
-          enabled={fields.categoryEnabled}
-          onToggle={(v) => set('categoryEnabled', v)}
-        >
-          <select
-            value={fields.categoryId}
-            onChange={(e) => set('categoryId', Number(e.target.value))}
-          >
+        <ToggleField label="Category" enabled={fields.categoryEnabled} onToggle={(v) => set('categoryEnabled', v)}>
+          <select value={fields.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {optionLabel(c)}
@@ -134,15 +127,8 @@ export function BulkEditSheet({
           </select>
         </ToggleField>
 
-        <ToggleField
-          label="Account"
-          enabled={fields.accountEnabled}
-          onToggle={(v) => set('accountEnabled', v)}
-        >
-          <select
-            value={fields.accountId}
-            onChange={(e) => set('accountId', Number(e.target.value))}
-          >
+        <ToggleField label="Account" enabled={fields.accountEnabled} onToggle={(v) => set('accountEnabled', v)}>
+          <select value={fields.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {optionLabel(a)}
@@ -151,20 +137,16 @@ export function BulkEditSheet({
           </select>
         </ToggleField>
 
-        <ToggleField
-          label="Type"
-          enabled={fields.typeEnabled}
-          onToggle={(v) => set('typeEnabled', v)}
-        >
+        <ToggleField label="Type" enabled={fields.typeEnabled} onToggle={(v) => set('typeEnabled', v)}>
           <TypeSelector options={STORED_TYPES} value={fields.type} onChange={(t) => set('type', t)} />
         </ToggleField>
 
-        <ToggleField
-          label="Date"
-          enabled={fields.dateEnabled}
-          onToggle={(v) => set('dateEnabled', v)}
-        >
-          <BulkDateField value={fields.date} onChange={(date) => set('date', date)} onTrapPausedChange={setPopoverOpen} />
+        <ToggleField label="Date" enabled={fields.dateEnabled} onToggle={(v) => set('dateEnabled', v)}>
+          <BulkDateField
+            value={fields.date}
+            onChange={(date) => set('date', date)}
+            onTrapPausedChange={setPopoverOpen}
+          />
         </ToggleField>
 
         <ToggleField
@@ -178,11 +160,7 @@ export function BulkEditSheet({
             onTrapPausedChange={setPopoverOpen}
           />
         </ToggleField>
-        <ToggleField
-          label="Flag"
-          enabled={fields.flagEnabled}
-          onToggle={(v) => set('flagEnabled', v)}
-        >
+        <ToggleField label="Flag" enabled={fields.flagEnabled} onToggle={(v) => set('flagEnabled', v)}>
           <FlagField
             compact
             flags={model.dataset.flags}
@@ -192,11 +170,7 @@ export function BulkEditSheet({
             {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
           />
         </ToggleField>
-        <ToggleField
-          label="Labels"
-          enabled={fields.labelsEnabled}
-          onToggle={(v) => set('labelsEnabled', v)}
-        >
+        <ToggleField label="Labels" enabled={fields.labelsEnabled} onToggle={(v) => set('labelsEnabled', v)}>
           <LabelField
             labels={model.dataset.labels}
             value={fields.labelIds}
@@ -214,12 +188,7 @@ export function BulkEditSheet({
         <button type="button" className={styles.cancelBtn} onClick={onCancel}>
           Cancel
         </button>
-        <button
-          type="button"
-          className={styles.applyBtn}
-          disabled={!canApply || busy}
-          onClick={handleApply}
-        >
+        <button type="button" className={styles.applyBtn} disabled={!canApply || busy} onClick={handleApply}>
           {busy ? 'Applying…' : 'Apply changes'}
         </button>
       </div>
@@ -241,11 +210,7 @@ function ToggleField({
   return (
     <div className={`${styles.fieldCard} ${enabled ? styles.fieldCardActive : ''}`}>
       <label className={styles.fieldHeader}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => onToggle(e.target.checked)}
-        />
+        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
         <span className={styles.fieldLabel}>{label}</span>
       </label>
       {enabled && <div className={styles.fieldInput}>{children}</div>}

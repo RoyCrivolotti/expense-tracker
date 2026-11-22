@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { markOf, newRecorder, statementsSince, summarize, type StatementRecord } from './records'
 
-const record = (sql: string, over: Partial<StatementRecord> = {}): StatementRecord => ({
+const record = (
+  sql: string,
+  over: Partial<StatementRecord> = {},
+): StatementRecord => ({
   sql,
   rowsRead: 1,
   rowsWritten: 0,
@@ -14,7 +17,11 @@ const record = (sql: string, over: Partial<StatementRecord> = {}): StatementReco
 describe('statementsSince', () => {
   it('adds up repeats of one SQL text and keeps the order in which texts first ran', () => {
     const recorder = newRecorder()
-    recorder.records.push(record('SELECT a'), record('SELECT b', { rowsRead: 5 }), record('SELECT a', { rowsRead: 3, durationMs: 1.5 }))
+    recorder.records.push(
+      record('SELECT a'),
+      record('SELECT b', { rowsRead: 5 }),
+      record('SELECT a', { rowsRead: 3, durationMs: 1.5 }),
+    )
     expect(statementsSince(recorder, { records: 0 })).toEqual([
       { sql: 'SELECT a', runs: 2, rowsRead: 4, rowsWritten: 0, sqlMs: 2, batch: false },
       { sql: 'SELECT b', runs: 1, rowsRead: 5, rowsWritten: 0, sqlMs: 0.5, batch: false },
@@ -23,9 +30,15 @@ describe('statementsSince', () => {
 
   it('keeps a statement sent inside a batch apart from the same text sent on its own', () => {
     const recorder = newRecorder()
-    recorder.records.push(record('UPDATE t SET x = ?', { batch: true, rowsWritten: 2, write: true }), record('UPDATE t SET x = ?', { rowsWritten: 1, write: true }))
+    recorder.records.push(
+      record('UPDATE t SET x = ?', { batch: true, rowsWritten: 2, write: true }),
+      record('UPDATE t SET x = ?', { rowsWritten: 1, write: true }),
+    )
     const totals = statementsSince(recorder, { records: 0 })
-    expect(totals.map((t) => [t.batch, t.rowsWritten])).toEqual([[true, 2], [false, 1]])
+    expect(totals.map((t) => [t.batch, t.rowsWritten])).toEqual([
+      [true, 2],
+      [false, 1],
+    ])
   })
 
   it('leaves out what ran before the mark, and its totals match the summary of the same request', () => {

@@ -48,7 +48,15 @@ export interface SpreadChartProps {
   paused?: boolean
 }
 
-function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs = SPREAD_RUNS, height = 210, embedded = false, paused = false }: SpreadChartProps) {
+function SpreadChartImpl({
+  draft: liveDraft,
+  milestones,
+  nominal = false,
+  runs = SPREAD_RUNS,
+  height = 210,
+  embedded = false,
+  paused = false,
+}: SpreadChartProps) {
   // The replay waits until the edits have stopped for a moment, and until the card is near the screen.
   // The inputs are painted first and the replay follows, so typing is not held up by it.
   const draft = useDeferredValue(useReplayInputOrLive(liveDraft, paused))
@@ -59,11 +67,20 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
   const key = `${spreadKey(draft, inflationRate, volatility, runs)}|${milestones.map((m) => m.amountCents).join(',')}`
   const { plan, result, targetCents } = useMemo(() => {
     const p = scenarioToParams({ ...draft, id: 0 }, inflationRate)
-    const target = draft.annualSpendCents > 0 && draft.safeWithdrawalRate > 0 ? fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate) : null
+    const target =
+      draft.annualSpendCents > 0 && draft.safeWithdrawalRate > 0
+        ? fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
+        : null
     return {
       plan: projectNetWorth(p),
       targetCents: target,
-      result: replayMarket({ params: p, volatility, runs, milestonesCents: milestones.map((m) => m.amountCents), fiTargetCents: target }),
+      result: replayMarket({
+        params: p,
+        volatility,
+        runs,
+        milestonesCents: milestones.map((m) => m.amountCents),
+        fiTargetCents: target,
+      }),
     }
     // The key is what the replay reads of the draft, the milestones and the settings.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,14 +88,26 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
 
   const money = (cents: number) => formatCentsCompact(cents, format)
   const short = (cents: number) => formatMoneyShort(cents, format)
-  const moneyLabel = nominal ? `${currencyWord(format)} on your account in each year` : planMoneyLabel(draft.planStartDate, format)
+  const moneyLabel = nominal
+    ? `${currencyWord(format)} on your account in each year`
+    : planMoneyLabel(draft.planStartDate, format)
   const series = useMemo(
     () => spreadSeries({ plan, result, inflationRate, nominal }),
     [plan, result, inflationRate, nominal],
   )
-  const labels = useMemo(() => sparseLabels(plan.map((p) => p.year), 5), [plan])
+  const labels = useMemo(
+    () =>
+      sparseLabels(
+        plan.map((p) => p.year),
+        5,
+      ),
+    [plan],
+  )
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
-    const line = (label: string, id: string): TooltipLine => ({
+    const line = (
+      label: string,
+      id: string,
+    ): TooltipLine => ({
       label,
       value: short(series.find((s) => s.id === id)?.values[i] ?? 0),
       color: series.find((s) => s.id === id)?.color,
@@ -95,8 +124,14 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
     }
   }
 
-  const fi = targetCents === null ? null : fiRow({ result, planStartDate: draft.planStartDate, years: result.years, money, targetCents, format })
-  const rows = [...milestoneRows({ milestones, result, planStartDate: draft.planStartDate, years: result.years, money }), ...(fi ? [fi] : [])]
+  const fi =
+    targetCents === null
+      ? null
+      : fiRow({ result, planStartDate: draft.planStartDate, years: result.years, money, targetCents, format })
+  const rows = [
+    ...milestoneRows({ milestones, result, planStartDate: draft.planStartDate, years: result.years, money }),
+    ...(fi ? [fi] : []),
+  ]
   const warning = spreadWarning(result)
   const caption = spreadCaption({ runs: result.runs, volatility, realReturn: draft.expectedRealReturn, format })
 
@@ -117,7 +152,10 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
       <ChartLegend
         items={[
           { label: 'The plan', color: series.find((s) => s.id === 'plan')!.color },
-          { label: 'Middle run, middle half shaded, 8 in 10 between the dashed lines', color: series.find((s) => s.id === 'median')!.color },
+          {
+            label: 'Middle run, middle half shaded, 8 in 10 between the dashed lines',
+            color: series.find((s) => s.id === 'median')!.color,
+          },
         ]}
       />
       {warning ? <p className={`${styles.chartHint} ${styles.chartCaption}`}>{warning}</p> : null}

@@ -20,7 +20,10 @@ export function mulberry32(seed: number): () => number {
  * (0, 1], so a uniform of exactly zero (it happens about once in 30.000 draws of 10.000 x 60) is a normal of
  * about 6,7 and not an infinity that turns a whole run into NaN.
  */
-export function boxMuller(u1: number, u2: number): [number, number] {
+export function boxMuller(
+  u1: number,
+  u2: number,
+): [number, number] {
   const r = Math.sqrt(-2 * Math.log(1 - u1))
   const angle = 2 * Math.PI * u2
   return [r * Math.cos(angle), r * Math.sin(angle)]
@@ -43,7 +46,11 @@ let cached: { key: string; draws: Float64Array } | null = null
  * `t * pairs + k`. They are made in that order from the seed, so the first years of a longer matrix are those
  * of a shorter one, and the last matrix asked for is kept, since a replay asks for the same one on every edit.
  */
-export function normalDraws(pairs: number, years: number, seed: number): Float64Array {
+export function normalDraws(
+  pairs: number,
+  years: number,
+  seed: number,
+): Float64Array {
   const key = `${pairs}|${years}|${seed}`
   if (cached?.key === key) return cached.draws
   const total = pairs * years

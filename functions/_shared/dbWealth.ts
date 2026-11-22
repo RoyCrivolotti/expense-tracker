@@ -98,9 +98,7 @@ export async function deleteWealthAccount(
     return { archived: true }
   }
 
-  const result = await env.DB.prepare('DELETE FROM wealth_accounts WHERE id = ? AND owner = ?')
-    .bind(id, owner)
-    .run()
+  const result = await env.DB.prepare('DELETE FROM wealth_accounts WHERE id = ? AND owner = ?').bind(id, owner).run()
   if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Wealth account not found')
   return { archived: false }
 }
@@ -112,9 +110,7 @@ async function loadCheckinWithEntries(
   checkinId: number,
 ): Promise<WealthCheckin> {
   const [checkinRow, entryRows] = await Promise.all([
-    env.DB.prepare('SELECT * FROM wealth_checkins WHERE id = ?')
-      .bind(checkinId)
-      .first<WealthCheckinRow>(),
+    env.DB.prepare('SELECT * FROM wealth_checkins WHERE id = ?').bind(checkinId).first<WealthCheckinRow>(),
     env.DB.prepare('SELECT * FROM wealth_checkin_entries WHERE checkin_id = ?')
       .bind(checkinId)
       .all<WealthCheckinEntryRow>()
@@ -130,9 +126,7 @@ async function assertOwnedAccountIds(
   accountIds: number[],
 ): Promise<void> {
   for (const accountId of accountIds) {
-    const row = await env.DB.prepare(
-      'SELECT id FROM wealth_accounts WHERE id = ? AND owner = ?',
-    )
+    const row = await env.DB.prepare('SELECT id FROM wealth_accounts WHERE id = ? AND owner = ?')
       .bind(accountId, owner)
       .first<{ id: number }>()
     if (!row) throw new HttpError(400, `Wealth account ${accountId} not found or not owned`)
@@ -210,9 +204,7 @@ export async function updateWealthCheckin(
   patch: Partial<NewWealthCheckin>,
 ): Promise<WealthCheckin> {
   // Verify ownership before mutating.
-  const existing = await env.DB.prepare(
-    'SELECT id FROM wealth_checkins WHERE id = ? AND owner = ?',
-  )
+  const existing = await env.DB.prepare('SELECT id FROM wealth_checkins WHERE id = ? AND owner = ?')
     .bind(id, owner)
     .first<{ id: number }>()
   if (!existing) throw new HttpError(404, 'Wealth check-in not found')
@@ -230,9 +222,7 @@ export async function updateWealthCheckin(
       values.push(patch.note ?? null)
     }
     if (fields.length > 0) {
-      await env.DB.prepare(
-        `UPDATE wealth_checkins SET ${fields.join(', ')} WHERE id = ? AND owner = ?`,
-      )
+      await env.DB.prepare(`UPDATE wealth_checkins SET ${fields.join(', ')} WHERE id = ? AND owner = ?`)
         .bind(...values, id, owner)
         .run()
     }
@@ -268,10 +258,6 @@ export async function deleteWealthCheckin(
   id: number,
 ): Promise<void> {
   // entries cascade-delete via FK.
-  const result = await env.DB.prepare(
-    'DELETE FROM wealth_checkins WHERE id = ? AND owner = ?',
-  )
-    .bind(id, owner)
-    .run()
+  const result = await env.DB.prepare('DELETE FROM wealth_checkins WHERE id = ? AND owner = ?').bind(id, owner).run()
   if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Wealth check-in not found')
 }

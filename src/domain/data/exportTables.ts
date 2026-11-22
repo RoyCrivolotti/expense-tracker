@@ -73,7 +73,10 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 const STATEMENT = /^([1-9]\d{0,15}):(\d{4}-(?:0[1-9]|1[0-2]))$/
 
 /** Whether `after` is a position this table can start from. Cursors carry no owner. */
-export function isExportCursor(table: ExportTable, after: string): boolean {
+export function isExportCursor(
+  table: ExportTable,
+  after: string,
+): boolean {
   if (table === 'settings') return false
   if (table === 'cashActuals') return MONTH.test(after)
   if (table === 'accountStatements') return STATEMENT.test(after)
@@ -88,7 +91,10 @@ export function statementPosition(after: string): { accountId: number; yearMonth
 }
 
 /** The cursor that continues after `row`, the last row of a chunk. */
-export function exportCursorOf(table: ExportTable, row: object): string {
+export function exportCursorOf(
+  table: ExportTable,
+  row: object,
+): string {
   const r = row as Record<string, unknown>
   if (table === 'cashActuals') return String(r.yearMonth)
   if (table === 'accountStatements') return `${String(r.accountId)}:${String(r.yearMonth)}`

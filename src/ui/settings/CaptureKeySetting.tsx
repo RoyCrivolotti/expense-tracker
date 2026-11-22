@@ -75,7 +75,15 @@ function MakeKeyForm({ busy, onMake }: { busy: boolean; onMake: (label: string) 
   )
 }
 
-function KeyList({ keys, busy, onRevoke }: { keys: CaptureKeyInfo[]; busy: boolean; onRevoke: (key: CaptureKeyInfo) => void }) {
+function KeyList({
+  keys,
+  busy,
+  onRevoke,
+}: {
+  keys: CaptureKeyInfo[]
+  busy: boolean
+  onRevoke: (key: CaptureKeyInfo) => void
+}) {
   if (keys.length === 0) return <p className={tabStyles.settingHint}>No keys yet.</p>
   return (
     <ul className={styles.list}>

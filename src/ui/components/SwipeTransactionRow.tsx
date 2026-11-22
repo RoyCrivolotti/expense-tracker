@@ -10,7 +10,10 @@ import { PresenceValue } from './Presence'
 import { TransactionRowBody } from './TransactionRowBody'
 import styles from './TransactionList.module.css'
 
-function deleteConfirmMessage(txn: Transaction, lookup: Lookup): string {
+function deleteConfirmMessage(
+  txn: Transaction,
+  lookup: Lookup,
+): string {
   const label = txn.description || lookup.categoryName(txn.categoryId)
   return `"${label}" will be removed permanently.`
 }

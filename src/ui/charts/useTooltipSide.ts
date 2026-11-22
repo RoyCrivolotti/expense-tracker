@@ -64,7 +64,10 @@ export function pickSide(room: { above: number; below: number }): TooltipSide {
 }
 
 /** How much of a panel of height `need` a side would cut off. */
-function clipped(room: number, need: number): number {
+function clipped(
+  room: number,
+  need: number,
+): number {
   return Math.max(0, need - room)
 }
 
@@ -74,7 +77,11 @@ function clipped(room: number, need: number): number {
  * rows instead of being drawn over the header or tab bar. The cap never goes below `floor`, even
  * where that still clips a little: a title-only sliver is worse than a small scrollable box.
  */
-export function capHeight(roomForSide: number, need: number, floor: number): number | null {
+export function capHeight(
+  roomForSide: number,
+  need: number,
+  floor: number,
+): number | null {
   const available = roomForSide - PANEL_GAP
   if (need <= available) return null
   return Math.min(need, Math.max(floor, available))

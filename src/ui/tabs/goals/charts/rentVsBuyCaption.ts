@@ -55,7 +55,9 @@ export function rentVsBuyCaptionParts({
       : null
   const details = [
     'The renter invests the cash and whatever owning would cost above the rent; the buyer owns the house, owes the loan and invests whatever rent would cost above owning.',
-    ...(feesCents > 0 ? [`The buyer spends the ${money(feesCents)} fees at once, so the buyer's line starts lower.`] : []),
+    ...(feesCents > 0
+      ? [`The buyer spends the ${money(feesCents)} fees at once, so the buyer's line starts lower.`]
+      : []),
     ...(payment ? [payment] : []),
     ...(loanPaidOffYear === null ? [] : [`The loan is paid off in year ${Math.ceil(loanPaidOffYear)} after you buy.`]),
     monthlyCostSentence(ownCheaper),

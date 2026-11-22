@@ -26,7 +26,7 @@ describe('planMoneyLabel', () => {
 })
 
 describe('chartMoneyLabel', () => {
-  it('names the plan\'s money, or what the account will read in each year in the Nominal view', () => {
+  it("names the plan's money, or what the account will read in each year in the Nominal view", () => {
     expect(chartMoneyLabel('2026-01-01', false, EU_MONEY_FORMAT)).toBe('in 2026 euros')
     expect(chartMoneyLabel('2026-01-01', true, EU_MONEY_FORMAT)).toBe('in euros on your account in each year')
   })

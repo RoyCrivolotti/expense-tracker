@@ -98,7 +98,10 @@ export const ROW_READERS = [
 ]
 
 /** Runs the named consumers and keeps each result as a string, so it can be kept and compared later. */
-export function fingerprint(out: Outputs, keys: string[]): Record<string, string> {
+export function fingerprint(
+  out: Outputs,
+  keys: string[],
+): Record<string, string> {
   return Object.fromEntries(keys.map((k) => [k, JSON.stringify(plain(out[k]!()))]))
 }
 

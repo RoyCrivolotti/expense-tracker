@@ -58,7 +58,10 @@ describe('ToastProvider', () => {
     function WithUndo() {
       const { showToast } = useToast()
       return (
-        <button type="button" onClick={() => showToast('Removed Horizon from the bar', 'info', { label: 'Undo', onAction })}>
+        <button
+          type="button"
+          onClick={() => showToast('Removed Horizon from the bar', 'info', { label: 'Undo', onAction })}
+        >
           go
         </button>
       )
@@ -111,7 +114,12 @@ describe('ToastProvider hold time', () => {
     function Hold() {
       const { showToast } = useToast()
       return (
-        <button type="button" onClick={() => showToast('Added\nExpense', 'success', { label: 'Undo', onAction: () => {} }, { holdMs: 5000 })}>
+        <button
+          type="button"
+          onClick={() =>
+            showToast('Added\nExpense', 'success', { label: 'Undo', onAction: () => {} }, { holdMs: 5000 })
+          }
+        >
           go
         </button>
       )
@@ -135,7 +143,12 @@ describe('ToastProvider dismissToast and taps', () => {
     const { showToast, dismissToast } = useToast()
     return (
       <>
-        <button type="button" onClick={() => showToast('First', 'success', { label: 'Undo', onAction: () => {} }, { key: 'one', keepOnTap: true })}>
+        <button
+          type="button"
+          onClick={() =>
+            showToast('First', 'success', { label: 'Undo', onAction: () => {} }, { key: 'one', keepOnTap: true })
+          }
+        >
           first
         </button>
         <button type="button" onClick={() => showToast('Second', 'info', undefined, { key: 'two' })}>
@@ -190,4 +203,3 @@ describe('ToastProvider dismissToast and taps', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 })
-

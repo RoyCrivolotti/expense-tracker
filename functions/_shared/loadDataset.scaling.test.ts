@@ -27,7 +27,10 @@ const MONTHS = 120
 const SIZES = (process.env.SCALING_ROWS ?? '5000,20000,50000,100000,250000').split(',').map(Number)
 
 /** Fastest of a few runs, in ms, so one slow GC pause does not stand for the cost. */
-function best<T>(fn: () => T, runs = 3): { ms: number; value: T } {
+function best<T>(
+  fn: () => T,
+  runs = 3,
+): { ms: number; value: T } {
   let value = fn()
   let ms = Infinity
   for (let i = 0; i < runs; i += 1) {
@@ -38,7 +41,10 @@ function best<T>(fn: () => T, runs = 3): { ms: number; value: T } {
   return { ms, value }
 }
 
-const fixed = (n: number, digits = 1): number => Number(n.toFixed(digits))
+const fixed = (
+  n: number,
+  digits = 1,
+): number => Number(n.toFixed(digits))
 
 function shapeFor(rows: number): { months: number; perMonth: number } {
   return { months: MONTHS, perMonth: Math.max(0, Math.round(rows / MONTHS) - 7) }
@@ -51,10 +57,15 @@ const TXN_COLUMNS =
  * The transactions read with no mapping and no status derivation on the server: raw column tuples straight
  * to JSON. What a "compact" route could cost; the client would derive status from accounts and statements.
  */
-async function compactRead(env: Env, stats: ReturnType<typeof newStats>): Promise<{ jsMs: number; mb: number }> {
+async function compactRead(
+  env: Env,
+  stats: ReturnType<typeof newStats>,
+): Promise<{ jsMs: number; mb: number }> {
   const sqliteBefore = stats.sqliteMs
   const start = performance.now()
-  const tuples = await env.DB.prepare(`SELECT ${TXN_COLUMNS} FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC`)
+  const tuples = await env.DB.prepare(
+    `SELECT ${TXN_COLUMNS} FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC`,
+  )
     .bind(OWNER)
     .raw()
   const body = JSON.stringify(tuples)
@@ -87,7 +98,9 @@ async function measure(rows: number): Promise<Record<string, number>> {
   const model = best(() => buildExpenseModel(parsed.value))
   const data = parsed.value
   const cash = best(() => computeCashReconciliation(data.transactions, data.accounts, data.settings, data.cashActuals))
-  const all = best(() => buildTransactionListRows(data.transactions, {}, data.accountStatements, cash.value, data.accounts, data.settings))
+  const all = best(() =>
+    buildTransactionListRows(data.transactions, {}, data.accountStatements, cash.value, data.accounts, data.settings),
+  )
   const series = best(() => groupTransactions(data.transactions))
   const heapMb = (process.memoryUsage().heapUsed - heapBefore) / 1_048_576
 

@@ -14,7 +14,11 @@ describe('monthEdgeNotice', () => {
   })
 
   it('offers the day the push arrived on when that is another day', () => {
-    const n = notice({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 12, 1, 0, 19) })!
+    const n = notice({
+      localDate: '2026-11-30',
+      occurredAt: pushAt(2026, 11, 30, 23, 52),
+      createdAt: arrivedAt(2026, 12, 1, 0, 19),
+    })!
 
     expect(n.original).toEqual({ date: '2026-11-30', label: 'Mon 30 Nov' })
     expect(n.alternate).toEqual({ date: '2026-12-01', label: 'Tue 1 Dec' })
@@ -25,13 +29,21 @@ describe('monthEdgeNotice', () => {
   })
 
   it('offers the next day when the push arrived the same day in the last hour of a month', () => {
-    const n = notice({ localDate: '2026-11-30', occurredAt: pushAt(2026, 11, 30, 23, 52), createdAt: arrivedAt(2026, 11, 30, 23, 53) })!
+    const n = notice({
+      localDate: '2026-11-30',
+      occurredAt: pushAt(2026, 11, 30, 23, 52),
+      createdAt: arrivedAt(2026, 11, 30, 23, 53),
+    })!
 
     expect(n.alternate.date).toBe('2026-12-01')
   })
 
   it('offers the day before in the first hour of a month, across a year end too', () => {
-    const n = notice({ localDate: '2027-01-01', occurredAt: pushAt(2027, 1, 1, 0, 10), createdAt: arrivedAt(2027, 1, 1, 0, 11) })!
+    const n = notice({
+      localDate: '2027-01-01',
+      occurredAt: pushAt(2027, 1, 1, 0, 10),
+      createdAt: arrivedAt(2027, 1, 1, 0, 11),
+    })!
 
     expect(n.alternate.date).toBe('2026-12-31')
   })

@@ -3,15 +3,47 @@
  * accents, capitals, padding, descriptions that sort as equal, an emoji and a few with numbers, with
  * ties on a date and some cancelled rows. Placeholder text only.
  */
-import { type DescriptionIndexOptions, type DescriptionMatch, type IndexRow, buildDescriptionIndex, normalizeDescriptionKey } from '../data/descriptionIndex'
+import {
+  type DescriptionIndexOptions,
+  type DescriptionMatch,
+  type IndexRow,
+  buildDescriptionIndex,
+  normalizeDescriptionKey,
+} from '../data/descriptionIndex'
 import { mulberry32 } from '../domain/engine/rng'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { makeDataset } from './factories'
 
-const WORDS = ['cafe', 'café', 'CAFÉ', 'Cafè', 'rent', 'Rent ', ' RENT', 'ñandú', 'nandu', 'Ünï', 'uni', 'münchen', 'mùnchen', 'straße', 'STRASSE', 'shop', 'Shop', '🍕 pizza', 'pizza', 'ärlig', 'apa', 'zebra']
+const WORDS = [
+  'cafe',
+  'café',
+  'CAFÉ',
+  'Cafè',
+  'rent',
+  'Rent ',
+  ' RENT',
+  'ñandú',
+  'nandu',
+  'Ünï',
+  'uni',
+  'münchen',
+  'mùnchen',
+  'straße',
+  'STRASSE',
+  'shop',
+  'Shop',
+  '🍕 pizza',
+  'pizza',
+  'ärlig',
+  'apa',
+  'zebra',
+]
 const SUFFIXES = ['', ' 1', ' 2', ' bar', ' 10', ' é']
 
-export function generatedRows(seed: number, count = 260): IndexRow[] {
+export function generatedRows(
+  seed: number,
+  count = 260,
+): IndexRow[] {
   const rnd = mulberry32(seed)
   const pick = <T>(items: readonly T[]): T => items[Math.floor(rnd() * items.length)]!
   return Array.from({ length: count }, (_, i): IndexRow => {
@@ -31,8 +63,30 @@ export function generatedRows(seed: number, count = 260): IndexRow[] {
 }
 
 /** The prefixes a person might type for these rows: every start of every description, in several spellings. */
-export function prefixesFor(rows: IndexRow[], rnd: () => number): string[] {
-  const out = new Set<string>(['c', 'ca', 'caf', 'r', 're', 'ren', 'n', 'ñ', 'u', 'm', 's', 'st', 'p', '🍕', 'a', 'z', 'zzz', 'x'])
+export function prefixesFor(
+  rows: IndexRow[],
+  rnd: () => number,
+): string[] {
+  const out = new Set<string>([
+    'c',
+    'ca',
+    'caf',
+    'r',
+    're',
+    'ren',
+    'n',
+    'ñ',
+    'u',
+    'm',
+    's',
+    'st',
+    'p',
+    '🍕',
+    'a',
+    'z',
+    'zzz',
+    'x',
+  ])
   for (const row of rows) {
     const key = normalizeDescriptionKey(row.description)
     for (const length of [1, 2, 3, 5]) {
@@ -50,26 +104,32 @@ export function prefixesFor(rows: IndexRow[], rnd: () => number): string[] {
  * The index in the server's order and reach (`order: 'key'`): descriptions that start with the text, by the collator
  * over the normalized text, as `GET /descriptions/suggest` answers them and without a count, since the server has none.
  */
-export function keyed(rows: IndexRow[], options: Omit<DescriptionIndexOptions, 'order'> = {}) {
+export function keyed(
+  rows: IndexRow[],
+  options: Omit<DescriptionIndexOptions, 'order'> = {},
+) {
   const index = buildDescriptionIndex(rows, { ...options, order: 'key' })
   return {
     ...index,
-    searchEntries: (text: string, limit?: number): DescriptionMatch[] =>
-      index.searchEntries(text, limit).map(({ uses: _uses, ...match }) => match),
+    searchEntries: (
+      text: string,
+      limit?: number,
+    ): DescriptionMatch[] => index.searchEntries(text, limit).map(({ uses: _uses, ...match }) => match),
   }
 }
 
 /** The rows as a dataset a database can be seeded with, newest first as the API serves them. */
-export function descriptionDataset(seed: number, count = 260): ExpenseDataset {
-  const transactions = generatedRows(seed, count).map(
-    (row): Transaction => ({
-      ...row,
-      budgetMonth: row.date.slice(0, 7),
-      amountCents: 1_000 + row.id,
-      status: row.cancelled ? 'cancelled' : 'posted',
-      createdAt: `${row.date}T08:00:00Z`,
-    }),
-  )
+export function descriptionDataset(
+  seed: number,
+  count = 260,
+): ExpenseDataset {
+  const transactions = generatedRows(seed, count).map((row): Transaction => ({
+    ...row,
+    budgetMonth: row.date.slice(0, 7),
+    amountCents: 1_000 + row.id,
+    status: row.cancelled ? 'cancelled' : 'posted',
+    createdAt: `${row.date}T08:00:00Z`,
+  }))
   transactions.sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
   return makeDataset({ transactions })
 }

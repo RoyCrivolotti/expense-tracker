@@ -24,9 +24,7 @@ describe('AnalyticsTab', () => {
   })
 
   it('renders the three-view shell once there is data', () => {
-    const model = buildExpenseModel(
-      makeDataset({ transactions: [makeTransaction({ id: 1, budgetMonth: '2026-01' })] }),
-    )
+    const model = buildExpenseModel(makeDataset({ transactions: [makeTransaction({ id: 1, budgetMonth: '2026-01' })] }))
     render(<AnalyticsTab model={model} month="2026-01" onMonthChange={vi.fn()} />)
     expect(screen.getByRole('tablist', { name: 'Analytics view' })).toBeInTheDocument()
   })

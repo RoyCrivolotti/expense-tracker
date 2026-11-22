@@ -32,11 +32,7 @@ import {
   updateScenario,
   updateSettings,
 } from '../dbConfig'
-import {
-  createInstallmentPlan,
-  deleteInstallmentPlan,
-  updateInstallmentPlan,
-} from '../dbInstallments'
+import { createInstallmentPlan, deleteInstallmentPlan, updateInstallmentPlan } from '../dbInstallments'
 import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
 import { createLabel, deleteLabel, setTransactionLabels, updateLabel } from '../dbLabels'
 import {
@@ -62,65 +58,239 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
   return {
     loadDataset: (owner) => loadDataset(env, owner),
     listOwners: () => listOwners(env),
-    queryTransactions: (owner, filter, page) => queryTransactions(env, owner, filter, page),
-    summarizeTransactions: (owner, filter) => summarizeTransactions(env, owner, filter),
-    getTransaction: (owner, id) => getTransaction(env, owner, id),
-    recentTransactions: (owner, limit) => recentTransactions(env, owner, limit),
+    queryTransactions: (
+      owner,
+      filter,
+      page,
+    ) => queryTransactions(env, owner, filter, page),
+    summarizeTransactions: (
+      owner,
+      filter,
+    ) => summarizeTransactions(env, owner, filter),
+    getTransaction: (
+      owner,
+      id,
+    ) => getTransaction(env, owner, id),
+    recentTransactions: (
+      owner,
+      limit,
+    ) => recentTransactions(env, owner, limit),
     readLedgerReference: (owner) => readLedgerReference(env, owner),
-    readMonthRows: (owner, range, maxRows) => readMonthRows(env, owner, range, maxRows),
-    readMonthCells: (owner, range, maxCells) => readMonthCells(env, owner, range, maxCells),
+    readMonthRows: (
+      owner,
+      range,
+      maxRows,
+    ) => readMonthRows(env, owner, range, maxRows),
+    readMonthCells: (
+      owner,
+      range,
+      maxCells,
+    ) => readMonthCells(env, owner, range, maxCells),
     readSeries: (owner) => readSeries(env, owner),
-    suggestDescriptions: (owner, request) => suggestDescriptions(env, owner, request),
+    suggestDescriptions: (
+      owner,
+      request,
+    ) => suggestDescriptions(env, owner, request),
     readUsage: (owner) => readUsage(env, owner),
-    readExportChunk: (owner, request) => readExportChunk(env, owner, request),
-    insertTransaction: (owner, input) => insertTransaction(env, owner, input),
-    updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
-    deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
-    deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
-    bulkUpdateTransactions: (owner, ids, patch) => bulkUpdateTransactions(env, owner, ids, patch),
-    bulkUpdateTransactionsByFilter: (owner, target, patch) =>
-      bulkUpdateTransactionsByFilter(env, owner, target, patch),
-    addLabelsToTransactions: (owner, target, labelIds) =>
-      addLabelsToTransactions(env, owner, target, labelIds),
-    setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) =>
-      setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
-    setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
-    clearCashActual: (owner, yearMonth) => clearCashActual(env, owner, yearMonth),
-    transactionExists: (owner, id) => transactionExists(env, owner, id),
-    listAttachments: (owner, transactionId) => listAttachments(env, owner, transactionId),
-    findAttachmentSource: (owner, id) => findAttachmentSource(env, owner, id),
-    createAttachment: (owner, input) => createAttachment(env, owner, input),
-    deleteAttachment: (owner, id) => deleteAttachment(env, owner, id),
+    readExportChunk: (
+      owner,
+      request,
+    ) => readExportChunk(env, owner, request),
+    insertTransaction: (
+      owner,
+      input,
+    ) => insertTransaction(env, owner, input),
+    updateTransaction: (
+      owner,
+      id,
+      patch,
+    ) => updateTransaction(env, owner, id, patch),
+    deleteTransaction: (
+      owner,
+      id,
+    ) => deleteTransaction(env, owner, id),
+    deleteTransactions: (
+      owner,
+      ids,
+    ) => deleteTransactions(env, owner, ids),
+    bulkUpdateTransactions: (
+      owner,
+      ids,
+      patch,
+    ) => bulkUpdateTransactions(env, owner, ids, patch),
+    bulkUpdateTransactionsByFilter: (
+      owner,
+      target,
+      patch,
+    ) => bulkUpdateTransactionsByFilter(env, owner, target, patch),
+    addLabelsToTransactions: (
+      owner,
+      target,
+      labelIds,
+    ) => addLabelsToTransactions(env, owner, target, labelIds),
+    setStatementPaid: (
+      owner,
+      accountId,
+      yearMonth,
+      paid,
+      paidOn,
+    ) => setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
+    setCashActual: (
+      owner,
+      yearMonth,
+      cents,
+    ) => setCashActual(env, owner, yearMonth, cents),
+    clearCashActual: (
+      owner,
+      yearMonth,
+    ) => clearCashActual(env, owner, yearMonth),
+    transactionExists: (
+      owner,
+      id,
+    ) => transactionExists(env, owner, id),
+    listAttachments: (
+      owner,
+      transactionId,
+    ) => listAttachments(env, owner, transactionId),
+    findAttachmentSource: (
+      owner,
+      id,
+    ) => findAttachmentSource(env, owner, id),
+    createAttachment: (
+      owner,
+      input,
+    ) => createAttachment(env, owner, input),
+    deleteAttachment: (
+      owner,
+      id,
+    ) => deleteAttachment(env, owner, id),
     attachmentBytesUsed: (owner) => attachmentBytesUsed(env, owner),
-    attachmentKeysForTransactions: (owner, ids) => attachmentKeysForTransactions(env, owner, ids),
-    createFlag: (owner, input) => createFlag(env, owner, input),
-    updateFlag: (owner, id, patch) => updateFlag(env, owner, id, patch),
-    deleteFlag: (owner, id) => deleteFlag(env, owner, id),
-    createLabel: (owner, input) => createLabel(env, owner, input),
-    updateLabel: (owner, id, patch) => updateLabel(env, owner, id, patch),
-    deleteLabel: (owner, id) => deleteLabel(env, owner, id),
-    setTransactionLabels: (owner, transactionId, labelIds) =>
-      setTransactionLabels(env, owner, transactionId, labelIds),
-    createCategory: (owner, input) => createCategory(env, owner, input),
-    updateCategory: (owner, id, patch) => updateCategory(env, owner, id, patch),
-    deleteCategory: (owner, id, options) => deleteCategory(env, owner, id, options),
-    createAccount: (owner, input) => createAccount(env, owner, input),
-    updateAccount: (owner, id, patch) => updateAccount(env, owner, id, patch),
-    deleteAccount: (owner, id, options) => deleteAccount(env, owner, id, options),
-    updateSettings: (owner, patch) => updateSettings(env, owner, patch),
-    createScenario: (owner, input) => createScenario(env, owner, input),
-    updateScenario: (owner, id, patch) => updateScenario(env, owner, id, patch),
-    activateScenario: (owner, id) => activateScenario(env, owner, id),
-    deleteScenario: (owner, id) => deleteScenario(env, owner, id),
-    bulkInsertTransactions: (owner, inputs) => bulkInsertTransactions(env, owner, inputs),
-    createInstallmentPlan: (owner, input) => createInstallmentPlan(env, owner, input),
-    updateInstallmentPlan: (owner, id, patch) => updateInstallmentPlan(env, owner, id, patch),
-    deleteInstallmentPlan: (owner, id) => deleteInstallmentPlan(env, owner, id),
-    createWealthAccount: (owner, input) => createWealthAccount(env, owner, input),
-    updateWealthAccount: (owner, id, patch) => updateWealthAccount(env, owner, id, patch),
-    deleteWealthAccount: (owner, id) => deleteWealthAccount(env, owner, id),
-    createWealthCheckin: (owner, input) => createWealthCheckin(env, owner, input),
-    updateWealthCheckin: (owner, id, patch) => updateWealthCheckin(env, owner, id, patch),
-    deleteWealthCheckin: (owner, id) => deleteWealthCheckin(env, owner, id),
+    attachmentKeysForTransactions: (
+      owner,
+      ids,
+    ) => attachmentKeysForTransactions(env, owner, ids),
+    createFlag: (
+      owner,
+      input,
+    ) => createFlag(env, owner, input),
+    updateFlag: (
+      owner,
+      id,
+      patch,
+    ) => updateFlag(env, owner, id, patch),
+    deleteFlag: (
+      owner,
+      id,
+    ) => deleteFlag(env, owner, id),
+    createLabel: (
+      owner,
+      input,
+    ) => createLabel(env, owner, input),
+    updateLabel: (
+      owner,
+      id,
+      patch,
+    ) => updateLabel(env, owner, id, patch),
+    deleteLabel: (
+      owner,
+      id,
+    ) => deleteLabel(env, owner, id),
+    setTransactionLabels: (
+      owner,
+      transactionId,
+      labelIds,
+    ) => setTransactionLabels(env, owner, transactionId, labelIds),
+    createCategory: (
+      owner,
+      input,
+    ) => createCategory(env, owner, input),
+    updateCategory: (
+      owner,
+      id,
+      patch,
+    ) => updateCategory(env, owner, id, patch),
+    deleteCategory: (
+      owner,
+      id,
+      options,
+    ) => deleteCategory(env, owner, id, options),
+    createAccount: (
+      owner,
+      input,
+    ) => createAccount(env, owner, input),
+    updateAccount: (
+      owner,
+      id,
+      patch,
+    ) => updateAccount(env, owner, id, patch),
+    deleteAccount: (
+      owner,
+      id,
+      options,
+    ) => deleteAccount(env, owner, id, options),
+    updateSettings: (
+      owner,
+      patch,
+    ) => updateSettings(env, owner, patch),
+    createScenario: (
+      owner,
+      input,
+    ) => createScenario(env, owner, input),
+    updateScenario: (
+      owner,
+      id,
+      patch,
+    ) => updateScenario(env, owner, id, patch),
+    activateScenario: (
+      owner,
+      id,
+    ) => activateScenario(env, owner, id),
+    deleteScenario: (
+      owner,
+      id,
+    ) => deleteScenario(env, owner, id),
+    bulkInsertTransactions: (
+      owner,
+      inputs,
+    ) => bulkInsertTransactions(env, owner, inputs),
+    createInstallmentPlan: (
+      owner,
+      input,
+    ) => createInstallmentPlan(env, owner, input),
+    updateInstallmentPlan: (
+      owner,
+      id,
+      patch,
+    ) => updateInstallmentPlan(env, owner, id, patch),
+    deleteInstallmentPlan: (
+      owner,
+      id,
+    ) => deleteInstallmentPlan(env, owner, id),
+    createWealthAccount: (
+      owner,
+      input,
+    ) => createWealthAccount(env, owner, input),
+    updateWealthAccount: (
+      owner,
+      id,
+      patch,
+    ) => updateWealthAccount(env, owner, id, patch),
+    deleteWealthAccount: (
+      owner,
+      id,
+    ) => deleteWealthAccount(env, owner, id),
+    createWealthCheckin: (
+      owner,
+      input,
+    ) => createWealthCheckin(env, owner, input),
+    updateWealthCheckin: (
+      owner,
+      id,
+      patch,
+    ) => updateWealthCheckin(env, owner, id, patch),
+    deleteWealthCheckin: (
+      owner,
+      id,
+    ) => deleteWealthCheckin(env, owner, id),
   }
 }

@@ -56,13 +56,7 @@ function renderStep(
 ) {
   return render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <InstallmentStep
-        model={model}
-        editing={editing}
-        draft={d}
-        set={set}
-        amountCents={amountCents}
-      />
+      <InstallmentStep model={model} editing={editing} draft={d} set={set} amountCents={amountCents} />
     </MoneyFormatProvider>,
   )
 }

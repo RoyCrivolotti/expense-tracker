@@ -17,7 +17,11 @@ beforeEach(async () => {
   await repo.createKey(key('kb', BOB))
 })
 
-const key = (keyId: string, owner = ALICE, createdAt = T0) => ({
+const key = (
+  keyId: string,
+  owner = ALICE,
+  createdAt = T0,
+) => ({
   keyId,
   owner,
   label: 'My phone',

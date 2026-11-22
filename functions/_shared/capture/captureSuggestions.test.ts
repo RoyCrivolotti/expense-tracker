@@ -7,7 +7,16 @@ import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
 const T0 = '2026-11-10T09:00:00.000Z'
-const SLOTS: Slot[] = [{ kind: 'number', index: 2, raw: '12,50', candidates: [{ cents: 1250, mark: 'comma' }], currency: 'EUR', negative: false }]
+const SLOTS: Slot[] = [
+  {
+    kind: 'number',
+    index: 2,
+    raw: '12,50',
+    candidates: [{ cents: 1250, mark: 'comma' }],
+    currency: 'EUR',
+    negative: false,
+  },
+]
 
 let sqlite: ReturnType<typeof migratedDatabase>
 let stats: SqliteD1Stats
@@ -43,13 +52,35 @@ async function push(o: Push = {}): Promise<string> {
   const localDate = o.localDate ?? '2026-11-10'
   const ok = await repo.recordCapture(
     {
-      id: `e${n}`, keyId: o.key ?? 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'push', amountCents: 1250, currency: 'EUR',
-      merchantRaw: merchant, last4: null, accountDigits: null, shapeId: 'one-wording', occurredAt: T0, localDate, offsetMinutes: 60, receivedAt: T0, body: null,
+      id: `e${n}`,
+      keyId: o.key ?? 'k1',
+      source: 'iberia',
+      replayKey: `r${n}`,
+      kind: 'push',
+      amountCents: 1250,
+      currency: 'EUR',
+      merchantRaw: merchant,
+      last4: null,
+      accountDigits: null,
+      shapeId: 'one-wording',
+      occurredAt: T0,
+      localDate,
+      offsetMinutes: 60,
+      receivedAt: T0,
+      body: null,
       slots: JSON.stringify(o.slots ?? SLOTS),
     },
     {
-      id: `rec${String(n).padStart(4, '0')}`, accountId: null, amountCents: o.amountCents ?? 1250, currency: 'EUR', occurredAt: `${localDate}T09:41:07+01:00`,
-      localDate, merchantRaw: merchant, descriptionSuggested: null, suggestedType: 'expense', createdAt: T0,
+      id: `rec${String(n).padStart(4, '0')}`,
+      accountId: null,
+      amountCents: o.amountCents ?? 1250,
+      currency: 'EUR',
+      occurredAt: `${localDate}T09:41:07+01:00`,
+      localDate,
+      merchantRaw: merchant,
+      descriptionSuggested: null,
+      suggestedType: 'expense',
+      createdAt: T0,
     },
     undefined,
     template,
@@ -58,15 +89,30 @@ async function push(o: Push = {}): Promise<string> {
   return `rec${String(n).padStart(4, '0')}`
 }
 
-const learn = (template: string, set: string) => sqlite.prepare(`UPDATE capture_templates SET ${set} WHERE template_id = ?`).run(template)
+const learn = (
+  template: string,
+  set: string,
+) => sqlite.prepare(`UPDATE capture_templates SET ${set} WHERE template_id = ?`).run(template)
 
-function remember(key: string, description: string, votes: number, amountCents = -1, owner = ALICE, categoryId: number | null = 7) {
+function remember(
+  key: string,
+  description: string,
+  votes: number,
+  amountCents = -1,
+  owner = ALICE,
+  categoryId: number | null = 7,
+) {
   sqlite
-    .prepare('INSERT INTO capture_merchants (owner, key, amount_cents, description, category_id, votes, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .prepare(
+      'INSERT INTO capture_merchants (owner, key, amount_cents, description, category_id, votes, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
     .run(owner, key, amountCents, description, categoryId, votes, T0)
 }
 
-const suggestionOf = async (id: string, owner = ALICE) => (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.suggestion
+const suggestionOf = async (
+  id: string,
+  owner = ALICE,
+) => (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.suggestion
 
 describe('the suggestion on the list', () => {
   it('carries the person’s description and category for the merchant and the template’s type and account', async () => {
@@ -110,8 +156,17 @@ describe('the suggestion on the list', () => {
 
   it('is null for a recommendation no push made', async () => {
     await repo.createRecommendation({
-      id: 'rec-alone', owner: ALICE, accountId: null, amountCents: 100, currency: 'EUR', occurredAt: '2026-11-10T09:00:00+01:00', localDate: '2026-11-10',
-      merchantRaw: 'CAFE EXAMPLE', descriptionSuggested: null, suggestedType: 'expense', createdAt: T0,
+      id: 'rec-alone',
+      owner: ALICE,
+      accountId: null,
+      amountCents: 100,
+      currency: 'EUR',
+      occurredAt: '2026-11-10T09:00:00+01:00',
+      localDate: '2026-11-10',
+      merchantRaw: 'CAFE EXAMPLE',
+      descriptionSuggested: null,
+      suggestedType: 'expense',
+      createdAt: T0,
     })
 
     expect(await suggestionOf('rec-alone')).toBeNull()
@@ -136,12 +191,26 @@ describe('the suggestion on the list', () => {
   it('looks for a typed duplicate at the re-read amount, not the first reading', async () => {
     const slots: Slot[] = [
       ...SLOTS,
-      { kind: 'number', index: 6, raw: '1.234', candidates: [{ cents: 123400, mark: 'comma' }, { cents: 123, mark: 'dot', ambiguous: true }], currency: 'EUR', negative: false },
+      {
+        kind: 'number',
+        index: 6,
+        raw: '1.234',
+        candidates: [
+          { cents: 123400, mark: 'comma' },
+          { cents: 123, mark: 'dot', ambiguous: true },
+        ],
+        currency: 'EUR',
+        negative: false,
+      },
     ]
     const id = await push({ slots })
     learn('t1', "accepts = 1, amount_slot = 6, amount_mark = 'dot'")
-    sqlite.exec("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, 'alice@example.com', 'Main', 'debit', 'immediate', 1)")
-    sqlite.exec("INSERT INTO categories (id, owner, name, monthly_budget_cents, sort_order, active) VALUES (1, 'alice@example.com', 'Food', 0, 1, 1)")
+    sqlite.exec(
+      "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, 'alice@example.com', 'Main', 'debit', 'immediate', 1)",
+    )
+    sqlite.exec(
+      "INSERT INTO categories (id, owner, name, monthly_budget_cents, sort_order, active) VALUES (1, 'alice@example.com', 'Food', 0, 1, 1)",
+    )
     sqlite.exec(
       "INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, owner) VALUES ('2026-11-10', '2026-11', 'Parking', 1, 1, 'expense', 123, 0, 'alice@example.com')",
     )
@@ -154,7 +223,10 @@ describe('the suggestion on the list', () => {
   })
 
   it('suggests for a page of 101 in two reads, whatever the page holds', async () => {
-    for (let i = 0; i < 101; i++) await push({ merchant: `SHOP ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26))}` })
+    for (let i = 0; i < 101; i++)
+      await push({
+        merchant: `SHOP ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26))}`,
+      })
     learn('t1', 'accepts = 1')
     remember('shop aa', 'First shop', 2)
     remember('shop wd', 'Last shop', 2)
@@ -164,7 +236,12 @@ describe('the suggestion on the list', () => {
 
     expect(page).toHaveLength(101)
     expect(page.every((r) => r.suggestion !== null && r.suggestion !== undefined)).toBe(true)
-    expect(page.map((r) => r.suggestion?.description).filter(Boolean).sort()).toEqual(['First shop', 'Last shop'])
+    expect(
+      page
+        .map((r) => r.suggestion?.description)
+        .filter(Boolean)
+        .sort(),
+    ).toEqual(['First shop', 'Last shop'])
     // The page, the cards, the two suggestion reads and the duplicate candidates.
     expect(stats.statements - before).toBe(5)
   })

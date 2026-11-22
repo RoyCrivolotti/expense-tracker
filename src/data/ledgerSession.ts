@@ -88,7 +88,12 @@ export interface WriteReach {
  * inserted rows) and so does marking a card statement paid or unpaid (it decides whether the rows it covers are posted),
  * so a list read from the server is read again.
  */
-function showsRowsChanged(done: Reconciled, cascade: Cascade | null, before: ExpenseDataset, after: ExpenseDataset): boolean {
+function showsRowsChanged(
+  done: Reconciled,
+  cascade: Cascade | null,
+  before: ExpenseDataset,
+  after: ExpenseDataset,
+): boolean {
   const statements = JSON.stringify(before.accountStatements) !== JSON.stringify(after.accountStatements)
   return done.changed.rows || cascade !== null || statements
 }
@@ -148,7 +153,10 @@ export class LedgerSession {
   private readonly cap: number
   private readonly onWrite: ((write: WriteEvent) => void) | undefined
 
-  constructor(source: LedgerPartsSource, options: SessionOptions = {}) {
+  constructor(
+    source: LedgerPartsSource,
+    options: SessionOptions = {},
+  ) {
     this.source = source
     this.onWrite = options.onWrite
     this.policy = options.policy ?? DEFAULT_HYDRATION_POLICY
@@ -172,7 +180,10 @@ export class LedgerSession {
 
   /** Reads the ledger for the first time, opening on `viewed` or the newest month. */
   async open(viewed?: string): Promise<void> {
-    const parts = await readLedgerParts(this.source, { ...this.readOptions(viewed ?? (this.state.viewed || undefined)), omitHeldSums: true })
+    const parts = await readLedgerParts(this.source, {
+      ...this.readOptions(viewed ?? (this.state.viewed || undefined)),
+      omitHeldSums: true,
+    })
     const held = holdParts(parts)
     this.set({ held, viewed: viewed ?? held.months[held.months.length - 1] ?? '', error: null, offline: false })
     void this.readSeries()
@@ -182,7 +193,10 @@ export class LedgerSession {
    * Holds a snapshot instead of reading: the screens show what was kept, the months not held stay as sums, and
    * a write is refused. `refresh` leaves this state once it reads.
    */
-  restore(held: HeldLedger, viewed: string): void {
+  restore(
+    held: HeldLedger,
+    viewed: string,
+  ): void {
     this.set({ held, viewed, error: null, offline: true })
   }
 
@@ -289,7 +303,10 @@ export class LedgerSession {
    * nor a series they are in). True when the write changed rows, held or not, which a list read from the
    * server does not see until it is read again.
    */
-  patch(patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach): boolean {
+  patch(
+    patch: (dataset: ExpenseDataset) => ExpenseDataset,
+    reach?: WriteReach,
+  ): boolean {
     const held = this.state.held
     const vouched = this.trail.take(held)
     if (!held || this.state.offline) return false
@@ -307,7 +324,12 @@ export class LedgerSession {
     return beyond || showsRowsChanged(done, cascade, before, after)
   }
 
-  private hold(done: Reconciled, before: ExpenseDataset, after: ExpenseDataset, cascade: Cascade | null): void {
+  private hold(
+    done: Reconciled,
+    before: ExpenseDataset,
+    after: ExpenseDataset,
+    cascade: Cascade | null,
+  ): void {
     this.epochs = bump(this.epochs, resourcesTouched(done))
     for (const month of done.stale) this.stale.add(month)
     // A cascade turns rows into, or out of, series that the patch does not show.
@@ -414,7 +436,10 @@ export class LedgerSession {
   }
 
   /** `again` reads a list that is held too, for one that a write left partial. */
-  private async readReceipts(ids: readonly number[], again: boolean): Promise<void> {
+  private async readReceipts(
+    ids: readonly number[],
+    again: boolean,
+  ): Promise<void> {
     const held = this.state.held
     if (!held || this.state.offline) return
     const wanted = (again ? [...ids] : receiptsToRead(held, ids)).filter((id) => !this.readingReceipts.has(id))
@@ -430,7 +455,10 @@ export class LedgerSession {
   }
 
   /** A list a request at a time, a few at once. */
-  private async readReceiptLists(wanted: number[], again: boolean): Promise<void> {
+  private async readReceiptLists(
+    wanted: number[],
+    again: boolean,
+  ): Promise<void> {
     for (let at = 0; at < wanted.length; at += RECEIPT_REQUESTS_AT_ONCE) {
       const chunk = wanted.slice(at, at + RECEIPT_REQUESTS_AT_ONCE)
       const lists = await Promise.all(chunk.map((id) => this.source.readReceiptsPart(id)))
@@ -451,7 +479,14 @@ export class LedgerSession {
       if (list) list.push(receipt)
       else byTransaction.set(receipt.transactionId, [receipt])
     }
-    this.set({ held: holdReceiptLists(now, wanted, wanted.map((id) => byTransaction.get(id) ?? []), false) })
+    this.set({
+      held: holdReceiptLists(
+        now,
+        wanted,
+        wanted.map((id) => byTransaction.get(id) ?? []),
+        false,
+      ),
+    })
   }
 
   /** Reads again the sums of the months a write moved, until none is waiting. */
@@ -468,7 +503,9 @@ export class LedgerSession {
         if (this.epochs.cube !== started) continue
         for (const month of months) this.stale.delete(month)
         const revision = parts[0]?.revision ?? held.revision
-        this.set({ held: { ...holdCells(held, parts), revision: held.revision ?? this.trail.adoptable(held, revision) } })
+        this.set({
+          held: { ...holdCells(held, parts), revision: held.revision ?? this.trail.adoptable(held, revision) },
+        })
       }
     } catch (error) {
       // The sums of the months written to are still the old ones, and only a read of everything puts them right.

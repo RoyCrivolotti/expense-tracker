@@ -5,12 +5,21 @@ import { type EditRows, useSelectionCore } from './tabs/useTransactionSelection'
 import type { BarOverrides, SelectionHook } from './transactionListView'
 
 /** Every row the list holds is chosen, and more match: the next step is all of them. */
-function canChoose(partial: boolean | undefined, offer: MatchingTarget | null, loaded: number, chosen: number): boolean {
+function canChoose(
+  partial: boolean | undefined,
+  offer: MatchingTarget | null,
+  loaded: number,
+  chosen: number,
+): boolean {
   return partial === true && offer !== null && loaded > 0 && chosen >= loaded && offer.expectedCount > loaded
 }
 
 /** What the select bar says: the way on to every matching row, or the note that they can be edited only. */
-function barOf(chosenEvery: boolean, canChoose: boolean, count: number | undefined): BarOverrides | undefined {
+function barOf(
+  chosenEvery: boolean,
+  canChoose: boolean,
+  count: number | undefined,
+): BarOverrides | undefined {
   if (chosenEvery) return { allLabel: 'Deselect all', matching: false, note: 'edit only', deleteBlocked: true }
   return canChoose ? { allLabel: `Select all ${count}`, matching: true } : undefined
 }
@@ -25,7 +34,12 @@ function editVia(
   offer: MatchingTarget | null,
   letGo: () => void,
 ): EditRows {
-  return async (ids, patch, labelIds, closeSheet) => {
+  return async (
+    ids,
+    patch,
+    labelIds,
+    closeSheet,
+  ) => {
     const every = chosen ?? (offer && ids.length === offer.expectedCount ? offer : null)
     try {
       if (every) return { updated: await actions!.updateMatching!(every, patch, labelIds), asked: every.expectedCount }
@@ -78,11 +92,17 @@ export const usePagedSelection: SelectionHook = (
   const edit = editVia(actions, target, offer, () => setChosen(null))
   const core = useSelectionCore({ actions, visibleIds, existingIds, onSelectModeChange, edit })
 
-  const clearing = <A extends unknown[]>(act: (...args: A) => void) => (...args: A) => {
-    setChosen(null)
-    act(...args)
-  }
-  const bar = barOf(target !== null, canChoose(list.partial, offer, visibleIds.length, core.selected.size), offer?.expectedCount)
+  const clearing =
+    <A extends unknown[]>(act: (...args: A) => void) =>
+    (...args: A) => {
+      setChosen(null)
+      act(...args)
+    }
+  const bar = barOf(
+    target !== null,
+    canChoose(list.partial, offer, visibleIds.length, core.selected.size),
+    offer?.expectedCount,
+  )
 
   return {
     ...core,

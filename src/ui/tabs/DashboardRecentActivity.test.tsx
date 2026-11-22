@@ -7,10 +7,20 @@ import { buildExpenseModel } from '../buildExpenseModel'
 import type { ExpenseModel } from '../useExpenseData'
 import { DashboardRecentActivity } from './DashboardRecentActivity'
 
-const row = (id: number, description: string, date: string): Transaction =>
+const row = (
+  id: number,
+  description: string,
+  date: string,
+): Transaction =>
   makeTransaction({ id, description, date, budgetMonth: date.slice(0, 7), createdAt: `2026-01-01T00:00:0${id}Z` })
 
-const held = makeDataset({ transactions: [row(3, 'Held newest', '2026-03-10'), row(2, 'Held middle', '2026-02-10'), row(1, 'Held oldest', '2026-01-10')] })
+const held = makeDataset({
+  transactions: [
+    row(3, 'Held newest', '2026-03-10'),
+    row(2, 'Held middle', '2026-02-10'),
+    row(1, 'Held oldest', '2026-01-10'),
+  ],
+})
 const server = [row(40, 'Server one', '2020-05-01'), row(39, 'Server two', '2020-04-01')]
 
 function model(recent?: ExpenseModel['recent']): ExpenseModel {
@@ -65,7 +75,11 @@ describe('DashboardRecentActivity', () => {
     const recent = { latest, added: latest }
     const view = render(<DashboardRecentActivity model={model(recent)} />)
     await waitFor(() => expect(latest).toHaveBeenCalledTimes(1))
-    view.rerender(<DashboardRecentActivity model={{ ...model(recent), dataset: { ...held, transactions: held.transactions.slice(1) } }} />)
+    view.rerender(
+      <DashboardRecentActivity
+        model={{ ...model(recent), dataset: { ...held, transactions: held.transactions.slice(1) } }}
+      />,
+    )
     await waitFor(() => expect(latest).toHaveBeenCalledTimes(2))
   })
 })

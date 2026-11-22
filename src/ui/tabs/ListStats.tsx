@@ -2,7 +2,10 @@ import { Money } from '../components/Money'
 import styles from './tabs.module.css'
 
 /** "1 item", "0 items", "2 items", "1000+ items". */
-function itemCountLabel(count: number, capped: boolean): string {
+function itemCountLabel(
+  count: number,
+  capped: boolean,
+): string {
   return `${count}${capped ? '+' : ''} item${count === 1 ? '' : 's'}`
 }
 

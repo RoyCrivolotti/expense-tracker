@@ -13,10 +13,17 @@ function request(
   if (init.site) headers.set('sec-fetch-site', init.site)
   if (init.length !== undefined) headers.set('content-length', init.length)
   if (init.encoding) headers.set('transfer-encoding', init.encoding)
-  return new Request(`https://expenses.test${PATH}`, { method, headers, ...(init.body != null ? { body: init.body } : {}) })
+  return new Request(`https://expenses.test${PATH}`, {
+    method,
+    headers,
+    ...(init.body != null ? { body: init.body } : {}),
+  })
 }
 
-const refusal = (r: Request, path = PATH): { status: number } | null => {
+const refusal = (
+  r: Request,
+  path = PATH,
+): { status: number } | null => {
   try {
     assertWriteIsSameOriginJson(r, path)
     return null
@@ -26,14 +33,24 @@ const refusal = (r: Request, path = PATH): { status: number } | null => {
 }
 
 describe('a write that carries a body', () => {
-  it.each(['application/json', 'application/json; charset=utf-8', 'Application/JSON', ' application/json ;charset=UTF-8'])(
-    'is let through as %s',
-    (type) => {
-      expect(refusal(request('POST', { type, body: '{}' }))).toBeNull()
-    },
-  )
+  it.each([
+    'application/json',
+    'application/json; charset=utf-8',
+    'Application/JSON',
+    ' application/json ;charset=UTF-8',
+  ])('is let through as %s', (type) => {
+    expect(refusal(request('POST', { type, body: '{}' }))).toBeNull()
+  })
 
-  it.each(['text/plain', 'text/plain;charset=UTF-8', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x', 'application/jsonx', 'application/vnd.api+json', ''])(
+  it.each([
+    'text/plain',
+    'text/plain;charset=UTF-8',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data; boundary=x',
+    'application/jsonx',
+    'application/vnd.api+json',
+    '',
+  ])(
     'is a 415 as %j, the types a page on another site can send without a preflight and the ones that are not JSON',
     (type) => {
       expect(refusal(request('POST', { type, body: '{}' }))?.status).toBe(415)
@@ -65,10 +82,13 @@ describe('a write with no body', () => {
 
   // workerd, which runs the API, hands a POST without a body over with a body object of zero length and
   // `Content-Length: 0`, which is not what Node builds for a request with no body, so the shape is made here.
-  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('needs none as workerd delivers it, an empty body that says so: %s', (method) => {
-    expect(refusal(request(method, { body: new Uint8Array(0), length: '0' }))).toBeNull()
-    expect(refusal(request(method, { body: new Uint8Array(0), length: ' 0 ' }))).toBeNull()
-  })
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
+    'needs none as workerd delivers it, an empty body that says so: %s',
+    (method) => {
+      expect(refusal(request(method, { body: new Uint8Array(0), length: '0' }))).toBeNull()
+      expect(refusal(request(method, { body: new Uint8Array(0), length: ' 0 ' }))).toBeNull()
+    },
+  )
 
   it('is still refused when the empty body does not say it is empty, or says it is not', () => {
     expect(refusal(request('POST', { body: new Uint8Array(0) }))?.status).toBe(415)

@@ -11,7 +11,13 @@ const messageOf = (e: unknown) => (e instanceof Error ? e.message : 'Something w
  * puts its payment back with the reason. `done` is told once a payment has been decided on the server. A send the server
  * refused for a typed row that looks the same is not a failure: the payment comes back with that row, via `matched`.
  */
-export function useReviewDecisions(done: (id: string) => void, matched: (id: string, match: PossibleMatch) => void) {
+export function useReviewDecisions(
+  done: (id: string) => void,
+  matched: (
+    id: string,
+    match: PossibleMatch,
+  ) => void,
+) {
   const { showToast, dismissToast } = useToast()
   const pending = usePendingAction()
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
@@ -42,7 +48,8 @@ export function useReviewDecisions(done: (id: string) => void, matched: (id: str
           } catch (e) {
             if (e instanceof PossibleDuplicateError) {
               matched(id, e.possibleMatch)
-              if (!pending.isHeld()) showToast('Not added yet \u00b7 you may have entered this already. Link it, or review it.', 'info')
+              if (!pending.isHeld())
+                showToast('Not added yet \u00b7 you may have entered this already. Link it, or review it.', 'info')
               hide(id, false)
               return
             }

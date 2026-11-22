@@ -29,12 +29,24 @@ export function fetchCardLinks(): Promise<CardLinks> {
 }
 
 /** Links four digits of a bank app to an account. Saving it again changes nothing. */
-export async function linkCard(source: CardSource, digits: string, accountId: number): Promise<void> {
-  await req<{ ok: true }>('/api/capture-cards', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ source, digits, accountId }) })
+export async function linkCard(
+  source: CardSource,
+  digits: string,
+  accountId: number,
+): Promise<void> {
+  await req<{ ok: true }>('/api/capture-cards', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ source, digits, accountId }),
+  })
 }
 
 /** The digits travel in the body, never in the address. */
 export async function unlinkCard(link: Pick<CardLink, 'source' | 'digitsKind' | 'digits'>): Promise<void> {
   const { source, digitsKind, digits } = link
-  await req<{ ok: true }>('/api/capture-cards', { method: 'DELETE', headers: JSON_HEADERS, body: JSON.stringify({ source, digitsKind, digits }) })
+  await req<{ ok: true }>('/api/capture-cards', {
+    method: 'DELETE',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ source, digitsKind, digits }),
+  })
 }

@@ -28,7 +28,13 @@ import {
   SAVE_CARD_SQL,
   eventParams,
 } from './captureEventsSql'
-import { EVENT_OF_RECOMMENDATION_SQL, EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL } from './captureLearningSql'
+import {
+  EVENT_OF_RECOMMENDATION_SQL,
+  EVICT_MERCHANTS_SQL,
+  LEARN_DECISION_SQL,
+  RECORD_OUTCOME_SQL,
+  VOTE_MERCHANT_SQL,
+} from './captureLearningSql'
 import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from './captureSuggestionsSql'
 import { COUNTED_SOURCES_SQL, MUTED_TEMPLATES_SQL, SOURCE_OUTCOMES_SQL } from './captureStatusSql'
 import { CREATE_KEY_SQL, FIND_KEY_SQL, LIST_KEYS_SQL, REVOKE_KEY_SQL, TOUCH_KEY_SQL } from './captureKeysSql'
@@ -67,7 +73,15 @@ function seeded(analyze: boolean) {
       db.prepare(
         `INSERT INTO capture_events (id, owner, key_id, source, replay_key, kind, occurred_at, local_date, offset_minutes, received_at, rec_id, body)
          VALUES (?, ?, ?, 'iberia', ?, 'card-purchase', '2026-03-01', '2026-03-01', 60, ?, ?, ?)`,
-      ).run(`e${o}-${i}`, owner, `k${o}`, `r${o}-${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`, `rec${o}-${i}`, i % 5 === 0 ? 'text' : null)
+      ).run(
+        `e${o}-${i}`,
+        owner,
+        `k${o}`,
+        `r${o}-${i}`,
+        `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`,
+        `rec${o}-${i}`,
+        i % 5 === 0 ? 'text' : null,
+      )
       db.prepare(
         `INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at) VALUES (?, ?, '2026-03-01', ?, '2026-03-01')`,
       ).run(`rec${o}-${i}`, owner, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}`)
@@ -82,7 +96,13 @@ function seeded(analyze: boolean) {
       for (const amount of [-1, 100 * (1 + (i % 3))]) {
         db.prepare(
           `INSERT INTO capture_merchants (owner, key, amount_cents, description, votes, last_seen) VALUES (?, ?, ?, ?, 1, ?)`,
-        ).run(owner, `merchant ${i % 10}`, amount, `Shop ${i}`, `2026-03-${String(1 + (i % 28)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}`)
+        ).run(
+          owner,
+          `merchant ${i % 10}`,
+          amount,
+          `Shop ${i}`,
+          `2026-03-${String(1 + (i % 28)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}`,
+        )
       }
     }
   }
@@ -95,15 +115,32 @@ const OWNER = 'owner1@example.com'
 /** A push that brings a recommendation of its own, so the statement looks for an open one of the same movement. */
 const GROUPING_PUSH = eventParams(
   {
-    id: 'e-new', keyId: 'k1', source: 'iberia', replayKey: 'r-new', kind: 'push', amountCents: 100, currency: 'EUR',
-    merchantRaw: null, last4: null, accountDigits: null, occurredAt: '2026-03-01T08:00:00.000Z', localDate: '2026-03-01',
-    offsetMinutes: 60, receivedAt: '2026-03-01T08:00:05.000Z', body: null, shapeId: 's',
+    id: 'e-new',
+    keyId: 'k1',
+    source: 'iberia',
+    replayKey: 'r-new',
+    kind: 'push',
+    amountCents: 100,
+    currency: 'EUR',
+    merchantRaw: null,
+    last4: null,
+    accountDigits: null,
+    occurredAt: '2026-03-01T08:00:00.000Z',
+    localDate: '2026-03-01',
+    offsetMinutes: 60,
+    receivedAt: '2026-03-01T08:00:05.000Z',
+    body: null,
+    shapeId: 's',
   },
   'rec-new',
   undefined,
   't1-1',
 )
-const planOf = (db: ReturnType<typeof seeded>, sql: string, params: Array<string | number | null>): string => {
+const planOf = (
+  db: ReturnType<typeof seeded>,
+  sql: string,
+  params: Array<string | number | null>,
+): string => {
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params)
   return rows.map((r) => String(r.detail)).join('\n')
 }
@@ -201,14 +238,54 @@ const CASES: Array<[string, string, Array<string | number | null>, RegExp]> = [
     [OWNER, 'iberia', 'title 1', 50],
     /SEARCH capture_templates USING INDEX idx_capture_templates_lookup \(owner=\? AND source=\? AND title=\?\)/,
   ],
-  ['make room at the template cap', EVICT_TEMPLATE_SQL, ['e1-1', 500], /SEARCH capture_templates USING (COVERING )?INDEX idx_capture_templates_seen \(owner=\?\)/],
-  ['a new template', INSERT_TEMPLATE_SQL, ['e1-1', 'tn', 'title', 'sk', 500], /SEARCH e USING INDEX sqlite_autoindex_capture_events_1 \(id=\?\)/],
-  ['learn a run', LEARN_RUN_SQL, ['e1-1', 't1-1', 'sk', 1, 2], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
-  ['count a push', SEEN_TEMPLATE_SQL, ['e1-1', 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
-  ['count a push of an ignored template', SEEN_IGNORED_SQL, [OWNER, 't1-1', 'x'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
-  ['the ignored templates', LIST_IGNORED_SQL, [OWNER, 100], /SEARCH capture_templates USING INDEX (sqlite_autoindex_capture_templates_1|idx_capture_templates_seen) \(owner=\?\)/],
-  ['un-ignore a template', UNIGNORE_SQL, [OWNER, 't1-1'], /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
-  ['drop a template that is gone', DROP_MISSING_TEMPLATE_SQL, ['e1-1'], /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/],
+  [
+    'make room at the template cap',
+    EVICT_TEMPLATE_SQL,
+    ['e1-1', 500],
+    /SEARCH capture_templates USING (COVERING )?INDEX idx_capture_templates_seen \(owner=\?\)/,
+  ],
+  [
+    'a new template',
+    INSERT_TEMPLATE_SQL,
+    ['e1-1', 'tn', 'title', 'sk', 500],
+    /SEARCH e USING INDEX sqlite_autoindex_capture_events_1 \(id=\?\)/,
+  ],
+  [
+    'learn a run',
+    LEARN_RUN_SQL,
+    ['e1-1', 't1-1', 'sk', 1, 2],
+    /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'count a push',
+    SEEN_TEMPLATE_SQL,
+    ['e1-1', 't1-1'],
+    /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'count a push of an ignored template',
+    SEEN_IGNORED_SQL,
+    [OWNER, 't1-1', 'x'],
+    /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'the ignored templates',
+    LIST_IGNORED_SQL,
+    [OWNER, 100],
+    /SEARCH capture_templates USING INDEX (sqlite_autoindex_capture_templates_1|idx_capture_templates_seen) \(owner=\?\)/,
+  ],
+  [
+    'un-ignore a template',
+    UNIGNORE_SQL,
+    [OWNER, 't1-1'],
+    /SEARCH capture_templates USING INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
+  [
+    'drop a template that is gone',
+    DROP_MISSING_TEMPLATE_SQL,
+    ['e1-1'],
+    /SEARCH t USING (COVERING )?INDEX sqlite_autoindex_capture_templates_1 \(owner=\? AND template_id=\?\)/,
+  ],
   [
     'the open recommendation a push joins',
     RECORD_EVENT_SQL,
@@ -332,24 +409,7 @@ describe.each([false, true])('capture statement plans, with table statistics: %s
 
   it('does not scan for a replay or a counter or a card write', () => {
     const db = seeded(analyze)
-    const event = [
-      'e',
-      'k1',
-      'iberia',
-      'rx',
-      'card-purchase',
-      1,
-      'EUR',
-      null,
-      null,
-      null,
-      't',
-      'd',
-      0,
-      't',
-      null,
-      null,
-    ]
+    const event = ['e', 'k1', 'iberia', 'rx', 'card-purchase', 1, 'EUR', null, null, null, 't', 'd', 0, 't', null, null]
     expect(planOf(db, RECORD_EVENT_SQL, event)).not.toMatch(/\bSCAN capture_events\b/)
     expect(
       planOf(db, RECORD_RECOMMENDATION_SQL, ['e', 'r', null, 1, 'EUR', 't', 'd', null, null, null, 't']),

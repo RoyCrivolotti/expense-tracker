@@ -63,8 +63,7 @@ function ActiveToggle({
       <span>
         <span className={styles.label}>Active</span>
         <span className={styles.hint}>
-          Archiving hides it from the pickers but keeps the{' '}
-          {transactionCountLabel(usageCount)} already labeled with it.
+          Archiving hides it from the pickers but keeps the {transactionCountLabel(usageCount)} already labeled with it.
         </span>
       </span>
     </label>
@@ -72,15 +71,7 @@ function ActiveToggle({
 }
 
 /** Mirrors FlagForm exactly, minus the "To be reimbursed" field — labels never offer one. */
-export function LabelForm({
-  label,
-  existing,
-  usageCount,
-  usage,
-  actions,
-  onDone,
-  onConfirmingChange,
-}: Props) {
+export function LabelForm({ label, existing, usageCount, usage, actions, onDone, onConfirmingChange }: Props) {
   const [draft, setDraft] = useState(() => initialLabelDraft(label, DEFAULT_COLOR))
   const [confirming, setConfirming] = useState(false)
   const patch = (next: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...next }))
@@ -93,12 +84,7 @@ export function LabelForm({
 
   return (
     <div className={styles.form}>
-      <TextField
-        label="Name"
-        value={draft.name}
-        placeholder="Japan trip"
-        onChange={(name) => patch({ name })}
-      />
+      <TextField label="Name" value={draft.name} placeholder="Japan trip" onChange={(name) => patch({ name })} />
       <TextField
         label="Description (optional)"
         value={draft.description}
@@ -108,19 +94,11 @@ export function LabelForm({
 
       <div className={styles.field}>
         <span className={styles.label}>Colour</span>
-        <ColorSwatchPicker
-          color={draft.color}
-          onChange={(color) => patch({ color })}
-          label="Label colour"
-        />
+        <ColorSwatchPicker color={draft.color} onChange={(color) => patch({ color })} label="Label colour" />
       </div>
 
       {label ? (
-        <ActiveToggle
-          active={draft.active}
-          usageCount={usageCount}
-          onChange={(active) => patch({ active })}
-        />
+        <ActiveToggle active={draft.active} usageCount={usageCount} onChange={(active) => patch({ active })} />
       ) : null}
 
       {err ? <p className={styles.error}>{err}</p> : null}

@@ -48,7 +48,10 @@ afterEach(() => {
 
 interface Screen {
   name: string
-  element: (model: ExpenseModel, month: string) => ReactElement
+  element: (
+    model: ExpenseModel,
+    month: string,
+  ) => ReactElement
   /** Tabs to press, in order, before the text is read; `{ button }` presses a button instead. */
   tabs?: Array<string | { button: string }>
   /** Text to cut out before comparing. */
@@ -58,32 +61,82 @@ interface Screen {
 }
 
 const SCREENS: Screen[] = [
-  { name: 'Dashboard', element: (model, month) => <DashboardTab model={model} month={month} />, without: ['Recent activity'] },
-  { name: 'Analytics Overview', element: (model, month) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} /> },
+  {
+    name: 'Dashboard',
+    element: (
+      model,
+      month,
+    ) => <DashboardTab model={model} month={month} />,
+    without: ['Recent activity'],
+  },
+  {
+    name: 'Analytics Overview',
+    element: (
+      model,
+      month,
+    ) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />,
+  },
   {
     name: 'Analytics Overview table',
-    element: (model, month) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />,
+    element: (
+      model,
+      month,
+    ) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />,
     tabs: [{ button: 'Table' }],
   },
-  { name: 'Analytics Spending', element: (model, month) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />, tabs: ['Spending'] },
-  { name: 'Analytics Cash', element: (model, month) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />, tabs: ['Cash'] },
+  {
+    name: 'Analytics Spending',
+    element: (
+      model,
+      month,
+    ) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />,
+    tabs: ['Spending'],
+  },
+  {
+    name: 'Analytics Cash',
+    element: (
+      model,
+      month,
+    ) => <AnalyticsTab model={model} month={month} onMonthChange={vi.fn()} />,
+    tabs: ['Cash'],
+  },
   { name: 'Goals plan', element: (model) => <GoalsTab model={model} actions={makeActions()} /> },
-  { name: 'Goals progress', element: (model) => <GoalsTab model={model} actions={makeActions()} />, tabs: ['Progress'] },
+  {
+    name: 'Goals progress',
+    element: (model) => <GoalsTab model={model} actions={makeActions()} />,
+    tabs: ['Progress'],
+  },
   {
     name: 'Settings statements',
-    element: (model, month) => <SettingsTab model={model} month={month} actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />,
+    element: (
+      model,
+      month,
+    ) => <SettingsTab model={model} month={month} actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />,
     tabs: ['Setup'],
     // Above it are the definitions with how many transactions carry each label, counted over the rows held.
     from: 'Card statements',
   },
-  { name: 'Transactions', element: (model, month) => <TransactionsTab model={model} month={month} actions={makeActions()} /> },
+  {
+    name: 'Transactions',
+    element: (
+      model,
+      month,
+    ) => <TransactionsTab model={model} month={month} actions={makeActions()} />,
+  },
 ]
 
 /** The text a screen shows, after pressing its tabs. */
-function textOf(screenSpec: Screen, model: ExpenseModel, month: string): string {
+function textOf(
+  screenSpec: Screen,
+  model: ExpenseModel,
+  month: string,
+): string {
   const { container } = render(screenSpec.element(model, month))
   for (const tab of screenSpec.tabs ?? []) {
-    const target = typeof tab === 'string' ? within(container).getAllByRole('tab', { name: tab }) : within(container).getAllByRole('button', { name: tab.button })
+    const target =
+      typeof tab === 'string'
+        ? within(container).getAllByRole('tab', { name: tab })
+        : within(container).getAllByRole('button', { name: tab.button })
     fireEvent.click(target[0]!)
   }
   let text = container.textContent ?? ''
@@ -106,7 +159,10 @@ function withPlan(dataset: ExpenseDataset): ExpenseDataset {
     ...dataset,
     goalScenarios: [samplePlan({ id: 1, isActive: true, planStartDate: '2022-01-01' })],
     settings: { ...dataset.settings, cashReserveMonths: 6 },
-    wealthAccounts: [...dataset.wealthAccounts, { id: 900, name: 'Savings', kind: 'cash', sortOrder: 9, archived: false }],
+    wealthAccounts: [
+      ...dataset.wealthAccounts,
+      { id: 900, name: 'Savings', kind: 'cash', sortOrder: 9, archived: false },
+    ],
     wealthCheckins: dataset.wealthCheckins.map((c) =>
       c === latest ? { ...c, entries: [...c.entries, { accountId: 900, valueCents: 900_000 }] } : c,
     ),
@@ -117,13 +173,18 @@ function withPlan(dataset: ExpenseDataset): ExpenseDataset {
  * Today is in the newest month of the ledger, whichever month is viewed: the screens that read the
  * recent past (the cash reserve, the pace since the plan began) do not move with the month picker.
  */
-function compare(source: ExpenseDataset, month: string): Array<[string, string, string]> {
+function compare(
+  source: ExpenseDataset,
+  month: string,
+): Array<[string, string, string]> {
   const dataset = withPlan(source)
   const newest = sortedMonths(dataset.transactions.map((t) => t.budgetMonth)).at(-1)!
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(`${newest}-20T12:00:00`))
   const whole = buildExpenseModel(dataset)
-  const windowed = buildLedgerModel(ledgerFor(dataset, month, WINDOWED), { history: fixedHistoryOf(dataset.transactions) })
+  const windowed = buildLedgerModel(ledgerFor(dataset, month, WINDOWED), {
+    history: fixedHistoryOf(dataset.transactions),
+  })
   expect(windowed.sums).toBeDefined()
   const differing: Array<[string, string, string]> = []
   for (const spec of SCREENS) {
@@ -156,7 +217,6 @@ describe('the screens over a window, compared with every row', () => {
   }, 120_000)
 })
 
-
 /** What the receipts show in the places that read them: the marks on the rows, the storage meter, a claim. */
 describe('the screens that show receipts, over a model that reads the lists on request', () => {
   const base = adversarialLedger()
@@ -171,7 +231,10 @@ describe('the screens that show receipts, over a model that reads the lists on r
   }
   const month = sortedMonths(dataset.transactions.map((t) => t.budgetMonth)).at(-1)!
   const counted = [...new Set(dataset.attachments.map((a) => a.transactionId))]
-  const withoutLists = (ledger: ReturnType<typeof ledgerFor>) => ({ ...ledger, reference: { ...ledger.reference, attachments: [] } })
+  const withoutLists = (ledger: ReturnType<typeof ledgerFor>) => ({
+    ...ledger,
+    reference: { ...ledger.reference, attachments: [] },
+  })
 
   async function readAll(): Promise<ExpenseModel> {
     const session = new LedgerSession(memorySource(dataset))
@@ -182,9 +245,14 @@ describe('the screens that show receipts, over a model that reads the lists on r
     return { ...buildLedgerModel(ledgerOfHeld(held), { attachmentCounts: held.attachmentCounts }), receiptsPending: 0 }
   }
 
-  const marks = (model: ExpenseModel, shown: string) => {
+  const marks = (
+    model: ExpenseModel,
+    shown: string,
+  ) => {
     const { container } = render(<TransactionsTab model={model} month={shown} />)
-    const labels = [...container.querySelectorAll('[role="img"][aria-label$="receipt"], [role="img"][aria-label$="receipts"]')]
+    const labels = [
+      ...container.querySelectorAll('[role="img"][aria-label$="receipt"], [role="img"][aria-label$="receipts"]'),
+    ]
     cleanup()
     return labels.map((el) => el.getAttribute('aria-label'))
   }
@@ -200,7 +268,9 @@ describe('the screens that show receipts, over a model that reads the lists on r
   it('marks the rows the same, from the counts alone and after the lists are read', async () => {
     const whole = buildExpenseModel(dataset)
     const unread = buildLedgerModel(withoutLists(ledgerFor(dataset, month)), {
-      attachmentCounts: Object.fromEntries(counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length])),
+      attachmentCounts: Object.fromEntries(
+        counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length]),
+      ),
     })
     const read = await readAll()
     expect(unread.dataset.attachments).toEqual([])
@@ -214,7 +284,9 @@ describe('the screens that show receipts, over a model that reads the lists on r
 
   it('shows the same storage meter once the lists are read, and none while they are pending', async () => {
     const meter = (model: ExpenseModel) => {
-      const { container } = render(<SettingsTab model={model} month={month} actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />)
+      const { container } = render(
+        <SettingsTab model={model} month={month} actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />,
+      )
       fireEvent.click(within(container).getAllByRole('tab', { name: 'Data' })[0]!)
       const text = container.textContent ?? ''
       cleanup()
@@ -223,17 +295,29 @@ describe('the screens that show receipts, over a model that reads the lists on r
     const whole = meter(buildExpenseModel(dataset))
     expect(whole).toContain('Receipt storage')
     expect(meter(await readAll())).toBe(whole)
-    const pending = { ...buildExpenseModel(dataset), dataset: { ...dataset, attachments: [] }, receiptsPending: counted.length }
+    const pending = {
+      ...buildExpenseModel(dataset),
+      dataset: { ...dataset, attachments: [] },
+      receiptsPending: counted.length,
+    }
     expect(meter(pending)).not.toContain('Receipt storage')
   })
 
   it('shows a claim the same once its rows’ lists are read, and waits until then', async () => {
-    const flagId = dataset.flags.find((f) => dataset.transactions.some((t) => t.flagId === f.id && dataset.attachments.some((a) => a.transactionId === t.id)))?.id
+    const flagId = dataset.flags.find((f) =>
+      dataset.transactions.some((t) => t.flagId === f.id && dataset.attachments.some((a) => a.transactionId === t.id)),
+    )?.id
     expect(flagId).toBeDefined()
     const report = (model: ExpenseModel) => {
       const { container } = render(
         <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-          <ExpenseReportView dataset={model.dataset} lookup={model.lookup} flagId={flagId!} onClose={vi.fn()} issuedOn="2026-09-12" />
+          <ExpenseReportView
+            dataset={model.dataset}
+            lookup={model.lookup}
+            flagId={flagId!}
+            onClose={vi.fn()}
+            issuedOn="2026-09-12"
+          />
         </MoneyFormatProvider>,
       )
       const text = document.body.textContent ?? ''
@@ -244,7 +328,9 @@ describe('the screens that show receipts, over a model that reads the lists on r
     const whole = report(buildExpenseModel(dataset))
     expect(report(await readAll())).toBe(whole)
     const unread = buildLedgerModel(withoutLists(ledgerFor(dataset, month)), {
-      attachmentCounts: Object.fromEntries(counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length])),
+      attachmentCounts: Object.fromEntries(
+        counted.map((id) => [id, dataset.attachments.filter((a) => a.transactionId === id).length]),
+      ),
     })
     expect(report(unread)).toContain('Loading receipts…')
   })

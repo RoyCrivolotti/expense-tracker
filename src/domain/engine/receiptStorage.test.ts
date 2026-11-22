@@ -10,10 +10,7 @@ describe('computeReceiptStorage', () => {
     // server enforces SUM(byte_size), so this must match it exactly rather than
     // approximate — a client-side undercount would promise room that is not there.
     const usage = computeReceiptStorage(
-      [
-        makeAttachment({ id: 1, byteSize: 400_000 }),
-        makeAttachment({ id: 2, byteSize: 600_000 }),
-      ],
+      [makeAttachment({ id: 1, byteSize: 400_000 }), makeAttachment({ id: 2, byteSize: 600_000 })],
       LIMIT,
     )
     expect(usage.usedBytes).toBe(1_000_000)

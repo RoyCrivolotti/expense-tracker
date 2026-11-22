@@ -181,11 +181,7 @@ describe('checkinInvestedCents', () => {
 })
 
 describe('checkinAssetsCents and hasDebtEntries', () => {
-  const mixed = [
-    makeAccount(1, 'investment'),
-    makeAccount(2, 'cash'),
-    makeAccount(3, 'debt'),
-  ]
+  const mixed = [makeAccount(1, 'investment'), makeAccount(2, 'cash'), makeAccount(3, 'debt')]
 
   it('adds up everything owned and leaves the debt out, unlike net worth', () => {
     const checkin = makeCheckin('2026-01-01', [
@@ -239,7 +235,7 @@ describe('trackStatus', () => {
     expect(trackStatus(checkin, scenario, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 
-  it('returns positive delta when actual > projected, in the plan\'s money', () => {
+  it("returns positive delta when actual > projected, in the plan's money", () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const projected = planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)!
     // A broker balance a year on is nominal; 5M ahead in today's money is a little more.
@@ -257,20 +253,39 @@ describe('trackStatus', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const projected = planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)!
     const actual = realToNominal(projected - 1_000_000, '2024-01-01', '2025-01-01', DEFAULT_INFLATION_RATE)
-    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }]), scenario, accounts, DEFAULT_INFLATION_RATE)
+    const status = trackStatus(
+      makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }]),
+      scenario,
+      accounts,
+      DEFAULT_INFLATION_RATE,
+    )
     expect(status!.deltaCents).toBeCloseTo(-1_000_000, -1)
     expect(status!.deltaMonths).toBeLessThan(0)
     // The plan's figure is in today's money; a balance that only matches it nominally
     // has lost a year of inflation.
-    const nominalMatch = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: projected }]), scenario, accounts, DEFAULT_INFLATION_RATE)
+    const nominalMatch = trackStatus(
+      makeCheckin('2025-01-01', [{ accountId: 1, valueCents: projected }]),
+      scenario,
+      accounts,
+      DEFAULT_INFLATION_RATE,
+    )
     expect(nominalMatch!.deltaCents).toBeLessThan(0)
   })
 
   describe('months ahead or behind', () => {
-    const withGap = (scenario: ReturnType<typeof makeScenario>, date: string, gapCents: number) => {
+    const withGap = (
+      scenario: ReturnType<typeof makeScenario>,
+      date: string,
+      gapCents: number,
+    ) => {
       const projected = planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)!
       const nominal = realToNominal(projected + gapCents, scenario.planStartDate!, date, DEFAULT_INFLATION_RATE)
-      return trackStatus(makeCheckin(date, [{ accountId: 1, valueCents: nominal }]), scenario, accounts, DEFAULT_INFLATION_RATE)!
+      return trackStatus(
+        makeCheckin(date, [{ accountId: 1, valueCents: nominal }]),
+        scenario,
+        accounts,
+        DEFAULT_INFLATION_RATE,
+      )!
     }
 
     it('reads the gap along the plan line, and says the day the line has the balance', () => {
@@ -319,7 +334,12 @@ describe('trackStatus', () => {
     it('gives no months, only the gap in money, for a balance the plan never has', () => {
       const scenario = makeScenario({ planStartDate: '2024-01-01' })
       const status = (valueCents: number) =>
-        trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents }]), scenario, accounts, DEFAULT_INFLATION_RATE)!
+        trackStatus(
+          makeCheckin('2025-01-01', [{ accountId: 1, valueCents }]),
+          scenario,
+          accounts,
+          DEFAULT_INFLATION_RATE,
+        )!
       // Above where the plan ends, and below the 100,000 it started from.
       const above = status(100_000_000_000)
       expect(above.deltaMonths).toBeNull()
@@ -332,7 +352,13 @@ describe('trackStatus', () => {
 
     it('has no status for a check-in from before the plan starts or after it ends, where there is no line to read', () => {
       const scenario = makeScenario({ planStartDate: '2024-01-01', horizonYears: 10 })
-      const at = (date: string) => trackStatus(makeCheckin(date, [{ accountId: 1, valueCents: 10_500_000 }]), scenario, accounts, DEFAULT_INFLATION_RATE)
+      const at = (date: string) =>
+        trackStatus(
+          makeCheckin(date, [{ accountId: 1, valueCents: 10_500_000 }]),
+          scenario,
+          accounts,
+          DEFAULT_INFLATION_RATE,
+        )
       expect(at('2023-06-01')).toBeNull()
       expect(at('2034-06-01')).toBeNull()
       expect(at('2034-01-01')).not.toBeNull()
@@ -350,16 +376,28 @@ describe('trackStatus', () => {
     const projected = planValueAtDate(scenario, '2025-01-01', rate)!
     // A balance exactly on plan in the money of the day: one year of 5% on the plan's figure.
     const onPlan = realToNominal(projected, '2024-01-01', '2025-01-01', rate)
-    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: onPlan }]), scenario, accounts, rate)
+    const status = trackStatus(
+      makeCheckin('2025-01-01', [{ accountId: 1, valueCents: onPlan }]),
+      scenario,
+      accounts,
+      rate,
+    )
     expect(status!.deltaCents).toBeCloseTo(0, -1)
     // The same balance against a plan that assumes 2% is not on plan: it is a little ahead.
     const at2 = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: onPlan }]), scenario, accounts, 0.02)
     expect(at2!.deltaCents).toBeGreaterThan(0)
   })
 
-  it('converts between today\'s money and the money of a later day, and leaves the start alone', () => {
+  it("converts between today's money and the money of a later day, and leaves the start alone", () => {
     expect(realToNominal(100_000_00, '2024-01-01', '2024-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
-    expect(nominalToReal(realToNominal(100_000_00, '2024-01-01', '2026-01-01', DEFAULT_INFLATION_RATE), '2024-01-01', '2026-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
+    expect(
+      nominalToReal(
+        realToNominal(100_000_00, '2024-01-01', '2026-01-01', DEFAULT_INFLATION_RATE),
+        '2024-01-01',
+        '2026-01-01',
+        DEFAULT_INFLATION_RATE,
+      ),
+    ).toBe(100_000_00)
     expect(realToNominal(100_000_00, '2024-01-01', '2025-01-01', 0.05)).toBeCloseTo(105_000_00, -4)
     // A check-in before the plan start is not deflated into the future.
     expect(nominalToReal(100_000_00, '2024-01-01', '2023-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
@@ -400,8 +438,11 @@ describe('milestonesReached', () => {
     { amountCents: 10_000_000, label: 'First' },
     { amountCents: 50_000_000, label: 'Second' },
   ]
-  const invested = (date: string, cents: number, id: number) =>
-    makeCheckin(date, [{ accountId: 1, valueCents: cents }], id)
+  const invested = (
+    date: string,
+    cents: number,
+    id: number,
+  ) => makeCheckin(date, [{ accountId: 1, valueCents: cents }], id)
 
   it('returns an empty map when there are no milestones', () => {
     expect(milestonesReached([], [invested('2024-06-01', 90_000_000, 1)], accounts).size).toBe(0)
@@ -433,26 +474,17 @@ describe('milestonesReached', () => {
   })
 
   it('keeps the first date even when a later check-in also clears the milestone', () => {
-    const checkins = [
-      invested('2024-06-01', 20_000_000, 1),
-      invested('2025-01-01', 30_000_000, 2),
-    ]
+    const checkins = [invested('2024-06-01', 20_000_000, 1), invested('2025-01-01', 30_000_000, 2)]
     expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
   })
 
   it('keeps a milestone reached even if a later check-in falls back below it', () => {
-    const checkins = [
-      invested('2024-06-01', 20_000_000, 1),
-      invested('2025-01-01', 5_000_000, 2),
-    ]
+    const checkins = [invested('2024-06-01', 20_000_000, 1), invested('2025-01-01', 5_000_000, 2)]
     expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
   })
 
   it('reads dates in chronological order regardless of input order', () => {
-    const checkins = [
-      invested('2025-01-01', 60_000_000, 2),
-      invested('2024-06-01', 20_000_000, 1),
-    ]
+    const checkins = [invested('2025-01-01', 60_000_000, 2), invested('2024-06-01', 20_000_000, 1)]
     expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
   })
 

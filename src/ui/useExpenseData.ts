@@ -108,7 +108,10 @@ export interface ExpenseData extends LoadState {
    * Shows a write in what is held. `reach` says what it did to rows that may not be held (a ledger held as a
    * window reads those again); a model that holds every row ignores it.
    */
-  applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset, reach?: WriteReach) => void
+  applyPatch: (
+    patch: (dataset: ExpenseDataset) => ExpenseDataset,
+    reach?: WriteReach,
+  ) => void
   /** Present when the model holds only the months being looked at: tells it which month the screens show. */
   viewMonth?: (month: string) => void
   /** True while the rows of the month shown are being read. */
@@ -131,7 +134,10 @@ const MIN_REFRESH_MS = 700
  * The dataset of a source. `owner` is who is signed in: the copy kept for when the network does not answer is
  * theirs alone, so with no owner none is kept or shown.
  */
-export function useExpenseData(source: ExpenseDataSource, owner?: string): ExpenseData {
+export function useExpenseData(
+  source: ExpenseDataSource,
+  owner?: string,
+): ExpenseData {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [version, setVersion] = useState(0)
   const [refreshing, setRefreshing] = useState(false)

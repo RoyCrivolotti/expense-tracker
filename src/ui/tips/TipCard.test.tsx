@@ -9,7 +9,15 @@ import { useTips } from './tipsContext'
 
 type Save = (patch: Partial<ExpenseSettings>) => Promise<void>
 
-function Page({ saved, hasTransactions = true, save }: { saved: string[] | undefined; hasTransactions?: boolean; save: Save | undefined }) {
+function Page({
+  saved,
+  hasTransactions = true,
+  save,
+}: {
+  saved: string[] | undefined
+  hasTransactions?: boolean
+  save: Save | undefined
+}) {
   return (
     <TipsProvider saved={saved} hasTransactions={hasTransactions} save={save}>
       <TipCard id="first-tip" title="First">
@@ -91,7 +99,7 @@ describe('TipCard', () => {
     expect(document.activeElement).toBe(again)
   })
 
-  it('runs the button\'s own action as well as putting the card away', () => {
+  it("runs the button's own action as well as putting the card away", () => {
     const onAction = vi.fn()
     render(
       <TipsProvider saved={[]} hasTransactions save={vi.fn<Save>().mockResolvedValue()}>

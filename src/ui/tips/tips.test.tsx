@@ -159,12 +159,16 @@ describe('the Getting started card and what is remembered on the account', () =>
 })
 
 describe('the Home Screen line', () => {
-  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1'
+  const IPHONE =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1'
   const DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15'
   beforeEach(() => setMotionDisabledForTests(true))
   afterEach(() => vi.restoreAllMocks())
 
-  function readingAs(userAgent: string, standalone: boolean) {
+  function readingAs(
+    userAgent: string,
+    standalone: boolean,
+  ) {
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(userAgent)
     vi.mocked(window.matchMedia).mockImplementation(
       (query: string) => ({ matches: standalone && query.includes('standalone'), media: query }) as MediaQueryList,

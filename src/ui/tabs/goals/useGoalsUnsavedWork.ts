@@ -7,7 +7,10 @@ import type { ScenarioEditor } from './useScenarioEditor'
  * in the tab, which unmounts on the way out; nothing keeps the draft. `canSave` is false in a
  * read-only session, where the question says so rather than offering a Save that is not there.
  */
-export function useGoalsUnsavedWork(editor: ScenarioEditor, canSave: boolean): void {
+export function useGoalsUnsavedWork(
+  editor: ScenarioEditor,
+  canSave: boolean,
+): void {
   const { unsaved, saving, creating } = editor
   const { name, detached } = editor.discardPrompt
   // A copy being made is a save too: the new scenario is written whether or not the tab is still up.

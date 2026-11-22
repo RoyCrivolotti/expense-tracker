@@ -24,7 +24,10 @@ const plan: InstallmentPlan = {
   active: true,
 }
 
-function linked(index: number, overrides: Partial<StoredTransaction> = {}): StoredTransaction {
+function linked(
+  index: number,
+  overrides: Partial<StoredTransaction> = {},
+): StoredTransaction {
   return {
     id: index,
     date: `${budgetMonthForIndex(plan, index)}-15`,
@@ -216,10 +219,8 @@ describe('charge dates when the calendar month differs from the budget month', (
     expect(s?.predictedDate).toBe('2026-03-06')
   })
 
-  it('is not moved by relabelling the reference installment\'s budget month', () => {
-    const s = nextInstallmentSuggestion(datedPlan, [
-      recorded(datedPlan, 14, '2025-12-06', { budgetMonth: '2026-05' }),
-    ])
+  it("is not moved by relabelling the reference installment's budget month", () => {
+    const s = nextInstallmentSuggestion(datedPlan, [recorded(datedPlan, 14, '2025-12-06', { budgetMonth: '2026-05' })])
     expect(s?.predictedDate).toBe('2026-01-06')
   })
 
@@ -244,7 +245,7 @@ describe('calendarOffsetMonths', () => {
     expect(calendarOffsetMonths(plan, [])).toBe(0)
   })
 
-  it('counts months from the first installment\'s date to its scheduled budget month', () => {
+  it("counts months from the first installment's date to its scheduled budget month", () => {
     expect(calendarOffsetMonths(plan, [linked(14, { date: '2025-12-20' })])).toBe(1)
     expect(calendarOffsetMonths(plan, [linked(14, { date: '2026-01-02' })])).toBe(0)
     expect(calendarOffsetMonths(plan, [linked(14, { date: '2026-02-02' })])).toBe(-1)

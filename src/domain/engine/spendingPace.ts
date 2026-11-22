@@ -44,12 +44,13 @@ export function isMonthlyGroup(group: OccurrenceGroup): boolean {
 }
 
 /** A recurring pattern counts towards a month's fixed charges only while it is alive. */
-export function activeInMonth(group: OccurrenceGroup, month: string): boolean {
+export function activeInMonth(
+  group: OccurrenceGroup,
+  month: string,
+): boolean {
   const prior = priorBudgetMonth(month)
   return (
-    group.budgetMonths.has(month) ||
-    group.budgetMonths.has(prior) ||
-    group.budgetMonths.has(priorBudgetMonth(prior))
+    group.budgetMonths.has(month) || group.budgetMonths.has(prior) || group.budgetMonths.has(priorBudgetMonth(prior))
   )
 }
 
@@ -81,7 +82,11 @@ export function expectedFixedCents(
   return duePlanCents(plans, budgeted, month) + recurringCents(groups, budgeted, month)
 }
 
-function duePlanCents(plans: InstallmentPlan[], budgeted: Set<number>, month: string): number {
+function duePlanCents(
+  plans: InstallmentPlan[],
+  budgeted: Set<number>,
+  month: string,
+): number {
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense' || !budgeted.has(plan.categoryId)) continue
@@ -91,7 +96,11 @@ function duePlanCents(plans: InstallmentPlan[], budgeted: Set<number>, month: st
   return total
 }
 
-function recurringCents(groups: OccurrenceGroup[], budgeted: Set<number>, month: string): number {
+function recurringCents(
+  groups: OccurrenceGroup[],
+  budgeted: Set<number>,
+  month: string,
+): number {
   let total = 0
   for (const group of groups) {
     if (group.key.type !== 'expense' || !budgeted.has(group.categoryId) || !isMonthlyGroup(group)) continue
@@ -125,10 +134,11 @@ export function computeSpendingPace(
   const open = cut !== null
   const dayOfMonth = cut?.elapsedDays ?? daysInMonth
 
-  const totalBudget = categories
-    .filter((c) => c.active)
-    .reduce((s, c) => s + c.monthlyBudgetCents, 0)
-  const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month, fixedGroups))
+  const totalBudget = categories.filter((c) => c.active).reduce((s, c) => s + c.monthlyBudgetCents, 0)
+  const flexibleBudgetCents = Math.max(
+    0,
+    totalBudget - expectedFixedCents(transactions, plans, categories, month, fixedGroups),
+  )
 
   // The clock measures the spend the envelope was built from: spend in a category with
   // no active budget is neither in the envelope nor in the pace.

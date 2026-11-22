@@ -14,7 +14,11 @@ vi.mock('../../data/receiptDownload', () => ({ deliverReceipts: vi.fn() }))
 
 const work = makeFlag({ id: 1, name: 'Work travel', description: 'Reimbursable — submit monthly' })
 
-function txn(id: number, date: string, overrides: Partial<Transaction> = {}): Transaction {
+function txn(
+  id: number,
+  date: string,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return {
     id,
     date,
@@ -52,7 +56,10 @@ function renderPack(
   return { onClose }
 }
 
-function datasetWith(transactions: Transaction[], attachments: unknown[] = []): ExpenseDataset {
+function datasetWith(
+  transactions: Transaction[],
+  attachments: unknown[] = [],
+): ExpenseDataset {
   return makeDataset({ flags: [work], transactions, attachments: attachments as never })
 }
 
@@ -92,10 +99,7 @@ describe('ExpenseReportView', () => {
 
   it('lists one row per transaction, oldest first', () => {
     renderPack(
-      datasetWith([
-        txn(1, '2026-05-09', { description: 'Taxi' }),
-        txn(2, '2026-05-02', { description: 'Hotel' }),
-      ]),
+      datasetWith([txn(1, '2026-05-09', { description: 'Taxi' }), txn(2, '2026-05-02', { description: 'Hotel' })]),
     )
 
     const rows = screen.getAllByRole('row').slice(1, 3)
@@ -137,23 +141,27 @@ describe('ExpenseReportView', () => {
 
   it('prints each receipt full size, captioned with its transaction', () => {
     renderPack(
-      datasetWith([txn(1, '2026-05-02', { description: 'Hotel' })], [
-        makeAttachment({ id: 5, transactionId: 1 }),
-      ]),
+      datasetWith([txn(1, '2026-05-02', { description: 'Hotel' })], [makeAttachment({ id: 5, transactionId: 1 })]),
     )
 
-    expect(screen.getByRole('img', { name: 'Receipt for Hotel' })).toHaveAttribute(
-      'src',
-      '/api/expenses/attachments/5',
-    )
+    expect(screen.getByRole('img', { name: 'Receipt for Hotel' })).toHaveAttribute('src', '/api/expenses/attachments/5')
     expect(screen.getByText(/2 May.*Hotel.*100,00/)).toBeInTheDocument()
   })
 
   it('names the PDF and ties it to the numbered line rather than pretending to print it', () => {
     renderPack(
-      datasetWith([txn(1, '2026-05-02')], [
-        makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
-      ]),
+      datasetWith(
+        [txn(1, '2026-05-02')],
+        [
+          makeAttachment({
+            id: 5,
+            transactionId: 1,
+            contentType: 'application/pdf',
+            hasThumb: false,
+            originalName: 'invoice.pdf',
+          }),
+        ],
+      ),
     )
 
     // The filename is what an approver matches against the separately-sent file,
@@ -165,9 +173,18 @@ describe('ExpenseReportView', () => {
 
   it('points at the screenshot route, which needs no PDF engine to work', () => {
     renderPack(
-      datasetWith([txn(1, '2026-05-02')], [
-        makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
-      ]),
+      datasetWith(
+        [txn(1, '2026-05-02')],
+        [
+          makeAttachment({
+            id: 5,
+            transactionId: 1,
+            contentType: 'application/pdf',
+            hasThumb: false,
+            originalName: 'invoice.pdf',
+          }),
+        ],
+      ),
     )
 
     // Receipts already accept image/png, so this is a route that exists today
@@ -177,9 +194,18 @@ describe('ExpenseReportView', () => {
 
   it('offers a PDF receipt as a link, since the page cannot show it', () => {
     renderPack(
-      datasetWith([txn(1, '2026-05-02')], [
-        makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
-      ]),
+      datasetWith(
+        [txn(1, '2026-05-02')],
+        [
+          makeAttachment({
+            id: 5,
+            transactionId: 1,
+            contentType: 'application/pdf',
+            hasThumb: false,
+            originalName: 'invoice.pdf',
+          }),
+        ],
+      ),
     )
 
     const link = screen.getByRole('link', { name: 'Open R1' })
@@ -361,23 +387,16 @@ describe('ExpenseReportView — the document', () => {
 
 describe('ExpenseReportView — filtering to items with a receipt', () => {
   it('offers no toggle when every line already has a receipt', () => {
-    renderPack(
-      datasetWith([txn(1, '2026-05-02')], [makeAttachment({ id: 5, transactionId: 1 })]),
-    )
+    renderPack(datasetWith([txn(1, '2026-05-02')], [makeAttachment({ id: 5, transactionId: 1 })]))
 
-    expect(
-      screen.queryByRole('radiogroup', { name: 'Filter the report by receipt' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Filter the report by receipt' })).not.toBeInTheDocument()
   })
 
   it('drops the unreceipted line and re-totals once checked', async () => {
     const user = userEvent.setup()
     renderPack(
       datasetWith(
-        [
-          txn(1, '2026-05-02', { amountCents: 10_000 }),
-          txn(2, '2026-05-09', { amountCents: 4_000 }),
-        ],
+        [txn(1, '2026-05-02', { amountCents: 10_000 }), txn(2, '2026-05-09', { amountCents: 4_000 })],
         [makeAttachment({ id: 5, transactionId: 1 })],
       ),
     )
@@ -392,12 +411,7 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
 
   it('goes back to the full claim once switched back to all items', async () => {
     const user = userEvent.setup()
-    renderPack(
-      datasetWith(
-        [txn(1, '2026-05-02'), txn(2, '2026-05-09')],
-        [makeAttachment({ id: 5, transactionId: 1 })],
-      ),
-    )
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')], [makeAttachment({ id: 5, transactionId: 1 })]))
 
     await user.click(screen.getByRole('radio', { name: 'With receipt' }))
     await user.click(screen.getByRole('radio', { name: 'All items' }))
@@ -543,9 +557,7 @@ describe('ExpenseReportView — the notes on each item', () => {
   it('offers no switch when no item has a note', () => {
     renderPack(datasetWith([txn(1, '2026-05-02')]))
 
-    expect(
-      screen.queryByRole('radiogroup', { name: 'Show or hide the notes on each item' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Show or hide the notes on each item' })).not.toBeInTheDocument()
   })
 
   it('prints them by default and withholds them on request', async () => {
@@ -649,9 +661,7 @@ describe('ExpenseReportView — sending the receipts on their own', () => {
   it('surfaces a failure instead of appearing to do nothing', async () => {
     const user = userEvent.setup()
     vi.mocked(deliverReceipts).mockRejectedValue(new Error('Could not load receipt 5'))
-    renderPack(
-      datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]),
-    )
+    renderPack(datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]))
 
     await user.click(screen.getByRole('button', { name: 'Send receipts' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load receipt 5')
@@ -664,9 +674,7 @@ describe('ExpenseReportView — sending the receipts on their own', () => {
     const abort = new Error('share cancelled')
     abort.name = 'AbortError'
     vi.mocked(deliverReceipts).mockRejectedValue(abort)
-    renderPack(
-      datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]),
-    )
+    renderPack(datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]))
 
     await user.click(screen.getByRole('button', { name: 'Send receipts' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -699,19 +707,13 @@ describe('ExpenseReportView — reopening a past report', () => {
 
   it('warns that a reprint will not match what was submitted', () => {
     // Recorded as 2 rows totalling 20,000; one was deleted afterwards.
-    renderPast([
-      txn(1, '2026-05-02', { settledBy: 99 }),
-      payment({ reportCount: 2, reportCoveredCents: 20_000 }),
-    ])
+    renderPast([txn(1, '2026-05-02', { settledBy: 99 }), payment({ reportCount: 2, reportCoveredCents: 20_000 })])
 
     expect(screen.getByText(/have changed since this report was sent/i)).toBeInTheDocument()
   })
 
   it('stays quiet when the covered rows still match', () => {
-    renderPast([
-      txn(1, '2026-05-02', { settledBy: 99 }),
-      payment({ reportCount: 1, reportCoveredCents: 10_000 }),
-    ])
+    renderPast([txn(1, '2026-05-02', { settledBy: 99 }), payment({ reportCount: 1, reportCoveredCents: 10_000 })])
 
     expect(screen.queryByText(/have changed since this report was sent/i)).not.toBeInTheDocument()
   })
@@ -738,7 +740,13 @@ describe('ExpenseReportView leaving', () => {
     return (
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
         <Presence show={show} exitMs={EXIT_MS.fade}>
-          <ExpenseReportView dataset={dataset} lookup={buildLookup(dataset)} flagId={1} onClose={vi.fn()} issuedOn="2026-09-12" />
+          <ExpenseReportView
+            dataset={dataset}
+            lookup={buildLookup(dataset)}
+            flagId={1}
+            onClose={vi.fn()}
+            issuedOn="2026-09-12"
+          />
         </Presence>
       </MoneyFormatProvider>
     )
@@ -769,10 +777,19 @@ describe('ExpenseReportView leaving', () => {
     expect(document.body.dataset.reportOpen).toBeUndefined()
   })
 
-  const withDataset = (show: boolean, dataset: ExpenseDataset) => (
+  const withDataset = (
+    show: boolean,
+    dataset: ExpenseDataset,
+  ) => (
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <Presence show={show} exitMs={EXIT_MS.fade}>
-        <ExpenseReportView dataset={dataset} lookup={buildLookup(dataset)} flagId={1} onClose={vi.fn()} issuedOn="2026-09-12" />
+        <ExpenseReportView
+          dataset={dataset}
+          lookup={buildLookup(dataset)}
+          flagId={1}
+          onClose={vi.fn()}
+          issuedOn="2026-09-12"
+        />
       </Presence>
     </MoneyFormatProvider>
   )
@@ -795,7 +812,11 @@ describe('ExpenseReportView leaving', () => {
 describe('ExpenseReportView, when receipt lists are read on request', () => {
   const rows = [txn(1, '2026-05-02'), txn(2, '2026-05-09'), txn(3, '2026-05-10', { type: 'refund' })]
 
-  function renderWith(dataset: ExpenseDataset, counts: Record<number, number>, ensureReceipts = vi.fn()) {
+  function renderWith(
+    dataset: ExpenseDataset,
+    counts: Record<number, number>,
+    ensureReceipts = vi.fn(),
+  ) {
     const view = (ds: ExpenseDataset) => (
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
         <ExpenseReportView

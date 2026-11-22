@@ -42,7 +42,10 @@ function modelWith(statements: AccountStatement[] = []): ExpenseModel {
   }
 }
 
-async function openJune(statements: AccountStatement[] = [], onToggle = vi.fn().mockResolvedValue(undefined)) {
+async function openJune(
+  statements: AccountStatement[] = [],
+  onToggle = vi.fn().mockResolvedValue(undefined),
+) {
   const user = userEvent.setup()
   render(<StatementToggles model={modelWith(statements)} onToggle={onToggle} />)
   await user.click(screen.getByRole('button', { name: /^June 2026/ }))

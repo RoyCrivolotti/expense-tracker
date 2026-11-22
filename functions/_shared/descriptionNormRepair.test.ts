@@ -35,12 +35,17 @@ function database() {
 type Kit = ReturnType<typeof database>
 
 const rows = (kit: Kit): Stored[] =>
-  kit.sqlite.prepare('SELECT id, description, description_norm FROM transactions ORDER BY id').all() as unknown as Stored[]
+  kit.sqlite
+    .prepare('SELECT id, description, description_norm FROM transactions ORDER BY id')
+    .all() as unknown as Stored[]
 
 const stale = (kit: Kit): Stored[] => rows(kit).filter((r) => r.description_norm !== normalizeDesc(r.description))
 
 /** What the previous release does to a row: it sets the description and knows nothing of the column. */
-function editLikeOldCode(kit: Kit, ids: number[]): void {
+function editLikeOldCode(
+  kit: Kit,
+  ids: number[],
+): void {
   for (const id of ids) {
     kit.sqlite
       .prepare("UPDATE transactions SET description = ?, updated_at = '2026-10-17 13:00:00' WHERE id = ?")
@@ -69,7 +74,9 @@ describe('rows written by code from before the column', () => {
 
   it('an edit leaves a stale value that the fill does not see: this is why a roll-forward needs the repair', async () => {
     const kit = database()
-    const ids = rows(kit).slice(0, 4).map((r) => r.id)
+    const ids = rows(kit)
+      .slice(0, 4)
+      .map((r) => r.id)
     editLikeOldCode(kit, ids)
     expect(stale(kit).map((r) => r.id)).toEqual(ids)
     expect(await hasPendingDescriptionNorm(kit.d1, OWNER)).toBe(false)
@@ -81,7 +88,12 @@ describe('rows written by code from before the column', () => {
 describe('the repair after rolling forward', () => {
   it('clearing every value and letting the next read refill them makes all of them right again', async () => {
     const kit = database()
-    editLikeOldCode(kit, rows(kit).slice(0, 4).map((r) => r.id))
+    editLikeOldCode(
+      kit,
+      rows(kit)
+        .slice(0, 4)
+        .map((r) => r.id),
+    )
     insertLikeOldCode(kit)
     kit.sqlite.exec(REPAIR_ALL_SQL)
     expect(rows(kit).every((r) => r.description_norm === null)).toBe(true)
@@ -91,10 +103,14 @@ describe('the repair after rolling forward', () => {
 
   it('clearing only the rows updated since the rollback began is enough', async () => {
     const kit = database()
-    const edited = rows(kit).slice(0, 4).map((r) => r.id)
+    const edited = rows(kit)
+      .slice(0, 4)
+      .map((r) => r.id)
     editLikeOldCode(kit, edited)
     kit.sqlite.exec(REPAIR_SINCE_SQL.replace('<when the rollback began, UTC>', ROLLBACK_START))
-    const cleared = rows(kit).filter((r) => r.description_norm === null).map((r) => r.id)
+    const cleared = rows(kit)
+      .filter((r) => r.description_norm === null)
+      .map((r) => r.id)
     expect(cleared).toEqual(edited)
     await fillDescriptionNorm(kit.d1, OWNER)
     expect(stale(kit)).toEqual([])
@@ -102,7 +118,12 @@ describe('the repair after rolling forward', () => {
 
   it('a time that is too late leaves them stale, which is why the full form is the default', () => {
     const kit = database()
-    editLikeOldCode(kit, rows(kit).slice(0, 2).map((r) => r.id))
+    editLikeOldCode(
+      kit,
+      rows(kit)
+        .slice(0, 2)
+        .map((r) => r.id),
+    )
     kit.sqlite.exec(REPAIR_SINCE_SQL.replace('<when the rollback began, UTC>', '2027-01-01 00:00:00'))
     expect(stale(kit)).toHaveLength(2)
   })
