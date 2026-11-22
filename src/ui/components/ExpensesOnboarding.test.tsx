@@ -38,12 +38,12 @@ function sourceThatSucceeds(): ExpenseDataSource {
   }
 }
 
-async function finishWizard() {
-  fireEvent.click(screen.getByText('Continue')) // step 0 -> money
-  fireEvent.click(screen.getByText('Continue')) // money -> categories
+async function finishWizard(confirm: boolean) {
+  fireEvent.click(await screen.findByText('Continue')) // money -> categories
   fireEvent.click(screen.getByText('Continue')) // categories -> accounts
   fireEvent.click(screen.getByText('Finish setup'))
-  fireEvent.click(screen.getByText('Apply'))
+  // Only a re-run asks first; a first run has nothing to protect.
+  if (confirm) fireEvent.click(await screen.findByText('Apply'))
   await waitFor(() => expect(screen.queryByText('Apply these changes?')).toBeNull())
 }
 
@@ -77,7 +77,7 @@ describe('ExpensesOnboarding', () => {
         onClose={onClose}
       />,
     )
-    await finishWizard()
+    await finishWizard(false)
     expect(onClose).toHaveBeenCalled()
     expect(onAdd).toHaveBeenCalled()
   })
@@ -98,12 +98,12 @@ describe('ExpensesOnboarding', () => {
         onClose={onClose}
       />,
     )
-    await finishWizard()
+    await finishWizard(true)
     expect(onClose).toHaveBeenCalled()
     expect(onAdd).not.toHaveBeenCalled()
   })
 
-  it('skipping never opens "add a transaction", regardless of firstRun', () => {
+  it('skipping never opens "add a transaction", regardless of firstRun', async () => {
     const onAdd = vi.fn()
     const onClose = vi.fn()
     render(
@@ -117,7 +117,7 @@ describe('ExpensesOnboarding', () => {
         onClose={onClose}
       />,
     )
-    fireEvent.click(screen.getByText('Skip for now'))
+    fireEvent.click(await screen.findByText('Skip for now'))
     expect(onClose).toHaveBeenCalled()
     expect(onAdd).not.toHaveBeenCalled()
   })

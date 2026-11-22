@@ -74,6 +74,8 @@ export function DashboardRecentActivity({ model, actions }: Props) {
           lookup={lookup}
           flat
           showDate
+          accountEmpty={model.months.length === 0}
+          canAdd={Boolean(actions)}
           {...(actions ? { onSelect: actions.onEdit } : {})}
         />
       </Card>

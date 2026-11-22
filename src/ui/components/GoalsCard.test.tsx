@@ -16,7 +16,7 @@ function daysAgoIso(n: number): string {
 describe('GoalsCard', () => {
   it('renders empty state when no scenarios exist', () => {
     render(<GoalsCard dataset={makeDataset()} />)
-    expect(screen.getByText(/Model multi-scenario wealth projections/i)).toBeInTheDocument()
+    expect(screen.getByText(/A long-range plan/i)).toBeInTheDocument()
   })
 
   it('asks for a plan to be chosen when scenarios exist but none is the plan', () => {

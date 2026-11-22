@@ -69,13 +69,13 @@ function gate(source: TestSource) {
   }
 }
 
-function renderTab(source: TestSource, options: { limit?: number; settleMs?: number; actions?: ExpenseActions } = {}) {
+function renderTab(source: TestSource, options: { limit?: number; settleMs?: number; actions?: ExpenseActions | null; dataset?: ExpenseDataset } = {}) {
   const pager = new TransactionPager(source, { limit: options.limit ?? 10, settleMs: options.settleMs ?? 0 })
-  const model: ExpenseModel = { ...buildExpenseModel(ledger), pagedList: pagedListOf(pager) }
+  const model: ExpenseModel = { ...buildExpenseModel(options.dataset ?? ledger), pagedList: pagedListOf(pager) }
   const tree = (
     <ToastProvider>
       <ConnectivityContext.Provider value={{ online: true, readOnly: false }}>
-        <TransactionsTab model={model} month={month} actions={options.actions ?? makeActions()} />
+        <TransactionsTab model={model} month={month} {...(options.actions === null ? {} : { actions: options.actions ?? makeActions() })} />
       </ConnectivityContext.Provider>
     </ToastProvider>
   )
@@ -204,6 +204,31 @@ describe('the Transactions tab over a list read in pages: a filter that changes'
     await held.release()
     await userEvent.type(search(), 'zzzz no such description')
     expect(await screen.findByText('No transactions match these filters.')).toBeInTheDocument()
+  })
+})
+
+describe('the Transactions tab over a list read in pages: an account with nothing in it', () => {
+  it('says there are no transactions yet and what to do, not that a filter matched nothing and not that the list failed', async () => {
+    const empty = { ...ledger, transactions: [] }
+    renderTab(memorySource(empty), { dataset: empty })
+    expect(await screen.findByText('No transactions yet. Tap + to add one.')).toBeInTheDocument()
+    expect(screen.queryByText('No transactions match these filters.')).toBeNull()
+    expect(screen.queryByText("Couldn't load transactions.")).toBeNull()
+  })
+
+  it('says only that there are none yet to a viewer who cannot add', async () => {
+    const empty = { ...ledger, transactions: [] }
+    renderTab(memorySource(empty), { dataset: empty, actions: null })
+    expect(await screen.findByText('No transactions yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/Tap \+/)).toBeNull()
+  })
+
+  it('keeps the filter words for a filter that matches nothing in an account that has transactions', async () => {
+    renderTab(memorySource(ledger))
+    await waitFor(() => expect(listFrame()).toHaveAttribute('aria-busy', 'false'))
+    await userEvent.type(search(), 'zzzz no such description')
+    expect(await screen.findByText('No transactions match these filters.')).toBeInTheDocument()
+    expect(screen.queryByText('No transactions yet. Tap + to add one.')).toBeNull()
   })
 })
 

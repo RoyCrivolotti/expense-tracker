@@ -1,7 +1,8 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { useHoldUpdateReload } from './updateReloadHold'
 
-const FOCUSABLE =
+/** What the keyboard can reach: the trap cycles through it, and a card that goes hands its focus on to the next of it. */
+export const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 function focusableWithin(root: HTMLElement): HTMLElement[] {

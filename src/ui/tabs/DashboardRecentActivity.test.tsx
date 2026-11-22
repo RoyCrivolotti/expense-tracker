@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../../domain/types'
+import { makeActions } from '../../testing/makeActions'
 import { makeDataset, makeTransaction } from '../../testing/factories'
 import { buildExpenseModel } from '../buildExpenseModel'
 import type { ExpenseModel } from '../useExpenseData'
@@ -19,6 +20,18 @@ function model(recent?: ExpenseModel['recent']): ExpenseModel {
 const shown = () => screen.queryAllByText(/^(Held|Server)/).map((el) => el.textContent)
 
 describe('DashboardRecentActivity', () => {
+  it('does not point a read-only viewer at a + they do not have', () => {
+    render(<DashboardRecentActivity model={buildExpenseModel(makeDataset())} />)
+    expect(screen.getByText('No transactions yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/Tap \+/)).toBeNull()
+  })
+
+  it('says what to do when the account has no transactions, not that filters matched nothing', () => {
+    render(<DashboardRecentActivity model={buildExpenseModel(makeDataset())} actions={makeActions()} />)
+    expect(screen.getByText('No transactions yet. Tap + to add one.')).toBeInTheDocument()
+    expect(screen.queryByText(/match these filters/)).toBeNull()
+  })
+
   it('lists the rows it holds when the model holds every row', () => {
     render(<DashboardRecentActivity model={model()} />)
     expect(shown()).toEqual(['Held newest', 'Held middle', 'Held oldest'])

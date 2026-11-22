@@ -162,6 +162,16 @@
 }
 .preview strong {
   font-weight: 680;
+  margin-left: auto;
+}
+.changeLink {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-accent, var(--exp-accent));
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .checkRow {

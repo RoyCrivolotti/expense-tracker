@@ -77,8 +77,8 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
   return (
     <div className={importStyles.root}>
       <p className={importStyles.guide}>
-        CSV must match the export format exactly. Columns: {describeExportCsvColumns()}.{' '}
-        <code>category</code> and <code>account</code> must match existing names.{' '}
+        Set up your categories and accounts first: the file must use their names. CSV must match
+        the export format exactly. Columns: {describeExportCsvColumns()}.{' '}
         <code>type</code> is one of {types}. <code>amount_cents</code> is integer cents, positive
         except on an <code>investment</code> row, where a negative amount is a withdrawal. Easiest
         path: export from Settings first, edit, then re-import.

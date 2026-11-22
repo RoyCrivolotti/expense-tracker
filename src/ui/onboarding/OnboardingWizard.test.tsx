@@ -36,11 +36,88 @@ function noopSource(): ExpenseDataSource {
 
 function goToStep(targetStep: number) {
   for (let i = 0; i < targetStep; i++) {
-    fireEvent.click(screen.getByText(/Continue/))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
   }
 }
 
 describe('OnboardingWizard', () => {
+  it('has three pages, the first being the welcome with the money choices', () => {
+    render(
+      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={vi.fn()} onSkip={vi.fn()} />,
+    )
+    expect(screen.getByRole('heading', { name: 'Welcome' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Currency')).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+  })
+
+  it('on a re-run, the first page is not a welcome and does not promise a first payment', () => {
+    render(
+      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun={false} onDone={vi.fn()} onSkip={vi.fn()} />,
+    )
+    expect(screen.queryByRole('heading', { name: 'Welcome' })).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Setup' })).toBeInTheDocument()
+    expect(screen.queryByText(/first payment/)).toBeNull()
+  })
+
+  it('on a first run, says the ledger is private and that a first payment comes next', () => {
+    render(
+      <OnboardingWizard source={noopSource()} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={vi.fn()} onSkip={vi.fn()} />,
+    )
+    expect(screen.getByText(/then you add your first payment/)).toBeInTheDocument()
+  })
+
+  it('carries a number format picked under "Change" through to the saved settings', async () => {
+    const updateSettings = vi.fn().mockResolvedValue(defaultExpenseSettings())
+    const source: ExpenseDataSource = {
+      ...noopSource(),
+      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main account', kind: 'debit', settlement: 'immediate', active: true }),
+      updateSettings,
+    }
+    const onDone = vi.fn()
+    render(<OnboardingWizard source={source} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={onDone} onSkip={vi.fn()} />)
+    const before = screen.getByText(/^(\d|[^\d\s]).*[,.]\d\d/, { selector: 'strong' }).textContent
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    fireEvent.change(screen.getByLabelText('Number format'), { target: { value: 'en-US' } })
+    expect(screen.getByText(/^(\d|[^\d\s]).*[,.]\d\d/, { selector: 'strong' }).textContent).not.toBe(before)
+    goToStep(2)
+    fireEvent.click(screen.getByText('Finish setup'))
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ numberLocale: 'en-US' }))
+  })
+
+  it('on a first run, Finish applies the setup at once without asking', async () => {
+    const onDone = vi.fn()
+    const source: ExpenseDataSource = {
+      ...noopSource(),
+      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
+      updateSettings: vi.fn().mockResolvedValue(defaultExpenseSettings()),
+    }
+    render(
+      <OnboardingWizard source={source} dataset={datasetWith()} applyPatch={vi.fn()} firstRun onDone={onDone} onSkip={vi.fn()} />,
+    )
+    goToStep(2)
+    fireEvent.click(screen.getByText('Finish setup'))
+    expect(screen.queryByText('Apply these changes?')).toBeNull()
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+  })
+
+  it('on a re-run, Finish still shows what will be added and waits for a yes', () => {
+    const onDone = vi.fn()
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Existing', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }],
+    })
+    render(
+      <OnboardingWizard source={noopSource()} dataset={dataset} applyPatch={vi.fn()} firstRun={false} onDone={onDone} onSkip={vi.fn()} />,
+    )
+    goToStep(2)
+    fireEvent.click(screen.getByText('Finish setup'))
+    expect(screen.getByText('Apply these changes?')).toBeInTheDocument()
+    expect(onDone).not.toHaveBeenCalled()
+  })
+
   it('seeds the Money step from the tenant\'s real settings instead of hardcoded defaults', () => {
     const dataset = datasetWith({
       settings: {
@@ -55,14 +132,18 @@ describe('OnboardingWizard', () => {
         source={noopSource()}
         dataset={dataset}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
-    goToStep(1)
+    goToStep(0)
     expect(screen.getByLabelText('Currency')).toHaveValue('USD')
+    expect(screen.queryByLabelText('Number format')).toBeNull()
+    expect(screen.getByText('$1,234.56')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
     expect(screen.getByLabelText('Number format')).toHaveValue('en-US')
-    expect(screen.getByLabelText('Budget month starts on day')).toHaveValue(13)
+    expect(screen.getByLabelText('My month starts on day')).toHaveValue(13)
   })
 
   it('moves focus to the new step heading on Continue, so screen readers announce the step change', () => {
@@ -72,15 +153,16 @@ describe('OnboardingWizard', () => {
         source={noopSource()}
         dataset={dataset}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByText('Continue'))
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Money & months' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'What do you spend on?' }))
 
     fireEvent.click(screen.getByText('Continue'))
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Choose categories' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Where do you pay from?' }))
   })
 
   describe('categories step on re-entry (tenant already has categories)', () => {
@@ -93,11 +175,12 @@ describe('OnboardingWizard', () => {
           source={noopSource()}
           dataset={dataset}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(2)
+      goToStep(1)
       for (const checkbox of screen.getAllByRole('checkbox')) {
         expect(checkbox).not.toBeChecked()
       }
@@ -114,11 +197,12 @@ describe('OnboardingWizard', () => {
           source={noopSource()}
           dataset={dataset}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(2)
+      goToStep(1)
       fireEvent.click(screen.getAllByRole('checkbox')[0]!)
       expect(screen.queryByText('No new categories will be added — Continue to accounts and settings.')).toBeNull()
       expect(screen.getByText('Continue')).not.toBeDisabled()
@@ -132,11 +216,12 @@ describe('OnboardingWizard', () => {
         source={noopSource()}
         dataset={dataset}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
-    goToStep(2)
+    goToStep(1)
     expect(screen.getByText('Continue')).not.toBeDisabled()
     for (const checkbox of screen.getAllByRole('checkbox')) {
       fireEvent.click(checkbox)
@@ -155,12 +240,13 @@ describe('OnboardingWizard', () => {
           source={noopSource()}
           dataset={dataset}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
-      expect(screen.queryByLabelText('Main debit account')).toBeNull()
+      goToStep(2)
+      expect(screen.queryByLabelText('Main account')).toBeNull()
       expect(screen.getByText('Finish setup')).not.toBeDisabled()
     })
 
@@ -171,13 +257,14 @@ describe('OnboardingWizard', () => {
           source={noopSource()}
           dataset={dataset}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByLabelText('Add another debit account'))
-      const nameInput = screen.getByLabelText('Main debit account')
+      const nameInput = screen.getByLabelText('Main account')
       fireEvent.change(nameInput, { target: { value: '' } })
       expect(screen.getByText('Finish setup')).toBeDisabled()
       fireEvent.change(nameInput, { target: { value: 'Second debit' } })
@@ -192,12 +279,13 @@ describe('OnboardingWizard', () => {
         source={noopSource()}
         dataset={dataset}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
-    goToStep(3)
-    fireEvent.click(screen.getByLabelText('Add a credit card (deferred settlement)'))
+    goToStep(2)
+    fireEvent.click(screen.getByLabelText('I also pay with a credit card that is charged once a month'))
     const nameInput = screen.getByLabelText('Credit card name')
     fireEvent.change(nameInput, { target: { value: '' } })
     expect(screen.getByText('Finish setup')).toBeDisabled()
@@ -222,13 +310,14 @@ describe('OnboardingWizard', () => {
         source={source}
         dataset={datasetWith({ accounts: [existingAccount] })}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
-    goToStep(3)
+    goToStep(2)
     // Re-entry with an existing account: opt-in checkbox off, no name required.
-    expect(screen.queryByLabelText('Main debit account')).toBeNull()
+    expect(screen.queryByLabelText('Main account')).toBeNull()
     expect(screen.getByText('Finish setup')).not.toBeDisabled()
 
     // The account gets deleted elsewhere (another tab, or via Settings) while this
@@ -238,6 +327,7 @@ describe('OnboardingWizard', () => {
         source={source}
         dataset={datasetWith({ accounts: [] })}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
@@ -245,7 +335,7 @@ describe('OnboardingWizard', () => {
 
     // A debit is mandatory again now that there are zero accounts, regardless of the
     // (now-hidden) opt-in checkbox's last value.
-    expect(screen.getByLabelText('Main debit account')).toHaveValue('Main debit')
+    expect(screen.getByLabelText('Main account')).toHaveValue('Main account')
     expect(screen.getByText('Finish setup')).not.toBeDisabled()
 
     fireEvent.click(screen.getByText('Finish setup'))
@@ -260,12 +350,13 @@ describe('OnboardingWizard', () => {
         source={noopSource()}
         dataset={dataset}
         applyPatch={vi.fn()}
+        firstRun={false}
         onDone={vi.fn()}
         onSkip={vi.fn()}
       />,
     )
-    goToStep(3)
-    const nameInput = screen.getByLabelText('Main debit account')
+    goToStep(2)
+    const nameInput = screen.getByLabelText('Main account')
     fireEvent.change(nameInput, { target: { value: '' } })
     expect(screen.getByText('Finish setup')).toBeDisabled()
   })
@@ -296,16 +387,17 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       expect(screen.getByText('Apply these changes?')).toBeTruthy()
       // All default presets are selected, and the default debit account is named.
       expect(screen.getByText(/new categories:/)).toBeTruthy()
-      expect(screen.getByText('1 new account: Main debit')).toBeTruthy()
+      expect(screen.getByText('1 new account: Main account')).toBeTruthy()
       expect(
         screen.getByText("This adds to what you already have — it doesn't check for or merge duplicate categories or accounts."),
       ).toBeTruthy()
@@ -320,11 +412,12 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={onDone}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       fireEvent.click(screen.getByText('Cancel'))
       expect(screen.queryByText('Apply these changes?')).toBeNull()
@@ -333,7 +426,7 @@ describe('OnboardingWizard', () => {
       expect(onDone).not.toHaveBeenCalled()
       // Wizard state survived: still on the Accounts step (nav back to it still works)
       // with its default debit name intact — Cancel didn't reset the draft.
-      expect(screen.getByLabelText('Main debit account')).toHaveValue('Main debit')
+      expect(screen.getByLabelText('Main account')).toHaveValue('Main account')
       expect(screen.getByText('Back')).toBeTruthy()
     })
 
@@ -345,11 +438,12 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={onDone}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       fireEvent.click(screen.getByText('Apply'))
       await waitFor(() => expect(onDone).toHaveBeenCalled())
@@ -366,11 +460,12 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={onSkip}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       fireEvent.keyDown(document, { key: 'Escape' })
       expect(screen.queryByText('Apply these changes?')).toBeNull()
@@ -386,11 +481,12 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       const applyBtn = screen.getByText('Apply')
       const cancelBtn = screen.getByText('Cancel')
@@ -411,16 +507,17 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={vi.fn()}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       fireEvent.click(screen.getByText('Back'))
       expect(screen.queryByText('Apply these changes?')).toBeNull()
       // Back from Accounts (step 3) lands on Categories (step 2).
-      expect(screen.getByText('Choose categories')).toBeTruthy()
+      expect(screen.getByText('What do you spend on?')).toBeTruthy()
     })
 
     it('clicking Apply twice in a row only runs setup once', async () => {
@@ -431,11 +528,12 @@ describe('OnboardingWizard', () => {
           source={source}
           dataset={datasetWith()}
           applyPatch={vi.fn()}
+          firstRun={false}
           onDone={onDone}
           onSkip={vi.fn()}
         />,
       )
-      goToStep(3)
+      goToStep(2)
       fireEvent.click(screen.getByText('Finish setup'))
       const apply = screen.getByText('Apply')
       fireEvent.click(apply)

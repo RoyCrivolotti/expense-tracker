@@ -161,6 +161,33 @@ describe('updateSettings with goalLevers', () => {
   })
 })
 
+describe('updateSettings with tipsSeen', () => {
+  it('stores the list as JSON and reads it back, and an empty list stays an empty list', async () => {
+    const { env, bind } = stubEnv(makeRow({ tips_seen: '["getting-started"]' }))
+    const saved = await updateSettings(env, OWNER, { tipsSeen: ['getting-started'] })
+    expect(boundMilestones(bind)).toBe('["getting-started"]')
+    expect(saved.tipsSeen).toEqual(['getting-started'])
+
+    const empty = stubEnv(makeRow({ tips_seen: '[]' }))
+    expect((await updateSettings(empty.env, OWNER, { tipsSeen: [] })).tipsSeen).toEqual([])
+    expect(boundMilestones(empty.bind)).toBe('[]')
+  })
+
+  it('leaves the field out until a list is written, on a null column and on a database without the column', async () => {
+    const { env } = stubEnv(makeRow({ tips_seen: null }))
+    expect(await updateSettings(env, OWNER, { claimantName: 'Alex' })).not.toHaveProperty('tipsSeen')
+    const { env: oldEnv } = stubEnv(makeRow())
+    expect(await updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).not.toHaveProperty('tipsSeen')
+  })
+
+  it('refuses what is not a list of tip ids', async () => {
+    const { env } = stubEnv(makeRow())
+    for (const bad of ['getting-started', null, [3], ['Not A Tip']]) {
+      await expect(updateSettings(env, OWNER, { tipsSeen: bad as unknown as [] })).rejects.toBeInstanceOf(HttpError)
+    }
+  })
+})
+
 function stubEnv(returnRow: SettingsRow) {
   const first = vi.fn().mockResolvedValue(returnRow)
   const run = vi.fn().mockResolvedValue(undefined)

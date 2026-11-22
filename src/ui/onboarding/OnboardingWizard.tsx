@@ -19,12 +19,9 @@ import { runOnboardingSetup } from './runOnboardingSetup'
 import { buildOnboardingConfirmSummary, ONBOARDING_CONFIRM_FOOTNOTE } from './onboardingConfirmSummary'
 import styles from './OnboardingWizard.module.css'
 
-const TITLES = [
-  'Welcome to Expenses',
-  'Money & months',
-  'Choose categories',
-  'Add accounts',
-] as const
+const TITLES = ['Welcome', 'What do you spend on?', 'Where do you pay from?'] as const
+/** A re-run is not a welcome, and has no first payment coming. */
+const RERUN_FIRST_TITLE = 'Setup'
 
 const LAST_STEP = TITLES.length - 1
 
@@ -82,11 +79,16 @@ interface OnboardingWizardProps {
   source: ExpenseDataSource
   dataset: ExpenseDataset
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
+  /**
+   * A first run has nothing to protect, so Finish applies at once. A re-run from Settings adds to
+   * what exists, so it still shows what will be added and waits for a yes.
+   */
+  firstRun: boolean
   onDone: () => void
   onSkip: () => void
 }
 
-export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }: OnboardingWizardProps) {
+export function OnboardingWizard({ source, dataset, applyPatch, firstRun, onDone, onSkip }: OnboardingWizardProps) {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,6 +144,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
         money,
         currentSettings: dataset.settings,
         existingCategories: dataset.categories,
+        firstRun,
       })
       onDone()
     } catch (err: unknown) {
@@ -156,7 +159,8 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       setStep((s) => s + 1)
       return
     }
-    setShowConfirm(true)
+    if (firstRun) void finish()
+    else setShowConfirm(true)
   }
 
   function handleConfirm() {
@@ -164,32 +168,19 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
     void finish()
   }
 
-  const nextDisabled = step === 2 ? !canNextCategories : step === LAST_STEP ? !canFinish : false
+  const nextDisabled = step === 1 ? !canNextCategories : step === LAST_STEP ? !canFinish : false
 
   return (
     <Modal
-      title={TITLES[step] ?? 'Setup'}
+      title={step === 0 && !firstRun ? RERUN_FIRST_TITLE : (TITLES[step] ?? 'Setup')}
       onClose={dismissHandler(showConfirm, () => setShowConfirm(false), onSkip)}
       trapPaused={showConfirm}
     >
       <OnboardingProgress step={step} />
       {step === 0 ? (
-        <div className={styles.stepBody}>
-          <p className={styles.lead}>
-            Set up your currency, categories, and accounts so you can log spending. Your data stays
-            private to your account.
-          </p>
-          <p className={styles.hint}>
-            This takes about a minute. Spending is grouped into budget months, which you can align
-            to the calendar or your own pay cycle. You can skip and configure everything later in
-            Settings.
-          </p>
-        </div>
+        <OnboardingMoneyStep firstRun={firstRun} money={money} onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))} />
       ) : null}
       {step === 1 ? (
-        <OnboardingMoneyStep money={money} onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))} />
-      ) : null}
-      {step === 2 ? (
         <OnboardingCategoriesStep
           drafts={drafts}
           onChange={setDrafts}
@@ -197,7 +188,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
           hasExistingCategories={hasExistingCategories}
         />
       ) : null}
-      {step === 3 ? (
+      {step === 2 ? (
         <OnboardingAccountsStep
           hasExistingAccounts={hasExistingAccounts}
           addDebit={accounts.addDebit}

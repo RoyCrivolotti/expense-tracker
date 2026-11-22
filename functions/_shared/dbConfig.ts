@@ -5,9 +5,7 @@ import type {
   GoalScenario,
   Milestone,
 } from '../domain/types'
-import { assumedInflationError } from '../domain/engine/assumedInflation'
-import { marketVolatilityError } from '../domain/engine/marketVolatility'
-import { leversError } from '../domain/engine/goalLevers'
+import { settingsPatchError } from '../domain/settingsChecks'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import type {
@@ -388,6 +386,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   assumedInflation: 'assumed_inflation',
   marketVolatility: 'market_volatility',
   goalLevers: 'goal_levers',
+  tipsSeen: 'tips_seen',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'claimantName',
@@ -401,6 +400,7 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'assumedInflation',
   'marketVolatility',
   'goalLevers',
+  'tipsSeen',
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
 export const CASH_RESERVE_MAX_MONTHS = 60
@@ -408,11 +408,11 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   if (key === 'milestones') {
     return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
   }
-  if (key === 'goalLevers') return value === undefined ? null : JSON.stringify(value)
+  if (key === 'goalLevers' || key === 'tipsSeen') return value === undefined ? null : JSON.stringify(value)
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 }
 
-/** The Goals tab's own settings: the cash reserve target, the assumed inflation, the market's bounce and the bar's inputs. */
+/** The Goals tab's own settings (the cash reserve target here, the rest in `settingsPatchError`) and the tips put away. */
 function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   if (
     patch.cashReserveMonths !== undefined &&
@@ -422,18 +422,8 @@ function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   ) {
     throw new HttpError(400, `cashReserveMonths must be an integer between 0 and ${CASH_RESERVE_MAX_MONTHS}`)
   }
-  if (patch.assumedInflation !== undefined) {
-    const error = assumedInflationError(patch.assumedInflation)
-    if (error) throw new HttpError(400, error)
-  }
-  if (patch.marketVolatility !== undefined) {
-    const error = marketVolatilityError(patch.marketVolatility)
-    if (error) throw new HttpError(400, error)
-  }
-  if (patch.goalLevers !== undefined) {
-    const error = leversError(patch.goalLevers)
-    if (error) throw new HttpError(400, error)
-  }
+  const error = settingsPatchError(patch)
+  if (error) throw new HttpError(400, error)
 }
 
 /** No balance is more than this, in cents: a hundred billion euros. */
