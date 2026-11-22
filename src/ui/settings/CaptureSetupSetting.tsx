@@ -19,7 +19,7 @@ function shortcutLink(setup: Setup): string | null {
 const REQUIREMENT =
   'Needs an iPhone or iPad with the Shortcuts app and its notification trigger; proven on iOS 27, untested on older versions. Your version is in Settings, General, About.'
 const ELSEWHERE =
-  'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. Set it up from Settings on that device; what it captures shows here as well.'
+  'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. It does not exist on Android or on a computer. Set it up from Settings on that iPhone or iPad; what it captures shows here as well.'
 const BY_HAND =
   'A shortcut built by hand from steps like these worked on one phone. It has not been tried on a second phone. We have not seen the iOS 27 screens beyond the trigger, so names here may differ from yours: tell us what does.'
 const FROM_LINK =

@@ -252,7 +252,7 @@ describe('on each kind of device', () => {
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
     expect(screen.getByText(/^Needs an iPhone or iPad with the Shortcuts app and its notification trigger/)).toBeInTheDocument()
     expect(screen.getByText('1. Make a key and copy it')).toBeInTheDocument()
-    expect(screen.queryByText(/Set it up from Settings on that device/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist on Android or on a computer/)).not.toBeInTheDocument()
   })
 
   it.each(['android', 'mac', 'windows', 'linux'] as const)('points to the iPhone instead on %s, and reads nothing', (platform) => {
@@ -262,7 +262,7 @@ describe('on each kind of device', () => {
     expect(screen.getByText('Set up capture')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. Set it up from Settings on that device; what it captures shows here as well.',
+        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. It does not exist on Android or on a computer. Set it up from Settings on that iPhone or iPad; what it captures shows here as well.',
       ),
     ).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
