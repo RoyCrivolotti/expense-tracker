@@ -25,6 +25,7 @@ function makeRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
     safe_withdrawal_rate: 0.04,
     plan_start_date: null,
     life_events: '[]',
+    is_active: 0,
     ...overrides,
   }
 }
@@ -32,7 +33,6 @@ function makeRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
 function stubEnv(returnRow: GoalScenarioRow) {
   const first = vi.fn().mockResolvedValue(returnRow)
   const prepare = vi.fn(() => ({
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     bind: (..._args: unknown[]) => ({ first }),
   }))
   return { env: { DB: { prepare } } as unknown as Env, prepare, first }

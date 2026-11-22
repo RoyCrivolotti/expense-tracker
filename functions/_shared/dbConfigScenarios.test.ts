@@ -101,6 +101,8 @@ describe('createScenario', () => {
       planStartDate: null,
       lifeEvents: [],
       contributionSchedule: [],
+      homeCarryRate: 0.015,
+      retirementYears: 40,
     })
 
     const insert = statements[0]!

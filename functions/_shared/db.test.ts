@@ -45,14 +45,14 @@ function stubEnv(): Env {
     DB: {
       prepare: (sql: string) => ({
         bind: () => ({
-          first: async () => null,
-          all: async () => {
-            if (sql.includes('FROM transactions WHERE owner')) return { results: [TXN_ROW] }
-            if (sql.includes('FROM labels WHERE owner')) return { results: [LABEL_ROW] }
+          first: () => Promise.resolve(null),
+          all: () => {
+            if (sql.includes('FROM transactions WHERE owner')) return Promise.resolve({ results: [TXN_ROW] })
+            if (sql.includes('FROM labels WHERE owner')) return Promise.resolve({ results: [LABEL_ROW] })
             if (sql.includes('FROM transaction_labels tl')) {
-              return { results: [{ transaction_id: 1, label_id: 2 }] }
+              return Promise.resolve({ results: [{ transaction_id: 1, label_id: 2 }] })
             }
-            return { results: [] }
+            return Promise.resolve({ results: [] })
           },
         }),
       }),
@@ -76,10 +76,13 @@ describe('loadDataset — labels', () => {
 
   it('gives a transaction with no links an empty labelIds array, not undefined', async () => {
     const env = stubEnv()
-    const prepare = env.DB.prepare
+    const prepare = env.DB.prepare.bind(env.DB)
     env.DB.prepare = (sql: string) =>
       sql.includes('FROM transaction_labels tl')
-        ? { bind: () => ({ all: async () => ({ results: [] }), first: async () => null }) }
+        ? // A deliberate partial statement: loadDataset only calls bind().all() on it.
+          ({
+            bind: () => ({ all: () => Promise.resolve({ results: [] }), first: () => Promise.resolve(null) }),
+          } as unknown as D1PreparedStatement)
         : prepare(sql)
 
     const dataset = await loadDataset(env, OWNER)
@@ -90,7 +93,7 @@ describe('loadDataset — labels', () => {
   it('joins against labels, so a transaction_labels row whose label was deleted cannot surface', async () => {
     let capturedSql = ''
     const env = stubEnv()
-    const prepare = env.DB.prepare
+    const prepare = env.DB.prepare.bind(env.DB)
     env.DB.prepare = (sql: string) => {
       if (sql.includes('FROM transaction_labels tl')) capturedSql = sql
       return prepare(sql)

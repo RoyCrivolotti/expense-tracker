@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 import {
   createWealthAccount,
   createWealthCheckin,
@@ -34,7 +34,7 @@ function stubEnv(
     firstMap?: Record<string, Row | null>
     runMap?: Record<string, number>
     allMap?: Record<string, Row[]>
-    batch?: unknown
+    batch?: (stmts: unknown[]) => Promise<unknown>
   } = {},
 ): Env {
   const firstMap = opts.firstMap ?? {}
@@ -56,11 +56,10 @@ function stubEnv(
     opts.batch ?? ((stmts: unknown[]) => Promise.resolve(stmts.map(() => ({ meta: { changes: 1 } })))),
   )
   const prepare = vi.fn((sql: string) => ({
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    bind: (..._args: unknown[]) => ({
-      first: vi.fn(async () => findInMap(firstMap, sql, null)),
-      run: vi.fn(async () => ({ meta: { changes: findInMap(runMap, sql, 1) } })),
-      all: vi.fn(async () => ({ results: findInMap(allMap, sql, []) })),
+    bind: () => ({
+      first: vi.fn(() => Promise.resolve(findInMap(firstMap, sql, null))),
+      run: vi.fn(() => Promise.resolve({ meta: { changes: findInMap(runMap, sql, 1) } })),
+      all: vi.fn(() => Promise.resolve({ results: findInMap(allMap, sql, []) })),
     }),
   }))
 
@@ -272,7 +271,7 @@ describe('createWealthCheckin', () => {
       }),
     ).rejects.toThrow('D1 batch failed')
     // The compensating DELETE should have been called
-    const deleteCalls = (env.DB.prepare as ReturnType<typeof vi.fn>).mock.calls.filter(([sql]: [string]) =>
+    const deleteCalls = (env.DB.prepare as unknown as Mock<(sql: string) => unknown>).mock.calls.filter(([sql]) =>
       sql.startsWith('DELETE FROM wealth_checkins WHERE id'),
     )
     expect(deleteCalls.length).toBe(1)

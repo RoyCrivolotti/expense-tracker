@@ -209,8 +209,8 @@ describe('GET /api/capture-cards', () => {
     )
     await post(good)
 
-    const mine = (await (await call(list)).json()) as { cards: unknown[]; waiting: unknown[] }
-    const theirs = (await (await call(list, { email: OTHER })).json()) as { cards: unknown[]; waiting: unknown[] }
+    const mine = await (await call(list)).json<{ cards: unknown[]; waiting: unknown[] }>()
+    const theirs = await (await call(list, { email: OTHER })).json<{ cards: unknown[]; waiting: unknown[] }>()
 
     expect(mine.cards).toEqual([{ source: 'iberia', digitsKind: 'card', digits: DIGITS, accountId: 1 }])
     expect(mine.waiting).toEqual([{ source: 'iberia', digits: '5533', count: 1 }])
@@ -264,7 +264,7 @@ describe('an unexpected failure', () => {
 
     expect(response.status).toBe(500)
     expect(await response.text()).not.toContain(DIGITS)
-    expect(JSON.stringify(logged, (_k, v) => (v instanceof Error ? v.message : v))).not.toContain(DIGITS)
+    expect(JSON.stringify(logged, (_k, v: unknown) => (v instanceof Error ? v.message : v))).not.toContain(DIGITS)
     expect(JSON.stringify(logged)).toContain('unexpected error')
   })
 })

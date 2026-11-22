@@ -167,10 +167,10 @@ async function measureRows(
   const asObjects = JSON.parse(JSON.stringify((await statement().all<Row>()).results)) as Row[]
   const asTuples = JSON.parse(JSON.stringify(await statement().raw())) as unknown[][]
   const time = async (map: () => Transaction[]) =>
-    best(async () => {
+    best(() => {
       const start = performance.now()
       JSON.stringify(map())
-      return performance.now() - start
+      return Promise.resolve(performance.now() - start)
     })
   const objects = await time(() => viaObjects(asObjects))
   const built = await time(() => direct(asObjects))
@@ -220,6 +220,7 @@ describe.skipIf(!process.env.SCALING_MEASURE)('ledger parts, by ledger size', ()
   it('reference part', { timeout: 600_000 }, async () => {
     const results: Record<string, number>[] = []
     for (const rows of SIZES) results.push(await measureReference(rows))
+    // eslint-disable-next-line no-console -- these tests exist to print the measured table
     console.table(results)
     expect(results).toHaveLength(SIZES.length)
   })
@@ -228,6 +229,7 @@ describe.skipIf(!process.env.SCALING_MEASURE)('ledger parts, by ledger size', ()
     const { env } = database(Math.max(...ROW_COUNTS) * 2)
     const results: Record<string, number>[] = []
     for (const count of ROW_COUNTS) results.push(await measureRows(env, count))
+    // eslint-disable-next-line no-console -- these tests exist to print the measured table
     console.table(results)
     expect(results).toHaveLength(ROW_COUNTS.length)
   })
@@ -236,6 +238,7 @@ describe.skipIf(!process.env.SCALING_MEASURE)('ledger parts, by ledger size', ()
     const { repo, stats } = database(Math.min(...SIZES.slice(-2)))
     const results = []
     for (const months of [12, 24, 60, 120]) results.push(await measureCube(repo, stats, months))
+    // eslint-disable-next-line no-console -- these tests exist to print the measured table
     console.table(results)
     expect(results).toHaveLength(4)
   })

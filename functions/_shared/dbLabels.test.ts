@@ -26,8 +26,8 @@ function stubEnv(opts: {
     bind: (...args: unknown[]) => ({
       sql,
       args,
-      first: vi.fn().mockImplementation(async () => first(sql, args)),
-      all: vi.fn().mockImplementation(async () => all(sql, args)),
+      first: vi.fn().mockImplementation(() => Promise.resolve(first(sql, args))),
+      all: vi.fn().mockImplementation(() => Promise.resolve(all(sql, args))),
     }),
   }))
   return { env: { DB: { prepare, batch } } as unknown as Env, prepare, batch }

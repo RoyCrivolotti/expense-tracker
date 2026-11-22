@@ -14,7 +14,6 @@ import { seedDataset } from '../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../src/testing/sqliteD1'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
-import type { Env } from './env'
 
 const OWNER = 'owner@example.com'
 const MONTHS = 120
@@ -30,7 +29,7 @@ async function measure(rows: number): Promise<Record<string, number>> {
   const db = migratedDatabase()
   seedDataset(db, OWNER, ledger)
   const stats = newStats()
-  const repo = createD1ExpenseRepository({ DB: sqliteD1(db, stats) } as Env)
+  const repo = createD1ExpenseRepository({ DB: sqliteD1(db, stats) })
   await repo.readUsage(OWNER)
   Object.assign(stats, newStats())
   const start = performance.now()
@@ -51,6 +50,7 @@ describe.skipIf(!process.env.SCALING_MEASURE)('the usage counts, by ledger size'
   it('prints cost per size', { timeout: 600_000 }, async () => {
     const results: Record<string, number>[] = []
     for (const rows of SIZES) results.push(await measure(rows))
+    // eslint-disable-next-line no-console -- these tests exist to print the measured table
     console.table(results)
     expect(results).toHaveLength(SIZES.length)
   })

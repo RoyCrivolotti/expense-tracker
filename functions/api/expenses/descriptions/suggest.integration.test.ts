@@ -73,7 +73,7 @@ const get = (
 async function items(query: string): Promise<DescriptionMatch[]> {
   const response = await get(query)
   expect(response.status, query).toBe(200)
-  const body = (await response.json()) as { items: DescriptionMatch[]; tooBroad: boolean }
+  const body = await response.json<{ items: DescriptionMatch[]; tooBroad: boolean }>()
   expect(Object.keys(body).sort(), query).toEqual(['items', 'tooBroad'])
   expect(body.tooBroad, query).toBe(false)
   return body.items
@@ -125,7 +125,7 @@ describe('GET /descriptions/suggest', () => {
   it('serves the owner’s own rows only', async () => {
     expect((await items('q=mar')).map((m) => m.label)).toEqual([])
     const theirs = await get('q=mar', OTHER)
-    expect(((await theirs.json()) as { items: DescriptionMatch[] }).items.map((m) => m.label)).toEqual([
+    expect((await theirs.json<{ items: DescriptionMatch[] }>()).items.map((m) => m.label)).toEqual([
       'Market on the moon',
     ])
   })
@@ -175,7 +175,7 @@ describe('what it refuses', () => {
   it.each(cases)('answers %s with 400', async (_name, query, status, message) => {
     const response = await get(query)
     expect(response.status).toBe(status)
-    expect(((await response.json()) as { error: string }).error).toContain(message)
+    expect((await response.json<{ error: string }>()).error).toContain(message)
   })
 
   it('answers a prefix that matches too many descriptions with 200 and tooBroad, and a list once it is longer', async () => {
@@ -206,7 +206,7 @@ describe('while descriptions are still waiting for their normalized form', () =>
     expect(first.headers.get('retry-after')).toBe('1')
     const second = await get('q=shop%2010')
     expect(second.status).toBe(200)
-    expect(((await second.json()) as { items: DescriptionMatch[] }).items.length).toBeGreaterThan(0)
+    expect((await second.json<{ items: DescriptionMatch[] }>()).items.length).toBeGreaterThan(0)
   })
 
   it('does not move the revision', async () => {

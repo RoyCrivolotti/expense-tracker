@@ -5,6 +5,7 @@ import type { BackupAlerts } from '../domain/ports/backupAlerts'
 import { createBackupDeps, runAllBackups } from './backupService'
 
 function mockRepo(overrides: Partial<ExpenseRepository> = {}): ExpenseRepository {
+  // A deliberate partial stub: the backup only reads loadDataset and listOwners.
   return {
     loadDataset: vi.fn().mockResolvedValue({ categories: [], accounts: [], transactions: [] }),
     listOwners: vi.fn().mockResolvedValue(['a@b.com']),
@@ -30,7 +31,7 @@ function mockRepo(overrides: Partial<ExpenseRepository> = {}): ExpenseRepository
     updateInstallmentPlan: vi.fn(),
     deleteInstallmentPlan: vi.fn(),
     ...overrides,
-  }
+  } as unknown as ExpenseRepository
 }
 
 function mockStore(objects: { key: string; size: number }[] = []): BackupStore & {
@@ -40,13 +41,15 @@ function mockStore(objects: { key: string; size: number }[] = []): BackupStore &
   let stored = [...objects]
   return {
     get: vi.fn().mockResolvedValue(null),
-    put: vi.fn().mockImplementation(async (key: string, body: string) => {
+    put: vi.fn().mockImplementation((key: string, body: string) => {
       stored = stored.filter((o) => o.key !== key)
       stored.push({ key, size: body.length })
+      return Promise.resolve()
     }),
-    list: vi.fn().mockImplementation(async () => stored),
-    delete: vi.fn().mockImplementation(async (key: string) => {
+    list: vi.fn().mockImplementation(() => Promise.resolve(stored)),
+    delete: vi.fn().mockImplementation((key: string) => {
       stored = stored.filter((o) => o.key !== key)
+      return Promise.resolve()
     }),
   }
 }
@@ -91,7 +94,7 @@ describe('runAllBackups', () => {
       policy,
     })
     expect(alerts.onLargeSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({ owner: 'a@b.com', bytes: expect.any(Number), limit: 10 }),
+      expect.objectContaining({ owner: 'a@b.com', bytes: expect.any(Number) as number, limit: 10 }),
     )
   })
 
@@ -105,7 +108,7 @@ describe('runAllBackups', () => {
     const alerts = mockAlerts()
     await runAllBackups({ repo: mockRepo(), store, alerts, policy })
     expect(alerts.onBucketNearLimit).toHaveBeenCalledWith({
-      usedBytes: expect.any(Number),
+      usedBytes: expect.any(Number) as number,
       limitBytes: 500,
     })
   })

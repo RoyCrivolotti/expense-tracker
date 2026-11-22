@@ -44,7 +44,7 @@ describe('the dataset revision', () => {
     const before = world.token()
     expect(before).not.toBeNull()
 
-    const { keyId } = (await (await call(create, 'POST', undefined, {})).json()) as { keyId: string }
+    const { keyId } = await (await call(create, 'POST', undefined, {})).json<{ keyId: string }>()
     await call(list, 'GET')
     await call(revoke, 'DELETE', keyId)
     expect(world.token()).toBe(before)

@@ -25,7 +25,7 @@ async function call(error: unknown): Promise<{ status: number; body: { error: st
     env: { DB: store.db, OWNER_EMAIL: OWNER },
     url: 'https://expenses.test/api/expenses/anything',
   })
-  return { status: response.status, body: (await response.json()) as { error: string } }
+  return { status: response.status, body: await response.json<{ error: string }>() }
 }
 
 describe('the /api middleware, for a route that does not catch', () => {

@@ -39,7 +39,7 @@ beforeEach(async () => {
     handler: Handler,
     path: string,
     body: unknown,
-  ) => ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
+  ) => (await (await world.call(handler, { method: 'POST', path, body })).json<{ id: number }>()).id
   accountId = await seeded(postAccount, '/accounts', {
     name: 'Debit',
     kind: 'debit',
@@ -52,7 +52,8 @@ beforeEach(async () => {
     sortOrder: 0,
     active: true,
   })
-  push = (await capturePhone(world.env.DB, OWNER, NOW)).push
+  const phone = await capturePhone(world.env.DB, OWNER, NOW)
+  push = (body) => phone.push(body)
 })
 
 function decide(
@@ -134,9 +135,9 @@ describe('an accept', () => {
   it('votes from a linked row too', async () => {
     await learnTheWording()
     const id = (await push(PUSH('Example Cafe')))!
-    const typed = (await (
+    const typed = await (
       await world.call(postTransaction, { method: 'POST', path: '/transactions', body: row('Coffee') })
-    ).json()) as { id: number }
+    ).json<{ id: number }>()
     await decide(link, id, { transactionId: typed.id })
 
     expect(merchants()).toHaveLength(2)
@@ -156,9 +157,11 @@ describe('an accept', () => {
 
 type Listed = { id: string; amountCents: number; suggestion: Record<string, unknown> | null }
 async function suggestionOf(id: string) {
-  const body = (await (await world.call(list, { method: 'GET', path: '/../recommendations' })).json()) as {
+  const body = await (
+    await world.call(list, { method: 'GET', path: '/../recommendations' })
+  ).json<{
     recommendations: Listed[]
-  }
+  }>()
   return body.recommendations.find((r) => r.id === id)?.suggestion
 }
 

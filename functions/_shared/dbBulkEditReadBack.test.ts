@@ -45,7 +45,7 @@ describe('an edit by ids answers with the rows it edited', () => {
       const ledger = randomLedger(seed)
       if (ledger.transactions.length === 0) continue
       const kit = queryDb(ledger, [{ owner: OTHER_OWNER, dataset: randomLedger(seed + 100) }])
-      const env = { DB: kit.d1 } as Env
+      const env = { DB: kit.d1 }
       const mine = ledger.transactions.map((t) => t.id)
       const theirs = (
         kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? LIMIT 3').all(OTHER_OWNER) as Array<{
@@ -95,7 +95,7 @@ describe('an edit by ids answers with the rows it edited', () => {
     ).map((r) => r.id)
 
     await expect(
-      bulkUpdateTransactions({ DB: kit.d1 } as Env, OWNER, [...foreign, 999_999], { description: 'No' }),
+      bulkUpdateTransactions({ DB: kit.d1 }, OWNER, [...foreign, 999_999], { description: 'No' }),
     ).resolves.toEqual([])
   })
 })
@@ -107,7 +107,7 @@ describe('a label link that points at another owner’s label', () => {
     const kit = queryDb(syntheticLedger({ months: 3, perMonth: 20, seed: 9 }), [
       { owner: OTHER_OWNER, dataset: syntheticLedger({ months: 3, perMonth: 20, seed: 10 }) },
     ])
-    const env = { DB: kit.d1 } as Env
+    const env = { DB: kit.d1 }
     const mine = (
       kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id LIMIT 3').all(OWNER) as Array<{
         id: number
@@ -132,7 +132,7 @@ describe('a label link that points at another owner’s label', () => {
 describe('the cost of an edit by ids', () => {
   it('is the same handful of statements whether it edits 1 row or 500', async () => {
     const kit = queryDb(syntheticLedger({ months: 12, perMonth: 60, seed: 5 }))
-    const env = { DB: kit.d1 } as Env
+    const env = { DB: kit.d1 }
     const all = (
       kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>
     ).map((r) => r.id)
@@ -157,7 +157,7 @@ describe('the cost of an edit by ids', () => {
     ).map((r) => r.id)
 
     kit.statements.length = 0
-    await bulkUpdateTransactions({ DB: kit.d1 } as Env, OWNER, ids, { description: 'Edited' })
+    await bulkUpdateTransactions({ DB: kit.d1 }, OWNER, ids, { description: 'Edited' })
 
     expect(kit.statements.filter((s) => s.sql.includes('json_group_array'))).toHaveLength(1)
     expect(kit.statements.filter((s) => /FROM account_statements WHERE account_id/.test(s.sql))).toEqual([])

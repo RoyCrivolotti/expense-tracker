@@ -71,9 +71,11 @@ describe('readBackup of a chunked backup', () => {
     const part = partKey(OWNER, DAY, 2)
     const padded = `${store.objects.get(part)!}\n\n`
     store.objects.set(part, padded)
-    const manifest = JSON.parse(store.objects.get(manifestKey(OWNER, DAY))!)
-    manifest.parts[1].bytes = padded.length
-    manifest.parts[1].rows = 2
+    const manifest = JSON.parse(store.objects.get(manifestKey(OWNER, DAY))!) as {
+      parts: { bytes: number; rows: number }[]
+    }
+    manifest.parts[1]!.bytes = padded.length
+    manifest.parts[1]!.rows = 2
     store.objects.set(manifestKey(OWNER, DAY), JSON.stringify(manifest))
 
     await expect(readBackup(store, OWNER, DAY)).rejects.toThrow('holds 1 rows, not the 2')

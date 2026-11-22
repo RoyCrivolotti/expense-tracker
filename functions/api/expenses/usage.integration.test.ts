@@ -46,7 +46,7 @@ describe('GET /usage', () => {
   it('serves the counts of the dataset the API serves, with the revision it was read under', async () => {
     const response = await get()
     expect(response.status).toBe(200)
-    const body = (await response.json()) as Usage & { revision: string }
+    const body = await response.json<Usage & { revision: string }>()
     const { revision, ...usage } = body
     expect(revision).toBe(world.token())
     const dataset = await loadDataset(world.env, OWNER)
@@ -56,7 +56,7 @@ describe('GET /usage', () => {
 
   it('counts the instalments the backfill adds, as the dataset does, even when this is the first read', async () => {
     const before = sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }
-    const usage = (await (await get()).json()) as Usage
+    const usage = await (await get()).json<Usage>()
     const after = sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(OWNER) as { n: number }
     expect(after.n).toBeGreaterThan(before.n)
     const { revision, ...counts } = usage as Usage & { revision: string }
@@ -68,12 +68,12 @@ describe('GET /usage', () => {
     expect((await world.call(onRequestGet, { path: '/usage', email: '' })).status).toBe(401)
     const response = await get(undefined, OWNER, `/usage?owner=${OTHER}`)
     expect(response.status).toBe(400)
-    expect(((await response.json()) as { error: string }).error).toBe('Unknown parameter: owner')
+    expect((await response.json<{ error: string }>()).error).toBe('Unknown parameter: owner')
   })
 
   it('counts the owner’s own rows only', async () => {
-    const mine = (await (await get()).json()) as Usage
-    const theirs = (await (await get(undefined, OTHER)).json()) as Usage
+    const mine = await (await get()).json<Usage>()
+    const theirs = await (await get(undefined, OTHER)).json<Usage>()
     const total = (u: Usage) => u.categories.reduce((sum, c) => sum + c.transactions, 0)
     const rows = (owner: string) =>
       (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(owner) as { n: number }).n
@@ -98,7 +98,7 @@ describe('caching against the revision', () => {
   })
 
   it('answers 200 with a new tag once a write has moved the revision, and the count has moved with it', async () => {
-    const before = (await (await get()).json()) as Usage
+    const before = await (await get()).json<Usage>()
     const etag = (await get()).headers.get('etag')!
     const category = before.categories[0]!
     const created = await world.call(postTransaction, {
@@ -119,7 +119,7 @@ describe('caching against the revision', () => {
     const after = await get({ 'if-none-match': etag })
     expect(after.status).toBe(200)
     expect(after.headers.get('etag')).not.toBe(etag)
-    const usage = (await after.json()) as Usage
+    const usage = await after.json<Usage>()
     expect(usage.categories.find((c) => c.id === category.id)!.transactions).toBe(category.transactions + 1)
   })
 

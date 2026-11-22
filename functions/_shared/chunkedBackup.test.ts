@@ -325,7 +325,6 @@ describe('planning data that is stored as JSON', () => {
           ],
           planStartDate: '2026-11-01',
           housePurchaseYear: 5,
-          isActive: true,
         }),
       })
       expect(scenario.status).toBe(201)
@@ -410,7 +409,7 @@ describe('the work of one invocation is bounded', () => {
             spentAtList.push(source.queries.count - before + store.total())
             return store.list(prefix)
           },
-        } as MemoryBackupStore
+        }
         const result = await runChunkedBackups({ ...deps, repo, store: watched }, clockOf(DAY))
 
         const spent =
@@ -474,7 +473,7 @@ describe('the work of one invocation is bounded', () => {
                   spentAtList.push(source.queries.count - before + store.total())
                   return store.list(prefix)
                 },
-              } as MemoryBackupStore
+              }
               const result = await runChunkedBackups({ ...deps, store: watched }, clockOf(DAY))
               const spent =
                 result.complete && spentAtList.length > 1
@@ -741,7 +740,10 @@ describe('the alerts the single-file backup raised are kept', () => {
     )
 
     expect([...store.objects.keys()].some((k) => k.includes('2026-09-0'))).toBe(false)
-    expect(alerts.onBucketNearLimit).toHaveBeenCalledWith({ usedBytes: expect.any(Number), limitBytes: 10_000_000 })
+    expect(alerts.onBucketNearLimit).toHaveBeenCalledWith({
+      usedBytes: expect.any(Number) as number,
+      limitBytes: 10_000_000,
+    })
   })
 })
 
@@ -855,10 +857,10 @@ describe('a ledger written to while it is backed up', () => {
       for (let i = 0; i < 12 && last.failed === 0; i += 1) last = await runChunkedBackups(deps, clockOf(DAY))
 
       expect(last).toMatchObject({ failed: 1, complete: false, pruned: 0 })
-      const finals = alerts.onInconsistentBackup.mock.calls.map(([d]) => d)
+      const finals = alerts.onInconsistentBackup.mock.calls.map(([d]) => d as { attempt: number; final: boolean })
       expect(finals).toHaveLength(MAX_PASSES)
       expect(finals.map((d) => d.attempt)).toEqual(Array.from({ length: MAX_PASSES }, (_, i) => i + 1))
-      expect(finals.map((d) => d.final)).toEqual([...Array(MAX_PASSES - 1).fill(false), true])
+      expect(finals.map((d) => d.final)).toEqual([...Array<boolean>(MAX_PASSES - 1).fill(false), true])
       expect(store.objects.has(manifestKey(OWNER, DAY))).toBe(false)
       expect(store.objects.has(manifestKey(OTHER_OWNER, DAY))).toBe(true)
 
@@ -907,7 +909,7 @@ describe('how often the state is saved', () => {
           return store.put(key, text, type)
         },
       }
-      const deps = depsOf(source, counting as MemoryBackupStore, {
+      const deps = depsOf(source, counting, {
         chunked: { enabled: true, maxOperations: 46, maxRows: 100_000 },
       })
 

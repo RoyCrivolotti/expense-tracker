@@ -23,7 +23,7 @@ function expenseEnv(store: ReturnType<typeof createInMemoryAccessDb>): Env {
 }
 
 async function readJson<T>(response: Response): Promise<T> {
-  return (await response.json()) as T
+  return await response.json<T>()
 }
 
 describe('wealth accounts API', () => {

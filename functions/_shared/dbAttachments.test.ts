@@ -39,8 +39,8 @@ function stubEnv(opts: {
       return {
         sql,
         args,
-        first: vi.fn().mockImplementation(async () => first(sql, args)),
-        all: vi.fn().mockImplementation(async () => all(sql, args)),
+        first: vi.fn().mockImplementation(() => Promise.resolve(first(sql, args))),
+        all: vi.fn().mockImplementation(() => Promise.resolve(all(sql, args))),
       }
     },
   }))

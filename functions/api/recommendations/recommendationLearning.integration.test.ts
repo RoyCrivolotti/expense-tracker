@@ -36,7 +36,7 @@ beforeEach(async () => {
     handler: Handler,
     path: string,
     body: unknown,
-  ) => ((await (await world.call(handler, { method: 'POST', path, body })).json()) as { id: number }).id
+  ) => (await (await world.call(handler, { method: 'POST', path, body })).json<{ id: number }>()).id
   accountId = await seeded(postAccount, '/accounts', {
     name: 'Debit',
     kind: 'debit',
@@ -49,7 +49,8 @@ beforeEach(async () => {
     sortOrder: 0,
     active: true,
   })
-  push = (await capturePhone(world.env.DB, OWNER, NOW)).push
+  const phone = await capturePhone(world.env.DB, OWNER, NOW)
+  push = (body) => phone.push(body)
 })
 
 function captures() {
@@ -161,9 +162,9 @@ describe('submitting a recommendation', () => {
 describe('linking a recommendation', () => {
   it('learns from the row it was linked to and records linked', async () => {
     const id = (await push(NO_CARD('Example Cafe')))!
-    const typed = (await (
+    const typed = await (
       await world.call(postTransaction, { method: 'POST', path: '/transactions', body: row('Coffee') })
-    ).json()) as { id: number }
+    ).json<{ id: number }>()
     expect((await decide(link, id, { transactionId: typed.id })).status).toBe(200)
 
     expect(outcome(id)).toBe('linked')
@@ -192,7 +193,11 @@ describe('dismissing', () => {
       await decide(dismiss, id)
     }
     expect(templates()).toHaveLength(1)
-    expect(templates()[0]).toMatchObject({ dismissals: 3, dismiss_streak: 3, ignored_at: expect.any(String) })
+    expect(templates()[0]).toMatchObject({
+      dismissals: 3,
+      dismiss_streak: 3,
+      ignored_at: expect.any(String) as unknown,
+    })
     expect(await push(WITH_CARD('Offer Four'))).toBeNull()
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM capture_events').get()).toEqual({ n: 3 })
     expect(sqlite.prepare('SELECT unrecognised FROM capture_counters').get()).toEqual({ unrecognised: 1 })
@@ -206,7 +211,7 @@ describe('dismissing', () => {
         merchant_start: number | null
         ignored_at: string | null
       }
-    expect(muted()).toMatchObject({ merchant_start: null, ignored_at: expect.any(String) })
+    expect(muted()).toMatchObject({ merchant_start: null, ignored_at: expect.any(String) as unknown })
     expect(await push(WITH_CARD('Offer Shop'))).toBeNull()
 
     expect(await push(WITH_CARD('Example Cafe'))).toEqual(expect.any(String))

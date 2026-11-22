@@ -12,7 +12,7 @@ function envFor(dataset: ExpenseDataset): { env: Env; stats: ReturnType<typeof n
   const db = migratedDatabase()
   seedDataset(db, OWNER, dataset)
   const stats = newStats()
-  return { env: { DB: sqliteD1(db, stats) } as Env, stats }
+  return { env: { DB: sqliteD1(db, stats) }, stats }
 }
 
 describe('sqliteD1', () => {
@@ -34,8 +34,8 @@ describe('sqliteD1', () => {
     const after = await db.prepare('SELECT COUNT(*) AS n FROM categories').first<{ n: number }>()
     expect(after?.n).toBe(0)
     const results = await db.batch([insert(2), db.prepare('SELECT id FROM categories')])
-    expect(results[0].meta.changes).toBe(1)
-    expect(results[1].results).toEqual([{ id: 2 }])
+    expect(results[0]?.meta.changes).toBe(1)
+    expect(results[1]?.results).toEqual([{ id: 2 }])
   })
 
   it('runs batches that overlap one after the other, as D1 does', async () => {
@@ -44,11 +44,11 @@ describe('sqliteD1', () => {
     const insert = (id: number) =>
       db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
     const [first, second] = await Promise.all([db.batch([insert(1), count()]), db.batch([insert(2), count()])])
-    expect(first[1].results).toEqual([{ n: 1 }])
-    expect(second[1].results).toEqual([{ n: 2 }])
+    expect(first[1]?.results).toEqual([{ n: 1 }])
+    expect(second[1]?.results).toEqual([{ n: 2 }])
     // A batch that fails rolls back and does not hold up the one behind it.
     await expect(Promise.all([db.batch([insert(2)]), db.batch([insert(3)])])).rejects.toThrow()
-    expect((await db.batch([count()]))[0].results).toEqual([{ n: 3 }])
+    expect((await db.batch([count()]))[0]?.results).toEqual([{ n: 3 }])
   })
 
   describe('bound-parameter limit', () => {
@@ -61,8 +61,14 @@ describe('sqliteD1', () => {
 
       expect(D1_MAX_BOUND_PARAMETERS).toBe(100)
       expect((await select(100).all()).results).toHaveLength(1)
-      for (const read of ['first', 'all', 'raw', 'run'] as const) {
-        await expect(select(101)[read]()).rejects.toThrow(/too many SQL variables/)
+      const reads = [
+        (s: D1PreparedStatement) => s.first(),
+        (s: D1PreparedStatement) => s.all(),
+        (s: D1PreparedStatement) => s.raw(),
+        (s: D1PreparedStatement) => s.run(),
+      ]
+      for (const read of reads) {
+        await expect(read(select(101))).rejects.toThrow(/too many SQL variables/)
       }
     })
 

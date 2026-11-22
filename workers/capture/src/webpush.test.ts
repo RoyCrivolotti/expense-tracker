@@ -96,9 +96,14 @@ describe('encryptPayload', () => {
 })
 
 async function vapidPair(): Promise<{ keys: VapidKeys; verify: CryptoKey }> {
-  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
-  const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
-  const publicKey = base64urlEncode(new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey)))
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair
+  const jwk = (await crypto.subtle.exportKey('jwk', pair.privateKey)) as JsonWebKey
+  const publicKey = base64urlEncode(
+    new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer),
+  )
   return {
     keys: { publicKey, privateKey: jwk.d as string, subject: 'https://app.example.test' },
     verify: pair.publicKey,

@@ -60,7 +60,7 @@ describe('createD1ExpenseRepository — labels dispatch', () => {
 
   it('setTransactionLabels delegates to dbLabels with the same args', async () => {
     const env = stubEnv()
-    const prepare = env.DB.prepare as ReturnType<typeof vi.fn>
+    const prepare = (env.DB as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare
     prepare.mockImplementation((sql: string) => ({
       bind: () => ({
         first: vi.fn().mockResolvedValue(

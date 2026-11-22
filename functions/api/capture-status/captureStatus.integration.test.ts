@@ -313,7 +313,7 @@ describe('GET /api/capture-status', () => {
   describe('the shortcut link', () => {
     const LINK = 'https://www.icloud.com/shortcuts/abc123'
     const link = async (setting?: string) =>
-      ((await (await get(undefined, OWNER, setting)).json()) as { shortcutUrl: string | null }).shortcutUrl
+      (await (await get(undefined, OWNER, setting)).json<{ shortcutUrl: string | null }>()).shortcutUrl
 
     it('is reported as set when the variable holds an iCloud Shortcuts link', async () => {
       expect(await link(LINK)).toBe(LINK)

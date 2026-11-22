@@ -4,6 +4,7 @@ import { createInMemoryAccessDb } from '../../_shared/testing/inMemoryAccessDb'
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { inMemoryExpenseRepository } from '../../../src/testing/inMemoryExpenseRepository'
 import { makeScenario } from '../../../src/testing/factories'
+import { defaultExpenseSettings } from '../../../src/domain/engine/defaults'
 import { onRequestPost as createAccount } from './accounts/index'
 import { onRequestPatch as patchAccount, onRequestDelete as deleteAccount } from './accounts/[id]'
 import { onRequestPost as createCategory } from './categories/index'
@@ -21,7 +22,7 @@ function expenseEnv(store: ReturnType<typeof createInMemoryAccessDb>): Env {
 }
 
 async function readJson<T>(response: Response): Promise<T> {
-  return (await response.json()) as T
+  return await response.json<T>()
 }
 
 describe('expenses API (middleware + handlers + in-memory repo)', () => {
@@ -628,7 +629,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
           { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
           { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
         ],
-        settings: { defaultAccountId: 1 },
+        settings: { ...defaultExpenseSettings(), defaultAccountId: 1 },
       },
       OWNER,
     )
@@ -658,7 +659,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
           { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
           { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
         ],
-        settings: { defaultAccountId: 1 },
+        settings: { ...defaultExpenseSettings(), defaultAccountId: 1 },
       },
       OWNER,
     )

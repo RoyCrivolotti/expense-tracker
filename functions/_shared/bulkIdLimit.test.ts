@@ -112,7 +112,7 @@ let others: Reference
 
 beforeEach(() => {
   db = migratedDatabase()
-  env = { DB: sqliteD1(db) } as Env
+  env = { DB: sqliteD1(db) }
   owned = seedReference(OWNER, 1)
   others = seedReference(OTHER, 100)
   seedTransactions(OWNER, owned, OWNER_FIRST, 600)
@@ -178,7 +178,7 @@ describe.each(SIZES)('editing %i transactions at once', (size) => {
 
     expect(updated.map((t) => t.id).sort((a, b) => a - b)).toEqual(ids)
     expect(updated.every((t) => t.categoryId === owned.category + 1)).toBe(true)
-    expect(updated.every((t) => t.labelIds.length === 1)).toBe(true)
+    expect(updated.every((t) => t.labelIds?.length === 1)).toBe(true)
     expect(categoriesOf(OWNER, owned.category + 1)).toBe(size)
   })
 

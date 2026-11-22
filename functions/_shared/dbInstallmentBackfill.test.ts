@@ -73,10 +73,10 @@ function envForBackfill(state: MockState): Env {
         bind: (...args: unknown[]) => {
           state.prepared.push(sql)
           if (sql.includes('JOIN accounts')) {
-            return { all: async () => ({ results: state.planRows }) }
+            return { all: () => Promise.resolve({ results: state.planRows }) }
           }
           if (sql.includes('plan_id IN')) {
-            return { all: async () => ({ results: state.txnRows }) }
+            return { all: () => Promise.resolve({ results: state.txnRows }) }
           }
           if (sql.startsWith('INSERT INTO transactions')) {
             const [
@@ -102,7 +102,7 @@ function envForBackfill(state: MockState): Env {
               state.conflictOn.planId === planId &&
               state.conflictOn.installmentIndex === installmentIndex
             ) {
-              return { first: async () => null }
+              return { first: () => Promise.resolve(null) }
             }
             state.nextId += 1
             const row = txnRow({
@@ -119,32 +119,33 @@ function envForBackfill(state: MockState): Env {
             })
             void owner
             state.insertedRows.push(row)
-            return { first: async () => row }
+            return { first: () => Promise.resolve(row) }
           }
           if (sql.includes('total_count AS t')) {
             const [planId] = args as [number, string]
             const plan = state.planRows.find((p) => p.id === planId)
-            return { first: async () => (plan ? { t: plan.total_count, a: plan.active } : null) }
+            return { first: () => Promise.resolve(plan ? { t: plan.total_count, a: plan.active } : null) }
           }
           if (sql.includes('MAX(installment_index)')) {
             const [, planId] = args as [string, number]
             const indices = [...state.txnRows, ...state.insertedRows]
               .filter((t) => t.plan_id === planId && t.cancelled === 0)
               .map((t) => t.installment_index as number)
-            return { first: async () => ({ m: indices.length ? Math.max(...indices) : null }) }
+            return { first: () => Promise.resolve({ m: indices.length ? Math.max(...indices) : null }) }
           }
           if (sql.startsWith('UPDATE installment_plans')) {
-            return { run: async () => ({ meta: { changes: 1 } }) }
+            return { run: () => Promise.resolve({ meta: { changes: 1 } }) }
           }
           if (sql.includes('owner_revision')) {
-            return { run: async () => ({ meta: { changes: 1 } }) }
+            return { run: () => Promise.resolve({ meta: { changes: 1 } }) }
           }
           if (sql.includes('budget_rollover_day')) {
             return {
-              first: async () => (state.rolloverDay != null ? { budget_rollover_day: state.rolloverDay } : null),
+              first: () =>
+                Promise.resolve(state.rolloverDay != null ? { budget_rollover_day: state.rolloverDay } : null),
             }
           }
-          return { first: async () => null, all: async () => ({ results: [] }) }
+          return { first: () => Promise.resolve(null), all: () => Promise.resolve({ results: [] }) }
         },
       }),
     },

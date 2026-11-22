@@ -30,8 +30,8 @@ function stubEnv(opts: {
     bind: (...args: unknown[]) => ({
       sql,
       args,
-      first: vi.fn().mockImplementation(async () => first(sql, args)),
-      run: vi.fn().mockImplementation(async () => run(sql, args)),
+      first: vi.fn().mockImplementation(() => Promise.resolve(first(sql, args))),
+      run: vi.fn().mockImplementation(() => Promise.resolve(run(sql, args))),
     }),
   }))
   const env = { DB: { prepare, batch } } as unknown as Env
@@ -50,7 +50,7 @@ describe('deleteCategory', () => {
 
     expect(result).toEqual({ reassignedToId: null })
     expect(batch).toHaveBeenCalledOnce()
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts.map((s) => s.sql)).toEqual([
       expect.stringContaining('investment_category_id = NULL'),
       expect.stringContaining('DELETE FROM categories'),
@@ -116,7 +116,7 @@ describe('deleteCategory', () => {
 
     expect(result).toEqual({ reassignedToId: 7 })
     expect(batch).toHaveBeenCalledOnce()
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts.map((s) => s.sql)).toEqual([
       'UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?',
       'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
@@ -159,7 +159,7 @@ describe('deleteCategory', () => {
         active: true,
       },
     })
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts[0]!.args).toEqual([99, 5, OWNER])
   })
 
@@ -266,7 +266,7 @@ describe('deleteAccount', () => {
 
     expect(result).toEqual({ reassignedToId: null })
     expect(batch).toHaveBeenCalledOnce()
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts.map((s) => s.sql)).toEqual([
       'UPDATE settings SET default_account_id = NULL WHERE owner = ? AND default_account_id = ?',
       'DELETE FROM accounts WHERE id = ? AND owner = ?',
@@ -334,7 +334,7 @@ describe('deleteAccount', () => {
 
     expect(result).toEqual({ reassignedToId: 8 })
     expect(batch).toHaveBeenCalledOnce()
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts.map((s) => s.sql)).toEqual([
       'UPDATE transactions SET account_id = ? WHERE account_id = ? AND owner = ?',
       'UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?',
@@ -357,7 +357,7 @@ describe('deleteAccount', () => {
 
     await deleteAccount(env, OWNER, 3, { reassignToId: 8 })
 
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     const settingsStmt = stmts.find((s) => s.sql.startsWith('UPDATE settings'))
     expect(settingsStmt).toBeDefined()
     // The statement is unconditional (WHERE default_account_id = ?), so it's a no-op
@@ -372,7 +372,7 @@ describe('deleteAccount', () => {
 
     await deleteAccount(env, OWNER, 3, { reassignToId: 8 })
 
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     const conflictDeleteIndex = stmts.findIndex((s) => s.sql.includes('DELETE FROM account_statements'))
     const migrateIndex = stmts.findIndex((s) => s.sql.startsWith('UPDATE account_statements SET account_id'))
     expect(conflictDeleteIndex).toBeGreaterThanOrEqual(0)
@@ -395,7 +395,7 @@ describe('deleteAccount', () => {
       reassignedToId: 42,
       createdAccount: { id: 42, name: 'Fixed name', kind: 'credit', settlement: 'deferred', active: true },
     })
-    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const stmts = batch.mock.calls[0]![0]
     expect(stmts[0]!.args).toEqual([42, 3, OWNER])
   })
 

@@ -146,7 +146,7 @@ describe('GET /export', () => {
     const response = await get(query)
 
     expect(response.status).toBe(400)
-    expect(((await response.json()) as { error: string }).error).toBeTruthy()
+    expect((await response.json<{ error: string }>()).error).toBeTruthy()
   })
 
   it('answers 401 with no signed-in user', async () => {

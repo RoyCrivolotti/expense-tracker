@@ -73,7 +73,7 @@ async function created(
 ) {
   const response = await create(env, repo, type, amountCents)
   expect(response.status).toBe(201)
-  return (await response.json()) as { id: number; type: string; amountCents: number }
+  return await response.json<{ id: number; type: string; amountCents: number }>()
 }
 
 async function patch(
@@ -95,7 +95,7 @@ async function patch(
 }
 
 async function message(response: Response): Promise<string> {
-  const body = (await response.json()) as { error?: string; message?: string }
+  const body = await response.json<{ error?: string; message?: string }>()
   return body.error ?? body.message ?? ''
 }
 

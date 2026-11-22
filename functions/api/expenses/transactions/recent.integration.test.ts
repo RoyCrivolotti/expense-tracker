@@ -64,8 +64,8 @@ const get = async (
 describe('GET /transactions/recent', () => {
   it('answers the eight rows saved last, whatever their date, as the dataset carries them', async () => {
     const world = await ledger()
-    const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
-    const { items } = (await (await get(world)).json()) as { items: Transaction[] }
+    const dataset = await (await world.call(getDataset)).json<ExpenseDataset>()
+    const { items } = await (await get(world)).json<{ items: Transaction[] }>()
     expect(items).toHaveLength(8)
     // Reading the dataset creates the instalments that have fallen due, which are rows saved last too.
     const backDated = items.filter((t) => t.date < '2024-01-01')
@@ -76,19 +76,21 @@ describe('GET /transactions/recent', () => {
 
   it('is a different list from the newest by date, which the list route gives with a limit of eight', async () => {
     const world = await ledger()
-    const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
-    const page = (await (await world.call(getList, { path: '/transactions/list?limit=8' })).json()) as {
+    const dataset = await (await world.call(getDataset)).json<ExpenseDataset>()
+    const page = await (
+      await world.call(getList, { path: '/transactions/list?limit=8' })
+    ).json<{
       items: Transaction[]
-    }
+    }>()
     expect(page.items.map((t) => t.id)).toEqual(latestTransactions(dataset.transactions).map((t) => t.id))
-    const { items } = (await (await get(world)).json()) as { items: Transaction[] }
+    const { items } = await (await get(world)).json<{ items: Transaction[] }>()
     expect(items.map((t) => t.id)).not.toEqual(page.items.map((t) => t.id))
   })
 
   it('takes a limit of 1 to 50 and refuses anything else, and anything it does not know', async () => {
     const world = await ledger()
-    expect(((await (await get(world, '?limit=3')).json()) as { items: unknown[] }).items).toHaveLength(3)
-    expect(((await (await get(world, '?limit=50')).json()) as { items: unknown[] }).items).toHaveLength(50)
+    expect((await (await get(world, '?limit=3')).json<{ items: unknown[] }>()).items).toHaveLength(3)
+    expect((await (await get(world, '?limit=50')).json<{ items: unknown[] }>()).items).toHaveLength(50)
     for (const search of ['?limit=0', '?limit=51', '?limit=2.5', '?limit=abc', '?limit=1&limit=2', '?from=1']) {
       expect((await get(world, search)).status, search).toBe(400)
     }
@@ -98,10 +100,8 @@ describe('GET /transactions/recent', () => {
     const world = await ledger()
     const response = await get(world, '?limit=50')
     expect(response.headers.get('cache-control')).toBe('private, no-store')
-    const { items } = (await response.json()) as { items: Transaction[] }
-    const mine = new Set(
-      ((await (await world.call(getDataset)).json()) as ExpenseDataset).transactions.map((t) => t.id),
-    )
+    const { items } = await response.json<{ items: Transaction[] }>()
+    const mine = new Set((await (await world.call(getDataset)).json<ExpenseDataset>()).transactions.map((t) => t.id))
     expect(items.length).toBe(50)
     expect(items.every((t) => mine.has(t.id))).toBe(true)
   })

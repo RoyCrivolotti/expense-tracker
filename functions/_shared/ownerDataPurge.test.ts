@@ -10,15 +10,16 @@ const ATTACHMENT_ROWS = [
 
 function envWith(opts: { bucket?: R2Bucket | undefined; order?: string[] } = {}) {
   const order = opts.order ?? []
-  const batch = vi.fn(async () => {
+  const batch = vi.fn((_statements: Array<{ sql: string }>) => {
     order.push('d1-batch')
+    return Promise.resolve()
   })
   const prepare = vi.fn((sql: string) => ({
     sql,
     bind: vi.fn().mockReturnThis(),
-    all: vi.fn(async () => {
+    all: vi.fn(() => {
       order.push('read-keys')
-      return { results: ATTACHMENT_ROWS }
+      return Promise.resolve({ results: ATTACHMENT_ROWS })
     }),
   }))
   const env = { DB: { prepare, batch }, RECEIPTS: opts.bucket } as unknown as Env
@@ -32,7 +33,7 @@ describe('purgeOwnerData', () => {
     await purgeOwnerData(env, 'Guest@Example.com')
 
     expect(batch).toHaveBeenCalledOnce()
-    const statements = batch.mock.calls[0]?.[0] as Array<{ sql: string }>
+    const statements = batch.mock.calls[0]?.[0] ?? []
     expect(statements.map((s) => s.sql)).toEqual([
       'DELETE FROM transactions WHERE owner = ?',
       'DELETE FROM account_statements WHERE owner = ?',
@@ -83,9 +84,10 @@ describe('purgeOwnerData', () => {
     const order: string[] = []
     const deleted: string[][] = []
     const bucket = {
-      delete: vi.fn(async (keys: string[]) => {
+      delete: vi.fn((keys: string[]) => {
         order.push('r2-delete')
         deleted.push(keys)
+        return Promise.resolve()
       }),
     } as unknown as R2Bucket
     const { env } = envWith({ bucket, order })
@@ -150,7 +152,7 @@ describe('purgeOwnerData against SQLite', () => {
     seedOwner(db, 'gone@example.com', 1)
     seedOwner(db, 'kept@example.com', 2)
 
-    await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
+    await purgeOwnerData({ DB: sqliteD1(db) }, 'gone@example.com')
 
     expect(db.prepare('SELECT owner FROM labels').all()).toEqual([{ owner: 'kept@example.com' }])
     // The link rows go with their transactions, not through anything the purge names.
@@ -172,12 +174,12 @@ describe('what a purge leaves behind', () => {
     const sent: string[] = []
     const d1 = sqliteD1(db)
     const batch = d1.batch.bind(d1)
-    d1.batch = ((statements: Array<{ sql: string }>) => {
-      sent.push(...statements.map((s) => s.sql))
-      return batch(statements as never)
-    }) as typeof d1.batch
+    d1.batch = <T = unknown>(statements: D1PreparedStatement[]) => {
+      sent.push(...statements.map((s) => (s as unknown as { sql: string }).sql))
+      return batch<T>(statements)
+    }
 
-    await purgeOwnerData({ DB: d1 } as unknown as Env, 'gone@example.com')
+    await purgeOwnerData({ DB: d1 }, 'gone@example.com')
 
     const deleted = new Set(sent.map((sql) => /^DELETE FROM (\w+)/.exec(sql)?.[1]))
     const tables = db
@@ -223,7 +225,7 @@ describe('what a purge leaves behind', () => {
       db.prepare("INSERT INTO push_settings (owner, mode, time_zone) VALUES (?, 'daily', 'UTC')").run(owner)
     }
 
-    await purgeOwnerData({ DB: sqliteD1(db) } as unknown as Env, 'gone@example.com')
+    await purgeOwnerData({ DB: sqliteD1(db) }, 'gone@example.com')
 
     for (const table of [
       'capture_keys',

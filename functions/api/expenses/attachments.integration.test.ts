@@ -33,16 +33,17 @@ function fakeBucket() {
   const objects = new Map<string, { body: Uint8Array; contentType: string }>()
   return {
     objects,
-    put: vi.fn(async (key: string, body: ArrayBuffer, opts?: { httpMetadata?: { contentType?: string } }) => {
+    put: vi.fn((key: string, body: ArrayBuffer, opts?: { httpMetadata?: { contentType?: string } }) => {
       objects.set(key, {
         body: new Uint8Array(body),
         contentType: opts?.httpMetadata?.contentType ?? '',
       })
+      return Promise.resolve()
     }),
-    get: vi.fn(async (key: string) => {
+    get: vi.fn((key: string) => {
       const stored = objects.get(key)
-      if (!stored) return null
-      return {
+      if (!stored) return Promise.resolve(null)
+      return Promise.resolve({
         body: new ReadableStream({
           start(c) {
             c.enqueue(stored.body)
@@ -51,10 +52,11 @@ function fakeBucket() {
         }),
         size: stored.body.length,
         httpEtag: `"${key}"`,
-      }
+      })
     }),
-    delete: vi.fn(async (keys: string | string[]) => {
+    delete: vi.fn((keys: string | string[]) => {
       for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key)
+      return Promise.resolve()
     }),
   }
 }
@@ -104,7 +106,7 @@ function upload(
 }
 
 async function body<T>(response: Response): Promise<T> {
-  return (await response.json()) as T
+  return await response.json<T>()
 }
 
 describe('attachments API', () => {

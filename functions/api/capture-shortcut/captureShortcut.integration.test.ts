@@ -20,11 +20,18 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
+/** The same environment with no APP_FILES bucket bound. */
+function withoutBucket(env: World['env']): World['env'] {
+  const copy = { ...env }
+  delete copy.APP_FILES
+  return copy
+}
+
 const get = (o: { email?: string | false; bound?: boolean } = {}) =>
   invokeExpenseApiRoute({
     handler: download,
     repo: createD1ExpenseRepository(world.env),
-    env: o.bound === false ? { ...world.env, APP_FILES: undefined } : world.env,
+    env: o.bound === false ? withoutBucket(world.env) : world.env,
     url: 'https://expenses.test/api/capture-shortcut',
     method: 'GET',
     email: o.email === undefined ? OWNER : o.email,

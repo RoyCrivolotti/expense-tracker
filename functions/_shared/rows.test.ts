@@ -38,7 +38,10 @@ describe('toGoalScenario', () => {
   it('still sends annualContributionGrowth as 0 for one release, so a client opened before the field was dropped stays finite', () => {
     // The old client multiplies it into every projection: left out, it is undefined and the net worth is NaN from year 2.
     expect(toGoalScenario(baseRow())).toMatchObject({ annualContributionGrowth: 0 })
-    expect(JSON.parse(JSON.stringify(toGoalScenario(baseRow()))).annualContributionGrowth).toBe(0)
+    expect(
+      (JSON.parse(JSON.stringify(toGoalScenario(baseRow()))) as { annualContributionGrowth: number })
+        .annualContributionGrowth,
+    ).toBe(0)
   })
 
   it('maps a row with empty life_events to lifeEvents: []', () => {
@@ -118,7 +121,7 @@ describe('toGoalScenario', () => {
 })
 
 function settingsRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
-  return {
+  const base: SettingsRow = {
     opening_cash_cents: 0,
     opening_investment_cents: 0,
     default_account_id: null,
@@ -126,8 +129,13 @@ function settingsRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     number_locale: null,
     budget_rollover_day: null,
     milestones: null,
-    ...overrides,
+    investment_category_id: null,
+    claimant_name: null,
+    cash_reserve_months: null,
+    assumed_inflation: null,
+    goal_levers: null,
   }
+  return Object.assign(base, overrides)
 }
 
 describe('toSettings milestones', () => {

@@ -65,7 +65,7 @@ const get = (
 ) => world.call(onRequestGet, { path: '/series', email, ...(headers ? { headers } : {}) })
 
 const seriesOf = async (response: Response): Promise<RecurringSeries[]> =>
-  ((await response.json()) as { series: RecurringSeries[] }).series
+  (await response.json<{ series: RecurringSeries[] }>()).series
 
 describe('GET /series', () => {
   it('serves the owner’s series, newest first, as the engine builds them from the rows', async () => {
@@ -93,11 +93,11 @@ describe('GET /series', () => {
   it('does not take the owner from the request, or any parameter at all', async () => {
     const response = await world.call(onRequestGet, { path: `/series?owner=${OTHER}`, email: OWNER })
     expect(response.status).toBe(400)
-    expect(((await response.json()) as { error: string }).error).toBe('Unknown parameter: owner')
+    expect((await response.json<{ error: string }>()).error).toBe('Unknown parameter: owner')
   })
 
   it('carries the revision it was read under, as the ledger parts do', async () => {
-    const body = (await (await get()).json()) as { revision: string }
+    const body = await (await get()).json<{ revision: string }>()
     expect(body.revision).toBe(world.token())
   })
 })
@@ -210,7 +210,7 @@ describe('while descriptions are still waiting for their normalized form', () =>
 
     const first = await get()
     expect(first.status).toBe(503)
-    expect(((await first.json()) as { error: string }).error).toContain('still being built')
+    expect((await first.json<{ error: string }>()).error).toContain('still being built')
     expect(first.headers.get('etag')).toBeNull()
     // The client is told when to come back instead of guessing, and the answer is not kept by a cache.
     expect(first.headers.get('retry-after')).toBe('1')

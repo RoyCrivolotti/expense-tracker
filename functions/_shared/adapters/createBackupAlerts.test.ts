@@ -11,7 +11,7 @@ describe('createBackupAlerts', () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const alerts = createBackupAlerts({
       DB: {} as D1Database,
-      EMAIL: { send } as unknown as SendEmail,
+      EMAIL: { send },
       BACKUP_ALERT_TO: 'ops@example.com',
       BACKUP_ALERT_FROM: 'alerts@example.com',
       BACKUP_ALERT_FROM_NAME: 'Ops',

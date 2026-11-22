@@ -22,7 +22,6 @@ import {
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { guardSql } from './batchGuard'
 import { bulkUpdateTransactions } from './dbWrite'
-import type { Env } from './env'
 import type { TxnFilter } from '../domain/engine/transactions'
 
 /**
@@ -39,7 +38,7 @@ let ledger: SmallLedger
 let repo: ReturnType<typeof createD1ExpenseRepository>
 
 function useDatabase(inner: D1Database): void {
-  repo = createD1ExpenseRepository({ DB: inner } as Env)
+  repo = createD1ExpenseRepository({ DB: inner })
 }
 
 beforeEach(() => {
@@ -322,7 +321,7 @@ describe('the same edit by ids and by filter', () => {
     const matched = idsWhere(ledger.db, "owner = ? AND type = 'expense' AND budget_month = '2026-09'", OWNER)
     const twin = smallLedger(6)
 
-    await bulkUpdateTransactions({ DB: twin.d1 } as Env, OWNER, matched, patch)
+    await bulkUpdateTransactions({ DB: twin.d1 }, OWNER, matched, patch)
     const result = await edit(filter, matched.length, patch)
 
     expect(result).toEqual({ updated: matched.length })
