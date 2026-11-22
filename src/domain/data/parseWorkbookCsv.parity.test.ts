@@ -47,9 +47,7 @@ function expectedRecon(rows: string[][]): Map<string, { expected: number; gap: n
   const out = new Map<string, { expected: number; gap: number | null }>()
   for (let i = start + 1; i < rows.length; i++) {
     const f = rows[i]!
-    const m = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul'].indexOf(
-      (f[0] ?? '').slice(0, 3).toLowerCase(),
-    )
+    const m = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul'].indexOf((f[0] ?? '').slice(0, 3).toLowerCase())
     if (m < 0) break
     const gapRaw = (f[11] ?? '').trim()
     out.set(`2026-${String(m + 1).padStart(2, '0')}`, {
@@ -67,19 +65,14 @@ describe.skipIf(!hasData || process.env.PARITY_TESTS !== '1')('workbook parity (
   const totals = computeMonthlyTotals(dataset.transactions)
   const expected = expectedMonthlyTotals(rows)
   const recon = new Map(
-    computeCashReconciliation(
-      dataset.transactions,
-      dataset.accounts,
-      dataset.settings,
-      dataset.cashActuals,
-    ).map((r) => [r.month, r]),
+    computeCashReconciliation(dataset.transactions, dataset.accounts, dataset.settings, dataset.cashActuals).map(
+      (r) => [r.month, r],
+    ),
   )
   const reconExpected = expectedRecon(rows)
 
   it.each(MONTHS)('expected cash matches the workbook for %s', (month) => {
-    expect(
-      Math.abs(recon.get(month)!.expectedCashCents - reconExpected.get(month)!.expected),
-    ).toBeLessThanOrEqual(TOL)
+    expect(Math.abs(recon.get(month)!.expectedCashCents - reconExpected.get(month)!.expected)).toBeLessThanOrEqual(TOL)
   })
 
   it.each(['2026-05', '2026-06'])('reconciliation gap matches for %s', (month) => {

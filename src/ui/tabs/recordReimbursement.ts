@@ -25,7 +25,10 @@ export class ReimbursementSettleError extends Error {
   readonly rolledBack: boolean
   readonly status: number | undefined
 
-  constructor(cause: unknown, rolledBack: boolean) {
+  constructor(
+    cause: unknown,
+    rolledBack: boolean,
+  ) {
     super(cause instanceof Error ? cause.message : 'Could not record the reimbursement')
     this.name = 'ReimbursementSettleError'
     this.rolledBack = rolledBack

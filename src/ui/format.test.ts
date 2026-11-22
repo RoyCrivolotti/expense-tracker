@@ -33,7 +33,11 @@ describe('buildLookup — attachments', () => {
       ],
     })
 
-    expect(buildLookup(dataset).attachments(10).map((a) => a.id)).toEqual([1, 2])
+    expect(
+      buildLookup(dataset)
+        .attachments(10)
+        .map((a) => a.id),
+    ).toEqual([1, 2])
   })
 
   it('is empty for a transaction with none', () => {

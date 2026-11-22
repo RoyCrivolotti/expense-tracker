@@ -35,8 +35,24 @@ const plan = samplePlan({
     { year: 12, label: 'Gift', amountCents: 1_000_000 },
   ],
 })
-const renter = samplePlan({ id: 2, name: 'Rent', sortOrder: 1, isActive: false, housePurchaseYear: null, horizonYears: 25, color: '#10b981' })
-const longer = samplePlan({ id: 3, name: 'Longer', sortOrder: 2, isActive: false, horizonYears: 35, housePurchaseYear: 0, color: '#f59e0b' })
+const renter = samplePlan({
+  id: 2,
+  name: 'Rent',
+  sortOrder: 1,
+  isActive: false,
+  housePurchaseYear: null,
+  horizonYears: 25,
+  color: '#10b981',
+})
+const longer = samplePlan({
+  id: 3,
+  name: 'Longer',
+  sortOrder: 2,
+  isActive: false,
+  horizonYears: 35,
+  housePurchaseYear: 0,
+  color: '#f59e0b',
+})
 const hidden = samplePlan({ id: 4, name: 'Hidden', sortOrder: 3, isActive: false, color: '#f43f5e' })
 const all: GoalScenario[] = [plan, renter, longer, hidden]
 const fromToday = planFromToday(plan, { investedCents: 6_500_000, date: '2027-03-01' }, INFLATION)
@@ -116,14 +132,22 @@ function fingerprint(el: Element): string {
 }
 
 /** What a reader sees of the chart at one moment: the drawing's fingerprint and every word around it. */
-function reading(container: HTMLElement, store: ReturnType<typeof createHeroLegendStore> | undefined) {
+function reading(
+  container: HTMLElement,
+  store: ReturnType<typeof createHeroLegendStore> | undefined,
+) {
   const svg = container.querySelector('svg[role="img"]')!
   return {
     drawing: fingerprint(svg),
-    axis: [...svg.querySelectorAll('text')].map((t) => t.textContent).filter(Boolean).join(' | '),
+    axis: [...svg.querySelectorAll('text')]
+      .map((t) => t.textContent)
+      .filter(Boolean)
+      .join(' | '),
     card: (container.textContent ?? '').replace(/\s+/g, ' ').trim(),
     tooltip: screen.queryByRole('tooltip')?.textContent ?? null,
-    chips: store?.get().map((i) => `${i.label}: ${i.valueCents ?? (i.outOfRun ? '-' : '')}${i.hidden ? ' (hidden)' : ''}`) ?? null,
+    chips:
+      store?.get().map((i) => `${i.label}: ${i.valueCents ?? (i.outOfRun ? '-' : '')}${i.hidden ? ' (hidden)' : ''}`) ??
+      null,
   }
 }
 

@@ -10,7 +10,10 @@ export function readOnlyScenarioNote(hasEdits: boolean): string {
 }
 
 /** The end of the discard question: what keeping the edits would take, which a read-only session cannot do. */
-export function keepEditsHint(canSave: boolean, detached: boolean): string {
+export function keepEditsHint(
+  canSave: boolean,
+  detached: boolean,
+): string {
   if (!canSave) return 'This session is read-only, so they cannot be saved.'
   return detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
 }

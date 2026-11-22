@@ -95,7 +95,9 @@ function FoldedLine({
 }) {
   const format = useMoneyFormat()
   if (indices.length === 0) return null
-  const parts = indices.map((i) => milestoneLabelWithAmount(milestones[i] as Milestone, (cents) => formatMoneyShort(cents, format)))
+  const parts = indices.map((i) =>
+    milestoneLabelWithAmount(milestones[i] as Milestone, (cents) => formatMoneyShort(cents, format)),
+  )
   // The check-ins' date is said once when they all agree on it: five dates in a row are noise.
   const dates = new Set(indices.map((i) => reached.get((milestones[i] as Milestone).amountCents)))
   const [date] = dates
@@ -132,7 +134,12 @@ function PhoneTools({
   return (
     <div className={styles.matrixPhoneTools}>
       <div className={styles.matrixPhoneRow}>
-        <SegmentedControl options={[...PHONE_VIEWS]} value={view} onChange={onView} ariaLabel="Read the milestones as" />
+        <SegmentedControl
+          options={[...PHONE_VIEWS]}
+          value={view}
+          onChange={onView}
+          ariaLabel="Read the milestones as"
+        />
         {pages.length > 1 ? (
           <button type="button" className={styles.matrixToggle} onClick={onSheet}>
             <ExpandIcon className={styles.matrixToggleIcon} aria-hidden="true" />
@@ -328,13 +335,19 @@ function MilestoneMatrixImpl({
       <div className={styles.matrixHeader}>
         <h3 className={styles.chartTitle}>Years to milestone</h3>
         {narrow || milestones.length === 0 ? null : (
-          <SegmentedControl options={[...VIEWS]} value={view} onChange={setChoice} ariaLabel="Show years to milestone as" />
+          <SegmentedControl
+            options={[...VIEWS]}
+            value={view}
+            onChange={setChoice}
+            ariaLabel="Show years to milestone as"
+          />
         )}
       </div>
       <p className={styles.chartHint}>
         Invested portfolio only. Edit the list in Assumptions. A milestone is an amount on your account, so each path is
         counted after inflation. Every path is counted in whole years from today, rounded up from the day it first
-        reaches the amount, so it can be up to a year later than the date on the Progress tab.{fromToday ? ' "From today" is the plan started again from your latest check-in.' : ''}
+        reaches the amount, so it can be up to a year later than the date on the Progress tab.
+        {fromToday ? ' "From today" is the plan started again from your latest check-in.' : ''}
         {view === 'timeline' ? ' Each dot is a milestone, at the years from now the path reaches it.' : ''}
       </p>
       {milestones.length === 0 ? (
@@ -344,7 +357,9 @@ function MilestoneMatrixImpl({
           <div hidden={view !== 'table'}>
             <MatrixBody rows={rows} milestones={milestones} reached={reached} />
           </div>
-          {view === 'timeline' ? <MilestoneTimeline rows={rows} milestones={milestones} reached={reached} today={today} /> : null}
+          {view === 'timeline' ? (
+            <MilestoneTimeline rows={rows} milestones={milestones} reached={reached} today={today} />
+          ) : null}
         </>
       )}
     </ChartShell>

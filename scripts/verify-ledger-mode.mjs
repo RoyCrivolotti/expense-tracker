@@ -35,7 +35,12 @@ const SIZES = [
 
 const failures = []
 
-function check(where, what, ok, detail = '') {
+function check(
+  where,
+  what,
+  ok,
+  detail = '',
+) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
 }
@@ -62,7 +67,10 @@ async function settle(page) {
 }
 
 /** The navigation renders each tab twice (sidebar and bottom bar); one is visible. Settings carries a badge. */
-async function press(page, name) {
+async function press(
+  page,
+  name,
+) {
   for (const match of [name, new RegExp(`${name}$`)]) {
     for (const button of await page.getByRole('button', { name: match, exact: typeof match === 'string' }).all()) {
       if (await button.isVisible()) return button.click()
@@ -83,7 +91,10 @@ async function screens(page) {
   await grab('dashboard')
   await press(page, 'Analytics')
   await page.waitForSelector('text=Spending baseline', { timeout: 20000 })
-  for (const [label, back] of [['newest', 0], ['older', OLDER_BY]]) {
+  for (const [label, back] of [
+    ['newest', 0],
+    ['older', OLDER_BY],
+  ]) {
     for (let i = 0; i < back; i++) {
       await page.getByRole('button', { name: 'Previous month' }).click()
       await page.waitForTimeout(150)
@@ -117,7 +128,11 @@ async function screens(page) {
   return out
 }
 
-async function open(browser, size, mode) {
+async function open(
+  browser,
+  size,
+  mode,
+) {
   const context = await browser.newContext({ viewport: size.viewport, colorScheme: 'light' })
   await context.clock.setFixedTime(TODAY)
   const page = await context.newPage()
@@ -129,14 +144,21 @@ async function open(browser, size, mode) {
 }
 
 /** Where two texts first differ, with a little around it, for a failure to say what it saw. */
-function firstDifference(a, b) {
+function firstDifference(
+  a,
+  b,
+) {
   let at = 0
   while (at < a.length && at < b.length && a[at] === b[at]) at++
   const near = (text) => JSON.stringify(text.slice(Math.max(0, at - 40), at + 60))
   return `at character ${at}: ${near(a)} against ${near(b)}`
 }
 
-async function compareModes(engine, browser, size) {
+async function compareModes(
+  engine,
+  browser,
+  size,
+) {
   const where = `${engine} ${size.name}`
   const off = await open(browser, size, 'off')
   const before = await screens(off.page)
@@ -147,17 +169,36 @@ async function compareModes(engine, browser, size) {
   await on.context.close()
   check(where, 'the ledger mode was on for the second run', usedLedger === 'on', String(usedLedger))
   for (const name of Object.keys(before)) {
-    check(where, `${name} reads the same`, before[name] === after[name] && before[name].length > 20, firstDifference(before[name], after[name]))
+    check(
+      where,
+      `${name} reads the same`,
+      before[name] === after[name] && before[name].length > 20,
+      firstDifference(before[name], after[name]),
+    )
   }
-  check(where, 'no page error, off or on', off.errors.length + on.errors.length === 0, [...off.errors, ...on.errors].join('; '))
+  check(
+    where,
+    'no page error, off or on',
+    off.errors.length + on.errors.length === 0,
+    [...off.errors, ...on.errors].join('; '),
+  )
 }
 
-async function shadow(engine, browser, size) {
+async function shadow(
+  engine,
+  browser,
+  size,
+) {
   const where = `${engine} ${size.name}`
   const { context, page, errors } = await open(browser, size, 'shadow')
   await page.waitForFunction(() => window.__ledgerShadow?.checks >= 1, null, { timeout: 30000 })
   const report = await page.evaluate(() => window.__ledgerShadow)
-  check(where, 'shadow mode compared the ledger with the whole dataset and found nothing', report.differences.length === 0, report.differences.join('; '))
+  check(
+    where,
+    'shadow mode compared the ledger with the whole dataset and found nothing',
+    report.differences.length === 0,
+    report.differences.join('; '),
+  )
   check(where, 'no page error in shadow mode', errors.length === 0, errors.join('; '))
   await context.close()
 }

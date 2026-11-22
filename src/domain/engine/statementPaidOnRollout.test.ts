@@ -32,25 +32,16 @@ describe('statement paidOn rollout', () => {
     const legacy: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true }]
     expect(buildStatementPayments(legacy, cashRows, accounts, 1)).toHaveLength(0)
 
-    const backfilled: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' },
-    ]
-    const rows = buildTransactionListRows(
-      [],
-      { month: '2026-07' },
-      backfilled,
-      cashRows,
-      accounts,
-      { defaultAccountId: 1 },
-    )
+    const backfilled: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' }]
+    const rows = buildTransactionListRows([], { month: '2026-07' }, backfilled, cashRows, accounts, {
+      defaultAccountId: 1,
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0]?.kind).toBe('statement-payment')
   })
 
   it('prefers a user-edited paidOn over backfilled values', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-13' },
-    ]
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-13' }]
     const rows = buildStatementPayments(statements, cashRows, accounts, 1)
     expect(rows[0]?.date).toBe('2026-07-13')
   })

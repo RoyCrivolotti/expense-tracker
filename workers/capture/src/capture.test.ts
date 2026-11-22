@@ -15,7 +15,12 @@ const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
 const NOW = new Date('2026-11-03T08:45:00.000Z')
 const URL_OF = 'https://capture.example.test/capture'
-const PURCHASE = { source: 'iberia', title: 'Compra realizada', body: 'Shop Example *4321 33,40 EUR', date: '2026-11-03T09:41:07+01:00' }
+const PURCHASE = {
+  source: 'iberia',
+  title: 'Compra realizada',
+  body: 'Shop Example *4321 33,40 EUR',
+  date: '2026-11-03T09:41:07+01:00',
+}
 
 let db: DatabaseSync
 let stats: SqliteD1Stats
@@ -29,7 +34,13 @@ function repos() {
 
 async function addKey(owner: string): Promise<MintedCaptureKey> {
   const key = await mintCaptureKey()
-  await repos().captures.createKey({ keyId: key.keyId, owner, label: 'Phone', secretHash: key.secretHash, createdAt: NOW.toISOString() })
+  await repos().captures.createKey({
+    keyId: key.keyId,
+    owner,
+    label: 'Phone',
+    secretHash: key.secretHash,
+    createdAt: NOW.toISOString(),
+  })
   return key
 }
 
@@ -46,7 +57,9 @@ beforeEach(async () => {
   stats.statements = 0
 })
 
-function request(over: { key?: string | null; headers?: Record<string, string>; body?: unknown; method?: string; url?: string } = {}) {
+function request(
+  over: { key?: string | null; headers?: Record<string, string>; body?: unknown; method?: string; url?: string } = {},
+) {
   const headers = new Headers({ 'content-type': 'application/json', ...over.headers })
   const key = over.key === undefined ? minted.key : over.key
   if (key !== null && !headers.has('authorization')) headers.set('authorization', `Bearer ${key}`)
@@ -56,26 +69,54 @@ function request(over: { key?: string | null; headers?: Record<string, string>; 
   return new Request(over.url ?? URL_OF, init)
 }
 
-const send = (req: Request, now = NOW) => handleCapture(req, env, { ...repos(), now: () => now })
+const send = (
+  req: Request,
+  now = NOW,
+) => handleCapture(req, env, { ...repos(), now: () => now })
 const rows = (sql: string) => db.prepare(sql).all() as Array<Record<string, unknown>>
 const count = (table: string) => (rows(`SELECT COUNT(*) AS n FROM ${table}`)[0] as { n: number }).n
 const shape = async (res: Response) => JSON.stringify([res.status, await res.text(), [...res.headers].sort()])
-const pushAt = (minute: number) => ({ ...PURCHASE, date: `2026-11-03T09:${String(minute % 60).padStart(2, '0')}:${String(Math.floor(minute / 60)).padStart(2, '0')}+01:00` })
+const pushAt = (minute: number) => ({
+  ...PURCHASE,
+  date: `2026-11-03T09:${String(minute % 60).padStart(2, '0')}:${String(Math.floor(minute / 60)).padStart(2, '0')}+01:00`,
+})
 
 describe('a valid push', () => {
   it('stores the event and an open recommendation under the key owner', async () => {
     const res = await send(request())
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
-    expect(rows('SELECT owner, key_id, kind, amount_cents, currency, local_date, offset_minutes, last4, merchant_raw FROM capture_events')).toEqual([
-      { owner: ALICE, key_id: minted.keyId, kind: 'push', amount_cents: 3340, currency: 'EUR', local_date: '2026-11-03', offset_minutes: 60, last4: '4321', merchant_raw: 'Shop Example *4321 33,40 EUR' },
+    expect(
+      rows(
+        'SELECT owner, key_id, kind, amount_cents, currency, local_date, offset_minutes, last4, merchant_raw FROM capture_events',
+      ),
+    ).toEqual([
+      {
+        owner: ALICE,
+        key_id: minted.keyId,
+        kind: 'push',
+        amount_cents: 3340,
+        currency: 'EUR',
+        local_date: '2026-11-03',
+        offset_minutes: 60,
+        last4: '4321',
+        merchant_raw: 'Shop Example *4321 33,40 EUR',
+      },
     ])
     const [rec] = rows('SELECT owner, amount_cents, suggested_type, state, account_id FROM recommendations')
-    expect(rec).toEqual({ owner: ALICE, amount_cents: 3340, suggested_type: 'expense', state: 'open', account_id: null })
+    expect(rec).toEqual({
+      owner: ALICE,
+      amount_cents: 3340,
+      suggested_type: 'expense',
+      state: 'open',
+      account_id: null,
+    })
     // The recommendation keeps the phone's own clock, the event the UTC instant.
     expect(rows('SELECT occurred_at FROM recommendations')[0]?.occurred_at).toBe('2026-11-03T09:41:07+01:00')
     expect(rows('SELECT occurred_at FROM capture_events')[0]?.occurred_at).toBe('2026-11-03T08:41:07.000Z')
-    expect(rows('SELECT last_used_at FROM capture_keys WHERE key_id = ?'.replace('?', `'${minted.keyId}'`))[0]?.last_used_at).toBe(NOW.toISOString())
+    expect(
+      rows('SELECT last_used_at FROM capture_keys WHERE key_id = ?'.replace('?', `'${minted.keyId}'`))[0]?.last_used_at,
+    ).toBe(NOW.toISOString())
   })
 
   it('points the recommendation at the account its card is mapped to', async () => {
@@ -121,14 +162,18 @@ describe('refusing a request before the database', () => {
     expect(stats.statements).toBe(0)
   })
 
-  it.each(['https://x.test/capture/', 'https://x.test/capture/x', 'https://x.test/%63apture', 'https://x.test/api/capture', 'https://x.test/', 'https://x.test/captures'])(
-    'answers 404 to %s',
-    async (url) => {
-      expect((await send(request({ url }))).status).toBe(404)
-      expect(stats.statements).toBe(0)
-      expect(count('capture_events')).toBe(0)
-    },
-  )
+  it.each([
+    'https://x.test/capture/',
+    'https://x.test/capture/x',
+    'https://x.test/%63apture',
+    'https://x.test/api/capture',
+    'https://x.test/',
+    'https://x.test/captures',
+  ])('answers 404 to %s', async (url) => {
+    expect((await send(request({ url }))).status).toBe(404)
+    expect(stats.statements).toBe(0)
+    expect(count('capture_events')).toBe(0)
+  })
 
   it('ignores the query string', async () => {
     expect((await send(request({ url: `${URL_OF}?x=1` }))).status).toBe(200)
@@ -149,7 +194,12 @@ describe('refusing a request before the database', () => {
         if (pulled > 50) controller.close()
       },
     })
-    const req = new Request(URL_OF, { method: 'POST', body: stream, headers: { authorization: `Bearer ${minted.key}`, 'content-type': 'application/json' }, duplex: 'half' } as RequestInit)
+    const req = new Request(URL_OF, {
+      method: 'POST',
+      body: stream,
+      headers: { authorization: `Bearer ${minted.key}`, 'content-type': 'application/json' },
+      duplex: 'half',
+    } as RequestInit)
     expect((await send(req)).status).toBe(413)
     expect(pulled).toBeLessThan(6)
     expect(count('capture_events')).toBe(0)
@@ -193,7 +243,17 @@ describe('the key', () => {
       ['wrong secret', request({ key: wrongSecret })],
       ['revoked', request({ key: revoked.key })],
       ['owner not on the allow-list', request({ key: removed.key })],
-      ['a login cookie and a forged Access header, no key', request({ key: null, headers: { cookie: 'CF_Authorization=x', 'cf-access-authenticated-user-email': ALICE, 'cf-access-jwt-assertion': 'x.y.z' } })],
+      [
+        'a login cookie and a forged Access header, no key',
+        request({
+          key: null,
+          headers: {
+            cookie: 'CF_Authorization=x',
+            'cf-access-authenticated-user-email': ALICE,
+            'cf-access-jwt-assertion': 'x.y.z',
+          },
+        }),
+      ],
     ]
   }
 
@@ -212,7 +272,8 @@ describe('the key', () => {
   })
 
   it('writes nothing for a flood of wrong keys, and reads at most once each', async () => {
-    for (let i = 0; i < 1000; i++) await send(request({ key: `xpk_${i.toString(16).padStart(16, '0')}_${'e'.repeat(64)}` }))
+    for (let i = 0; i < 1000; i++)
+      await send(request({ key: `xpk_${i.toString(16).padStart(16, '0')}_${'e'.repeat(64)}` }))
     expect(stats.statements).toBe(1000)
     expect(count('capture_events') + count('capture_counters')).toBe(0)
   })
@@ -223,7 +284,9 @@ describe('the key', () => {
   ])('stops working when %s', async (_name, change) => {
     expect((await send(request({ key: bobKey.key }))).status).toBe(200)
     await change()
-    expect((await send(request({ key: bobKey.key, body: { ...PURCHASE, date: '2026-11-03T09:50:00+01:00' } }))).status).toBe(401)
+    expect(
+      (await send(request({ key: bobKey.key, body: { ...PURCHASE, date: '2026-11-03T09:50:00+01:00' } }))).status,
+    ).toBe(401)
   })
 
   it('does not come back for an owner who is purged and approved again', async () => {
@@ -283,7 +346,9 @@ describe('the source word', () => {
 
   it('is the App name of the notification, folded, when the shortcut sends no source', async () => {
     expect((await send(request({ body: { ...fromApp, app: 'SampleCards' } }))).status).toBe(200)
-    expect((await send(request({ body: { ...fromApp, app: 'Bank 24 Online', date: '2026-11-03T09:42:07+01:00' } }))).status).toBe(200)
+    expect(
+      (await send(request({ body: { ...fromApp, app: 'Bank 24 Online', date: '2026-11-03T09:42:07+01:00' } }))).status,
+    ).toBe(200)
     expect(sourceOf().sort()).toEqual(['bank-24-online', 'samplecards'])
   })
 
@@ -329,7 +394,9 @@ describe('a body the Worker cannot read', () => {
       const res = await handleCapture(request({ body }), env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
       expect(res.status).toBe(400)
     }
-    expect(malformed()).toEqual([{ owner: ALICE, source: '-', day: '2026-11-03', received: 0, unrecognised: 0, malformed: 2 }])
+    expect(malformed()).toEqual([
+      { owner: ALICE, source: '-', day: '2026-11-03', received: 0, unrecognised: 0, malformed: 2 },
+    ])
     expect(lines.map((l) => l.reason)).toEqual(['bad-body', 'bad-body'])
     expect(count('capture_events')).toBe(0)
   })
@@ -342,7 +409,11 @@ describe('a body the Worker cannot read', () => {
 
   it('is still answered 400 when the count cannot be written', async () => {
     const captures = { ...repos().captures, bumpCounter: vi.fn().mockRejectedValue(new Error('D1 down')) }
-    const res = await handleCapture(request({ body: '{nope' }), env, { captures, access: repos().access, now: () => NOW })
+    const res = await handleCapture(request({ body: '{nope' }), env, {
+      captures,
+      access: repos().access,
+      now: () => NOW,
+    })
     expect(res.status).toBe(400)
   })
 })
@@ -351,19 +422,33 @@ describe('a push from any bank, in any words', () => {
   const push = (source: string) => ({ source, title: 'Notice', body: 'invented text', date: PURCHASE.date })
 
   it('becomes a recommendation when it shows an amount with a currency marker, in that currency', async () => {
-    const card = { source: 'newbank', title: 'Card used', body: 'You spent $18.20 at Sample Diner, card ending 7788', date: PURCHASE.date }
+    const card = {
+      source: 'newbank',
+      title: 'Card used',
+      body: 'You spent $18.20 at Sample Diner, card ending 7788',
+      date: PURCHASE.date,
+    }
     expect((await send(request({ body: card }))).status).toBe(200)
     expect(rows('SELECT source, kind, amount_cents, currency, last4 FROM capture_events')).toEqual([
       { source: 'newbank', kind: 'push', amount_cents: 1820, currency: 'USD', last4: '7788' },
     ])
     expect(rows('SELECT amount_cents, currency, suggested_type, merchant_raw FROM recommendations')).toEqual([
-      { amount_cents: 1820, currency: 'USD', suggested_type: 'expense', merchant_raw: 'You spent $18.20 at Sample Diner, card ending 7788' },
+      {
+        amount_cents: 1820,
+        currency: 'USD',
+        suggested_type: 'expense',
+        merchant_raw: 'You spent $18.20 at Sample Diner, card ending 7788',
+      },
     ])
   })
 
   it('makes nothing of a push with two different marked amounts, which could be a charge and a balance', async () => {
     const lines: CaptureLogLine[] = []
-    await handleCapture(request({ body: { ...PURCHASE, body: 'Pago 12,50 EUR. Saldo 400,00 EUR' } }), env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+    await handleCapture(request({ body: { ...PURCHASE, body: 'Pago 12,50 EUR. Saldo 400,00 EUR' } }), env, {
+      ...repos(),
+      now: () => NOW,
+      log: (l) => lines.push(l),
+    })
     expect(count('capture_events') + count('recommendations') + count('capture_templates')).toBe(0)
     expect(rows('SELECT received, unrecognised FROM capture_counters')).toEqual([{ received: 1, unrecognised: 1 }])
     expect(lines).toEqual([expect.objectContaining({ outcome: 'dropped', reason: 'no-amount' })])
@@ -371,7 +456,9 @@ describe('a push from any bank, in any words', () => {
 
   it('gives no description, rather than an empty one, when the amount is in the title and the body is empty', async () => {
     await send(request({ body: { ...PURCHASE, title: 'Paid 12,50 EUR', body: '' } }))
-    expect(rows('SELECT amount_cents, merchant_raw, body FROM capture_events')).toEqual([{ amount_cents: 1250, merchant_raw: null, body: null }])
+    expect(rows('SELECT amount_cents, merchant_raw, body FROM capture_events')).toEqual([
+      { amount_cents: 1250, merchant_raw: null, body: null },
+    ])
     expect(rows('SELECT merchant_raw FROM recommendations')).toEqual([{ merchant_raw: null }])
   })
 
@@ -458,21 +545,29 @@ describe('a push that makes no recommendation', () => {
     expect(everyText()).not.toContain(MARKER)
   })
 
-  it('keeps a recognised purchase\'s text, and never a key or secret', async () => {
+  it("keeps a recognised purchase's text, and never a key or secret", async () => {
     await send(request({ body: { ...PURCHASE, body: `Shop ${MARKER} *4321 33,40 EUR` } }))
     expect(everyText().filter((t) => t.includes(MARKER)).length).toBeGreaterThan(0)
     expect(everyText().some((t) => /xpk_|secret/i.test(t))).toBe(false)
   })
 
   function everyText(): string[] {
-    const tables = rows("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'capture_%' OR name = 'recommendations'") as Array<{ name: string }>
-    return tables.flatMap(({ name }) => rows(`SELECT * FROM ${name}`).flatMap((row) => Object.values(row).filter((v): v is string => typeof v === 'string')))
+    const tables = rows(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'capture_%' OR name = 'recommendations'",
+    ) as Array<{ name: string }>
+    return tables.flatMap(({ name }) =>
+      rows(`SELECT * FROM ${name}`).flatMap((row) =>
+        Object.values(row).filter((v): v is string => typeof v === 'string'),
+      ),
+    )
   }
 })
 
 describe('hostile text', () => {
   it('is stored cleaned of control and bidi characters and capped, and none of it reaches the log', async () => {
-    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => undefined))
+    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => undefined),
+    )
     const evil = `<script>x</script>‮\u0000=SUM(A1) ${'y'.repeat(300)} *4321 33,40 EUR`
     await send(request({ body: { ...PURCHASE, body: evil } }))
     await send(request({ body: '{"title": "HOSTILE-MARKER' }))
@@ -481,7 +576,8 @@ describe('hostile text', () => {
     expect(stored.includes(String.fromCharCode(0x202e)) || stored.includes(String.fromCharCode(0))).toBe(false)
     expect(stored.length).toBeLessThanOrEqual(200)
     const logged = JSON.stringify(spies.flatMap((s) => s.mock.calls))
-    for (const secret of ['HOSTILE-MARKER', 'script', 'SUM(A1)', '33,40', '4321', ALICE]) expect(logged).not.toContain(secret)
+    for (const secret of ['HOSTILE-MARKER', 'script', 'SUM(A1)', '33,40', '4321', ALICE])
+      expect(logged).not.toContain(secret)
     expect(spies.flatMap((s) => s.mock.calls).length).toBe(2)
     spies.forEach((s) => s.mockRestore())
   })
@@ -519,11 +615,15 @@ describe('the caps', () => {
     expect((await send(request({ body: promo(200) }))).status).toBe(429)
     expect((await send(request({ key: bobKey.key, body: promo(1) }))).status).toBe(200)
     const tomorrow = new Date(NOW.getTime() + 24 * 60 * 60 * 1000)
-    expect((await send(request({ body: { ...promo(1), date: '2026-11-04T09:00:00+01:00' } }), tomorrow)).status).toBe(200)
+    expect((await send(request({ body: { ...promo(1), date: '2026-11-04T09:00:00+01:00' } }), tomorrow)).status).toBe(
+      200,
+    )
   })
 
   it('refuses everyone once the day has had 2000 pushes', async () => {
-    db.prepare("INSERT INTO capture_counters (owner, source, day, received) VALUES ('crowd@example.com', 'iberia', '2026-11-03', 2000)").run()
+    db.prepare(
+      "INSERT INTO capture_counters (owner, source, day, received) VALUES ('crowd@example.com', 'iberia', '2026-11-03', 2000)",
+    ).run()
     expect((await send(request())).status).toBe(429)
     expect(count('capture_events')).toBe(0)
   })
@@ -542,11 +642,34 @@ describe('a key revoked after it was checked', () => {
   it('stores nothing when recordCapture runs for it', async () => {
     await repos().captures.revokeKey(ALICE, minted.keyId, NOW.toISOString())
     const event = {
-      id: 'e1', keyId: minted.keyId, source: 'iberia' as const, replayKey: 'r', kind: 'push' as const,
-      amountCents: 100, currency: 'EUR', merchantRaw: null, last4: null, accountDigits: null,
-      occurredAt: NOW.toISOString(), localDate: '2026-11-03', offsetMinutes: 60, receivedAt: NOW.toISOString(), body: null,
+      id: 'e1',
+      keyId: minted.keyId,
+      source: 'iberia' as const,
+      replayKey: 'r',
+      kind: 'push' as const,
+      amountCents: 100,
+      currency: 'EUR',
+      merchantRaw: null,
+      last4: null,
+      accountDigits: null,
+      occurredAt: NOW.toISOString(),
+      localDate: '2026-11-03',
+      offsetMinutes: 60,
+      receivedAt: NOW.toISOString(),
+      body: null,
     }
-    const rec = { id: 'r1', accountId: null, amountCents: 100, currency: 'EUR', occurredAt: event.occurredAt, localDate: '2026-11-03', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense' as const, createdAt: event.receivedAt }
+    const rec = {
+      id: 'r1',
+      accountId: null,
+      amountCents: 100,
+      currency: 'EUR',
+      occurredAt: event.occurredAt,
+      localDate: '2026-11-03',
+      merchantRaw: null,
+      descriptionSuggested: null,
+      suggestedType: 'expense' as const,
+      createdAt: event.receivedAt,
+    }
     expect(await repos().captures.recordCapture(event, rec)).toBe(false)
     expect(count('capture_events') + count('recommendations')).toBe(0)
   })
@@ -570,12 +693,21 @@ describe('the Worker entry', () => {
   it('answers a database failure with a fixed 500 that carries no push text', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
-    const broken = { ...env, DB: { prepare: () => { throw new Error('boom Shop Example') } } } as unknown as CaptureEnv
+    const broken = {
+      ...env,
+      DB: {
+        prepare: () => {
+          throw new Error('boom Shop Example')
+        },
+      },
+    } as unknown as CaptureEnv
     const res = await worker.fetch(request(), broken, ctx)
     expect(res.status).toBe(500)
     expect(await res.text()).toBe('{"error":"server error"}')
     expect(error.mock.calls).toEqual([])
-    expect(log.mock.calls).toEqual([[expect.objectContaining({ outcome: 'error', reason: 'exception', status: 500, errorName: 'Error' })]])
+    expect(log.mock.calls).toEqual([
+      [expect.objectContaining({ outcome: 'error', reason: 'exception', status: 500, errorName: 'Error' })],
+    ])
     expect(JSON.stringify(log.mock.calls)).not.toContain('boom')
     error.mockRestore()
     log.mockRestore()
@@ -590,7 +722,8 @@ describe('the Worker entry', () => {
 
 describe('the log line', () => {
   const lines: CaptureLogLine[] = []
-  const sendLogged = (req: Request) => handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+  const sendLogged = (req: Request) =>
+    handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
   beforeEach(() => {
     lines.length = 0
   })
@@ -599,7 +732,14 @@ describe('the log line', () => {
   it('says a stored push was stored, with its source and key', async () => {
     await sendLogged(request())
     expect(lines).toEqual([
-      expect.objectContaining({ event: 'capture', outcome: 'stored', reason: 'stored', status: 200, source: 'iberia', keyId: minted.keyId }),
+      expect.objectContaining({
+        event: 'capture',
+        outcome: 'stored',
+        reason: 'stored',
+        status: 200,
+        source: 'iberia',
+        keyId: minted.keyId,
+      }),
     ])
     expect(typeof last()?.ms).toBe('number')
   })
@@ -648,7 +788,9 @@ describe('the log line', () => {
   it('says a key the server does not accept was rejected, naming its public id but nothing else', async () => {
     const other = await mintCaptureKey()
     await sendLogged(request({ key: other.key }))
-    expect(last()).toEqual(expect.objectContaining({ outcome: 'refused', reason: 'key-rejected', status: 401, keyId: other.keyId }))
+    expect(last()).toEqual(
+      expect.objectContaining({ outcome: 'refused', reason: 'key-rejected', status: 401, keyId: other.keyId }),
+    )
     expect(JSON.stringify(last())).not.toContain(other.key)
   })
 
@@ -665,7 +807,11 @@ describe('the log line', () => {
 })
 
 describe('shapes and templates', () => {
-  const at = (merchant: string, minute: number, amount = '12,50') => ({
+  const at = (
+    merchant: string,
+    minute: number,
+    amount = '12,50',
+  ) => ({
     ...pushAt(minute),
     body: `Has pagado ${amount} EUR en ${merchant} con tu tarjeta *4321`,
   })
@@ -674,12 +820,20 @@ describe('shapes and templates', () => {
   it('makes a template on the first push, describing it by the whole body', async () => {
     await send(request({ body: at('Example Cafe', 1) }))
     expect(templates()).toEqual([
-      { title: 'compra realizada', skeleton: 'compra realizada has pagado <N> <C> en example cafe con tu tarjeta <D>', merchant_start: null, merchant_end: null, seen: 1 },
+      {
+        title: 'compra realizada',
+        skeleton: 'compra realizada has pagado <N> <C> en example cafe con tu tarjeta <D>',
+        merchant_start: null,
+        merchant_end: null,
+        seen: 1,
+      },
     ])
     const [event] = rows('SELECT shape_id, template_id, slots, body, merchant_raw FROM capture_events')
     expect(event?.shape_id).toMatch(/^[0-9a-f]{64}$/)
     expect(event?.template_id).toEqual(expect.any(String))
-    expect(JSON.parse(event?.slots as string)).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'number', currency: 'EUR' })]))
+    expect(JSON.parse(event?.slots as string)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'number', currency: 'EUR' })]),
+    )
     expect(event?.body).toBe('Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321')
     expect(event?.merchant_raw).toBe('Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321')
   })
@@ -688,12 +842,19 @@ describe('shapes and templates', () => {
     await send(request({ body: at('Example Cafe', 1) }))
     await send(request({ body: at('Sample Books Ltd', 2, '3,99') }))
     expect(templates()).toEqual([
-      { title: 'compra realizada', skeleton: 'compra realizada has pagado <N> <C> en <M> con tu tarjeta <D>', merchant_start: 7, merchant_end: 8, seen: 2 },
+      {
+        title: 'compra realizada',
+        skeleton: 'compra realizada has pagado <N> <C> en <M> con tu tarjeta <D>',
+        merchant_start: 7,
+        merchant_end: 8,
+        seen: 2,
+      },
     ])
-    expect(rows('SELECT merchant_raw FROM recommendations ORDER BY created_at, amount_cents DESC').map((r) => r.merchant_raw)).toEqual([
-      'Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321',
-      'Sample Books Ltd',
-    ])
+    expect(
+      rows('SELECT merchant_raw FROM recommendations ORDER BY created_at, amount_cents DESC').map(
+        (r) => r.merchant_raw,
+      ),
+    ).toEqual(['Has pagado 12,50 EUR en Example Cafe con tu tarjeta *4321', 'Sample Books Ltd'])
     expect(rows('SELECT COUNT(DISTINCT template_id) AS n FROM capture_events')[0]?.n).toBe(1)
   })
 
@@ -703,7 +864,9 @@ describe('shapes and templates', () => {
     await send(request({ body: at('Corner Shop', 3) }))
     expect(templates()).toHaveLength(1)
     expect(templates()[0]?.seen).toBe(3)
-    expect(rows("SELECT merchant_raw FROM capture_events WHERE body LIKE '%Corner%'")).toEqual([{ merchant_raw: 'Corner Shop' }])
+    expect(rows("SELECT merchant_raw FROM capture_events WHERE body LIKE '%Corner%'")).toEqual([
+      { merchant_raw: 'Corner Shop' },
+    ])
   })
 
   it('counts nothing again for a replay', async () => {
@@ -720,7 +883,9 @@ describe('shapes and templates', () => {
   })
 
   it('stores a push with more slots than the column holds, keeping the first ones', async () => {
-    const res = await send(request({ body: { ...PURCHASE, body: `Has pagado 12,50 EUR en Example Cafe ${'7 '.repeat(1500)}` } }))
+    const res = await send(
+      request({ body: { ...PURCHASE, body: `Has pagado 12,50 EUR en Example Cafe ${'7 '.repeat(1500)}` } }),
+    )
     expect(res.status).toBe(200)
     const [event] = rows('SELECT slots FROM capture_events')
     const slots = JSON.parse(event?.slots as string) as Array<{ index: number }>
@@ -729,30 +894,42 @@ describe('shapes and templates', () => {
   })
 
   it('finds the merchant past an amount with its marker glued on', async () => {
-    const glued = (merchant: string, minute: number) => ({ ...pushAt(minute), body: `Has pagado 12,50EUR en ${merchant} con tu tarjeta *4321` })
+    const glued = (
+      merchant: string,
+      minute: number,
+    ) => ({ ...pushAt(minute), body: `Has pagado 12,50EUR en ${merchant} con tu tarjeta *4321` })
     await send(request({ body: glued('Example Cafe', 1) }))
     await send(request({ body: glued('Sample Books Ltd', 2) }))
     expect(templates()[0]?.skeleton).toBe('compra realizada has pagado <N> <C> en <M> con tu tarjeta <D>')
-    expect(rows("SELECT merchant_raw FROM recommendations WHERE merchant_raw NOT LIKE 'Has %'")).toEqual([{ merchant_raw: 'Sample Books Ltd' }])
+    expect(rows("SELECT merchant_raw FROM recommendations WHERE merchant_raw NOT LIKE 'Has %'")).toEqual([
+      { merchant_raw: 'Sample Books Ltd' },
+    ])
   })
 
   it('writes no body, merchant or skeleton to the log', async () => {
-    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => undefined))
+    const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => undefined),
+    )
     await send(request({ body: at('Example Cafe', 1) }))
     await send(request({ body: at('Sample Books Ltd', 2) }))
     const calls = spies.flatMap((s) => s.mock.calls)
     const logged = JSON.stringify(calls)
-    for (const secret of ['Example', 'Sample', 'pagado', 'tarjeta', '12,50', '4321', '<M>']) expect(logged).not.toContain(secret)
+    for (const secret of ['Example', 'Sample', 'pagado', 'tarjeta', '12,50', '4321', '<M>'])
+      expect(logged).not.toContain(secret)
     expect(calls).toHaveLength(2)
     spies.forEach((s) => s.mockRestore())
   })
 })
 
 describe('a push of a template the person has ignored', () => {
-  const at = (merchant: string, minute: number) => ({ ...pushAt(minute), body: `Has pagado 12,50 EUR en ${merchant} con tu tarjeta *4321` })
+  const at = (
+    merchant: string,
+    minute: number,
+  ) => ({ ...pushAt(minute), body: `Has pagado 12,50 EUR en ${merchant} con tu tarjeta *4321` })
   const IGNORED_AT = '2026-11-02T10:00:00.000Z'
   const lines: CaptureLogLine[] = []
-  const sendLogged = (req: Request) => handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
+  const sendLogged = (req: Request) =>
+    handleCapture(req, env, { ...repos(), now: () => NOW, log: (l) => lines.push(l) })
 
   beforeEach(async () => {
     lines.length = 0
@@ -768,12 +945,16 @@ describe('a push of a template the person has ignored', () => {
     expect(count('capture_events')).toBe(2)
     expect(count('recommendations')).toBe(2)
     expect(rows('SELECT received, unrecognised FROM capture_counters')).toEqual([{ received: 3, unrecognised: 1 }])
-    expect(rows('SELECT seen, last_seen, ignored_at FROM capture_templates')).toEqual([{ seen: 3, last_seen: NOW.toISOString(), ignored_at: IGNORED_AT }])
+    expect(rows('SELECT seen, last_seen, ignored_at FROM capture_templates')).toEqual([
+      { seen: 3, last_seen: NOW.toISOString(), ignored_at: IGNORED_AT },
+    ])
   })
 
   it('logs it as dropped for an ignored shape, with none of its text', async () => {
     await sendLogged(request({ body: at('Corner Shop', 3) }))
-    expect(lines).toEqual([expect.objectContaining({ outcome: 'dropped', reason: 'ignored-shape', status: 200, source: 'iberia' })])
+    expect(lines).toEqual([
+      expect.objectContaining({ outcome: 'dropped', reason: 'ignored-shape', status: 200, source: 'iberia' }),
+    ])
     for (const secret of ['Corner', 'pagado', '12,50', '4321']) expect(JSON.stringify(lines)).not.toContain(secret)
   })
 

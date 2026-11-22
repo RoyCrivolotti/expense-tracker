@@ -1,8 +1,6 @@
 import type { Transaction } from '../types'
 
-export function makeTxn(
-  overrides: Partial<Transaction> & { date: string; description: string },
-): Transaction {
+export function makeTxn(overrides: Partial<Transaction> & { date: string; description: string }): Transaction {
   const base: Transaction = {
     id: overrides.id ?? Math.random() * 10000,
     date: overrides.date,

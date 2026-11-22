@@ -10,7 +10,10 @@ import type { Env } from './env'
  * answers 503 while some are, rather than leave rows out of a series. The rows come back as bare tuples,
  * which is cheaper for the Worker than an object each.
  */
-export async function readSeries(env: Env, owner: string): Promise<RecurringSeries[]> {
+export async function readSeries(
+  env: Env,
+  owner: string,
+): Promise<RecurringSeries[]> {
   await ensureDescriptionNorm(env.DB, owner)
   const rows = await env.DB.prepare(SERIES_SQL).bind(owner).raw<SeriesTuple>()
   return foldSeries(rows)

@@ -1,7 +1,10 @@
 import { RETIREMENT_RATE_BANDS, type MoneyFormat } from '../../../engine'
 
 /** A rate as a person writes it: 4%, 3,5%, 3,25%, with only the places it needs. */
-export function plainPercent(rate: number, format: MoneyFormat): string {
+export function plainPercent(
+  rate: number,
+  format: MoneyFormat,
+): string {
   return `${(rate * 100).toLocaleString(format.locale, { maximumFractionDigits: 2 })}%`
 }
 

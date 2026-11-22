@@ -23,7 +23,9 @@ describe('formatMoneyShort', () => {
     expect(formatMoneyShort(8_237_000_00, EU_MONEY_FORMAT, 2)).toBe('8,24M €')
     // Only millions take the extra place; thousands are whole either way.
     expect(formatMoneyShort(736_400_00, EU_MONEY_FORMAT, 2)).toBe('736k €')
-    expect(formatMoneyShort(8_200_000_00, { ...EU_MONEY_FORMAT, locale: 'en-US', decimalSeparator: '.' })).toBe('8.2M €')
+    expect(formatMoneyShort(8_200_000_00, { ...EU_MONEY_FORMAT, locale: 'en-US', decimalSeparator: '.' })).toBe(
+      '8.2M €',
+    )
   })
 
   it('rolls thousands that round up into the next unit instead of printing 1000k', () => {

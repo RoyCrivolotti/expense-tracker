@@ -15,7 +15,11 @@ type SteppedSetting = 'assumedInflation' | 'marketVolatility'
  * value is kept, and sent once it lands. A save that fails puts the saved value back and says
  * so, since a stepper still showing what was clicked reads as saved.
  */
-export function useSavedSetting(key: SteppedSetting, value: number, onChange: Save) {
+export function useSavedSetting(
+  key: SteppedSetting,
+  value: number,
+  onChange: Save,
+) {
   const [draft, setDraft] = useState(value)
   const [error, setError] = useState<string | null>(null)
   // True from the first step until the last one has landed. The saved value arriving in the
@@ -43,28 +47,31 @@ export function useSavedSetting(key: SteppedSetting, value: number, onChange: Sa
   const queued = useRef<number | null>(null)
 
   // Sends `first`, then whatever was clicked while it was in flight, until nothing newer is left.
-  const save = useCallback(async (first: number) => {
-    inFlight.current = true
-    setBusy(true)
-    let next: number | null = first
-    try {
-      while (next !== null) {
-        await send.current({ [key]: next })
-        saved.current = next
-        setError(null)
-        const newest: number | null = queued.current
+  const save = useCallback(
+    async (first: number) => {
+      inFlight.current = true
+      setBusy(true)
+      let next: number | null = first
+      try {
+        while (next !== null) {
+          await send.current({ [key]: next })
+          saved.current = next
+          setError(null)
+          const newest: number | null = queued.current
+          queued.current = null
+          next = newest !== null && newest !== saved.current ? newest : null
+        }
+      } catch (e) {
         queued.current = null
-        next = newest !== null && newest !== saved.current ? newest : null
+        setDraft(saved.current)
+        setError(failureMessage(e))
+      } finally {
+        inFlight.current = false
+        setBusy(false)
       }
-    } catch (e) {
-      queued.current = null
-      setDraft(saved.current)
-      setError(failureMessage(e))
-    } finally {
-      inFlight.current = false
-      setBusy(false)
-    }
-  }, [key])
+    },
+    [key],
+  )
 
   const step = useCallback(
     (next: number) => {

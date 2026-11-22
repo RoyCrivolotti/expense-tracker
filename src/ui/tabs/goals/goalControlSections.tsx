@@ -29,12 +29,22 @@ export interface SectionProps {
   onChange: (patch: Partial<NewGoalScenario>) => void
   omit?: ReadonlySet<LeverKey>
   /** Puts something around an input that can be in the bar (the star that sends it there); the phone has nothing around them. */
-  wrap?: (key: LeverKey, field: ReactNode) => ReactNode
+  wrap?: (
+    key: LeverKey,
+    field: ReactNode,
+  ) => ReactNode
 }
 
-const plain = (_key: LeverKey, field: ReactNode): ReactNode => field
+const plain = (
+  _key: LeverKey,
+  field: ReactNode,
+): ReactNode => field
 
-function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+function purchaseSummary(
+  draft: NewGoalScenario,
+  inflationRate: number,
+  format: MoneyFormat,
+): string | null {
   const purchaseYear = draft.housePurchaseYear
   if (purchaseYear === null) return null
   const down = Math.round(housePriceAtPurchaseCents({ ...draft, inflationRate }) * draft.downPaymentFraction)
@@ -52,7 +62,14 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   }
   const total = down + fees
   // The three are in the plan's euros; the account pays more in the year it is paid, which is the figure a buyer sees.
-  const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money, format })
+  const paid = bothMoneys({
+    cents: total,
+    years: purchaseYear,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money,
+    format,
+  })
   const account = paid.same ? '' : ` (${aboutOnAccount(paid)})`
   return `Year ${purchaseYear} takes ${money(total)} from the portfolio: ${money(down)} down + ${money(fees)} fees, in ${label}${account}.${rest}`
 }
@@ -73,12 +90,19 @@ function MonthlyInvestingField({
   const note = firstChangeNote(draft, format)
   return (
     <>
-      {wrap('monthlyContributionCents', <MoneyField
-        label={L.monthlyContributionCents.label}
-        value={draft.monthlyContributionCents}
-        onChange={(v) => onChange({ monthlyContributionCents: v })}
-      />)}
-      {note ? <p className={styles.fieldHint}>{note}. Set under {ADJUST_LABELS.changes.title}.</p> : null}
+      {wrap(
+        'monthlyContributionCents',
+        <MoneyField
+          label={L.monthlyContributionCents.label}
+          value={draft.monthlyContributionCents}
+          onChange={(v) => onChange({ monthlyContributionCents: v })}
+        />,
+      )}
+      {note ? (
+        <p className={styles.fieldHint}>
+          {note}. Set under {ADJUST_LABELS.changes.title}.
+        </p>
+      ) : null}
     </>
   )
 }
@@ -90,10 +114,10 @@ function MonthlyInvestingField({
 export function ReturnNote() {
   return (
     <p className={styles.fieldHint}>
-      Real return: about 5% a year after inflation is what world stocks have returned over the very long
-      run, and many forecasts are lower. 6 to 7% is optimistic. Enter the rate your money compounds at, not the
-      simple average of yearly returns, which is higher by about a point for stocks. The plan takes out no fund
-      costs or tax, so enter the return after them.
+      Real return: about 5% a year after inflation is what world stocks have returned over the very long run, and many
+      forecasts are lower. 6 to 7% is optimistic. Enter the rate your money compounds at, not the simple average of
+      yearly returns, which is higher by about a point for stocks. The plan takes out no fund costs or tax, so enter the
+      return after them.
     </p>
   )
 }
@@ -101,34 +125,43 @@ export function ReturnNote() {
 export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
-      {omit.has('startInvestedCents') ? null : (
-        wrap('startInvestedCents', <MoneyField
-          label={L.startInvestedCents.label}
-          value={draft.startInvestedCents}
-          onChange={(v) => onChange({ startInvestedCents: v })}
-        />)
-      )}
+      {omit.has('startInvestedCents')
+        ? null
+        : wrap(
+            'startInvestedCents',
+            <MoneyField
+              label={L.startInvestedCents.label}
+              value={draft.startInvestedCents}
+              onChange={(v) => onChange({ startInvestedCents: v })}
+            />,
+          )}
       {omit.has('monthlyContributionCents') ? null : (
         <MonthlyInvestingField draft={draft} onChange={onChange} wrap={wrap} />
       )}
-      {omit.has('expectedRealReturn') ? null : (
-        wrap('expectedRealReturn', <PercentField
-          label={L.expectedRealReturn.label}
-          value={draft.expectedRealReturn}
-          max={L.expectedRealReturn.max ?? 0.15}
-          onChange={(v) => onChange({ expectedRealReturn: v })}
-        />)
-      )}
+      {omit.has('expectedRealReturn')
+        ? null
+        : wrap(
+            'expectedRealReturn',
+            <PercentField
+              label={L.expectedRealReturn.label}
+              value={draft.expectedRealReturn}
+              max={L.expectedRealReturn.max ?? 0.15}
+              onChange={(v) => onChange({ expectedRealReturn: v })}
+            />,
+          )}
       <ReturnNote />
-      {omit.has('horizonYears') ? null : (
-        wrap('horizonYears', <NumberField
-          label={L.horizonYears.label}
-          value={draft.horizonYears}
-          min={L.horizonYears.min ?? 1}
-          max={L.horizonYears.max ?? 60}
-          onChange={(v) => onChange({ horizonYears: v })}
-        />)
-      )}
+      {omit.has('horizonYears')
+        ? null
+        : wrap(
+            'horizonYears',
+            <NumberField
+              label={L.horizonYears.label}
+              value={draft.horizonYears}
+              min={L.horizonYears.min ?? 1}
+              max={L.horizonYears.max ?? 60}
+              onChange={(v) => onChange({ horizonYears: v })}
+            />,
+          )}
     </>
   )
 }
@@ -148,29 +181,38 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
   const priceHint = housePriceHint(draft, inflationRate, format)
   return (
     <>
-      {omit.has('housePriceCents') ? null : (
-        wrap('housePriceCents', <MoneyField
-          label={L.housePriceCents.label}
-          value={draft.housePriceCents}
-          onChange={(v) => onChange({ housePriceCents: v })}
-        />)
-      )}
+      {omit.has('housePriceCents')
+        ? null
+        : wrap(
+            'housePriceCents',
+            <MoneyField
+              label={L.housePriceCents.label}
+              value={draft.housePriceCents}
+              onChange={(v) => onChange({ housePriceCents: v })}
+            />,
+          )}
       {priceHint ? <p className={styles.fieldHint}>{priceHint}</p> : null}
-      {omit.has('downPaymentFraction') ? null : (
-        wrap('downPaymentFraction', <PercentField
-          label={L.downPaymentFraction.label}
-          value={draft.downPaymentFraction}
-          max={downPaymentMax(draft)}
-          onChange={(v) => onChange({ downPaymentFraction: v })}
-        />)
-      )}
+      {omit.has('downPaymentFraction')
+        ? null
+        : wrap(
+            'downPaymentFraction',
+            <PercentField
+              label={L.downPaymentFraction.label}
+              value={draft.downPaymentFraction}
+              max={downPaymentMax(draft)}
+              onChange={(v) => onChange({ downPaymentFraction: v })}
+            />,
+          )}
       {omit.has('transactionCostsCents') ? null : (
         <>
-          {wrap('transactionCostsCents', <MoneyField
-            label={L.transactionCostsCents.label}
-            value={draft.transactionCostsCents}
-            onChange={(v) => onChange({ transactionCostsCents: v })}
-          />)}
+          {wrap(
+            'transactionCostsCents',
+            <MoneyField
+              label={L.transactionCostsCents.label}
+              value={draft.transactionCostsCents}
+              onChange={(v) => onChange({ transactionCostsCents: v })}
+            />,
+          )}
         </>
       )}
     </>
@@ -183,32 +225,41 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
   const explainsRates = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
   return (
     <>
-      {omit.has('mortgageRateAnnual') ? null : (
-        wrap('mortgageRateAnnual', <PercentField
-          label={L.mortgageRateAnnual.label}
-          value={draft.mortgageRateAnnual}
-          max={L.mortgageRateAnnual.max ?? 0.1}
-          onChange={(v) => onChange({ mortgageRateAnnual: v })}
-        />)
-      )}
-      {omit.has('mortgageTermYears') ? null : (
-        wrap('mortgageTermYears', <NumberField
-          label={L.mortgageTermYears.label}
-          value={draft.mortgageTermYears}
-          decimals={2}
-          min={L.mortgageTermYears.min ?? 1}
-          max={L.mortgageTermYears.max ?? 40}
-          onChange={(v) => onChange({ mortgageTermYears: v })}
-        />)
-      )}
-      {omit.has('houseAppreciationRate') ? null : (
-        wrap('houseAppreciationRate', <PercentField
-          label={L.houseAppreciationRate.label}
-          value={draft.houseAppreciationRate}
-          max={L.houseAppreciationRate.max ?? 0.1}
-          onChange={(v) => onChange({ houseAppreciationRate: v })}
-        />)
-      )}
+      {omit.has('mortgageRateAnnual')
+        ? null
+        : wrap(
+            'mortgageRateAnnual',
+            <PercentField
+              label={L.mortgageRateAnnual.label}
+              value={draft.mortgageRateAnnual}
+              max={L.mortgageRateAnnual.max ?? 0.1}
+              onChange={(v) => onChange({ mortgageRateAnnual: v })}
+            />,
+          )}
+      {omit.has('mortgageTermYears')
+        ? null
+        : wrap(
+            'mortgageTermYears',
+            <NumberField
+              label={L.mortgageTermYears.label}
+              value={draft.mortgageTermYears}
+              decimals={2}
+              min={L.mortgageTermYears.min ?? 1}
+              max={L.mortgageTermYears.max ?? 40}
+              onChange={(v) => onChange({ mortgageTermYears: v })}
+            />,
+          )}
+      {omit.has('houseAppreciationRate')
+        ? null
+        : wrap(
+            'houseAppreciationRate',
+            <PercentField
+              label={L.houseAppreciationRate.label}
+              value={draft.houseAppreciationRate}
+              max={L.houseAppreciationRate.max ?? 0.1}
+              onChange={(v) => onChange({ houseAppreciationRate: v })}
+            />,
+          )}
       {explainsRates ? (
         <p className={styles.fieldHint}>Enter both as quoted, before inflation. The plan takes inflation off.</p>
       ) : null}
@@ -244,24 +295,27 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
   const purchaseHint = purchaseSummary(draft, inflationRate, format)
   return (
     <>
-      {omit.has('housePurchaseYear') ? null : (
-        wrap(
-          'housePurchaseYear',
-          <PurchaseYearField
-            value={draft.housePurchaseYear}
-            maxYear={draft.horizonYears}
-            onChange={(v) => onChange({ housePurchaseYear: v })}
-          />,
-        )
-      )}
+      {omit.has('housePurchaseYear')
+        ? null
+        : wrap(
+            'housePurchaseYear',
+            <PurchaseYearField
+              value={draft.housePurchaseYear}
+              maxYear={draft.horizonYears}
+              onChange={(v) => onChange({ housePurchaseYear: v })}
+            />,
+          )}
       {purchaseHint ? <p className={styles.fieldHint}>{purchaseHint}</p> : null}
-      {omit.has('rentMonthlyCents') ? null : (
-        wrap('rentMonthlyCents', <MoneyField
-          label={L.rentMonthlyCents.label}
-          value={draft.rentMonthlyCents}
-          onChange={(v) => onChange({ rentMonthlyCents: v })}
-        />)
-      )}
+      {omit.has('rentMonthlyCents')
+        ? null
+        : wrap(
+            'rentMonthlyCents',
+            <MoneyField
+              label={L.rentMonthlyCents.label}
+              value={draft.rentMonthlyCents}
+              onChange={(v) => onChange({ rentMonthlyCents: v })}
+            />,
+          )}
       <HomeCarryField draft={draft} onChange={onChange} />
     </>
   )
@@ -279,7 +333,9 @@ function HousingNotes({ draft, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 
   const ratesShown = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
   const notes = [
     housePriceDetail(draft, inflationRate, format),
-    feesShown ? 'Fees are notary, agency and closing costs, withdrawn with the down payment in the year you buy.' : null,
+    feesShown
+      ? 'Fees are notary, agency and closing costs, withdrawn with the down payment in the year you buy.'
+      : null,
     feesShown ? feesMoneyHint(draft, inflationRate, format) : null,
     rentMoneyHint(draft, inflationRate, format),
     ratesShown
@@ -315,11 +371,14 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
     <>
       {omit.has('annualSpendCents') ? null : (
         <>
-          {wrap('annualSpendCents', <MoneyField
-            label={L.annualSpendCents.label}
-            value={draft.annualSpendCents}
-            onChange={(v) => onChange({ annualSpendCents: v })}
-          />)}
+          {wrap(
+            'annualSpendCents',
+            <MoneyField
+              label={L.annualSpendCents.label}
+              value={draft.annualSpendCents}
+              onChange={(v) => onChange({ annualSpendCents: v })}
+            />,
+          )}
           <p className={styles.fieldHint}>
             Yearly cost of living after FI. Add the tax on what you withdraw: the plan does not.
           </p>
@@ -327,15 +386,18 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
         </>
       )}
       <RetirementYearsField draft={draft} onChange={onChange} />
-      {omit.has('safeWithdrawalRate') ? null : (
-        wrap('safeWithdrawalRate', <PercentField
-          label={L.safeWithdrawalRate.label}
-          value={draft.safeWithdrawalRate}
-          min={L.safeWithdrawalRate.min ?? 0.005}
-          max={L.safeWithdrawalRate.max ?? 0.06}
-          onChange={(v) => onChange({ safeWithdrawalRate: v })}
-        />)
-      )}
+      {omit.has('safeWithdrawalRate')
+        ? null
+        : wrap(
+            'safeWithdrawalRate',
+            <PercentField
+              label={L.safeWithdrawalRate.label}
+              value={draft.safeWithdrawalRate}
+              min={L.safeWithdrawalRate.min ?? 0.005}
+              max={L.safeWithdrawalRate.max ?? 0.06}
+              onChange={(v) => onChange({ safeWithdrawalRate: v })}
+            />,
+          )}
       {explainsTarget ? (
         <p className={styles.fieldHint}>
           Share of the portfolio spent each year after FI. FI target = annual spend ÷ this rate.
@@ -356,7 +418,9 @@ function FireNotes({ explainsTarget }: { explainsTarget: boolean }) {
   const notes = [
     'FI is searched within your Horizon (years); if it is never reached, the drawdown charts show the target only.',
     ...retirementYearsNotes(format),
-    ...(explainsTarget ? ['4% is the usual rule of thumb. A lower rate means spending less, which is a higher FI target.'] : []),
+    ...(explainsTarget
+      ? ['4% is the usual rule of thumb. A lower rate means spending less, which is a higher FI target.']
+      : []),
   ]
   return (
     <Disclosure title="How FI is worked out">
@@ -367,15 +431,19 @@ function FireNotes({ explainsTarget }: { explainsTarget: boolean }) {
   )
 }
 
-export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 'onChange' | 'omit'>) {
+export function ChangesFields({
+  draft,
+  onChange,
+  omit = NO_LEVERS,
+}: Pick<SectionProps, 'draft' | 'onChange' | 'omit'>) {
   const format = useMoneyFormat()
   const example = monthlyAmountMoneyHint(draft, useAssumedInflation(), format)
   return (
     <>
       <p className={styles.fieldHint}>
-        What you send to your investments each month: the amount you start with, then each change from a month
-        on. It is counted in {planMoneyLabel(draft.planStartDate, format)} at the assumed inflation, so an amount that stays the same counts for
-        less each year.{example ? ` ${example}` : ''} Enter 0 for a pause.
+        What you send to your investments each month: the amount you start with, then each change from a month on. It is
+        counted in {planMoneyLabel(draft.planStartDate, format)} at the assumed inflation, so an amount that stays the
+        same counts for less each year.{example ? ` ${example}` : ''} Enter 0 for a pause.
       </p>
       <ContributionStepsList
         steps={draft.contributionSchedule ?? []}
@@ -395,8 +463,8 @@ export function EventsFields({ draft, onChange }: Pick<SectionProps, 'draft' | '
   return (
     <>
       <p className={styles.fieldHint}>
-        One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a
-        specific projection year. Shown as diamond markers on the chart. Amounts are counted in{' '}
+        One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a specific projection
+        year. Shown as diamond markers on the chart. Amounts are counted in{' '}
         {planMoneyLabel(draft.planStartDate, format)}, like the rest of the plan.
       </p>
       <LifeEventsList

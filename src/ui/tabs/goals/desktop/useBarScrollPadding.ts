@@ -41,7 +41,10 @@ function anchoringSwitch(root: HTMLElement): (off: boolean) => void {
 }
 
 /** Says when focus comes into an element from outside it and when it leaves it altogether. */
-function watchFocusInside(element: HTMLElement | null, onChange: (inside: boolean) => void): () => void {
+function watchFocusInside(
+  element: HTMLElement | null,
+  onChange: (inside: boolean) => void,
+): () => void {
   const enter = () => onChange(true)
   const leave = (event: FocusEvent) => {
     if (event.relatedTarget instanceof Node && element?.contains(event.relatedTarget)) return

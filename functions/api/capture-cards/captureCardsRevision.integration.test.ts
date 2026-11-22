@@ -13,11 +13,19 @@ let world: World
 beforeEach(() => {
   const sqlite = migratedDatabase()
   world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
-  sqlite.prepare("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, ?, 'Account', 'debit', 'immediate', 1)").run(OWNER)
+  sqlite
+    .prepare(
+      "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, ?, 'Account', 'debit', 'immediate', 1)",
+    )
+    .run(OWNER)
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
-function call(handler: Handler, method: string, body?: unknown): Promise<Response> {
+function call(
+  handler: Handler,
+  method: string,
+  body?: unknown,
+): Promise<Response> {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),
@@ -31,7 +39,8 @@ function call(handler: Handler, method: string, body?: unknown): Promise<Respons
 
 describe('the dataset revision', () => {
   it('does not move when a card is linked, listed or removed, though an ordinary write moves it', async () => {
-    const label = (name: string) => world.call(createLabel, { method: 'POST', path: '/labels', body: { name, color: '#336699' } })
+    const label = (name: string) =>
+      world.call(createLabel, { method: 'POST', path: '/labels', body: { name, color: '#336699' } })
     await label('first')
     const before = world.token()
 

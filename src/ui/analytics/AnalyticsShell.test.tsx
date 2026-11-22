@@ -42,11 +42,7 @@ describe('AnalyticsShell', () => {
     renderShell()
 
     expect(screen.getByRole('tablist', { name: 'Analytics view' })).toBeInTheDocument()
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
-      'Overview',
-      'Spending',
-      'Cash',
-    ])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Overview', 'Spending', 'Cash'])
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Overview')
   })
@@ -100,11 +96,7 @@ describe('AnalyticsShell on a phone', () => {
     }))
     renderShell()
 
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
-      'Overview',
-      'Spending',
-      'Cash',
-    ])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Overview', 'Spending', 'Cash'])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Spending' }))
     expect(screen.getByRole('radiogroup', { name: 'Group spending by' })).toBeInTheDocument()

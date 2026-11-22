@@ -51,11 +51,19 @@ ORDER BY newest_date DESC, newest_id DESC`
 
 function numbers(csv: string | null): number[] {
   if (!csv) return []
-  return csv.split(',').map(Number).sort((a, b) => a - b)
+  return csv
+    .split(',')
+    .map(Number)
+    .sort((a, b) => a - b)
 }
 
-export function oracleSeries(db: DatabaseSync, owner: string): RecurringSeries[] {
-  const rows = db.prepare(ORACLE_SERIES_SQL).all(owner, SERIES_TAIL_DATES, SERIES_TAIL_OFFSETS) as unknown as OracleRow[]
+export function oracleSeries(
+  db: DatabaseSync,
+  owner: string,
+): RecurringSeries[] {
+  const rows = db
+    .prepare(ORACLE_SERIES_SQL)
+    .all(owner, SERIES_TAIL_DATES, SERIES_TAIL_OFFSETS) as unknown as OracleRow[]
   return rows.map((row) => ({
     label: row.label,
     accountId: row.account_id,

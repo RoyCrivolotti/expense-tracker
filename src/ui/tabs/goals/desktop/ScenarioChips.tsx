@@ -12,7 +12,17 @@ import styles from './planDesktop.module.css'
 
 function EyeIcon({ off }: { off: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       {off ? (
         <path d="M3 3l18 18M10.6 5.2A10 10 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4M6.5 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 004.2 4.2" />
       ) : (
@@ -82,7 +92,8 @@ function ChipName({ label, note }: { label: string; note: string | undefined }) 
 function ChipValue({ line }: { line: ScenarioLegendItem | undefined }) {
   const format = useMoneyFormat()
   if (!line || line.hidden) return <span className={styles.chipValue}></span>
-  if (line.valueCents == null && line.status) return <span className={`${styles.chipValue} ${styles.chipStatus}`}>{line.status}</span>
+  if (line.valueCents == null && line.status)
+    return <span className={`${styles.chipValue} ${styles.chipStatus}`}>{line.status}</span>
   if (line.valueCents == null) return <span className={styles.chipValue}></span>
   const figure = formatCentsCompact(line.valueCents, format)
   if (!line.endedIn) return <span className={styles.chipValue}>{figure}</span>
@@ -104,7 +115,10 @@ interface ChipProps {
   onToggle: ((scenarioId: number) => void) | undefined
 }
 
-function chipClass(active: boolean, hidden: boolean): string {
+function chipClass(
+  active: boolean,
+  hidden: boolean,
+): string {
   return [styles.chip, active ? styles.chipOn : '', hidden ? styles.chipHidden : ''].filter(Boolean).join(' ')
 }
 
@@ -127,7 +141,11 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
         className={styles.chipOpen}
         onClick={onOpen}
       >
-        <span className={styles.tabDot} style={{ background: scenario ? scenarioInk(scenario.color) : 'var(--color-text-muted)' }} aria-hidden />
+        <span
+          className={styles.tabDot}
+          style={{ background: scenario ? scenarioInk(scenario.color) : 'var(--color-text-muted)' }}
+          aria-hidden
+        />
         <ChipName label={label} note={line?.note} />
         <ChipSpeech plan={plan} edited={edited} />
         <span className={styles.chipSide} aria-hidden>
@@ -154,13 +172,21 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
  * What the chart published for a chip's scenario. The open scenario is the draft, which has no
  * scenario id on its line; the dotted plan-from-today line is a draft's neighbour, not the draft.
  */
-function lineFor(items: ScenarioLegendItem[], scenario: GoalScenario | null, active: boolean): ScenarioLegendItem | undefined {
+function lineFor(
+  items: ScenarioLegendItem[],
+  scenario: GoalScenario | null,
+  active: boolean,
+): ScenarioLegendItem | undefined {
   if (scenario === null || active) return items.find((item) => item.scenarioId === undefined && !item.dotted)
   return items.find((item) => item.scenarioId === scenario.id)
 }
 
 /** The open scenario is named as it is typed; the draft has no name of its own yet. */
-function chipLabel(scenario: GoalScenario | null, active: boolean, draftName: string): string {
+function chipLabel(
+  scenario: GoalScenario | null,
+  active: boolean,
+  draftName: string,
+): string {
   if (scenario === null) return 'Unsaved draft'
   return active && draftName.trim() ? draftName : scenario.name
 }
@@ -187,7 +213,17 @@ interface ScenarioChipsProps {
  * rows as the width needs. They are the tabs and the chart's legend in one, so each carries its
  * colour, the value at the year pointed at and an eye to hide its line.
  */
-export function ScenarioChips({ scenarios, activeId, dirty, draftName, showDraft, onSelect, onSelectDraft, legend, onToggleVisible }: ScenarioChipsProps) {
+export function ScenarioChips({
+  scenarios,
+  activeId,
+  dirty,
+  draftName,
+  showDraft,
+  onSelect,
+  onSelectDraft,
+  legend,
+  onToggleVisible,
+}: ScenarioChipsProps) {
   const group = useRef<HTMLDivElement>(null)
   const items = useHeroLegend(legend)
   const entries: (GoalScenario | null)[] = [...(showDraft ? [null] : []), ...scenarios]

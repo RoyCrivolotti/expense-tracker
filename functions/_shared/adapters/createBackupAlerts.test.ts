@@ -4,9 +4,7 @@ import { createBackupAlerts } from './createBackupAlerts'
 describe('createBackupAlerts', () => {
   it('uses console-only alerts when email env is incomplete', async () => {
     const alerts = createBackupAlerts({ DB: {} as D1Database })
-    await expect(
-      alerts.onLargeSnapshot({ owner: 'a@b.com', bytes: 100, limit: 50 }),
-    ).resolves.toBeUndefined()
+    await expect(alerts.onLargeSnapshot({ owner: 'a@b.com', bytes: 100, limit: 50 })).resolves.toBeUndefined()
   })
 
   it('wires email when binding and recipients are configured', async () => {

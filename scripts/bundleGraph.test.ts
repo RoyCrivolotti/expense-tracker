@@ -3,21 +3,30 @@ import { captureOnlyChunks, goalsOnlyChunks, ledgerOnlyChunks } from './bundleGr
 
 type Build = Record<string, string>
 
-const INDEX = '<script type="module" src="/assets/index-a.js"></script><link rel="modulepreload" href="/assets/jsx-1.js">'
-const asBuild = (build: Build, indexHtml = INDEX) => ({
+const INDEX =
+  '<script type="module" src="/assets/index-a.js"></script><link rel="modulepreload" href="/assets/jsx-1.js">'
+const asBuild = (
+  build: Build,
+  indexHtml = INDEX,
+) => ({
   files: Object.keys(build),
   read: (file: string) => build[file] ?? '',
   indexHtml,
 })
-const run = (build: Build, indexHtml = INDEX): string[] => goalsOnlyChunks(asBuild(build, indexHtml))
+const run = (
+  build: Build,
+  indexHtml = INDEX,
+): string[] => goalsOnlyChunks(asBuild(build, indexHtml))
 const runLedger = (build: Build): string[] => ledgerOnlyChunks(asBuild(build))
 
 // A build as the bundler writes it: the entry holds the lazy imports of both tabs, each tab imports the entry back,
 // and chunks are named after the first module in them.
 const base: Build = {
-  'index-a.js': 'import"./jsx-1.js";const g=lazy(()=>load(()=>import(`./GoalsTab-b.js`)));const a=lazy(()=>load(()=>import(`./AnalyticsTab-c.js`)))',
+  'index-a.js':
+    'import"./jsx-1.js";const g=lazy(()=>load(()=>import(`./GoalsTab-b.js`)));const a=lazy(()=>load(()=>import(`./AnalyticsTab-c.js`)))',
   'jsx-1.js': 'export const x=1',
-  'GoalsTab-b.js': 'import{a}from"./index-a.js";import{s}from"./ScrollRegion-d.js";import{c}from"./useSvgAnchor-e.js";const Spread=lazy(()=>load(()=>import(`./SpreadChart-f.js`)))',
+  'GoalsTab-b.js':
+    'import{a}from"./index-a.js";import{s}from"./ScrollRegion-d.js";import{c}from"./useSvgAnchor-e.js";const Spread=lazy(()=>load(()=>import(`./SpreadChart-f.js`)))',
   'AnalyticsTab-c.js': 'import{a}from"./index-a.js";import{c}from"./useSvgAnchor-e.js"',
   'ScrollRegion-d.js': 'import{a}from"./index-a.js"',
   'useSvgAnchor-e.js': 'export const c=1',
@@ -29,7 +38,7 @@ describe('goalsOnlyChunks', () => {
     expect(run(base)).toEqual(['GoalsTab-b.js', 'ScrollRegion-d.js', 'SpreadChart-f.js'])
   })
 
-  it('does not walk through the entry, which holds the other tabs\' lazy imports', () => {
+  it("does not walk through the entry, which holds the other tabs' lazy imports", () => {
     // Goals imports the entry back, and the entry imports every tab lazily. A tab only the entry loads, and that
     // Analytics does not reach, would be counted as Goals' if the walk went through the entry.
     const withSettings = {
@@ -41,7 +50,7 @@ describe('goalsOnlyChunks', () => {
     expect(run(withSettings)).not.toContain('AnalyticsTab-c.js')
   })
 
-  it('counts a chunk only Goals loads as Goals\' whatever it is called, and one only Analytics loads as not', () => {
+  it("counts a chunk only Goals loads as Goals' whatever it is called, and one only Analytics loads as not", () => {
     const renamed = {
       ...base,
       'Chart-9.js': 'export const z=1',
@@ -54,7 +63,11 @@ describe('goalsOnlyChunks', () => {
   })
 
   it('leaves out a chunk both tabs load, and one the entry loads statically', () => {
-    const both = { ...base, 'AnalyticsTab-c.js': `${base['AnalyticsTab-c.js']};import{s}from"./ScrollRegion-d.js"`, 'index-a.js': `${base['index-a.js']};import"./SpreadChart-f.js"` }
+    const both = {
+      ...base,
+      'AnalyticsTab-c.js': `${base['AnalyticsTab-c.js']};import{s}from"./ScrollRegion-d.js"`,
+      'index-a.js': `${base['index-a.js']};import"./SpreadChart-f.js"`,
+    }
     expect(run(both)).toEqual(['GoalsTab-b.js'])
   })
 
@@ -70,7 +83,8 @@ describe('ledgerOnlyChunks', () => {
   const ledgerBuild: Build = {
     ...base,
     'index-a.js': `${base['index-a.js']};const l=lazy(()=>load(()=>import(\`./LedgerExpensesApp-h.js\`)));const p=()=>import(\`./apiLedgerParts-i.js\`)`,
-    'LedgerExpensesApp-h.js': 'import{a}from"./index-a.js";import{s}from"./ledgerSession-j.js";import{c}from"./useSvgAnchor-e.js"',
+    'LedgerExpensesApp-h.js':
+      'import{a}from"./index-a.js";import{s}from"./ledgerSession-j.js";import{c}from"./useSvgAnchor-e.js"',
     'ledgerSession-j.js': 'export const s=1',
     'apiLedgerParts-i.js': 'import{e}from"./ledgerPartsErrors-k.js"',
     'ledgerPartsErrors-k.js': 'export const e=1',
@@ -101,7 +115,10 @@ describe('ledgerOnlyChunks', () => {
   })
 
   it('leaves out a chunk the page loads at once', () => {
-    const eagerErrors = { ...ledgerBuild, 'index-a.js': `${ledgerBuild['index-a.js']};import"./ledgerPartsErrors-k.js"` }
+    const eagerErrors = {
+      ...ledgerBuild,
+      'index-a.js': `${ledgerBuild['index-a.js']};import"./ledgerPartsErrors-k.js"`,
+    }
     expect(runLedger(eagerErrors)).not.toContain('ledgerPartsErrors-k.js')
   })
 
@@ -115,7 +132,8 @@ describe('captureOnlyChunks', () => {
     ...base,
     'index-a.js': `${base['index-a.js']};const k=lazy(()=>load(()=>import(\`./CaptureKeySetting-k.js\`)));const r=lazy(()=>load(()=>import(\`./ReviewCard-r.js\`)))`,
     'CaptureKeySetting-k.js': 'import{a}from"./index-a.js";import{c}from"./capture-shared-m.js"',
-    'ReviewCard-r.js': 'import{a}from"./index-a.js";import{c}from"./capture-shared-m.js";import{s}from"./ScrollRegion-d.js"',
+    'ReviewCard-r.js':
+      'import{a}from"./index-a.js";import{c}from"./capture-shared-m.js";import{s}from"./ScrollRegion-d.js"',
     'capture-shared-m.js': 'export const c=1',
   }
 

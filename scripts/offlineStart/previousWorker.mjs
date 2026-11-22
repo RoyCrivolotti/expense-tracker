@@ -15,7 +15,11 @@ export const PREVIOUS_OPTIONS = {
     {
       urlPattern: ({ request, url }) => request.mode === 'navigate' && !/^\/(api|cdn-cgi)\//.test(url.pathname),
       handler: 'NetworkFirst',
-      options: { cacheName: 'app-shell', networkTimeoutSeconds: 5, expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 } },
+      options: {
+        cacheName: 'app-shell',
+        networkTimeoutSeconds: 5,
+        expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 },
+      },
     },
   ],
   // What the PWA plugin adds for `registerType: 'autoUpdate'`.

@@ -104,7 +104,10 @@ export class TransactionPager {
   private attached = 0
   private dirty = false
 
-  constructor(source: PagerSource, { limit = PAGE_SIZE, settleMs = 0 }: PagerOptions = {}) {
+  constructor(
+    source: PagerSource,
+    { limit = PAGE_SIZE, settleMs = 0 }: PagerOptions = {},
+  ) {
     this.source = source
     this.limit = limit
     this.settleMs = settleMs
@@ -202,7 +205,8 @@ export class TransactionPager {
   matching(): MatchingTarget | null {
     const { summary, summaryStale, stale, loading, refreshing, refreshFailed } = this.state
     const reading = stale || loading || refreshing || refreshFailed || summaryStale || this.summaryPending
-    if (!this.filter || this.waiting || reading || !summary || summary.capped || this.summaryKey !== this.key) return null
+    if (!this.filter || this.waiting || reading || !summary || summary.capped || this.summaryKey !== this.key)
+      return null
     return { filter: this.filter, expectedCount: summary.count, expectedRevision: summary.revision }
   }
 
@@ -235,7 +239,10 @@ export class TransactionPager {
   }
 
   /** A burst of typing begins or goes on: nothing is read until it stops. */
-  private hold(filter: TxnFilter, key: string): void {
+  private hold(
+    filter: TxnFilter,
+    key: string,
+  ): void {
     const { loading, refreshing, error, refreshFailed, rows } = this.state
     if (!this.waiting) this.parked = { error, refreshFailed, idle: !loading && !refreshing && !this.summaryPending }
     this.supersede()
@@ -270,7 +277,10 @@ export class TransactionPager {
   }
 
   /** A filter that selects other rows: its first page and its figures are read, and the old rows wait. */
-  private start(filter: TxnFilter, key: string): void {
+  private start(
+    filter: TxnFilter,
+    key: string,
+  ): void {
     this.supersede()
     this.parked = null
     this.filter = filter
@@ -289,7 +299,10 @@ export class TransactionPager {
   }
 
   /** The same list read again, `depth` rows of it (a first page for none). */
-  private reload(depth: number, summary: boolean): Promise<void> {
+  private reload(
+    depth: number,
+    summary: boolean,
+  ): Promise<void> {
     const figures = summary || this.summaryPending || this.state.summary === null
     this.supersede()
     const done = this.read(depth, 'refresh')
@@ -302,12 +315,21 @@ export class TransactionPager {
    * Reads from the first page until `depth` rows are in (one page when it is zero) and puts them in place of
    * the rows held. A page is as large as the server allows, so a list ten pages deep is a few requests.
    */
-  private async read(depth: number, mode: 'filter' | 'refresh'): Promise<void> {
+  private async read(
+    depth: number,
+    mode: 'filter' | 'refresh',
+  ): Promise<void> {
     const { generation, filter } = this
     const { signal } = this.abort
     if (!filter) return
     const refreshing = mode === 'refresh'
-    this.set({ loading: !refreshing, refreshing, error: null, refreshFailed: false, ...(refreshing ? { stale: false } : {}) })
+    this.set({
+      loading: !refreshing,
+      refreshing,
+      error: null,
+      refreshFailed: false,
+      ...(refreshing ? { stale: false } : {}),
+    })
     let rows: Transaction[] = []
     let cursor: string | undefined
     try {

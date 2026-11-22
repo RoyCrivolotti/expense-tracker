@@ -16,13 +16,21 @@ function tokens(selector: string): Map<string, string> {
 type Rgb = [number, number, number]
 
 /** A token's colour, following `var()` and the one `color-mix` toward black the theme uses. */
-function colour(value: string, theme: Map<string, string>): Rgb {
+function colour(
+  value: string,
+  theme: Map<string, string>,
+): Rgb {
   const ref = /^var\((--[\w-]+)\)$/.exec(value)
   if (ref) return colour(theme.get(ref[1] ?? '') ?? '', theme)
   const mix = /^color-mix\(in srgb, (.+) (\d+)%, black\)$/.exec(value)
   if (mix) return colour(mix[1] ?? '', theme).map((c) => c * (Number(mix[2]) / 100)) as Rgb
   const short = /^#([\da-f])([\da-f])([\da-f])$/i.exec(value)
-  const hex = short ? short.slice(1).map((d) => d + d).join('') : /^#([\da-f]{6})$/i.exec(value)?.[1]
+  const hex = short
+    ? short
+        .slice(1)
+        .map((d) => d + d)
+        .join('')
+    : /^#([\da-f]{6})$/i.exec(value)?.[1]
   if (!hex) throw new Error(`not a colour: ${value}`)
   const n = parseInt(hex, 16)
   return [n >> 16, (n >> 8) & 255, n & 255]
@@ -36,7 +44,10 @@ function luminance(rgb: Rgb): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-function contrast(a: Rgb, b: Rgb): number {
+function contrast(
+  a: Rgb,
+  b: Rgb,
+): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
   return (hi + 0.05) / (lo + 0.05)
 }
@@ -66,7 +77,8 @@ describe('toast tones', () => {
 
 describe('the toast in the side rail', () => {
   const css = source('components/Toast.module.css')
-  const aside = /@media \(min-width: 1024px\) \{\s*:global\(:root\[data-toast-aside\]\) \.viewport \{([^}]*)\}/.exec(css)?.[1] ?? ''
+  const aside =
+    /@media \(min-width: 1024px\) \{\s*:global\(:root\[data-toast-aside\]\) \.viewport \{([^}]*)\}/.exec(css)?.[1] ?? ''
 
   it('sits bottom left inside the rail, above its menu button, and does not follow the bar', () => {
     expect(aside).toMatch(/left:\s*0\.5rem/)
@@ -78,6 +90,8 @@ describe('the toast in the side rail', () => {
 
   it('is only where the rail is wide enough for it, which is where AppShell widens the rail', () => {
     expect(css.match(/data-toast-aside/g)).toHaveLength(1)
-    expect(source('nav/AppShell.module.css')).toMatch(/@media \(min-width: 1024px\) \{\s*\.shell \{\s*grid-template-columns: var\(--exp-rail\) 1fr/)
+    expect(source('nav/AppShell.module.css')).toMatch(
+      /@media \(min-width: 1024px\) \{\s*\.shell \{\s*grid-template-columns: var\(--exp-rail\) 1fr/,
+    )
   })
 })

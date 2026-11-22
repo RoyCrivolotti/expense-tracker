@@ -8,9 +8,15 @@
 import type { Usage } from '../data/usage'
 import type { ExpenseDataset } from '../types'
 
-const byId = (a: { id: number }, b: { id: number }): number => a.id - b.id
+const byId = (
+  a: { id: number },
+  b: { id: number },
+): number => a.id - b.id
 
-function tally<T>(items: readonly T[], keys: (item: T) => Iterable<number>): Map<number, number> {
+function tally<T>(
+  items: readonly T[],
+  keys: (item: T) => Iterable<number>,
+): Map<number, number> {
   const counts = new Map<number, number>()
   for (const item of items) {
     for (const key of keys(item)) counts.set(key, (counts.get(key) ?? 0) + 1)

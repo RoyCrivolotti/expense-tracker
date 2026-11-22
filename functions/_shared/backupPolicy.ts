@@ -17,13 +17,19 @@ const BASE: BackupPolicy = {
   bucketAlertThresholdFraction: defaults.bucketAlertThresholdFraction,
 }
 
-function parsePositiveInt(raw: string | undefined, fallback: number): number {
+function parsePositiveInt(
+  raw: string | undefined,
+  fallback: number,
+): number {
   if (!raw?.trim()) return fallback
   const n = Number.parseInt(raw, 10)
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
-function parseFraction(raw: string | undefined, fallback: number): number {
+function parseFraction(
+  raw: string | undefined,
+  fallback: number,
+): number {
   if (!raw?.trim()) return fallback
   const n = Number.parseFloat(raw)
   return Number.isFinite(n) && n > 0 && n <= 1 ? n : fallback
@@ -33,19 +39,13 @@ function parseFraction(raw: string | undefined, fallback: number): number {
 export function resolveBackupPolicy(
   env: Pick<
     Env,
-    | 'BACKUP_RETENTION_DAYS'
-    | 'BACKUP_MAX_BUCKET_BYTES'
-    | 'BACKUP_MAX_SNAPSHOT_BYTES'
-    | 'BACKUP_BUCKET_ALERT_FRACTION'
+    'BACKUP_RETENTION_DAYS' | 'BACKUP_MAX_BUCKET_BYTES' | 'BACKUP_MAX_SNAPSHOT_BYTES' | 'BACKUP_BUCKET_ALERT_FRACTION'
   >,
 ): BackupPolicy {
   return {
     retentionDays: parsePositiveInt(env.BACKUP_RETENTION_DAYS, BASE.retentionDays),
     maxBucketBytes: parsePositiveInt(env.BACKUP_MAX_BUCKET_BYTES, BASE.maxBucketBytes),
     maxSnapshotBytes: parsePositiveInt(env.BACKUP_MAX_SNAPSHOT_BYTES, BASE.maxSnapshotBytes),
-    bucketAlertThresholdFraction: parseFraction(
-      env.BACKUP_BUCKET_ALERT_FRACTION,
-      BASE.bucketAlertThresholdFraction,
-    ),
+    bucketAlertThresholdFraction: parseFraction(env.BACKUP_BUCKET_ALERT_FRACTION, BASE.bucketAlertThresholdFraction),
   }
 }

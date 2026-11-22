@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { backupFolder, backupUnitOf, dateKeyFromObjectKey, manifestKey, ownerBackupKey, partKey, stateKey } from './backupKeys'
+import {
+  backupFolder,
+  backupUnitOf,
+  dateKeyFromObjectKey,
+  manifestKey,
+  ownerBackupKey,
+  partKey,
+  stateKey,
+} from './backupKeys'
 
 describe('backup keys', () => {
   it('keep the single-file snapshot where it was', () => {
@@ -27,7 +35,11 @@ describe('backupUnitOf', () => {
       owner: 'a@b.com',
       dateKey: '2026-10-15',
     })
-    for (const key of [manifestKey('a@b.com', '2026-10-15'), stateKey('a@b.com', '2026-10-15'), partKey('a@b.com', '2026-10-15', 3)]) {
+    for (const key of [
+      manifestKey('a@b.com', '2026-10-15'),
+      stateKey('a@b.com', '2026-10-15'),
+      partKey('a@b.com', '2026-10-15', 3),
+    ]) {
       expect(backupUnitOf(key)).toEqual({ unit: 'a@b.com/2026-10-15/', owner: 'a@b.com', dateKey: '2026-10-15' })
     }
   })

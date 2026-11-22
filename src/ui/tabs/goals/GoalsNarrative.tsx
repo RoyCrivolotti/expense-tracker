@@ -39,13 +39,7 @@ interface PlanStat {
   note?: string
 }
 
-function CompactNarrative({
-  draft,
-  milestones,
-}: {
-  draft: NewGoalScenario
-  milestones: Milestone[]
-}) {
+function CompactNarrative({ draft, milestones }: { draft: NewGoalScenario; milestones: Milestone[] }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const { end, next, fiYear } = getNarrativeStats(draft, milestones, inflationRate)
@@ -122,13 +116,7 @@ function fiSentence({
   return `FI target (${formatPercent(draft.safeWithdrawalRate, format)} SWR) is ${formatCents(fiTarget, format)} in ${target.planLabel}, ${reached}.`
 }
 
-function FullNarrative({
-  draft,
-  milestones,
-}: {
-  draft: NewGoalScenario
-  milestones: Milestone[]
-}) {
+function FullNarrative({ draft, milestones }: { draft: NewGoalScenario; milestones: Milestone[] }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const { end, next, top, fiYear, fiTarget } = getNarrativeStats(draft, milestones, inflationRate)
@@ -146,9 +134,8 @@ function FullNarrative({
     <Card>
       <h3 className={styles.chartTitle}>What this means</h3>
       <p className={styles.narrative}>
-        At {formatPercent(draft.expectedRealReturn, format)} real return and{' '}
-        {contributionPhrase(draft, format)} invested, your portfolio reaches{' '}
-        {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
+        At {formatPercent(draft.expectedRealReturn, format)} real return and {contributionPhrase(draft, format)}{' '}
+        invested, your portfolio reaches {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
         {formatCents(end?.netWorthCents ?? 0, format)} net worth in {draft.horizonYears} years, in {worth.planLabel}{' '}
         (the net worth is {aboutOnAccount(worth)}).
         {milestoneSentences([next, top], short)}

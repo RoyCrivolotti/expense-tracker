@@ -18,7 +18,9 @@ describe('partEtag', () => {
   })
 
   it('carries the range asked for', () => {
-    expect(partEtag('months', revision, '2026-01..2026-03')).toBe(`W/"${revision.token}-2026-10-months${PARTS_FORMAT}-2026-01..2026-03"`)
+    expect(partEtag('months', revision, '2026-01..2026-03')).toBe(
+      `W/"${revision.token}-2026-10-months${PARTS_FORMAT}-2026-01..2026-03"`,
+    )
   })
 
   it('does not match another part, range, token, month or format', () => {
@@ -34,7 +36,11 @@ describe('partEtag', () => {
 })
 
 /** Every path through the JSON with the types seen there, so a renamed, added or dropped field shows. */
-function shapeOf(value: unknown, path = '$', out = new Set<string>()): Set<string> {
+function shapeOf(
+  value: unknown,
+  path = '$',
+  out = new Set<string>(),
+): Set<string> {
   if (Array.isArray(value)) {
     out.add(`${path}[]`)
     for (const item of value) shapeOf(item, `${path}[]`, out)

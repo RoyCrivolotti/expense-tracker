@@ -68,9 +68,7 @@ describe('useLabelFormSave', () => {
   it('starts a first label at sort order 0', async () => {
     const createLabel = vi.fn().mockResolvedValue(label)
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useLabelFormSave(null, [], actionsWith({ createLabel }), onDone),
-    )
+    const { result } = renderHook(() => useLabelFormSave(null, [], actionsWith({ createLabel }), onDone))
 
     act(() => result.current.save(draft))
 
@@ -96,9 +94,7 @@ describe('useLabelFormSave', () => {
   it('refuses a blank name without calling the API', () => {
     const createLabel = vi.fn()
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useLabelFormSave(null, [], actionsWith({ createLabel }), onDone),
-    )
+    const { result } = renderHook(() => useLabelFormSave(null, [], actionsWith({ createLabel }), onDone))
 
     act(() => result.current.save({ ...draft, name: '   ' }))
 
@@ -110,9 +106,7 @@ describe('useLabelFormSave', () => {
   it('surfaces a server error and stays open', async () => {
     const createLabel = vi.fn().mockRejectedValue(new Error('Label name is required'))
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useLabelFormSave(null, [], actionsWith({ createLabel }), onDone),
-    )
+    const { result } = renderHook(() => useLabelFormSave(null, [], actionsWith({ createLabel }), onDone))
 
     act(() => result.current.save(draft))
 
@@ -124,9 +118,7 @@ describe('useLabelFormSave', () => {
   it('deletes an existing label', async () => {
     const deleteLabel = vi.fn().mockResolvedValue({ unlabeled: 2 })
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useLabelFormSave(label, [label], actionsWith({ deleteLabel }), onDone),
-    )
+    const { result } = renderHook(() => useLabelFormSave(label, [label], actionsWith({ deleteLabel }), onDone))
 
     act(() => result.current.remove())
 
@@ -136,9 +128,7 @@ describe('useLabelFormSave', () => {
 
   it('does nothing on delete when there is no label yet', () => {
     const deleteLabel = vi.fn()
-    const { result } = renderHook(() =>
-      useLabelFormSave(null, [], actionsWith({ deleteLabel }), vi.fn()),
-    )
+    const { result } = renderHook(() => useLabelFormSave(null, [], actionsWith({ deleteLabel }), vi.fn()))
 
     act(() => result.current.remove())
 

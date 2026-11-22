@@ -22,11 +22,20 @@ interface TrackingProps {
  * starts with (the engine reads them so), so they fold into the starting amount and leave the history, and the box and
  * the first line say what the plan uses instead of an amount it no longer does.
  */
-function planStartPatch(draft: NewGoalScenario, date: string | null): Partial<NewGoalScenario> {
+function planStartPatch(
+  draft: NewGoalScenario,
+  date: string | null,
+): Partial<NewGoalScenario> {
   const schedule = draft.contributionSchedule ?? []
   if (!date || schedule.length === 0) return { planStartDate: date }
-  const { monthlyContributionCents, contributionSchedule, folded } = foldChangesAtOrBefore(draft.monthlyContributionCents, schedule, date)
-  return folded.length === 0 ? { planStartDate: date } : { planStartDate: date, monthlyContributionCents, contributionSchedule }
+  const { monthlyContributionCents, contributionSchedule, folded } = foldChangesAtOrBefore(
+    draft.monthlyContributionCents,
+    schedule,
+    date,
+  )
+  return folded.length === 0
+    ? { planStartDate: date }
+    : { planStartDate: date, monthlyContributionCents, contributionSchedule }
 }
 
 /** Re-baselining from the latest check-in, and what the last one changed. */
@@ -101,8 +110,8 @@ export function TrackingFields({ draft, latest, otherPlan = null, onChange }: Tr
         onChange={(v) => onChange(planStartPatch(draft, v))}
       />
       <p className={styles.fieldHint}>
-        Moving the date here keeps every amount as typed. To start later with the amounts restated for inflation, use Start a
-        copy later.
+        Moving the date here keeps every amount as typed. To start later with the amounts restated for inflation, use
+        Start a copy later.
       </p>
       <FutureStartNotes draft={draft} otherPlan={otherPlan} onChange={onChange} />
       <RebaselineField draft={draft} latest={latest} onChange={onChange} />

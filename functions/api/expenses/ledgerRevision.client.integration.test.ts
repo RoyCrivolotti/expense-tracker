@@ -54,7 +54,10 @@ function routeFetch() {
     ['/api/expenses/reference', 'GET', getReference],
     ['/api/expenses/cube', 'GET', getCube],
   ]
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     const method = init?.method ?? 'GET'
     const handler = handlers.find(([path, verb]) => path === url.pathname && verb === method)?.[2]
@@ -69,15 +72,23 @@ function routeFetch() {
 }
 
 const monthsInDb = (): string[] =>
-  (sqlite.prepare('SELECT DISTINCT budget_month AS month FROM transactions WHERE owner = ? ORDER BY month').all(OWNER) as Array<{ month: string }>).map(
-    (row) => row.month,
-  )
+  (
+    sqlite
+      .prepare('SELECT DISTINCT budget_month AS month FROM transactions WHERE owner = ? ORDER BY month')
+      .all(OWNER) as Array<{ month: string }>
+  ).map((row) => row.month)
 
 const idsInDb = (month: string): number[] =>
-  (sqlite.prepare('SELECT id FROM transactions WHERE owner = ? AND budget_month = ? ORDER BY id').all(OWNER, month) as Array<{ id: number }>).map((row) => row.id)
+  (
+    sqlite
+      .prepare('SELECT id FROM transactions WHERE owner = ? AND budget_month = ? ORDER BY id')
+      .all(OWNER, month) as Array<{ id: number }>
+  ).map((row) => row.id)
 
-const idsHeld = (session: LedgerSession, month: string): number[] =>
-  (session.getState().held!.rows.get(month) ?? []).map((row) => row.id).sort((a, b) => a - b)
+const idsHeld = (
+  session: LedgerSession,
+  month: string,
+): number[] => (session.getState().held!.rows.get(month) ?? []).map((row) => row.id).sort((a, b) => a - b)
 
 /** A write made here: sent, receipt noted by the listener, then its patch, as the screens do it. */
 async function saveSettings(session: LedgerSession): Promise<void> {
@@ -85,21 +96,44 @@ async function saveSettings(session: LedgerSession): Promise<void> {
   session.patch((d) => patchAfterSettings(d, saved, ['openingCashCents']))
 }
 
-const newRow = (month: string, description: string) => {
-  const account = (sqlite.prepare('SELECT id FROM accounts WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }).id
-  const category = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }).id
-  return { date: `${month}-15`, budgetMonth: month, description, accountId: account, categoryId: category, type: 'expense' as const, amountCents: 999, cancelled: false }
+const newRow = (
+  month: string,
+  description: string,
+) => {
+  const account = (
+    sqlite.prepare('SELECT id FROM accounts WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }
+  ).id
+  const category = (
+    sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }
+  ).id
+  return {
+    date: `${month}-15`,
+    budgetMonth: month,
+    description,
+    accountId: account,
+    categoryId: category,
+    type: 'expense' as const,
+    amountCents: 999,
+    cancelled: false,
+  }
 }
 
 /** A row added by someone else: no receipt reaches the session. */
 async function addElsewhere(month: string): Promise<number> {
-  const response = await world.call(postTransaction, { method: 'POST', path: '/transactions', body: newRow(month, 'Added elsewhere') })
+  const response = await world.call(postTransaction, {
+    method: 'POST',
+    path: '/transactions',
+    body: newRow(month, 'Added elsewhere'),
+  })
   expect(response.status).toBe(201)
   return ((await response.json()) as { id: number }).id
 }
 
 /** A row added here, with the patch the screens apply; the sums of its month are read after it. */
-async function addHere(session: LedgerSession, month: string): Promise<void> {
+async function addHere(
+  session: LedgerSession,
+  month: string,
+): Promise<void> {
   const added = await source.createTransaction(newRow(month, 'Added here'))
   session.patch((d) => patchAfterTransactionCreate(d, added))
 }

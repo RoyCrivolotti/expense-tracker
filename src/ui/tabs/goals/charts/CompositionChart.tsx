@@ -75,9 +75,24 @@ function CompositionChartImpl({
     const p = points[i]
     const year = years[i] ?? i
     const lines: TooltipLine[] = [
-      { label: 'Invested portfolio', value: formatMoneyShort(p?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
-      { label: 'House value', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), color: HOUSE_COLOR, tone: 'neutral' },
-      { label: 'Mortgage owed', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), color: MORTGAGE_COLOR, tone: 'neutral' },
+      {
+        label: 'Invested portfolio',
+        value: formatMoneyShort(p?.investedCents ?? 0, format),
+        color: INVESTED_COLOR,
+        tone: 'neutral',
+      },
+      {
+        label: 'House value',
+        value: formatMoneyShort(p?.houseEquityCents ?? 0, format),
+        color: HOUSE_COLOR,
+        tone: 'neutral',
+      },
+      {
+        label: 'Mortgage owed',
+        value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format),
+        color: MORTGAGE_COLOR,
+        tone: 'neutral',
+      },
       {
         label: 'Net worth',
         value: formatMoneyShort(p?.netWorthCents ?? 0, format),

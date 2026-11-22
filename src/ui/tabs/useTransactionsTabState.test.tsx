@@ -22,7 +22,10 @@ beforeAll(() => {
   })
 })
 
-function modelWith(flags = [work], labels: ReturnType<typeof makeLabel>[] = []): ExpenseModel {
+function modelWith(
+  flags = [work],
+  labels: ReturnType<typeof makeLabel>[] = [],
+): ExpenseModel {
   const dataset = makeDataset({ flags, labels })
   return {
     dataset,
@@ -71,9 +74,7 @@ describe('useTransactionsTabState — flag filter', () => {
 
 describe('useTransactionsTabState — label filter', () => {
   it('keeps a label filter that still resolves', () => {
-    const { result } = renderHook(() =>
-      useTransactionsTabState(modelWith([], [madrid]), '2026-05'),
-    )
+    const { result } = renderHook(() => useTransactionsTabState(modelWith([], [madrid]), '2026-05'))
 
     act(() => result.current.setLabelIds([madrid.id]))
 
@@ -85,10 +86,9 @@ describe('useTransactionsTabState — label filter', () => {
   it('drops only the stale id when one of several selected labels is deleted', () => {
     // Same self-healing as the flag filter, but per-id: losing one selected label
     // should not silently clear the other, still-valid one.
-    const { result, rerender } = renderHook(
-      ({ model }) => useTransactionsTabState(model, '2026-05'),
-      { initialProps: { model: modelWith([], [madrid, moving]) } },
-    )
+    const { result, rerender } = renderHook(({ model }) => useTransactionsTabState(model, '2026-05'), {
+      initialProps: { model: modelWith([], [madrid, moving]) },
+    })
 
     act(() => result.current.setLabelIds([madrid.id, moving.id]))
     expect(result.current.labelIds).toEqual([madrid.id, moving.id])
@@ -100,10 +100,9 @@ describe('useTransactionsTabState — label filter', () => {
   })
 
   it('resets cleanly to no active filter when every selected label is deleted', () => {
-    const { result, rerender } = renderHook(
-      ({ model }) => useTransactionsTabState(model, '2026-05'),
-      { initialProps: { model: modelWith([], [madrid]) } },
-    )
+    const { result, rerender } = renderHook(({ model }) => useTransactionsTabState(model, '2026-05'), {
+      initialProps: { model: modelWith([], [madrid]) },
+    })
 
     act(() => result.current.setLabelIds([madrid.id]))
     rerender({ model: modelWith([], []) })
@@ -114,9 +113,7 @@ describe('useTransactionsTabState — label filter', () => {
   })
 
   it('clearFilters resets the label selection along with everything else', () => {
-    const { result } = renderHook(() =>
-      useTransactionsTabState(modelWith([], [madrid]), '2026-05'),
-    )
+    const { result } = renderHook(() => useTransactionsTabState(modelWith([], [madrid]), '2026-05'))
 
     act(() => result.current.setLabelIds([madrid.id]))
     act(() => result.current.clearFilters())
@@ -185,7 +182,10 @@ describe('useTransactionsTabState — acting on a selection that spans two month
   }
 
   /** The ids a spy was called with, sorted: a bulk action's order means nothing. */
-  function idsOf(spy: unknown, call = 0): number[] {
+  function idsOf(
+    spy: unknown,
+    call = 0,
+  ): number[] {
     const ids = (spy as { mock: { calls: unknown[][] } }).mock.calls[call]?.[0] as number[]
     return [...ids].sort((a, b) => a - b)
   }
@@ -297,12 +297,14 @@ describe('useTransactionsTabState — the month arrows and the date scope', () =
     }
   }
 
-  function renderAt(month: string, monthNavigation = 0) {
+  function renderAt(
+    month: string,
+    monthNavigation = 0,
+  ) {
     const model = threeMonthModel()
-    return renderHook(
-      ({ m, nav }) => useTransactionsTabState(model, m, undefined, { monthNavigation: nav }),
-      { initialProps: { m: month, nav: monthNavigation } },
-    )
+    return renderHook(({ m, nav }) => useTransactionsTabState(model, m, undefined, { monthNavigation: nav }), {
+      initialProps: { m: month, nav: monthNavigation },
+    })
   }
 
   const shown = (ids: number[]) => [...ids].sort((a, b) => a - b)
@@ -404,12 +406,29 @@ describe('useTransactionsTabState — amount filter', () => {
   function modelWithRows(): ExpenseModel {
     const dataset = makeDataset({
       transactions: [
-        makeTransaction({ id: 1, date: '2026-05-03', budgetMonth: '2026-05', amountCents: 6410, description: 'Groceries' }),
+        makeTransaction({
+          id: 1,
+          date: '2026-05-03',
+          budgetMonth: '2026-05',
+          amountCents: 6410,
+          description: 'Groceries',
+        }),
         makeTransaction({ id: 2, date: '2026-05-04', budgetMonth: '2026-05', amountCents: 2064, description: 'Train' }),
-        makeTransaction({ id: 3, date: '2026-05-05', budgetMonth: '2026-05', amountCents: 110_000, description: 'Rent' }),
+        makeTransaction({
+          id: 3,
+          date: '2026-05-05',
+          budgetMonth: '2026-05',
+          amountCents: 110_000,
+          description: 'Rent',
+        }),
       ],
     })
-    return { dataset, lookup: buildLookup(dataset), descriptionIndex: { search: () => [], resolve: () => undefined }, months: [] }
+    return {
+      dataset,
+      lookup: buildLookup(dataset),
+      descriptionIndex: { search: () => [], resolve: () => undefined },
+      months: [],
+    }
   }
   const ids = (rows: { id: number }[]) => rows.map((r) => r.id).sort((a, b) => a - b)
 

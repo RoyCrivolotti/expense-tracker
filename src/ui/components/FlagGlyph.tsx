@@ -26,9 +26,7 @@ export function FlagGlyph({
       className={`${styles.glyph} ${className ?? ''}`}
       style={{ color: flag.color }}
       title={flag.description ? `${flag.name} — ${flag.description}` : flag.name}
-      {...(decorative
-        ? { 'aria-hidden': true }
-        : { 'aria-label': `Flagged: ${flag.name}`, role: 'img' })}
+      {...(decorative ? { 'aria-hidden': true } : { 'aria-label': `Flagged: ${flag.name}`, role: 'img' })}
     >
       <FlagIcon fill="currentColor" strokeWidth={1.5} />
     </span>

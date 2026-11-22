@@ -4,7 +4,10 @@ import { HttpError } from '../http'
 
 /** Cloudflare Access adapter — reads the authenticated-user header Access injects. */
 export const cloudflareAccessAuth: AuthProvider = {
-  resolveUser(request, _config: AuthConfig) {
+  resolveUser(
+    request,
+    _config: AuthConfig,
+  ) {
     try {
       return resolveAuthenticatedEmail(request)
     } catch (e) {

@@ -36,8 +36,11 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const get = (headers?: Record<string, string>, email = OWNER, path = '/usage') =>
-  world.call(onRequestGet, { path, email, ...(headers ? { headers } : {}) })
+const get = (
+  headers?: Record<string, string>,
+  email = OWNER,
+  path = '/usage',
+) => world.call(onRequestGet, { path, email, ...(headers ? { headers } : {}) })
 
 describe('GET /usage', () => {
   it('serves the counts of the dataset the API serves, with the revision it was read under', async () => {
@@ -72,7 +75,8 @@ describe('GET /usage', () => {
     const mine = (await (await get()).json()) as Usage
     const theirs = (await (await get(undefined, OTHER)).json()) as Usage
     const total = (u: Usage) => u.categories.reduce((sum, c) => sum + c.transactions, 0)
-    const rows = (owner: string) => (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(owner) as { n: number }).n
+    const rows = (owner: string) =>
+      (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ?').get(owner) as { n: number }).n
     expect(total(mine)).toBeLessThanOrEqual(rows(OWNER))
     expect(total(theirs)).toBeLessThanOrEqual(rows(OTHER))
     expect(mine.categories.map((c) => c.id)).not.toEqual(theirs.categories.map((c) => c.id))
@@ -100,7 +104,16 @@ describe('caching against the revision', () => {
     const created = await world.call(postTransaction, {
       method: 'POST',
       path: '/transactions',
-      body: { date: '2026-10-10', budgetMonth: '2026-10', description: 'New', accountId: before.accounts[0]!.id, categoryId: category.id, type: 'expense', amountCents: 5, cancelled: false },
+      body: {
+        date: '2026-10-10',
+        budgetMonth: '2026-10',
+        description: 'New',
+        accountId: before.accounts[0]!.id,
+        categoryId: category.id,
+        type: 'expense',
+        amountCents: 5,
+        cancelled: false,
+      },
     })
     expect(created.status).toBe(201)
     const after = await get({ 'if-none-match': etag })
@@ -114,7 +127,10 @@ describe('caching against the revision', () => {
   // shape means moving PARTS_FORMAT, which changes every part's tag, and then this.
   it('matches the shape PARTS_FORMAT was last moved for', async () => {
     const paths = new Set<string>()
-    const walk = (value: unknown, path: string): void => {
+    const walk = (
+      value: unknown,
+      path: string,
+    ): void => {
       if (Array.isArray(value)) {
         paths.add(`${path}[]`)
         for (const item of value) walk(item, `${path}[]`)
@@ -123,7 +139,10 @@ describe('caching against the revision', () => {
       } else paths.add(`${path}:${typeof value}`)
     }
     walk(await (await get()).json(), '$')
-    const fingerprint = createHash('sha256').update([...paths].sort().join('\n')).digest('hex').slice(0, 16)
+    const fingerprint = createHash('sha256')
+      .update([...paths].sort().join('\n'))
+      .digest('hex')
+      .slice(0, 16)
     expect(
       { format: PARTS_FORMAT, fingerprint },
       'The JSON shape of GET /api/expenses/usage changed. Raise PARTS_FORMAT in datasetEtag.ts, then put the new fingerprint here.',

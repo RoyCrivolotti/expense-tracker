@@ -36,15 +36,15 @@ describe('labelService — sortOrder and active', () => {
   })
 
   it('rejects a null sort order rather than leaking a NOT NULL constraint error', async () => {
-    await expect(
-      patchLabel(repo, 'owner@example.com', 1, { sortOrder: null as unknown as number }),
-    ).rejects.toThrow(/whole number/)
+    await expect(patchLabel(repo, 'owner@example.com', 1, { sortOrder: null as unknown as number })).rejects.toThrow(
+      /whole number/,
+    )
   })
 
   it('rejects a non-boolean active', async () => {
-    await expect(
-      patchLabel(repo, 'owner@example.com', 1, { active: 'yes' as unknown as boolean }),
-    ).rejects.toThrow(/true or false/)
+    await expect(patchLabel(repo, 'owner@example.com', 1, { active: 'yes' as unknown as boolean })).rejects.toThrow(
+      /true or false/,
+    )
   })
 
   it('accepts a well-formed label', async () => {
@@ -54,15 +54,11 @@ describe('labelService — sortOrder and active', () => {
 
 describe('labelService — name and colour', () => {
   it('rejects a blank name', async () => {
-    await expect(
-      createLabel(repo, 'owner@example.com', { ...valid, name: '   ' }),
-    ).rejects.toThrow(/name is required/)
+    await expect(createLabel(repo, 'owner@example.com', { ...valid, name: '   ' })).rejects.toThrow(/name is required/)
   })
 
   it('rejects a colour that is not a hex value', async () => {
-    await expect(
-      createLabel(repo, 'owner@example.com', { ...valid, color: 'green' }),
-    ).rejects.toThrow(/hex value/)
+    await expect(createLabel(repo, 'owner@example.com', { ...valid, color: 'green' })).rejects.toThrow(/hex value/)
   })
 
   it('drops a blank description rather than storing an empty string', async () => {
@@ -73,9 +69,9 @@ describe('labelService — name and colour', () => {
   })
 
   it('rejects an over-long description', async () => {
-    await expect(
-      createLabel(repo, 'owner@example.com', { ...valid, description: 'x'.repeat(141) }),
-    ).rejects.toThrow(/140 characters or fewer/)
+    await expect(createLabel(repo, 'owner@example.com', { ...valid, description: 'x'.repeat(141) })).rejects.toThrow(
+      /140 characters or fewer/,
+    )
   })
 
   it('trims and keeps a well-formed description', async () => {
@@ -95,11 +91,7 @@ describe('labelService — name and colour', () => {
 
   it('clears a description via an explicit empty string', async () => {
     await patchLabel(repo, 'owner@example.com', 1, { description: '' })
-    expect(updateLabelMock).toHaveBeenCalledWith(
-      'owner@example.com',
-      1,
-      expect.objectContaining({ description: '' }),
-    )
+    expect(updateLabelMock).toHaveBeenCalledWith('owner@example.com', 1, expect.objectContaining({ description: '' }))
   })
 })
 
@@ -112,18 +104,12 @@ describe('removeLabel', () => {
 
 describe('setTransactionLabels — labelIds validation', () => {
   it('rejects a non-array payload', async () => {
-    await expect(
-      setTransactionLabels(repo, 'owner@example.com', 1, 'not-an-array'),
-    ).rejects.toThrow(/must be an array/)
+    await expect(setTransactionLabels(repo, 'owner@example.com', 1, 'not-an-array')).rejects.toThrow(/must be an array/)
   })
 
   it('rejects a non-positive-integer id', async () => {
-    await expect(setTransactionLabels(repo, 'owner@example.com', 1, [1, -2])).rejects.toThrow(
-      /Invalid labelId/,
-    )
-    await expect(setTransactionLabels(repo, 'owner@example.com', 1, [1.5])).rejects.toThrow(
-      /Invalid labelId/,
-    )
+    await expect(setTransactionLabels(repo, 'owner@example.com', 1, [1, -2])).rejects.toThrow(/Invalid labelId/)
+    await expect(setTransactionLabels(repo, 'owner@example.com', 1, [1.5])).rejects.toThrow(/Invalid labelId/)
   })
 
   it('dedupes before reaching the repository, so a repeated id cannot trip the UNIQUE constraint', async () => {

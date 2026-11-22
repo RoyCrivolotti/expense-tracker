@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { PushTimeoutError, base64urlDecode, base64urlEncode, encryptPayload, sendWebPush, vapidAuthorization } from './webpush'
+import {
+  PushTimeoutError,
+  base64urlDecode,
+  base64urlEncode,
+  encryptPayload,
+  sendWebPush,
+  vapidAuthorization,
+} from './webpush'
 import type { VapidKeys } from './webpush'
 
 // RFC 8291, Appendix A: the one worked example of the message encryption. These are the RFC's published values, copied
@@ -9,16 +16,57 @@ import type { VapidKeys } from './webpush'
 const RFC = {
   plaintext: 'When I grow up, I want to be a watermelon',
   asScalar: ['yfWPiYE-n46H', 'LnH0KqZOF1fJ', 'JU3MYrct3AEL', 'tAQ-oRw'].join(''),
-  asPoint: ['BP4z9KsN6nGR', 'TbVYI_c7VJSP', 'QTBtkgcy27ml', 'mlMoZIIgDll6', 'e3vCYLocInmY', 'WAmS6TlzAC8w', 'EqKK6PBru3jl', '7A8'].join(''),
-  uaPoint: ['BCVxsr7N_eNg', 'VRqvHtD0zTZs', 'Ec6-VV-JvLex', 'hqUzORcxaOzi', '6-AYWXvTBHm4', 'bjyPjs7Vd8pZ', 'GH6SRpkNtoIA', 'iw4'].join(''),
+  asPoint: [
+    'BP4z9KsN6nGR',
+    'TbVYI_c7VJSP',
+    'QTBtkgcy27ml',
+    'mlMoZIIgDll6',
+    'e3vCYLocInmY',
+    'WAmS6TlzAC8w',
+    'EqKK6PBru3jl',
+    '7A8',
+  ].join(''),
+  uaPoint: [
+    'BCVxsr7N_eNg',
+    'VRqvHtD0zTZs',
+    'Ec6-VV-JvLex',
+    'hqUzORcxaOzi',
+    '6-AYWXvTBHm4',
+    'bjyPjs7Vd8pZ',
+    'GH6SRpkNtoIA',
+    'iw4',
+  ].join(''),
   uaAuth: ['BTBZMqHH6r4T', 'ts7J_aSIgg'].join(''),
   salt: ['DGv6ra1nlYgD', 'CS1FRnbzlw'].join(''),
-  message: ['DGv6ra1nlYgD', 'CS1FRnbzlwAA', 'EABBBP4z9KsN', '6nGRTbVYI_c7', 'VJSPQTBtkgcy', '27mlmlMoZIIg', 'Dll6e3vCYLoc', 'InmYWAmS6Tlz', 'AC8wEqKK6PBr', 'u3jl7A_yl95b', 'Qpu6cVPTpK4M', 'qgkf1CXztLVB', 'St2Ks3oZwbuw', 'XPXLWyouBWLV', 'WGNWQexSgSxs', 'j_Qulcy4a-fN'].join(''),
+  message: [
+    'DGv6ra1nlYgD',
+    'CS1FRnbzlwAA',
+    'EABBBP4z9KsN',
+    '6nGRTbVYI_c7',
+    'VJSPQTBtkgcy',
+    '27mlmlMoZIIg',
+    'Dll6e3vCYLoc',
+    'InmYWAmS6Tlz',
+    'AC8wEqKK6PBr',
+    'u3jl7A_yl95b',
+    'Qpu6cVPTpK4M',
+    'qgkf1CXztLVB',
+    'St2Ks3oZwbuw',
+    'XPXLWyouBWLV',
+    'WGNWQexSgSxs',
+    'j_Qulcy4a-fN',
+  ].join(''),
 }
 
 async function senderKeys(): Promise<CryptoKeyPair> {
   const point = base64urlDecode(RFC.asPoint)
-  const jwk = { kty: 'EC', crv: 'P-256', x: base64urlEncode(point.slice(1, 33)), y: base64urlEncode(point.slice(33, 65)), d: RFC.asScalar }
+  const jwk = {
+    kty: 'EC',
+    crv: 'P-256',
+    x: base64urlEncode(point.slice(1, 33)),
+    y: base64urlEncode(point.slice(33, 65)),
+    d: RFC.asScalar,
+  }
   const ec = { name: 'ECDH', namedCurve: 'P-256' }
   return {
     privateKey: await crypto.subtle.importKey('jwk', jwk, ec, true, ['deriveBits']),
@@ -51,7 +99,10 @@ async function vapidPair(): Promise<{ keys: VapidKeys; verify: CryptoKey }> {
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
   const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
   const publicKey = base64urlEncode(new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey)))
-  return { keys: { publicKey, privateKey: jwk.d as string, subject: 'https://app.example.test' }, verify: pair.publicKey }
+  return {
+    keys: { publicKey, privateKey: jwk.d as string, subject: 'https://app.example.test' },
+    verify: pair.publicKey,
+  }
 }
 
 describe('vapidAuthorization', () => {
@@ -70,7 +121,12 @@ describe('vapidAuthorization', () => {
     })
     const sig = base64urlDecode(signature as string)
     expect(sig.length).toBe(64)
-    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, verify, sig, new TextEncoder().encode(`${head}.${claims}`))
+    const ok = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      verify,
+      sig,
+      new TextEncoder().encode(`${head}.${claims}`),
+    )
     expect(ok).toBe(true)
   })
 
@@ -88,16 +144,31 @@ describe('sendWebPush', () => {
   it('posts the encrypted body to the endpoint with the headers a push service needs', async () => {
     const { keys } = await vapidPair()
     const calls: Array<{ url: string; init: RequestInit }> = []
-    const fetcher = ((url: string, init: RequestInit) => {
+    const fetcher = ((
+      url: string,
+      init: RequestInit,
+    ) => {
       calls.push({ url, init })
       return Promise.resolve(new Response(null, { status: 201 }))
     }) as unknown as typeof fetch
     const target = { endpoint: 'https://push.example.test/send/abc', p256dh: RFC.uaPoint, auth: RFC.uaAuth }
-    const res = await sendWebPush(target, '{"v":1}', keys, { ttl: 86400, topic: 'a'.repeat(32) }, fetcher, 1_800_000_000_000)
+    const res = await sendWebPush(
+      target,
+      '{"v":1}',
+      keys,
+      { ttl: 86400, topic: 'a'.repeat(32) },
+      fetcher,
+      1_800_000_000_000,
+    )
     expect(res.status).toBe(201)
     expect(calls[0]?.url).toBe(target.endpoint)
     const headers = calls[0]?.init.headers as Record<string, string>
-    expect(headers).toMatchObject({ TTL: '86400', Urgency: 'high', Topic: 'a'.repeat(32), 'Content-Encoding': 'aes128gcm' })
+    expect(headers).toMatchObject({
+      TTL: '86400',
+      Urgency: 'high',
+      Topic: 'a'.repeat(32),
+      'Content-Encoding': 'aes128gcm',
+    })
     expect(headers.Authorization).toMatch(/^vapid t=.+, k=/)
     expect((calls[0]?.init.body as Uint8Array).length).toBeGreaterThan(100)
   })
@@ -105,12 +176,26 @@ describe('sendWebPush', () => {
   it('gives up on a push service that does not answer, and says so with its own error', async () => {
     const { keys } = await vapidPair()
     let signal: AbortSignal | undefined
-    const fetcher = ((_url: string, init: RequestInit) => {
+    const fetcher = ((
+      _url: string,
+      init: RequestInit,
+    ) => {
       signal = init.signal as AbortSignal
-      return new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+      return new Promise((_resolve, reject) =>
+        signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))),
+      )
     }) as unknown as typeof fetch
     const target = { endpoint: 'https://push.example.test/send/abc', p256dh: RFC.uaPoint, auth: RFC.uaAuth }
-    await expect(sendWebPush(target, '{"v":1}', keys, { ttl: 60, topic: 'a'.repeat(32), timeoutMs: 20 }, fetcher, 1_800_000_000_000)).rejects.toBeInstanceOf(PushTimeoutError)
+    await expect(
+      sendWebPush(
+        target,
+        '{"v":1}',
+        keys,
+        { ttl: 60, topic: 'a'.repeat(32), timeoutMs: 20 },
+        fetcher,
+        1_800_000_000_000,
+      ),
+    ).rejects.toBeInstanceOf(PushTimeoutError)
     expect(signal?.aborted).toBe(true)
   })
 
@@ -118,9 +203,17 @@ describe('sendWebPush', () => {
     const { keys } = await vapidPair()
     const target = { endpoint: 'https://push.example.test/send/abc', p256dh: RFC.uaPoint, auth: RFC.uaAuth }
     const refused = (() => Promise.reject(new TypeError('offline'))) as unknown as typeof fetch
-    await expect(sendWebPush(target, '{}', keys, { ttl: 60, topic: 't' }, refused, 1_800_000_000_000)).rejects.toThrow('offline')
+    await expect(sendWebPush(target, '{}', keys, { ttl: 60, topic: 't' }, refused, 1_800_000_000_000)).rejects.toThrow(
+      'offline',
+    )
     let seen: AbortSignal | undefined
-    const ok = ((_u: string, init: RequestInit) => ((seen = init.signal as AbortSignal), Promise.resolve(new Response(null, { status: 201 })))) as unknown as typeof fetch
+    const ok = ((
+      _u: string,
+      init: RequestInit,
+    ) => (
+      (seen = init.signal as AbortSignal),
+      Promise.resolve(new Response(null, { status: 201 }))
+    )) as unknown as typeof fetch
     await sendWebPush(target, '{}', keys, { ttl: 60, topic: 't' }, ok, 1_800_000_000_000)
     expect(seen?.aborted).toBe(false)
   })

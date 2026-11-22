@@ -19,7 +19,16 @@ describe('the spread card ahead of its chip', () => {
 
   it('fetches its code a moment after the charts are on the page, so the first tap on its chip finds it loaded', () => {
     const { unmount } = render(
-      <SecondaryCharts scenarios={[]} draft={draftFromDataset(makeDataset(), 0)} monthly={[]} milestones={[]} reached={new Map()} activeId={null} dirty={false} fromToday={null} />,
+      <SecondaryCharts
+        scenarios={[]}
+        draft={draftFromDataset(makeDataset(), 0)}
+        monthly={[]}
+        milestones={[]}
+        reached={new Map()}
+        activeId={null}
+        dirty={false}
+        fromToday={null}
+      />,
     )
     expect(preload).not.toHaveBeenCalled()
     act(() => {
@@ -31,7 +40,16 @@ describe('the spread card ahead of its chip', () => {
 
   it('does not fetch it if the charts go away first', () => {
     const { unmount } = render(
-      <SecondaryCharts scenarios={[]} draft={draftFromDataset(makeDataset(), 0)} monthly={[]} milestones={[]} reached={new Map()} activeId={null} dirty={false} fromToday={null} />,
+      <SecondaryCharts
+        scenarios={[]}
+        draft={draftFromDataset(makeDataset(), 0)}
+        monthly={[]}
+        milestones={[]}
+        reached={new Map()}
+        activeId={null}
+        dirty={false}
+        fromToday={null}
+      />,
     )
     unmount()
     act(() => {

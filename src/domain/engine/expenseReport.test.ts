@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { Flag, Transaction, TransactionAttachment } from '../types'
-import {
-  buildExpenseReport,
-  buildSettledReport,
-  receiptsOnlyReport,
-  reportReceipts,
-} from './expenseReport'
+import { buildExpenseReport, buildSettledReport, receiptsOnlyReport, reportReceipts } from './expenseReport'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
   return { name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true, ...overrides }
 }
 
-function txn(id: number, date: string, overrides: Partial<Transaction> = {}): Transaction {
+function txn(
+  id: number,
+  date: string,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return {
     id,
     date,
@@ -27,7 +26,10 @@ function txn(id: number, date: string, overrides: Partial<Transaction> = {}): Tr
   }
 }
 
-function attachment(id: number, transactionId: number): TransactionAttachment {
+function attachment(
+  id: number,
+  transactionId: number,
+): TransactionAttachment {
   return {
     id,
     transactionId,
@@ -129,10 +131,7 @@ describe('buildExpenseReport', () => {
   it('does not count a credit as an item missing its receipt', () => {
     const report = buildExpenseReport(
       1,
-      [
-        txn(1, '2026-05-02', { flagId: 1 }),
-        txn(2, '2026-06-14', { flagId: 1, amountCents: 10_000, type: 'refund' }),
-      ],
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-06-14', { flagId: 1, amountCents: 10_000, type: 'refund' })],
       [WORK],
       [attachment(1, 1)],
     )
@@ -271,12 +270,7 @@ describe('buildExpenseReport', () => {
   })
 
   it('still builds for an archived flag, so a settled report can be reprinted', () => {
-    const report = buildExpenseReport(
-      1,
-      [txn(1, '2026-05-02', { flagId: 1 })],
-      [flag({ id: 1, active: false })],
-      [],
-    )
+    const report = buildExpenseReport(1, [txn(1, '2026-05-02', { flagId: 1 })], [flag({ id: 1, active: false })], [])
 
     // Archiving is how a claim is marked done, and a done claim is exactly the
     // one an employer asks to see again.
@@ -286,10 +280,7 @@ describe('buildExpenseReport', () => {
   it('excludes cancelled transactions, inheriting the card’s rule', () => {
     const report = buildExpenseReport(
       1,
-      [
-        txn(1, '2026-05-02', { flagId: 1 }),
-        txn(2, '2026-05-04', { flagId: 1, cancelled: true, status: 'cancelled' }),
-      ],
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1, cancelled: true, status: 'cancelled' })],
       [WORK],
       [],
     )
@@ -373,11 +364,7 @@ describe('receiptsOnlyReport', () => {
   it('renumbers the receipts left, so the figures still read 1, 2, 3', () => {
     const report = buildExpenseReport(
       1,
-      [
-        txn(1, '2026-05-02', { flagId: 1 }),
-        txn(2, '2026-05-04', { flagId: 1 }),
-        txn(3, '2026-05-09', { flagId: 1 }),
-      ],
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 }), txn(3, '2026-05-09', { flagId: 1 })],
       [WORK],
       [attachment(10, 1), attachment(11, 3)],
     )
@@ -390,11 +377,7 @@ describe('receiptsOnlyReport', () => {
   it('narrows the period to the lines that are left', () => {
     const report = buildExpenseReport(
       1,
-      [
-        txn(1, '2026-05-02', { flagId: 1 }),
-        txn(2, '2026-05-04', { flagId: 1 }),
-        txn(3, '2026-05-09', { flagId: 1 }),
-      ],
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 }), txn(3, '2026-05-09', { flagId: 1 })],
       [WORK],
       [attachment(10, 2)],
     )

@@ -16,7 +16,10 @@ import { RecordReimbursementSheet, type RecordInput } from './RecordReimbursemen
 
 const WORK = makeFlag({ id: 1, name: 'Work travel' })
 
-function txn(id: number, overrides: Partial<Transaction> = {}): Transaction {
+function txn(
+  id: number,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return makeTransaction({ id, flagId: 1, amountCents: 10_000, ...overrides })
 }
 
@@ -38,7 +41,12 @@ function model(): ExpenseModel {
 }
 
 function renderSheet(g: FlagGroup) {
-  const onRecord = vi.fn<(input: RecordInput, transactionIds: number[]) => void>()
+  const onRecord = vi.fn<
+    (
+      input: RecordInput,
+      transactionIds: number[],
+    ) => void
+  >()
   const onCancel = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -64,9 +72,7 @@ describe('RecordReimbursementSheet', () => {
   it('records only the lines that are ticked', async () => {
     // An employer approving some lines and rejecting others is the case this
     // whole sheet exists for.
-    const { onRecord } = renderSheet(
-      group([txn(1, { description: 'Flight' }), txn(2, { description: 'Hotel' })]),
-    )
+    const { onRecord } = renderSheet(group([txn(1, { description: 'Flight' }), txn(2, { description: 'Hotel' })]))
 
     await userEvent.click(lines()[1]!)
     await userEvent.click(screen.getByRole('button', { name: /^Record / }))
@@ -123,13 +129,7 @@ describe('RecordReimbursementSheet', () => {
     const settled = group([txn(1), txn(2, { type: 'refund' })])
     const { container } = render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <RecordReimbursementSheet
-          group={settled}
-          model={model()}
-          busy={false}
-          onCancel={vi.fn()}
-          onRecord={vi.fn()}
-        />
+        <RecordReimbursementSheet group={settled} model={model()} busy={false} onCancel={vi.fn()} onRecord={vi.fn()} />
       </MoneyFormatProvider>,
     )
 

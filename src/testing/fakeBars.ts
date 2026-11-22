@@ -8,8 +8,10 @@ import { vi } from 'vitest'
  */
 export function installFakeBars(barHeight = 60) {
   return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    return (this.style.visibility === 'hidden'
-      ? { top: 0, bottom: barHeight, height: barHeight }
-      : { top: 0, bottom: 0, height: 0 }) as DOMRect
+    return (
+      this.style.visibility === 'hidden'
+        ? { top: 0, bottom: barHeight, height: barHeight }
+        : { top: 0, bottom: 0, height: 0 }
+    ) as DOMRect
   })
 }

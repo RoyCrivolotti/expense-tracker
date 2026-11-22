@@ -64,7 +64,10 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
   if (statements.length === 0) return null
 
   // A save is tracked per card: one card's save finishing must not unlock another's.
-  const track = (accountId: number, saving: boolean) =>
+  const track = (
+    accountId: number,
+    saving: boolean,
+  ) =>
     setPending((prev) => {
       const next = new Set(prev)
       if (saving) next.add(accountId)
@@ -73,15 +76,14 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
     })
 
   const save = actions?.setStatementPaid
-    ? async (accountId: number, paid: boolean, paidOn?: string) => {
+    ? async (
+        accountId: number,
+        paid: boolean,
+        paidOn?: string,
+      ) => {
         track(accountId, true)
         try {
-          await actions.setStatementPaid(
-            accountId,
-            month,
-            paid,
-            paid ? (paidOn ?? todayLocalIso()) : undefined,
-          )
+          await actions.setStatementPaid(accountId, month, paid, paid ? (paidOn ?? todayLocalIso()) : undefined)
         } finally {
           track(accountId, false)
         }
@@ -118,9 +120,7 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
                 paidOn={s.paidOn}
                 disabled={pending.has(s.id)}
                 {...(actionable ? { onPress: () => setEditingId(s.id) } : {})}
-                {...(actionable && !s.paid && markPaidToday
-                  ? { onMarkPaidToday: () => void markPaidToday(s) }
-                  : {})}
+                {...(actionable && !s.paid && markPaidToday ? { onMarkPaidToday: () => void markPaidToday(s) } : {})}
               />
             )
           })}

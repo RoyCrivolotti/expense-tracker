@@ -8,7 +8,9 @@ describe('parseDeleteTransactionIds', () => {
 
   it('takes numbers as sent and refuses anything that would have to be coerced into an id', () => {
     for (const value of [true, '1', '1e1', ' 7 ', '', null, undefined, {}, [3], NaN, Infinity, 2 ** 53, -3]) {
-      expect(() => parseDeleteTransactionIds([value]), `${typeof value}: ${JSON.stringify(value)}`).toThrow('Invalid transaction id')
+      expect(() => parseDeleteTransactionIds([value]), `${typeof value}: ${JSON.stringify(value)}`).toThrow(
+        'Invalid transaction id',
+      )
     }
     expect(parseDeleteTransactionIds([Number.MAX_SAFE_INTEGER])).toEqual([Number.MAX_SAFE_INTEGER])
   })

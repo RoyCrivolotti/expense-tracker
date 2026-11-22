@@ -8,7 +8,10 @@ import type { Lookup } from '../format'
 
 const payment = makeTransaction({ id: 99, type: 'refund', amountCents: 12_000, date: '2026-06-14' })
 
-function renderLink(editing = makeTransaction({ id: 1 }), lookup: Partial<Lookup> = {}) {
+function renderLink(
+  editing = makeTransaction({ id: 1 }),
+  lookup: Partial<Lookup> = {},
+) {
   const onOpen = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -37,9 +40,7 @@ describe('ReimbursementLink', () => {
       settledBy: () => [makeTransaction({ id: 1 }), makeTransaction({ id: 2, amountCents: 4_000 })],
     })
 
-    expect(screen.getByRole('button', { name: /Reimburses 2 transactions/ })).toHaveTextContent(
-      '238,40 €',
-    )
+    expect(screen.getByRole('button', { name: /Reimburses 2 transactions/ })).toHaveTextContent('238,40 €')
   })
 
   it('names the count in the label, since the button opens only the first', () => {
@@ -48,19 +49,13 @@ describe('ReimbursementLink', () => {
       settledBy: () => [makeTransaction({ id: 1 }), makeTransaction({ id: 2 })],
     })
 
-    expect(
-      screen.getByRole('button', { name: 'Reimburses 2 transactions. Open the first.' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reimburses 2 transactions. Open the first.' })).toBeInTheDocument()
   })
 
   it('shows nothing for a transaction on neither side of a reimbursement', () => {
     const { container } = render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <ReimbursementLink
-          editing={makeTransaction({ id: 1 })}
-          lookup={makeLookup()}
-          onOpen={vi.fn()}
-        />
+        <ReimbursementLink editing={makeTransaction({ id: 1 })} lookup={makeLookup()} onOpen={vi.fn()} />
       </MoneyFormatProvider>,
     )
 

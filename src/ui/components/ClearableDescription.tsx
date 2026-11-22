@@ -23,7 +23,13 @@ export function ClearableDescription({ seed, value, index, onChange, onAccept }:
   const prefilled = Boolean(seed?.recommendationId && seed.description)
   return (
     <div className={styles.wrap} ref={wrap}>
-      <DescriptionCombobox value={value} index={index} placeholder="e.g. Mercadona" onChange={onChange} onAccept={onAccept} />
+      <DescriptionCombobox
+        value={value}
+        index={index}
+        placeholder="e.g. Mercadona"
+        onChange={onChange}
+        onAccept={onAccept}
+      />
       {prefilled && value !== '' ? (
         <button
           type="button"

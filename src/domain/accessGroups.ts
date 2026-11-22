@@ -48,7 +48,10 @@ export function emptyGroupGrants(): GroupGrants {
   }
 }
 
-export function hasGroupGrant(grants: GroupGrants, groupId: AccessGroupId): boolean {
+export function hasGroupGrant(
+  grants: GroupGrants,
+  groupId: AccessGroupId,
+): boolean {
   return grants[groupId]
 }
 

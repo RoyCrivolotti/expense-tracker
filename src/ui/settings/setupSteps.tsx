@@ -35,10 +35,12 @@ const automationStep = (shared: boolean): SetupStepSpec => ({
   title: 'Check the automation is on',
   body: (
     <p>
-      {shared ? 'A shared shortcut may arrive with its automation switched off; that is not tried yet. ' : ''}Open the automation and keep{' '}
-      <b>Automation</b> on, {shared ? RUNS_UNASKED : 'still set to run without asking, as you chose when you made it'}. Turn on <b>Allow Running When Locked</b> (info button, Privacy). Notify was off on the
-      automations that were tried, and whether it matters is not tried yet. The editor can say Automation is turned off while
-      it runs, so trust the automation list and your first real payment.
+      {shared ? 'A shared shortcut may arrive with its automation switched off; that is not tried yet. ' : ''}Open the
+      automation and keep <b>Automation</b> on,{' '}
+      {shared ? RUNS_UNASKED : 'still set to run without asking, as you chose when you made it'}. Turn on{' '}
+      <b>Allow Running When Locked</b> (info button, Privacy). Notify was off on the automations that were tried, and
+      whether it matters is not tried yet. The editor can say Automation is turned off while it runs, so trust the
+      automation list and your first real payment.
     </p>
   ),
 })
@@ -56,7 +58,11 @@ const purchaseStep = (): SetupStepSpec => ({
 })
 
 /** With the shortcut's share link available: add it in Shortcuts, then make the edits it needs by hand. */
-export function fileSteps(setup: Setup, shortcutUrl: string, onByHand: () => void): SetupStepSpec[] {
+export function fileSteps(
+  setup: Setup,
+  shortcutUrl: string,
+  onByHand: () => void,
+): SetupStepSpec[] {
   return [
     keyStep(setup),
     { id: 'add', title: 'Add the shortcut', body: <AddShortcutLink href={shortcutUrl} onByHand={onByHand} /> },

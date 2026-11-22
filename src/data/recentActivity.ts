@@ -10,7 +10,9 @@ export interface RecentActivity {
   added: () => Promise<Transaction[]>
 }
 
-export function recentActivityOf(source: Pick<LedgerPartsSource, 'readTransactionPage' | 'readRecentTransactions'>): RecentActivity {
+export function recentActivityOf(
+  source: Pick<LedgerPartsSource, 'readTransactionPage' | 'readRecentTransactions'>,
+): RecentActivity {
   return {
     latest: () => source.readTransactionPage({}, { limit: RECENT_ACTIVITY_LIMIT }).then((page) => page.items),
     added: () => source.readRecentTransactions({ limit: RECENT_ACTIVITY_LIMIT }).then((part) => part.items),

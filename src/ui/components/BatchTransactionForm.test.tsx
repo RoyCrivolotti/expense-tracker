@@ -11,9 +11,7 @@ import { BatchTransactionForm } from './BatchTransactionForm'
 
 function dataset(): ExpenseDataset {
   return {
-    flags: [
-      { id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true },
-    ],
+    flags: [{ id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }],
     labels: [],
     attachments: [],
     categories: [
@@ -63,7 +61,10 @@ function model(): ExpenseModel {
   }
 }
 
-function renderForm(actions = makeActions(), onClose = vi.fn()) {
+function renderForm(
+  actions = makeActions(),
+  onClose = vi.fn(),
+) {
   const m = model()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -119,7 +120,7 @@ describe('BatchTransactionForm — rendering', () => {
 })
 
 describe('BatchTransactionForm — rows and dates', () => {
-  it('adding a row carries the previous row\'s category, account, and type forward', () => {
+  it("adding a row carries the previous row's category, account, and type forward", () => {
     renderForm()
     // Switch the first row away from every default before adding a second row.
     fireEvent.change(screen.getByDisplayValue('Groceries'), { target: { value: '2' } })
@@ -218,7 +219,7 @@ describe('BatchTransactionForm — save', () => {
     expect(actions.createTransactions).not.toHaveBeenCalled()
   })
 
-  it('clears a row\'s error as soon as it is edited', async () => {
+  it("clears a row's error as soon as it is edited", async () => {
     renderForm()
     fireEvent.change(descriptionInputs()[0]!, { target: { value: 'Broken' } })
     fireEvent.click(screen.getByRole('button', { name: /add 0 transactions/i }))
@@ -290,12 +291,7 @@ describe('BatchTransactionForm — save', () => {
     const onDirtyChange = vi.fn()
     render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <BatchTransactionForm
-          model={model()}
-          actions={makeActions()}
-          onClose={vi.fn()}
-          onDirtyChange={onDirtyChange}
-        />
+        <BatchTransactionForm model={model()} actions={makeActions()} onClose={vi.fn()} onDirtyChange={onDirtyChange} />
       </MoneyFormatProvider>,
     )
     expect(onDirtyChange).toHaveBeenLastCalledWith(false)

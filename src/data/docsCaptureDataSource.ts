@@ -195,12 +195,7 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   // Counted cash through June, taken from the engine's own expectation so the
   // amounts stay consistent with whatever the fixture adds up to, with a small
   // deliberate gap in May, so the drift story has something to show.
-  const cashActuals: CashActual[] = computeCashReconciliation(
-    transactions,
-    dataset.accounts,
-    settings,
-    [],
-  )
+  const cashActuals: CashActual[] = computeCashReconciliation(transactions, dataset.accounts, settings, [])
     .filter((r) => r.month <= '2026-06')
     .map((r) => ({
       yearMonth: r.month,
@@ -285,7 +280,10 @@ async function heldDataset(): Promise<HeldDataset> {
 }
 
 /** Add `labelId` to `labelIds` if it is not already there, without mutating the input. */
-function withLabelAdded(labelIds: number[] | undefined, labelId: number): number[] {
+function withLabelAdded(
+  labelIds: number[] | undefined,
+  labelId: number,
+): number[] {
   const current = labelIds ?? []
   return current.includes(labelId) ? current : [...current, labelId]
 }
@@ -308,7 +306,10 @@ function withAutoLabel(txn: Transaction): Transaction {
  * configuring a flag's auto-label also labels every transaction already carrying
  * that flag, deduped against one it already has some other way.
  */
-function applyAutoLabelToFlagged(flagId: number, labelId: number): void {
+function applyAutoLabelToFlagged(
+  flagId: number,
+  labelId: number,
+): void {
   loaded = loaded.map((t) => {
     if (t.flagId !== flagId) return t
     const labelIds = withLabelAdded(t.labelIds, labelId)
@@ -354,7 +355,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // the caller replaces the row whose id matches what comes back (see
   // patchAfterTransactionUpdate), and a stub's new id matches nothing, so the edit
   // silently no-ops on screen. Merged onto the real row instead, same as the bulk path.
-  updateTransaction(id, patch) {
+  updateTransaction(
+    id,
+    patch,
+  ) {
     const existing = loaded.find((t) => t.id === id)
     const merged = existing
       ? ({ ...existing, ...patch } as Transaction)
@@ -366,7 +370,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // Was missing entirely, so anything routed through the bulk path — the
   // bulk-edit sheet, and recording a reimbursement — threw
   // "not a function" against the capture source.
-  updateTransactions(ids, patch) {
+  updateTransactions(
+    ids,
+    patch,
+  ) {
     const byId = new Map(loaded.map((t) => [t.id, t]))
     const transactions = ids.map((id) => {
       const existing = byId.get(id)
@@ -416,7 +423,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // nothing else), and a stub built from the patch alone came back named
   // "Flag" — this file's own updateTransaction comment describes exactly
   // this failure mode.
-  updateFlag(id, patch) {
+  updateFlag(
+    id,
+    patch,
+  ) {
     const existing = loadedFlags.find((f) => f.id === id)
     const { autoLabelId, ...rest } = patch
     const merged: Flag = existing
@@ -457,7 +467,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // Merged onto the real row, not rebuilt from the patch: a rename sends only
   // { name }, and a stub built from the patch alone silently reset sortOrder
   // to 0 — the same failure mode updateFlag's own comment describes.
-  updateLabel(id, patch) {
+  updateLabel(
+    id,
+    patch,
+  ) {
     const existing = loadedLabels.find((l) => l.id === id)
     const merged: Label = existing
       ? { ...existing, ...patch, id }
@@ -478,14 +491,22 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // Merged onto the real row, same reason as updateTransaction above: a
   // transaction built from labelIds alone would come back having lost its
   // amount, its category, everything else the caller's optimistic patch relies on.
-  setTransactionLabels(transactionId, labelIds) {
+  setTransactionLabels(
+    transactionId,
+    labelIds,
+  ) {
     const existing = loaded.find((t) => t.id === transactionId)
     if (!existing) return Promise.reject(new Error('Transaction not found'))
     const merged: Transaction = { ...existing, labelIds }
     loaded = loaded.map((t) => (t.id === transactionId ? merged : t))
     return Promise.resolve(merged)
   },
-  setStatementPaid(accountId, yearMonth, paid, paidOn) {
+  setStatementPaid(
+    accountId,
+    yearMonth,
+    paid,
+    paidOn,
+  ) {
     const row: AccountStatement = {
       accountId,
       yearMonth,
@@ -494,7 +515,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     }
     return Promise.resolve(row)
   },
-  setCashActual(yearMonth, actualCashCents) {
+  setCashActual(
+    yearMonth,
+    actualCashCents,
+  ) {
     if (actualCashCents === null) return Promise.resolve(null)
     const row: CashActual = { yearMonth, actualCashCents }
     return Promise.resolve(row)
@@ -504,7 +528,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     const row: Category = { ...input, id: nextId, active: input.active ?? true }
     return Promise.resolve(row)
   },
-  updateCategory(id, patch) {
+  updateCategory(
+    id,
+    patch,
+  ) {
     const row: Category = {
       id,
       name: patch.name ?? 'Category',
@@ -524,7 +551,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     const row: Account = { ...input, id: nextId, active: input.active ?? true }
     return Promise.resolve(row)
   },
-  updateAccount(id, patch) {
+  updateAccount(
+    id,
+    patch,
+  ) {
     const row: Account = {
       id,
       name: patch.name ?? 'Account',
@@ -562,7 +592,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // The real API returns the whole row, so the patch is merged onto the stored one: a stub built
   // from the patch alone came back without the plan flag, so saving the plan's start date
   // silently un-chose it.
-  updateScenario(id: number, patch: Partial<NewGoalScenario>) {
+  updateScenario(
+    id: number,
+    patch: Partial<NewGoalScenario>,
+  ) {
     const base = loadedScenarios.find((s) => s.id === id)
     if (!base) return Promise.reject(new Error('Scenario not found'))
     const updated: GoalScenario = { ...base, ...patch, id }
@@ -583,7 +616,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     }
     return Promise.resolve(plan)
   },
-  updateInstallmentPlan(id: number, patch: Partial<NewInstallmentPlan>) {
+  updateInstallmentPlan(
+    id: number,
+    patch: Partial<NewInstallmentPlan>,
+  ) {
     const plan: InstallmentPlan = {
       id,
       description: patch.description ?? 'Plan',
@@ -606,7 +642,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     const account: WealthAccount = { ...input, id: nextId }
     return Promise.resolve(account)
   },
-  updateWealthAccount(id: number, patch: Partial<NewWealthAccount>) {
+  updateWealthAccount(
+    id: number,
+    patch: Partial<NewWealthAccount>,
+  ) {
     const account: WealthAccount = {
       id,
       name: patch.name ?? 'Account',
@@ -618,7 +657,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   // Like the API, an account the seeded check-ins refer to is archived and any other is removed.
   deleteWealthAccount(id: number) {
-    return Promise.resolve({ archived: docsCaptureWealthCheckins().some((c) => c.entries.some((e) => e.accountId === id)) })
+    return Promise.resolve({
+      archived: docsCaptureWealthCheckins().some((c) => c.entries.some((e) => e.accountId === id)),
+    })
   },
   createWealthCheckin(input: NewWealthCheckin) {
     nextId += 1
@@ -631,7 +672,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     }
     return Promise.resolve(checkin)
   },
-  updateWealthCheckin(id: number, patch: Partial<NewWealthCheckin>) {
+  updateWealthCheckin(
+    id: number,
+    patch: Partial<NewWealthCheckin>,
+  ) {
     const checkin: WealthCheckin = {
       id,
       checkinDate: patch.checkinDate ?? new Date().toISOString().slice(0, 10),

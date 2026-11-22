@@ -6,11 +6,7 @@ export function OnboardingProgress({ step }: { step: number }) {
   return (
     <div className={styles.progress} aria-label={`Step ${step + 1} of ${STEP_LABELS.length}`}>
       {STEP_LABELS.map((label, index) => (
-        <span
-          key={label}
-          className={index <= step ? styles.progressDotActive : styles.progressDot}
-          aria-hidden
-        />
+        <span key={label} className={index <= step ? styles.progressDotActive : styles.progressDot} aria-hidden />
       ))}
       <span className={styles.progressLabel}>
         Step {step + 1} of {STEP_LABELS.length}
@@ -41,12 +37,7 @@ export function OnboardingNav({
       ) : (
         <span />
       )}
-      <button
-        type="button"
-        className={styles.primaryBtn}
-        onClick={onNext}
-        disabled={nextDisabled || busy}
-      >
+      <button type="button" className={styles.primaryBtn} onClick={onNext} disabled={nextDisabled || busy}>
         {busy ? 'Saving…' : nextLabel}
       </button>
     </div>

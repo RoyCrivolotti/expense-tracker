@@ -17,7 +17,10 @@ export function MilestoneReadout({
   more?: string
 }) {
   return (
-    <p className={text ? styles.matrixReadout : `${styles.matrixReadout} ${styles.matrixReadoutEmpty}`} aria-live="polite">
+    <p
+      className={text ? styles.matrixReadout : `${styles.matrixReadout} ${styles.matrixReadoutEmpty}`}
+      aria-live="polite"
+    >
       {text ?? `${touch ? 'Tap' : 'Point at or focus'} ${what} to read it as a sentence.${more}`}
     </p>
   )

@@ -25,12 +25,18 @@ const MIN_ALL_MONTHS = 3
 const DAYS_PER_MONTH = 365.25 / 12
 
 /** Months from one date to another, counted in days, so the day of a check-in places it. */
-export function monthsBetweenDates(from: string, to: string): number {
+export function monthsBetweenDates(
+  from: string,
+  to: string,
+): number {
   return (utcDateMs(to) - utcDateMs(from)) / DAY_MS / DAYS_PER_MONTH
 }
 
 /** The smallest window that reaches back to the earliest check-in, with a month to spare. */
-export function defaultHistoryWindow(earliestDate: string | null, today: string): HistoryWindowKey {
+export function defaultHistoryWindow(
+  earliestDate: string | null,
+  today: string,
+): HistoryWindowKey {
   if (!earliestDate) return '3m'
   const wanted = monthsBetweenDates(earliestDate, today) + 1
   return HISTORY_WINDOWS.find((o) => o.months != null && o.months >= wanted)?.value ?? 'all'
@@ -57,8 +63,7 @@ export function historyAxis(
   maxLabels = 5,
 ): HistoryAxis {
   const fixed = HISTORY_WINDOWS.find((o) => o.value === window)?.months ?? null
-  const months =
-    fixed ?? Math.max(MIN_ALL_MONTHS, Math.ceil(monthsBetweenDates(earliestDate ?? today, today)) + 1)
+  const months = fixed ?? Math.max(MIN_ALL_MONTHS, Math.ceil(monthsBetweenDates(earliestDate ?? today, today)) + 1)
   const stepMonths = stepMonthsFor(months / 12)
   const steps = Math.ceil(months / stepMonths)
   const todayMonth = today.slice(0, 7)
@@ -73,6 +78,10 @@ export function historyAxis(
 }
 
 /** Where a date falls on the axis: `steps` is today, and each step back is `stepMonths`. */
-export function xIndexFor(date: string, today: string, axis: HistoryAxis): number {
+export function xIndexFor(
+  date: string,
+  today: string,
+  axis: HistoryAxis,
+): number {
   return axis.steps - monthsBetweenDates(date, today) / axis.stepMonths
 }

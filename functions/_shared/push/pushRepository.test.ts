@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { MAX_PUSH_DEVICES, type NewPushSubscription, type PushRepository } from '../../../src/domain/ports/pushRepository'
+import {
+  MAX_PUSH_DEVICES,
+  type NewPushSubscription,
+  type PushRepository,
+} from '../../../src/domain/ports/pushRepository'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { createD1PushRepository } from '../adapters/d1PushRepository'
 
@@ -28,7 +32,9 @@ describe('a device’s subscription', () => {
   it('is stored once per endpoint: saving it again keeps the id and takes the new label and keys', async () => {
     expect(await repo.saveSubscription(sub())).toBe('id-1')
     expect(await repo.saveSubscription(sub({ id: 'id-2', label: 'My iPhone', auth: 'b'.repeat(22) }))).toBe('id-1')
-    expect(await repo.listDevices(ALICE)).toEqual([{ id: 'id-1', label: 'My iPhone', createdAt: T0, lastSentAt: null, lastStatus: null }])
+    expect(await repo.listDevices(ALICE)).toEqual([
+      { id: 'id-1', label: 'My iPhone', createdAt: T0, lastSentAt: null, lastStatus: null },
+    ])
   })
 
   it('moves to whoever is signed in on the device', async () => {
@@ -40,11 +46,17 @@ describe('a device’s subscription', () => {
 
   it('is capped per person inside the insert, and a refresh never counts against the cap', async () => {
     for (let i = 0; i < MAX_PUSH_DEVICES; i++) {
-      expect(await repo.saveSubscription(sub({ id: `id-${i}`, endpoint: `https://web.push.apple.com/${i}` }))).toBe(`id-${i}`)
+      expect(await repo.saveSubscription(sub({ id: `id-${i}`, endpoint: `https://web.push.apple.com/${i}` }))).toBe(
+        `id-${i}`,
+      )
     }
     expect(await repo.saveSubscription(sub({ id: 'id-x', endpoint: 'https://web.push.apple.com/x' }))).toBeNull()
-    expect(await repo.saveSubscription(sub({ id: 'id-y', endpoint: 'https://web.push.apple.com/3', label: 'Again' }))).toBe('id-3')
-    expect(await repo.saveSubscription(sub({ id: 'id-b', owner: BOB, endpoint: 'https://web.push.apple.com/b' }))).toBe('id-b')
+    expect(
+      await repo.saveSubscription(sub({ id: 'id-y', endpoint: 'https://web.push.apple.com/3', label: 'Again' })),
+    ).toBe('id-3')
+    expect(await repo.saveSubscription(sub({ id: 'id-b', owner: BOB, endpoint: 'https://web.push.apple.com/b' }))).toBe(
+      'id-b',
+    )
     expect(await repo.listDevices(ALICE)).toHaveLength(MAX_PUSH_DEVICES)
   })
 
@@ -57,20 +69,33 @@ describe('a device’s subscription', () => {
   })
 
   it('lists newest first', async () => {
-    await repo.saveSubscription(sub({ id: 'old', endpoint: 'https://web.push.apple.com/old', createdAt: '2026-11-01T00:00:00.000Z' }))
-    await repo.saveSubscription(sub({ id: 'new', endpoint: 'https://web.push.apple.com/new', createdAt: '2026-11-02T00:00:00.000Z' }))
+    await repo.saveSubscription(
+      sub({ id: 'old', endpoint: 'https://web.push.apple.com/old', createdAt: '2026-11-01T00:00:00.000Z' }),
+    )
+    await repo.saveSubscription(
+      sub({ id: 'new', endpoint: 'https://web.push.apple.com/new', createdAt: '2026-11-02T00:00:00.000Z' }),
+    )
     expect((await repo.listDevices(ALICE)).map((d) => d.id)).toEqual(['new', 'old'])
   })
 })
 
 describe('what a send needs', () => {
   it('lists the person’s own devices with their keys, oldest first', async () => {
-    await repo.saveSubscription(sub({ id: 'b', endpoint: 'https://web.push.apple.com/b', createdAt: '2026-11-02T00:00:00.000Z' }))
-    await repo.saveSubscription(sub({ id: 'a', endpoint: 'https://web.push.apple.com/a', createdAt: '2026-11-01T00:00:00.000Z' }))
+    await repo.saveSubscription(
+      sub({ id: 'b', endpoint: 'https://web.push.apple.com/b', createdAt: '2026-11-02T00:00:00.000Z' }),
+    )
+    await repo.saveSubscription(
+      sub({ id: 'a', endpoint: 'https://web.push.apple.com/a', createdAt: '2026-11-01T00:00:00.000Z' }),
+    )
     await repo.saveSubscription(sub({ id: 'c', owner: BOB, endpoint: 'https://web.push.apple.com/c' }))
     const targets = await repo.listTargets(ALICE)
     expect(targets.map((t) => t.id)).toEqual(['a', 'b'])
-    expect(targets[0]).toEqual({ id: 'a', endpoint: 'https://web.push.apple.com/a', p256dh: sub().p256dh, auth: sub().auth })
+    expect(targets[0]).toEqual({
+      id: 'a',
+      endpoint: 'https://web.push.apple.com/a',
+      p256dh: sub().p256dh,
+      auth: sub().auth,
+    })
   })
 
   it('notes the push service’s answer on the person’s own device only', async () => {
@@ -123,4 +148,3 @@ describe('the summary cron’s reads and its claim', () => {
     expect(await repo.claimSummary(BOB, null, T0)).toBe(false)
   })
 })
-

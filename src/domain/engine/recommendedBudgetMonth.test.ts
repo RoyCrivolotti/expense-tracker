@@ -9,9 +9,17 @@ const accounts: Account[] = [
   { id: 3, name: 'Santander', kind: 'credit', settlement: 'deferred', active: true },
 ]
 
-const paid = (accountId: number, yearMonth: string): AccountStatement => ({ accountId, yearMonth, paid: true })
+const paid = (
+  accountId: number,
+  yearMonth: string,
+): AccountStatement => ({ accountId, yearMonth, paid: true })
 
-function txn(id: number, accountId: number, budgetMonth: string, extra: Partial<Transaction> = {}): Transaction {
+function txn(
+  id: number,
+  accountId: number,
+  budgetMonth: string,
+  extra: Partial<Transaction> = {},
+): Transaction {
   return makeTransaction({ id, accountId, budgetMonth, date: `${budgetMonth}-10`, ...extra })
 }
 

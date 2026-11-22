@@ -37,7 +37,10 @@ const TAG_MIN_WIDTH = 54
 const CHAR_WIDTH = 6.7
 const TAG_PADDING = 18
 
-export function tagWidth(text: string, dots = 1): number {
+export function tagWidth(
+  text: string,
+  dots = 1,
+): number {
   const textWidth = Math.max(TAG_MIN_WIDTH, Math.round(text.length * CHAR_WIDTH + TAG_PADDING))
   return dots > 1 ? textWidth + dots * DOT_ROOM : textWidth
 }
@@ -69,7 +72,12 @@ interface Block {
 }
 
 /** Where the first tag of a block of `n` sits: the block centred on what it was asked for, kept inside the plot. */
-function blockStart(block: Block, pitch: number, min: number, max: number): number {
+function blockStart(
+  block: Block,
+  pitch: number,
+  min: number,
+  max: number,
+): number {
   const n = block.ids.length
   const span = (n - 1) * pitch
   const centred = block.sum / n - span / 2
@@ -82,7 +90,12 @@ function blockStart(block: Block, pitch: number, min: number, max: number): numb
  * are moved together as a block centred on where they were asked for, so no tag is pushed far
  * from its own line while others stay put.
  */
-export function spreadTags(asked: number[], pitch: number, min: number, max: number): number[] {
+export function spreadTags(
+  asked: number[],
+  pitch: number,
+  min: number,
+  max: number,
+): number[] {
   const order = asked.map((_, i) => i).sort((a, b) => asked[a]! - asked[b]!)
   let blocks: Block[] = order.map((i) => ({ ids: [i], sum: asked[i]! }))
   let merged = true
@@ -93,7 +106,11 @@ export function spreadTags(asked: number[], pitch: number, min: number, max: num
       const next = blocks[k]!
       const prevLast = blockStart(prev, pitch, min, max) + (prev.ids.length - 1) * pitch
       if (prevLast + pitch > blockStart(next, pitch, min, max) + 0.001) {
-        blocks = [...blocks.slice(0, k - 1), { ids: [...prev.ids, ...next.ids], sum: prev.sum + next.sum }, ...blocks.slice(k + 1)]
+        blocks = [
+          ...blocks.slice(0, k - 1),
+          { ids: [...prev.ids, ...next.ids], sum: prev.sum + next.sum },
+          ...blocks.slice(k + 1),
+        ]
         merged = true
         break
       }
@@ -143,13 +160,29 @@ export function buildTags(
     const value = valueAtPlace(line, active)
     // A line that has ended, or not started, has no point at this year, and so no tag.
     if (value === undefined) continue
-    tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false, dotted: false })
+    tags.push({
+      id: line.id,
+      color: line.color,
+      colors: [line.color],
+      y: scaleY(value),
+      text: spec.format(value),
+      band: false,
+      dotted: false,
+    })
   }
   for (const line of pointLines) {
     // The line starts at the latest check-in and has no value before it, so no tag there.
     const value = pointSeriesValueAt(line.points, active)
     if (value === null) continue
-    tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false, dotted: true })
+    tags.push({
+      id: line.id,
+      color: line.color,
+      colors: [line.color],
+      y: scaleY(value),
+      text: spec.format(value),
+      band: false,
+      dotted: true,
+    })
   }
   const labels = spec.bandLabels
   if (labels) {
@@ -158,8 +191,24 @@ export function buildTags(
       const lo = edges ? valueAtPlace({ values: edges.lo, preStep: edges.loPre, xs: band.xs }, active) : undefined
       const hi = edges ? valueAtPlace({ values: edges.hi, preStep: edges.hiPre, xs: band.xs }, active) : undefined
       if (lo === undefined || hi === undefined) continue
-      tags.push({ id: `band-hi-${k}`, color: band.color, colors: [band.color], y: scaleY(hi), text: `${labels.hi} · ${spec.format(hi)}`, band: true, dotted: false })
-      tags.push({ id: `band-lo-${k}`, color: band.color, colors: [band.color], y: scaleY(lo), text: `${labels.lo} · ${spec.format(lo)}`, band: true, dotted: false })
+      tags.push({
+        id: `band-hi-${k}`,
+        color: band.color,
+        colors: [band.color],
+        y: scaleY(hi),
+        text: `${labels.hi} · ${spec.format(hi)}`,
+        band: true,
+        dotted: false,
+      })
+      tags.push({
+        id: `band-lo-${k}`,
+        color: band.color,
+        colors: [band.color],
+        y: scaleY(lo),
+        text: `${labels.lo} · ${spec.format(lo)}`,
+        band: true,
+        dotted: false,
+      })
     }
   }
   return mergeEqual(tags)
@@ -176,11 +225,22 @@ export interface PlacedTag {
  * Where each tag is drawn: beside the dots on their right, or on their left where the right has
  * no room (the last years of the plan). `x` is the tag's left edge.
  */
-export function placeTags(tags: ValueTag[], focusX: number, chartWidth: number, yTop: number, yBottom: number): PlacedTag[] {
+export function placeTags(
+  tags: ValueTag[],
+  focusX: number,
+  chartWidth: number,
+  yTop: number,
+  yBottom: number,
+): PlacedTag[] {
   const widths = tags.map((t) => tagWidth(t.text, t.colors.length))
   const widest = Math.max(0, ...widths)
   const onLeft = focusX + TAG_OFFSET + widest > chartWidth - 2
-  const ys = spreadTags(tags.map((t) => t.y), TAG_PITCH, yTop + TAG_HEIGHT / 2, yBottom - TAG_HEIGHT / 2)
+  const ys = spreadTags(
+    tags.map((t) => t.y),
+    TAG_PITCH,
+    yTop + TAG_HEIGHT / 2,
+    yBottom - TAG_HEIGHT / 2,
+  )
   return tags.map((tag, i) => {
     const width = widths[i]!
     return { tag, x: onLeft ? focusX - TAG_OFFSET - width : focusX + TAG_OFFSET, y: ys[i]!, width }

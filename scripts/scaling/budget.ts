@@ -46,8 +46,7 @@ export type IndexShape = Pick<
 export function partialIndexHits(row: IndexShape): number {
   const plan = row.planId != null
   const settled = row.settledBy != null
-  const pinned =
-    row.type === 'investment' || plan || row.flagId != null || settled || (row.reportCount ?? 0) > 0
+  const pinned = row.type === 'investment' || plan || row.flagId != null || settled || (row.reportCount ?? 0) > 0
   const hits = [plan && row.installmentIndex != null, plan, row.flagId != null, settled, pinned]
   return hits.filter(Boolean).length
 }

@@ -27,10 +27,16 @@ const MONTHS = 120
 const SIZES = (process.env.SCALING_ROWS ?? '5000,20000,50000,100000,250000').split(',').map(Number)
 const ROW_COUNTS = [500, 1_000, 2_000, 3_000, 5_000, 8_000, 10_000]
 
-const fixed = (n: number, digits = 1): number => Number(n.toFixed(digits))
+const fixed = (
+  n: number,
+  digits = 1,
+): number => Number(n.toFixed(digits))
 
 /** Fastest of a few runs, in ms, so one slow GC pause does not stand for the cost. */
-async function best<T>(fn: () => Promise<T>, runs = 5): Promise<{ ms: number; value: T }> {
+async function best<T>(
+  fn: () => Promise<T>,
+  runs = 5,
+): Promise<{ ms: number; value: T }> {
   let value = await fn()
   let ms = Infinity
   for (let i = 0; i < runs; i += 1) {
@@ -56,7 +62,10 @@ function database(rows: number) {
 }
 
 /** Time spent in JavaScript for one call: wall time less what SQLite itself took. */
-async function jsTime<T>(stats: ReturnType<typeof newStats>, fn: () => Promise<T>): Promise<{ jsMs: number; value: T }> {
+async function jsTime<T>(
+  stats: ReturnType<typeof newStats>,
+  fn: () => Promise<T>,
+): Promise<{ jsMs: number; value: T }> {
   const sqliteBefore = stats.sqliteMs
   const start = performance.now()
   const value = await fn()
@@ -92,8 +101,15 @@ function viaObjects(rows: Row[]): Transaction[] {
 function direct(rows: Row[]): Transaction[] {
   return rows.map((r) => {
     const t: Transaction = {
-      id: r.id, date: r.date, budgetMonth: r.budget_month, description: r.description, accountId: r.account_id,
-      categoryId: r.category_id, type: r.type, amountCents: r.amount_cents, cancelled: r.cancelled === 1,
+      id: r.id,
+      date: r.date,
+      budgetMonth: r.budget_month,
+      description: r.description,
+      accountId: r.account_id,
+      categoryId: r.category_id,
+      type: r.type,
+      amountCents: r.amount_cents,
+      cancelled: r.cancelled === 1,
       status: 'posted',
       labelIds: r.label_ids === '[]' ? [] : (JSON.parse(r.label_ids) as number[]).sort((a, b) => a - b),
     }
@@ -113,9 +129,16 @@ function direct(rows: Row[]): Transaction[] {
 function fromTuples(rows: unknown[][]): Transaction[] {
   return rows.map((r) => {
     const t: Transaction = {
-      id: r[0] as number, date: r[1] as string, budgetMonth: r[2] as string, description: r[3] as string,
-      accountId: r[4] as number, categoryId: r[5] as number, type: r[6] as Transaction['type'],
-      amountCents: r[7] as number, cancelled: r[8] === 1, status: 'posted',
+      id: r[0] as number,
+      date: r[1] as string,
+      budgetMonth: r[2] as string,
+      description: r[3] as string,
+      accountId: r[4] as number,
+      categoryId: r[5] as number,
+      type: r[6] as Transaction['type'],
+      amountCents: r[7] as number,
+      cancelled: r[8] === 1,
+      status: 'posted',
       labelIds: r[17] === '[]' ? [] : (JSON.parse(r[17] as string) as number[]).sort((a, b) => a - b),
     }
     if (r[9]) t.notes = r[9] as string
@@ -135,16 +158,20 @@ function fromTuples(rows: unknown[][]): Transaction[] {
  * workerd hands a Worker plain objects and arrays parsed from JSON. So the rows are copied through JSON
  * first, and only the mapping and the stringify are timed.
  */
-async function measureRows(env: Env, count: number): Promise<Record<string, number>> {
+async function measureRows(
+  env: Env,
+  count: number,
+): Promise<Record<string, number>> {
   const { sql, params } = monthRowsSql(OWNER, { from: '2000-01', to: '2099-12' }, count)
   const statement = () => env.DB.prepare(sql).bind(...params.slice(0, -1), count)
   const asObjects = JSON.parse(JSON.stringify((await statement().all<Row>()).results)) as Row[]
   const asTuples = JSON.parse(JSON.stringify(await statement().raw())) as unknown[][]
-  const time = async (map: () => Transaction[]) => best(async () => {
-    const start = performance.now()
-    JSON.stringify(map())
-    return performance.now() - start
-  })
+  const time = async (map: () => Transaction[]) =>
+    best(async () => {
+      const start = performance.now()
+      JSON.stringify(map())
+      return performance.now() - start
+    })
   const objects = await time(() => viaObjects(asObjects))
   const built = await time(() => direct(asObjects))
   const tuples = await time(() => fromTuples(asTuples))
@@ -159,14 +186,20 @@ async function measureRows(env: Env, count: number): Promise<Record<string, numb
   }
 }
 
-async function measureCube(repo: ReturnType<typeof createD1ExpenseRepository>, stats: ReturnType<typeof newStats>, months: number) {
+async function measureCube(
+  repo: ReturnType<typeof createD1ExpenseRepository>,
+  stats: ReturnType<typeof newStats>,
+  months: number,
+) {
   const to = '2026-09'
   const [y, m] = to.split('-').map(Number) as [number, number]
   const index = y * 12 + (m - 1) - (months - 1)
   const from = `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
   const range = { from, to }
   await repo.readMonthCells(OWNER, range, 1_000_000)
-  const run = await best(() => jsTime(stats, async () => JSON.stringify(await repo.readMonthCells(OWNER, range, 1_000_000))))
+  const run = await best(() =>
+    jsTime(stats, async () => JSON.stringify(await repo.readMonthCells(OWNER, range, 1_000_000))),
+  )
   const cells = (await repo.readMonthCells(OWNER, range, 1_000_000)) ?? []
   const sqlite = await best(async () => {
     const before = stats.sqliteMs

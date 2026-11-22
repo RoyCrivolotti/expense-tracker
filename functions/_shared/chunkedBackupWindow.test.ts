@@ -22,7 +22,12 @@ const RUNS_IN_WINDOW = 24
  */
 const SPARE_RUNS = 4
 
-const policy = { retentionDays: 14, maxBucketBytes: 512 * 1024 * 1024, maxSnapshotBytes: 100 * 1024 * 1024, bucketAlertThresholdFraction: 0.8 }
+const policy = {
+  retentionDays: 14,
+  maxBucketBytes: 512 * 1024 * 1024,
+  maxSnapshotBytes: 100 * 1024 * 1024,
+  bucketAlertThresholdFraction: 0.8,
+}
 const alerts = {
   onLargeSnapshot: () => Promise.resolve(),
   onBucketNearLimit: () => Promise.resolve(),
@@ -48,7 +53,7 @@ describe('a ledger of 50,000 transactions, backed up with the default settings',
 
     let runs = 0
     let mostCalls = 0
-    for (let complete = false; !complete && runs < 100; ) {
+    for (let complete = false; !complete && runs < 100;) {
       runs += 1
       const before = kit.statements.length + store.total()
       complete = (await runChunkedBackups(deps, () => new Date('2026-10-15T04:00:00Z'))).complete

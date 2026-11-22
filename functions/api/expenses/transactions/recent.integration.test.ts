@@ -26,16 +26,40 @@ async function ledger() {
   seedDataset(sqlite, OTHER, shifted(syntheticLedger({ months: 3, perMonth: 10, seed: 6 }), 1_000_000))
   const world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
   // Saved one after another, newest dates first, oldest last, so the last rows saved are the oldest by date.
-  const dates = ['2026-06-20', '2026-05-02', '2025-11-30', '2026-06-21', '2024-01-15', '2026-02-10', '2025-07-04', '2026-06-19', '2023-03-03', '2026-04-04', '2026-06-22', '2022-12-24']
+  const dates = [
+    '2026-06-20',
+    '2026-05-02',
+    '2025-11-30',
+    '2026-06-21',
+    '2024-01-15',
+    '2026-02-10',
+    '2025-07-04',
+    '2026-06-19',
+    '2023-03-03',
+    '2026-04-04',
+    '2026-06-22',
+    '2022-12-24',
+  ]
   for (const [i, date] of dates.entries()) {
-    const body = { date, budgetMonth: date.slice(0, 7), description: `Saved ${i}`, accountId: CHECKING, categoryId: CAT.other, type: 'expense', amountCents: 100 + i, cancelled: false }
+    const body = {
+      date,
+      budgetMonth: date.slice(0, 7),
+      description: `Saved ${i}`,
+      accountId: CHECKING,
+      categoryId: CAT.other,
+      type: 'expense',
+      amountCents: 100 + i,
+      cancelled: false,
+    }
     expect((await world.call(createTransaction, { method: 'POST', body })).status).toBe(201)
   }
   return world
 }
 
-const get = async (world: Awaited<ReturnType<typeof ledger>>, search = '') =>
-  world.call(getRecent, { path: `/transactions/recent${search}` })
+const get = async (
+  world: Awaited<ReturnType<typeof ledger>>,
+  search = '',
+) => world.call(getRecent, { path: `/transactions/recent${search}` })
 
 describe('GET /transactions/recent', () => {
   it('answers the eight rows saved last, whatever their date, as the dataset carries them', async () => {
@@ -53,7 +77,9 @@ describe('GET /transactions/recent', () => {
   it('is a different list from the newest by date, which the list route gives with a limit of eight', async () => {
     const world = await ledger()
     const dataset = (await (await world.call(getDataset)).json()) as ExpenseDataset
-    const page = (await (await world.call(getList, { path: '/transactions/list?limit=8' })).json()) as { items: Transaction[] }
+    const page = (await (await world.call(getList, { path: '/transactions/list?limit=8' })).json()) as {
+      items: Transaction[]
+    }
     expect(page.items.map((t) => t.id)).toEqual(latestTransactions(dataset.transactions).map((t) => t.id))
     const { items } = (await (await get(world)).json()) as { items: Transaction[] }
     expect(items.map((t) => t.id)).not.toEqual(page.items.map((t) => t.id))
@@ -73,7 +99,9 @@ describe('GET /transactions/recent', () => {
     const response = await get(world, '?limit=50')
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     const { items } = (await response.json()) as { items: Transaction[] }
-    const mine = new Set(((await (await world.call(getDataset)).json()) as ExpenseDataset).transactions.map((t) => t.id))
+    const mine = new Set(
+      ((await (await world.call(getDataset)).json()) as ExpenseDataset).transactions.map((t) => t.id),
+    )
     expect(items.length).toBe(50)
     expect(items.every((t) => mine.has(t.id))).toBe(true)
   })

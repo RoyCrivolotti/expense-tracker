@@ -15,14 +15,20 @@ const milestones = [
   { amountCents: 10_000_000, label: '' },
   { amountCents: 100_000_000, label: '' },
 ]
-const show = (over = {}, props: Partial<Parameters<typeof SpreadChart>[0]> = {}) =>
-  render(<SpreadChart draft={draftOf(over)} milestones={milestones} runs={400} {...props} />)
+const show = (
+  over = {},
+  props: Partial<Parameters<typeof SpreadChart>[0]> = {},
+) => render(<SpreadChart draft={draftOf(over)} milestones={milestones} runs={400} {...props} />)
 
 describe('SpreadChart', () => {
-  it('says where the middle run and the two tenths end against the plan\'s line, and what the euros are', () => {
+  it("says where the middle run and the two tenths end against the plan's line, and what the euros are", () => {
     show()
     expect(screen.getByRole('heading', { name: 'How far luck could move the plan' })).toBeInTheDocument()
-    expect(screen.getByText(/In year 30, in 2026 euros, the middle run ends at .*, the plan at .*, the luckiest tenth of runs above .* and the unluckiest tenth below/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /In year 30, in 2026 euros, the middle run ends at .*, the plan at .*, the luckiest tenth of runs above .* and the unluckiest tenth below/,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('opens by saying what a run is', () => {
@@ -41,10 +47,12 @@ describe('SpreadChart', () => {
     show()
     expect(screen.getByText(/Each of the 400 runs replays your plan in a different market/)).toBeInTheDocument()
     expect(screen.getByText(/the typical 5,0% a year times a luck factor with a bounce of 15,0%/)).toBeInTheDocument()
-    expect(screen.getByText(/Only the market changes: the saving, the house, the events and the inflation are as planned/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Only the market changes: the saving, the house, the events and the inflation are as planned/),
+    ).toBeInTheDocument()
   })
 
-  it('uses the owner\'s market bounce, not a fixed one', () => {
+  it("uses the owner's market bounce, not a fixed one", () => {
     render(
       <MarketVolatilityContext.Provider value={0.11}>
         <SpreadChart draft={draftOf()} milestones={milestones} runs={400} />
@@ -116,7 +124,8 @@ describe('SpreadChart', () => {
     fireEvent.keyDown(svg, { key: 'End' })
     const tip = screen.getByRole('tooltip')
     expect(tip).toHaveTextContent('Year 30 (2056)')
-    for (const label of ['Luckiest tenth above', 'Middle run', 'The plan', 'Unluckiest tenth below']) expect(tip).toHaveTextContent(label)
+    for (const label of ['Luckiest tenth above', 'Middle run', 'The plan', 'Unluckiest tenth below'])
+      expect(tip).toHaveTextContent(label)
     expect(tip.querySelectorAll('[class*="tooltipSwatch"]')).toHaveLength(4)
   })
 

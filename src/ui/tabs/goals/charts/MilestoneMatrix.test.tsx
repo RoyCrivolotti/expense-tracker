@@ -35,8 +35,20 @@ describe('MilestoneMatrix', () => {
   })
 
   it('names a milestone that is not reached by the horizon it was searched to, not by a flat 40+', () => {
-    const short = makeScenario({ id: 1, name: 'Short', horizonYears: 12, startInvestedCents: 0, monthlyContributionCents: 10_000 })
-    const long = makeScenario({ id: 2, name: 'Long', horizonYears: 45, startInvestedCents: 0, monthlyContributionCents: 10_000 })
+    const short = makeScenario({
+      id: 1,
+      name: 'Short',
+      horizonYears: 12,
+      startInvestedCents: 0,
+      monthlyContributionCents: 10_000,
+    })
+    const long = makeScenario({
+      id: 2,
+      name: 'Long',
+      horizonYears: 45,
+      startInvestedCents: 0,
+      monthlyContributionCents: 10_000,
+    })
     const milestones = [{ amountCents: 1_000_000_00, label: '' }]
 
     render(<MilestoneMatrix scenarios={[short, long]} draft={draft} milestones={milestones} reached={noneReached} />)
@@ -52,7 +64,14 @@ describe('MilestoneMatrix', () => {
     const copy = makeScenario({ id: 2, name: 'Path A: Invest only (copy)' })
     const other = makeScenario({ id: 3, name: 'Path B: House now' })
 
-    render(<MilestoneMatrix scenarios={[original, copy, other]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
+    render(
+      <MilestoneMatrix
+        scenarios={[original, copy, other]}
+        draft={draft}
+        milestones={defaultMilestones()}
+        reached={noneReached}
+      />,
+    )
 
     expect(screen.getByText('Path A: Invest only')).toBeInTheDocument()
     expect(screen.getByText('Path A: Invest only (copy)')).toBeInTheDocument()
@@ -81,14 +100,7 @@ describe('MilestoneMatrix', () => {
   })
 
   it('renders one column header per milestone', () => {
-    render(
-      <MilestoneMatrix
-        scenarios={[draft]}
-        draft={draft}
-        milestones={defaultMilestones()}
-        reached={noneReached}
-      />,
-    )
+    render(<MilestoneMatrix scenarios={[draft]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
     // One header per milestone, plus the leading "Scenario" column.
     expect(screen.getAllByRole('columnheader')).toHaveLength(defaultMilestones().length + 1)
   })
@@ -137,9 +149,7 @@ describe('MilestoneMatrix', () => {
   })
 
   it('shows an empty state instead of the table when there are no milestones', () => {
-    render(
-      <MilestoneMatrix scenarios={[draft]} draft={draft} milestones={[]} reached={noneReached} />,
-    )
+    render(<MilestoneMatrix scenarios={[draft]} draft={draft} milestones={[]} reached={noneReached} />)
     expect(screen.getByText('No milestones set.')).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
   })
@@ -184,7 +194,10 @@ describe('MilestoneMatrix', () => {
         fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
-    const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('th[scope="row"]')?.textContent)
+    const names = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((r) => r.querySelector('th[scope="row"]')?.textContent)
     expect(names).toEqual(['Scenario', 'Aggressive', 'Aggressive, from today', 'Scenario (editing)'])
     expect(screen.getByText(/is the plan started again from your latest check-in/)).toBeInTheDocument()
   })
@@ -215,20 +228,11 @@ describe('MilestoneMatrix', () => {
       />,
     )
     expect(screen.getAllByText(/'26/)).toHaveLength(1)
-    expect(
-      screen.getByRole('columnheader', { name: /Future one/ }).getAttribute('title'),
-    ).not.toContain('reached')
+    expect(screen.getByRole('columnheader', { name: /Future one/ }).getAttribute('title')).not.toContain('reached')
   })
 
   it('points at where the list is edited', () => {
-    render(
-      <MilestoneMatrix
-        scenarios={[draft]}
-        draft={draft}
-        milestones={defaultMilestones()}
-        reached={noneReached}
-      />,
-    )
+    render(<MilestoneMatrix scenarios={[draft]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
     expect(screen.getByText(/Edit the list in Assumptions/)).toBeTruthy()
   })
 })

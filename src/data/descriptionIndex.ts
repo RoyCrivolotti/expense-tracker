@@ -23,19 +23,28 @@ export interface IndexedMatch extends DescriptionMatch {
 }
 
 export interface DescriptionIndex {
-  search(text: string, limit?: number): DescriptionSuggestion[]
+  search(
+    text: string,
+    limit?: number,
+  ): DescriptionSuggestion[]
   resolve(label: string): DescriptionSuggestion | undefined
   /**
    * A hook for an index that has more to say than its own rows (a window, whose older rows the server holds): the
    * suggestions for what is typed, the index's own at once and the rest as they arrive. Absent for an index that
    * holds every row, whose `search` is the whole answer.
    */
-  useSuggestions?: (index: DescriptionIndex, value: string) => DescriptionSuggestion[]
+  useSuggestions?: (
+    index: DescriptionIndex,
+    value: string,
+  ) => DescriptionSuggestion[]
 }
 
 /** What `buildDescriptionIndex` returns: `search`, and the same matches with the row each comes from. */
 export interface DescriptionEntryIndex extends DescriptionIndex {
-  searchEntries: (text: string, limit?: number) => IndexedMatch[]
+  searchEntries: (
+    text: string,
+    limit?: number,
+  ) => IndexedMatch[]
 }
 
 /** What the index reads of a row. */
@@ -48,7 +57,10 @@ export type IndexRow = Pick<
 export const normalizeDescriptionKey = normalizeDesc
 
 /** Whether `a` is a more recent row than `b`: the later date, then the higher id. */
-export function isNewer(a: DescriptionMatch, b: DescriptionMatch): boolean {
+export function isNewer(
+  a: DescriptionMatch,
+  b: DescriptionMatch,
+): boolean {
   if (a.date !== b.date) return a.date > b.date
   return a.id > b.id
 }
@@ -84,8 +96,14 @@ function buildEntries(rows: readonly IndexRow[]): Map<string, IndexedMatch> {
  * descriptions of one index share a newest row, so the order is total without a collator; the key settles the one
  * case a merge can bring (a row renamed between the browser's index and the server's answer speaks for two keys).
  */
-export function compareByUsage(typed: string): (a: { key: string; entry: IndexedMatch }, b: { key: string; entry: IndexedMatch }) => number {
-  return (a, b) => {
+export function compareByUsage(typed: string): (
+  a: { key: string; entry: IndexedMatch },
+  b: { key: string; entry: IndexedMatch },
+) => number {
+  return (
+    a,
+    b,
+  ) => {
     const aStarts = a.key.startsWith(typed)
     const bStarts = b.key.startsWith(typed)
     if (aStarts !== bStarts) return aStarts ? -1 : 1
@@ -120,12 +138,18 @@ export function buildDescriptionIndex(
     return entry ? { label: entry.label, template: entry.template } : undefined
   }
 
-  const searchEntries = (text: string, limit = DEFAULT_SUGGEST_LIMIT): IndexedMatch[] => {
+  const searchEntries = (
+    text: string,
+    limit = DEFAULT_SUGGEST_LIMIT,
+  ): IndexedMatch[] => {
     const typed = normalizeDescriptionKey(text)
     if (!typed) return []
     const ordered =
       order === 'key'
-        ? inSuggestionOrder(keyed.filter((item) => item.key.startsWith(typed)), collator)
+        ? inSuggestionOrder(
+            keyed.filter((item) => item.key.startsWith(typed)),
+            collator,
+          )
         : keyed.filter((item) => item.key.includes(typed)).sort(compareByUsage(typed))
     return ordered.slice(0, limit).map(({ entry }) => entry)
   }
@@ -133,7 +157,10 @@ export function buildDescriptionIndex(
   return {
     resolve: (label) => lookup(normalizeDescriptionKey(label)),
     searchEntries,
-    search: (text, limit) => searchEntries(text, limit).map(({ label, template }) => ({ label, template })),
+    search: (
+      text,
+      limit,
+    ) => searchEntries(text, limit).map(({ label, template }) => ({ label, template })),
   }
 }
 
@@ -173,7 +200,9 @@ export function suggestDescriptionsOf(
   rows: readonly (IndexRow & Pick<Transaction, 'budgetMonth'>)[],
   { prefix, before, limit, locale }: DescriptionSuggestRequest,
 ): DescriptionSuggestResult {
-  const walked = new Set(rows.map((row) => normalizeDescriptionKey(row.description)).filter((key) => key.startsWith(prefix)))
+  const walked = new Set(
+    rows.map((row) => normalizeDescriptionKey(row.description)).filter((key) => key.startsWith(prefix)),
+  )
   if (walked.size > MAX_SUGGEST_KEYS) return { items: [], tooBroad: true }
   const eligible = rows.filter((row) => before === undefined || row.budgetMonth < before)
   const index = buildDescriptionIndex(eligible, { order: 'key', ...(locale ? { locale } : {}) })

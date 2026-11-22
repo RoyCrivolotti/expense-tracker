@@ -47,7 +47,10 @@ export function planFromToday(
 }
 
 /** The same restart counted at another inflation rate; itself when the rate is the one it was made at. */
-export function planFromTodayAt(fromToday: PlanFromToday, inflationRate: number): PlanFromToday {
+export function planFromTodayAt(
+  fromToday: PlanFromToday,
+  inflationRate: number,
+): PlanFromToday {
   if (inflationRate === fromToday.inflationRate) return fromToday
   return planFromToday(fromToday.source.plan, fromToday.source.latest, inflationRate) ?? fromToday
 }

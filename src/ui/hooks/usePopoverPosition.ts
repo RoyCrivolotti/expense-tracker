@@ -34,12 +34,10 @@ export function getSafeAreaProbe(): HTMLDivElement {
   safeAreaProbe.setAttribute('aria-hidden', 'true')
   safeAreaProbe.dataset.safeAreaProbe = ''
   safeAreaProbe.style.cssText =
-    'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
-    'visibility:hidden;pointer-events:none'
+    'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' + 'visibility:hidden;pointer-events:none'
   document.body.appendChild(safeAreaProbe)
   return safeAreaProbe
 }
-
 
 /**
  * Below the trigger when it fits, otherwise directly above it, then clamped

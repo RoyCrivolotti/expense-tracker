@@ -26,24 +26,61 @@ let answer: (url: string) => number | Error
 
 const repos = () => ({ captures: createD1CaptureRepository(env), push: createD1PushRepository(env) })
 
-async function addDevice(owner: string, endpoint: string, id: string): Promise<void> {
-  const pair = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair
+async function addDevice(
+  owner: string,
+  endpoint: string,
+  id: string,
+): Promise<void> {
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, [
+    'deriveBits',
+  ])) as CryptoKeyPair
   const point = new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer)
-  await repos().push.saveSubscription({ id, owner, endpoint, p256dh: base64urlEncode(point), auth: base64urlEncode(crypto.getRandomValues(new Uint8Array(16))), label: 'iPhone', createdAt: EVENING.toISOString() })
+  await repos().push.saveSubscription({
+    id,
+    owner,
+    endpoint,
+    p256dh: base64urlEncode(point),
+    auth: base64urlEncode(crypto.getRandomValues(new Uint8Array(16))),
+    label: 'iPhone',
+    createdAt: EVENING.toISOString(),
+  })
 }
 
-function rec(id: string, over: Partial<NewRecommendation> = {}): NewRecommendation {
-  return { id, owner: ALICE, accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: '2026-11-23T08:00:00+01:00', localDate: '2026-11-23', merchantRaw: null, descriptionSuggested: null, suggestedType: 'expense', createdAt: EVENING.toISOString(), ...over }
+function rec(
+  id: string,
+  over: Partial<NewRecommendation> = {},
+): NewRecommendation {
+  return {
+    id,
+    owner: ALICE,
+    accountId: null,
+    amountCents: 1250,
+    currency: 'EUR',
+    occurredAt: '2026-11-23T08:00:00+01:00',
+    localDate: '2026-11-23',
+    merchantRaw: null,
+    descriptionSuggested: null,
+    suggestedType: 'expense',
+    createdAt: EVENING.toISOString(),
+    ...over,
+  }
 }
 
-const choose = (mode: 'daily' | 'weekly' | 'each', timeZone = 'Europe/Madrid', owner = ALICE) => repos().push.saveSettings(owner, { mode, timeZone }, false)
+const choose = (
+  mode: 'daily' | 'weekly' | 'each',
+  timeZone = 'Europe/Madrid',
+  owner = ALICE,
+) => repos().push.saveSettings(owner, { mode, timeZone }, false)
 
 const deps = (now: Date = EVENING) => ({
   push: repos().push,
   captures: repos().captures,
   now: () => now,
   log: (l: PushLogLine) => lines.push(l),
-  fetcher: ((url: string, init: RequestInit) => {
+  fetcher: ((
+    url: string,
+    init: RequestInit,
+  ) => {
     calls.push({ url, init })
     const result = answer(url)
     return result instanceof Error ? Promise.reject(result) : Promise.resolve(new Response(null, { status: result }))
@@ -56,8 +93,15 @@ beforeEach(async () => {
   db = migratedDatabase()
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
   const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
-  const publicKey = base64urlEncode(new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer))
-  env = { DB: sqliteD1(db), VAPID_PRIVATE_KEY: jwk.d as string, VAPID_PUBLIC_KEY: publicKey, VAPID_SUBJECT: 'https://app.example.test' }
+  const publicKey = base64urlEncode(
+    new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer),
+  )
+  env = {
+    DB: sqliteD1(db),
+    VAPID_PRIVATE_KEY: jwk.d as string,
+    VAPID_PUBLIC_KEY: publicKey,
+    VAPID_SUBJECT: 'https://app.example.test',
+  }
   await createD1AccessRepository(env).grantAccess(ALICE, ALICE)
   lines.length = 0
   calls.length = 0
@@ -68,12 +112,28 @@ afterEach(() => undefined)
 
 describe('the summary payload', () => {
   it('names the count and the total when there is one, and opens the list', () => {
-    expect(JSON.parse(summaryPayload({ count: 3, totalCents: 4820, currency: 'EUR', onlyId: null }))).toEqual({ v: 1, kind: 'summary', url: '/', count: 3, totalCents: 4820, currency: 'EUR', open: 3 })
+    expect(JSON.parse(summaryPayload({ count: 3, totalCents: 4820, currency: 'EUR', onlyId: null }))).toEqual({
+      v: 1,
+      kind: 'summary',
+      url: '/',
+      count: 3,
+      totalCents: 4820,
+      currency: 'EUR',
+      open: 3,
+    })
   })
 
   it('leaves the total out when there is none, and opens the one payment when only one is waiting', () => {
-    expect(JSON.parse(summaryPayload({ count: 2, totalCents: null, currency: null, onlyId: null }))).toEqual({ v: 1, kind: 'summary', url: '/', count: 2, open: 2 })
-    expect(JSON.parse(summaryPayload({ count: 1, totalCents: 1250, currency: 'EUR', onlyId: 'rec-1' })).url).toBe('/?review=rec-1')
+    expect(JSON.parse(summaryPayload({ count: 2, totalCents: null, currency: null, onlyId: null }))).toEqual({
+      v: 1,
+      kind: 'summary',
+      url: '/',
+      count: 2,
+      open: 2,
+    })
+    expect(JSON.parse(summaryPayload({ count: 1, totalCents: 1250, currency: 'EUR', onlyId: 'rec-1' })).url).toBe(
+      '/?review=rec-1',
+    )
   })
 })
 
@@ -86,8 +146,16 @@ describe('runSummaries', () => {
     await repos().captures.createRecommendation(rec('b', { amountCents: 3000 }))
     await runSummaries(env, deps())
     expect(calls.map((c) => c.url).sort()).toEqual([ENDPOINT, ENDPOINT_TWO])
-    expect(calls[0]?.init.headers).toMatchObject({ Topic: 'review-summary', TTL: '86400', Urgency: 'high', 'Content-Encoding': 'aes128gcm' })
-    expect(outcomes()).toEqual([['sent', 'ok'], ['sent', 'ok']])
+    expect(calls[0]?.init.headers).toMatchObject({
+      Topic: 'review-summary',
+      TTL: '86400',
+      Urgency: 'high',
+      'Content-Encoding': 'aes128gcm',
+    })
+    expect(outcomes()).toEqual([
+      ['sent', 'ok'],
+      ['sent', 'ok'],
+    ])
     expect((await repos().push.getSettings(ALICE))?.lastSummaryAt).toBe(EVENING.toISOString())
     expect((await repos().push.listDevices(ALICE)).map((d) => d.lastStatus)).toEqual([201, 201])
   })
@@ -113,7 +181,7 @@ describe('runSummaries', () => {
     expect(outcomes()).toContainEqual(['skipped', 'already-sent'])
   })
 
-  it('sends a late run the same evening, but not before 20:00 and not on a weekly person\'s Tuesday', async () => {
+  it("sends a late run the same evening, but not before 20:00 and not on a weekly person's Tuesday", async () => {
     await choose('daily')
     await addDevice(ALICE, ENDPOINT, 'one')
     await repos().captures.createRecommendation(rec('a'))
@@ -126,7 +194,7 @@ describe('runSummaries', () => {
     expect(calls).toHaveLength(1)
   })
 
-  it('judges 20:00 by the person\'s zone across a summer time change', async () => {
+  it("judges 20:00 by the person's zone across a summer time change", async () => {
     await choose('daily')
     await addDevice(ALICE, ENDPOINT, 'one')
     await repos().captures.createRecommendation(rec('a'))
@@ -177,7 +245,10 @@ describe('runSummaries', () => {
     await repos().captures.createRecommendation(rec('b', { owner: BOB }))
     await runSummaries(env, deps())
     expect(calls.map((c) => c.url)).toEqual([ENDPOINT_TWO])
-    expect(outcomes()).toEqual([['skipped', 'invalid-zone'], ['sent', 'ok']])
+    expect(outcomes()).toEqual([
+      ['skipped', 'invalid-zone'],
+      ['sent', 'ok'],
+    ])
   })
 
   it('leaves a person who wants a push per payment alone', async () => {
@@ -197,7 +268,10 @@ describe('runSummaries', () => {
     answer = (url) => (url === ENDPOINT ? 410 : 503)
     await runSummaries(env, deps())
     expect((await repos().push.listDevices(ALICE)).map((d) => d.id)).toEqual(['two'])
-    expect(outcomes().sort()).toEqual([['failed', 'push-service-error'], ['gone', 'expired']])
+    expect(outcomes().sort()).toEqual([
+      ['failed', 'push-service-error'],
+      ['gone', 'expired'],
+    ])
   })
 
   it('logs a failed fetch and a timeout and still sends to the next device', async () => {
@@ -207,18 +281,32 @@ describe('runSummaries', () => {
     await repos().captures.createRecommendation(rec('a'))
     answer = (url) => (url === ENDPOINT ? new Error('offline') : 201)
     await runSummaries(env, deps())
-    expect(outcomes().sort()).toEqual([['failed', 'network'], ['sent', 'ok']])
+    expect(outcomes().sort()).toEqual([
+      ['failed', 'network'],
+      ['sent', 'ok'],
+    ])
   })
 
-  it('still sends to the other device, and does not throw, when recording one device\'s result fails', async () => {
+  it("still sends to the other device, and does not throw, when recording one device's result fails", async () => {
     await choose('daily')
     await addDevice(ALICE, ENDPOINT, 'one')
     await addDevice(ALICE, ENDPOINT_TWO, 'two')
     await repos().captures.createRecommendation(rec('a'))
-    const push = { ...repos().push, recordSend: (owner: string, id: string, status: number, at: string) => (id === 'one' ? Promise.reject(new Error('boom')) : repos().push.recordSend(owner, id, status, at)) }
+    const push = {
+      ...repos().push,
+      recordSend: (
+        owner: string,
+        id: string,
+        status: number,
+        at: string,
+      ) => (id === 'one' ? Promise.reject(new Error('boom')) : repos().push.recordSend(owner, id, status, at)),
+    }
     await expect(runSummaries(env, { ...deps(), push })).resolves.toBeUndefined()
     expect(calls.map((c) => c.url).sort()).toEqual([ENDPOINT, ENDPOINT_TWO])
-    expect(outcomes().sort()).toEqual([['failed', 'exception'], ['sent', 'ok']])
+    expect(outcomes().sort()).toEqual([
+      ['failed', 'exception'],
+      ['sent', 'ok'],
+    ])
     expect((await repos().push.listDevices(ALICE)).find((d) => d.id === 'two')?.lastStatus).toBe(201)
   })
 
@@ -242,11 +330,15 @@ describe('runSummaries', () => {
     await repos().captures.createRecommendation(rec('a', { owner: BOB, merchantRaw: 'Shop Example' }))
     await runSummaries(env, deps())
     const written = JSON.stringify(lines)
-    for (const secret of [ENDPOINT, env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY, ALICE, BOB, 'Shop Example']) expect(written).not.toContain(secret as string)
+    for (const secret of [ENDPOINT, env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY, ALICE, BOB, 'Shop Example'])
+      expect(written).not.toContain(secret as string)
   })
 
-  it('never throws: a failed read is one failed line, and one person\'s failure stops no one', async () => {
-    await runSummaries(env, { ...deps(), push: { ...repos().push, listSummaryPeople: () => Promise.reject(new Error('boom')) } })
+  it("never throws: a failed read is one failed line, and one person's failure stops no one", async () => {
+    await runSummaries(env, {
+      ...deps(),
+      push: { ...repos().push, listSummaryPeople: () => Promise.reject(new Error('boom')) },
+    })
     expect(outcomes()).toEqual([['failed', 'exception']])
     lines.length = 0
     await createD1AccessRepository(env).grantAccess(BOB, ALICE)
@@ -254,14 +346,20 @@ describe('runSummaries', () => {
     await choose('daily', 'Europe/Madrid', BOB)
     await addDevice(BOB, ENDPOINT, 'one')
     await repos().captures.createRecommendation(rec('b', { owner: BOB }))
-    const captures = { summarizeOpen: (owner: string) => (owner === ALICE ? Promise.reject(new Error('boom')) : repos().captures.summarizeOpen(owner)) }
+    const captures = {
+      summarizeOpen: (owner: string) =>
+        owner === ALICE ? Promise.reject(new Error('boom')) : repos().captures.summarizeOpen(owner),
+    }
     await runSummaries(env, { ...deps(), captures })
-    expect(outcomes()).toEqual([['failed', 'exception'], ['sent', 'ok']])
+    expect(outcomes()).toEqual([
+      ['failed', 'exception'],
+      ['sent', 'ok'],
+    ])
   })
 })
 
 describe('the Worker’s scheduled handler', () => {
-  it('runs the summaries at the cron\'s own scheduled time', async () => {
+  it("runs the summaries at the cron's own scheduled time", async () => {
     await choose('daily')
     await addDevice(ALICE, ENDPOINT, 'one')
     await repos().captures.createRecommendation(rec('a'))
@@ -269,9 +367,16 @@ describe('the Worker’s scheduled handler', () => {
     const ctx = { waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as ExecutionContext
     const fetched: string[] = []
     const original = globalThis.fetch
-    globalThis.fetch = ((url: string) => (fetched.push(url), Promise.resolve(new Response(null, { status: 201 })))) as unknown as typeof fetch
+    globalThis.fetch = ((url: string) => (
+      fetched.push(url),
+      Promise.resolve(new Response(null, { status: 201 }))
+    )) as unknown as typeof fetch
     try {
-      await worker.scheduled({ scheduledTime: EVENING.getTime(), cron: '0 * * * *' } as unknown as ScheduledController, env, ctx)
+      await worker.scheduled(
+        { scheduledTime: EVENING.getTime(), cron: '0 * * * *' } as unknown as ScheduledController,
+        env,
+        ctx,
+      )
       await Promise.all(pending)
     } finally {
       globalThis.fetch = original

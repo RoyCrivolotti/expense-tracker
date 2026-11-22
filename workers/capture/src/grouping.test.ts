@@ -24,7 +24,13 @@ beforeEach(async () => {
   env = { DB: sqliteD1(db), OWNER_EMAIL: ALICE, CAPTURE_REPLAY_SECRET: 'replay-secret' }
   await repos().access.grantAccess(ALICE, ALICE)
   key = await mintCaptureKey()
-  await repos().captures.createKey({ keyId: key.keyId, owner: ALICE, label: 'Phone', secretHash: key.secretHash, createdAt: NOW.toISOString() })
+  await repos().captures.createKey({
+    keyId: key.keyId,
+    owner: ALICE,
+    label: 'Phone',
+    secretHash: key.secretHash,
+    createdAt: NOW.toISOString(),
+  })
   lines = []
 })
 
@@ -35,9 +41,20 @@ const at = (seconds: number) => {
 }
 
 type Push = { title: string; body: string; seconds: number }
-const payment = (seconds: number, amount = '10,50', shop = 'Shop Example'): Push => ({ title: 'Card payment', body: `${shop} *4321 ${amount} EUR`, seconds })
-const alert = (seconds: number, amount = '-10.50'): Push => ({ title: 'Balance changed', body: `A movement of ${amount} EUR on your account **5512`, seconds })
-const purchase = (seconds: number, shop: string, amount: string): Push => ({ title: 'Purchase', body: `Purchase at ${shop} of ${amount} EUR`, seconds })
+const payment = (
+  seconds: number,
+  amount = '10,50',
+  shop = 'Shop Example',
+): Push => ({ title: 'Card payment', body: `${shop} *4321 ${amount} EUR`, seconds })
+const alert = (
+  seconds: number,
+  amount = '-10.50',
+): Push => ({ title: 'Balance changed', body: `A movement of ${amount} EUR on your account **5512`, seconds })
+const purchase = (
+  seconds: number,
+  shop: string,
+  amount: string,
+): Push => ({ title: 'Purchase', body: `Purchase at ${shop} of ${amount} EUR`, seconds })
 
 function send(push: Push): Promise<Response> {
   const request = new Request('https://capture.example.test/capture', {
@@ -80,7 +97,11 @@ describe('pushes of one movement', () => {
     expect(answers.map((a) => a.status)).toEqual([200, 200])
     expect(recs()).toHaveLength(1)
     expect(new Set(events().map((e) => e.rec_id)).size).toBe(1)
-    expect(events().map((e) => e.grouped).sort()).toEqual([0, 1])
+    expect(
+      events()
+        .map((e) => e.grouped)
+        .sort(),
+    ).toEqual([0, 1])
   })
 
   it('stay two when the same wording comes twice, however close', async () => {
@@ -158,7 +179,12 @@ describe('pushes of one movement', () => {
   it('never join a recommendation the person has decided', async () => {
     await send(payment(0))
     const [rec] = recs()
-    expect(await repos().captures.decideRecommendation(ALICE, rec?.id as string, { state: 'dismissed', at: NOW.toISOString() })).toBe(true)
+    expect(
+      await repos().captures.decideRecommendation(ALICE, rec?.id as string, {
+        state: 'dismissed',
+        at: NOW.toISOString(),
+      }),
+    ).toBe(true)
     await send(alert(10))
     expect(recs().map((r) => r.state)).toEqual(['dismissed', 'open'])
     expect(events().map((e) => e.grouped)).toEqual([0, 0])
@@ -170,7 +196,13 @@ describe('pushes of one movement', () => {
     await repos().access.grantGroup(bob, 'expenses', ALICE)
     await send(payment(0))
     const bobKey = await mintCaptureKey()
-    await repos().captures.createKey({ keyId: bobKey.keyId, owner: bob, label: 'Phone', secretHash: bobKey.secretHash, createdAt: NOW.toISOString() })
+    await repos().captures.createKey({
+      keyId: bobKey.keyId,
+      owner: bob,
+      label: 'Phone',
+      secretHash: bobKey.secretHash,
+      createdAt: NOW.toISOString(),
+    })
     key = bobKey
     await send(alert(5))
     expect(rows('SELECT owner FROM recommendations ORDER BY owner').map((r) => r.owner)).toEqual([ALICE, bob])
@@ -229,12 +261,18 @@ describe('the card of a joined recommendation', () => {
   })
 
   it('is not given by linking the digits of a push that joined it', async () => {
-    db.prepare("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (7, ?, 'Account', 'debit', 'immediate', 1)").run(ALICE)
+    db.prepare(
+      "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (7, ?, 'Account', 'debit', 'immediate', 1)",
+    ).run(ALICE)
     await send(payment(0))
     await send(alert(5))
-    expect(await repos().captures.linkCard(ALICE, { source: 'mybank', digitsKind: 'card', digits: '5512', accountId: 7 })).toBe('linked')
+    expect(
+      await repos().captures.linkCard(ALICE, { source: 'mybank', digitsKind: 'card', digits: '5512', accountId: 7 }),
+    ).toBe('linked')
     expect(rows('SELECT account_id FROM recommendations')).toEqual([{ account_id: null }])
-    expect(await repos().captures.linkCard(ALICE, { source: 'mybank', digitsKind: 'card', digits: '4321', accountId: 7 })).toBe('linked')
+    expect(
+      await repos().captures.linkCard(ALICE, { source: 'mybank', digitsKind: 'card', digits: '4321', accountId: 7 }),
+    ).toBe('linked')
     expect(rows('SELECT account_id FROM recommendations')).toEqual([{ account_id: 7 }])
   })
 })

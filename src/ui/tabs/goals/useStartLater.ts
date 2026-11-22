@@ -16,7 +16,12 @@ export function useStartLater(
     [wealthCheckins, wealthAccounts],
   )
   return useMemo(
-    () => ({ source: draft, checkins, scenarios: goalScenarios, onCreate: (input: NewGoalScenario) => void create(input) }),
+    () => ({
+      source: draft,
+      checkins,
+      scenarios: goalScenarios,
+      onCreate: (input: NewGoalScenario) => void create(input),
+    }),
     [draft, checkins, goalScenarios, create],
   )
 }

@@ -25,19 +25,18 @@ export function ExportDataSection({ model, month }: ExportDataProps) {
     if (!exportAll) return downloadTransactionsCsv(model.dataset, {})
     setFailed(false)
     setReading(exportAll.count)
-    exportAll.read().then(
-      (transactions) => downloadTransactionsCsv({ ...model.dataset, transactions }, {}),
-      () => setFailed(true),
-    ).finally(() => setReading(null))
+    exportAll
+      .read()
+      .then(
+        (transactions) => downloadTransactionsCsv({ ...model.dataset, transactions }, {}),
+        () => setFailed(true),
+      )
+      .finally(() => setReading(null))
   }
 
   return (
     <div>
-      <button
-        type="button"
-        className={styles.addBtn}
-        onClick={() => downloadTransactionsCsv(model.dataset, { month })}
-      >
+      <button type="button" className={styles.addBtn} onClick={() => downloadTransactionsCsv(model.dataset, { month })}>
         Export {month} to CSV
       </button>
       <button type="button" className={styles.addBtn} disabled={reading !== null} onClick={exportEverything}>

@@ -12,12 +12,18 @@ import { netSpendCents } from './transactions'
 
 const WORK = makeFlag({ id: 1, name: 'Work travel' })
 
-function account(id: number, overrides: Partial<Account> = {}): Account {
+function account(
+  id: number,
+  overrides: Partial<Account> = {},
+): Account {
   return { id, name: `Account ${id}`, kind: 'debit', settlement: 'immediate', active: true, ...overrides }
 }
 const CARD = account(9, { kind: 'credit', settlement: 'deferred' })
 
-function txn(id: number, overrides: Partial<Transaction> = {}): Transaction {
+function txn(
+  id: number,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return {
     id,
     date: '2026-05-02',
@@ -64,9 +70,7 @@ describe('buildReimbursementDraft', () => {
   })
 
   it('names the claim it settles', () => {
-    expect(buildReimbursementDraft(group([txn(1)]), [account(1)], 1)?.description).toBe(
-      'Reimbursement — Work travel',
-    )
+    expect(buildReimbursementDraft(group([txn(1)]), [account(1)], 1)?.description).toBe('Reimbursement — Work travel')
   })
 
   it('refuses a claim with nothing outstanding', () => {
@@ -148,19 +152,13 @@ describe('reimbursementAccountId', () => {
 
 describe('dominantCategoryId', () => {
   it('picks the category the selection spent most in', () => {
-    const rows = [
-      txn(1, { categoryId: 3, amountCents: 5_000 }),
-      txn(2, { categoryId: 7, amountCents: 40_000 }),
-    ]
+    const rows = [txn(1, { categoryId: 3, amountCents: 5_000 }), txn(2, { categoryId: 7, amountCents: 40_000 })]
 
     expect(dominantCategoryId(rows)).toBe(7)
   })
 
   it('breaks a tie on the lowest id, so the same selection prefills the same way twice', () => {
-    const rows = [
-      txn(1, { categoryId: 7, amountCents: 10_000 }),
-      txn(2, { categoryId: 3, amountCents: 10_000 }),
-    ]
+    const rows = [txn(1, { categoryId: 7, amountCents: 10_000 }), txn(2, { categoryId: 3, amountCents: 10_000 })]
 
     expect(dominantCategoryId(rows)).toBe(3)
   })

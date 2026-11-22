@@ -6,7 +6,10 @@ import { loadReferenceTables, rows } from './dbReference'
 import { toAttachment, toStoredTxn, type AttachmentRow, type TxnRow } from './rows'
 
 /** Read every table for one owner and assemble a dataset with derived statuses. */
-export async function loadDataset(env: Env, owner: string): Promise<ExpenseDataset> {
+export async function loadDataset(
+  env: Env,
+  owner: string,
+): Promise<ExpenseDataset> {
   await backfillForRead(env, owner)
   const [reference, attachmentRows, txns, transactionLabelRows] = await Promise.all([
     loadReferenceTables(env, owner),
@@ -16,11 +19,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
       'SELECT * FROM transaction_attachments WHERE owner = ? ORDER BY transaction_id, id',
       owner,
     ),
-    rows<TxnRow>(
-      env.DB,
-      'SELECT * FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC',
-      owner,
-    ),
+    rows<TxnRow>(env.DB, 'SELECT * FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC', owner),
     // Load every transaction_labels row for this owner in one query, keyed by
     // transaction_id below. Joined to labels too, not just transactions: a
     // transaction_labels row whose label no longer exists is dropped here rather
@@ -48,11 +47,9 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
   // labelIds is not a real column, so it is merged on after deriveTransactions
   // rather than carried through toStoredTxn — same reason status itself is
   // derived rather than stored.
-  const transactions = deriveTransactions(
-    txns.map(toStoredTxn),
-    reference.accounts,
-    reference.accountStatements,
-  ).map((t) => ({ ...t, labelIds: labelIdsByTxn.get(t.id) ?? [] }))
+  const transactions = deriveTransactions(txns.map(toStoredTxn), reference.accounts, reference.accountStatements).map(
+    (t) => ({ ...t, labelIds: labelIdsByTxn.get(t.id) ?? [] }),
+  )
 
   return { ...reference, attachments: attachmentRows.map(toAttachment), transactions }
 }

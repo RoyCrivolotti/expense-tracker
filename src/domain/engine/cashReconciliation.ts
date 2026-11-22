@@ -58,7 +58,12 @@ function emptyAgg(): MonthAgg {
   return { incomeCents: 0, debitExpenseCents: 0, investmentsCents: 0, cardCharges: new Map() }
 }
 
-function addCardCharge(agg: MonthAgg, accountId: number, signed: number, status: TxnStatus): void {
+function addCardCharge(
+  agg: MonthAgg,
+  accountId: number,
+  signed: number,
+  status: TxnStatus,
+): void {
   // All rows in a card-month share one derived status (the statement paid flag).
   const card = agg.cardCharges.get(accountId) ?? { chargeCents: 0, paid: status === 'posted' }
   card.chargeCents += signed
@@ -67,7 +72,10 @@ function addCardCharge(agg: MonthAgg, accountId: number, signed: number, status:
 }
 
 /** Bucket non-cancelled transactions into per-budget-month aggregates. */
-function aggregateMonths(transactions: Transaction[], accounts: Account[]): Map<string, MonthAgg> {
+function aggregateMonths(
+  transactions: Transaction[],
+  accounts: Account[],
+): Map<string, MonthAgg> {
   const immediate = new Set(accounts.filter((a) => a.settlement === 'immediate').map((a) => a.id))
   const deferred = new Set(accounts.filter((a) => a.settlement === 'deferred').map((a) => a.id))
   const byMonth = new Map<string, MonthAgg>()
@@ -111,18 +119,13 @@ export function computeCashReconciliation(
       if (card.paid) paidStatements += card.chargeCents
       else unpaid += card.chargeCents
     }
-    const cashMovement =
-      agg.incomeCents - agg.debitExpenseCents - paidStatements - agg.investmentsCents
+    const cashMovement = agg.incomeCents - agg.debitExpenseCents - paidStatements - agg.investmentsCents
     cash += cashMovement
     const actual = actualByMonth.get(month) ?? null
     const gapCents = actual === null ? null : actual - cash
     const carryoverGapCents = priorGap
     const monthGapCents =
-      gapCents !== null
-        ? carryoverGapCents !== null
-          ? gapCents - carryoverGapCents
-          : gapCents
-        : null
+      gapCents !== null ? (carryoverGapCents !== null ? gapCents - carryoverGapCents : gapCents) : null
     if (gapCents !== null) priorGap = gapCents
     rows.push({
       month,

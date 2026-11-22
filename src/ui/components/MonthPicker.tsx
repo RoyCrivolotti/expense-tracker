@@ -20,7 +20,13 @@ interface MonthPickerProps {
 
 /** Offline, with only some months' rows saved here: a filled dot for a month that is, a hollow one for the rest. */
 function SavedMark({ saved }: { saved: boolean }) {
-  return <span role="img" className={saved ? styles.saved : styles.unsaved} aria-label={saved ? 'Saved on this device' : 'Not saved on this device'} />
+  return (
+    <span
+      role="img"
+      className={saved ? styles.saved : styles.unsaved}
+      aria-label={saved ? 'Saved on this device' : 'Not saved on this device'}
+    />
+  )
 }
 
 export function MonthPicker({

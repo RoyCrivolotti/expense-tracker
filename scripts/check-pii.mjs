@@ -52,7 +52,10 @@ function trackedFiles() {
     .filter((file) => !SKIP_FILE.some((pattern) => pattern.test(file)))
 }
 
-function lineOf(text, index) {
+function lineOf(
+  text,
+  index,
+) {
   return text.slice(0, index).split('\n').length
 }
 

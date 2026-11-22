@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { devicePlatform } from '../../config/device'
 import type { PushMode } from '../../domain/ports/pushRepository'
-import { fetchPushConfig, fetchPushDevices, removePushDevice, savePushChoice, savePushDevice, type PushDevices } from '../../data/pushApi'
+import {
+  fetchPushConfig,
+  fetchPushDevices,
+  removePushDevice,
+  savePushChoice,
+  savePushDevice,
+  type PushDevices,
+} from '../../data/pushApi'
 import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 import { applicationServerKey, deviceLabel, pushSupportFrom, type PushSupport } from './pushSupport'
 
 /** Where this device stands: what the card shows. */
-export type PushDeviceStatus = 'loading' | 'unsupported' | 'not-installed' | 'not-configured' | 'denied' | 'off' | 'on' | 'failed'
+export type PushDeviceStatus =
+  'loading' | 'unsupported' | 'not-installed' | 'not-configured' | 'denied' | 'off' | 'on' | 'failed'
 
 export interface PushDevice {
   status: PushDeviceStatus
@@ -32,7 +40,11 @@ const EMPTY: PushDevices = { devices: [], settings: null }
 /** What the browser says about this device. Read once per mount so a test can stub it. */
 function support(): PushSupport {
   const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
-  return pushSupportFrom({ platform: devicePlatform(), hasPush: 'PushManager' in window && 'Notification' in window, standalone })
+  return pushSupportFrom({
+    platform: devicePlatform(),
+    hasPush: 'PushManager' in window && 'Notification' in window,
+    standalone,
+  })
 }
 
 const zone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -118,18 +130,28 @@ async function probe(memory: Memory): Promise<Probe> {
  * The permission prompt must come from the person's tap, and the subscription follows in the same handler. A prompt
  * refused is `denied`; one dismissed leaves the device `off`, to be asked again.
  */
-async function enable(key: string, memory: Memory): Promise<{ id: string } | { status: 'denied' | 'off' }> {
-  if ((await Notification.requestPermission()) !== 'granted') return { status: Notification.permission === 'denied' ? 'denied' : 'off' }
+async function enable(
+  key: string,
+  memory: Memory,
+): Promise<{ id: string } | { status: 'denied' | 'off' }> {
+  if ((await Notification.requestPermission()) !== 'granted')
+    return { status: Notification.permission === 'denied' ? 'denied' : 'off' }
   const registration = await readyRegistration()
   if (!registration) throw new Error('This browser has no service worker, so it cannot receive notifications.')
-  const sub = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey(key) })
+  const sub = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: applicationServerKey(key),
+  })
   const id = await savePushDevice(sub.toJSON(), deviceLabel(devicePlatform()), zone())
   memory.write(id)
   return { id }
 }
 
 /** The server's row goes first, so a browser that then fails to unsubscribe is at worst one the sender finds gone. */
-async function disable(thisId: string | null, memory: Memory): Promise<void> {
+async function disable(
+  thisId: string | null,
+  memory: Memory,
+): Promise<void> {
   if (thisId) await removePushDevice(thisId)
   const sub = await subscription()
   if (sub) await sub.unsubscribe().catch(() => undefined)
@@ -173,7 +195,10 @@ export function usePushDevice(): PushDevice {
   const { probed, setProbed, retry } = useProbe(memory)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const settle = (status: PushDeviceStatus, id: string | null) => setProbed((p) => ({ ...p, status, id }))
+  const settle = (
+    status: PushDeviceStatus,
+    id: string | null,
+  ) => setProbed((p) => ({ ...p, status, id }))
 
   /** Runs a change, then reads the devices again rather than patching the list by hand. */
   const act = useCallback(

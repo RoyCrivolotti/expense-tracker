@@ -9,7 +9,12 @@ import type { DatabaseSync } from 'node:sqlite'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { apiLedgerParts } from '../../../src/data/apiLedgerParts'
 import { LedgerUsage } from '../../../src/data/ledgerUsage'
-import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
+import {
+  buildDescriptionIndex,
+  mergeDescriptionMatches,
+  normalizeDescriptionKey,
+  suggestDescriptionsOf,
+} from '../../../src/data/descriptionIndex'
 import { MAX_SUGGEST_KEYS } from '../../../src/domain/data/descriptionSuggest'
 import { usageFromDataset } from '../../../src/domain/engine/recordUsage'
 import type { ExpenseDataset } from '../../../src/domain/types'
@@ -39,12 +44,18 @@ async function serve(source: ExpenseDataset): Promise<Served> {
   return { sqlite, world, dataset: (await (await world.call(getDataset)).json()) as ExpenseDataset }
 }
 
-function routeFetch(world: World, seen: string[] = []) {
+function routeFetch(
+  world: World,
+  seen: string[] = [],
+) {
   const handlers: Array<[string, Handler]> = [
     ['/api/expenses/usage', getUsage],
     ['/api/expenses/descriptions/suggest', getDescriptions],
   ]
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     init?.signal?.throwIfAborted()
     seen.push(`${url.pathname}${url.search}`)
@@ -97,7 +108,11 @@ describe('the usage counts a client keeps', () => {
     const other = first.categories.find((c) => c.id !== from)!
     const ids = free.filter((t) => t.categoryId === from).map((t) => t.id)
 
-    await served.world.call(patchBulk, { method: 'PATCH', path: '/transactions/bulk', body: { ids: ids.slice(0, 100), patch: { categoryId: other.id } } })
+    await served.world.call(patchBulk, {
+      method: 'PATCH',
+      path: '/transactions/bulk',
+      body: { ids: ids.slice(0, 100), patch: { categoryId: other.id } },
+    })
     store.noteWrite(true)
 
     const now = (await (await served.world.call(getDataset)).json()) as ExpenseDataset
@@ -140,7 +155,9 @@ describe('the older descriptions a client reads', () => {
       const merged = mergeDescriptionMatches(own.searchEntries(typed, 8), items, { text: typed, limit: 8 })
 
       const reference = suggestDescriptionsOf(rows(), { prefix: typed, limit: 8, before, locale }).items
-      expect(merged, typed).toEqual(mergeDescriptionMatches(own.searchEntries(typed, 8), reference, { text: typed, limit: 8 }))
+      expect(merged, typed).toEqual(
+        mergeDescriptionMatches(own.searchEntries(typed, 8), reference, { text: typed, limit: 8 }),
+      )
       expect(merged.length, typed).toBeGreaterThan(0)
     }
   })
@@ -167,6 +184,8 @@ describe('the older descriptions a client reads', () => {
 
     const stop = new AbortController()
     stop.abort()
-    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'caf', limit: 5 }, { signal: stop.signal })).rejects.toThrow()
+    await expect(
+      apiLedgerParts.readDescriptionSuggest({ prefix: 'caf', limit: 5 }, { signal: stop.signal }),
+    ).rejects.toThrow()
   })
 })

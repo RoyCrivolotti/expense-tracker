@@ -29,7 +29,10 @@ export function makeScale(
   return (value) => rangeMin + ((value - domainMin) / span) * (rangeMax - rangeMin)
 }
 
-function niceNum(range: number, round: boolean): number {
+function niceNum(
+  range: number,
+  round: boolean,
+): number {
   const safe = range || 1
   const exp = Math.floor(Math.log10(Math.abs(safe)))
   const frac = Math.abs(safe) / 10 ** exp
@@ -49,7 +52,11 @@ function coarser(step: number): number {
   return (mantissa === 1 ? 2 : mantissa === 2 ? 5 : 10) * 10 ** exp
 }
 
-function axisAt(min: number, hi: number, step: number) {
+function axisAt(
+  min: number,
+  hi: number,
+  step: number,
+) {
   const span = hi - min
   const niceMin = Math.floor(min / step) * step
   const niceMax = Math.ceil(hi / step) * step
@@ -106,9 +113,7 @@ export function collectDomain(
   // it made the domain infinite, niceScale returned NaN bounds, and the scale built
   // from those mapped every point to NaN. An infinite FI target is reachable by
   // design, so the scale has to survive one.
-  const all = [...(includeZero ? [0] : []), ...refValues, ...valueArrays.flat()].filter(
-    Number.isFinite,
-  )
+  const all = [...(includeZero ? [0] : []), ...refValues, ...valueArrays.flat()].filter(Number.isFinite)
   if (all.length === 0) return { min: 0, max: 0 }
   return { min: Math.min(...all), max: Math.max(...all) }
 }
@@ -138,7 +143,10 @@ export function stackAreas(series: number[][]): Band[] {
 }
 
 /** Keep every `step`-th label (plus the last); blank the rest to avoid crowding. */
-export function sparseLabels(values: Array<string | number>, step: number): string[] {
+export function sparseLabels(
+  values: Array<string | number>,
+  step: number,
+): string[] {
   return values.map((v, i) => (i % step === 0 || i === values.length - 1 ? String(v) : ''))
 }
 
@@ -148,7 +156,11 @@ export function sparseLabels(values: Array<string | number>, step: number): stri
  * bottom as a dashed band no one can read; from the highest down, a line is kept only if it is
  * at least `minGapPx` from the last one kept.
  */
-export function spacedRefLines(values: number[], scaleY: (v: number) => number, minGapPx: number): number[] {
+export function spacedRefLines(
+  values: number[],
+  scaleY: (v: number) => number,
+  minGapPx: number,
+): number[] {
   const kept: number[] = []
   let lastY = Infinity
   for (const v of [...new Set(values.filter(Number.isFinite))].sort((a, b) => b - a)) {
@@ -165,7 +177,10 @@ export function linePath(points: Pt[]): string {
 }
 
 /** Closed fill between an upper edge and a (reversed) lower edge. */
-export function areaPath(top: Pt[], bottom: Pt[]): string {
+export function areaPath(
+  top: Pt[],
+  bottom: Pt[],
+): string {
   if (top.length === 0) return ''
   const up = top.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
   const down = [...bottom]
@@ -180,7 +195,10 @@ export function areaPath(top: Pt[], bottom: Pt[]): string {
  * the same x are a step, and the day of it reads the later one: the value after the payment or event,
  * as the plan's line has it on the anniversary.
  */
-export function pointSeriesValueAt(points: { xIndex: number; value: number }[], x: number): number | null {
+export function pointSeriesValueAt(
+  points: { xIndex: number; value: number }[],
+  x: number,
+): number | null {
   const sorted = [...points].sort((a, b) => a.xIndex - b.xIndex)
   for (let i = sorted.length - 1; i >= 1; i--) {
     const a = sorted[i - 1]!

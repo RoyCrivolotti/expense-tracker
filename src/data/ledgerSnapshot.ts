@@ -70,7 +70,10 @@ function hasLedgerShape(ledger: unknown): ledger is StoredLedger {
 }
 
 /** Pure, so that it can be tested without an IndexedDB: whether `record` is a snapshot this build can open for `owner`. */
-export function isUsableLedgerSnapshot(record: unknown, owner: string): record is LedgerSnapshotRecord {
+export function isUsableLedgerSnapshot(
+  record: unknown,
+  owner: string,
+): record is LedgerSnapshotRecord {
   if (!isObject(record) || record.version !== SNAPSHOT_VERSION || record.format !== LEDGER_SNAPSHOT_FORMAT) return false
   if (record.owner !== owner || record.key !== keyFor(owner)) return false
   return typeof record.viewed === 'string' && typeof record.savedAt === 'string' && hasLedgerShape(record.ledger)
@@ -106,7 +109,11 @@ const done = <T>(request: IDBRequest<T>): Promise<T> =>
   })
 
 /** Keeps `held` as `owner`'s snapshot and removes every other owner's. Resolves false when it could not. */
-export async function saveLedgerSnapshot(owner: string, held: HeldLedger, viewed: string): Promise<boolean> {
+export async function saveLedgerSnapshot(
+  owner: string,
+  held: HeldLedger,
+  viewed: string,
+): Promise<boolean> {
   if (typeof indexedDB === 'undefined') return false
   const record: LedgerSnapshotRecord = {
     key: keyFor(owner),
@@ -121,7 +128,8 @@ export async function saveLedgerSnapshot(owner: string, held: HeldLedger, viewed
     await withStore('readwrite', async (store) => {
       const keys = await done(store.getAllKeys())
       for (const key of keys) {
-        if (typeof key === 'string' && key.startsWith(LEDGER_KEY_PREFIX) && key !== record.key) await done(store.delete(key))
+        if (typeof key === 'string' && key.startsWith(LEDGER_KEY_PREFIX) && key !== record.key)
+          await done(store.delete(key))
       }
       await done(store.put(record))
     })

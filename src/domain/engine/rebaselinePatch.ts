@@ -78,7 +78,13 @@ export interface Rebaseline {
    * What moved to the euros of the new start: the years and the inflation they were moved by, and the
    * spending, rent and fees before and after. Null when nothing was restated.
    */
-  restated: { years: number; inflationRate: number; spend: [number, number]; rent: [number, number]; fees: [number, number] } | null
+  restated: {
+    years: number
+    inflationRate: number
+    spend: [number, number]
+    rent: [number, number]
+    fees: [number, number]
+  } | null
   /** A house not yet bought: today's price, what it grew to by the house's own rate, and that rate. Null when it did not move. */
   housePrice: { from: number; to: number; appreciation: number } | null
   /** A house already bought, as it is now held; null when there is none. */
@@ -117,7 +123,10 @@ function restartContribution(
   const schedule = scenario.contributionSchedule ?? []
   const month = checkinDate.slice(0, 7)
   const begun = oldStart ? schedule.filter((s) => s.from <= month) : []
-  const inForce = begun.reduce<ContributionStep | null>((latest, s) => (!latest || s.from > latest.from ? s : latest), null)
+  const inForce = begun.reduce<ContributionStep | null>(
+    (latest, s) => (!latest || s.from > latest.from ? s : latest),
+    null,
+  )
   return {
     monthlyContributionCents: inForce ? inForce.monthlyCents : scenario.monthlyContributionCents,
     contributionSchedule: oldStart ? schedule.filter((s) => s.from > month) : [...schedule],
@@ -126,7 +135,10 @@ function restartContribution(
 }
 
 /** The years the start moves forward by, to the day; 0 for no old start, a date that is not one, or a move that is not forward. */
-function yearsMoved(oldStart: string | null, newDate: string): number {
+function yearsMoved(
+  oldStart: string | null,
+  newDate: string,
+): number {
   if (!oldStart) return 0
   const years = yearsBetween(oldStart, newDate)
   return Number.isFinite(years) && years > 0 ? years : 0
@@ -137,7 +149,12 @@ function yearsMoved(oldStart: string | null, newDate: string): number {
  * interest is on what is left. `months` can be a fraction (the check-in is not on a payment day), and
  * the closed form holds for it, so a chain of restarts agrees with one made all at once.
  */
-function loanBalance(loan: number, ratePerYear: number, termMonths: number, months: number): number {
+function loanBalance(
+  loan: number,
+  ratePerYear: number,
+  termMonths: number,
+  months: number,
+): number {
   if (loan <= 0 || months >= termMonths) return 0
   const rate = ratePerYear / 12
   if (rate === 0) return loan * (1 - months / termMonths)
@@ -168,12 +185,17 @@ function restartHouse(
     mortgageTermYears: scenario.mortgageTermYears,
   }
   const moved = yearsMoved(oldStart, newDate)
-  if (!oldStart || moved === 0 || !(scenario.housePriceCents > 0)) return { fields: typed, priceMoved: null, owned: null }
+  if (!oldStart || moved === 0 || !(scenario.housePriceCents > 0))
+    return { fields: typed, priceMoved: null, owned: null }
   const value = Math.round(scenario.housePriceCents * Math.pow(1 + scenario.houseAppreciationRate, moved))
   const purchase = scenario.housePurchaseYear
-  const bought = purchase === 0 || (purchase !== null && carriedYear(purchase, oldStart, newDate, newDate, early) === null)
+  const bought =
+    purchase === 0 || (purchase !== null && carriedYear(purchase, oldStart, newDate, newDate, early) === null)
   if (!bought) {
-    const priceMoved = value === scenario.housePriceCents ? null : { from: scenario.housePriceCents, to: value, appreciation: scenario.houseAppreciationRate }
+    const priceMoved =
+      value === scenario.housePriceCents
+        ? null
+        : { from: scenario.housePriceCents, to: value, appreciation: scenario.houseAppreciationRate }
     return { fields: { ...typed, housePriceCents: value }, priceMoved, owned: null }
   }
   return { ...ownedHouse(scenario, oldStart, newDate, value, inflationRate), priceMoved: null }
@@ -197,7 +219,8 @@ function ownedHouse(
   const elapsed = Math.max(0, yearsBetween(anniversary(oldStart, purchase), newDate))
   // The loan as the engine took it at the purchase, in plan euros, then in the euros paid on the day.
   const atPurchase = housePriceAtPurchaseCents({ ...scenario, inflationRate })
-  const loan = (atPurchase - Math.round(atPurchase * scenario.downPaymentFraction)) * Math.pow(1 + inflationRate, purchase)
+  const loan =
+    (atPurchase - Math.round(atPurchase * scenario.downPaymentFraction)) * Math.pow(1 + inflationRate, purchase)
   const owedCents = Math.round(loanBalance(loan, scenario.mortgageRateAnnual, termMonths, elapsed * 12))
   const raised = owedCents > value
   const price = raised ? owedCents : value
@@ -232,14 +255,24 @@ export function rebaseline(
   // The euros of the new start: what was typed in the euros of the old one, by the inflation between.
   const factor = Math.pow(1 + inflationRate, moved)
   const restate = (cents: number) => Math.round(cents * factor)
-  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, at.date, restate, costsEarly)
+  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(
+    scenario.lifeEvents,
+    oldStart,
+    at.date,
+    restate,
+    costsEarly,
+  )
   const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, at.date, costsEarly)
   const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
     scenario,
     oldStart,
     at.date,
   )
-  const { fields: houseFields, priceMoved, owned } = restartHouse(scenario, oldStart, at.date, inflationRate, costsEarly)
+  const {
+    fields: houseFields,
+    priceMoved,
+    owned,
+  } = restartHouse(scenario, oldStart, at.date, inflationRate, costsEarly)
   const spend = restate(scenario.annualSpendCents)
   const rent = restate(scenario.rentMonthlyCents)
   const fees = restate(scenario.transactionCostsCents)

@@ -15,7 +15,10 @@ function held<T>() {
   return { promise, land }
 }
 
-function harness(source: Partial<ExpenseDataSource>, initial: Partial<ExpenseDataset> = {}) {
+function harness(
+  source: Partial<ExpenseDataSource>,
+  initial: Partial<ExpenseDataset> = {},
+) {
   let dataset: ExpenseDataset = { ...makeDataset(), ...initial }
   const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
     dataset = patch(dataset)

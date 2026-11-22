@@ -4,7 +4,10 @@ import type { ExpenseDataset } from '../domain/types'
 import { makeDataset, makeFlag, makeTransaction } from '../testing/factories'
 import { LedgerUsage, touchesUsage } from './ledgerUsage'
 
-const part = (revision: string, flagCount = 0): UsagePart => ({
+const part = (
+  revision: string,
+  flagCount = 0,
+): UsagePart => ({
   revision,
   categories: [],
   accounts: [],
@@ -22,7 +25,14 @@ function gated(...parts: Array<UsagePart | Error>) {
         waiting.push(() => (next instanceof Error ? reject(next) : resolve(next)))
       }),
   )
-  return { readUsagePart, release: async () => { waiting.shift()?.(); await Promise.resolve(); await Promise.resolve() } }
+  return {
+    readUsagePart,
+    release: async () => {
+      waiting.shift()?.()
+      await Promise.resolve()
+      await Promise.resolve()
+    },
+  }
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -136,7 +146,11 @@ describe('LedgerUsage', () => {
 
   it('reads again for the next screen when a read that nothing overtook failed, though the counts are not out of date', async () => {
     const source = {
-      readUsagePart: vi.fn().mockResolvedValueOnce(part('r1', 1)).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(part('r1', 1)),
+      readUsagePart: vi
+        .fn()
+        .mockResolvedValueOnce(part('r1', 1))
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce(part('r1', 1)),
     }
     const usage = new LedgerUsage(source)
     const off = usage.watch()
@@ -154,7 +168,9 @@ describe('LedgerUsage', () => {
   })
 
   it('has no counts and says why when the first read fails, and reads again on request', async () => {
-    const source = { readUsagePart: vi.fn().mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(part('r1', 1)) }
+    const source = {
+      readUsagePart: vi.fn().mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(part('r1', 1)),
+    }
     const usage = new LedgerUsage(source)
     usage.watch()
     await flush()
@@ -188,7 +204,10 @@ describe('touchesUsage', () => {
       transactions: [makeTransaction({ id: 1 }), makeTransaction({ id: 2 })],
       ...overrides,
     })
-  const write = (after: ExpenseDataset, extra: { beyond?: boolean; patch?: object } = {}) => ({
+  const write = (
+    after: ExpenseDataset,
+    extra: { beyond?: boolean; patch?: object } = {},
+  ) => ({
     before: dataset(),
     after,
     beyond: extra.beyond ?? false,
@@ -196,13 +215,23 @@ describe('touchesUsage', () => {
   })
 
   it('is true when a write to rows that are held changes what names a record', () => {
-    expect(touchesUsage(write(dataset({ transactions: [makeTransaction({ id: 1, flagId: 1 }), makeTransaction({ id: 2 })] })))).toBe(true)
+    expect(
+      touchesUsage(
+        write(dataset({ transactions: [makeTransaction({ id: 1, flagId: 1 }), makeTransaction({ id: 2 })] })),
+      ),
+    ).toBe(true)
     expect(touchesUsage(write(dataset({ transactions: [makeTransaction({ id: 1 })] })))).toBe(true)
     expect(touchesUsage(write(dataset({ flags: [] })))).toBe(true)
   })
 
   it('is false when it changes only what a count is not made of', () => {
-    expect(touchesUsage(write(dataset({ transactions: [makeTransaction({ id: 1, description: 'renamed' }), makeTransaction({ id: 2 })] })))).toBe(false)
+    expect(
+      touchesUsage(
+        write(
+          dataset({ transactions: [makeTransaction({ id: 1, description: 'renamed' }), makeTransaction({ id: 2 })] }),
+        ),
+      ),
+    ).toBe(false)
     expect(touchesUsage(write(dataset({ flags: [makeFlag({ id: 1, name: 'renamed' })] })))).toBe(false)
   })
 
@@ -213,6 +242,8 @@ describe('touchesUsage', () => {
   })
 
   it('is false for a write that reached rows that are not held and only wrote what a count is not made of', () => {
-    expect(touchesUsage(write(dataset(), { beyond: true, patch: { description: 'renamed', date: '2026-01-02' } }))).toBe(false)
+    expect(
+      touchesUsage(write(dataset(), { beyond: true, patch: { description: 'renamed', date: '2026-01-02' } })),
+    ).toBe(false)
   })
 })

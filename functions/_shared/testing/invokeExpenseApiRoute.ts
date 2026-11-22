@@ -48,9 +48,7 @@ function handlerContext(
 }
 
 /** Run an expense route through auth middleware with an injected in-memory repository. */
-export async function invokeExpenseApiRoute(
-  options: InvokeExpenseApiOptions,
-): Promise<Response> {
+export async function invokeExpenseApiRoute(options: InvokeExpenseApiOptions): Promise<Response> {
   const headers = new Headers()
   if (options.email !== false) {
     headers.set('Cf-Access-Authenticated-User-Email', options.email ?? 'owner@example.com')

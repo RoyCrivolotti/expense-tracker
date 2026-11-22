@@ -23,7 +23,10 @@ export interface SheetRelease {
 }
 
 /** How long the sheet should take to cover the distance it has left to travel. */
-export function exitDurationMs(sheetHeight: number, fromOffsetPx: number): number {
+export function exitDurationMs(
+  sheetHeight: number,
+  fromOffsetPx: number,
+): number {
   if (sheetHeight <= 0) return EXIT_MAX_MS
   const remaining = Math.max(0, sheetHeight - fromOffsetPx)
   const scaled = Math.round((remaining / sheetHeight) * EXIT_MAX_MS)

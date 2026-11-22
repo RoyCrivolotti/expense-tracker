@@ -7,7 +7,11 @@ import type { GoalScenario } from '../../../types'
  * of its own to hide, so the flag goes when the edits do, whichever way they end (Discard, Save,
  * put back by hand, a refresh) and when a flagged scenario is loaded.
  */
-function withoutLoadedLine(hidden: ReadonlySet<number>, loaded: GoalScenario | null, dirty: boolean): ReadonlySet<number> {
+function withoutLoadedLine(
+  hidden: ReadonlySet<number>,
+  loaded: GoalScenario | null,
+  dirty: boolean,
+): ReadonlySet<number> {
   if (loaded === null || dirty || !hidden.has(loaded.id)) return hidden
   const next = new Set(hidden)
   next.delete(loaded.id)
@@ -20,7 +24,11 @@ function withoutLoadedLine(hidden: ReadonlySet<number>, loaded: GoalScenario | n
  * line to hide. The same set comes back while nothing in it has gone, so what is keyed on it (the
  * chart's lines) does not redo its work.
  */
-export function useHiddenLines(scenarios: GoalScenario[], loaded: GoalScenario | null, dirty: boolean) {
+export function useHiddenLines(
+  scenarios: GoalScenario[],
+  loaded: GoalScenario | null,
+  dirty: boolean,
+) {
   const [hidden, setHidden] = useState<ReadonlySet<number>>(() => new Set())
   const kept = withoutLoadedLine(hidden, loaded, dirty)
   if (kept !== hidden) setHidden(kept)

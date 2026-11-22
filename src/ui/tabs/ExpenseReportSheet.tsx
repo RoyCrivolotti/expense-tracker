@@ -1,10 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
-import {
-  reportReceipts,
-  type ReportLine,
-  type ExpenseReport,
-} from '../../domain/engine/expenseReport'
+import { reportReceipts, type ReportLine, type ExpenseReport } from '../../domain/engine/expenseReport'
 import { formatCents, type MoneyFormat } from '../../engine/money'
 import { formatDayLabel, type Lookup } from '../format'
 import styles from './ExpenseReportView.module.css'
@@ -86,8 +82,7 @@ export function ExpenseReportSheet({
                         part. A screenshot costs nothing and already works, because
                         receipts accept image/png. */}
                     <span className={styles.screenOnly}>
-                      To have it print on this page instead, attach a screenshot of it as an
-                      image.
+                      To have it print on this page instead, attach a screenshot of it as an image.
                     </span>
                   </p>
                   {/* Screen only: on paper a link is a dead underline, and the
@@ -109,8 +104,7 @@ export function ExpenseReportSheet({
                 />
               )}
               <figcaption className={styles.caption}>
-                <span className={styles.refBadge}>R{ref}</span>{' '}
-                {formatDayLabel(transaction.date)} ·{' '}
+                <span className={styles.refBadge}>R{ref}</span> {formatDayLabel(transaction.date)} ·{' '}
                 {transaction.description || lookup.categoryName(transaction.categoryId)} ·{' '}
                 {formatCents(transaction.amountCents, format)}
               </figcaption>
@@ -122,9 +116,7 @@ export function ExpenseReportSheet({
       {/* Print-only: a claim usually has to be signed before it is submitted. */}
       <section className={styles.signature}>
         <div className={styles.signatureLine} />
-        <p className={styles.signatureLabel}>
-          Signature{claimantName ? ` — ${claimantName}` : ''}
-        </p>
+        <p className={styles.signatureLabel}>Signature{claimantName ? ` — ${claimantName}` : ''}</p>
       </section>
     </article>
   )
@@ -194,13 +186,7 @@ function InlineEdit({
  * The claim's name. An employer reading the document needs to know what it is
  * *for*, which is why this defaults to the flag's name and can be renamed.
  */
-function EditableTitle({
-  title,
-  onTitleChange,
-}: {
-  title: string
-  onTitleChange: (title: string) => void
-}) {
+function EditableTitle({ title, onTitleChange }: { title: string; onTitleChange: (title: string) => void }) {
   return (
     <InlineEdit
       value={title}
@@ -351,20 +337,14 @@ function ReportRow({
         {transaction.description || lookup.categoryName(transaction.categoryId)}
         {/* The transaction's own notes. An approver asks what a dinner was for,
             and that is exactly what this field already holds. */}
-        {showNotes && transaction.notes ? (
-          <span className={styles.notes}>{transaction.notes}</span>
-        ) : null}
+        {showNotes && transaction.notes ? <span className={styles.notes}>{transaction.notes}</span> : null}
       </td>
       <td className={styles.hideNarrow}>{lookup.categoryName(transaction.categoryId)}</td>
       <td className={styles.numeric}>
         {formatCents(signed ? -transaction.amountCents : transaction.amountCents, format)}
       </td>
       <td className={styles.numeric}>
-        {line.receiptRefs.length > 0
-          ? line.receiptRefs.map((r) => `R${r}`).join(' ')
-          : signed
-            ? '—'
-            : 'No receipt'}
+        {line.receiptRefs.length > 0 ? line.receiptRefs.map((r) => `R${r}`).join(' ') : signed ? '—' : 'No receipt'}
       </td>
     </tr>
   )
@@ -402,13 +382,7 @@ function ReportTable({
         </thead>
         <tbody>
           {report.lines.map((line) => (
-            <ReportRow
-              key={line.transaction.id}
-              line={line}
-              lookup={lookup}
-              format={format}
-              showNotes={showNotes}
-            />
+            <ReportRow key={line.transaction.id} line={line} lookup={lookup} format={format} showNotes={showNotes} />
           ))}
         </tbody>
         {settled ? (
@@ -431,21 +405,11 @@ function ReportTable({
           </tbody>
         ) : null}
         <tfoot>
-          <TotalRow
-            label="Total expenses"
-            cents={report.totalClaimedCents}
-            format={format}
-            emphasis={!settled}
-          />
+          <TotalRow label="Total expenses" cents={report.totalClaimedCents} format={format} emphasis={!settled} />
           {settled ? (
             <>
               <TotalRow label="Less reimbursed" cents={-report.creditedCents} format={format} />
-              <TotalRow
-                label="Outstanding"
-                cents={report.outstandingCents}
-                format={format}
-                emphasis
-              />
+              <TotalRow label="Outstanding" cents={report.outstandingCents} format={format} emphasis />
             </>
           ) : null}
         </tfoot>
@@ -479,9 +443,7 @@ function TotalRow({
         {label}
       </th>
       <td className={styles.hideNarrow} />
-      <td className={`${styles.numeric} ${emphasis ? styles.total : ''}`}>
-        {formatCents(cents, format)}
-      </td>
+      <td className={`${styles.numeric} ${emphasis ? styles.total : ''}`}>{formatCents(cents, format)}</td>
       <td />
     </tr>
   )
@@ -509,18 +471,14 @@ function MissingReceipts({
   return (
     <div className={styles.warning}>
       <p className={styles.warningText}>
-        {bare.length} item{bare.length === 1 ? ' has' : 's have'} no receipt attached. Most
-        employers will send the report back for those.
+        {bare.length} item{bare.length === 1 ? ' has' : 's have'} no receipt attached. Most employers will send the
+        report back for those.
       </p>
       {onOpenTransaction ? (
         <ul className={styles.warningList}>
           {bare.map(({ transaction }) => (
             <li key={transaction.id}>
-              <button
-                type="button"
-                className={styles.warningBtn}
-                onClick={() => onOpenTransaction(transaction)}
-              >
+              <button type="button" className={styles.warningBtn} onClick={() => onOpenTransaction(transaction)}>
                 {formatDayLabel(transaction.date)} ·{' '}
                 {transaction.description || lookup.categoryName(transaction.categoryId)}
               </button>

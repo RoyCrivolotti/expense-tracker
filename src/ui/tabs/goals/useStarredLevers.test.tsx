@@ -33,7 +33,10 @@ interface Props {
   save: TestSave | undefined
 }
 
-function setup(saved: readonly LeverKey[], save: TestSave | undefined) {
+function setup(
+  saved: readonly LeverKey[],
+  save: TestSave | undefined,
+) {
   const showToast = vi.fn()
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
@@ -182,7 +185,11 @@ describe('useStarredLevers', () => {
       act(() => result.current.toggle(second))
 
       expect(showToast).toHaveBeenCalledTimes(1)
-      const [message, tone, action] = showToast.mock.calls[0] as [string, string, { label: string; onAction: () => void; shortcut: unknown }]
+      const [message, tone, action] = showToast.mock.calls[0] as [
+        string,
+        string,
+        { label: string; onAction: () => void; shortcut: unknown },
+      ]
       expect(message).toBe(`Removed ${LEVER_SPECS[second].short} from the bar`)
       expect(tone).toBe('info')
       expect(action.label).toBe('Undo')

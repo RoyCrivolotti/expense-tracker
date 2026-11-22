@@ -26,7 +26,9 @@ describe('Goals copy that names the Assumptions tab', () => {
 
     const text = container.textContent ?? ''
     expect(text).toContain('the assumed inflation set in Assumptions')
-    expect(text.replace('the assumed inflation set in Assumptions', '').replace('the Market bounce card in Assumptions', '')).not.toMatch(/assumptions/i)
+    expect(
+      text.replace('the assumed inflation set in Assumptions', '').replace('the Market bounce card in Assumptions', ''),
+    ).not.toMatch(/assumptions/i)
   })
 
   it('says where the market bounce is set, since the spread card uses it before anything says what it is', () => {
@@ -35,8 +37,13 @@ describe('Goals copy that names the Assumptions tab', () => {
     expect(container.textContent).toContain('You set it in the Market bounce card in Assumptions.')
   })
 
-  it('writes every number of the glossary in the owner\'s number style, the guide and the count of runs as much as the worked example', () => {
-    const usd = render(<MoneyFormatContext.Provider value={resolveMoneyFormat('USD', 'en-US')}><GoalsExplainer /></MoneyFormatContext.Provider>).container.textContent ?? ''
+  it("writes every number of the glossary in the owner's number style, the guide and the count of runs as much as the worked example", () => {
+    const usd =
+      render(
+        <MoneyFormatContext.Provider value={resolveMoneyFormat('USD', 'en-US')}>
+          <GoalsExplainer />
+        </MoneyFormatContext.Provider>,
+      ).container.textContent ?? ''
     expect(usd).toContain('4% up to 35 years, 3.5% up to 49 and 3.25% from 50')
     expect(usd).toContain('replays the plan in 10,000 different markets')
     expect(usd).toContain('default $500 in demo')
@@ -54,7 +61,9 @@ describe('Goals copy that names the Assumptions tab', () => {
   it('says that a mixed portfolio bounces less but also grows less, so the return comes down with the bounce', () => {
     const { container } = render(<GoalsExplainer />)
 
-    expect(container.textContent).toContain('A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.')
+    expect(container.textContent).toContain(
+      'A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.',
+    )
   })
 
   it('gives the chance of the money lasting for the return and bounce it is true for, and the figure is what the engine says', () => {
@@ -78,7 +87,9 @@ describe('Goals copy that names the Assumptions tab', () => {
   it('says in the glossary that the drawdown card still gives the odds when FI is not reached', () => {
     const { container } = render(<GoalsExplainer />)
 
-    expect(container.textContent).toContain('the drawdown chart shows the target only, and the chance the money lasts is still said under its title, since it starts at the target.')
+    expect(container.textContent).toContain(
+      'the drawdown chart shows the target only, and the chance the money lasts is still said under its title, since it starts at the target.',
+    )
   })
 
   it('introduces the Assumptions view in plain sentences', () => {

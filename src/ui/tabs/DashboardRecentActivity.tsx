@@ -30,7 +30,11 @@ interface Props {
  * month it does not hold. Read again when the rows held change (a write, a refresh, another month), and null until the
  * first answer and when it fails (offline), when the rows held are all there is to list.
  */
-function useServedActivity(recent: ExpenseModel['recent'], mode: ActivityMode, held: unknown): Transaction[] | null {
+function useServedActivity(
+  recent: ExpenseModel['recent'],
+  mode: ActivityMode,
+  held: unknown,
+): Transaction[] | null {
   const [served, setServed] = useState<{ mode: ActivityMode; rows: Transaction[] } | null>(null)
   useEffect(() => {
     if (!recent) return
@@ -52,7 +56,8 @@ export function DashboardRecentActivity({ model, actions }: Props) {
   const served = useServedActivity(recent, mode, dataset)
 
   const activity = useMemo(
-    () => served ?? (mode === 'latest' ? latestTransactions(dataset.transactions) : recentlyAdded(dataset.transactions)),
+    () =>
+      served ?? (mode === 'latest' ? latestTransactions(dataset.transactions) : recentlyAdded(dataset.transactions)),
     [dataset, mode, served],
   )
 
@@ -60,12 +65,7 @@ export function DashboardRecentActivity({ model, actions }: Props) {
     <>
       <div className={styles.sectionHeader}>
         <SectionTitle>Recent activity</SectionTitle>
-        <SegmentedControl
-          options={ACTIVITY_MODES}
-          value={mode}
-          onChange={setMode}
-          ariaLabel="Recent activity sort"
-        />
+        <SegmentedControl options={ACTIVITY_MODES} value={mode} onChange={setMode} ariaLabel="Recent activity sort" />
       </div>
       <p className={styles.activityHint}>{ACTIVITY_HINTS[mode]}</p>
       <Card>

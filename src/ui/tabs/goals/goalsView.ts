@@ -35,7 +35,10 @@ export function entryDraftPatch(
 export const GOALS_VIEW_TABS = { idPrefix: 'goals-view', panelId: 'goals-panel' }
 
 /** What the phone's one row shows as selected: Plan is whichever of its halves was last open. */
-export function mobileViewOf(view: TabView, half: MobilePlanView): GoalsMobileView {
+export function mobileViewOf(
+  view: TabView,
+  half: MobilePlanView,
+): GoalsMobileView {
   return view === 'plan' ? half : view
 }
 

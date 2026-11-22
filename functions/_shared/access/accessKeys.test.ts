@@ -107,7 +107,16 @@ describe('the keys of the team', () => {
   it('are only the RSA keys that import', async () => {
     const odd = {
       fetch: (async () =>
-        new Response(JSON.stringify({ keys: [{ kid: 'a', kty: 'EC', crv: 'P-256' }, { kid: 'b', kty: 'RSA' }, { kty: 'RSA', n: 'x', e: 'AQAB' }, ...(await idp.certs()).keys] }))) as typeof fetch,
+        new Response(
+          JSON.stringify({
+            keys: [
+              { kid: 'a', kty: 'EC', crv: 'P-256' },
+              { kid: 'b', kty: 'RSA' },
+              { kty: 'RSA', n: 'x', e: 'AQAB' },
+              ...(await idp.certs()).keys,
+            ],
+          }),
+        )) as typeof fetch,
     }
 
     const keyFor = createAccessKeyCache({ ...odd, now: () => clock })
@@ -133,7 +142,9 @@ describe('the keys of the team', () => {
   it('are a 503 when the document holds no usable key', async () => {
     const empty = { fetch: (async () => new Response(JSON.stringify({ keys: [] }))) as typeof fetch }
 
-    await expect(createAccessKeyCache({ ...empty, now: () => clock })(TEAM, 'key-1')).rejects.toMatchObject({ status: 503 })
+    await expect(createAccessKeyCache({ ...empty, now: () => clock })(TEAM, 'key-1')).rejects.toMatchObject({
+      status: 503,
+    })
   })
 })
 
@@ -147,10 +158,18 @@ describe('normalizeTeamDomain', () => {
     expect(normalizeTeamDomain(raw)).toBe(host)
   })
 
-  it.each(['', 'acme', 'http://acme.cloudflareaccess.com', 'acme.cloudflareaccess.com/path', 'acme.cloudflareaccess.com:8443', 'a b.com', '-acme.com', 'acme..com', 'user@example.com', '/cdn-cgi'])(
-    'refuses %j',
-    (raw) => {
-      expect(normalizeTeamDomain(raw)).toBeNull()
-    },
-  )
+  it.each([
+    '',
+    'acme',
+    'http://acme.cloudflareaccess.com',
+    'acme.cloudflareaccess.com/path',
+    'acme.cloudflareaccess.com:8443',
+    'a b.com',
+    '-acme.com',
+    'acme..com',
+    'user@example.com',
+    '/cdn-cgi',
+  ])('refuses %j', (raw) => {
+    expect(normalizeTeamDomain(raw)).toBeNull()
+  })
 })

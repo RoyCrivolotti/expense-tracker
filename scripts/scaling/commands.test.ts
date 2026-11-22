@@ -23,7 +23,10 @@ interface Harness {
   routes: MeasureOptions[]
 }
 
-function harness(transport: Transport, over: Partial<Deps> = {}): Harness {
+function harness(
+  transport: Transport,
+  over: Partial<Deps> = {},
+): Harness {
   const out: string[] = []
   const files = new Map<string, unknown>()
   const opened: RestOptions[] = []
@@ -35,7 +38,10 @@ function harness(transport: Transport, over: Partial<Deps> = {}): Harness {
     readProductionToml: () => TOML,
     files: {
       readJson: (path) => files.get(path),
-      writeJson: (path, value) => void files.set(path, JSON.parse(JSON.stringify(value))),
+      writeJson: (
+        path,
+        value,
+      ) => void files.set(path, JSON.parse(JSON.stringify(value))),
       exists: (path) => files.has(path),
     },
     transportFor: (options) => (opened.push(options), transport),
@@ -46,7 +52,14 @@ function harness(transport: Transport, over: Partial<Deps> = {}): Harness {
     measureRoutes: (options) => {
       routes.push(options)
       const summary = { calls: 1, statements: 1, rowsRead: 5, rowsWritten: 0, sqlMs: 0, writes: 0 }
-      const result: RouteResult = { name: 'GET stub', status: 200, bytes: 10, summary, statements: [], unexpectedWrite: false }
+      const result: RouteResult = {
+        name: 'GET stub',
+        status: 200,
+        bytes: 10,
+        summary,
+        statements: [],
+        unexpectedWrite: false,
+      }
       return Promise.resolve([result])
     },
     ...over,
@@ -54,7 +67,10 @@ function harness(transport: Transport, over: Partial<Deps> = {}): Harness {
   return { deps, out, files, opened, routes }
 }
 
-const run = (argv: string[], h: Harness) => execute(parseArgs(argv), h.deps)
+const run = (
+  argv: string[],
+  h: Harness,
+) => execute(parseArgs(argv), h.deps)
 const text = (h: Harness) => h.out.join('\n')
 
 describe('plan', () => {
@@ -81,7 +97,9 @@ describe('the dry runs', () => {
     expect(text(h)).toContain('dry run')
     expect(text(h)).toContain(SYNTHETIC_OWNER)
     const dataset = ledgerOfAbout(300, '2026-10')
-    expect(text(h)).toContain(`expected rows written: ${datasetInsertWrites(dataset) + referenceInsertWrites(dataset)}; removing them again later: ${datasetDeleteWrites(dataset)}`)
+    expect(text(h)).toContain(
+      `expected rows written: ${datasetInsertWrites(dataset) + referenceInsertWrites(dataset)}; removing them again later: ${datasetDeleteWrites(dataset)}`,
+    )
     expect(h.opened).toHaveLength(0)
     expect(h.files.size).toBe(0)
   })
@@ -102,14 +120,21 @@ describe('refusals before any statement', () => {
   })
 
   it('refuses production before it reads the config or the credentials', async () => {
-    const h = harness(transport(), { env: {}, readDevConfig: () => { throw new Error('config was read') } })
+    const h = harness(transport(), {
+      env: {},
+      readDevConfig: () => {
+        throw new Error('config was read')
+      },
+    })
     await expect(run(['check', '--database', 'roy-expenses'], h)).rejects.toThrow(/production database/)
   })
 
   it('never opens a connection to the production database', async () => {
     const h = harness(transport())
     await expect(run(['check', '--database', 'roy-expenses'], h)).rejects.toThrow(/production/)
-    await expect(run(['seed', '--database', 'roy-expenses', '--write', '--confirm', 'roy-expenses', '--snapshot', 's.json'], h)).rejects.toThrow(/production/)
+    await expect(
+      run(['seed', '--database', 'roy-expenses', '--write', '--confirm', 'roy-expenses', '--snapshot', 's.json'], h),
+    ).rejects.toThrow(/production/)
     expect(h.opened).toHaveLength(0)
   })
 
@@ -129,7 +154,9 @@ describe('refusals before any statement', () => {
   })
 
   it('refuses to write when the account has no room today', async () => {
-    const h = harness(transport(), { usage: () => Promise.resolve({ rowsRead: 0, rowsWritten: 39_000, byDatabase: {} }) })
+    const h = harness(transport(), {
+      usage: () => Promise.resolve({ rowsRead: 0, rowsWritten: 39_000, byDatabase: {} }),
+    })
     h.files.set('snap.json', {})
     await expect(run(['seed', ...CONFIRM, '--snapshot', 'snap.json'], h)).rejects.toThrow(/account has written 39000/)
   })
@@ -141,13 +168,22 @@ describe('refusals before any statement', () => {
   })
 
   it('accepts the number read off the dashboard instead of analytics', async () => {
-    const h = harness(sqliteTransport(databaseWithAnotherOwner()), { usage: () => Promise.reject(new Error('not allowed')) })
+    const h = harness(sqliteTransport(databaseWithAnotherOwner()), {
+      usage: () => Promise.reject(new Error('not allowed')),
+    })
     h.files.set('snap.json', {})
-    expect(await run(['seed', ...CONFIRM, '--snapshot', 'snap.json', '--transactions', '200', '--account-written-today', '300'], h)).toBe(0)
+    expect(
+      await run(
+        ['seed', ...CONFIRM, '--snapshot', 'snap.json', '--transactions', '200', '--account-written-today', '300'],
+        h,
+      ),
+    ).toBe(0)
   })
 
   it('keeps a read-only command running when analytics are out of reach', async () => {
-    const h = harness(sqliteTransport(databaseWithAnotherOwner()), { usage: () => Promise.reject(new Error('not allowed')) })
+    const h = harness(sqliteTransport(databaseWithAnotherOwner()), {
+      usage: () => Promise.reject(new Error('not allowed')),
+    })
     expect(await run(['check', '--database', 'roy-expenses-dev'], h)).toBe(0)
     expect(text(h)).toContain('account today: unknown')
   })
@@ -194,7 +230,14 @@ describe('a whole exercise through the commands', () => {
 
   it('reports a failing route as a failed run', async () => {
     const { db } = await seededDatabase(200)
-    const failing: RouteResult = { name: 'GET stub', status: 500, bytes: 0, statements: [], unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: 0, rowsWritten: 0, sqlMs: 0, writes: 0 } }
+    const failing: RouteResult = {
+      name: 'GET stub',
+      status: 500,
+      bytes: 0,
+      statements: [],
+      unexpectedWrite: false,
+      summary: { calls: 1, statements: 1, rowsRead: 0, rowsWritten: 0, sqlMs: 0, writes: 0 },
+    }
     const h = harness(sqliteTransport(db), { measureRoutes: () => Promise.resolve([failing]) })
     expect(await run(['measure', '--database', 'roy-expenses-dev'], h)).toBe(1)
     const wrote: RouteResult = { ...failing, status: 200, unexpectedWrite: true }
@@ -207,7 +250,9 @@ describe('a whole exercise through the commands', () => {
     const h = harness(sqliteTransport(databaseWithAnotherOwner()))
     h.files.set(SPEND_FILE, { days: [{ day: '2026-10-18', read: 10, written: 24_990, statements: 3 }] })
     h.files.set('snap.json', {})
-    await expect(run(['seed', ...CONFIRM, '--snapshot', 'snap.json', '--transactions', '200'], h)).rejects.toThrow(/in total/)
+    await expect(run(['seed', ...CONFIRM, '--snapshot', 'snap.json', '--transactions', '200'], h)).rejects.toThrow(
+      /in total/,
+    )
   })
 
   it('fails a cleanup that leaves rows behind and a verify that finds the synthetic owner or a change', async () => {
@@ -223,7 +268,11 @@ describe('a whole exercise through the commands', () => {
   it('stops a cleanup that finds rows it was not meant to leave', async () => {
     const { db } = await seededDatabase(100)
     const inner = sqliteTransport(db)
-    const sloppy: Transport = { ...inner, query: (s) => (/^DELETE FROM settings/.test(s.sql) ? inner.query({ sql: 'SELECT 1', params: [] }) : inner.query(s)) }
+    const sloppy: Transport = {
+      ...inner,
+      query: (s) =>
+        /^DELETE FROM settings/.test(s.sql) ? inner.query({ sql: 'SELECT 1', params: [] }) : inner.query(s),
+    }
     db.prepare('INSERT INTO settings (owner) VALUES (?)').run(SYNTHETIC_OWNER)
     const h = harness(sloppy)
     expect(await run(['cleanup', ...CONFIRM, '--transactions', '100'], h)).toBe(1)
@@ -242,7 +291,14 @@ describe('the stop file', () => {
 describe('compare', () => {
   it('shows the growth per 1,000 transactions between two runs', async () => {
     const h = harness(sqliteTransport(databaseWithAnotherOwner()))
-    const result = (read: number): RouteResult => ({ name: 'GET series', status: 200, bytes: 1, statements: [], unexpectedWrite: false, summary: { calls: 1, statements: 1, rowsRead: read, rowsWritten: 0, sqlMs: 0, writes: 0 } })
+    const result = (read: number): RouteResult => ({
+      name: 'GET series',
+      status: 200,
+      bytes: 1,
+      statements: [],
+      unexpectedWrite: false,
+      summary: { calls: 1, statements: 1, rowsRead: read, rowsWritten: 0, sqlMs: 0, writes: 0 },
+    })
     h.files.set('a.json', { day: 'd', transactions: 300, results: [result(2_700)] })
     h.files.set('b.json', { day: 'd', transactions: 1_200, results: [result(10_800)] })
     expect(await run(['compare', 'a.json', 'b.json'], h)).toBe(0)

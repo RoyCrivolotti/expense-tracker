@@ -1,9 +1,4 @@
-import type {
-  AttachmentCounts,
-  LedgerReferenceRead,
-  MonthRange,
-  MonthRowsRead,
-} from '../domain/data/ledgerParts'
+import type { AttachmentCounts, LedgerReferenceRead, MonthRange, MonthRowsRead } from '../domain/data/ledgerParts'
 import type { MonthCell } from '../domain/ledger/types'
 import { deriveStatus } from '../domain/engine/status'
 import type { AccountStatement, StoredTransaction, Transaction, TxnStatus, TxnType } from '../domain/types'
@@ -43,11 +38,17 @@ interface CellRow {
   n: number
 }
 
-function statement({ sql, params }: Sql, env: Env): D1PreparedStatement {
+function statement(
+  { sql, params }: Sql,
+  env: Env,
+): D1PreparedStatement {
   return env.DB.prepare(sql).bind(...params)
 }
 
-async function rowsOf<T>(query: Sql, env: Env): Promise<T[]> {
+async function rowsOf<T>(
+  query: Sql,
+  env: Env,
+): Promise<T[]> {
   return (await statement(query, env).all<T>()).results ?? []
 }
 
@@ -60,18 +61,26 @@ function labelIdsOf(json: string): number[] {
  * `date DESC, id DESC`, the order the API returns rows in. An id is unique, so no two rows tie. Dates are
  * `YYYY-MM-DD`, which JavaScript and SQLite's binary collation compare alike.
  */
-const byNewest = (a: { date: string; id: number }, b: { date: string; id: number }): number =>
-  a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1
+const byNewest = (
+  a: { date: string; id: number },
+  b: { date: string; id: number },
+): number => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
 
 /** The indexed pinned rows, which are in order, with the few payments that are pinned by a link. */
-function newestFirst(indexed: PartRow[], payments: PartRow[]): PartRow[] {
+function newestFirst(
+  indexed: PartRow[],
+  payments: PartRow[],
+): PartRow[] {
   if (payments.length === 0) return indexed
   return [...indexed, ...payments].sort(byNewest)
 }
 
 function transactionsOf<R extends LeanRow>(
   rows: R[],
-  statusOf: (stored: StoredTransaction, row: R) => TxnStatus,
+  statusOf: (
+    stored: StoredTransaction,
+    row: R,
+  ) => TxnStatus,
 ): { transactions: Transaction[]; attachmentCounts: AttachmentCounts } {
   const attachmentCounts: AttachmentCounts = {}
   const transactions = rows.map((row) => {
@@ -87,7 +96,10 @@ function transactionsOf<R extends LeanRow>(
  * row whose account is not there is posted, cancelled or not. Statements are grouped by account, so a row looks
  * through its own account's few and not all of them.
  */
-function statusReader(accountRows: AccountRow[], paidRows: StatementRow[]): (stored: StoredTransaction) => TxnStatus {
+function statusReader(
+  accountRows: AccountRow[],
+  paidRows: StatementRow[],
+): (stored: StoredTransaction) => TxnStatus {
   const accounts = new Map(accountRows.map((row) => [row.id, toAccount(row)]))
   const paid = new Map<number, AccountStatement[]>()
   for (const row of paidRows) {
@@ -107,7 +119,10 @@ function statusReader(accountRows: AccountRow[], paidRows: StatementRow[]): (sto
  * the twelve reference statements `loadDataset` runs, two for the pinned rows and one that counts rows
  * per budget month.
  */
-export async function readLedgerReference(env: Env, owner: string): Promise<LedgerReferenceRead> {
+export async function readLedgerReference(
+  env: Env,
+  owner: string,
+): Promise<LedgerReferenceRead> {
   const [reference, indexed, payments, counts] = await Promise.all([
     loadReferenceTables(env, owner),
     rowsOf<PartRow>(pinnedSql(owner), env),

@@ -7,7 +7,10 @@ import { utcDateMs } from './dates'
 import type { CarriedEvent, Rebaseline } from './rebaselinePatch'
 
 /** The same day of the year, `years` on, by the calendar rather than in days. */
-export function anniversary(iso: string, years: number): string {
+export function anniversary(
+  iso: string,
+  years: number,
+): string {
   const d = new Date(utcDateMs(iso))
   d.setUTCFullYear(d.getUTCFullYear() + years)
   return d.toISOString().slice(0, 10)
@@ -23,7 +26,13 @@ export function anniversary(iso: string, years: number): string {
  * source has already spent it, and the copy would read above its source from then to the end. Paid
  * early it reads under. One that would land on the start itself is behind it (null).
  */
-export function carriedYear(year: number, oldStart: string, newStart: string, checkin: string, early = false): number | null {
+export function carriedYear(
+  year: number,
+  oldStart: string,
+  newStart: string,
+  checkin: string,
+  early = false,
+): number | null {
   const date = anniversary(oldStart, year)
   if (date <= checkin) return null
   let k = 1
@@ -71,7 +80,9 @@ export function carryPurchase(
   early = false,
 ): { housePurchaseYear: number | null; house: Rebaseline['house'] } {
   const housePurchaseYear =
-    purchase === null || purchase === 0 || !oldStart ? purchase : (carriedYear(purchase, oldStart, date, date, early) ?? 0)
+    purchase === null || purchase === 0 || !oldStart
+      ? purchase
+      : (carriedYear(purchase, oldStart, date, date, early) ?? 0)
   const house =
     oldStart && purchase !== null && purchase > 0 && housePurchaseYear !== null
       ? {

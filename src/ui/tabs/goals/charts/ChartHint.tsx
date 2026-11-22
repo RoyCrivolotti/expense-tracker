@@ -12,7 +12,15 @@ export interface HintText {
  * behind "How to read this chart": that person has not met a purchase year or a return band yet, and a paragraph of them
  * above the first chart they see is the page's hardest sentence. Anyone with a saved scenario keeps it open, as it was.
  */
-export function ChartHint({ hint, isHero, savedScenarios }: { hint: HintText | null; isHero: boolean; savedScenarios: number }) {
+export function ChartHint({
+  hint,
+  isHero,
+  savedScenarios,
+}: {
+  hint: HintText | null
+  isHero: boolean
+  savedScenarios: number
+}) {
   if (hint === null) return null
   if (!isHero || savedScenarios > 0) return <p className={styles.chartHint}>{`${hint.lead} ${hint.rest}`}</p>
   return (

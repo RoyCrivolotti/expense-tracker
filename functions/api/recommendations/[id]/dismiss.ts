@@ -9,7 +9,12 @@ import { recommendationId, refuse } from '../../../_shared/recommendationRoute'
 export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = recommendationId(context.params.id)
   try {
-    const result = await dismissRecommendation(createD1CaptureRepository(context.env), context.data.owner, id, new Date())
+    const result = await dismissRecommendation(
+      createD1CaptureRepository(context.env),
+      context.data.owner,
+      id,
+      new Date(),
+    )
     if (!result.ok) refuse(result)
     return json({ ok: true })
   } catch (error) {

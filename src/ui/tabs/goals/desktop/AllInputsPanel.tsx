@@ -45,7 +45,10 @@ function Column({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Whether any input of the section is left to show; an empty one would be a heading over nothing. */
-function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): boolean {
+function hasInputs(
+  keys: readonly LeverKey[],
+  omit: ReadonlySet<LeverKey>,
+): boolean {
   return keys.some((key) => !omit.has(key))
 }
 
@@ -88,7 +91,10 @@ interface ColumnProps {
   otherPlan: PlanFromToday | null
   onChange: (patch: Partial<NewGoalScenario>) => void
   omit: ReadonlySet<LeverKey>
-  wrap: (key: LeverKey, field: ReactNode) => ReactNode
+  wrap: (
+    key: LeverKey,
+    field: ReactNode,
+  ) => ReactNode
 }
 
 /** What the panel says about the stars above its columns, and the way back to the five it starts with. */
@@ -97,7 +103,9 @@ function StarNote({ starred }: { starred: StarredLevers }) {
   return (
     <div className={styles.starNote}>
       <p className={styles.starText}>
-        {starred.canAdd ? 'Star an input to keep it in the bar above.' : 'The bar holds five. Take one out of it to star another.'}
+        {starred.canAdd
+          ? 'Star an input to keep it in the bar above.'
+          : 'The bar holds five. Take one out of it to star another.'}
       </p>
       {starred.isDefault ? null : (
         <button type="button" className={goalStyles.btn} onClick={starred.reset}>
@@ -112,7 +120,10 @@ function PanelBody({ id, draft, latest, otherPlan = null, onChange, starred }: P
   const { leaving, exitMs } = useExit()
   const labels = ADJUST_LABELS
   const omit = useMemo<ReadonlySet<LeverKey>>(() => new Set(starred.keys), [starred.keys])
-  const wrap = (key: LeverKey, field: ReactNode) => (
+  const wrap = (
+    key: LeverKey,
+    field: ReactNode,
+  ) => (
     <Starrable leverKey={key} starred={starred}>
       {field}
     </Starrable>
@@ -131,7 +142,14 @@ function PanelBody({ id, draft, latest, otherPlan = null, onChange, starred }: P
         <Card>
           <StarNote starred={starred} />
           <div className={styles.columns}>
-            <PortfolioColumn draft={draft} latest={latest} otherPlan={otherPlan} onChange={onChange} omit={omit} wrap={wrap} />
+            <PortfolioColumn
+              draft={draft}
+              latest={latest}
+              otherPlan={otherPlan}
+              onChange={onChange}
+              omit={omit}
+              wrap={wrap}
+            />
             {hasInputs(SECTION_KEYS.housing, omit) ? (
               <Column title={labels.housing.title}>
                 <HousingFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />

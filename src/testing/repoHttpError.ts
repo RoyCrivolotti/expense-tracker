@@ -2,7 +2,10 @@
 export class RepoHttpError extends Error {
   readonly status: number
 
-  constructor(status: number, message: string) {
+  constructor(
+    status: number,
+    message: string,
+  ) {
     super(message)
     this.status = status
   }

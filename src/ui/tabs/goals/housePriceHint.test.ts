@@ -3,10 +3,14 @@ import { EU_MONEY_FORMAT } from '../../../engine'
 import { samplePlan, SAMPLE_INFLATION } from '../../../testing/samplePlan'
 import { housePriceDetail, housePriceHint } from './housePriceHint'
 
-const hint = (over = {}, inflation = SAMPLE_INFLATION) =>
-  housePriceHint(samplePlan(over), inflation, EU_MONEY_FORMAT)
-const detail = (over = {}, inflation = SAMPLE_INFLATION) =>
-  housePriceDetail(samplePlan(over), inflation, EU_MONEY_FORMAT)
+const hint = (
+  over = {},
+  inflation = SAMPLE_INFLATION,
+) => housePriceHint(samplePlan(over), inflation, EU_MONEY_FORMAT)
+const detail = (
+  over = {},
+  inflation = SAMPLE_INFLATION,
+) => housePriceDetail(samplePlan(over), inflation, EU_MONEY_FORMAT)
 
 describe('housePriceHint', () => {
   it('says what the house costs when it is bought, in the money of the plan start, and nothing more in the line under the price', () => {
@@ -16,7 +20,9 @@ describe('housePriceHint', () => {
 
   it('keeps for the detail what the plan cannot be checked without: the same cost as paid, and the rates it came from', () => {
     // 300.000 x 1.03^8 = 380.031 euros on the day, as houses rise 3% a year and inflation is 2%.
-    expect(detail()).toBe('When you pay it that is about 380.031 € on your account, as houses rise 3,0% a year and inflation is 2,0%.')
+    expect(detail()).toBe(
+      'When you pay it that is about 380.031 € on your account, as houses rise 3,0% a year and inflation is 2,0%.',
+    )
   })
 
   it('says the same price when houses only keep up with inflation', () => {

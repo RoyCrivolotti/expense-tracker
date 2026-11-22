@@ -64,12 +64,7 @@ function PlainTransactionRow({
   return (
     <div className={styles.rowWithAction}>
       {row}
-      <button
-        type="button"
-        className={styles.clearFlagBtn}
-        aria-label="Clear flag"
-        onClick={() => onClearFlag(txn)}
-      >
+      <button type="button" className={styles.clearFlagBtn} aria-label="Clear flag" onClick={() => onClearFlag(txn)}>
         <CloseIcon />
       </button>
     </div>
@@ -139,7 +134,12 @@ export function TransactionRow({
   }
 
   const touchProps = onLongPressSelect
-    ? { onTouchStart: longPress.onTouchStart, onTouchMove: longPress.onTouchMove, onTouchEnd: longPress.onTouchEnd, onTouchCancel: longPress.onTouchCancel }
+    ? {
+        onTouchStart: longPress.onTouchStart,
+        onTouchMove: longPress.onTouchMove,
+        onTouchEnd: longPress.onTouchEnd,
+        onTouchCancel: longPress.onTouchCancel,
+      }
     : {}
 
   return (

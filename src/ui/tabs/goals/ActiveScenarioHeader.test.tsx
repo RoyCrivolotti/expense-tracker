@@ -103,7 +103,9 @@ describe('ActiveScenarioHeader', () => {
     const HINT = 'Give the scenario a name to save it'
 
     it('turns Save changes off without disabling it, and a press says why instead of saving', () => {
-      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: '  ' }), makeActions(), { dirty: true })
+      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: '  ' }), makeActions(), {
+        dirty: true,
+      })
 
       const save = screen.getByRole('button', { name: 'Save changes' })
       expect(save).toHaveAttribute('aria-disabled', 'true')
@@ -116,8 +118,10 @@ describe('ActiveScenarioHeader', () => {
       expect(onSaveChanges).not.toHaveBeenCalled()
     })
 
-    it('does the same for a new scenario\'s Save, which had no reason at all', () => {
-      const { onSaveDraft, showToast } = renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), { detached: true })
+    it("does the same for a new scenario's Save, which had no reason at all", () => {
+      const { onSaveDraft, showToast } = renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), {
+        detached: true,
+      })
 
       const save = screen.getByRole('button', { name: 'Save scenario' })
       expect(save).toHaveAttribute('aria-disabled', 'true')
@@ -155,7 +159,9 @@ describe('ActiveScenarioHeader', () => {
     })
 
     it('says nothing once there is a name', () => {
-      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions(), { dirty: true })
+      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions(), {
+        dirty: true,
+      })
       const save = screen.getByRole('button', { name: 'Save changes' })
       expect(screen.queryByText(HINT)).not.toBeInTheDocument()
       expect(save).not.toHaveAttribute('aria-disabled')
@@ -189,7 +195,9 @@ describe('ActiveScenarioHeader', () => {
     unmount()
 
     renderHeader(scenario, makeActions(), { canWrite: false, dirty: true })
-    expect(screen.getByRole('status')).toHaveTextContent('so these changes cannot be saved. They are lost when you leave Goals or reload.')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'so these changes cannot be saved. They are lost when you leave Goals or reload.',
+    )
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
   })
 

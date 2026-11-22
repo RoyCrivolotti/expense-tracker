@@ -49,7 +49,9 @@ describe('the sections of the controls', () => {
     expect(screen.getByText('How FI is worked out')).toBeInTheDocument()
     // Every input that can be in the bar is out of the sections; the upkeep of the house and the years
     // the money must last are not among them (neither has a star), so they are all that is left.
-    const left = [...container.querySelectorAll('input')].filter((i) => !/^(Upkeep|Years the money)/.test(i.getAttribute('aria-label') ?? ''))
+    const left = [...container.querySelectorAll('input')].filter(
+      (i) => !/^(Upkeep|Years the money)/.test(i.getAttribute('aria-label') ?? ''),
+    )
     expect(left).toHaveLength(0)
   })
 
@@ -67,7 +69,9 @@ describe('the sections of the controls', () => {
   it('says to enter the rate the money compounds at, not the average of yearly returns, and that fund costs and tax are not taken out', () => {
     render(<PortfolioFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['expectedRealReturn'])} />)
     const note = screen.getByText(/Real return: about 5% a year after inflation/)
-    expect(note).toHaveTextContent('Enter the rate your money compounds at, not the simple average of yearly returns, which is higher by about a point for stocks.')
+    expect(note).toHaveTextContent(
+      'Enter the rate your money compounds at, not the simple average of yearly returns, which is higher by about a point for stocks.',
+    )
     expect(note).toHaveTextContent('The plan takes out no fund costs or tax, so enter the return after them.')
   })
 
@@ -112,7 +116,11 @@ describe('the sections of the controls', () => {
     const { id, ...draft } = samplePlan()
     void id
     const { rerender } = render(<HousingFields draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText(/Enter the price at the plan's start\. Bought in year 8 it costs about 324\.353 € in 2026 euros/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Enter the price at the plan's start\. Bought in year 8 it costs about 324\.353 € in 2026 euros/,
+      ),
+    ).toBeInTheDocument()
 
     // It is worked out from the draft and said nowhere else, so it does not leave with the input.
     rerender(<HousingFields draft={draft} onChange={vi.fn()} omit={everything(['housePriceCents'])} />)
@@ -125,7 +133,9 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     expect(
-      screen.getByText('Counted in 2026 euros and rising with inflation: about 1.172 € a month on your account in 2034, the year you buy.'),
+      screen.getByText(
+        'Counted in 2026 euros and rising with inflation: about 1.172 € a month on your account in 2034, the year you buy.',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -134,7 +144,9 @@ describe('the sections of the controls', () => {
     void id
     const { rerender } = render(<FireFields draft={draft} onChange={vi.fn()} />)
     expect(
-      screen.getByText('Counted in 2026 euros: about 54.341 € a year on your account in 2056, when the plan ends (FI is not reached).'),
+      screen.getByText(
+        'Counted in 2026 euros: about 54.341 € a year on your account in 2056, when the plan ends (FI is not reached).',
+      ),
     ).toBeInTheDocument()
 
     rerender(<FireFields draft={draft} onChange={vi.fn()} omit={everything(['annualSpendCents'])} />)
@@ -145,7 +157,11 @@ describe('the sections of the controls', () => {
     const { id, ...draft } = samplePlan()
     void id
     render(<ChangesFields draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText(/It is counted in 2026 euros at the assumed inflation, so an amount that stays the same counts for less each year/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /It is counted in 2026 euros at the assumed inflation, so an amount that stays the same counts for less each year/,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('takes what the purchase costs from the price it has risen to', () => {
@@ -174,7 +190,9 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     // 6.000 euros of 2026 times 1,02 to the 8th.
-    expect(screen.getByText('Counted in 2026 euros: about 7.030 € on your account in 2034, the year you buy.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Counted in 2026 euros: about 7.030 € on your account in 2034, the year you buy.'),
+    ).toBeInTheDocument()
   })
 
   it('names the money of the amounts that are typed for a one-off event, and what the one being added comes to on the account', () => {
@@ -215,7 +233,9 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={rest} onChange={vi.fn()} />)
 
-    expect(screen.getByText(/Already own: the starting balance is counted as what is left after the/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Already own: the starting balance is counted as what is left after the/),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/takes .* from the portfolio/)).not.toBeInTheDocument()
   })
 
@@ -241,17 +261,33 @@ describe('the sections of the controls', () => {
   })
 
   it('has the years the money must last, with the guide for them, even when the withdrawal rate is in the bar', () => {
-    render(<FireFields draft={{ ...makeDraft(), retirementYears: 40 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
+    render(
+      <FireFields
+        draft={{ ...makeDraft(), retirementYears: 40 }}
+        onChange={vi.fn()}
+        omit={everything(SECTION_KEYS.fire)}
+      />,
+    )
     expect(screen.getAllByLabelText('Years the money must last').length).toBeGreaterThan(0)
     expect(screen.getByText(/40 years points to 3,5%/)).toBeInTheDocument()
-    expect(screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50/),
+    ).toBeInTheDocument()
     expect(screen.getByText(/moves the rate to the guide unless you have set the rate yourself/)).toBeInTheDocument()
   })
 
   it('calls the guide a rule of thumb, not a safe rate, in view, and points to the chart that shows how often the money lasts behind the note', () => {
-    render(<FireFields draft={{ ...makeDraft(), retirementYears: 30 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
+    render(
+      <FireFields
+        draft={{ ...makeDraft(), retirementYears: 30 }}
+        onChange={vi.fn()}
+        omit={everything(SECTION_KEYS.fire)}
+      />,
+    )
     const hint = screen.getByText(/How long the money must last\./)
-    expect(hint).toHaveTextContent('How long the money must last. 30 years points to 4%, a rule of thumb, not a promise.')
+    expect(hint).toHaveTextContent(
+      'How long the money must last. 30 years points to 4%, a rule of thumb, not a promise.',
+    )
     expect(hint).not.toHaveTextContent('that is safe')
     expect(screen.getByText('The FI chart shows how often the money lasts in simulated markets.')).toBeInTheDocument()
   })
@@ -273,7 +309,9 @@ describe('the sections of the controls', () => {
 
   it('says to add the tax on what is withdrawn, since the plan does not, under the spending', () => {
     render(<FireFields draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByText(/Yearly cost of living after FI/)).toHaveTextContent('Add the tax on what you withdraw: the plan does not.')
+    expect(screen.getByText(/Yearly cost of living after FI/)).toHaveTextContent(
+      'Add the tax on what you withdraw: the plan does not.',
+    )
   })
 
   it('moves the withdrawal rate with the years while it is the guide, and leaves one set by hand alone', () => {
@@ -285,7 +323,10 @@ describe('the sections of the controls', () => {
       return onChange.mock.calls[0]?.[0] as { retirementYears: number; safeWithdrawalRate?: number }
     }
     // 35 years at 4% is the guide, so 36 years brings 3,5% with it.
-    expect(years({ ...makeDraft(), retirementYears: 35, safeWithdrawalRate: 0.04 })).toEqual({ retirementYears: 36, safeWithdrawalRate: 0.035 })
+    expect(years({ ...makeDraft(), retirementYears: 35, safeWithdrawalRate: 0.04 })).toEqual({
+      retirementYears: 36,
+      safeWithdrawalRate: 0.035,
+    })
     // A rate set by hand stays.
     expect(years({ ...makeDraft(), retirementYears: 35, safeWithdrawalRate: 0.045 })).toEqual({ retirementYears: 36 })
   })

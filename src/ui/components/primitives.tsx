@@ -3,13 +3,7 @@ import { Money } from './Money'
 import type { TxnType } from '../../types'
 import styles from './primitives.module.css'
 
-export function Card({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string | undefined
-}) {
+export function Card({ children, className }: { children: ReactNode; className?: string | undefined }) {
   return <section className={`${styles.card} ${className ?? ''}`}>{children}</section>
 }
 

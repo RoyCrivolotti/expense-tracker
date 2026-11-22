@@ -13,7 +13,10 @@ import type { Flag } from '../../types'
  * so the trigger and popover still have something to show instead of silently
  * falling back to "No flag".
  */
-export function selectableFlags(flags: Flag[], value: number | null): Flag[] {
+export function selectableFlags(
+  flags: Flag[],
+  value: number | null,
+): Flag[] {
   const filtered = flags.filter((f) => f.active || f.id === value)
   if (value == null || flags.some((f) => f.id === value)) return filtered
   const placeholder: Flag = {
@@ -36,6 +39,7 @@ export function transactionCountLabel(count: number | null): string {
 /** What deleting a flag will actually do, in the user's terms. */
 export function flagDeleteMessage(usageCount: number | null): string {
   if (usageCount === 0) return 'Nothing is flagged with it, so nothing else changes.'
-  if (usageCount === null) return 'Every transaction flagged with it will be unflagged. Nothing else changes — no transaction is deleted.'
+  if (usageCount === null)
+    return 'Every transaction flagged with it will be unflagged. Nothing else changes — no transaction is deleted.'
   return `${transactionCountLabel(usageCount)} will be unflagged. Nothing else changes — no transaction is deleted.`
 }

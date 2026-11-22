@@ -155,7 +155,7 @@ describe('FilterFields layout', () => {
   })
 
   it('keeps three columns with five fields, so two boxes do not stretch wider than the rest', () => {
-    const { container } = renderFields({ flags: [] , labels: [travel] })
+    const { container } = renderFields({ flags: [], labels: [travel] })
 
     expect(container.firstElementChild).toHaveAttribute('data-columns', '3')
   })
@@ -163,12 +163,7 @@ describe('FilterFields layout', () => {
   it('goes two to a row with only the four fields that always exist', () => {
     const { container } = renderFields({ flags: [], labels: [] })
 
-    expect(order(container)).toEqual([
-      'Filter by category',
-      'Filter by account',
-      'Filter by type',
-      'Filter by status',
-    ])
+    expect(order(container)).toEqual(['Filter by category', 'Filter by account', 'Filter by type', 'Filter by status'])
     expect(container.firstElementChild).toHaveAttribute('data-columns', '2')
   })
 })

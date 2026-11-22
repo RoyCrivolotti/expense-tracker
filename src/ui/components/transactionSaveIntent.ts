@@ -53,7 +53,10 @@ async function createPlanAndLink<T>(
   actions: ExpenseActions,
   input: NewTransaction,
   intent: Extract<InstallmentIntent, { kind: 'new' }>,
-  link: (planId: number, amountCents: number) => Promise<T>,
+  link: (
+    planId: number,
+    amountCents: number,
+  ) => Promise<T>,
 ): Promise<T> {
   const { plan, amountCents } = planFromInput(
     input,

@@ -10,7 +10,8 @@ const LIFE_EVENT_LABEL_MAX_LENGTH = 100
 
 /** One entry as a well-formed event, or why not. */
 function validateEvent(entry: unknown): string | null {
-  if (typeof entry !== 'object' || entry === null) return 'a life event must be an object with year, amountCents and label'
+  if (typeof entry !== 'object' || entry === null)
+    return 'a life event must be an object with year, amountCents and label'
   const { year, amountCents, label } = entry as Record<string, unknown>
   if (!Number.isInteger(year) || (year as number) < 0 || (year as number) > LIFE_EVENT_MAX_YEAR) {
     return `a life event's year must be a whole number from 0 to ${LIFE_EVENT_MAX_YEAR}`

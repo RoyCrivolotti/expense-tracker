@@ -106,9 +106,7 @@ describe('resolveDismissSnap', () => {
 
   it('lets a pull back up beat the distance rule too', () => {
     expect(release({ offsetY: THRESHOLD + 10, peakOffsetY: THRESHOLD + 10 })).toBe('dismiss')
-    expect(
-      release({ offsetY: THRESHOLD + 10, peakOffsetY: THRESHOLD + 10 + CANCEL_PULLBACK_PX }),
-    ).toBe('settle')
+    expect(release({ offsetY: THRESHOLD + 10, peakOffsetY: THRESHOLD + 10 + CANCEL_PULLBACK_PX })).toBe('settle')
   })
 
   it('is not troubled by the jitter at the end of an ordinary drag', () => {

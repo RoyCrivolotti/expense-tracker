@@ -84,7 +84,15 @@ export function DetailGrid({
       </div>
       <div className={`${styles.detailWide} ${styles.detailWideLast}`}>
         <NearScreen>
-          {(near) => <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} height={STACK_CHART_HEIGHT} paused={!near} />}
+          {(near) => (
+            <LazySpreadChart
+              draft={draft}
+              milestones={milestones}
+              nominal={nominal}
+              height={STACK_CHART_HEIGHT}
+              paused={!near}
+            />
+          )}
         </NearScreen>
       </div>
     </section>

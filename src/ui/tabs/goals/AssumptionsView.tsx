@@ -27,14 +27,7 @@ interface Props {
  * The milestone ladder, the accounts each check-in records a balance for, the cash reserve and
  * the assumed inflation.
  */
-export function AssumptionsView({
-  accounts,
-  checkins,
-  settings,
-  actions,
-  onSettingsChange,
-  focus = null,
-}: Props) {
+export function AssumptionsView({ accounts, checkins, settings, actions, onSettingsChange, focus = null }: Props) {
   const format = useMoneyFormat()
   const accountsCard = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -49,12 +42,14 @@ export function AssumptionsView({
   return (
     <div className={styles.progressStack}>
       <p className={goalStyles.intro}>
-        Progress is measured with your milestones, the accounts each check-in records a balance
-        for, the months of spending to hold in cash, and an assumed inflation rate. That rate
-        brings check-ins, the house and the mortgage back to the {currencyWord(format)} of the plan&apos;s start year, and
-        counts what you invest each month for less each year.
+        Progress is measured with your milestones, the accounts each check-in records a balance for, the months of
+        spending to hold in cash, and an assumed inflation rate. That rate brings check-ins, the house and the mortgage
+        back to the {currencyWord(format)} of the plan&apos;s start year, and counts what you invest each month for less
+        each year.
       </p>
-      <p className={goalStyles.chartHint}>The return, the house and life after FI are set per scenario, in Scenarios.</p>
+      <p className={goalStyles.chartHint}>
+        The return, the house and life after FI are set per scenario, in Scenarios.
+      </p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
       <div ref={accountsCard} className={styles.landingTarget}>
         <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />

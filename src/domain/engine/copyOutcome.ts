@@ -53,12 +53,17 @@ export function copyOutcome(
   const end = Math.min(theirsAt + source.horizonYears, oursAt + copy.horizonYears)
   const theirs = projectNetWorth(scenarioToParams(source, inflationRate))
   const ours = projectNetWorth(scenarioToParams(copy, inflationRate))
-  const read = (points: typeof theirs, offset: number, t: number, field: 'invested' | 'netWorth') =>
-    valueOnAxisAt(points, offset, inflationRate, t, field)
+  const read = (
+    points: typeof theirs,
+    offset: number,
+    t: number,
+    field: 'invested' | 'netWorth',
+  ) => valueOnAxisAt(points, offset, inflationRate, t, field)
   const above: number[] = []
   for (let k = 0; oursAt + k / STEPS_PER_YEAR <= end; k += 1) {
     const t = oursAt + k / STEPS_PER_YEAR
-    if ((read(ours, oursAt, t, 'netWorth') ?? 0) - (read(theirs, theirsAt, t, 'netWorth') ?? 0) > ABOVE_BY_CENTS) above.push(t)
+    if ((read(ours, oursAt, t, 'netWorth') ?? 0) - (read(theirs, theirsAt, t, 'netWorth') ?? 0) > ABOVE_BY_CENTS)
+      above.push(t)
   }
   const month = (t: number) => dateAtYears(at.origin, t).slice(0, 7)
   const gap = (field: 'invested' | 'netWorth') => {

@@ -24,16 +24,18 @@ export function ChartFocusIndicator({
   yTop: number
   innerH: number
   scaleY: (v: number) => number
-  lineSeries: { id: string; color: string; values: number[]; preStep?: number[] | undefined; xs?: number[] | undefined }[]
+  lineSeries: {
+    id: string
+    color: string
+    values: number[]
+    preStep?: number[] | undefined
+    xs?: number[] | undefined
+  }[]
 }) {
   if (active == null) return null
   return (
     <>
-      <line
-        x1={focusX} x2={focusX}
-        y1={yTop} y2={yTop + innerH}
-        className={styles.crosshair}
-      />
+      <line x1={focusX} x2={focusX} y1={yTop} y2={yTop + innerH} className={styles.crosshair} />
       {lineSeries.flatMap((s) => {
         const value = valueAtPlace(s, active)
         // A line that has ended, or not started, has no point at this year, and none is drawn at zero for it.
@@ -216,20 +218,8 @@ export function ChartGrid({
         const y = scaleY(t)
         return (
           <g key={t}>
-            <line
-              x1={x0}
-              x2={x1}
-              y1={y}
-              y2={y}
-              className={t === 0 ? styles.axisLine : styles.gridLine}
-            />
-            <text
-              x={x0 - 8}
-              y={y}
-              textAnchor="end"
-              dominantBaseline="middle"
-              className={styles.yLabel}
-            >
+            <line x1={x0} x2={x1} y1={y} y2={y} className={t === 0 ? styles.axisLine : styles.gridLine} />
+            <text x={x0 - 8} y={y} textAnchor="end" dominantBaseline="middle" className={styles.yLabel}>
               {formatValue(t)}
             </text>
           </g>
@@ -296,7 +286,14 @@ export function ChartRefLines({
   return (
     <>
       {drawn.map((v) => (
-        <line key={v} x1={x1} x2={x2} y1={scaleY(v)} y2={scaleY(v)} className={refLineClass(v === pickedLine, !!highlight)} />
+        <line
+          key={v}
+          x1={x1}
+          x2={x2}
+          y1={scaleY(v)}
+          y2={scaleY(v)}
+          className={refLineClass(v === pickedLine, !!highlight)}
+        />
       ))}
     </>
   )
@@ -321,7 +318,10 @@ export function ChartRefCurves({
         <path
           key={c.id}
           d={linePath(c.values.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) })))}
-          className={refLineClass(highlight != null && 'curveId' in highlight && highlight.curveId === c.id, !!highlight)}
+          className={refLineClass(
+            highlight != null && 'curveId' in highlight && highlight.curveId === c.id,
+            !!highlight,
+          )}
           fill="none"
           aria-hidden
         />
@@ -375,7 +375,12 @@ export function ChartAnnotationLayer({
         return (
           <g key={`${d.color}-${k}`}>
             <circle cx={x} cy={y} r={4.5} className={styles.annotationDot} style={{ stroke: d.color }} />
-            <text x={x} y={Math.max(top + 10, y + (k % 2 === 0 ? -9 : 17))} textAnchor="middle" className={styles.annotationLabel}>
+            <text
+              x={x}
+              y={Math.max(top + 10, y + (k % 2 === 0 ? -9 : 17))}
+              textAnchor="middle"
+              className={styles.annotationLabel}
+            >
               {d.label}
             </text>
           </g>
@@ -478,23 +483,8 @@ export function ChartAboveMarker({
 }
 
 /** Solid vertical "today" marker line. */
-export function ChartTodayMarker({
-  x,
-  yTop,
-  yBottom,
-}: {
-  x: number
-  yTop: number
-  yBottom: number
-}) {
-  return (
-    <line
-      x1={x} x2={x}
-      y1={yTop} y2={yBottom}
-      className={styles.todayMarker}
-      aria-hidden
-    />
-  )
+export function ChartTodayMarker({ x, yTop, yBottom }: { x: number; yTop: number; yBottom: number }) {
+  return <line x1={x} x2={x} y1={yTop} y2={yBottom} className={styles.todayMarker} aria-hidden />
 }
 
 /** X axis labels at the chart baseline; pass '' to skip an index. */

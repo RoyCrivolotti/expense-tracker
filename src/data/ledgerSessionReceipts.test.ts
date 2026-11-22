@@ -20,11 +20,16 @@ const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
 const newest = months.at(-1)!
 const far = months[10]!
 
-const calls = (source: TestSource, prefix: string) => source.calls.filter((c) => c.startsWith(prefix))
+const calls = (
+  source: TestSource,
+  prefix: string,
+) => source.calls.filter((c) => c.startsWith(prefix))
 const flush = () => new Promise((resolve) => setTimeout(resolve, 5))
 
-const row = (id: number, month: string): Transaction =>
-  makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}` })
+const row = (
+  id: number,
+  month: string,
+): Transaction => makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}` })
 
 async function opened() {
   const source = memorySource(dataset)
@@ -37,7 +42,11 @@ async function opened() {
  * A write to the reference tables as the browser sees it: the server moves to `after`, the receipt arrives, then the
  * patch. It moves no month's sums, so nothing is read after it that could give the held ledger a revision.
  */
-function rename(source: TestSource, session: LedgerSession, receipt: { before: string | null; after: string | null }) {
+function rename(
+  source: TestSource,
+  session: LedgerSession,
+  receipt: { before: string | null; after: string | null },
+) {
   source.move(receipt.after ?? 'elsewhere')
   session.noteReceipt(receipt)
   const label = source.dataset.labels[0]!
@@ -45,7 +54,13 @@ function rename(source: TestSource, session: LedgerSession, receipt: { before: s
 }
 
 /** The same for a row added to `month`, which moves that month's sums, so they are read after it. */
-function write(source: TestSource, session: LedgerSession, id: number, receipt: { before: string | null; after: string | null }, month = newest) {
+function write(
+  source: TestSource,
+  session: LedgerSession,
+  id: number,
+  receipt: { before: string | null; after: string | null },
+  month = newest,
+) {
   const added = row(id, month)
   source.dataset = { ...source.dataset, transactions: [...source.dataset.transactions, added] }
   source.move(receipt.after ?? 'elsewhere')
@@ -117,7 +132,12 @@ describe('a month read after a write the server vouched for', () => {
 })
 
 describe('a month read after a write the server did not vouch for', () => {
-  const refreshes = async (arrange: (source: TestSource, session: LedgerSession) => void) => {
+  const refreshes = async (
+    arrange: (
+      source: TestSource,
+      session: LedgerSession,
+    ) => void,
+  ) => {
     const { source, session } = await opened()
     arrange(source, session)
     source.calls.length = 0

@@ -28,7 +28,8 @@ describe('sqliteD1', () => {
 
   it('applies a batch as one transaction and rolls all of it back on a failure', async () => {
     const db = sqliteD1(migratedDatabase())
-    const insert = (id: number) => db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
+    const insert = (id: number) =>
+      db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
     await expect(db.batch([insert(1), insert(1)])).rejects.toThrow()
     const after = await db.prepare('SELECT COUNT(*) AS n FROM categories').first<{ n: number }>()
     expect(after?.n).toBe(0)
@@ -40,7 +41,8 @@ describe('sqliteD1', () => {
   it('runs batches that overlap one after the other, as D1 does', async () => {
     const db = sqliteD1(migratedDatabase())
     const count = () => db.prepare('SELECT COUNT(*) AS n FROM categories')
-    const insert = (id: number) => db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
+    const insert = (id: number) =>
+      db.prepare('INSERT INTO categories (owner,id,name) VALUES (?,?,?)').bind(OWNER, id, 'x')
     const [first, second] = await Promise.all([db.batch([insert(1), count()]), db.batch([insert(2), count()])])
     expect(first[1].results).toEqual([{ n: 1 }])
     expect(second[1].results).toEqual([{ n: 2 }])
@@ -75,7 +77,14 @@ describe('sqliteD1', () => {
 
     it('takes a different limit, or none', async () => {
       const raw = migratedDatabase()
-      const select = (db: ReturnType<typeof sqliteD1>, n: number) => db.prepare(`SELECT ${marks(n)}`).bind(...values(n)).all()
+      const select = (
+        db: ReturnType<typeof sqliteD1>,
+        n: number,
+      ) =>
+        db
+          .prepare(`SELECT ${marks(n)}`)
+          .bind(...values(n))
+          .all()
 
       await expect(select(sqliteD1(raw, newStats(), { maxBoundParameters: 5 }), 6)).rejects.toThrow(/limit 5/)
       expect((await select(sqliteD1(raw, newStats(), { maxBoundParameters: Infinity }), 1000)).results).toHaveLength(1)
@@ -124,8 +133,12 @@ describe('sqliteD1 changes', () => {
     )
     // The row, its cell and its month: sqlite3_changes() would say 1.
     expect((await insert.bind(500).run()).meta.changes).toBe(3)
-    expect((await db.prepare('UPDATE transactions SET amount_cents = 900 WHERE owner = ?').bind('o').run()).meta.changes).toBe(2)
-    expect((await db.prepare("UPDATE transactions SET notes = 'n' WHERE owner = ?").bind('o').run()).meta.changes).toBe(1)
+    expect(
+      (await db.prepare('UPDATE transactions SET amount_cents = 900 WHERE owner = ?').bind('o').run()).meta.changes,
+    ).toBe(2)
+    expect((await db.prepare("UPDATE transactions SET notes = 'n' WHERE owner = ?").bind('o').run()).meta.changes).toBe(
+      1,
+    )
     const deleted = await db.prepare('DELETE FROM transactions WHERE owner = ? RETURNING id').bind('o').run()
     expect(deleted.results).toEqual([{ id: 1 }])
     // The row, then its cell and its month subtracted and, both being empty, deleted.

@@ -24,9 +24,7 @@ function HistoryBars({ detail }: { detail: SpendingGroupDetail }) {
           <span className={styles.historyTrack}>
             <i
               className={
-                h.budgetCents !== null && h.actualCents > h.budgetCents
-                  ? styles.historyOver
-                  : styles.historyBar
+                h.budgetCents !== null && h.actualCents > h.budgetCents ? styles.historyOver : styles.historyBar
               }
               style={{ width: `${(Math.max(0, h.actualCents) / max) * 100}%` }}
             />
@@ -65,8 +63,7 @@ export function SpendingDetailBody({ detail, model, onOpenTransactions }: Props)
       </div>
       {detail.monthsOver > 0 && (
         <p className={styles.detailNote}>
-          Over budget in {detail.monthsOver} of the last {detail.history.length} months — against
-          today&apos;s budget.
+          Over budget in {detail.monthsOver} of the last {detail.history.length} months — against today&apos;s budget.
         </p>
       )}
       <HistoryBars detail={detail} />
@@ -75,7 +72,9 @@ export function SpendingDetailBody({ detail, model, onOpenTransactions }: Props)
           <h4 className={styles.topTitle}>Biggest this month</h4>
           {detail.topTransactions.map((t) => (
             <div key={t.id} className={styles.topRow}>
-              <span className={styles.topDate}>{t.date.slice(8)}.{t.date.slice(5, 7)}</span>
+              <span className={styles.topDate}>
+                {t.date.slice(8)}.{t.date.slice(5, 7)}
+              </span>
               <span className={styles.topDesc}>{t.description || model.lookup.categoryName(t.categoryId)}</span>
               <span className={styles.topAmount}>{formatCents(t.amountCents, format)}</span>
             </div>

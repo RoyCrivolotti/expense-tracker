@@ -44,7 +44,20 @@ export interface PlanDesktopProps {
  * The page is one column, so there is one scroll and the chart is never squeezed beside a
  * panel. Charts read the editor's deferred draft, so dragging a control never waits on them.
  */
-export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
+export function PlanDesktop({
+  scenarios,
+  editor,
+  actions,
+  latest,
+  milestones,
+  reached,
+  monthly,
+  checkins,
+  accounts,
+  fromToday,
+  display,
+  levers,
+}: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
   // The chart tells the chips above it what each line is worth where it is pointed at.
   const [legend] = useState(createHeroLegendStore)

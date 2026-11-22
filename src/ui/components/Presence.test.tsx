@@ -115,7 +115,10 @@ describe('Presence', () => {
   })
 
   it('takes an overlay nested in another one out with its parent', () => {
-    const tree = (show: boolean, innerShown: boolean) => (
+    const tree = (
+      show: boolean,
+      innerShown: boolean,
+    ) => (
       <Presence show={show} exitMs={100}>
         <Probe label="outer" />
         <Presence show={innerShown} exitMs={100}>
@@ -159,7 +162,10 @@ describe('Presence', () => {
 
 describe('PresenceValue', () => {
   it('holds the last value through the exit and reads everything else fresh', () => {
-    const tree = (value: string | null, suffix: string) => (
+    const tree = (
+      value: string | null,
+      suffix: string,
+    ) => (
       <PresenceValue value={value} exitMs={100}>
         {(v) => (
           <p data-testid="row">
@@ -229,7 +235,10 @@ describe('useHeldWhileLeaving', () => {
     const shown = useHeldWhileLeaving(value)
     return <p data-testid="reads">{shown}</p>
   }
-  const overlay = (show: boolean, value: string) => (
+  const overlay = (
+    show: boolean,
+    value: string,
+  ) => (
     <Presence show={show} exitMs={100}>
       <Reads value={value} />
     </Presence>
@@ -256,7 +265,11 @@ describe('useHeldWhileLeaving', () => {
     const fn = vi.fn()
     function Holds({ f }: { f: () => void }) {
       const held = useHeldWhileLeaving(f)
-      return <button type="button" onClick={held}>call</button>
+      return (
+        <button type="button" onClick={held}>
+          call
+        </button>
+      )
     }
     render(
       <Presence show exitMs={100}>

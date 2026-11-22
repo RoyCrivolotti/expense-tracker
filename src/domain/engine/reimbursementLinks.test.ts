@@ -5,7 +5,10 @@ import { buildReimbursementLinks } from './reimbursementLinks'
 
 const payment = makeTransaction({ id: 99, type: 'refund', amountCents: 12_000, date: '2026-06-14' })
 
-function claimed(id: number, overrides: Partial<Transaction> = {}): Transaction {
+function claimed(
+  id: number,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return makeTransaction({ id, flagId: 1, settledBy: 99, ...overrides })
 }
 
@@ -43,12 +46,7 @@ describe('buildReimbursementLinks', () => {
 
   it('keeps two payments' + "' rows apart", () => {
     const other = makeTransaction({ id: 98, type: 'refund' })
-    const links = buildReimbursementLinks([
-      claimed(1),
-      claimed(2, { settledBy: 98 }),
-      payment,
-      other,
-    ])
+    const links = buildReimbursementLinks([claimed(1), claimed(2, { settledBy: 98 }), payment, other])
 
     expect(links.settledBy(99).map((t) => t.id)).toEqual([1])
     expect(links.settledBy(98).map((t) => t.id)).toEqual([2])

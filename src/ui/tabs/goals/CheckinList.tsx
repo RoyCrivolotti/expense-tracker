@@ -5,10 +5,7 @@ import { Card } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
-import {
-  checkinNetWorthCents,
-  trackStatus,
-} from '../../../engine'
+import { checkinNetWorthCents, trackStatus } from '../../../engine'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
@@ -25,7 +22,10 @@ interface Props {
   actions: ExpenseActions | undefined
 }
 
-function accountName(id: number, accounts: WealthAccount[]) {
+function accountName(
+  id: number,
+  accounts: WealthAccount[],
+) {
   return accounts.find((a) => a.id === id)?.name ?? `Account ${id}`
 }
 
@@ -67,9 +67,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
                 <div className={styles.checkinHeader}>
                   <span className={styles.checkinDate}>{formatCheckinDate(c.checkinDate)}</span>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
-                    <span className={styles.checkinTotal}>
-                      {formatMoneyShort(netWorth, format)}
-                    </span>
+                    <span className={styles.checkinTotal}>{formatMoneyShort(netWorth, format)}</span>
                     {status ? (
                       <span
                         className={[
@@ -85,9 +83,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
                 </div>
 
                 {c.note ? (
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                    {c.note}
-                  </p>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>{c.note}</p>
                 ) : null}
 
                 {c.entries.length > 0 ? (
@@ -95,9 +91,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
                     {c.entries.map((e) => (
                       <div key={e.accountId} className={styles.checkinEntry}>
                         <span>{accountName(e.accountId, accounts)}</span>
-                        <span className={styles.checkinEntryValue}>
-                          {formatMoneyShort(e.valueCents, format)}
-                        </span>
+                        <span className={styles.checkinEntryValue}>{formatMoneyShort(e.valueCents, format)}</span>
                       </div>
                     ))}
                   </div>

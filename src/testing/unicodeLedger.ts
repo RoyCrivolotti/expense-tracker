@@ -8,7 +8,11 @@ import type { ExpenseDataset, Transaction } from '../domain/types'
 import { makeDataset, makeTransaction } from './factories'
 
 /** A series that repeats `description` monthly, spelled differently each time. */
-export function spelledSeries(firstId: number, spellings: string[], extra: Partial<Transaction> = {}): Transaction[] {
+export function spelledSeries(
+  firstId: number,
+  spellings: string[],
+  extra: Partial<Transaction> = {},
+): Transaction[] {
   return spellings.map((description, i) =>
     makeTransaction({
       id: firstId + i,
@@ -44,4 +48,3 @@ export function unicodeLedger(): ExpenseDataset {
   )
   return makeDataset({ transactions: ordered })
 }
-

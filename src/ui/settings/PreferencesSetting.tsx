@@ -61,8 +61,8 @@ export function PreferencesSetting({ settings, onChange }: Props) {
         <div className={`${styles.settingGroup} ${styles.settingGroupDivider}`}>
           <RolloverDayField settings={settings} onChange={onChange} />
           <p className={styles.settingHint}>
-            Day of the month new spending starts counting toward the next budget month. Set to 1
-            for plain calendar months. Only affects transactions added from now on.
+            Day of the month new spending starts counting toward the next budget month. Set to 1 for plain calendar
+            months. Only affects transactions added from now on.
           </p>
         </div>
       </Card>

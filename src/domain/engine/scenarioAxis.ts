@@ -33,7 +33,10 @@ export interface AxisPoint {
 }
 
 /** How much the euros of a start `offsetYears` after the origin are worth in the euros of the origin. */
-function deflator(offsetYears: number, inflationRate: number): number {
+function deflator(
+  offsetYears: number,
+  inflationRate: number,
+): number {
   return Math.pow(1 + inflationRate, offsetYears)
 }
 
@@ -42,7 +45,11 @@ function deflator(offsetYears: number, inflationRate: number): number {
  * with the value the day before a step where the year has one, every value in the euros of the origin.
  * At an offset of 0 these are the scenario's own points, untouched.
  */
-export function onAxis(points: readonly PlanPoint[], offsetYears: number, inflationRate: number): AxisPoint[] {
+export function onAxis(
+  points: readonly PlanPoint[],
+  offsetYears: number,
+  inflationRate: number,
+): AxisPoint[] {
   const back = deflator(offsetYears, inflationRate)
   return points.flatMap((p) => {
     const xIndex = offsetYears + p.year
@@ -58,12 +65,19 @@ export type AxisField = 'invested' | 'netWorth'
  * A yearly amount between two anniversaries, read on a straight line. A house that is not there at the
  * first of them is bought on the second, on the anniversary, so it (and its loan) is nothing until then.
  */
-function between(from: number, to: number, part: number): number {
+function between(
+  from: number,
+  to: number,
+  part: number,
+): number {
   return from === 0 ? 0 : from + part * (to - from)
 }
 
 /** The net worth `years` after the scenario's start: its invested line, plus the house, less the loan. */
-function netWorthAt(points: readonly YearPoint[], years: number): number | null {
+function netWorthAt(
+  points: readonly YearPoint[],
+  years: number,
+): number | null {
   const invested = planValueAt(planLineOf(points), years)
   if (invested === null) return null
   const whole = Math.floor(years)
@@ -86,7 +100,10 @@ const SAME_YEAR = 1e-9
  * back `k` less a scrap of rounding (0,1 + 4 - 0,1 is 3,9999999999999996), which would read the day
  * before the anniversary's step instead of the anniversary, so a figure that close to whole is whole.
  */
-function ownYears(axisYear: number, offsetYears: number): number {
+function ownYears(
+  axisYear: number,
+  offsetYears: number,
+): number {
   const years = axisYear - offsetYears
   const whole = Math.round(years)
   return Math.abs(years - whole) < SAME_YEAR ? whole : years

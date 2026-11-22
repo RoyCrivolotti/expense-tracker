@@ -40,7 +40,15 @@ export function TipCard(props: Props) {
   )
 }
 
-function TipCardBody({ id, title, actionLabel = 'Got it', onAction, secondary, children, arriving }: Props & { arriving: boolean }) {
+function TipCardBody({
+  id,
+  title,
+  actionLabel = 'Got it',
+  onAction,
+  secondary,
+  children,
+  arriving,
+}: Props & { arriving: boolean }) {
   const { dismiss } = useTips()
   const { leaving, exitMs } = useExit()
   const card = useRef<HTMLElement>(null)
@@ -49,7 +57,9 @@ function TipCardBody({ id, title, actionLabel = 'Got it', onAction, secondary, c
     moveFocusPast(card.current)
     dismiss(id)
   }
-  const classes = [styles.fold, arriving ? styles.arriving : '', leaving ? styles.leaving : ''].filter(Boolean).join(' ')
+  const classes = [styles.fold, arriving ? styles.arriving : '', leaving ? styles.leaving : '']
+    .filter(Boolean)
+    .join(' ')
   return (
     <div className={classes} style={exitVars(leaving, exitMs)} inert={leaving}>
       <div className={styles.foldInner}>

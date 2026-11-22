@@ -43,9 +43,11 @@ beforeEach(() => {
 })
 
 const linksOf = (id: number): number[] =>
-  (ledger.db.prepare('SELECT label_id FROM transaction_labels WHERE transaction_id = ? ORDER BY label_id').all(id) as Array<{ label_id: number }>).map(
-    (r) => r.label_id,
-  )
+  (
+    ledger.db
+      .prepare('SELECT label_id FROM transaction_labels WHERE transaction_id = ? ORDER BY label_id')
+      .all(id) as Array<{ label_id: number }>
+  ).map((r) => r.label_id)
 
 const allLinks = (): unknown =>
   ledger.db.prepare('SELECT transaction_id, label_id FROM transaction_labels ORDER BY transaction_id, label_id').all()
@@ -184,7 +186,9 @@ describe('adding labels by filter', () => {
     useDatabase(big.d1)
 
     await expect(
-      repo.addLabelsToTransactions(OWNER, { filter: { month: '2026-08' }, expectedCount: MAX_FILTER_EDIT_ROWS }, [A.label]),
+      repo.addLabelsToTransactions(OWNER, { filter: { month: '2026-08' }, expectedCount: MAX_FILTER_EDIT_ROWS }, [
+        A.label,
+      ]),
     ).rejects.toMatchObject({ status: 400, message: bulkTooManyMessage() })
     const linked = (big.db.prepare('SELECT COUNT(*) AS n FROM transaction_labels').get() as { n: number }).n
     expect(linked).toBe(0)
@@ -248,7 +252,11 @@ describe('the in-memory repository does the same', () => {
       memory.addLabelsToTransactions(OWNER, { filter: { type: 'expense' }, expectedCount: 1 }, [A.label]),
     ).rejects.toMatchObject({ status: 409 })
     await expect(
-      memory.addLabelsToTransactions(OWNER, { ids: Array.from({ length: MAX_BULK_LABEL_LINKS + 1 }, (_, i) => i + 1) }, [A.label]),
+      memory.addLabelsToTransactions(
+        OWNER,
+        { ids: Array.from({ length: MAX_BULK_LABEL_LINKS + 1 }, (_, i) => i + 1) },
+        [A.label],
+      ),
     ).rejects.toMatchObject({ status: 400 })
   })
 })

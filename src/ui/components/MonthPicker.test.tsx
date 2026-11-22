@@ -37,15 +37,7 @@ describe('MonthPicker', () => {
     // at the end of the range answers too, so the three behave alike.
     const onChange = vi.fn()
     const onLockedPress = vi.fn()
-    render(
-      <MonthPicker
-        months={MONTHS}
-        value="2026-05"
-        onChange={onChange}
-        locked
-        onLockedPress={onLockedPress}
-      />,
-    )
+    render(<MonthPicker months={MONTHS} value="2026-05" onChange={onChange} locked onLockedPress={onLockedPress} />)
     const controls = [
       screen.getByRole('button', { name: 'Previous month' }),
       screen.getByRole('button', { name: 'Next month' }),
@@ -63,9 +55,7 @@ describe('MonthPicker', () => {
 
   it('stays reachable from the keyboard while locked, so the reason is too', async () => {
     const onLockedPress = vi.fn()
-    render(
-      <MonthPicker months={MONTHS} value="2026-06" onChange={vi.fn()} locked onLockedPress={onLockedPress} />,
-    )
+    render(<MonthPicker months={MONTHS} value="2026-06" onChange={vi.fn()} locked onLockedPress={onLockedPress} />)
 
     await userEvent.tab()
     expect(screen.getByRole('button', { name: 'Previous month' })).toHaveFocus()

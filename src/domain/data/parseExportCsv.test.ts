@@ -8,12 +8,8 @@ const DATASET: ExpenseDataset = {
   flags: [],
   labels: [],
   attachments: [],
-  categories: [
-    { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
-  ],
-  accounts: [
-    { id: 2, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true },
-  ],
+  categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true }],
+  accounts: [{ id: 2, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true }],
   transactions: [],
   accountStatements: [],
   cashActuals: [],
@@ -24,8 +20,7 @@ const DATASET: ExpenseDataset = {
   settings: defaultExpenseSettings(),
 }
 
-const VALID_ROW =
-  '1,2026-06-15,2026-06,Mercadona,Groceries,Santander Debit,expense,1250,posted,0,'
+const VALID_ROW = '1,2026-06-15,2026-06,Mercadona,Groceries,Santander Debit,expense,1250,posted,0,'
 
 describe('parseExportCsv', () => {
   it('parses a valid export row', () => {
@@ -45,10 +40,8 @@ describe('parseExportCsv', () => {
   })
 
   it('rejects unknown category', () => {
-    const header =
-      'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
-    const row =
-      '1,2026-06-15,2026-06,Test,Unknown,Santander Debit,expense,100,posted,0,'
+    const header = 'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
+    const row = '1,2026-06-15,2026-06,Test,Unknown,Santander Debit,expense,100,posted,0,'
     const { rows, errors } = parseExportCsv(`${header}\n${row}`, DATASET)
     expect(rows).toHaveLength(0)
     expect(errors[0]?.message).toContain('Unknown category')
@@ -84,8 +77,7 @@ describe('parseExportCsv', () => {
   })
 
   it('skips zero-amount rows', () => {
-    const header =
-      'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
+    const header = 'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
     const row = '1,2026-06-15,2026-06,,Groceries,Santander Debit,expense,0,forecast,0,'
     const { rows, errors } = parseExportCsv(`${header}\n${row}`, DATASET)
     expect(rows).toHaveLength(0)
@@ -93,10 +85,8 @@ describe('parseExportCsv', () => {
   })
 
   it('handles quoted descriptions with commas', () => {
-    const header =
-      'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
-    const row =
-      '1,2026-06-15,2026-06,"Shop, sale",Groceries,Santander Debit,expense,500,posted,0,'
+    const header = 'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
+    const row = '1,2026-06-15,2026-06,"Shop, sale",Groceries,Santander Debit,expense,500,posted,0,'
     const { rows } = parseExportCsv(`${header}\n${row}`, DATASET)
     expect(rows[0]?.input.description).toBe('Shop, sale')
   })

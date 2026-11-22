@@ -22,9 +22,7 @@ export function exportTransactionsCsv(
 ): string {
   const catNames = new Map(dataset.categories.map((c) => [c.id, c.name]))
   const accNames = new Map(dataset.accounts.map((a) => [a.id, a.name]))
-  const txns = opts.month
-    ? dataset.transactions.filter((t) => t.budgetMonth === opts.month)
-    : dataset.transactions
+  const txns = opts.month ? dataset.transactions.filter((t) => t.budgetMonth === opts.month) : dataset.transactions
   const header = EXPORT_CSV_HEADER
   const rows = txns.map((t) =>
     [
@@ -49,21 +47,23 @@ export function exportTransactionsCsv(
  * plus the year-scoped YTD the grid shows. Amounts in integer cents, like the
  * transaction export: exact, and immune to locale decimal marks.
  */
-export function monthlySummaryCsv(rows: CategoryActuals[], months: string[], ytdYear: string): string {
+export function monthlySummaryCsv(
+  rows: CategoryActuals[],
+  months: string[],
+  ytdYear: string,
+): string {
   const header = ['category', 'monthly_budget_cents', ...months, `ytd_${ytdYear}_cents`].join(',')
   const lines = rows.map((r) =>
-    [
-      escText(r.name),
-      r.monthlyBudgetCents,
-      ...months.map((m) => r.byMonth.get(m) ?? 0),
-      r.ytdActualCents,
-    ].join(','),
+    [escText(r.name), r.monthlyBudgetCents, ...months.map((m) => r.byMonth.get(m) ?? 0), r.ytdActualCents].join(','),
   )
   return [header, ...lines].join('\n')
 }
 
 /** Trigger a browser download of a CSV. */
-export function downloadCsv(filename: string, csv: string): void {
+export function downloadCsv(
+  filename: string,
+  csv: string,
+): void {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

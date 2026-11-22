@@ -19,7 +19,10 @@ import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 
 afterEach(() => vi.useRealTimers())
 
-const MIGRATION = readFileSync(join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'), 'utf8')
+const MIGRATION = readFileSync(
+  join(import.meta.dirname, '..', '..', '..', 'migrations', '0039_ledger_rollup.sql'),
+  'utf8',
+)
 const STATEMENTS: Array<{ sql: string }> = splitStatements(MIGRATION)
 /** The statements after the last trigger fill the tables; they are told apart by where they are, not by what they say. */
 const FIRST_BACKFILL = STATEMENTS.findLastIndex((s) => /^CREATE TRIGGER/i.test(s.sql)) + 1
@@ -27,9 +30,17 @@ const SETUP = STATEMENTS.slice(0, FIRST_BACKFILL)
 const BACKFILLS = STATEMENTS.slice(FIRST_BACKFILL)
 
 /** Tables after 0039 that purging an owner deletes from. */
-const LATER_TABLES = ['0040_capture.sql', '0041_capture_shapes.sql', '0042_capture_merchants.sql', '0044_push_subscriptions.sql']
+const LATER_TABLES = [
+  '0040_capture.sql',
+  '0041_capture_shapes.sql',
+  '0042_capture_merchants.sql',
+  '0044_push_subscriptions.sql',
+]
 
-async function kitFor(seed: number, through?: string) {
+async function kitFor(
+  seed: number,
+  through?: string,
+) {
   const sqlite = migratedDatabase(through)
   // The walks purge an owner, which deletes from those tables; 0039 does not depend on them.
   if (through !== undefined) for (const file of LATER_TABLES) applyMigration(sqlite, file)
@@ -43,11 +54,15 @@ describe('named hazards', () => {
 })
 
 describe('a random walk over every write path', () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])('seed %i', async (seed) => {
-    const { k } = await kitFor(seed)
-    await seedRows(k, 15)
-    await walk(k, 250)
-  }, 120_000)
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])(
+    'seed %i',
+    async (seed) => {
+      const { k } = await kitFor(seed)
+      await seedRows(k, 15)
+      await walk(k, 250)
+    },
+    120_000,
+  )
 })
 
 describe('the migration', () => {
@@ -89,22 +104,39 @@ describe('the migration', () => {
     await walk(k, 80)
     applyMigrationSql(sqlite, MIGRATION)
     await assertRollup(k, 'applied again')
-    const triggers = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'transactions' ORDER BY name").all()
+    const triggers = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'transactions' ORDER BY name")
+      .all()
     expect(triggers.map((t) => (t as { name: string }).name)).toEqual([
-      'ledger_rollup_ad', 'ledger_rollup_ai', 'ledger_rollup_au_amount', 'ledger_rollup_au_cell', 'ledger_rollup_au_month',
+      'ledger_rollup_ad',
+      'ledger_rollup_ai',
+      'ledger_rollup_au_amount',
+      'ledger_rollup_au_cell',
+      'ledger_rollup_au_month',
     ])
   })
 })
 
 const sources = import.meta.glob<string>(
-  ['/functions/**/*.{ts,mjs}', '!/functions/**/*.test.ts', '/scripts/**/*.{ts,mjs,sql}', '!/scripts/**/*.test.ts', '/workers/**/*.ts', '/src/**/*.{ts,tsx}', '!/src/**/*.test.{ts,tsx}', '/migrations/*.sql'],
+  [
+    '/functions/**/*.{ts,mjs}',
+    '!/functions/**/*.test.ts',
+    '/scripts/**/*.{ts,mjs,sql}',
+    '!/scripts/**/*.test.ts',
+    '/workers/**/*.ts',
+    '/src/**/*.{ts,tsx}',
+    '!/src/**/*.test.{ts,tsx}',
+    '/migrations/*.sql',
+  ],
   { query: '?raw', import: 'default', eager: true },
 )
 
 describe('the delete trigger is the only way rows leave', () => {
   it('nothing replaces a row of transactions, which would delete it without firing the trigger', () => {
     const replacing = /(?:REPLACE\s+INTO|UPDATE\s+OR\s+REPLACE)\s+["`[]?transactions\b/i
-    const found = Object.entries(sources).filter(([, text]) => replacing.test(text)).map(([file]) => file)
+    const found = Object.entries(sources)
+      .filter(([, text]) => replacing.test(text))
+      .map(([file]) => file)
     expect(found).toEqual([])
     expect(Object.keys(sources).length).toBeGreaterThan(100)
   })

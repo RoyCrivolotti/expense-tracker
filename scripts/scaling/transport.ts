@@ -111,9 +111,7 @@ export function restTransport(options: RestOptions): Transport {
 }
 
 /** What Cloudflare calls the database: used to check the id in config/dev.json is the one named there. */
-export async function describeDatabase(
-  options: RestOptions,
-): Promise<{ uuid: string; name: string }> {
+export async function describeDatabase(options: RestOptions): Promise<{ uuid: string; name: string }> {
   const url = `${API}/accounts/${options.accountId}/d1/database/${options.databaseId}`
   const envelope = await call<{ uuid?: string; name?: string }>(options.fetchImpl ?? fetch, options.token, url, {
     method: 'GET',
@@ -141,7 +139,10 @@ interface UsageGroup {
   dimensions?: { databaseId?: string }
 }
 
-function addGroup(usage: AccountUsage, group: UsageGroup): void {
+function addGroup(
+  usage: AccountUsage,
+  group: UsageGroup,
+): void {
   const rowsRead = group.sum?.rowsRead ?? 0
   const rowsWritten = group.sum?.rowsWritten ?? 0
   usage.rowsRead += rowsRead
@@ -152,14 +153,18 @@ function addGroup(usage: AccountUsage, group: UsageGroup): void {
 }
 
 /** Rows read and written today by every D1 database in the account, from the GraphQL analytics API. */
-export async function accountUsageOn(options: Omit<RestOptions, 'databaseId'>, day: string): Promise<AccountUsage> {
+export async function accountUsageOn(
+  options: Omit<RestOptions, 'databaseId'>,
+  day: string,
+): Promise<AccountUsage> {
   const envelope = await call<unknown>(options.fetchImpl ?? fetch, options.token, `${API}/graphql`, {
     method: 'POST',
     body: { query: USAGE_QUERY, variables: { accountTag: options.accountId, day } },
   })
   const data = envelope.data as { viewer?: { accounts?: { d1AnalyticsAdaptiveGroups?: UsageGroup[] }[] } } | undefined
   const groups = data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups
-  if (!groups) throw new Error('Cloudflare analytics returned no D1 usage (does the token allow Account Analytics: Read?)')
+  if (!groups)
+    throw new Error('Cloudflare analytics returned no D1 usage (does the token allow Account Analytics: Read?)')
   const usage: AccountUsage = { rowsRead: 0, rowsWritten: 0, byDatabase: {} }
   for (const group of groups) addGroup(usage, group)
   return usage

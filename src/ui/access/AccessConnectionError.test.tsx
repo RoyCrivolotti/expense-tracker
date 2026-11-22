@@ -9,7 +9,10 @@ function setOnline(online: boolean) {
   Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => online })
 }
 
-function show(error: string, { standalone = false } = {}) {
+function show(
+  error: string,
+  { standalone = false } = {},
+) {
   installFakeMatchMedia((query) => standalone && query === '(display-mode: standalone)')
   const onRetry = vi.fn()
   render(<AccessConnectionError error={error} onRetry={onRetry} />)

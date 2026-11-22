@@ -17,7 +17,12 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
-function call(handler: Handler, method: string, id?: string, body?: unknown): Promise<Response> {
+function call(
+  handler: Handler,
+  method: string,
+  id?: string,
+  body?: unknown,
+): Promise<Response> {
   return invokeExpenseApiRoute({
     handler,
     repo: createD1ExpenseRepository(world.env),

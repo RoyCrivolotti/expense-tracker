@@ -7,10 +7,7 @@ import { makeScenario } from '../../../src/testing/factories'
 import { onRequestPost as createAccount } from './accounts/index'
 import { onRequestPatch as patchAccount, onRequestDelete as deleteAccount } from './accounts/[id]'
 import { onRequestPost as createCategory } from './categories/index'
-import {
-  onRequestPatch as patchCategory,
-  onRequestDelete as deleteCategory,
-} from './categories/[id]'
+import { onRequestPatch as patchCategory, onRequestDelete as deleteCategory } from './categories/[id]'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPost as createScenario } from './scenarios/index'
 import { onRequestPatch as patchScenario, onRequestDelete as deleteScenario } from './scenarios/[id]'
@@ -75,7 +72,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect((await readJson<{ name: string }>(updated)).name).toBe('Main checking')
   })
 
-  it('replaces the owner\'s dataset revision before and after a write', async () => {
+  it("replaces the owner's dataset revision before and after a write", async () => {
     const store = createInMemoryAccessDb()
     store.seedActiveUser(OWNER, { groups: ['expenses'] })
     const repo = inMemoryExpenseRepository({}, OWNER)
@@ -125,9 +122,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
       email: OWNER,
     })
     expect(updated.status).toBe(200)
-    expect((await readJson<{ monthlyBudgetCents: number }>(updated)).monthlyBudgetCents).toBe(
-      60000,
-    )
+    expect((await readJson<{ monthlyBudgetCents: number }>(updated)).monthlyBudgetCents).toBe(60000)
   })
 
   it('updates settings including defaultAccountId', async () => {
@@ -149,9 +144,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
       email: OWNER,
     })
     expect(response.status).toBe(200)
-    const settings = await readJson<{ openingCashCents: number; defaultAccountId: number | null }>(
-      response,
-    )
+    const settings = await readJson<{ openingCashCents: number; defaultAccountId: number | null }>(response)
     expect(settings.openingCashCents).toBe(100000)
     expect(settings.defaultAccountId).toBe(1)
   })
@@ -175,9 +168,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
       email: OWNER,
     })
     expect(response.status).toBe(200)
-    const settings = await readJson<{ milestones: { amountCents: number; label: string }[] }>(
-      response,
-    )
+    const settings = await readJson<{ milestones: { amountCents: number; label: string }[] }>(response)
     expect(settings.milestones).toEqual([
       { amountCents: 10_000_000, label: 'First' },
       { amountCents: 20_000_000, label: 'Second' },
@@ -263,7 +254,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect(dataset.goalScenarios).toHaveLength(0)
   })
 
-  it('saves a scenario\'s monthly-investing changes in date order and refuses ones it cannot store', async () => {
+  it("saves a scenario's monthly-investing changes in date order and refuses ones it cannot store", async () => {
     const store = createInMemoryAccessDb()
     store.seedActiveUser(OWNER, { groups: ['expenses'] })
     const repo = inMemoryExpenseRepository({}, OWNER)
@@ -516,9 +507,7 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
       email: OWNER,
     })
     expect(response.status).toBe(200)
-    const body = await readJson<{ reassignedToId: number; createdCategory: { name: string } }>(
-      response,
-    )
+    const body = await readJson<{ reassignedToId: number; createdCategory: { name: string } }>(response)
     expect(body.createdCategory.name).toBe('Dining out')
 
     const dataset = await repo.loadDataset(OWNER)

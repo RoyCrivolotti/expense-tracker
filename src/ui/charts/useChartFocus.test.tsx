@@ -7,7 +7,11 @@ import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 const points: { x: number; y: number }[] = []
 const restores: (() => void)[] = []
 
-function stub(target: object, key: string, descriptor: PropertyDescriptor) {
+function stub(
+  target: object,
+  key: string,
+  descriptor: PropertyDescriptor,
+) {
   const original = Object.getOwnPropertyDescriptor(target, key)
   Object.defineProperty(target, key, { configurable: true, ...descriptor })
   restores.push(() => {
@@ -64,8 +68,14 @@ function Harness({ options, length = 5 }: { options?: ChartFocusOptions; length?
 
 const svg = () => screen.getByTestId('svg')
 const active = () => screen.getByTestId('active').textContent
-const touchAt = (clientX: number, clientY = 0) => ({ clientX, clientY, pointerId: 1, pointerType: 'touch' })
-const mouseAt = (clientX: number, clientY = 0) => ({ clientX, clientY, pointerId: 1, pointerType: 'mouse' })
+const touchAt = (
+  clientX: number,
+  clientY = 0,
+) => ({ clientX, clientY, pointerId: 1, pointerType: 'touch' })
+const mouseAt = (
+  clientX: number,
+  clientY = 0,
+) => ({ clientX, clientY, pointerId: 1, pointerType: 'mouse' })
 
 function tapOutside() {
   const outside = screen.getByTestId('outside')

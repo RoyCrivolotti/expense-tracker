@@ -24,7 +24,11 @@ const CLOSE_ENOUGH = 0.01
  * The plan carried on from the latest check-in, read on `date` in that date's euros: what the person is
  * likely to have then if they follow it. Null past the plan's last year.
  */
-function planOnDate(fromToday: PlanFromToday, date: string, inflationRate: number): number | null {
+function planOnDate(
+  fromToday: PlanFromToday,
+  date: string,
+  inflationRate: number,
+): number | null {
   const plan = planFromTodayAt(fromToday, inflationRate)
   const years = yearsBetween(plan.since, date)
   const value = valueOnAxisAt(projectNetWorth(scenarioToParams(plan.scenario, inflationRate)), 0, inflationRate, years)
@@ -50,7 +54,8 @@ export function FutureStartNotes({ draft, otherPlan, onChange }: Props) {
   const future = start != null && start > todayIso()
   // A balance read off a plan that holds its house on the date is after buying it, and one off a plan that does not
   // is before: offered to a scenario on the other side of a purchase, it would be the year-0 house over again.
-  const comparable = future && otherPlan !== null && ownsHouseBy(otherPlan.source.plan, start) === ownsHouseBy(draft, start)
+  const comparable =
+    future && otherPlan !== null && ownsHouseBy(otherPlan.source.plan, start) === ownsHouseBy(draft, start)
   const planCents = useMemo(
     () => (comparable ? planOnDate(otherPlan, start, inflationRate) : null),
     [comparable, otherPlan, start, inflationRate],

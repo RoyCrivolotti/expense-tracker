@@ -27,11 +27,10 @@ const dataset: ExpenseDataset = {
 
 describe('resolveDescriptionTemplate', () => {
   it('keeps current ids when template targets inactive category or account', () => {
-    const resolved = resolveDescriptionTemplate(
-      { type: 'income', categoryId: 2, accountId: 20 },
-      dataset,
-      { categoryId: 1, accountId: 10 },
-    )
+    const resolved = resolveDescriptionTemplate({ type: 'income', categoryId: 2, accountId: 20 }, dataset, {
+      categoryId: 1,
+      accountId: 10,
+    })
     expect(resolved).toEqual({ type: 'income', categoryId: 1, accountId: 10 })
   })
 })

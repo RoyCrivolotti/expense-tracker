@@ -3,7 +3,10 @@ import type { TransactionExportPart } from '../domain/data/ledgerParts'
 import { makeTransaction } from '../testing/factories'
 import { exportAllTransactions } from './exportAllTransactions'
 
-const row = (id: number, date = '2025-01-10') => makeTransaction({ id, date, budgetMonth: date.slice(0, 7) })
+const row = (
+  id: number,
+  date = '2025-01-10',
+) => makeTransaction({ id, date, budgetMonth: date.slice(0, 7) })
 type Chunk = TransactionExportPart
 
 /** A source that answers the n-th call with the n-th chunk, whatever it is asked. */

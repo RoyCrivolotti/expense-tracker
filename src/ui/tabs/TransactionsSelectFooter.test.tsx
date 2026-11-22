@@ -44,7 +44,10 @@ function makeSelection(overrides: Partial<SelectionState> = {}): SelectionState 
   }
 }
 
-function footer(selection: SelectionState, props: Partial<Props> = {}) {
+function footer(
+  selection: SelectionState,
+  props: Partial<Props> = {},
+) {
   return (
     <TransactionsSelectFooter
       actionsEnabled
@@ -163,9 +166,7 @@ describe('TransactionsSelectFooter delete confirm', () => {
   it('says how many chosen rows it leaves alone', () => {
     render(footer(makeSelection({ pendingBatchDelete: true, hiddenCount: 2 })))
 
-    expect(screen.getByRole('alertdialog')).toHaveTextContent(
-      "2 more you selected aren't shown and won't be deleted.",
-    )
+    expect(screen.getByRole('alertdialog')).toHaveTextContent("2 more you selected aren't shown and won't be deleted.")
   })
 
   it('deletes the selection when confirmed', async () => {
@@ -212,9 +213,7 @@ describe('TransactionsSelectFooter bulk edit', () => {
   it('says how many chosen rows it leaves alone', () => {
     render(footer(makeSelection({ pendingBulkEdit: true, hiddenCount: 1 })))
 
-    expect(screen.getByRole('note')).toHaveTextContent(
-      "1 more you selected isn't shown and won't be changed.",
-    )
+    expect(screen.getByRole('note')).toHaveTextContent("1 more you selected isn't shown and won't be changed.")
   })
 
   it('applies only the fields that were switched on', async () => {
@@ -324,9 +323,7 @@ describe('TransactionsSelectFooter leaving', () => {
 
     rerender(footer(makeSelection({ selected: new Set() })))
 
-    expect(screen.getByRole('alertdialog')).toHaveTextContent(
-      '3 transactions will be removed permanently.',
-    )
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('3 transactions will be removed permanently.')
 
     void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()

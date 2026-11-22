@@ -53,17 +53,27 @@ const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', '
 const NO_PICKER_TABS: ReadonlySet<TabId> = new Set(['settings', 'goals'])
 
 /** Only Transactions has a selection for the month to disturb. */
-function monthLockedFor(tab: TabId, txnSelecting: boolean): boolean {
+function monthLockedFor(
+  tab: TabId,
+  txnSelecting: boolean,
+): boolean {
   return tab === 'transactions' && txnSelecting
 }
 
 /** The month the user picked, else the one a selection is holding, else the newest. */
-function shownMonth(picked: string | null, held: string | null, months: string[]): string {
+function shownMonth(
+  picked: string | null,
+  held: string | null,
+  months: string[],
+): string {
   return picked ?? held ?? months[months.length - 1] ?? ''
 }
 
 /** A model that holds only the months looked at reads the rows of the month shown. */
-function useViewMonth(viewMonth: ((month: string) => void) | undefined, month: string): void {
+function useViewMonth(
+  viewMonth: ((month: string) => void) | undefined,
+  month: string,
+): void {
   useEffect(() => {
     viewMonth?.(month)
   }, [viewMonth, month])
@@ -418,16 +428,8 @@ function ExpensesAppReady({
           compactFooter={COMPACT_FOOTER_TABS.has(tab)}
           wide={tab === 'goals' || tab === 'analytics'}
           contentRef={contentRef}
-          pullIndicator={
-            <PullToRefreshIndicator
-              pullPx={pullPx}
-              isPulling={isPulling}
-              refreshing={refreshing}
-            />
-          }
-          banner={
-            <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
-          }
+          pullIndicator={<PullToRefreshIndicator pullPx={pullPx} isPulling={isPulling} refreshing={refreshing} />}
+          banner={<ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />}
           // Hidden while rows are selected: the selection bar sits in the same corner and
           // there is nothing to add a transaction for mid-batch-action anyway.
           {...(actions && tab !== 'goals' && selectionMonth === null ? { onAdd: actions.onAdd } : {})}
@@ -440,7 +442,9 @@ function ExpensesAppReady({
               pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
               onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
               online={online}
-              refreshing={refreshing} onRefresh={refresh} savedMonths={model.savedMonths}
+              refreshing={refreshing}
+              onRefresh={refresh}
+              savedMonths={model.savedMonths}
             />
           }
         >
@@ -476,12 +480,7 @@ function ExpensesAppReady({
         <PresenceValue value={actions ? modal : null} exitMs={EXIT_MS.sheet}>
           {(shown) =>
             actions && (
-              <ActiveTransactionModal
-                modal={shown}
-                actions={actions}
-                model={model}
-                onClose={() => setModal(null)}
-              />
+              <ActiveTransactionModal modal={shown} actions={actions} model={model} onClose={() => setModal(null)} />
             )
           }
         </PresenceValue>

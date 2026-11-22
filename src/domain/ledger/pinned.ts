@@ -16,7 +16,10 @@ export function settlementPaymentIds(rows: readonly StoredTransaction[]): Set<nu
  * `planId`, `flagId`, `settledBy` and `reportCount` across months. `payments` comes from
  * `settlementPaymentIds` over the whole ledger.
  */
-export function isPinned(row: StoredTransaction, payments: ReadonlySet<number>): boolean {
+export function isPinned(
+  row: StoredTransaction,
+  payments: ReadonlySet<number>,
+): boolean {
   return (
     row.type === 'investment' ||
     row.planId != null ||

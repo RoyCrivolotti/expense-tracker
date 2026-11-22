@@ -22,15 +22,15 @@ export function serverBudgetMonth(
   rolloverDay: number | null | undefined,
   now: Date = new Date(),
 ): string {
-  return defaultBudgetMonth(
-    now.toISOString().slice(0, 10),
-    rolloverDay ?? DEFAULT_BUDGET_ROLLOVER_DAY,
-  )
+  return defaultBudgetMonth(now.toISOString().slice(0, 10), rolloverDay ?? DEFAULT_BUDGET_ROLLOVER_DAY)
 }
 
 const NEW_TOKEN = 'lower(hex(randomblob(8)))'
 
-function bumpStatement(db: D1Database, owner: string): D1PreparedStatement {
+function bumpStatement(
+  db: D1Database,
+  owner: string,
+): D1PreparedStatement {
   return db
     .prepare(
       `INSERT INTO owner_revision (owner, token) VALUES (?, ${NEW_TOKEN})
@@ -41,7 +41,10 @@ function bumpStatement(db: D1Database, owner: string): D1PreparedStatement {
 }
 
 /** Replace the owner's token with a fresh random one, creating the row if there is none. */
-export async function bumpRevision(db: D1Database, owner: string): Promise<void> {
+export async function bumpRevision(
+  db: D1Database,
+  owner: string,
+): Promise<void> {
   await bumpStatement(db, owner).run()
 }
 
@@ -60,7 +63,10 @@ export interface Bump {
  * bump ran, which is what a write that names the revision it was based on (`expectedRevision`) has to be
  * compared with, and what a request compares its second bump with to learn whether anyone else wrote between.
  */
-export async function bumpRevisionReadingPrevious(db: D1Database, owner: string): Promise<Bump> {
+export async function bumpRevisionReadingPrevious(
+  db: D1Database,
+  owner: string,
+): Promise<Bump> {
   const [previous, bumped] = await db.batch([
     db.prepare('SELECT token FROM owner_revision WHERE owner = ?').bind(owner),
     bumpStatement(db, owner),
@@ -72,7 +78,10 @@ export async function bumpRevisionReadingPrevious(db: D1Database, owner: string)
 }
 
 /** The owner's token, creating one if the owner has none yet. Never replaces an existing one. */
-async function ensureRevision(db: D1Database, owner: string): Promise<string> {
+async function ensureRevision(
+  db: D1Database,
+  owner: string,
+): Promise<string> {
   const row = await db
     .prepare(
       `INSERT INTO owner_revision (owner, token) VALUES (?, ${NEW_TOKEN})

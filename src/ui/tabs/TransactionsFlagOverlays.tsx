@@ -83,14 +83,7 @@ export function TransactionsFlagOverlays({
       </PresenceValue>
 
       <PresenceValue value={managingFlags ? actions : null} exitMs={EXIT_MS.sheet}>
-        {(shown) => (
-          <FlagsModal
-            model={model}
-            actions={shown}
-            onClose={onCloseManage}
-            onOpenReport={onOpenReport}
-          />
-        )}
+        {(shown) => <FlagsModal model={model} actions={shown} onClose={onCloseManage} onOpenReport={onOpenReport} />}
       </PresenceValue>
     </>
   )

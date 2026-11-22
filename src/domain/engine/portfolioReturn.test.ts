@@ -4,7 +4,12 @@ import { makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../tes
 
 const accounts = [makeWealthAccount({ id: 1, kind: 'investment' }), makeWealthAccount({ id: 2, kind: 'cash' })]
 
-function checkin(id: number, date: string, invested: number, cash = 0) {
+function checkin(
+  id: number,
+  date: string,
+  invested: number,
+  cash = 0,
+) {
   return makeWealthCheckin({
     id,
     checkinDate: date,
@@ -15,16 +20,17 @@ function checkin(id: number, date: string, invested: number, cash = 0) {
   })
 }
 
-function contribution(date: string, amountCents: number) {
+function contribution(
+  date: string,
+  amountCents: number,
+) {
   return makeTransaction({ date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents })
 }
 
 describe('portfolioReturn', () => {
   it('needs two check-ins at least a month apart', () => {
     expect(portfolioReturn([checkin(1, '2026-01-01', 100)], accounts, [])).toBeNull()
-    expect(
-      portfolioReturn([checkin(1, '2026-01-01', 100), checkin(2, '2026-01-20', 110)], accounts, []),
-    ).toBeNull()
+    expect(portfolioReturn([checkin(1, '2026-01-01', 100), checkin(2, '2026-01-20', 110)], accounts, [])).toBeNull()
   })
 
   it('is the plain growth when nothing was added', () => {
@@ -40,11 +46,9 @@ describe('portfolioReturn', () => {
 
   it('takes contributions out, weighted by how long they were in', () => {
     // 100k grew to 110k, but 10k went in halfway: no return at all.
-    const r = portfolioReturn(
-      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 110_000_00)],
-      accounts,
-      [contribution('2025-07-02', 10_000_00)],
-    )!
+    const r = portfolioReturn([checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 110_000_00)], accounts, [
+      contribution('2025-07-02', 10_000_00),
+    ])!
     expect(r.periodReturn).toBeCloseTo(0, 6)
     expect(r.contributionsCents).toBe(10_000_00)
   })
@@ -54,7 +58,13 @@ describe('portfolioReturn', () => {
       [checkin(1, '2025-01-01', 100_000_00, 50_000_00), checkin(2, '2026-01-01', 110_000_00, 1_00)],
       accounts,
       [
-        makeTransaction({ date: '2025-06-01', type: 'investment', amountCents: 5_000_00, status: 'cancelled', cancelled: true }),
+        makeTransaction({
+          date: '2025-06-01',
+          type: 'investment',
+          amountCents: 5_000_00,
+          status: 'cancelled',
+          cancelled: true,
+        }),
         makeTransaction({ date: '2025-06-01', type: 'investment', amountCents: 5_000_00, status: 'forecast' }),
         contribution('2024-12-31', 5_000_00),
         contribution('2026-01-02', 5_000_00),
@@ -81,13 +91,9 @@ describe('portfolioReturn', () => {
   })
 
   it('gives up when there was nothing invested to earn on', () => {
-    expect(
-      portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 0)], accounts, []),
-    ).toBeNull()
+    expect(portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 0)], accounts, [])).toBeNull()
     // Money appeared that no transaction accounts for: nothing honest can be said.
-    expect(
-      portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 50_000_00)], accounts, []),
-    ).toBeNull()
+    expect(portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 50_000_00)], accounts, [])).toBeNull()
   })
 
   it('chains the stretches between check-ins', () => {
@@ -110,11 +116,7 @@ describe('portfolioReturn', () => {
     // Time-weighted that is −50%; measured start to end in one go it would read about
     // −33%, because the late money dilutes the loss.
     const r = portfolioReturn(
-      [
-        checkin(1, '2025-01-01', 100_000_00),
-        checkin(2, '2025-07-01', 50_000_00),
-        checkin(3, '2026-01-01', 150_000_00),
-      ],
+      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2025-07-01', 50_000_00), checkin(3, '2026-01-01', 150_000_00)],
       accounts,
       [contribution('2025-07-02', 100_000_00)],
     )!
@@ -124,11 +126,9 @@ describe('portfolioReturn', () => {
 
   it('treats a negative investment as money taken back out', () => {
     // 100k, 50k sold to cash halfway, 50k left: no return, not a 50% loss.
-    const r = portfolioReturn(
-      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)],
-      accounts,
-      [contribution('2025-07-02', -50_000_00)],
-    )!
+    const r = portfolioReturn([checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)], accounts, [
+      contribution('2025-07-02', -50_000_00),
+    ])!
     expect(r.periodReturn).toBeCloseTo(0, 6)
     expect(r.contributionsCents).toBe(-50_000_00)
   })
@@ -137,11 +137,9 @@ describe('portfolioReturn', () => {
     // 100k, another 100k added a month before the end, 50k left: the approximation
     // puts the stretch below minus one hundred percent, where no rate exists.
     expect(
-      portfolioReturn(
-        [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)],
-        accounts,
-        [contribution('2025-12-01', 100_000_00)],
-      ),
+      portfolioReturn([checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)], accounts, [
+        contribution('2025-12-01', 100_000_00),
+      ]),
     ).toBeNull()
     // Two such stretches multiply back to a positive number; each is judged on its own.
     expect(
@@ -156,22 +154,14 @@ describe('portfolioReturn', () => {
       ),
     ).toBeNull()
     // Losing it all is a return of minus one hundred percent, not an error.
-    const wiped = portfolioReturn(
-      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 0)],
-      accounts,
-      [],
-    )!
+    const wiped = portfolioReturn([checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 0)], accounts, [])!
     expect(wiped.periodReturn).toBe(-1)
     expect(wiped.annualised).toBe(-1)
   })
 
   it('skips the stretches before the portfolio opened', () => {
     const r = portfolioReturn(
-      [
-        checkin(1, '2025-01-01', 0),
-        checkin(2, '2025-04-01', 0),
-        checkin(3, '2026-01-01', 110_000_00),
-      ],
+      [checkin(1, '2025-01-01', 0), checkin(2, '2025-04-01', 0), checkin(3, '2026-01-01', 110_000_00)],
       accounts,
       [contribution('2025-04-02', 100_000_00)],
     )!

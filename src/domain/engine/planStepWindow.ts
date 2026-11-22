@@ -17,12 +17,18 @@ const OTHER_PATH_MONTHS = 3
 const MIN_BAND = 100
 
 /** The segment of the line a date is in: the year it is in, or the last year at the last day. */
-function segmentAt(line: PlanLine, offset: number): PlanSegment | undefined {
+function segmentAt(
+  line: PlanLine,
+  offset: number,
+): PlanSegment | undefined {
   return line.segments[Math.min(Math.floor(offset), line.segments.length - 1)]
 }
 
 /** Half of the width of "on track": a month of what the line rises by in the year the date is in. */
-export function monthBand(line: PlanLine, offset: number): number {
+export function monthBand(
+  line: PlanLine,
+  offset: number,
+): number {
   const segment = segmentAt(line, offset)
   return segment ? Math.max(MIN_BAND, Math.abs(segment.end - segment.start) / 12) : MIN_BAND
 }
@@ -37,7 +43,10 @@ export interface NearStep {
 }
 
 /** The rise per year of the segment `index`, or of the nearest one that exists. */
-function riseOf(line: PlanLine, index: number): number {
+function riseOf(
+  line: PlanLine,
+  index: number,
+): number {
   const segment = line.segments[Math.max(0, Math.min(index, line.segments.length - 1))]
   return segment ? segment.end - segment.start : 0
 }
@@ -47,7 +56,10 @@ function riseOf(line: PlanLine, index: number): number {
  * before it, the line from after the step carried back; after it, the line from before the step
  * carried on. Null anywhere else.
  */
-export function nearStep(line: PlanLine, offset: number): NearStep | null {
+export function nearStep(
+  line: PlanLine,
+  offset: number,
+): NearStep | null {
   const anniversary = Math.round(offset)
   const segment = line.segments[anniversary - 1]
   if (!segment || Math.abs(offset - anniversary) > STEP_WINDOW || !isBoundary(segment)) return null
@@ -66,12 +78,17 @@ export interface Reading {
 }
 
 /** The balance against the line on `offset`; null where there is no line. */
-export function readAgainst(line: PlanLine, offset: number, balanceCents: number): Reading | null {
+export function readAgainst(
+  line: PlanLine,
+  offset: number,
+  balanceCents: number,
+): Reading | null {
   const main = planValueAt(line, offset)
   if (main === null) return null
   const near = nearStep(line, offset)
   const gap = near === null ? Infinity : Math.abs(balanceCents - near.alternate)
-  const other = near !== null && gap < Math.abs(balanceCents - main) && gap <= OTHER_PATH_MONTHS * monthBand(line, offset)
+  const other =
+    near !== null && gap < Math.abs(balanceCents - main) && gap <= OTHER_PATH_MONTHS * monthBand(line, offset)
   const reference = other ? near.alternate : main
   return {
     reference,

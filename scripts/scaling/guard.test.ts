@@ -24,8 +24,14 @@ describe('the production database id', () => {
 
   it('reads only blocks named for production', () => {
     const toml = [
-      '[[d1_databases]]', 'binding = "DB"', 'database_name = "roy-expenses"', 'database_id = "aaa"',
-      '[[d1_databases]]', 'binding = "DEV"', 'database_name = "roy-expenses-dev"', 'database_id = "bbb"',
+      '[[d1_databases]]',
+      'binding = "DB"',
+      'database_name = "roy-expenses"',
+      'database_id = "aaa"',
+      '[[d1_databases]]',
+      'binding = "DEV"',
+      'database_name = "roy-expenses-dev"',
+      'database_id = "bbb"',
     ].join('\n')
     expect(productionDatabaseIds(toml)).toEqual(['aaa'])
     expect(productionDatabaseIds('name = "x"')).toEqual([])
@@ -54,7 +60,9 @@ describe('the target', () => {
 
   it('refuses production even when config/dev.json points at it', () => {
     const dev = { d1DatabaseId: 'prod-id', d1DatabaseName: PRODUCTION_DATABASE }
-    expect(() => assertSafeTarget({ database: PRODUCTION_DATABASE, dev, productionIds: ['prod-id'] })).toThrow(/production/)
+    expect(() => assertSafeTarget({ database: PRODUCTION_DATABASE, dev, productionIds: ['prod-id'] })).toThrow(
+      /production/,
+    )
   })
 
   it('wants the database name typed again before any write', () => {
@@ -97,23 +105,35 @@ describe('which statements may be sent', () => {
   })
 
   it('refuses every write without --write, even one for the synthetic owner', () => {
-    expect(() => assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', [SYNTHETIC_OWNER], false)).toThrow(/without --write/)
+    expect(() => assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', [SYNTHETIC_OWNER], false)).toThrow(
+      /without --write/,
+    )
   })
 
   it('refuses a write that names no owner, or binds someone else', () => {
     expect(() => assertStatementAllowed('DELETE FROM transactions', [SYNTHETIC_OWNER], true)).toThrow(/names no owner/)
-    expect(() => assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', ['someone@example.com'], true)).toThrow(/synthetic owner/)
-    expect(() => assertStatementAllowed('UPDATE transactions SET x = 1 WHERE owner = ?', [], true)).toThrow(/synthetic owner/)
+    expect(() =>
+      assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', ['someone@example.com'], true),
+    ).toThrow(/synthetic owner/)
+    expect(() => assertStatementAllowed('UPDATE transactions SET x = 1 WHERE owner = ?', [], true)).toThrow(
+      /synthetic owner/,
+    )
   })
 
   it('lets an owner-scoped write for the synthetic owner through once writes are enabled', () => {
-    expect(() => assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', [SYNTHETIC_OWNER], true)).not.toThrow()
-    expect(() => assertStatementAllowed('DELETE FROM allowed_users WHERE email = ?', [SYNTHETIC_OWNER], true)).not.toThrow()
+    expect(() =>
+      assertStatementAllowed('DELETE FROM transactions WHERE owner = ?', [SYNTHETIC_OWNER], true),
+    ).not.toThrow()
+    expect(() =>
+      assertStatementAllowed('DELETE FROM allowed_users WHERE email = ?', [SYNTHETIC_OWNER], true),
+    ).not.toThrow()
   })
 
   it('never lets the schema change', () => {
     expect(() => assertStatementAllowed('DROP TABLE transactions', [SYNTHETIC_OWNER], true)).toThrow(/schema/)
-    expect(() => assertStatementAllowed('CREATE INDEX i ON transactions (owner)', [SYNTHETIC_OWNER], true)).toThrow(/schema/)
+    expect(() => assertStatementAllowed('CREATE INDEX i ON transactions (owner)', [SYNTHETIC_OWNER], true)).toThrow(
+      /schema/,
+    )
   })
 
   it('uses an address under example.com, which RFC 2606 reserves and check-pii accepts', () => {

@@ -56,14 +56,20 @@ export function precachedEntries(source) {
   for (const m of source.matchAll(entry)) {
     const fields = { [m[1]]: m[2], [m[3]]: m[4] }
     if (!fields.url || !fields.revision || fields.url === 'null') continue
-    entries.push({ url: JSON.parse(fields.url), revision: fields.revision === 'null' ? null : JSON.parse(fields.revision) })
+    entries.push({
+      url: JSON.parse(fields.url),
+      revision: fields.revision === 'null' ? null : JSON.parse(fields.revision),
+    })
   }
   return entries
 }
 
 /** A worker resolves the relative URL it is given against its own address; Node's `Request` refuses one. */
 class WorkerRequest extends Request {
-  constructor(input, init) {
+  constructor(
+    input,
+    init,
+  ) {
     super(typeof input === 'string' ? new URL(input, `${ORIGIN}/`).href : input, init)
   }
 }
@@ -83,7 +89,11 @@ function subresource(pathname) {
  * Loads the worker with a Cache Storage that holds every precached URL, as it would after an install, and a `fetch`
  * that `network` controls. Returns what the worker registered and the errors it raised while loading.
  */
-function load(dist, entries, network) {
+function load(
+  dist,
+  entries,
+  network,
+) {
   const listeners = {}
   const posted = []
   const store = new Map()
@@ -93,29 +103,55 @@ function load(dist, entries, network) {
     store.set(key, url.endsWith('.html') ? SHELL_BODY : `ASSET ${url}`)
   }
   const cache = {
-    match: async (key) => (store.has(typeof key === 'string' ? key : key.url) ? new Response(store.get(typeof key === 'string' ? key : key.url)) : undefined),
+    match: async (key) =>
+      store.has(typeof key === 'string' ? key : key.url)
+        ? new Response(store.get(typeof key === 'string' ? key : key.url))
+        : undefined,
     put: async () => {},
     keys: async () => [],
     delete: async () => true,
   }
   const sandbox = {
-    console, setTimeout, clearTimeout, URL, Request: WorkerRequest, Response, Headers, ExtendableEvent, FetchEvent,
+    console,
+    setTimeout,
+    clearTimeout,
+    URL,
+    Request: WorkerRequest,
+    Response,
+    Headers,
+    ExtendableEvent,
+    FetchEvent,
     navigator: { language: 'en-GB' },
     fetch: async () => {
       if (!network.up) throw new TypeError('Failed to fetch')
       return new Response(NETWORK_BODY)
     },
-    caches: { open: async () => cache, keys: async () => [], match: (key) => cache.match(key), delete: async () => true },
+    caches: {
+      open: async () => cache,
+      keys: async () => [],
+      match: (key) => cache.match(key),
+      delete: async () => true,
+    },
     location: new URL(`${ORIGIN}/sw.js`),
     registration: { scope: `${ORIGIN}/`, showNotification: async () => {} },
-    addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn) },
+    addEventListener: (
+      type,
+      fn,
+    ) => {
+      ;(listeners[type] ??= []).push(fn)
+    },
     skipWaiting: () => Promise.resolve(),
-    clients: { claim: () => Promise.resolve(), matchAll: async () => [{ postMessage: (message) => posted.push(JSON.stringify(message)) }], openWindow: async () => {} },
+    clients: {
+      claim: () => Promise.resolve(),
+      matchAll: async () => [{ postMessage: (message) => posted.push(JSON.stringify(message)) }],
+      openWindow: async () => {},
+    },
   }
   sandbox.self = sandbox
   const context = vm.createContext(sandbox)
   sandbox.importScripts = (...files) => {
-    for (const file of files) vm.runInContext(readFileSync(join(dist, new URL(file, `${ORIGIN}/`).pathname), 'utf8'), context)
+    for (const file of files)
+      vm.runInContext(readFileSync(join(dist, new URL(file, `${ORIGIN}/`).pathname), 'utf8'), context)
   }
   // The worker's own promise chains reject after a failed fetch, which a browser logs and Node would exit on; only
   // what is raised while the worker loads is a fault of the worker.
@@ -126,11 +162,22 @@ function load(dist, entries, network) {
   }
   process.on('unhandledRejection', onRejection)
   vm.runInContext(readFileSync(join(dist, 'sw.js'), 'utf8'), context)
-  return { listeners, posted, errors, loaded: () => { phase.loading = false }, stop: () => process.off('unhandledRejection', onRejection) }
+  return {
+    listeners,
+    posted,
+    errors,
+    loaded: () => {
+      phase.loading = false
+    },
+    stop: () => process.off('unhandledRejection', onRejection),
+  }
 }
 
 /** What the worker does with a request: the body of its answer, or null when it leaves the request to the browser. */
-async function answer(worker, request) {
+async function answer(
+  worker,
+  request,
+) {
   const event = new FetchEvent(request)
   for (const listener of worker.listeners.fetch ?? []) listener(event)
   if (!event.responded) return null
@@ -152,7 +199,9 @@ export async function problemsOfWorker(dist) {
   const entries = precachedEntries(source)
   const problems = []
   if (!entries.some((entry) => entry.url === 'index.html' && entry.revision)) {
-    problems.push('the shell (index.html) is not precached with a revision, so the worker cannot answer a navigation when the network fails')
+    problems.push(
+      'the shell (index.html) is not precached with a revision, so the worker cannot answer a navigation when the network fails',
+    )
   }
   const network = { up: true }
   const worker = load(dist, entries, network)
@@ -167,19 +216,46 @@ export async function problemsOfWorker(dist) {
   const asset = entries.find((entry) => entry.url.endsWith('.js'))
   const expectations = [
     ['a navigation to / while the network answers', () => navigation('/'), true, NETWORK_BODY],
-    ['a navigation to a deep link while the network answers', () => navigation('/settings?tab=data'), true, NETWORK_BODY],
+    [
+      'a navigation to a deep link while the network answers',
+      () => navigation('/settings?tab=data'),
+      true,
+      NETWORK_BODY,
+    ],
     ['a navigation to / while the network fails', () => navigation('/'), false, SHELL_BODY],
     ['a navigation to a deep link while the network fails', () => navigation('/settings'), false, SHELL_BODY],
-    ['an API URL opened in a tab while the network fails', () => navigation('/api/expenses/attachments/7'), false, null],
+    [
+      'an API URL opened in a tab while the network fails',
+      () => navigation('/api/expenses/attachments/7'),
+      false,
+      null,
+    ],
     ['an Access URL opened in a tab while the network fails', () => navigation('/cdn-cgi/access/logout'), false, null],
-    ['a request of the app for its data while the network answers', () => subresource('/api/access/status'), true, null],
+    [
+      'a request of the app for its data while the network answers',
+      () => subresource('/api/access/status'),
+      true,
+      null,
+    ],
     ['a request of the app for its data while the network fails', () => subresource('/api/access/status'), false, null],
-    ...(asset ? [['a precached script while the network fails', () => subresource(`/${asset.url}`), false, `ASSET ${asset.url}`]] : []),
+    ...(asset
+      ? [
+          [
+            'a precached script while the network fails',
+            () => subresource(`/${asset.url}`),
+            false,
+            `ASSET ${asset.url}`,
+          ],
+        ]
+      : []),
   ]
   for (const [what, request, networkUp, expected] of expectations) {
     network.up = networkUp
     const got = await answer(worker, request())
-    if (got !== expected) problems.push(`${what}: expected ${expected === null ? 'no answer from the worker' : `"${expected}"`}, got ${got === null ? 'no answer from the worker' : `"${got}"`}`)
+    if (got !== expected)
+      problems.push(
+        `${what}: expected ${expected === null ? 'no answer from the worker' : `"${expected}"`}, got ${got === null ? 'no answer from the worker' : `"${got}"`}`,
+      )
   }
   // A worker that shows pushes must also tell the open windows, or a payment that arrives with the app in front waits
   // for a refresh. The windows are reached through `clients`, which only the push handler can pass on.
@@ -188,7 +264,9 @@ export async function problemsOfWorker(dist) {
     for (const listener of worker.listeners.push) listener(push)
     await push.kept.catch(() => {})
     if (!worker.posted.includes(JSON.stringify({ type: 'review-changed' }))) {
-      problems.push('a push does not tell the open windows (a message of type "review-changed"), so the payment waits for a refresh')
+      problems.push(
+        'a push does not tell the open windows (a message of type "review-changed"), so the payment waits for a refresh',
+      )
     }
   }
   worker.stop()

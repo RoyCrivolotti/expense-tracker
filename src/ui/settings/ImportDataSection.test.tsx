@@ -15,11 +15,17 @@ const account = dataset.accounts[0]!.name
 
 /** A file of `n` rows in the export format, each with a description of its own. */
 function csvOf(n: number): string {
-  const lines = Array.from({ length: n }, (_, i) => `,2026-01-05,2026-01,Import ${i + 1},${category},${account},expense,${100 + i},posted,0,`)
+  const lines = Array.from(
+    { length: n },
+    (_, i) => `,2026-01-05,2026-01,Import ${i + 1},${category},${account},expense,${100 + i},posted,0,`,
+  )
   return [EXPORT_CSV_HEADER, ...lines].join('\n')
 }
 
-async function chooseFile(container: HTMLElement, text: string): Promise<void> {
+async function chooseFile(
+  container: HTMLElement,
+  text: string,
+): Promise<void> {
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')!
   const file = new File([text], 'import.csv', { type: 'text/csv' })
   Object.defineProperty(file, 'text', { value: () => Promise.resolve(text) })
@@ -39,14 +45,18 @@ function renderSection(createTransactions: (inputs: NewTransaction[]) => Promise
   return { ...view, createTransactions: actions.createTransactions as ReturnType<typeof vi.fn> }
 }
 
-const sizes = (mock: ReturnType<typeof vi.fn>): number[] => mock.mock.calls.map(([inputs]) => (inputs as NewTransaction[]).length)
-const descriptions = (mock: ReturnType<typeof vi.fn>): string[] => mock.mock.calls.flatMap(([inputs]) => (inputs as NewTransaction[]).map((row) => row.description))
+const sizes = (mock: ReturnType<typeof vi.fn>): number[] =>
+  mock.mock.calls.map(([inputs]) => (inputs as NewTransaction[]).length)
+const descriptions = (mock: ReturnType<typeof vi.fn>): string[] =>
+  mock.mock.calls.flatMap(([inputs]) => (inputs as NewTransaction[]).map((row) => row.description))
 const confirm = () => fireEvent.click(screen.getByRole('button', { name: /Confirm import|Importing/ }))
 
 describe('ImportDataSection, the words above the buttons', () => {
   it('says categories and accounts must be set up first, since the file uses their names', () => {
     renderSection(() => Promise.resolve())
-    expect(screen.getByText(/Set up your categories and accounts first: the file must use their names\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Set up your categories and accounts first: the file must use their names\./),
+    ).toBeInTheDocument()
   })
 })
 
@@ -115,7 +125,9 @@ describe('ImportDataSection, a file of more rows than a request takes', () => {
     await chooseFile(container, csvOf(250))
     confirm()
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Imported 100 of 250 transactions. The next 100 were refused and not saved: Row 130: Unknown category.')
+    expect(alert).toHaveTextContent(
+      'Imported 100 of 250 transactions. The next 100 were refused and not saved: Row 130: Unknown category.',
+    )
     expect(alert).toHaveTextContent('The 150 left are still here')
     expect(screen.getByText('Import stopped: 100 of 250 imported')).toBeInTheDocument()
     expect(screen.getByText('150 rows ready')).toBeInTheDocument()
@@ -128,7 +140,10 @@ describe('ImportDataSection, a file of more rows than a request takes', () => {
     expect(sizes(createTransactions)).toEqual([100, 100, 100, 50])
     // The first hundred went out once; the refused hundred went out again with the fifty after them, the rest and no more.
     const sent = descriptions(createTransactions)
-    const named = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `Import ${from + i}`)
+    const named = (
+      from: number,
+      to: number,
+    ) => Array.from({ length: to - from + 1 }, (_, i) => `Import ${from + i}`)
     expect(sent.slice(0, 100)).toEqual(named(1, 100))
     expect(sent.slice(200)).toEqual(named(101, 250))
   })

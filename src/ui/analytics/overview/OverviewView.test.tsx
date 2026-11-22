@@ -36,7 +36,14 @@ function model() {
   }
   // An unpaid card charge in March, for the hatched cap and the committed basis.
   transactions.push(
-    txn({ date: '2026-03-02', budgetMonth: '2026-03', description: 'Gadget', categoryId: 2, amountCents: 10_000, status: 'forecast' }),
+    txn({
+      date: '2026-03-02',
+      budgetMonth: '2026-03',
+      description: 'Gadget',
+      categoryId: 2,
+      amountCents: 10_000,
+      status: 'forecast',
+    }),
   )
   return buildExpenseModel(
     makeDataset({
@@ -89,19 +96,21 @@ describe('OverviewView', () => {
     expect(screen.getByText('Goals plan assumes')).toBeTruthy()
   })
 
-  it('says the open month\'s income split is through the same days as the headline numbers', () => {
+  it("says the open month's income split is through the same days as the headline numbers", () => {
     renderView()
     expect(screen.getByText(/income in the first 10 days/)).toBeTruthy()
   })
 
-  it('calls a closed month\'s income split a whole month', () => {
+  it("calls a closed month's income split a whole month", () => {
     renderView({ month: '2026-02', openMonth: '2026-03' })
     expect(screen.getByText(/income this month/)).toBeTruthy()
   })
 
   it('says the baseline is a trailing average over the history there is, not a year to date', () => {
     renderView()
-    expect(screen.getByText(/of\s+history before this one, up to 12\. A trailing average, not a calendar year/)).toBeTruthy()
+    expect(
+      screen.getByText(/of\s+history before this one, up to 12\. A trailing average, not a calendar year/),
+    ).toBeTruthy()
     expect(screen.getByText(/Annual spend at FI/)).toBeTruthy()
   })
 
@@ -167,7 +176,13 @@ describe('OverviewView', () => {
     const oneMonth = buildExpenseModel(
       makeDataset({
         transactions: [
-          txn({ date: '2026-03-01', budgetMonth: '2026-03', type: 'income', description: 'Payroll', amountCents: 300_000 }),
+          txn({
+            date: '2026-03-01',
+            budgetMonth: '2026-03',
+            type: 'income',
+            description: 'Payroll',
+            amountCents: 300_000,
+          }),
         ],
       }),
     )

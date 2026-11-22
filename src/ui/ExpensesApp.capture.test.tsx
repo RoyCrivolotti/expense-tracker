@@ -15,7 +15,11 @@ import { ToastProvider } from './hooks/ToastProvider'
 import { UNDO_MS } from './capture/usePendingAction'
 import { RETURN_THROTTLE_MS } from './capture/useReloadOnReturn'
 
-vi.mock('../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), fetchCardLinks: vi.fn(), linkCard: vi.fn() }))
+vi.mock('../data/captureCardsApi', async (original) => ({
+  ...(await original<typeof cardsApi>()),
+  fetchCardLinks: vi.fn(),
+  linkCard: vi.fn(),
+}))
 vi.mock('../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
 vi.mock('../data/recommendationsApi', async (original) => ({
   ...(await original<typeof api>()),
@@ -37,11 +41,19 @@ beforeAll(() => {
   })
 })
 
-const dataset: ExpenseDataset = makeDataset({ ...makeReviewModel().dataset, transactions: [...makeReviewModel().dataset.transactions] })
+const dataset: ExpenseDataset = makeDataset({
+  ...makeReviewModel().dataset,
+  transactions: [...makeReviewModel().dataset.transactions],
+})
 const KNOWN = '0b0c0d0e-1111-4222-8333-444455556661'
 const NEW = '0b0c0d0e-1111-4222-8333-444455556662'
 const known = makeRecommendation({ id: KNOWN })
-const unknown = makeRecommendation({ id: NEW, merchantRaw: 'BRAND NEW PLACE', amountCents: 800, localDate: '2026-11-09' })
+const unknown = makeRecommendation({
+  id: NEW,
+  merchantRaw: 'BRAND NEW PLACE',
+  amountCents: 800,
+  localDate: '2026-11-09',
+})
 
 function source(): ExpenseDataSource {
   return { canWrite: true, load: vi.fn().mockResolvedValue(dataset) }
@@ -60,7 +72,9 @@ beforeEach(() => {
   setMotionDisabledForTests(true)
   vi.useFakeTimers({ shouldAdvanceTime: true })
   vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known, unknown], next: null, openCount: 2 })
-  vi.mocked(api.submitRecommendation).mockImplementation(() => Promise.resolve(makeTransaction({ id: 77, description: 'Cafe Example', accountId: 1, categoryId: 1 })))
+  vi.mocked(api.submitRecommendation).mockImplementation(() =>
+    Promise.resolve(makeTransaction({ id: 77, description: 'Cafe Example', accountId: 1, categoryId: 1 })),
+  )
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -102,7 +116,11 @@ describe('payments to review on the Dashboard', () => {
     expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
 
     // A second payment is captured on the server; the app is not restarted.
-    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known, unknown], next: null, openCount: 2 })
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [known, unknown],
+      next: null,
+      openCount: 2,
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh data' }))
 
     expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
@@ -141,7 +159,9 @@ describe('payments to review on the Dashboard', () => {
     })
 
     it('waits while the queue sheet is open, and reads once when it closes', async () => {
-      const seven = [KNOWN, NEW, ...[3, 4, 5, 6, 7].map((n) => `0b0c0d0e-1111-4222-8333-44445555666${n}`)].map((id) => makeRecommendation({ id, merchantRaw: `PLACE ${id.slice(-1)}` }))
+      const seven = [KNOWN, NEW, ...[3, 4, 5, 6, 7].map((n) => `0b0c0d0e-1111-4222-8333-44445555666${n}`)].map((id) =>
+        makeRecommendation({ id, merchantRaw: `PLACE ${id.slice(-1)}` }),
+      )
       vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: seven, next: null, openCount: 7 })
       open()
       await screen.findByRole('heading', { name: '7 payments to review' })
@@ -170,7 +190,11 @@ describe('payments to review on the Dashboard', () => {
     // The server no longer lists it once it is decided.
     vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [unknown], next: null, openCount: 1 })
     await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
-    expect(api.submitRecommendation).toHaveBeenCalledWith(KNOWN, expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, type: 'expense' }), undefined)
+    expect(api.submitRecommendation).toHaveBeenCalledWith(
+      KNOWN,
+      expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, type: 'expense' }),
+      undefined,
+    )
     expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
   })
 
@@ -200,7 +224,13 @@ describe('payments to review on the Dashboard', () => {
     chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
-    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' }), false))
+    await waitFor(() =>
+      expect(api.submitRecommendation).toHaveBeenCalledWith(
+        NEW,
+        expect.objectContaining({ amountCents: 800, description: 'Bakery', date: '2026-11-09' }),
+        false,
+      ),
+    )
   })
 
   it('moves on to the next payment when the form is saved, and ends the queue at the last', async () => {
@@ -223,7 +253,9 @@ describe('payments to review on the Dashboard', () => {
     chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add and next (1 left)' }))
 
-    await waitFor(() => expect(within(screen.getByRole('dialog').querySelector('form')!).getByLabelText(/amount/i)).toHaveValue('4,50'))
+    await waitFor(() =>
+      expect(within(screen.getByRole('dialog').querySelector('form')!).getByLabelText(/amount/i)).toHaveValue('4,50'),
+    )
     form = screen.getByRole('dialog').querySelector('form')!
     expect(within(form).getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
   })
@@ -234,7 +266,10 @@ describe('payments to review on the Dashboard', () => {
       next: null,
       openCount: 1,
     })
-    vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [{ source: 'iberia', digitsKind: 'card', digits: '1234', accountId: 2 }], waiting: [] })
+    vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({
+      cards: [{ source: 'iberia', digitsKind: 'card', digits: '1234', accountId: 2 }],
+      waiting: [],
+    })
     vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
     open()
     fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
@@ -245,10 +280,18 @@ describe('payments to review on the Dashboard', () => {
     chooseCategory(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
-    await waitFor(() => expect(api.submitRecommendation).toHaveBeenCalledWith(NEW, expect.objectContaining({ accountId: 2, amountCents: 800 }), false))
+    await waitFor(() =>
+      expect(api.submitRecommendation).toHaveBeenCalledWith(
+        NEW,
+        expect.objectContaining({ accountId: 2, amountCents: 800 }),
+        false,
+      ),
+    )
     expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
     // The card is remembered once the payment is saved, so a failed save leaves no link.
-    expect(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]!)
+    expect(vi.mocked(api.submitRecommendation).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(cardsApi.linkCard).mock.invocationCallOrder[0]!,
+    )
   })
 
   it('does not let the payment be saved until the card is answered, so the account is never a guess', async () => {
@@ -266,7 +309,9 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 
     const question = screen.getByText(/Which account is the card/).closest('fieldset')!
-    expect(await within(question).findByRole('alert')).toHaveTextContent('Choose the account for the card ending 4821 first')
+    expect(await within(question).findByRole('alert')).toHaveTextContent(
+      'Choose the account for the card ending 4821 first',
+    )
     expect(screen.getAllByText('Choose the account for the card ending 4821 first')).toHaveLength(1)
     expect(screen.getByLabelText('Account for the card ending 4821')).toHaveFocus()
     expect(api.submitRecommendation).not.toHaveBeenCalled()
@@ -294,7 +339,11 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('does not ask about a card whose account is known', async () => {
-    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...unknown, accountId: 1, card: { source: 'iberia', digits: '4821' } }], next: null, openCount: 1 })
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...unknown, accountId: 1, card: { source: 'iberia', digits: '4821' } }],
+      next: null,
+      openCount: 1,
+    })
     open()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
@@ -323,7 +372,11 @@ describe('payments to review on the Dashboard', () => {
   })
 
   it('still adds a known merchant with one tap when the server names no match', async () => {
-    vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [{ ...known, possibleMatch: null }], next: null, openCount: 1 })
+    vi.mocked(api.fetchRecommendations).mockResolvedValue({
+      recommendations: [{ ...known, possibleMatch: null }],
+      next: null,
+      openCount: 1,
+    })
     open()
     await screen.findByRole('heading', { name: '1 payment to review' })
 
@@ -372,4 +425,3 @@ describe('payments to review on the Dashboard', () => {
     })
   })
 })
-

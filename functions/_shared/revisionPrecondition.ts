@@ -8,6 +8,9 @@ import { HttpError } from './http'
  * replaced the token by the time a handler runs, so the one to compare with is the token it replaced.
  * Any write since the view moves the token, including one from another tab.
  */
-export function assertRevisionUnchanged(data: ExpensesData, expected: string): void {
+export function assertRevisionUnchanged(
+  data: ExpensesData,
+  expected: string,
+): void {
   if (data.revisionBeforeWrite !== expected) throw new HttpError(409, BULK_REVISION_MESSAGE)
 }

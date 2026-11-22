@@ -20,7 +20,11 @@ function setup() {
   return { kit, repo, ledger }
 }
 
-function insert(kit: ReturnType<typeof setup>['kit'], date: string, description: string): number {
+function insert(
+  kit: ReturnType<typeof setup>['kit'],
+  date: string,
+  description: string,
+): number {
   const result = kit.sqlite
     .prepare(
       `INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, created_at)

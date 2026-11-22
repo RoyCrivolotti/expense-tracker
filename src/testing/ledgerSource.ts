@@ -27,7 +27,10 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
     source.calls.push(call)
     source.before?.(call)
   }
-  const through = <T,>(call: string, read: () => Promise<T>): Promise<T> => {
+  const through = <T>(
+    call: string,
+    read: () => Promise<T>,
+  ): Promise<T> => {
     note(call)
     return read()
   }
@@ -51,11 +54,17 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note(`cube:${range.from}..${range.to}`)
       return served.readCubePart(range)
     },
-    readTransactionPage(filter, request) {
+    readTransactionPage(
+      filter,
+      request,
+    ) {
       note('page')
       return served.readTransactionPage(filter, request)
     },
-    readTransactionSummary(filter, request) {
+    readTransactionSummary(
+      filter,
+      request,
+    ) {
       note('summary')
       return served.readTransactionSummary(filter, request)
     },
@@ -69,7 +78,10 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
     },
     readRecentTransactions: (request) => through('recent', () => served.readRecentTransactions(request)),
     readTransactionExport: (request) => through('export', () => served.readTransactionExport(request)),
-    readDescriptionSuggest(request, options) {
+    readDescriptionSuggest(
+      request,
+      options,
+    ) {
       note(`suggest:${request.prefix}|${request.before ?? ''}`)
       return served.readDescriptionSuggest(request, options)
     },

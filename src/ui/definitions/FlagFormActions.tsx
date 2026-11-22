@@ -19,7 +19,10 @@ interface Props {
   onDelete: () => void
 }
 
-function saveLabel(busy: boolean, flag: Flag | null): string {
+function saveLabel(
+  busy: boolean,
+  flag: Flag | null,
+): string {
   if (busy) return 'Saving…'
   return flag ? 'Save flag' : 'Add flag'
 }
@@ -60,12 +63,7 @@ export function FlagFormActions({
         <button type="button" className={styles.saveBtn} disabled={busy || awaitingDelete} onClick={onSave}>
           {saveLabel(busy, flag)}
         </button>
-        <button
-          type="button"
-          className={styles.cancelBtn}
-          disabled={busy || awaitingDelete}
-          onClick={onCancel}
-        >
+        <button type="button" className={styles.cancelBtn} disabled={busy || awaitingDelete} onClick={onCancel}>
           Cancel
         </button>
       </div>

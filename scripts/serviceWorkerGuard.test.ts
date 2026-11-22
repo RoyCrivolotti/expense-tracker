@@ -25,7 +25,11 @@ const workboxOptions: Partial<GenerateSWOptions> = {
   directoryIndex: null,
   navigateFallback: null,
   runtimeCaching: [
-    { urlPattern: isShellNavigation, handler: 'NetworkOnly', options: { precacheFallback: { fallbackURL: SHELL_URL } } },
+    {
+      urlPattern: isShellNavigation,
+      handler: 'NetworkOnly',
+      options: { precacheFallback: { fallbackURL: SHELL_URL } },
+    },
   ],
 }
 
@@ -63,9 +67,13 @@ async function check(dir: string): Promise<{ failed: boolean; report: string }> 
 }
 
 describe('the check of the built service worker', () => {
-  it('passes a worker that does what the app’s does', async () => {
-    expect(await check(await site(workboxOptions))).toEqual({ failed: false, report: '' })
-  }, SLOW)
+  it(
+    'passes a worker that does what the app’s does',
+    async () => {
+      expect(await check(await site(workboxOptions))).toEqual({ failed: false, report: '' })
+    },
+    SLOW,
+  )
 
   it.each([
     [
@@ -92,7 +100,11 @@ describe('the check of the built service worker', () => {
       'an API URL opened in a tab is answered with the shell',
       {
         runtimeCaching: [
-          { urlPattern: ({ request }: { request: { mode: string } }) => request.mode === 'navigate', handler: 'NetworkOnly' as const, options: { precacheFallback: { fallbackURL: SHELL_URL } } },
+          {
+            urlPattern: ({ request }: { request: { mode: string } }) => request.mode === 'navigate',
+            handler: 'NetworkOnly' as const,
+            options: { precacheFallback: { fallbackURL: SHELL_URL } },
+          },
         ],
       },
       'an API URL opened in a tab while the network fails: expected no answer from the worker, got "SHELL"',
@@ -101,50 +113,78 @@ describe('the check of the built service worker', () => {
       'the app’s own requests for its data are answered by the worker',
       {
         runtimeCaching: [
-          { urlPattern: ({ url }: { url: { pathname: string } }) => url.pathname.startsWith('/api/'), handler: 'NetworkOnly' as const },
+          {
+            urlPattern: ({ url }: { url: { pathname: string } }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly' as const,
+          },
         ],
       },
       'a request of the app for its data while the network fails: expected no answer from the worker',
     ],
-  ])('fails a worker where %s', async (_what, change, expected) => {
-    const options = { ...workboxOptions, ...change } as Partial<GenerateSWOptions>
-    if ('directoryIndex' in change) delete options.directoryIndex
-    const { failed, report } = await check(await site(options))
-    expect(failed).toBe(true)
-    expect(report).toContain(expected)
-  }, SLOW)
+  ])(
+    'fails a worker where %s',
+    async (_what, change, expected) => {
+      const options = { ...workboxOptions, ...change } as Partial<GenerateSWOptions>
+      if ('directoryIndex' in change) delete options.directoryIndex
+      const { failed, report } = await check(await site(options))
+      expect(failed).toBe(true)
+      expect(report).toContain(expected)
+    },
+    SLOW,
+  )
 
-  it('fails the worker the app shipped before, which throws while it is evaluated and answers no navigation', async () => {
-    const { failed, report } = await check(await site(PREVIOUS_OPTIONS as Partial<GenerateSWOptions>))
-    expect(failed).toBe(true)
-    expect(report).toContain('evaluating the worker raised: non-precached-url')
-    expect(report).toContain('a navigation to / while the network fails: expected "SHELL", got no answer from the worker')
-  }, SLOW)
+  it(
+    'fails the worker the app shipped before, which throws while it is evaluated and answers no navigation',
+    async () => {
+      const { failed, report } = await check(await site(PREVIOUS_OPTIONS as Partial<GenerateSWOptions>))
+      expect(failed).toBe(true)
+      expect(report).toContain('evaluating the worker raised: non-precached-url')
+      expect(report).toContain(
+        'a navigation to / while the network fails: expected "SHELL", got no answer from the worker',
+      )
+    },
+    SLOW,
+  )
 
-  it('fails a worker that shows pushes but does not tell the open windows, and passes one that does', async () => {
-    const silent = await site(workboxOptions)
-    appendFileSync(join(silent, 'sw.js'), "\nself.addEventListener('push', (e) => e.waitUntil(self.registration.showNotification('x')))\n")
-    const silentResult = await check(silent)
-    expect(silentResult.failed).toBe(true)
-    expect(silentResult.report).toContain('a push does not tell the open windows')
+  it(
+    'fails a worker that shows pushes but does not tell the open windows, and passes one that does',
+    async () => {
+      const silent = await site(workboxOptions)
+      appendFileSync(
+        join(silent, 'sw.js'),
+        "\nself.addEventListener('push', (e) => e.waitUntil(self.registration.showNotification('x')))\n",
+      )
+      const silentResult = await check(silent)
+      expect(silentResult.failed).toBe(true)
+      expect(silentResult.report).toContain('a push does not tell the open windows')
 
-    const telling = await site(workboxOptions)
-    appendFileSync(join(telling, 'sw.js'), "\nself.addEventListener('push', (e) => e.waitUntil(self.clients.matchAll().then((all) => all.forEach((w) => w.postMessage({ type: 'review-changed' })))))\n")
-    expect(await check(telling)).toEqual({ failed: false, report: '' })
-  }, SLOW)
+      const telling = await site(workboxOptions)
+      appendFileSync(
+        join(telling, 'sw.js'),
+        "\nself.addEventListener('push', (e) => e.waitUntil(self.clients.matchAll().then((all) => all.forEach((w) => w.postMessage({ type: 'review-changed' })))))\n",
+      )
+      expect(await check(telling)).toEqual({ failed: false, report: '' })
+    },
+    SLOW,
+  )
 
-  it('says to build first when there is no worker', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'sw-guard-'))
-    made.push(dir)
-    const { failed, report } = await check(dir)
-    expect(failed).toBe(true)
-    expect(report).toContain('does not exist; run the build first')
-  }, SLOW)
+  it(
+    'says to build first when there is no worker',
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'sw-guard-'))
+      made.push(dir)
+      const { failed, report } = await check(dir)
+      expect(failed).toBe(true)
+      expect(report).toContain('does not exist; run the build first')
+    },
+    SLOW,
+  )
 })
 
 describe('reading the precache manifest out of a built worker', () => {
   it('reads the entries workbox-build writes, url first and unquoted', () => {
-    const source = 'precacheAndRoute([{url:"index.html",revision:"3f2a"},{url:"assets/app.js",revision:null}],{directoryIndex:null})'
+    const source =
+      'precacheAndRoute([{url:"index.html",revision:"3f2a"},{url:"assets/app.js",revision:null}],{directoryIndex:null})'
     expect(precachedEntries(source)).toEqual([
       { url: 'index.html', revision: '3f2a' },
       { url: 'assets/app.js', revision: null },
@@ -152,7 +192,8 @@ describe('reading the precache manifest out of a built worker', () => {
   })
 
   it('reads the entries a bundler writes, revision first and quoted', () => {
-    const source = 'D([{"revision":"3f2a","url":"index.html"},{"revision":null,"url":"assets/app.js"}],{directoryIndex:``})'
+    const source =
+      'D([{"revision":"3f2a","url":"index.html"},{"revision":null,"url":"assets/app.js"}],{directoryIndex:``})'
     expect(precachedEntries(source)).toEqual([
       { url: 'index.html', revision: '3f2a' },
       { url: 'assets/app.js', revision: null },

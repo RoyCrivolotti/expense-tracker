@@ -1,18 +1,14 @@
 import type { Account, AccountStatement, Transaction } from '../types'
 import type { CashRow } from './cashReconciliation'
 import { buildStatementPayments, type StatementPaymentRow } from './statementPayments'
-import {
-  filterTransactions,
-  matchesAmountBounds,
-  matchesQueryAmount,
-  type TxnFilter,
-} from './transactions'
+import { filterTransactions, matchesAmountBounds, matchesQueryAmount, type TxnFilter } from './transactions'
 
-export type TransactionListRow =
-  | { kind: 'transaction'; txn: Transaction }
-  | StatementPaymentRow
+export type TransactionListRow = { kind: 'transaction'; txn: Transaction } | StatementPaymentRow
 
-function matchesPeriod(row: StatementPaymentRow, filter: TxnFilter): boolean {
+function matchesPeriod(
+  row: StatementPaymentRow,
+  filter: TxnFilter,
+): boolean {
   if (filter.dateFrom || filter.dateTo) {
     if (filter.dateFrom && row.date < filter.dateFrom) return false
     if (filter.dateTo && row.date > filter.dateTo) return false
@@ -22,13 +18,20 @@ function matchesPeriod(row: StatementPaymentRow, filter: TxnFilter): boolean {
   return true
 }
 
-function matchesQuery(row: StatementPaymentRow, filter: TxnFilter, query: string): boolean {
+function matchesQuery(
+  row: StatementPaymentRow,
+  filter: TxnFilter,
+  query: string,
+): boolean {
   if (matchesQueryAmount(row.amountCents, filter.queryAmount)) return true
   const haystack = `${row.cardName} statement payment`.toLowerCase()
   return haystack.includes(query.toLowerCase())
 }
 
-function matchesAccount(row: StatementPaymentRow, filter: TxnFilter): boolean {
+function matchesAccount(
+  row: StatementPaymentRow,
+  filter: TxnFilter,
+): boolean {
   if (filter.accountId == null) return true
   return row.debitAccountId === filter.accountId || row.cardAccountId === filter.accountId
 }
@@ -63,7 +66,10 @@ function matchesLabelFilter(filter: TxnFilter): boolean {
   return !filter.labelIds || filter.labelIds.length === 0
 }
 
-export function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): boolean {
+export function matchesStatementPayment(
+  row: StatementPaymentRow,
+  filter: TxnFilter,
+): boolean {
   if (!matchesPeriod(row, filter)) return false
   if (!matchesAccount(row, filter)) return false
   if (!matchesType(filter)) return false
@@ -90,15 +96,8 @@ export function buildTransactionListRows(
   accounts: Account[],
   settings: { defaultAccountId: number | null },
 ): TransactionListRow[] {
-  const txns = filterTransactions(transactions, filter).map(
-    (txn): TransactionListRow => ({ kind: 'transaction', txn }),
-  )
-  const payments = buildStatementPayments(
-    statements,
-    cashRows,
-    accounts,
-    settings.defaultAccountId,
-  )
+  const txns = filterTransactions(transactions, filter).map((txn): TransactionListRow => ({ kind: 'transaction', txn }))
+  const payments = buildStatementPayments(statements, cashRows, accounts, settings.defaultAccountId)
     .filter((row) => matchesStatementPayment(row, filter))
     .map((row) => row as TransactionListRow)
 

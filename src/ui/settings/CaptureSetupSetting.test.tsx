@@ -18,11 +18,33 @@ vi.mock('../../config/device', async (original) => ({
 
 const ADDRESS = 'https://capture.example.workers.dev/capture'
 const phone = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
-const diagnostics = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
-const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
+const diagnostics = {
+  received: 0,
+  recommended: 0,
+  grouped: 0,
+  unread: 0,
+  addedAsIs: 0,
+  edited: 0,
+  linked: 0,
+  dismissed: 0,
+  open: 0,
+  muted: 0,
+}
+const none: statusApi.SourceStatus = {
+  source: 'iberia',
+  lastCaptureAt: null,
+  received: 0,
+  unrecognised: 0,
+  diagnostics,
+}
 
 const LINK = 'https://www.icloud.com/shortcuts/abc123'
-const status = (iberia = none, endpoint: string | null = ADDRESS, shortcutUrl: string | null = null, malformed = 0) =>
+const status = (
+  iberia = none,
+  endpoint: string | null = ADDRESS,
+  shortcutUrl: string | null = null,
+  malformed = 0,
+) =>
   vi
     .mocked(statusApi.fetchCaptureStatus)
     .mockResolvedValue({ sources: [iberia, { ...none, source: 'santander' }], malformed, endpoint, shortcutUrl })
@@ -136,18 +158,36 @@ describe('the first-payment check', () => {
   })
 
   it('waits when no source has sent anything yet', async () => {
-    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 0, endpoint: ADDRESS, shortcutUrl: null })
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({
+      sources: [],
+      malformed: 0,
+      endpoint: ADDRESS,
+      shortcutUrl: null,
+    })
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
   })
 
   it('says how many requests from the shortcut could not be read, rather than that nothing arrived', async () => {
-    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [], malformed: 3, endpoint: ADDRESS, shortcutUrl: null })
+    vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({
+      sources: [],
+      malformed: 3,
+      endpoint: ADDRESS,
+      shortcutUrl: null,
+    })
     render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText(/^3 requests from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
-    expect(para(/If your bank app’s name has no Latin letters or digits, add a source field with a short name you type, such as mybank\./)).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        /^3 requests from your shortcut in the last 7 days could not be read: check its fields\./,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      para(
+        /If your bank app’s name has no Latin letters or digits, add a source field with a short name you type, such as mybank\./,
+      ),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/Nothing has reached the app/)).not.toBeInTheDocument()
   })
 
@@ -156,7 +196,9 @@ describe('the first-payment check', () => {
     render(<CaptureSetupSetting />)
 
     expect(await screen.findByText('Last payment captured')).toBeInTheDocument()
-    expect(screen.getByText(/^1 request from your shortcut in the last 7 days could not be read: check its fields\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/^1 request from your shortcut in the last 7 days could not be read: check its fields\./),
+    ).toBeInTheDocument()
   })
 
   it('says nothing of unreadable requests when there were none', async () => {
@@ -248,31 +290,39 @@ describe('the steps', () => {
 })
 
 describe('on each kind of device', () => {
-  it.each(['iphone', 'ipad', 'unknown'] as const)('shows the steps, the requirement and the check on %s', async (platform) => {
-    vi.mocked(device.devicePlatform).mockReturnValue(platform)
-    render(<CaptureSetupSetting />)
+  it.each(['iphone', 'ipad', 'unknown'] as const)(
+    'shows the steps, the requirement and the check on %s',
+    async (platform) => {
+      vi.mocked(device.devicePlatform).mockReturnValue(platform)
+      render(<CaptureSetupSetting />)
 
-    expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
-    expect(screen.getByText(/^Needs an iPhone or iPad with the Shortcuts app and its notification trigger/)).toBeInTheDocument()
-    expect(screen.getByText('1. Make a key and copy it')).toBeInTheDocument()
-    expect(screen.queryByText(/does not exist on Android or on a computer/)).not.toBeInTheDocument()
-  })
+      expect(await screen.findByText('Waiting for your first payment')).toBeInTheDocument()
+      expect(
+        screen.getByText(/^Needs an iPhone or iPad with the Shortcuts app and its notification trigger/),
+      ).toBeInTheDocument()
+      expect(screen.getByText('1. Make a key and copy it')).toBeInTheDocument()
+      expect(screen.queryByText(/does not exist on Android or on a computer/)).not.toBeInTheDocument()
+    },
+  )
 
-  it.each(['android', 'mac', 'windows', 'linux'] as const)('points to the iPhone instead on %s, and reads nothing', (platform) => {
-    vi.mocked(device.devicePlatform).mockReturnValue(platform)
-    render(<CaptureSetupSetting />)
+  it.each(['android', 'mac', 'windows', 'linux'] as const)(
+    'points to the iPhone instead on %s, and reads nothing',
+    (platform) => {
+      vi.mocked(device.devicePlatform).mockReturnValue(platform)
+      render(<CaptureSetupSetting />)
 
-    expect(screen.getByText('Set up capture')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. It does not exist on Android or on a computer. Set it up from Settings on that iPhone or iPad; what it captures shows here as well.',
-      ),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Needs an iPhone or iPad/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Checking')).not.toBeInTheDocument()
-    expect(statusApi.fetchCaptureStatus).not.toHaveBeenCalled()
-  })
+      expect(screen.getByText('Set up capture')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Capture reads your bank app\u2019s notifications through a Shortcut on your iPhone or iPad. It does not exist on Android or on a computer. Set it up from Settings on that iPhone or iPad; what it captures shows here as well.',
+        ),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Needs an iPhone or iPad/)).not.toBeInTheDocument()
+      expect(screen.queryByText('Checking')).not.toBeInTheDocument()
+      expect(statusApi.fetchCaptureStatus).not.toHaveBeenCalled()
+    },
+  )
 })
 
 /** A step's sentence, whose bold words split it into several elements. */
@@ -314,10 +364,16 @@ describe('with the shortcut link available', () => {
     ])
     expect(para(/Tap Copy at once: the key is shown once/)).toBeInTheDocument()
     expect(para(/replace KEY_HERE with your key\. Keep Bearer and the space after it/)).toBeInTheDocument()
-    expect(para(/Leave no empty row under Headers: an empty header makes the request fail before it reaches the app\./)).toBeInTheDocument()
+    expect(
+      para(/Leave no empty row under Headers: an empty header makes the request fail before it reaches the app\./),
+    ).toBeInTheDocument()
     expect(para(/the app field holds the notification’s App variable/)).toBeInTheDocument()
     expect(screen.getByText(/may arrive with its automation switched off; that is not tried yet/)).toBeInTheDocument()
-    expect(para(/keep Automation on, set to run without asking you each time \(on iOS 18 that option is called Run Immediately; on your phone it may be worded differently\)\. Turn on/)).toBeInTheDocument()
+    expect(
+      para(
+        /keep Automation on, set to run without asking you each time \(on iOS 18 that option is called Run Immediately; on your phone it may be worded differently\)\. Turn on/,
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByText(/Allow Running When Locked/)).toBeInTheDocument()
     expect(screen.getByText('Waiting for your first payment')).toBeInTheDocument()
   })
@@ -402,9 +458,17 @@ describe('without the shortcut link', () => {
     render(<CaptureSetupSetting />)
     await screen.findByText('6. Enter the address')
 
-    expect(para(/choose the option that runs the automation without asking you each time; with the other one, every payment waits for you to tap\. On iOS 18 the two are called Run Immediately and Run After Confirmation; on your phone they may be worded differently\. Then tap Next\./)).toBeInTheDocument()
-    expect(para(/choose New Blank Automation\. Tap the Search bar at the bottom and type Get Contents of URL/)).toBeInTheDocument()
-    expect(para(/Tap Copy here, then in the action tap URL and paste\. The \/capture at the end is part of the address/)).toBeInTheDocument()
+    expect(
+      para(
+        /choose the option that runs the automation without asking you each time; with the other one, every payment waits for you to tap\. On iOS 18 the two are called Run Immediately and Run After Confirmation; on your phone they may be worded differently\. Then tap Next\./,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      para(/choose New Blank Automation\. Tap the Search bar at the bottom and type Get Contents of URL/),
+    ).toBeInTheDocument()
+    expect(
+      para(/Tap Copy here, then in the action tap URL and paste\. The \/capture at the end is part of the address/),
+    ).toBeInTheDocument()
     const check = para(/keep Automation on, still set to run without asking, as you chose when you made it\. Turn on/)
     expect(check.textContent).not.toMatch(/Run Immediately|Run After Confirmation/)
     expect(screen.getByText(ADDRESS)).toBeInTheDocument()
@@ -412,7 +476,11 @@ describe('without the shortcut link', () => {
     expect(para(/Set the text to Bearer \(with a space after it\) followed by your key/)).toBeInTheDocument()
     expect(para(/look for a date format called ISO 8601/)).toBeInTheDocument()
     expect(para(/followed by your key\. Leave no empty row under Headers/)).toBeInTheDocument()
-    expect(para(/set the key to app\. Tap the value field, choose the notification’s variable, then pick App\. The app files/)).toBeInTheDocument()
+    expect(
+      para(
+        /set the key to app\. Tap the value field, choose the notification’s variable, then pick App\. The app files/,
+      ),
+    ).toBeInTheDocument()
     expect(para(/An older shortcut that sends a source name instead keeps working/)).toBeInTheDocument()
   })
 })

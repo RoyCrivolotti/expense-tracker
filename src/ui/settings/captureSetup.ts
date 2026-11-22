@@ -44,7 +44,10 @@ const pad = (n: number) => String(n).padStart(2, '0')
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 /** "today at 09:41", "yesterday at 18:02" or "12 Nov at 09:41", in the phone's own clock. */
-export function lastCaptureText(iso: string, now: Date): string {
+export function lastCaptureText(
+  iso: string,
+  now: Date,
+): string {
   const at = new Date(iso)
   const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
   const day = localDay(at)
@@ -97,7 +100,10 @@ export interface SetupMemory {
  * Whether the steps are open: what the person last chose, else open until a payment has been captured. Someone whose
  * capture works has no use for the steps on every visit, and someone still setting up needs them in front of them.
  */
-export function stepsOpen(memory: Pick<SetupMemory, 'steps'>, sources: readonly SourceStatus[] | undefined): boolean {
+export function stepsOpen(
+  memory: Pick<SetupMemory, 'steps'>,
+  sources: readonly SourceStatus[] | undefined,
+): boolean {
   if (memory.steps) return memory.steps === 'open'
   return !overall(sources ?? [])?.lastCaptureAt
 }
@@ -110,7 +116,10 @@ function choices(raw: Partial<SetupMemory> | null): Pick<SetupMemory, 'steps' | 
   }
 }
 
-export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null, owner?: string): SetupMemory {
+export function readSetupMemory(
+  storage: Pick<Storage, 'getItem'> | null,
+  owner?: string,
+): SetupMemory {
   try {
     const raw = JSON.parse(storage?.getItem(keyFor(owner)) ?? 'null') as Partial<SetupMemory> | null
     const ticks = Array.isArray(raw?.ticks) ? raw.ticks.filter((t): t is string => typeof t === 'string') : []
@@ -120,7 +129,11 @@ export function readSetupMemory(storage: Pick<Storage, 'getItem'> | null, owner?
   }
 }
 
-export function writeSetupMemory(storage: Pick<Storage, 'setItem'> | null, memory: SetupMemory, owner?: string): void {
+export function writeSetupMemory(
+  storage: Pick<Storage, 'setItem'> | null,
+  memory: SetupMemory,
+  owner?: string,
+): void {
   try {
     storage?.setItem(keyFor(owner), JSON.stringify(memory))
   } catch {

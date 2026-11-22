@@ -16,11 +16,7 @@ interface LedgerTableProps<R extends { month: string }> {
 }
 
 /** Generic month-indexed table (month rows, metric columns) with sticky header. */
-export function LedgerTable<R extends { month: string }>({
-  rows,
-  columns,
-  totals,
-}: LedgerTableProps<R>) {
+export function LedgerTable<R extends { month: string }>({ rows, columns, totals }: LedgerTableProps<R>) {
   return (
     <div className={styles.scroll}>
       <table className={styles.table}>

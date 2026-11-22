@@ -10,8 +10,14 @@ export type ReceiptDelivery = 'shared' | 'zipped'
 export interface ReceiptDeliveryDeps {
   fetchReceipt(attachmentId: number): Promise<Blob>
   canShareFiles(files: File[]): boolean
-  shareFiles(files: File[], title: string): Promise<void>
-  saveBlob(blob: Blob, filename: string): void
+  shareFiles(
+    files: File[],
+    title: string,
+  ): Promise<void>
+  saveBlob(
+    blob: Blob,
+    filename: string,
+  ): void
 }
 
 export const browserReceiptDelivery: ReceiptDeliveryDeps = {
@@ -23,10 +29,15 @@ export const browserReceiptDelivery: ReceiptDeliveryDeps = {
   // Feature-detected rather than sniffed: Safari on iOS shares files, Chrome on
   // Android shares files, and desktop support varies by OS and version. Asking
   // canShare about the actual files is the only reliable answer.
-  canShareFiles: (files) =>
-    typeof navigator.canShare === 'function' && navigator.canShare({ files }),
-  shareFiles: (files, title) => navigator.share({ files, title }),
-  saveBlob: (blob, filename) => {
+  canShareFiles: (files) => typeof navigator.canShare === 'function' && navigator.canShare({ files }),
+  shareFiles: (
+    files,
+    title,
+  ) => navigator.share({ files, title }),
+  saveBlob: (
+    blob,
+    filename,
+  ) => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -60,9 +71,7 @@ export async function deliverReceipts(
   if (receipts.length === 0) throw new Error('This report has no receipts to send')
 
   const blobs = await Promise.all(receipts.map((r) => deps.fetchReceipt(r.attachmentId)))
-  const files = blobs.map(
-    (blob, i) => new File([blob], receipts[i]!.filename, { type: blob.type }),
-  )
+  const files = blobs.map((blob, i) => new File([blob], receipts[i]!.filename, { type: blob.type }))
 
   if (deps.canShareFiles(files)) {
     await deps.shareFiles(files, packName)

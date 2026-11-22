@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchPushConfig, fetchPushDevices, removePushDevice, savePushChoice, savePushDevice } from './pushApi'
 
-const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+const ok = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -22,11 +23,22 @@ describe('push calls', () => {
   it('puts the subscription with the device’s name and zone, and returns the row’s id', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ id: 'd-1' }))
     vi.stubGlobal('fetch', fetchMock)
-    expect(await savePushDevice({ endpoint: 'https://web.push.apple.com/x', keys: { p256dh: 'k', auth: 'a' } }, 'iPhone', 'Europe/Madrid')).toBe('d-1')
+    expect(
+      await savePushDevice(
+        { endpoint: 'https://web.push.apple.com/x', keys: { p256dh: 'k', auth: 'a' } },
+        'iPhone',
+        'Europe/Madrid',
+      ),
+    ).toBe('d-1')
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('/api/push-subscriptions')
     expect(init.method).toBe('PUT')
-    expect(JSON.parse(init.body as string)).toEqual({ endpoint: 'https://web.push.apple.com/x', keys: { p256dh: 'k', auth: 'a' }, label: 'iPhone', timeZone: 'Europe/Madrid' })
+    expect(JSON.parse(init.body as string)).toEqual({
+      endpoint: 'https://web.push.apple.com/x',
+      keys: { p256dh: 'k', auth: 'a' },
+      label: 'iPhone',
+      timeZone: 'Europe/Madrid',
+    })
     expect((init.headers as Record<string, string>)['content-type']).toBe('application/json')
   })
 

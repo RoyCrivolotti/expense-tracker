@@ -17,7 +17,10 @@ const OPTIONS: { value: Section; label: string }[] = [
 const ANCHOR_ID = 'demo-content'
 
 /** jsdom lays nothing out: the bar sticks 60px down, and is either there (stuck) or lower. */
-function layOutAt(top: number, height = 44) {
+function layOutAt(
+  top: number,
+  height = 44,
+) {
   const bar = screen.getByRole('tablist').parentElement!
   bar.style.top = '60px'
   Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: height })
@@ -232,7 +235,7 @@ describe('SectionTabs', () => {
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 111, behavior: 'auto' })
     })
 
-    it('keeps each section\'s own place, so one comes back where that one was left', async () => {
+    it("keeps each section's own place, so one comes back where that one was left", async () => {
       const user = userEvent.setup()
       const { scrollTo } = renderStuck()
 
@@ -266,7 +269,7 @@ describe('SectionTabs', () => {
   })
 
   describe('as what the page keeps clear of', () => {
-    it('sets the page\'s scroll padding to the bottom of the bar and a little air while it is mounted', () => {
+    it("sets the page's scroll padding to the bottom of the bar and a little air while it is mounted", () => {
       const { unmount } = render(<Page />)
       expect(document.documentElement.style.scrollPaddingTop).toBe('8px')
 
@@ -304,7 +307,7 @@ describe('SectionTabs styles', () => {
     expect(rule('.bar::after')).toMatch(/pointer-events:\s*none/)
   })
 
-  it('takes the page\'s scroll padding back out for focus in the bar and for the content anchor', () => {
+  it("takes the page's scroll padding back out for focus in the bar and for the content anchor", () => {
     expect(rule('.bar *')).toMatch(/scroll-margin-top:\s*calc\(-1 \* var\(--scroll-pad-top, 0px\)\)/)
     expect(rule('.anchor')).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
   })
@@ -315,7 +318,7 @@ describe('SectionTabs styles', () => {
     )
   })
 
-  it('has the bar as high as the rest of the desktop\'s segmented controls where there is a mouse', () => {
+  it("has the bar as high as the rest of the desktop's segmented controls where there is a mouse", () => {
     const desktop = /@media \(min-width: 768px\) and \(pointer: fine\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
 
     expect(desktop).toMatch(/--exp-subnav-h:\s*2\.25rem/)

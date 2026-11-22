@@ -6,9 +6,7 @@ const SHAPE = { months: 40, perMonth: 30 }
 describe('syntheticLedger', () => {
   it('gives the same ledger for the same seed and a different one for another', () => {
     expect(syntheticLedger(SHAPE)).toEqual(syntheticLedger(SHAPE))
-    expect(syntheticLedger({ ...SHAPE, seed: 2 }).transactions).not.toEqual(
-      syntheticLedger(SHAPE).transactions,
-    )
+    expect(syntheticLedger({ ...SHAPE, seed: 2 }).transactions).not.toEqual(syntheticLedger(SHAPE).transactions)
   })
 
   it('holds at least the ordinary rows of every month, newest first by date then id', () => {

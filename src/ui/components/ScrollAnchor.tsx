@@ -24,7 +24,11 @@ export class ScrollAnchor extends Component<ScrollAnchorProps, unknown, Anchor |
     return list ? captureAnchor(list) : null
   }
 
-  componentDidUpdate(_props: ScrollAnchorProps, _state: unknown, anchor: Anchor | null) {
+  componentDidUpdate(
+    _props: ScrollAnchorProps,
+    _state: unknown,
+    anchor: Anchor | null,
+  ) {
     const shift = anchorShift(anchor)
     if (Math.abs(shift) >= SHIFT_PX) window.scrollBy(0, shift)
   }

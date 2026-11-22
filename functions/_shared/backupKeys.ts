@@ -11,19 +11,34 @@ export function utcDateFromKey(key: string): Date {
   return new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1))
 }
 
-export function ownerBackupKey(owner: string, dateKey: string): string {
+export function ownerBackupKey(
+  owner: string,
+  dateKey: string,
+): string {
   return `${owner}/${dateKey}.json`
 }
 
 /** Everything a chunked backup of one owner on one day is stored under. */
-export function backupFolder(owner: string, dateKey: string): string {
+export function backupFolder(
+  owner: string,
+  dateKey: string,
+): string {
   return `${owner}/${dateKey}/`
 }
 
-export const manifestKey = (owner: string, dateKey: string): string => `${backupFolder(owner, dateKey)}manifest.json`
-export const stateKey = (owner: string, dateKey: string): string => `${backupFolder(owner, dateKey)}state.json`
-export const partKey = (owner: string, dateKey: string, sequence: number): string =>
-  `${backupFolder(owner, dateKey)}part-${String(sequence).padStart(6, '0')}.ndjson`
+export const manifestKey = (
+  owner: string,
+  dateKey: string,
+): string => `${backupFolder(owner, dateKey)}manifest.json`
+export const stateKey = (
+  owner: string,
+  dateKey: string,
+): string => `${backupFolder(owner, dateKey)}state.json`
+export const partKey = (
+  owner: string,
+  dateKey: string,
+  sequence: number,
+): string => `${backupFolder(owner, dateKey)}part-${String(sequence).padStart(6, '0')}.ndjson`
 
 const FOLDER_OBJECT = /^(.+)\/(\d{4}-\d{2}-\d{2})\/[^/]+$/
 

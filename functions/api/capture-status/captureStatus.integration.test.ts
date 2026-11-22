@@ -40,11 +40,19 @@ beforeEach(async () => {
 afterEach(() => vi.useRealTimers())
 
 let n = 0
-async function stored(keyId: string, source: string, receivedAt: string, outcome: string | null = null, state = 'open') {
+async function stored(
+  keyId: string,
+  source: string,
+  receivedAt: string,
+  outcome: string | null = null,
+  state = 'open',
+) {
   n += 1
   const owner = keyId === 'k1' ? OWNER : OTHER
   sqlite
-    .prepare("INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at, state) VALUES (?, ?, ?, ?, ?, ?)")
+    .prepare(
+      'INSERT INTO recommendations (id, owner, occurred_at, local_date, created_at, state) VALUES (?, ?, ?, ?, ?, ?)',
+    )
     .run(`rec${n}`, owner, receivedAt, receivedAt.slice(0, 10), receivedAt, state)
   const ok = await createD1CaptureRepository(world.env).recordEvent({
     id: `e${n}`,
@@ -66,20 +74,46 @@ async function stored(keyId: string, source: string, receivedAt: string, outcome
   expect(ok).toBe(true)
   sqlite.prepare('UPDATE capture_events SET rec_id = ?, outcome = ? WHERE id = ?').run(`rec${n}`, outcome, `e${n}`)
 }
-const muted = (owner: string, source: string, id: string, ignoredAt: string | null) =>
+const muted = (
+  owner: string,
+  source: string,
+  id: string,
+  ignoredAt: string | null,
+) =>
   sqlite
     .prepare(
       `INSERT INTO capture_templates (owner, template_id, source, title, skeleton, first_seen, last_seen, ignored_at)
        VALUES (?, ?, ?, 't', 's', '2026-11-01', '2026-11-01', ?)`,
     )
     .run(owner, id, source, ignoredAt)
-const NONE = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
-const counter = (owner: string, source: string, day: string, received: number, unrecognised: number) =>
+const NONE = {
+  received: 0,
+  recommended: 0,
+  grouped: 0,
+  unread: 0,
+  addedAsIs: 0,
+  edited: 0,
+  linked: 0,
+  dismissed: 0,
+  open: 0,
+  muted: 0,
+}
+const counter = (
+  owner: string,
+  source: string,
+  day: string,
+  received: number,
+  unrecognised: number,
+) =>
   sqlite
     .prepare('INSERT INTO capture_counters (owner, source, day, received, unrecognised) VALUES (?, ?, ?, ?, ?)')
     .run(owner, source, day, received, unrecognised)
 
-const get = (setting?: string, email: string | false = OWNER, shortcut?: string) =>
+const get = (
+  setting?: string,
+  email: string | false = OWNER,
+  shortcut?: string,
+) =>
   invokeExpenseApiRoute({
     handler: status,
     repo: createD1ExpenseRepository(world.env),
@@ -123,7 +157,15 @@ describe('GET /api/capture-status', () => {
     counter(OWNER, 'newbank', '2026-09-01', 1, 0)
 
     expect(await (await get()).json()).toMatchObject({
-      sources: [{ source: 'newbank', lastCaptureAt: '2026-09-01T08:00:00.000Z', received: 0, unrecognised: 0, diagnostics: NONE }],
+      sources: [
+        {
+          source: 'newbank',
+          lastCaptureAt: '2026-09-01T08:00:00.000Z',
+          received: 0,
+          unrecognised: 0,
+          diagnostics: NONE,
+        },
+      ],
     })
   })
 
@@ -151,13 +193,27 @@ describe('GET /api/capture-status', () => {
     muted(OTHER, 'iberia', 'tm', '2026-11-10')
 
     expect(await (await get()).json()).toMatchObject({
-      sources: [{ source: 'iberia', lastCaptureAt: null, received: 1, unrecognised: 1, diagnostics: { ...NONE, received: 1, unread: 1 } }],
+      sources: [
+        {
+          source: 'iberia',
+          lastCaptureAt: null,
+          received: 1,
+          unrecognised: 1,
+          diagnostics: { ...NONE, received: 1, unread: 1 },
+        },
+      ],
     })
   })
 
   it('counts the requests of the last seven days that could not be read, and lists no source for them', async () => {
-    const malformed = (owner: string, day: string, n: number) =>
-      sqlite.prepare("INSERT INTO capture_counters (owner, source, day, malformed) VALUES (?, '-', ?, ?)").run(owner, day, n)
+    const malformed = (
+      owner: string,
+      day: string,
+      n: number,
+    ) =>
+      sqlite
+        .prepare("INSERT INTO capture_counters (owner, source, day, malformed) VALUES (?, '-', ?, ?)")
+        .run(owner, day, n)
     malformed(OWNER, '2026-11-13', 2)
     malformed(OWNER, '2026-11-07', 1)
     malformed(OWNER, '2026-11-06', 40)
@@ -186,7 +242,18 @@ describe('GET /api/capture-status', () => {
             source: 'newbank',
             received: 6,
             unrecognised: 1,
-            diagnostics: { received: 8, recommended: 5, grouped: 0, unread: 3, addedAsIs: 1, edited: 1, linked: 1, dismissed: 1, open: 1, muted: 1 },
+            diagnostics: {
+              received: 8,
+              recommended: 5,
+              grouped: 0,
+              unread: 3,
+              addedAsIs: 1,
+              edited: 1,
+              linked: 1,
+              dismissed: 1,
+              open: 1,
+              muted: 1,
+            },
           },
         ],
       })
@@ -199,10 +266,19 @@ describe('GET /api/capture-status', () => {
       await stored('k1', 'newbank', '2026-11-13T09:00:00.000Z')
       await stored('k1', 'newbank', '2026-11-13T09:00:05.000Z')
       // The second push of each pair joined the first's recommendation.
-      sqlite.prepare("UPDATE capture_events SET rec_id = 'rec' || (CAST(substr(rec_id, 4) AS INTEGER) - 1), grouped = 1 WHERE id IN (?, ?)").run(`e${n - 2}`, `e${n}`)
+      sqlite
+        .prepare(
+          "UPDATE capture_events SET rec_id = 'rec' || (CAST(substr(rec_id, 4) AS INTEGER) - 1), grouped = 1 WHERE id IN (?, ?)",
+        )
+        .run(`e${n - 2}`, `e${n}`)
 
       expect(await (await get()).json()).toMatchObject({
-        sources: [{ source: 'newbank', diagnostics: { ...NONE, received: 3, recommended: 2, grouped: 2, dismissed: 1, open: 1 } }],
+        sources: [
+          {
+            source: 'newbank',
+            diagnostics: { ...NONE, received: 3, recommended: 2, grouped: 2, dismissed: 1, open: 1 },
+          },
+        ],
       })
     })
 

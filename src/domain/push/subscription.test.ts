@@ -5,7 +5,12 @@ const APPLE = 'https://web.push.apple.com/QGZkYjM0ZTQtNzhlYi00ZjA4LWI1YjEtNDI0ZD
 
 describe('a push service endpoint', () => {
   it('is an https URL on one of the known services, kept as the sender will use it', () => {
-    for (const url of [APPLE, 'https://fcm.googleapis.com/fcm/send/abc:def', 'https://updates.push.services.mozilla.com/wpush/v2/gAAAA', 'https://wns2-par02p.notify.windows.com/w/?token=AwYAAA']) {
+    for (const url of [
+      APPLE,
+      'https://fcm.googleapis.com/fcm/send/abc:def',
+      'https://updates.push.services.mozilla.com/wpush/v2/gAAAA',
+      'https://wns2-par02p.notify.windows.com/w/?token=AwYAAA',
+    ]) {
       expect(pushServiceEndpointOf(url), url).toBe(url)
     }
   })
@@ -63,6 +68,7 @@ describe('the mode and the zone', () => {
     expect(isTimeZone('Europe/Madrid')).toBe(true)
     expect(isTimeZone('America/Argentina/Buenos_Aires')).toBe(true)
     expect(isTimeZone('UTC')).toBe(true)
-    for (const bad of ['Mars/Olympus', '', 'Europe/Madrid'.padEnd(65, 'x'), 7, undefined]) expect(isTimeZone(bad), String(bad)).toBe(false)
+    for (const bad of ['Mars/Olympus', '', 'Europe/Madrid'.padEnd(65, 'x'), 7, undefined])
+      expect(isTimeZone(bad), String(bad)).toBe(false)
   })
 })

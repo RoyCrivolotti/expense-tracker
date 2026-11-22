@@ -29,7 +29,10 @@ export interface SelectionOptions {
  * the moment of committing. The bar already counts them, but that is easy to miss, and
  * someone who chose eleven rows should not believe all eleven were changed.
  */
-export function offScreenNote(hiddenCount: number, outcome: 'deleted' | 'changed'): string {
+export function offScreenNote(
+  hiddenCount: number,
+  outcome: 'deleted' | 'changed',
+): string {
   if (hiddenCount <= 0) return ''
   const verb = hiddenCount === 1 ? "isn't" : "aren't"
   return `${hiddenCount} more you selected ${verb} shown and won't be ${outcome}.`
@@ -45,7 +48,10 @@ function dialogIsOpen(): boolean {
   )
 }
 
-export function batchDeleteMessage(count: number, hiddenCount = 0): string {
+export function batchDeleteMessage(
+  count: number,
+  hiddenCount = 0,
+): string {
   const noun = count === 1 ? 'transaction' : 'transactions'
   const note = offScreenNote(hiddenCount, 'deleted')
   return `${count} ${noun} will be removed permanently.${note ? ` ${note}` : ''}`
@@ -197,7 +203,10 @@ export function useSelectionCore({ actions, visibleIds, existingIds, onSelectMod
 
   const cancelBulkEdit = () => setPendingBulkEdit(false)
 
-  const confirmBulkEdit = async (patch: BulkTransactionPatch, labelIdsToAdd: number[] = []) => {
+  const confirmBulkEdit = async (
+    patch: BulkTransactionPatch,
+    labelIdsToAdd: number[] = [],
+  ) => {
     if (!actions || selected.size === 0) return
     setBusy(true)
     try {
@@ -274,7 +283,11 @@ export function useTransactionSelection(
   /** Looked up by id to union onto each row's own labels. */
   transactions?: readonly Pick<Transaction, 'id' | 'labelIds'>[],
 ) {
-  const edit: EditRows = async (ids, patch, labelIdsToAdd) => {
+  const edit: EditRows = async (
+    ids,
+    patch,
+    labelIdsToAdd,
+  ) => {
     // A patch with nothing in it is rejected server-side as an empty edit — a
     // labels-only bulk edit has no column to set, so this is skipped rather
     // than sent.

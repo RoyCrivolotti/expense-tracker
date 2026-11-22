@@ -20,7 +20,10 @@ const PLAN_COLUMNS: ColumnMap = {
   active: 'active',
 }
 
-function coerce(key: keyof NewInstallmentPlan, value: unknown): unknown {
+function coerce(
+  key: keyof NewInstallmentPlan,
+  value: unknown,
+): unknown {
   if (key === 'active') return value ? 1 : 0
   return value ?? null
 }
@@ -77,18 +80,20 @@ export async function updateInstallmentPlan(
   return toInstallmentPlan(row)
 }
 
-export async function deleteInstallmentPlan(env: Env, owner: string, id: number): Promise<void> {
+export async function deleteInstallmentPlan(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<void> {
   // No FK on transactions.plan_id (see migration 0009), so unlink first to avoid
   // leaving transactions pointing at a deleted plan. One batch, because the halves
   // are only correct together: run apart, a failed delete leaves the plan alive with
   // every payment already unlinked from it, and the next installment recomputes its
   // index from MAX(installment_index) as though nothing had ever been paid.
   const [, deleted] = await env.DB.batch([
-    env.DB
-      .prepare(
-        'UPDATE transactions SET plan_id = NULL, installment_index = NULL WHERE plan_id = ? AND owner = ?',
-      )
-      .bind(id, owner),
+    env.DB.prepare(
+      'UPDATE transactions SET plan_id = NULL, installment_index = NULL WHERE plan_id = ? AND owner = ?',
+    ).bind(id, owner),
     env.DB.prepare('DELETE FROM installment_plans WHERE id = ? AND owner = ?').bind(id, owner),
   ])
   if ((deleted?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Installment plan not found')

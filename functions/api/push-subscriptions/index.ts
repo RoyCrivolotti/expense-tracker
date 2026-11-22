@@ -24,7 +24,9 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
 export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const body = await readJson<unknown>(context.request, MAX_BODY_BYTES)
   try {
-    const saved = await savePushDevice(createD1PushRepository(context.env), context.data.owner, body, new Date(), () => crypto.randomUUID())
+    const saved = await savePushDevice(createD1PushRepository(context.env), context.data.owner, body, new Date(), () =>
+      crypto.randomUUID(),
+    )
     if (saved === 'limit') throw new HttpError(409, 'You already have the most devices allowed. Remove one first.')
     return json(saved)
   } catch (error) {

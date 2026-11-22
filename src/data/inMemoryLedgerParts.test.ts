@@ -10,8 +10,11 @@ import { makeAttachment, makeDataset, makeTransaction } from '../testing/factori
 import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
 import { inMemoryLedgerParts } from './inMemoryLedgerParts'
 
-const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
-  makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
+const row = (
+  id: number,
+  month: string,
+  over: Parameters<typeof makeTransaction>[0] = {},
+) => makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
 
 const dataset = makeDataset({
   transactions: [row(1, '2026-01'), row(2, '2026-02', { type: 'investment' }), row(3, '2026-03'), row(4, '2026-03')],
@@ -30,7 +33,10 @@ describe('inMemoryLedgerParts', () => {
     const rows = await source.readMonthsPart({ from: '2026-02', to: '2026-03' })
     expect(rows.transactions.map((t) => t.id)).toEqual([4, 3, 2])
     const cube = await source.readCubePart({ from: '2026-01', to: '2026-03' })
-    expect(cube.cells.map((c) => [c.budgetMonth, c.count])).toEqual([['2026-01', 1], ['2026-03', 2]])
+    expect(cube.cells.map((c) => [c.budgetMonth, c.count])).toEqual([
+      ['2026-01', 1],
+      ['2026-03', 2],
+    ])
   })
 
   it('refuses the ranges the routes refuse, as a rejected promise', async () => {
@@ -66,7 +72,11 @@ describe('inMemoryLedgerParts', () => {
   it('lists the receipts of one transaction, and none for a transaction without any', async () => {
     const withReceipts = makeDataset({
       transactions: [row(1, '2026-01'), row(2, '2026-01')],
-      attachments: [makeAttachment({ id: 1, transactionId: 1 }), makeAttachment({ id: 2, transactionId: 1 }), makeAttachment({ id: 3, transactionId: 2 })],
+      attachments: [
+        makeAttachment({ id: 1, transactionId: 1 }),
+        makeAttachment({ id: 2, transactionId: 1 }),
+        makeAttachment({ id: 3, transactionId: 2 }),
+      ],
     })
     const served = inMemoryLedgerParts(() => ({ dataset: withReceipts, revision: 'v1' }))
     expect((await served.readReceiptsPart(1)).map((a) => a.id)).toEqual([1, 2])
@@ -101,7 +111,9 @@ describe('inMemoryLedgerParts', () => {
     const held = inMemoryLedgerParts(() => ({ dataset: ledger, revision: 'v3' }))
     const { nextCursor } = await held.readTransactionPage({}, { limit: 5 })
     expect(nextCursor).not.toBeNull()
-    await expect(held.readTransactionPage({ status: 'posted' }, { cursor: nextCursor! })).rejects.toBeInstanceOf(ValidationError)
+    await expect(held.readTransactionPage({ status: 'posted' }, { cursor: nextCursor! })).rejects.toBeInstanceOf(
+      ValidationError,
+    )
     await expect(held.readTransactionPage({}, { cursor: `${nextCursor!}x` })).rejects.toBeInstanceOf(ValidationError)
   })
 
@@ -145,7 +157,13 @@ describe('inMemoryLedgerParts', () => {
 
   it('serves the series of every row, as the route does, under the revision it is at', async () => {
     const monthly = Array.from({ length: 5 }, (_, i) =>
-      makeTransaction({ id: 10 + i, description: 'Gym', date: `2026-0${i + 1}-05`, budgetMonth: `2026-0${i + 1}`, amountCents: 2500 }),
+      makeTransaction({
+        id: 10 + i,
+        description: 'Gym',
+        date: `2026-0${i + 1}-05`,
+        budgetMonth: `2026-0${i + 1}`,
+        amountCents: 2500,
+      }),
     )
     const gym = makeDataset({ transactions: [...dataset.transactions, ...monthly] })
     const held = inMemoryLedgerParts(() => ({ dataset: gym, revision: 'v4' }))

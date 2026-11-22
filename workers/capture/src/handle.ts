@@ -37,7 +37,8 @@ function cheapRefusal(request: Request): { response: Response; reason: CaptureRe
   if (request.method !== 'POST') return { response: reply.methodNotAllowed(), reason: 'wrong-method' }
   if (bearerKey(request) === null) return { response: reply.unauthorized(), reason: 'no-valid-key-header' }
   const declared = request.headers.get('content-length')
-  if (declared !== null && Number(declared) > MAX_BODY_BYTES) return { response: reply.tooLarge(), reason: 'body-too-large' }
+  if (declared !== null && Number(declared) > MAX_BODY_BYTES)
+    return { response: reply.tooLarge(), reason: 'body-too-large' }
   const type = request.headers.get('content-type') ?? ''
   if (!/^application\/json\s*(;|$)/i.test(type)) return { response: reply.unsupportedType(), reason: 'not-json' }
   return null
@@ -47,7 +48,11 @@ function cheapRefusal(request: Request): { response: Response; reason: CaptureRe
  * Answers a push and writes one log line about it, whatever happened. A thrown error is logged by its class alone and
  * then thrown again for the caller to turn into the fixed 500.
  */
-export async function handleCapture(request: Request, env: CaptureEnv, deps: CaptureDeps): Promise<Response> {
+export async function handleCapture(
+  request: Request,
+  env: CaptureEnv,
+  deps: CaptureDeps,
+): Promise<Response> {
   const started = Date.now()
   const log = deps.log ?? consoleLogger
   const line: CaptureLogLine = { event: 'capture', outcome: 'refused', reason: 'unknown', status: 0, ms: 0 }
@@ -68,7 +73,12 @@ export async function handleCapture(request: Request, env: CaptureEnv, deps: Cap
   }
 }
 
-async function run(request: Request, env: CaptureEnv, deps: CaptureDeps, line: CaptureLogLine): Promise<Response> {
+async function run(
+  request: Request,
+  env: CaptureEnv,
+  deps: CaptureDeps,
+  line: CaptureLogLine,
+): Promise<Response> {
   const refused = cheapRefusal(request)
   if (refused) {
     line.reason = refused.reason
@@ -109,7 +119,13 @@ async function run(request: Request, env: CaptureEnv, deps: CaptureDeps, line: C
 }
 
 /** Counts the push against the caps, then stores what it becomes or counts it as unrecognised. */
-async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, deps: CaptureDeps, line: CaptureLogLine): Promise<Response> {
+async function admitAndStore(
+  push: RawPush,
+  key: CaptureKey,
+  secret: string,
+  deps: CaptureDeps,
+  line: CaptureLogLine,
+): Promise<Response> {
   const now = deps.now()
   const day = now.toISOString().slice(0, 10)
   const admitted = await deps.captures.admit(key.owner, push.source, day, DAILY_CAPS)
@@ -127,7 +143,13 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
   await deps.captures.touchKey(key.keyId, now.toISOString()).catch(() => undefined)
 
   const stored = await receive(push, key, secret, deps, now)
-  if (stored === 'bad-date' || stored === 'clock-skew' || stored === 'too-old' || stored === 'no-amount' || stored === 'code-like') {
+  if (
+    stored === 'bad-date' ||
+    stored === 'clock-skew' ||
+    stored === 'too-old' ||
+    stored === 'no-amount' ||
+    stored === 'code-like'
+  ) {
     await deps.captures.bumpCounter(key.owner, push.source, day, 'unrecognised')
     line.outcome = 'dropped'
     line.reason = stored
@@ -149,7 +171,13 @@ async function admitAndStore(push: RawPush, key: CaptureKey, secret: string, dep
 }
 
 /** What a push becomes once admitted. One whose Date cannot be trusted is not read at all. */
-async function receive(push: RawPush, key: CaptureKey, secret: string, deps: CaptureDeps, now: Date): Promise<StoreResult | 'bad-date' | 'clock-skew' | 'too-old'> {
+async function receive(
+  push: RawPush,
+  key: CaptureKey,
+  secret: string,
+  deps: CaptureDeps,
+  now: Date,
+): Promise<StoreResult | 'bad-date' | 'clock-skew' | 'too-old'> {
   const date = parsePushDate(push.date)
   if (!date) return 'bad-date'
   const time = pushTimeVerdict(date.instantMs, now.getTime())

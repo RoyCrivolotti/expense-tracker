@@ -86,18 +86,32 @@ interface Run {
 
 const readCost = (table: string): number => (table === 'wealthCheckins' ? 2 : 1)
 
-function spend(budget: StepBudget, operations: number, rows = 0): void {
+function spend(
+  budget: StepBudget,
+  operations: number,
+  rows = 0,
+): void {
   budget.operations -= operations
   budget.rows -= rows
 }
 
-async function revisionOf(deps: ChunkedDeps, owner: string, budget: StepBudget): Promise<string | null> {
+async function revisionOf(
+  deps: ChunkedDeps,
+  owner: string,
+  budget: StepBudget,
+): Promise<string | null> {
   if (!deps.readRevision) return null
   spend(budget, 1)
   return deps.readRevision(owner)
 }
 
-function freshState(owner: string, dateKey: string, startedAt: Date, revision: string | null, attempt: number): BackupState {
+function freshState(
+  owner: string,
+  dateKey: string,
+  startedAt: Date,
+  revision: string | null,
+  attempt: number,
+): BackupState {
   return {
     format: BACKUP_FORMAT,
     owner,
@@ -149,7 +163,10 @@ async function writePart(run: Run): Promise<void> {
   run.pendingRows = 0
 }
 
-function take(run: Run, chunk: ExportChunk): void {
+function take(
+  run: Run,
+  chunk: ExportChunk,
+): void {
   for (const row of chunk.rows) run.pending.push(`${JSON.stringify({ t: chunk.table, r: row } satisfies PartLine)}\n`)
   run.pendingRows += chunk.rows.length
   run.state.counts[chunk.table] += chunk.rows.length
@@ -169,7 +186,11 @@ async function drain(run: Run): Promise<void> {
     if (budget.rows <= 0 || budget.operations < readCost(table) + FINISH_RESERVE) return
     const limit = Math.min(EXPORT_CHUNK_ROWS[table], READ_ROWS, budget.rows)
     spend(budget, readCost(table))
-    const chunk = await deps.repo.readExportChunk(owner, { table, limit, ...(state.after !== null ? { after: state.after } : {}) })
+    const chunk = await deps.repo.readExportChunk(owner, {
+      table,
+      limit,
+      ...(state.after !== null ? { after: state.after } : {}),
+    })
     spend(budget, 0, chunk.rows.length)
     take(run, chunk)
     if (run.pendingRows >= SAVE_ROWS) {
@@ -184,7 +205,10 @@ async function drain(run: Run): Promise<void> {
  * could fail on a reference. Say so, and start the pass again from the first table unless this was the last one
  * allowed. Parts the abandoned pass wrote are overwritten by number or left out of the manifest.
  */
-async function startOver(run: Run, revisionNow: string | null): Promise<'continues' | 'failed'> {
+async function startOver(
+  run: Run,
+  revisionNow: string | null,
+): Promise<'continues' | 'failed'> {
   const { deps, owner, dateKey, state } = run
   const final = state.attempt >= MAX_PASSES
   await deps.alerts.onInconsistentBackup({ owner, dateKey, attempt: state.attempt, final })
@@ -279,7 +303,10 @@ async function reportAbandoned(
 }
 
 /** The cron entry point of chunked mode: one invocation's worth of work, for every owner. */
-export async function runChunkedBackups(deps: ChunkedDeps, now: () => Date = () => new Date()): Promise<ChunkedRunResult> {
+export async function runChunkedBackups(
+  deps: ChunkedDeps,
+  now: () => Date = () => new Date(),
+): Promise<ChunkedRunResult> {
   const dateKey = now().toISOString().slice(0, 10)
   const budget: StepBudget = { operations: deps.chunked.maxOperations, rows: deps.chunked.maxRows }
   spend(budget, 2)

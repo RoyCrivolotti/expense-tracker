@@ -59,17 +59,22 @@ function NetWorthNowCardImpl({
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const current = latest ? latest.investedCents : draft.startInvestedCents
-  const measured = latest
-    ? `as of ${formatCheckinDate(latest.date)}`
-    : 'at plan start, no check-in yet'
+  const measured = latest ? `as of ${formatCheckinDate(latest.date)}` : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
   const pct = fiShare(draft, latest, current, fiTarget, inflationRate)
   const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatCents(c, format), format)
   const fiYear = useMemo(
-    () => yearsToFi(scenarioToParams({ ...draft, id: 0 }, inflationRate), draft.annualSpendCents, draft.safeWithdrawalRate),
+    () =>
+      yearsToFi(scenarioToParams({ ...draft, id: 0 }, inflationRate), draft.annualSpendCents, draft.safeWithdrawalRate),
     [draft, inflationRate],
   )
-  const worth = worthInPlanMoneyNote({ latest, planStartDate: draft.planStartDate, inflationRate, money: (c) => formatCents(c, format), format })
+  const worth = worthInPlanMoneyNote({
+    latest,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money: (c) => formatCents(c, format),
+    format,
+  })
   const targetNote = fiTargetMoneyNote({
     targetCents: fiTarget,
     fiYear,
@@ -81,8 +86,7 @@ function NetWorthNowCardImpl({
   })
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.
-  const next =
-    milestones.find((m) => m.amountCents > current && !reached.has(m.amountCents)) ?? null
+  const next = milestones.find((m) => m.amountCents > current && !reached.has(m.amountCents)) ?? null
   const nextMilestone = next ? milestoneLabelWithAmount(next, (c) => formatCents(c, format)) : null
 
   return (
@@ -98,9 +102,7 @@ function NetWorthNowCardImpl({
             </li>
             <li>
               <strong>{pct.toFixed(0)}%</strong> of your {formatCents(fiTarget, format)} FI target
-              <span className={styles.nowListNote}>
-                target is from future annual spend at FI, not current spending
-              </span>
+              <span className={styles.nowListNote}>target is from future annual spend at FI, not current spending</span>
               <span className={styles.nowListNote}>{targetNote}</span>
               {targets ? <span className={styles.nowListNote}>{targets}</span> : null}
             </li>
@@ -121,8 +123,8 @@ function NetWorthNowCardImpl({
       ) : (
         <p className={styles.chartHint}>
           {formatCents(current, format)} invested {measured}
-          {nextMilestone != null ? ` · next milestone ${nextMilestone}` : ''}. Set annual spend at FI
-          above to see progress toward a financial independence target.
+          {nextMilestone != null ? ` · next milestone ${nextMilestone}` : ''}. Set annual spend at FI above to see
+          progress toward a financial independence target.
         </p>
       )}
     </Card>

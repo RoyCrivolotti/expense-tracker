@@ -133,7 +133,9 @@ describe('ConfigModal delete control', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await vi.waitFor(() => expect(screen.getByLabelText('Move to')).toBeTruthy())
     expect(
-      screen.getByText(`This category turned out to still be in use elsewhere. Move its records to another category first, or create a new one.`),
+      screen.getByText(
+        `This category turned out to still be in use elsewhere. Move its records to another category first, or create a new one.`,
+      ),
     ).toBeTruthy()
     expect(onClose).not.toHaveBeenCalled()
   })
@@ -314,7 +316,7 @@ describe('ConfigModal delete control', () => {
     })
   })
 
-  it('blocks deletion of the tenant\'s only category', () => {
+  it("blocks deletion of the tenant's only category", () => {
     render(
       <ConfigModal
         target={{ kind: 'category', record: DINING }}
@@ -324,9 +326,7 @@ describe('ConfigModal delete control', () => {
       />,
     )
 
-    expect(
-      screen.getByText("You need at least one category, so this one can't be deleted."),
-    ).toBeTruthy()
+    expect(screen.getByText("You need at least one category, so this one can't be deleted.")).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Delete category' })).toBeNull()
   })
 
@@ -340,14 +340,18 @@ describe('ConfigModal delete control', () => {
       />,
     )
 
-    expect(
-      screen.getByText("You need at least one account, so this one can't be deleted."),
-    ).toBeTruthy()
+    expect(screen.getByText("You need at least one account, so this one can't be deleted.")).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Delete account' })).toBeNull()
   })
 
   it('excludes inactive accounts from the reassign-target dropdown', () => {
-    const ARCHIVED_ACCOUNT: Account = { id: 13, name: 'Old checking', kind: 'debit', settlement: 'immediate', active: false }
+    const ARCHIVED_ACCOUNT: Account = {
+      id: 13,
+      name: 'Old checking',
+      kind: 'debit',
+      settlement: 'immediate',
+      active: false,
+    }
     const ds = dataset({
       accounts: [CHECKING, OLD_CARD, ARCHIVED_ACCOUNT],
       transactions: [
@@ -561,7 +565,10 @@ describe('ConfigModal while it leaves', () => {
     )
   }
 
-  const lunch = (categoryId: number, id: number) => ({
+  const lunch = (
+    categoryId: number,
+    id: number,
+  ) => ({
     id,
     date: '2026-01-01',
     budgetMonth: '2026-01',

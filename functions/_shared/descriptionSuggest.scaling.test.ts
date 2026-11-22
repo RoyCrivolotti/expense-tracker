@@ -22,7 +22,10 @@ const MONTHS = 120
 const SIZES = (process.env.SCALING_ROWS ?? '5000,20000,50000,100000,250000').split(',').map(Number)
 const PREFIXES = ['c', 'co', 'cor', 'corner market 1', 'zz']
 
-const fixed = (n: number, digits = 1): number => Number(n.toFixed(digits))
+const fixed = (
+  n: number,
+  digits = 1,
+): number => Number(n.toFixed(digits))
 
 async function measure(rows: number): Promise<Array<Record<string, number | string>>> {
   const ledger = syntheticLedger({ months: MONTHS, perMonth: Math.max(0, Math.round(rows / MONTHS) - 7) })
@@ -40,8 +43,13 @@ async function measure(rows: number): Promise<Array<Record<string, number | stri
     const { items } = await repo.suggestDescriptions(OWNER, request)
     const ms = performance.now() - start
     const inRange = db
-      .prepare("SELECT count(*) AS n, count(DISTINCT description_norm) AS keys FROM transactions WHERE owner = ? AND description_norm >= ? AND description_norm < ? AND cancelled = 0 AND budget_month < '2026-01'")
-      .get(OWNER, prefix, prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)) as { n: number; keys: number }
+      .prepare(
+        "SELECT count(*) AS n, count(DISTINCT description_norm) AS keys FROM transactions WHERE owner = ? AND description_norm >= ? AND description_norm < ? AND cancelled = 0 AND budget_month < '2026-01'",
+      )
+      .get(OWNER, prefix, prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)) as {
+      n: number
+      keys: number
+    }
     out.push({
       rows: ledger.transactions.length,
       prefix,

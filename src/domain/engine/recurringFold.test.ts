@@ -6,8 +6,11 @@ import { groupKeyString, groupTransactions } from './recurringDetect'
 import { PREDICT_HISTORY } from './recurringPredict'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
-const gym = (id: number, date: string, overrides: Partial<Transaction> = {}) =>
-  makeTxn({ id, date, description: 'Gym', budgetMonth: date.slice(0, 7), ...overrides })
+const gym = (
+  id: number,
+  date: string,
+  overrides: Partial<Transaction> = {},
+) => makeTxn({ id, date, description: 'Gym', budgetMonth: date.slice(0, 7), ...overrides })
 
 describe('foldNewerRows', () => {
   const rows = monthlyDates(2026, 1, 5, 5).map((date, i) => gym(i + 1, date, { amountCents: 3_000 + i }))
@@ -51,7 +54,11 @@ describe('foldNewerRows', () => {
         expect(folded.dates, groupKeyString(folded.key)).toEqual(expected.dates)
         expect(folded.budgetOffsets.slice(-PREDICT_HISTORY)).toEqual(expected.budgetOffsets.slice(-PREDICT_HISTORY))
         expect([...folded.budgetMonths].sort()).toEqual([...expected.budgetMonths].sort())
-        expect(folded).toMatchObject({ label: expected.label, amountCents: expected.amountCents, categoryId: expected.categoryId })
+        expect(folded).toMatchObject({
+          label: expected.label,
+          amountCents: expected.amountCents,
+          categoryId: expected.categoryId,
+        })
         checked += 1
       }
     }

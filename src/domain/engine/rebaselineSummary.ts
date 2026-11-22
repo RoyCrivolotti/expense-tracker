@@ -7,7 +7,11 @@ import { currencyWord, formatCents, formatPercent, type MoneyFormat } from './mo
 import type { Rebaseline } from './rebaselinePatch'
 
 /** What happened to the monthly amount, or null when it did not move. */
-export function monthlyLine(r: Rebaseline, format: MoneyFormat, formatDate: (iso: string) => string): string | null {
+export function monthlyLine(
+  r: Rebaseline,
+  format: MoneyFormat,
+  formatDate: (iso: string) => string,
+): string | null {
   if (r.droppedSteps.length === 0) return null
   const from = formatCents(r.previous.monthlyContributionCents, format)
   const to = formatCents(r.patch.monthlyContributionCents, format)
@@ -19,14 +23,20 @@ export function monthlyLine(r: Rebaseline, format: MoneyFormat, formatDate: (iso
 }
 
 /** "3 years", "2,5 years", "1 year": a whole number of years is said plainly, a part year to one decimal. */
-export function yearsText(years: number, format: MoneyFormat): string {
+export function yearsText(
+  years: number,
+  format: MoneyFormat,
+): string {
   const rounded = Math.round(years * 10) / 10
   const text = rounded.toLocaleString(format.locale, { maximumFractionDigits: 1 })
   return rounded === 1 ? '1 year' : `${text} years`
 }
 
 /** What was counted in the euros of the new start, and the price of a house still to buy. */
-export function restatedLines(r: Rebaseline, format: MoneyFormat): string[] {
+export function restatedLines(
+  r: Rebaseline,
+  format: MoneyFormat,
+): string[] {
   const lines: string[] = []
   const { restated, housePrice } = r
   if (restated) {
@@ -56,13 +66,20 @@ export function ownedHouseLine(
   copy?: 'behind' | 'at-start',
 ): string {
   const owned = r.ownedHouse!
-  const behind = r.house && copy !== 'at-start'
-    ? `The house purchase (${formatDate(r.house.from)}) is behind the new start, so the plan holds the house as owned from day one`
-    : 'The plan holds the house as owned from day one'
-  const left = owned.owedCents === 0 ? 'with nothing owed' : `with about ${formatCents(owned.owedCents, format)} still owed over ${yearsText(owned.remainingYears, format)}`
-  const note = owned.raisedToOwed ? ' It owes more than it is worth on these figures, so its value is set to what is owed.' : ''
+  const behind =
+    r.house && copy !== 'at-start'
+      ? `The house purchase (${formatDate(r.house.from)}) is behind the new start, so the plan holds the house as owned from day one`
+      : 'The plan holds the house as owned from day one'
+  const left =
+    owned.owedCents === 0
+      ? 'with nothing owed'
+      : `with about ${formatCents(owned.owedCents, format)} still owed over ${yearsText(owned.remainingYears, format)}`
+  const note = owned.raisedToOwed
+    ? ' It owes more than it is worth on these figures, so its value is set to what is owed.'
+    : ''
   // A copy says what it did with the purchase in a line of its own, and Cancel there changes nothing to undo.
-  const unsure = r.house && !copy ? ' If you have not bought it yet, cancel, move the purchase year, then re-baseline.' : ''
+  const unsure =
+    r.house && !copy ? ' If you have not bought it yet, cancel, move the purchase year, then re-baseline.' : ''
   return `${behind}: worth about ${formatCents(owned.valueCents, format)}, ${left} (the loan's own schedule, not a balance you logged).${note}${unsure}`
 }
 

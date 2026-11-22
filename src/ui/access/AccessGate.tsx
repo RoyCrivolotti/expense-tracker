@@ -14,7 +14,10 @@ function isAdminPath(): boolean {
 
 /** The server said the person may not read what this device kept (not allowed, or not into Expenses), so none of it stays for the next time the network is out. */
 function dropSavedCopies(): void {
-  void import('../../data/savedCopy').then((copy) => copy.forgetSavedCopies(), () => undefined)
+  void import('../../data/savedCopy').then(
+    (copy) => copy.forgetSavedCopies(),
+    () => undefined,
+  )
 }
 
 export function AccessGate({ source }: { source: ExpenseDataSource }) {

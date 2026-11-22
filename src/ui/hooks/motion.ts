@@ -39,7 +39,10 @@ export function foldDone(): Promise<void> {
  * `--exit-ms` for an overlay that is leaving, or nothing while it is not. The CSS reads it
  * in place of a duration of its own, so the animation ends exactly when `Presence` lets go.
  */
-export function exitVars(leaving: boolean, exitMs: number): CSSProperties | undefined {
+export function exitVars(
+  leaving: boolean,
+  exitMs: number,
+): CSSProperties | undefined {
   return leaving ? ({ '--exit-ms': `${exitMs}ms` } as CSSProperties) : undefined
 }
 

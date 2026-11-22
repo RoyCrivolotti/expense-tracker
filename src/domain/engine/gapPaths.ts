@@ -29,7 +29,12 @@ export function planEvents(points: readonly YearPoint[]): PlanEvent[] {
  * month of an anniversary was read against the plan with the step made or not, whichever it was nearer
  * (`TrackStatus.nearStep`), and the event is held to the same reading so the two agree.
  */
-export function eventHappened(event: PlanEvent, at: number, start: string, nearStep: TrackStatus['nearStep']): boolean {
+export function eventHappened(
+  event: PlanEvent,
+  at: number,
+  start: string,
+  nearStep: TrackStatus['nearStep'],
+): boolean {
   if (nearStep && dateAtYears(start, event.year) === nearStep.date) return nearStep.counted === 'made'
   return event.year <= at
 }

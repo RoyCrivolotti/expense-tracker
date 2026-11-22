@@ -9,7 +9,10 @@ import { filterTransactions, type TxnFilter } from './transactions'
 
 const ids = (rows: TransactionListRow[]) => rows.map((r) => (r.kind === 'transaction' ? r.txn.id : r.key))
 
-function readings(ledger: ExpenseDataset, filter: TxnFilter) {
+function readings(
+  ledger: ExpenseDataset,
+  filter: TxnFilter,
+) {
   const { accounts, settings, accountStatements, cashActuals, transactions } = ledger
   const cashRows = computeCashReconciliation(transactions, accounts, settings, cashActuals)
   const ordered = filterTransactions(transactions, filter)
@@ -40,7 +43,16 @@ describe('pagedListRows', () => {
     for (const [name, ledger] of ledgers) {
       const { ordered, payments, reference } = readings(ledger, {})
       const full = ids(reference)
-      for (const loaded of new Set([0, 1, 2, 7, 50, Math.floor(ordered.length / 2), ordered.length - 1, ordered.length])) {
+      for (const loaded of new Set([
+        0,
+        1,
+        2,
+        7,
+        50,
+        Math.floor(ordered.length / 2),
+        ordered.length - 1,
+        ordered.length,
+      ])) {
         const partial = ids(pagedListRows(ordered.slice(0, loaded), payments, loaded >= ordered.length))
         expect(partial, `${name} ${loaded}`).toEqual(full.slice(0, partial.length))
       }
@@ -50,7 +62,9 @@ describe('pagedListRows', () => {
   it('holds a payment back until the day it falls on has been read to its end', () => {
     const [name, ledger] = ledgers[0]!
     const { ordered, payments } = readings(ledger, {})
-    const payment = payments.find((p) => ordered.some((t) => t.date === p.date) && ordered.some((t) => t.date < p.date))!
+    const payment = payments.find(
+      (p) => ordered.some((t) => t.date === p.date) && ordered.some((t) => t.date < p.date),
+    )!
     expect(payment, name).toBeDefined()
     const lastOfDay = ordered.findLastIndex((t) => t.date === payment.date)
     const shown = (loaded: number) => pagedListRows(ordered.slice(0, loaded), payments, false).includes(payment)

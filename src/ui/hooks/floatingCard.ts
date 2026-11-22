@@ -9,7 +9,10 @@ const STEP_PX = 16
 const BIG_STEP_PX = 64
 
 /** Dragging by the grip: the card goes as far as the pointer, held inside the box. */
-function dragGesture(layout: CardLayout, turn: () => Turn): Gesture<DragSession> {
+function dragGesture(
+  layout: CardLayout,
+  turn: () => Turn,
+): Gesture<DragSession> {
   return {
     start: (e) => ({
       id: e.pointerId,
@@ -21,7 +24,10 @@ function dragGesture(layout: CardLayout, turn: () => Turn): Gesture<DragSession>
       turn: turn(),
       dpr: window.devicePixelRatio || 1,
     }),
-    move: (session, e) => layout.moveTo(dragPosition(session, e.clientX, e.clientY)),
+    move: (
+      session,
+      e,
+    ) => layout.moveTo(dragPosition(session, e.clientX, e.clientY)),
     // Of the sizes the position was worked out for: after a resize it is the box that was, not the one that is.
     finish: (session) => {
       const at = layout.at()
@@ -40,14 +46,26 @@ interface ResizeSession {
 }
 
 /** Dragging the bottom right corner: the whole card grows or shrinks with the pointer, from its top left. */
-function resizeGesture(layout: CardLayout, turn: () => Turn): Gesture<ResizeSession> {
+function resizeGesture(
+  layout: CardLayout,
+  turn: () => Turn,
+): Gesture<ResizeSession> {
   return {
     start: (e) => {
       const scale = layout.scale()
       const own = layout.natural()
-      return { x0: e.clientX, y0: e.clientY, scale, content: { width: own.width * scale, height: own.height * scale }, turn: turn() }
+      return {
+        x0: e.clientX,
+        y0: e.clientY,
+        scale,
+        content: { width: own.width * scale, height: own.height * scale },
+        turn: turn(),
+      }
     },
-    move: (session, e) => {
+    move: (
+      session,
+      e,
+    ) => {
       const delta = toLocalDelta(e.clientX - session.x0, e.clientY - session.y0, session.turn)
       layout.rescale(scaleFromDrag(session.scale, session.content, delta))
     },

@@ -28,12 +28,21 @@ describe('the guide sheet', () => {
     for (const section of GUIDE_SECTIONS) {
       expect(within(dialog).getByRole('heading', { name: section.title })).toBeInTheDocument()
       for (const block of section.blocks) {
-        for (const text of block.kind === 'p' ? [block.text] : block.items) expect(within(dialog).getByText(text)).toBeInTheDocument()
+        for (const text of block.kind === 'p' ? [block.text] : block.items)
+          expect(within(dialog).getByText(text)).toBeInTheDocument()
       }
     }
     // Steps are numbered and the lists are bullets, as in the docs page.
-    expect(within(dialog).getByText(/^Welcome\./).closest('ol')).not.toBeNull()
-    expect(within(dialog).getByText(/^Expense: money you spend/).closest('ul')).not.toBeNull()
+    expect(
+      within(dialog)
+        .getByText(/^Welcome\./)
+        .closest('ol'),
+    ).not.toBeNull()
+    expect(
+      within(dialog)
+        .getByText(/^Expense: money you spend/)
+        .closest('ul'),
+    ).not.toBeNull()
     // The card behind it stays: reading the guide does not put it away.
     expect(card()).toBeInTheDocument()
 

@@ -20,16 +20,26 @@ const BULK = '/api/expenses/transactions/bulk'
  */
 const MAX_EDIT_IDS = 100
 
-const send = <T>(method: string, url: string, body: unknown): Promise<T> =>
-  req<T>(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+const send = <T>(
+  method: string,
+  url: string,
+  body: unknown,
+): Promise<T> => req<T>(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
-const total = <T>(parts: T[], key: keyof T): number => parts.reduce((sum, part) => sum + (part[key] as number), 0)
+const total = <T>(
+  parts: T[],
+  key: keyof T,
+): number => parts.reduce((sum, part) => sum + (part[key] as number), 0)
 
 /**
  * `ids` in requests of at most `size`, one after the other. A request that fails after others went through
  * says how far it got, because those stay written.
  */
-async function inChunks<T>(ids: readonly number[], size: number, call: (chunk: number[]) => Promise<T>): Promise<T[]> {
+async function inChunks<T>(
+  ids: readonly number[],
+  size: number,
+  call: (chunk: number[]) => Promise<T>,
+): Promise<T[]> {
   const parts: T[] = []
   for (let at = 0; at < ids.length; at += size) {
     try {
@@ -37,9 +47,12 @@ async function inChunks<T>(ids: readonly number[], size: number, call: (chunk: n
     } catch (error) {
       if (at === 0) throw error
       const message = error instanceof Error ? error.message : String(error)
-      throw new Error(`${at.toLocaleString('en-US')} of ${ids.length.toLocaleString('en-US')} were done before this failed: ${message}`, {
-        cause: error,
-      })
+      throw new Error(
+        `${at.toLocaleString('en-US')} of ${ids.length.toLocaleString('en-US')} were done before this failed: ${message}`,
+        {
+          cause: error,
+        },
+      )
     }
   }
   return parts

@@ -1,11 +1,7 @@
 import { useRef, useState } from 'react'
 import type { TransactionAttachment } from '../../types'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
-import {
-  removeStaged,
-  stageReceipts,
-  type PendingReceipt,
-} from '../../data/pendingReceipts'
+import { removeStaged, stageReceipts, type PendingReceipt } from '../../data/pendingReceipts'
 import type { ExpenseActions } from '../actions'
 import { CameraIcon, TrashIcon } from '../icons'
 import { EXIT_MS } from '../hooks/motion'
@@ -29,11 +25,17 @@ const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf'
 
 const NO_PENDING: PendingReceipt[] = []
 
-function errText(e: unknown, fallback: string): string {
+function errText(
+  e: unknown,
+  fallback: string,
+): string {
   return e instanceof Error ? e.message : fallback
 }
 
-function capFilter(chosen: File[], total: number): { kept: File[]; error: string | null } {
+function capFilter(
+  chosen: File[],
+  total: number,
+): { kept: File[]; error: string | null } {
   const room = Math.max(0, RECEIPT_CLIENT_POLICY.maxPerTransaction - total)
   if (chosen.length <= room) return { kept: chosen, error: null }
   const dropped = chosen.length - room
@@ -65,11 +67,7 @@ function StoredThumb({
         aria-label={`View ${attachment.originalName ?? 'receipt'}`}
       >
         {attachment.hasThumb ? (
-          <img
-            src={`/api/expenses/attachments/${attachment.id}?variant=thumb`}
-            alt=""
-            loading="lazy"
-          />
+          <img src={`/api/expenses/attachments/${attachment.id}?variant=thumb`} alt="" loading="lazy" />
         ) : (
           <span className={styles.doc}>PDF</span>
         )}
@@ -126,23 +124,10 @@ function PendingThumb({
   )
 }
 
-function AddButton({
-  busy,
-  atCap,
-  onClick,
-}: {
-  busy: boolean
-  atCap: boolean
-  onClick: () => void
-}) {
+function AddButton({ busy, atCap, onClick }: { busy: boolean; atCap: boolean; onClick: () => void }) {
   const label = busy ? 'Adding…' : atCap ? 'Receipt limit reached' : 'Add receipt'
   return (
-    <button
-      type="button"
-      className={styles.addBtn}
-      disabled={busy || atCap}
-      onClick={onClick}
-    >
+    <button type="button" className={styles.addBtn} disabled={busy || atCap} onClick={onClick}>
       <span className={styles.addIcon} aria-hidden>
         <CameraIcon />
       </span>
@@ -285,7 +270,10 @@ export function ReceiptStrip({
     actions,
   )
 
-  const setOverlay = (next: TransactionAttachment | null, kind: 'view' | 'remove') => {
+  const setOverlay = (
+    next: TransactionAttachment | null,
+    kind: 'view' | 'remove',
+  ) => {
     if (kind === 'view') setViewing(next)
     else setRemoving(next)
     onTrapPausedChange?.(next !== null)
@@ -321,9 +309,7 @@ export function ReceiptStrip({
               onRemove={() => unstage(index)}
             />
           ))}
-          {!hideControls && (
-            <AddButton busy={busy} atCap={atCap} onClick={() => inputRef.current?.click()} />
-          )}
+          {!hideControls && <AddButton busy={busy} atCap={atCap} onClick={() => inputRef.current?.click()} />}
         </div>
       )}
       <input
@@ -340,9 +326,7 @@ export function ReceiptStrip({
           {err}
         </p>
       ) : null}
-      {transactionId == null && pendingFiles.length > 0 ? (
-        <p className={styles.hint}>Uploaded when you save.</p>
-      ) : null}
+      {transactionId == null && pendingFiles.length > 0 ? <p className={styles.hint}>Uploaded when you save.</p> : null}
 
       <Overlays
         viewing={viewing}

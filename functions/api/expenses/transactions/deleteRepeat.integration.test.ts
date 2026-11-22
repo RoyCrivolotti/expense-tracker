@@ -34,10 +34,19 @@ afterEach(() => {
 
 const withReceipt = (): number => ids.transactions[0]!
 
-const remove = (id: number | string, email?: string) =>
-  world.call(deleteOne, { method: 'DELETE', path: `/transactions/${id}`, params: { id: String(id) }, ...(email ? { email } : {}) })
+const remove = (
+  id: number | string,
+  email?: string,
+) =>
+  world.call(deleteOne, {
+    method: 'DELETE',
+    path: `/transactions/${id}`,
+    params: { id: String(id) },
+    ...(email ? { email } : {}),
+  })
 
-const rows = (id: number): number => (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(id) as { n: number }).n
+const rows = (id: number): number =>
+  (sqlite.prepare('SELECT COUNT(*) AS n FROM transactions WHERE id = ?').get(id) as { n: number }).n
 
 const receipt = (response: Response) => ({
   before: response.headers.get(REVISION_BEFORE_HEADER),
@@ -46,12 +55,26 @@ const receipt = (response: Response) => ({
 
 /** A row of the other owner's, with a receipt, made through the routes. */
 async function otherOwnersRow(): Promise<number> {
-  const post = async (handler: Parameters<World['call']>[0], path: string, body: unknown) => {
+  const post = async (
+    handler: Parameters<World['call']>[0],
+    path: string,
+    body: unknown,
+  ) => {
     const response = await world.call(handler, { method: 'POST', path, body, email: OTHER })
     return (await response.json<{ id: number }>()).id
   }
-  const accountId = await post(postAccount, '/accounts', { name: 'Theirs', kind: 'debit', settlement: 'immediate', active: true })
-  const categoryId = await post(postCategory, '/categories', { name: 'Theirs', monthlyBudgetCents: 0, sortOrder: 0, active: true })
+  const accountId = await post(postAccount, '/accounts', {
+    name: 'Theirs',
+    kind: 'debit',
+    settlement: 'immediate',
+    active: true,
+  })
+  const categoryId = await post(postCategory, '/categories', {
+    name: 'Theirs',
+    monthlyBudgetCents: 0,
+    sortOrder: 0,
+    active: true,
+  })
   const id = await post(postTransaction, '/transactions', expense(accountId, categoryId, 'Not yours', '2026-10-10'))
   await world.call(postAttachment, { method: 'POST', path: '/attachments', rawBody: uploadForm(id), email: OTHER })
   return id
@@ -84,7 +107,9 @@ describe('a delete that is sent twice', () => {
 
     expect(bucket).toHaveBeenCalledTimes(1)
     expect(rows(withReceipt())).toBe(0)
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transaction_attachments WHERE transaction_id = ?').get(withReceipt())).toEqual({ n: 0 })
+    expect(
+      sqlite.prepare('SELECT COUNT(*) AS n FROM transaction_attachments WHERE transaction_id = ?').get(withReceipt()),
+    ).toEqual({ n: 0 })
   })
 })
 
@@ -104,7 +129,9 @@ describe('a delete of a row that is not there', () => {
     expect([response.status, await response.json()]).toEqual([200, { ok: true }])
     expect(rows(theirs)).toBe(1)
     expect(bucket).not.toHaveBeenCalled()
-    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM transaction_attachments WHERE transaction_id = ?').get(theirs)).toEqual({ n: 1 })
+    expect(
+      sqlite.prepare('SELECT COUNT(*) AS n FROM transaction_attachments WHERE transaction_id = ?').get(theirs),
+    ).toEqual({ n: 1 })
   })
 })
 

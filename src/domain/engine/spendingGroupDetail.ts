@@ -108,9 +108,7 @@ export function computeSpendingGroupDetail(
   )
 
   const budgetCents =
-    groupBy === 'category'
-      ? (args.categories.find((c) => String(c.id) === key)?.monthlyBudgetCents ?? 0) || null
-      : null
+    groupBy === 'category' ? (args.categories.find((c) => String(c.id) === key)?.monthlyBudgetCents ?? 0) || null : null
   const history = window.map((m) => ({ month: m, actualCents: byMonth.get(m) ?? 0, budgetCents }))
   const values = history.map((h) => h.actualCents)
   return {

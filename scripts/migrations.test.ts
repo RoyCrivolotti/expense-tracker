@@ -75,8 +75,9 @@ describe('an incomplete migration record', () => {
     const files = migrationFiles()
     const applied = ['0020_migrations_table']
 
-    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied))
-      .not.toContain('0021_report_snapshot.sql')
+    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied)).not.toContain(
+      '0021_report_snapshot.sql',
+    )
   })
 
   it('finds nothing on a fresh database, where every file really is pending', () => {
@@ -89,8 +90,7 @@ describe('an incomplete migration record', () => {
     const files = migrationFiles()
     const applied = files.slice(0, -1).map(stemOf)
 
-    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied))
-      .toEqual([])
+    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied)).toEqual([])
   })
 })
 
@@ -139,13 +139,17 @@ describe('migration safety', () => {
     // Scoping the backfills defangs the UPDATEs; nothing in plain SQL defangs a
     // DROP TABLE. Only never running the file again does.
     for (const statement of statementsOf('0003_multi_user.sql')) {
-      if (!/^(INSERT INTO cash_actuals_new|DROP TABLE cash_actuals|ALTER TABLE cash_actuals_new|CREATE TABLE IF NOT EXISTS cash_actuals_new)/i.test(statement)) continue
+      if (
+        !/^(INSERT INTO cash_actuals_new|DROP TABLE cash_actuals|ALTER TABLE cash_actuals_new|CREATE TABLE IF NOT EXISTS cash_actuals_new)/i.test(
+          statement,
+        )
+      )
+        continue
       db.exec(statement)
     }
 
     const row = db.prepare("SELECT owner FROM cash_actuals WHERE year_month = '2026-01'").get() as
-      | { owner: string }
-      | undefined
+      { owner: string } | undefined
     expect(row?.owner).toBe('owner@example.com')
   })
 })
@@ -155,8 +159,10 @@ describe('assessing a database', () => {
   const never = () => {
     throw new Error('asked whether the database has tables, which only an empty record needs')
   }
-  const assessWith = (applied: string[], tables: () => boolean = never) =>
-    assess({ database: 'db', files, applied, hasApplicationTables: tables })
+  const assessWith = (
+    applied: string[],
+    tables: () => boolean = never,
+  ) => assess({ database: 'db', files, applied, hasApplicationTables: tables })
 
   it('is current when every file is recorded', () => {
     expect(assessWith(files.map(stemOf))).toEqual({ state: 'current', pending: [] })
@@ -190,7 +196,12 @@ describe('assessing a database', () => {
   })
 
   it('names the database it is talking about', () => {
-    const result = assess({ database: 'roy-expenses', files, applied: ['0020_migrations_table'], hasApplicationTables: never })
+    const result = assess({
+      database: 'roy-expenses',
+      files,
+      applied: ['0020_migrations_table'],
+      hasApplicationTables: never,
+    })
 
     expect(result.problem).toMatch(/^roy-expenses records 1 migration/)
   })
@@ -199,24 +210,34 @@ describe('assessing a database', () => {
 describe('the command line', () => {
   it('reads a database as a check, and --apply as an apply that takes a restore point', () => {
     expect(parseArgs(['roy-expenses'])).toEqual({ database: 'roy-expenses', apply: false, restorePoint: true })
-    expect(parseArgs(['roy-expenses', '--apply'])).toEqual({ database: 'roy-expenses', apply: true, restorePoint: true })
-    expect(parseArgs(['--apply', 'roy-expenses'])).toEqual({ database: 'roy-expenses', apply: true, restorePoint: true })
+    expect(parseArgs(['roy-expenses', '--apply'])).toEqual({
+      database: 'roy-expenses',
+      apply: true,
+      restorePoint: true,
+    })
+    expect(parseArgs(['--apply', 'roy-expenses'])).toEqual({
+      database: 'roy-expenses',
+      apply: true,
+      restorePoint: true,
+    })
   })
 
   it('skips the restore point only when asked to, and only on an apply', () => {
-    expect(parseArgs(['db', '--apply', '--no-restore-point'])).toEqual({ database: 'db', apply: true, restorePoint: false })
+    expect(parseArgs(['db', '--apply', '--no-restore-point'])).toEqual({
+      database: 'db',
+      apply: true,
+      restorePoint: false,
+    })
   })
 
-  it.each([
-    [[]],
-    [['--apply']],
-    [['a', 'b']],
-    [['a', '--aply']],
-    [['a', '--force']],
-    [['a', '--no-restore-point']],
-  ])('refuses %j with the usage line, so a typo cannot flip a check into an apply', (argv) => {
-    expect(() => parseArgs(argv)).toThrow(/^Usage: node scripts\/migrate\.mjs <database> \[--apply \[--no-restore-point\]\]$/)
-  })
+  it.each([[[]], [['--apply']], [['a', 'b']], [['a', '--aply']], [['a', '--force']], [['a', '--no-restore-point']]])(
+    'refuses %j with the usage line, so a typo cannot flip a check into an apply',
+    (argv) => {
+      expect(() => parseArgs(argv)).toThrow(
+        /^Usage: node scripts\/migrate\.mjs <database> \[--apply \[--no-restore-point\]\]$/,
+      )
+    },
+  )
 })
 
 describe('the restore point', () => {
@@ -230,9 +251,12 @@ describe('the restore point', () => {
     expect(parseBookmark(`⛅️ wrangler 4.0\n${JSON.stringify({ bookmark })}\n`)).toBe(bookmark)
   })
 
-  it.each(['', 'not json', '{}', '{"bookmark": ""}', '{"bookmark": 12}'])('refuses %j, since an apply must not go ahead without one', (output) => {
-    expect(() => parseBookmark(output)).toThrow(/No bookmark in the Time Travel output/)
-  })
+  it.each(['', 'not json', '{}', '{"bookmark": ""}', '{"bookmark": 12}'])(
+    'refuses %j, since an apply must not go ahead without one',
+    (output) => {
+      expect(() => parseBookmark(output)).toThrow(/No bookmark in the Time Travel output/)
+    },
+  )
 
   it('gives the command that goes back to it', () => {
     expect(restoreCommand('roy-expenses', bookmark)).toBe(

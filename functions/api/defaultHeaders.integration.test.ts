@@ -60,7 +60,10 @@ describe('the headers of an answer', () => {
   })
 
   it('keep a receipt cacheable by the browser, and nosniff', async () => {
-    const response = await world.call(getAttachment, { path: `/attachments/${ids.attachment}`, params: { id: String(ids.attachment) } })
+    const response = await world.call(getAttachment, {
+      path: `/attachments/${ids.attachment}`,
+      params: { id: String(ids.attachment) },
+    })
 
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toMatch(/max-age=31536000/)

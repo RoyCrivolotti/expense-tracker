@@ -5,7 +5,10 @@ import * as api from '../../data/recommendationsApi'
 import { useRecommendationList } from './useRecommendationList'
 import { RETURN_THROTTLE_MS, useHoldReloads, useReloadOnReturn } from './useReloadOnReturn'
 
-vi.mock('../../data/recommendationsApi', async (original) => ({ ...(await original<typeof api>()), fetchRecommendations: vi.fn() }))
+vi.mock('../../data/recommendationsApi', async (original) => ({
+  ...(await original<typeof api>()),
+  fetchRecommendations: vi.fn(),
+}))
 afterEach(() => vi.resetAllMocks())
 
 const rec = (id: string): api.RecommendationInfo => ({
@@ -20,7 +23,11 @@ const rec = (id: string): api.RecommendationInfo => ({
   descriptionSuggested: null,
   suggestedType: 'expense',
 })
-const page = (ids: string[], next: string | null = null, openCount = ids.length): api.RecommendationPage => ({ recommendations: ids.map(rec), next, openCount })
+const page = (
+  ids: string[],
+  next: string | null = null,
+  openCount = ids.length,
+): api.RecommendationPage => ({ recommendations: ids.map(rec), next, openCount })
 const fetchMock = () => vi.mocked(api.fetchRecommendations)
 
 describe('useRecommendationList', () => {
@@ -34,7 +41,9 @@ describe('useRecommendationList', () => {
   })
 
   it('shows the reason a read failed, and clears it when a retry works', async () => {
-    fetchMock().mockRejectedValueOnce(new ApiError('Request failed (500)', 500)).mockResolvedValueOnce(page(['a']))
+    fetchMock()
+      .mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
+      .mockResolvedValueOnce(page(['a']))
     const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.error).toBe('Request failed (500)'))
 
@@ -52,7 +61,10 @@ describe('useRecommendationList', () => {
   })
 
   it('appends the next page, and keeps what it has when that read fails', async () => {
-    fetchMock().mockResolvedValueOnce(page(['a'], 'c1', 2)).mockRejectedValueOnce(new ApiError('Request failed (503)', 503)).mockResolvedValueOnce(page(['b'], null, 2))
+    fetchMock()
+      .mockResolvedValueOnce(page(['a'], 'c1', 2))
+      .mockRejectedValueOnce(new ApiError('Request failed (503)', 503))
+      .mockResolvedValueOnce(page(['b'], null, 2))
     const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.hasMore).toBe(true))
 
@@ -105,7 +117,10 @@ describe('useRecommendationList', () => {
   })
 
   it('keeps the rows it has when a later read fails, and shows the failure when Retry asks for one', async () => {
-    fetchMock().mockResolvedValueOnce(page(['a'])).mockRejectedValueOnce(new ApiError('Request failed (500)', 500)).mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
+    fetchMock()
+      .mockResolvedValueOnce(page(['a']))
+      .mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
+      .mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
     const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.items).toHaveLength(1))
 
@@ -143,7 +158,9 @@ describe('a read that was on its way when a payment was decided', () => {
   })
 
   it('still shows a payment that comes back in a read begun after the decision', async () => {
-    fetchMock().mockResolvedValueOnce(page(['a'], null, 1)).mockResolvedValueOnce(page(['a'], null, 1))
+    fetchMock()
+      .mockResolvedValueOnce(page(['a'], null, 1))
+      .mockResolvedValueOnce(page(['a'], null, 1))
     const { result } = renderHook(() => useRecommendationList())
     await waitFor(() => expect(result.current.items).toHaveLength(1))
     act(() => result.current.remove('a'))
@@ -156,7 +173,8 @@ describe('a read that was on its way when a payment was decided', () => {
 })
 
 describe('reading again when the app returns', () => {
-  const setVisibility = (state: 'visible' | 'hidden') => Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+  const setVisibility = (state: 'visible' | 'hidden') =>
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
   const show = () => {
     setVisibility('visible')
     act(() => void document.dispatchEvent(new Event('visibilitychange')))

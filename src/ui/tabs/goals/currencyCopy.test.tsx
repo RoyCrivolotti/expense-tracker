@@ -37,22 +37,39 @@ const NOT_EURO = /euro|€/i
 const usdSettings = { ...defaultExpenseSettings(), currencyCode: 'USD', numberLocale: 'en-US' }
 
 describe('the Goals screens in another currency', () => {
-  it('names the assumed inflation and the milestones in the owner\'s money', () => {
-    const { container } = render(inUsd(<><InflationSetting settings={usdSettings} onChange={vi.fn()} /><MilestonesSetting settings={usdSettings} onChange={vi.fn()} /></>))
+  it("names the assumed inflation and the milestones in the owner's money", () => {
+    const { container } = render(
+      inUsd(
+        <>
+          <InflationSetting settings={usdSettings} onChange={vi.fn()} />
+          <MilestonesSetting settings={usdSettings} onChange={vi.fn()} />
+        </>,
+      ),
+    )
     expect(container.textContent).not.toMatch(NOT_EURO)
-    expect(container.textContent).toContain('Goals counts in the US dollars of each plan\'s start date (2026 US dollars, say)')
+    expect(container.textContent).toContain(
+      "Goals counts in the US dollars of each plan's start date (2026 US dollars, say)",
+    )
     expect(container.textContent).toContain('US dollars on the account in ten years buy less than US dollars today')
   })
 
   it('names it in the introduction of Assumptions', () => {
     const { container } = render(
-      inUsd(<AssumptionsView accounts={[]} checkins={[]} settings={usdSettings} actions={makeActions()} onSettingsChange={vi.fn()} />),
+      inUsd(
+        <AssumptionsView
+          accounts={[]}
+          checkins={[]}
+          settings={usdSettings}
+          actions={makeActions()}
+          onSettingsChange={vi.fn()}
+        />,
+      ),
     )
     expect(container.textContent).not.toMatch(NOT_EURO)
-    expect(container.textContent).toContain('back to the US dollars of the plan\'s start year')
+    expect(container.textContent).toContain("back to the US dollars of the plan's start year")
   })
 
-  it('writes the glossary in the owner\'s money, with its example in the owner\'s number style', () => {
+  it("writes the glossary in the owner's money, with its example in the owner's number style", () => {
     const { container } = render(inUsd(<GoalsExplainer />))
     const text = container.textContent ?? ''
     expect(text).not.toMatch(NOT_EURO)
@@ -66,17 +83,36 @@ describe('the Goals screens in another currency', () => {
     expect(container.textContent).toContain('100.000 € of 2026 euros reads about 121.899 € on your account in 2036')
   })
 
-  it('names the loan\'s euros in the rent against buying note', () => {
-    const base = { upfrontCents: 6_600_000, feesCents: 600_000, priceCents: 32_435_282, startYear: 8, moneyLabel: '2026 US dollars', carryRate: 0.015, realReturn: 0.05, houseGrowth: 0.01, paymentCents: 144_172, ownCheaper: null, loanPaidOffYear: null, money: (c: number) => `$${c / 100}` }
+  it("names the loan's euros in the rent against buying note", () => {
+    const base = {
+      upfrontCents: 6_600_000,
+      feesCents: 600_000,
+      priceCents: 32_435_282,
+      startYear: 8,
+      moneyLabel: '2026 US dollars',
+      carryRate: 0.015,
+      realReturn: 0.05,
+      houseGrowth: 0.01,
+      paymentCents: 144_172,
+      ownCheaper: null,
+      loanPaidOffYear: null,
+      money: (c: number) => `$${c / 100}`,
+    }
     const text = rentVsBuyCaption({ ...base, format: USD })
     expect(text).toContain('so in these US dollars it shrinks each year')
     expect(text).not.toMatch(NOT_EURO)
   })
 
   it('names the euros of the old and the new start in the re-baseline summary', () => {
-    const r = rebaseline(samplePlan({ housePurchaseYear: null }), { investedCents: 8_000_000, date: '2029-01-01' }, 0.02)
+    const r = rebaseline(
+      samplePlan({ housePurchaseYear: null }),
+      { investedCents: 8_000_000, date: '2029-01-01' },
+      0.02,
+    )
     const text = rebaselineSummary(r, GBP, () => '').join(' ')
-    expect(text).toContain('typed in the British pounds of the old start are counted in the British pounds of the new one')
+    expect(text).toContain(
+      'typed in the British pounds of the old start are counted in the British pounds of the new one',
+    )
     expect(text).not.toMatch(NOT_EURO)
     expect(currencyWord(GBP)).toBe('British pounds')
   })
@@ -84,9 +120,21 @@ describe('the Goals screens in another currency', () => {
   it('shows no euro anywhere on the Plan, Progress and Assumptions views of a plan with a house and a check-in', async () => {
     const user = userEvent.setup()
     const dataset = makeDataset({
-      goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, planStartDate: '2020-01-01', housePurchaseYear: 5, housePriceCents: 30_000_000 })],
+      goalScenarios: [
+        makeScenario({
+          id: 1,
+          name: 'Path A',
+          sortOrder: 0,
+          isActive: true,
+          planStartDate: '2020-01-01',
+          housePurchaseYear: 5,
+          housePriceCents: 30_000_000,
+        }),
+      ],
       wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })],
-      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: '2026-06-01', entries: [{ accountId: 1, valueCents: 20_000_000 }] })],
+      wealthCheckins: [
+        makeWealthCheckin({ id: 1, checkinDate: '2026-06-01', entries: [{ accountId: 1, valueCents: 20_000_000 }] }),
+      ],
     })
     dataset.settings = { ...dataset.settings, currencyCode: 'USD', numberLocale: 'en-US' }
     const { container } = render(inUsd(<GoalsTab model={buildExpenseModel(dataset)} actions={makeActions()} />))
@@ -99,7 +147,7 @@ describe('the Goals screens in another currency', () => {
     }
   })
 
-  it('names the owner\'s money under the balances as logged and under the investing against the plan', () => {
+  it("names the owner's money under the balances as logged and under the investing against the plan", () => {
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
     const checkins = [
       makeWealthCheckin({ id: 1, checkinDate: '2026-03-01', entries: [{ accountId: 1, valueCents: 10_000_000 }] }),
@@ -112,7 +160,10 @@ describe('the Goals screens in another currency', () => {
       inUsd(
         <>
           <NetWorthHistoryChart checkins={checkins} accounts={accounts} />
-          <SavingsRateChart draft={draft} monthly={[{ month: '2026-06', investedCents: 40_000, netSavingCents: 285_695 }]} />
+          <SavingsRateChart
+            draft={draft}
+            monthly={[{ month: '2026-06', investedCents: 40_000, netSavingCents: 285_695 }]}
+          />
         </>,
       ),
     )
@@ -140,12 +191,26 @@ describe('the Goals screens in another currency', () => {
       endInvestedCents: 3_900_000,
       netChangeCents: -6_100_000,
     }
-    const note = render(inUsd(<BreakdownExtras breakdowns={[{ id: '1', label: 'Path A', color: '#6366f1', breakdown }]} breakdownInTodaysMoney yearZeroHint={false} format={USD} />))
-    expect(note.container.textContent).toContain("The purchase breakdown is in the plan's US dollars, not in the Nominal values above.")
+    const note = render(
+      inUsd(
+        <BreakdownExtras
+          breakdowns={[{ id: '1', label: 'Path A', color: '#6366f1', breakdown }]}
+          breakdownInTodaysMoney
+          yearZeroHint={false}
+          format={USD}
+        />,
+      ),
+    )
+    expect(note.container.textContent).toContain(
+      "The purchase breakdown is in the plan's US dollars, not in the Nominal values above.",
+    )
   })
 
-  it('names the owner\'s money in every group of the Scenarios inputs: portfolio, housing, FI, the changes in the monthly investing, events and the plan start', () => {
-    const { id, isActive, ...draft } = samplePlan({ planStartDate: '2020-01-01', lifeEvents: [{ year: 3, amountCents: 500_000, label: 'Bonus' }] })
+  it("names the owner's money in every group of the Scenarios inputs: portfolio, housing, FI, the changes in the monthly investing, events and the plan start", () => {
+    const { id, isActive, ...draft } = samplePlan({
+      planStartDate: '2020-01-01',
+      lifeEvents: [{ year: 3, amountCents: 500_000, label: 'Bonus' }],
+    })
     void id
     void isActive
     const noop = vi.fn()
@@ -166,12 +231,14 @@ describe('the Goals screens in another currency', () => {
     expect(text).toContain('2020 US dollars')
   })
 
-  it('names it on the dashboard card, in the headline\'s net worth and the badge', () => {
+  it("names it on the dashboard card, in the headline's net worth and the badge", () => {
     const scenario = makeScenario({ id: 1, isActive: true, name: 'Sample', planStartDate: '2024-01-01' })
     const dataset = makeDataset({
       goalScenarios: [scenario],
       wealthAccounts: [makeWealthAccount({ id: 1, kind: 'investment' })],
-      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: '2026-06-01', entries: [{ accountId: 1, valueCents: 20_000_000 }] })],
+      wealthCheckins: [
+        makeWealthCheckin({ id: 1, checkinDate: '2026-06-01', entries: [{ accountId: 1, valueCents: 20_000_000 }] }),
+      ],
     })
     dataset.settings = { ...dataset.settings, currencyCode: 'USD', numberLocale: 'en-US' }
     const { container } = render(inUsd(<GoalsCard dataset={dataset} />))

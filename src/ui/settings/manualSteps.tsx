@@ -26,19 +26,15 @@ export const BEFORE_ADDRESS: SetupStepSpec[] = [
   {
     id: 'app',
     title: 'Choose the bank’s app',
-    body: (
-      <p>
-        Tap the app name and choose your bank&rsquo;s app. Leave the filters empty.
-      </p>
-    ),
+    body: <p>Tap the app name and choose your bank&rsquo;s app. Leave the filters empty.</p>,
   },
   {
     id: 'run',
     title: 'Let it run without asking',
     body: (
       <p>
-        On the same screen, choose the option that runs the automation without asking you each time; with the other
-        one, every payment waits for you to tap. On iOS 18 the two are called <b>Run Immediately</b> and{' '}
+        On the same screen, choose the option that runs the automation without asking you each time; with the other one,
+        every payment waits for you to tap. On iOS 18 the two are called <b>Run Immediately</b> and{' '}
         <b>Run After Confirmation</b>; on your phone they may be worded differently. Then tap <b>Next</b>.
       </p>
     ),
@@ -87,7 +83,11 @@ const SETTINGS: SetupStepSpec[] = [
 ]
 
 /** One JSON field taken from the notification: add it as Text, name it, and pick the notification's variable. */
-function field(key: string, variable: string, more?: ReactNode): SetupStepSpec {
+function field(
+  key: string,
+  variable: string,
+  more?: ReactNode,
+): SetupStepSpec {
   return {
     id: `field-${key}`,
     title: `Add the ${key} field`,

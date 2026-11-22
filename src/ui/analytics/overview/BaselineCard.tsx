@@ -35,17 +35,15 @@ export function BaselineCard({
 }) {
   const format = useMoneyFormat()
   if (!baseline) {
-    return (
-      <NeedsCard title="Spending baseline">Shows once a month before this one has closed with spending.</NeedsCard>
-    )
+    return <NeedsCard title="Spending baseline">Shows once a month before this one has closed with spending.</NeedsCard>
   }
   const compact = (cents: number) => formatCentsCompact(cents, format)
   return (
     <Card>
       <h3 className={styles.cardTitle}>Spending baseline</h3>
       <p className={styles.cardSub}>
-        Measured over the {baseline.months.length} {baseline.months.length === 1 ? 'month' : 'months'} of
-        history before this one, up to 12. A trailing average, not a calendar year.
+        Measured over the {baseline.months.length} {baseline.months.length === 1 ? 'month' : 'months'} of history before
+        this one, up to 12. A trailing average, not a calendar year.
       </p>
       <p className={styles.cardSub}>
         It is what you really spend, to set against the plan&apos;s &quot;Annual spend at FI&quot; in Goals.
@@ -64,21 +62,13 @@ export function BaselineCard({
             <span>Goals plan assumes</span>
             <span className={styles.kvValue}>
               {compact(baseline.planMonthlyCents)}{' '}
-              <ChangeChip
-                value={baseline.meanMonthlyCents}
-                baseline={baseline.planMonthlyCents}
-                upGood={false}
-              />
+              <ChangeChip value={baseline.meanMonthlyCents} baseline={baseline.planMonthlyCents} upGood={false} />
             </span>
           </div>
         )}
       </div>
       {onUseInGoals && (
-        <button
-          type="button"
-          className={styles.useInGoals}
-          onClick={() => onUseInGoals(baseline.meanMonthlyCents)}
-        >
+        <button type="button" className={styles.useInGoals} onClick={() => onUseInGoals(baseline.meanMonthlyCents)}>
           Use in Goals
         </button>
       )}

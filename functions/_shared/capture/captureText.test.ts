@@ -17,21 +17,51 @@ let repo: CaptureRepository
 beforeEach(async () => {
   db = migratedDatabase()
   repo = createD1CaptureRepository({ DB: sqliteD1(db) })
-  for (const [keyId, owner] of [['k1', ALICE], ['kb', BOB]] as const) {
+  for (const [keyId, owner] of [
+    ['k1', ALICE],
+    ['kb', BOB],
+  ] as const) {
     await repo.createKey({ keyId, owner, label: 'Phone', secretHash: 'h', createdAt: at(DAY) })
   }
 })
 
-function store(id: string, receivedDay: string, over: Partial<CaptureEvent> = {}): Promise<CaptureRecorded> {
+function store(
+  id: string,
+  receivedDay: string,
+  over: Partial<CaptureEvent> = {},
+): Promise<CaptureRecorded> {
   const receivedAt = at(receivedDay)
   return repo.recordCapture(
     {
-      id, keyId: 'k1', source: 'iberia', replayKey: `r-${id}`, kind: 'push', amountCents: 1250, currency: 'EUR', merchantRaw: BODY,
-      last4: null, accountDigits: null, occurredAt: receivedAt, localDate: receivedDay, offsetMinutes: 0, receivedAt, body: BODY, shapeId: 'one-wording', ...over,
+      id,
+      keyId: 'k1',
+      source: 'iberia',
+      replayKey: `r-${id}`,
+      kind: 'push',
+      amountCents: 1250,
+      currency: 'EUR',
+      merchantRaw: BODY,
+      last4: null,
+      accountDigits: null,
+      occurredAt: receivedAt,
+      localDate: receivedDay,
+      offsetMinutes: 0,
+      receivedAt,
+      body: BODY,
+      shapeId: 'one-wording',
+      ...over,
     },
     {
-      id: `rec-${id}`, accountId: null, amountCents: 1250, currency: 'EUR', occurredAt: receivedAt, localDate: receivedDay, merchantRaw: BODY,
-      descriptionSuggested: null, suggestedType: 'expense', createdAt: receivedAt,
+      id: `rec-${id}`,
+      accountId: null,
+      amountCents: 1250,
+      currency: 'EUR',
+      occurredAt: receivedAt,
+      localDate: receivedDay,
+      merchantRaw: BODY,
+      descriptionSuggested: null,
+      suggestedType: 'expense',
+      createdAt: receivedAt,
     },
   )
 }
@@ -39,8 +69,17 @@ function store(id: string, receivedDay: string, over: Partial<CaptureEvent> = {}
 type TextRow = { id: string; body: string | null; merchant_raw: string | null }
 /** Each event's text: null only once both the body and the event's copy of the description are blank. */
 const bodies = () =>
-  Object.fromEntries((db.prepare('SELECT id, body, merchant_raw FROM capture_events ORDER BY id').all() as TextRow[]).map((r) => [r.id, r.body ?? r.merchant_raw]))
-const descriptions = () => db.prepare('SELECT merchant_raw FROM recommendations').all().map((r) => r.merchant_raw)
+  Object.fromEntries(
+    (db.prepare('SELECT id, body, merchant_raw FROM capture_events ORDER BY id').all() as TextRow[]).map((r) => [
+      r.id,
+      r.body ?? r.merchant_raw,
+    ]),
+  )
+const descriptions = () =>
+  db
+    .prepare('SELECT merchant_raw FROM recommendations')
+    .all()
+    .map((r) => r.merchant_raw)
 
 describe('deciding a recommendation', () => {
   it.each([
@@ -58,7 +97,9 @@ describe('deciding a recommendation', () => {
     await store('e1', DAY)
     db.prepare("UPDATE capture_events SET body_excerpt = 'older text' WHERE id = 'e1'").run()
     await repo.decideRecommendation(ALICE, 'rec-e1', { state: 'dismissed', at: at(DAY) })
-    expect(db.prepare('SELECT body, body_excerpt FROM capture_events').all()).toEqual([{ body: null, body_excerpt: null }])
+    expect(db.prepare('SELECT body, body_excerpt FROM capture_events').all()).toEqual([
+      { body: null, body_excerpt: null },
+    ])
   })
 
   it('touches nothing of another person’s, and still acts once', async () => {

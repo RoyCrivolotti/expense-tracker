@@ -47,9 +47,15 @@ export function stemOf(file) {
  * @param {string[]} appliedNames
  * @returns {string[]}
  */
-export function selectPendingMigrations(files, appliedNames) {
+export function selectPendingMigrations(
+  files,
+  appliedNames,
+) {
   const applied = new Set(appliedNames)
-  return files.filter((f) => f.endsWith('.sql')).sort().filter((f) => !applied.has(stemOf(f)))
+  return files
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+    .filter((f) => !applied.has(stemOf(f)))
 }
 
 /** Leading migration number, or 0 for anything that is not a migration file. */
@@ -72,7 +78,10 @@ function numberOf(name) {
  * @param {string[]} appliedNames
  * @returns {string[]}
  */
-export function backfillsBelowHighestApplied(pending, appliedNames) {
+export function backfillsBelowHighestApplied(
+  pending,
+  appliedNames,
+) {
   const highest = appliedNames.reduce((max, name) => Math.max(max, numberOf(name)), 0)
   return pending.filter((f) => numberOf(f) < highest)
 }
@@ -168,7 +177,10 @@ export function parseBookmark(output) {
  * @param {string} bookmark
  * @returns {string}
  */
-export function restoreCommand(database, bookmark) {
+export function restoreCommand(
+  database,
+  bookmark,
+) {
   return `npx wrangler d1 time-travel restore ${database} --bookmark=${bookmark}`
 }
 
@@ -185,7 +197,10 @@ export function isMissingTable(error) {
   return /no such table/i.test([stdout, stderr, message].map(String).join('\n'))
 }
 
-function wrangler(database, args) {
+function wrangler(
+  database,
+  args,
+) {
   return execFileSync('npx', ['wrangler', 'd1', 'execute', database, '--remote', ...args], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -247,7 +262,10 @@ export function takeRestorePoint(database) {
 }
 
 /** Where a person finds the way back, in the log and on the run's summary page. */
-function announceRestorePoint(database, bookmark) {
+function announceRestorePoint(
+  database,
+  bookmark,
+) {
   const lines = [
     `Restore point for ${database}: ${bookmark}`,
     `To put ${database} back to it (this discards every write since, user data included):`,
@@ -255,12 +273,22 @@ function announceRestorePoint(database, bookmark) {
   ]
   console.log(lines.join('\n'))
   if (process.env.GITHUB_STEP_SUMMARY) {
-    const block = ['### Restore point', `\`${database}\` before the migrations: \`${bookmark}\``, '```', lines[2].trim(), '```']
+    const block = [
+      '### Restore point',
+      `\`${database}\` before the migrations: \`${bookmark}\``,
+      '```',
+      lines[2].trim(),
+      '```',
+    ]
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${block.join('\n')}\n`)
   }
 }
 
-function applyPending(database, pending, restorePoint) {
+function applyPending(
+  database,
+  pending,
+  restorePoint,
+) {
   // The tracking table has to exist before anything can be recorded against it.
   const ordered = pending.includes(TRACKING_MIGRATION)
     ? [TRACKING_MIGRATION, ...pending.filter((f) => f !== TRACKING_MIGRATION)]

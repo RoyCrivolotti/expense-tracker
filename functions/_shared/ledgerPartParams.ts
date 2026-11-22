@@ -5,7 +5,10 @@ import { ValidationError } from '../domain/application/validationError'
  * outside `allowed` is refused, so a misspelt one is an error and not a request that quietly means
  * something else.
  */
-export function singleParams(url: URL, allowed: readonly string[]): Record<string, string | undefined> {
+export function singleParams(
+  url: URL,
+  allowed: readonly string[],
+): Record<string, string | undefined> {
   for (const key of url.searchParams.keys()) {
     if (!allowed.includes(key)) throw new ValidationError(`Unknown parameter: ${key}`)
   }

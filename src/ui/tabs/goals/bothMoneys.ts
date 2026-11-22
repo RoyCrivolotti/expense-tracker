@@ -6,12 +6,19 @@ import { yearLabel } from './yearLabel'
  * What an amount of the plan's money comes to on the account `years` into the plan. The plan counts in
  * the euros of its start, and a euro on the account in a later year is worth less by the inflation.
  */
-export function onAccountCents(realCents: number, years: number, inflationRate: number): number {
+export function onAccountCents(
+  realCents: number,
+  years: number,
+  inflationRate: number,
+): number {
   return Math.round(realCents * Math.pow(1 + inflationRate, years))
 }
 
 /** Where on the account an amount is read, "on your account in 2056", or "in year 30" with no start date. */
-export function onAccountLabel(years: number, planStartDate: string | null | undefined): string {
+export function onAccountLabel(
+  years: number,
+  planStartDate: string | null | undefined,
+): string {
   return `on your account in ${yearLabel(years, planStartDate)}`
 }
 

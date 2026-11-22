@@ -7,7 +7,10 @@ import { detectUpcoming, stillStopped } from './recurringUpcoming'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 let nextId = 1
-function row(date: string, overrides: Partial<Transaction> = {}): Transaction {
+function row(
+  date: string,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return makeTxn({ id: nextId++, date, description: 'Gym', ...overrides })
 }
 
@@ -16,24 +19,39 @@ function gymOnThe5th(extra: Transaction[] = []): Transaction[] {
   return [...monthlyDates(2026, 1, 5, 6).map((date) => row(date)), ...extra]
 }
 
-function upcoming(rows: Transaction[], today: string) {
+function upcoming(
+  rows: Transaction[],
+  today: string,
+) {
   return detectUpcoming(rows, { today })
 }
 
-function datesOf(rows: Transaction[], today: string): string[] {
+function datesOf(
+  rows: Transaction[],
+  today: string,
+): string[] {
   return upcoming(rows, today).map((s) => s.predictedDate)
 }
 
 /** The mornings, counting from the day after the newest row, on which the card lists anything. */
-function mornings(rows: Transaction[], count: number): string[] {
-  const newest = rows.map((r) => r.date).sort().pop()!
+function mornings(
+  rows: Transaction[],
+  count: number,
+): string[] {
+  const newest = rows
+    .map((r) => r.date)
+    .sort()
+    .pop()!
   return Array.from({ length: count }, (_, i) => addDaysIso(newest, i + 1)).filter(
     (today) => upcoming(rows, today).length > 0,
   )
 }
 
 /** A series whose charges are `gaps` days apart, starting on `start`. */
-function withGaps(start: string, gaps: number[]): Transaction[] {
+function withGaps(
+  start: string,
+  gaps: number[],
+): Transaction[] {
   const dates = [start]
   for (const gap of gaps) dates.push(addDaysIso(dates[dates.length - 1]!, gap))
   return dates.map((date) => row(date))
@@ -123,13 +141,19 @@ describe('detectUpcoming', () => {
     })
 
     it('tolerates a few days either side of the usual day', () => {
-      const rows = ['2026-01-05', '2026-02-07', '2026-03-04', '2026-04-05', '2026-05-06', '2026-06-05'].map((d) => row(d))
+      const rows = ['2026-01-05', '2026-02-07', '2026-03-04', '2026-04-05', '2026-05-06', '2026-06-05'].map((d) =>
+        row(d),
+      )
       expect(datesOf(rows, '2026-07-05')).toEqual(['2026-07-05'])
     })
 
     it('suggests monthly series only: weekly, quarterly and yearly ones never reach the card', () => {
-      const weekly = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29'].map((d) => row(d, { description: 'Weekly' }))
-      const quarterly = ['2025-01-10', '2025-04-10', '2025-07-10', '2025-10-10'].map((d) => row(d, { description: 'Quarterly' }))
+      const weekly = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29'].map((d) =>
+        row(d, { description: 'Weekly' }),
+      )
+      const quarterly = ['2025-01-10', '2025-04-10', '2025-07-10', '2025-10-10'].map((d) =>
+        row(d, { description: 'Quarterly' }),
+      )
       const yearly = ['2023-06-20', '2024-06-20', '2025-06-20'].map((d) => row(d, { description: 'Yearly' }))
       expect(mornings(weekly, 120)).toEqual([])
       expect(mornings(quarterly, 400)).toEqual([])
@@ -145,7 +169,6 @@ describe('detectUpcoming', () => {
       expect(mornings(withGaps('2026-01-01', [30, 30, 30, 10, 50]), 60)).not.toEqual([])
       expect(mornings(withGaps('2026-01-01', [30, 30, 10, 50]), 60)).toEqual([])
     })
-
   })
 
   describe('when it shows a charge', () => {
@@ -173,13 +196,17 @@ describe('detectUpcoming', () => {
     })
 
     it('follows a billing day that has moved, after two charges on the new day', () => {
-      const rows = ['2026-01-05', '2026-02-05', '2026-03-05', '2026-04-05', '2026-05-10', '2026-06-10'].map((d) => row(d))
+      const rows = ['2026-01-05', '2026-02-05', '2026-03-05', '2026-04-05', '2026-05-10', '2026-06-10'].map((d) =>
+        row(d),
+      )
       expect(datesOf(rows, '2026-07-04')).toEqual([])
       expect(datesOf(rows, '2026-07-09')).toEqual(['2026-07-10'])
     })
 
     it('is at the usual day for a charge that moves between the end and the start of the month', () => {
-      const rows = ['2026-02-27', '2026-03-31', '2026-05-01', '2026-05-31', '2026-07-01', '2026-07-31'].map((d) => row(d))
+      const rows = ['2026-02-27', '2026-03-31', '2026-05-01', '2026-05-31', '2026-07-01', '2026-07-31'].map((d) =>
+        row(d),
+      )
       // Usual day is the last of the month, give or take a day: August opens on the 30th at the latest.
       const [suggestion] = upcoming(rows, '2026-08-30')
       expect(['2026-08-31', '2026-09-01']).toContain(suggestion!.predictedDate)
@@ -328,15 +355,23 @@ describe('detectUpcoming', () => {
     it('is shown for the first day of a budget month before anything is logged in it', () => {
       // Nothing here depends on the month that is open, so a charge on the 13th of a month that
       // starts on the 13th is on the card on the 12th.
-      const rows = monthlyDates(2026, 1, 13, 6).map((date) => row(date, { budgetMonth: `${addDaysIso(date, 31).slice(0, 7)}` }))
+      const rows = monthlyDates(2026, 1, 13, 6).map((date) =>
+        row(date, { budgetMonth: `${addDaysIso(date, 31).slice(0, 7)}` }),
+      )
       expect(datesOf(rows, '2026-07-12')).toEqual(['2026-07-13'])
     })
   })
 
   describe('a series the owner stopped', () => {
-    const stoppedAt = (date: string, key = 'gym|1|1|expense') => ({ [key]: { after: date } })
-    const stoppedUpcoming = (rows: Transaction[], today: string, stopped: Record<string, { after: string }>) =>
-      detectUpcoming(rows, { today, stopped }).map((s) => s.predictedDate)
+    const stoppedAt = (
+      date: string,
+      key = 'gym|1|1|expense',
+    ) => ({ [key]: { after: date } })
+    const stoppedUpcoming = (
+      rows: Transaction[],
+      today: string,
+      stopped: Record<string, { after: string }>,
+    ) => detectUpcoming(rows, { today, stopped }).map((s) => s.predictedDate)
 
     it('is left out of the card', () => {
       expect(stoppedUpcoming(gymOnThe5th(), '2026-07-05', stoppedAt('2026-06-05'))).toEqual([])
@@ -403,7 +438,10 @@ describe('detectUpcoming', () => {
 
     it('judges each series by its own newest charge', () => {
       const both = { ...stopped, 'rent|1|1|expense': { after: '2026-06-01', label: 'Rent' } }
-      const rows = [...gymOnThe5th([row('2026-07-05')]), ...monthlyDates(2026, 1, 1, 6).map((d) => row(d, { description: 'Rent' }))]
+      const rows = [
+        ...gymOnThe5th([row('2026-07-05')]),
+        ...monthlyDates(2026, 1, 1, 6).map((d) => row(d, { description: 'Rent' })),
+      ]
       expect(Object.keys(stillStopped(rows, both))).toEqual(['rent|1|1|expense'])
     })
   })
@@ -446,7 +484,8 @@ describe('the regularity floor', () => {
   // Median 31 days, so a gap within 15% of it is regular: three of five gaps sit at the floor, four of seven below it.
   const atTheFloor = withGaps('2026-01-05', [30, 31, 30, 50, 52])
   const belowIt = withGaps('2026-01-05', [30, 31, 30, 29, 50, 52, 70])
-  const gapsOfRows = (rows: Transaction[]) => rows.slice(1).map((r, i) => (Date.parse(r.date) - Date.parse(rows[i]!.date)) / 86_400_000)
+  const gapsOfRows = (rows: Transaction[]) =>
+    rows.slice(1).map((r, i) => (Date.parse(r.date) - Date.parse(rows[i]!.date)) / 86_400_000)
 
   it('is shared by the card and the fixed split, so a series is on one exactly when it is trusted by the other', () => {
     expect(regularityScore(gapsOfRows(atTheFloor))).toBe(MIN_REGULARITY)

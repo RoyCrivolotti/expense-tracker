@@ -9,5 +9,10 @@ export const SHELL_URL = '/index.html'
  * navigations too. Those are left to the browser: an offline receipt is an error and not the shell, and Access must
  * answer for itself.
  */
-export const isShellNavigation = ({ request, url }: { request: { mode: string }; url: { pathname: string } }): boolean =>
-  request.mode === 'navigate' && !/^\/(api|cdn-cgi)\//.test(url.pathname)
+export const isShellNavigation = ({
+  request,
+  url,
+}: {
+  request: { mode: string }
+  url: { pathname: string }
+}): boolean => request.mode === 'navigate' && !/^\/(api|cdn-cgi)\//.test(url.pathname)

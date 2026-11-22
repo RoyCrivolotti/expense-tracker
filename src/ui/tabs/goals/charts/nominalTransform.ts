@@ -1,7 +1,10 @@
 import type { ChartSeries } from '../../../charts/LinearChart'
 import { drawnValuesOf } from '../../../charts/steppedPoints'
 
-function factor(yearOffset: number, inflationRate: number): number {
+function factor(
+  yearOffset: number,
+  inflationRate: number,
+): number {
   return Math.pow(1 + inflationRate, yearOffset)
 }
 
@@ -17,21 +20,22 @@ export function inflateSeries(
 ): ChartSeries[] {
   return series.map((s) => {
     // A series placed between the axis' places is inflated by the year each value sits at.
-    const inflate = (values: number[]) => values.map((v, i) => Math.round(v * factor(s.xs?.[i] ?? years[i] ?? i, inflationRate)))
+    const inflate = (values: number[]) =>
+      values.map((v, i) => Math.round(v * factor(s.xs?.[i] ?? years[i] ?? i, inflationRate)))
     return {
-    ...s,
-    values: inflate(s.values),
-    ...(s.preStep ? { preStep: inflate(s.preStep) } : {}),
-    ...(s.band
-      ? {
-          band: {
-            lo: inflate(s.band.lo),
-            hi: inflate(s.band.hi),
-            ...(s.band.loPre ? { loPre: inflate(s.band.loPre) } : {}),
-            ...(s.band.hiPre ? { hiPre: inflate(s.band.hiPre) } : {}),
-          },
-        }
-      : {}),
+      ...s,
+      values: inflate(s.values),
+      ...(s.preStep ? { preStep: inflate(s.preStep) } : {}),
+      ...(s.band
+        ? {
+            band: {
+              lo: inflate(s.band.lo),
+              hi: inflate(s.band.hi),
+              ...(s.band.loPre ? { loPre: inflate(s.band.loPre) } : {}),
+              ...(s.band.hiPre ? { hiPre: inflate(s.band.hiPre) } : {}),
+            },
+          }
+        : {}),
     }
   })
 }
@@ -40,7 +44,10 @@ export function inflateSeries(
  * Check-in points brought to the plan's euros, each by its own fractional `xIndex`, so an
  * actual exactly on plan sits on the real line rather than reading as ahead of it.
  */
-export function deflatePoints(series: ChartSeries[], inflationRate: number): ChartSeries[] {
+export function deflatePoints(
+  series: ChartSeries[],
+  inflationRate: number,
+): ChartSeries[] {
   return series.map((s) =>
     s.points
       ? { ...s, points: s.points.map((p) => ({ ...p, value: Math.round(p.value / factor(p.xIndex, inflationRate)) })) }
@@ -49,7 +56,10 @@ export function deflatePoints(series: ChartSeries[], inflationRate: number): Cha
 }
 
 /** A projection given as points is real like the lines: the nominal view inflates each by its own year. */
-export function inflatePoints(series: ChartSeries[], inflationRate: number): ChartSeries[] {
+export function inflatePoints(
+  series: ChartSeries[],
+  inflationRate: number,
+): ChartSeries[] {
   return series.map((s) =>
     s.points
       ? { ...s, points: s.points.map((p) => ({ ...p, value: Math.round(p.value * factor(p.xIndex, inflationRate)) })) }
@@ -58,7 +68,11 @@ export function inflatePoints(series: ChartSeries[], inflationRate: number): Cha
 }
 
 /** Real point series as drawn: inflated with the lines in the nominal view, untouched otherwise. */
-function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: number): ChartSeries[] {
+function drawnRealPoints(
+  realPoints: ChartSeries[],
+  nominalMode: boolean,
+  rate: number,
+): ChartSeries[] {
   return nominalMode ? inflatePoints(realPoints, rate) : realPoints
 }
 
@@ -123,7 +137,13 @@ export function computeChartDisplayData(
   drawnMax: number | undefined
 } {
   const drawnRate = viewInflation ?? inflationRate
-  const { floor: nominalSeries, drawn: drawnSeries } = nominalLines(series, floorSeries, years, inflationRate, drawnRate)
+  const { floor: nominalSeries, drawn: drawnSeries } = nominalLines(
+    series,
+    floorSeries,
+    years,
+    inflationRate,
+    drawnRate,
+  )
   const displaySeries = nominalMode ? drawnSeries : series
   const displayExtraSeries = nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate)
   const displayRealPoints = drawnRealPoints(realPoints, nominalMode, drawnRate)

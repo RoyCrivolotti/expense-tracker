@@ -61,7 +61,11 @@ interface Request {
   rawBody?: BodyInit
 }
 
-const expense = (ids: SeededIds, day: string, description: string) => ({
+const expense = (
+  ids: SeededIds,
+  day: string,
+  description: string,
+) => ({
   date: day,
   budgetMonth: day.slice(0, 7),
   description,
@@ -79,47 +83,193 @@ const id = (value: number) => ({ id: String(value) })
  * "has a case for every mutating route", so adding a route means saying how to exercise it.
  */
 const CASES: Record<string, (ids: SeededIds) => Request & { status: number }> = {
-  'POST /accounts': () => ({ status: 201, path: '/accounts', body: { name: 'Savings', kind: 'debit', settlement: 'immediate', active: true } }),
-  'PATCH /accounts/:id': (ids) => ({ status: 200, path: `/accounts/${ids.debit}`, params: id(ids.debit), body: { name: 'Main' } }),
-  'DELETE /accounts/:id': (ids) => ({ status: 200, path: `/accounts/${ids.spareAccount}`, params: id(ids.spareAccount), body: {} }),
+  'POST /accounts': () => ({
+    status: 201,
+    path: '/accounts',
+    body: { name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+  }),
+  'PATCH /accounts/:id': (ids) => ({
+    status: 200,
+    path: `/accounts/${ids.debit}`,
+    params: id(ids.debit),
+    body: { name: 'Main' },
+  }),
+  'DELETE /accounts/:id': (ids) => ({
+    status: 200,
+    path: `/accounts/${ids.spareAccount}`,
+    params: id(ids.spareAccount),
+    body: {},
+  }),
   'POST /attachments': (ids) => ({ status: 201, path: '/attachments', rawBody: uploadForm(ids.transactions[1]!) }),
-  'DELETE /attachments/:id': (ids) => ({ status: 200, path: `/attachments/${ids.attachment}`, params: id(ids.attachment) }),
-  'PUT /cash-actuals': () => ({ status: 200, path: '/cash-actuals', body: { yearMonth: '2026-10', actualCashCents: 250_000 } }),
-  'POST /categories': () => ({ status: 201, path: '/categories', body: { name: 'Fun', monthlyBudgetCents: 1_000, sortOrder: 9, active: true } }),
-  'PATCH /categories/:id': (ids) => ({ status: 200, path: `/categories/${ids.groceries}`, params: id(ids.groceries), body: { monthlyBudgetCents: 70_000 } }),
-  'DELETE /categories/:id': (ids) => ({ status: 200, path: `/categories/${ids.spareCategory}`, params: id(ids.spareCategory), body: {} }),
-  'POST /flags': () => ({ status: 201, path: '/flags', body: { name: 'Gift', color: '#F43F5E', sortOrder: 9, active: true } }),
-  'PATCH /flags/:id': (ids) => ({ status: 200, path: `/flags/${ids.flag}`, params: id(ids.flag), body: { name: 'Client' } }),
+  'DELETE /attachments/:id': (ids) => ({
+    status: 200,
+    path: `/attachments/${ids.attachment}`,
+    params: id(ids.attachment),
+  }),
+  'PUT /cash-actuals': () => ({
+    status: 200,
+    path: '/cash-actuals',
+    body: { yearMonth: '2026-10', actualCashCents: 250_000 },
+  }),
+  'POST /categories': () => ({
+    status: 201,
+    path: '/categories',
+    body: { name: 'Fun', monthlyBudgetCents: 1_000, sortOrder: 9, active: true },
+  }),
+  'PATCH /categories/:id': (ids) => ({
+    status: 200,
+    path: `/categories/${ids.groceries}`,
+    params: id(ids.groceries),
+    body: { monthlyBudgetCents: 70_000 },
+  }),
+  'DELETE /categories/:id': (ids) => ({
+    status: 200,
+    path: `/categories/${ids.spareCategory}`,
+    params: id(ids.spareCategory),
+    body: {},
+  }),
+  'POST /flags': () => ({
+    status: 201,
+    path: '/flags',
+    body: { name: 'Gift', color: '#F43F5E', sortOrder: 9, active: true },
+  }),
+  'PATCH /flags/:id': (ids) => ({
+    status: 200,
+    path: `/flags/${ids.flag}`,
+    params: id(ids.flag),
+    body: { name: 'Client' },
+  }),
   'DELETE /flags/:id': (ids) => ({ status: 200, path: `/flags/${ids.spareFlag}`, params: id(ids.spareFlag) }),
   'POST /installment-plans': (ids) => ({
     status: 201,
     path: '/installment-plans',
-    body: { description: 'Desk', totalCount: 2, amountCents: 20_000, accountId: ids.card, categoryId: ids.travel, type: 'expense', anchorBudgetMonth: '2026-12', startInstallmentIndex: 1, active: true },
+    body: {
+      description: 'Desk',
+      totalCount: 2,
+      amountCents: 20_000,
+      accountId: ids.card,
+      categoryId: ids.travel,
+      type: 'expense',
+      anchorBudgetMonth: '2026-12',
+      startInstallmentIndex: 1,
+      active: true,
+    },
   }),
-  'PATCH /installment-plans/:id': (ids) => ({ status: 200, path: `/installment-plans/${ids.plan}`, params: id(ids.plan), body: { description: 'Couch' } }),
-  'DELETE /installment-plans/:id': (ids) => ({ status: 200, path: `/installment-plans/${ids.plan}`, params: id(ids.plan) }),
-  'POST /labels': () => ({ status: 201, path: '/labels', body: { name: 'Work', color: '#6366F1', sortOrder: 9, active: true } }),
-  'PATCH /labels/:id': (ids) => ({ status: 200, path: `/labels/${ids.label}`, params: id(ids.label), body: { name: 'Holiday' } }),
+  'PATCH /installment-plans/:id': (ids) => ({
+    status: 200,
+    path: `/installment-plans/${ids.plan}`,
+    params: id(ids.plan),
+    body: { description: 'Couch' },
+  }),
+  'DELETE /installment-plans/:id': (ids) => ({
+    status: 200,
+    path: `/installment-plans/${ids.plan}`,
+    params: id(ids.plan),
+  }),
+  'POST /labels': () => ({
+    status: 201,
+    path: '/labels',
+    body: { name: 'Work', color: '#6366F1', sortOrder: 9, active: true },
+  }),
+  'PATCH /labels/:id': (ids) => ({
+    status: 200,
+    path: `/labels/${ids.label}`,
+    params: id(ids.label),
+    body: { name: 'Holiday' },
+  }),
   'DELETE /labels/:id': (ids) => ({ status: 200, path: `/labels/${ids.spareLabel}`, params: id(ids.spareLabel) }),
   'POST /scenarios': () => ({ status: 201, path: '/scenarios', body: scenarioInput({ name: 'Another' }) }),
-  'PATCH /scenarios/:id': (ids) => ({ status: 200, path: `/scenarios/${ids.scenario}`, params: id(ids.scenario), body: { name: 'Renamed' } }),
-  'DELETE /scenarios/:id': (ids) => ({ status: 200, path: `/scenarios/${ids.spareScenario}`, params: id(ids.spareScenario) }),
+  'PATCH /scenarios/:id': (ids) => ({
+    status: 200,
+    path: `/scenarios/${ids.scenario}`,
+    params: id(ids.scenario),
+    body: { name: 'Renamed' },
+  }),
+  'DELETE /scenarios/:id': (ids) => ({
+    status: 200,
+    path: `/scenarios/${ids.spareScenario}`,
+    params: id(ids.spareScenario),
+  }),
   'PUT /settings': () => ({ status: 200, path: '/settings', body: { openingCashCents: 123_400 } }),
-  'PUT /statements': (ids) => ({ status: 200, path: '/statements', body: { accountId: ids.card, yearMonth: '2026-10', paid: true, paidOn: '2026-10-20' } }),
-  'POST /transactions': (ids) => ({ status: 201, path: '/transactions', body: expense(ids, '2026-10-08', 'Coffee beans') }),
-  'PATCH /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[0]}`, params: id(ids.transactions[0]!), body: { description: 'Edited' } }),
-  'DELETE /transactions/:id': (ids) => ({ status: 200, path: `/transactions/${ids.spareTransaction}`, params: id(ids.spareTransaction) }),
-  'PUT /transactions/:id/labels': (ids) => ({ status: 200, path: `/transactions/${ids.transactions[1]}/labels`, params: id(ids.transactions[1]!), body: { labelIds: [] } }),
-  'POST /transactions/bulk/labels': (ids) => ({ status: 200, path: '/transactions/bulk/labels', body: { ids: [ids.transactions[0]], labelIds: [ids.label] } }),
-  'POST /transactions/bulk': (ids) => ({ status: 201, path: '/transactions/bulk', body: { transactions: [expense(ids, '2026-10-09', 'Bulk one'), expense(ids, '2026-10-10', 'Bulk two')] } }),
-  'PATCH /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.transactions[0]], patch: { categoryId: ids.travel } } }),
-  'DELETE /transactions/bulk': (ids) => ({ status: 200, path: '/transactions/bulk', body: { ids: [ids.spareTransaction] } }),
-  'POST /wealth-accounts': () => ({ status: 201, path: '/wealth-accounts', body: { name: 'Pension', kind: 'investment', sortOrder: 5, archived: false } }),
-  'PATCH /wealth-accounts/:id': (ids) => ({ status: 200, path: `/wealth-accounts/${ids.wealthAccount}`, params: id(ids.wealthAccount), body: { sortOrder: 4 } }),
-  'DELETE /wealth-accounts/:id': (ids) => ({ status: 200, path: `/wealth-accounts/${ids.spareWealthAccount}`, params: id(ids.spareWealthAccount) }),
-  'POST /wealth-checkins': (ids) => ({ status: 201, path: '/wealth-checkins', body: { checkinDate: '2026-09-01', entries: [{ accountId: ids.wealthAccount, valueCents: 6_000_000 }] } }),
-  'PATCH /wealth-checkins/:id': (ids) => ({ status: 200, path: `/wealth-checkins/${ids.checkin}`, params: id(ids.checkin), body: { checkinDate: '2026-06-02' } }),
-  'DELETE /wealth-checkins/:id': (ids) => ({ status: 200, path: `/wealth-checkins/${ids.spareCheckin}`, params: id(ids.spareCheckin) }),
+  'PUT /statements': (ids) => ({
+    status: 200,
+    path: '/statements',
+    body: { accountId: ids.card, yearMonth: '2026-10', paid: true, paidOn: '2026-10-20' },
+  }),
+  'POST /transactions': (ids) => ({
+    status: 201,
+    path: '/transactions',
+    body: expense(ids, '2026-10-08', 'Coffee beans'),
+  }),
+  'PATCH /transactions/:id': (ids) => ({
+    status: 200,
+    path: `/transactions/${ids.transactions[0]}`,
+    params: id(ids.transactions[0]!),
+    body: { description: 'Edited' },
+  }),
+  'DELETE /transactions/:id': (ids) => ({
+    status: 200,
+    path: `/transactions/${ids.spareTransaction}`,
+    params: id(ids.spareTransaction),
+  }),
+  'PUT /transactions/:id/labels': (ids) => ({
+    status: 200,
+    path: `/transactions/${ids.transactions[1]}/labels`,
+    params: id(ids.transactions[1]!),
+    body: { labelIds: [] },
+  }),
+  'POST /transactions/bulk/labels': (ids) => ({
+    status: 200,
+    path: '/transactions/bulk/labels',
+    body: { ids: [ids.transactions[0]], labelIds: [ids.label] },
+  }),
+  'POST /transactions/bulk': (ids) => ({
+    status: 201,
+    path: '/transactions/bulk',
+    body: { transactions: [expense(ids, '2026-10-09', 'Bulk one'), expense(ids, '2026-10-10', 'Bulk two')] },
+  }),
+  'PATCH /transactions/bulk': (ids) => ({
+    status: 200,
+    path: '/transactions/bulk',
+    body: { ids: [ids.transactions[0]], patch: { categoryId: ids.travel } },
+  }),
+  'DELETE /transactions/bulk': (ids) => ({
+    status: 200,
+    path: '/transactions/bulk',
+    body: { ids: [ids.spareTransaction] },
+  }),
+  'POST /wealth-accounts': () => ({
+    status: 201,
+    path: '/wealth-accounts',
+    body: { name: 'Pension', kind: 'investment', sortOrder: 5, archived: false },
+  }),
+  'PATCH /wealth-accounts/:id': (ids) => ({
+    status: 200,
+    path: `/wealth-accounts/${ids.wealthAccount}`,
+    params: id(ids.wealthAccount),
+    body: { sortOrder: 4 },
+  }),
+  'DELETE /wealth-accounts/:id': (ids) => ({
+    status: 200,
+    path: `/wealth-accounts/${ids.spareWealthAccount}`,
+    params: id(ids.spareWealthAccount),
+  }),
+  'POST /wealth-checkins': (ids) => ({
+    status: 201,
+    path: '/wealth-checkins',
+    body: { checkinDate: '2026-09-01', entries: [{ accountId: ids.wealthAccount, valueCents: 6_000_000 }] },
+  }),
+  'PATCH /wealth-checkins/:id': (ids) => ({
+    status: 200,
+    path: `/wealth-checkins/${ids.checkin}`,
+    params: id(ids.checkin),
+    body: { checkinDate: '2026-06-02' },
+  }),
+  'DELETE /wealth-checkins/:id': (ids) => ({
+    status: 200,
+    path: `/wealth-checkins/${ids.spareCheckin}`,
+    params: id(ids.spareCheckin),
+  }),
 }
 
 const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
@@ -142,7 +292,10 @@ const READ_CASES: Record<string, (ids: SeededIds) => Request> = {
   }),
 }
 
-async function getDataset(world: World, headers?: Record<string, string>) {
+async function getDataset(
+  world: World,
+  headers?: Record<string, string>,
+) {
   const response = await world.call(onRequestGet, { ...(headers ? { headers } : {}) })
   return { response, etag: response.headers.get('etag'), text: await response.text() }
 }
@@ -242,16 +395,21 @@ describe('a read never moves the revision', () => {
 })
 
 describe('the token a write replaced', () => {
-  const seeing = (record: (value: unknown) => void): Handler => (context) => {
-    record(context.data.revisionBeforeWrite)
-    return new Response('ok')
-  }
+  const seeing =
+    (record: (value: unknown) => void): Handler =>
+    (context) => {
+      record(context.data.revisionBeforeWrite)
+      return new Response('ok')
+    }
 
   it('reaches the handler, so a write can tell whether the ledger moved since it was looked at', async () => {
     const before = world.token()
     let seen: unknown = 'unset'
 
-    await world.call(seeing((value) => (seen = value)), { method: 'PATCH', path: '/anything' })
+    await world.call(
+      seeing((value) => (seen = value)),
+      { method: 'PATCH', path: '/anything' },
+    )
 
     expect(before).not.toBeNull()
     expect(seen).toBe(before)
@@ -261,10 +419,16 @@ describe('the token a write replaced', () => {
   it('is the token the previous write left behind', async () => {
     const first = world.token()
     let seen: unknown = 'unset'
-    await world.call(seeing(() => undefined), { method: 'POST', path: '/anything' })
+    await world.call(
+      seeing(() => undefined),
+      { method: 'POST', path: '/anything' },
+    )
     const second = world.token()
 
-    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything' })
+    await world.call(
+      seeing((value) => (seen = value)),
+      { method: 'POST', path: '/anything' },
+    )
 
     expect(seen).toBe(second)
     expect(seen).not.toBe(first)
@@ -274,7 +438,10 @@ describe('the token a write replaced', () => {
     let seen: unknown = 'unset'
     expect(world.token(OTHER)).toBeNull()
 
-    await world.call(seeing((value) => (seen = value)), { method: 'POST', path: '/anything', email: OTHER })
+    await world.call(
+      seeing((value) => (seen = value)),
+      { method: 'POST', path: '/anything', email: OTHER },
+    )
 
     expect(seen).toBeNull()
     expect(world.token(OTHER)).not.toBeNull()
@@ -284,7 +451,10 @@ describe('the token a write replaced', () => {
     let seen: unknown = 'unset'
     world.clearLog()
 
-    await world.call(seeing((value) => (seen = value)), { path: '/anything' })
+    await world.call(
+      seeing((value) => (seen = value)),
+      { path: '/anything' },
+    )
 
     expect(seen).toBeUndefined()
     expect(world.log.some((sql) => sql.includes('FROM owner_revision'))).toBe(false)
@@ -293,7 +463,10 @@ describe('the token a write replaced', () => {
 
 describe('the bumps around a write', () => {
   /** Runs a handler that records the token it saw, so the order of bump, handler, bump shows. */
-  async function writeSeeing(handler: (seen: () => string | null) => Handler, method = 'POST') {
+  async function writeSeeing(
+    handler: (seen: () => string | null) => Handler,
+    method = 'POST',
+  ) {
     const before = world.token()
     let during: string | null = null
     const response = await world.call(
@@ -390,7 +563,10 @@ describe('the bumps around a write', () => {
 })
 
 describe('the receipt a write sends', () => {
-  const answering = (status = 200): Handler => () => new Response('ok', { status })
+  const answering =
+    (status = 200): Handler =>
+    () =>
+      new Response('ok', { status })
   const receipt = (response: Response) => ({
     before: response.headers.get(REVISION_BEFORE_HEADER),
     after: response.headers.get(REVISION_AFTER_HEADER),
@@ -553,10 +729,11 @@ describe('GET /api/expenses', () => {
 
   it('sends the whole dataset again to a browser holding the tag from before a write', async () => {
     const { etag: stale } = await getDataset(world)
-    const write = await world.call(
-      (await import('./settings/index')).onRequestPut,
-      { method: 'PUT', path: '/settings', body: { openingCashCents: 777_700 } },
-    )
+    const write = await world.call((await import('./settings/index')).onRequestPut, {
+      method: 'PUT',
+      path: '/settings',
+      body: { openingCashCents: 777_700 },
+    })
     expect(write.status).toBe(200)
 
     const { response, etag, text } = await getDataset(world, { 'if-none-match': stale! })
@@ -609,9 +786,7 @@ describe('the budget month is part of the tag', () => {
     expect(november.response.status).toBe(200)
     expect(november.etag).not.toBe(october)
     expect(november.etag).toContain('-2026-11-')
-    const sofa = JSON.parse(november.text).transactions.filter(
-      (t: { planId?: number }) => t.planId === ids.plan,
-    )
+    const sofa = JSON.parse(november.text).transactions.filter((t: { planId?: number }) => t.planId === ids.plan)
     expect(sofa).toHaveLength(1)
   })
 

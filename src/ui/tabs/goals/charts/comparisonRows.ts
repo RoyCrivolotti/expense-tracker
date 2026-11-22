@@ -54,9 +54,15 @@ function houseLabel(year: number | null): string {
  * FI for a row: the years from its own plan start, or, for a plan and its restart from a check-in (whose years are
  * counted from two different days), the month it is reached in, so the two can be read against each other.
  */
-function fiCell(params: ReturnType<typeof scenarioToParams>, scenario: { annualSpendCents: number; safeWithdrawalRate: number; planStartDate: string | null }, asMonth: boolean): string {
+function fiCell(
+  params: ReturnType<typeof scenarioToParams>,
+  scenario: { annualSpendCents: number; safeWithdrawalRate: number; planStartDate: string | null },
+  asMonth: boolean,
+): string {
   const year = yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)
-  const month = asMonth ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)) : null
+  const month = asMonth
+    ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate))
+    : null
   return month ?? fiLabel(year)
 }
 
@@ -87,7 +93,13 @@ type Entry = { key: string; name: string; color: string; scenario: GoalScenario 
  * Every row on the calendar that starts on `origin`, each read on the same day and in the origin's euros:
  * `year` years after it, or with no window the year `restYear` gives. The plan from today joins at the check-in.
  */
-function calendarRows(all: Entry[], origin: string, format: MoneyFormat, inflationRate: number, year: number | null): ComparisonRow[] {
+function calendarRows(
+  all: Entry[],
+  origin: string,
+  format: MoneyFormat,
+  inflationRate: number,
+  year: number | null,
+): ComparisonRow[] {
   const placed = all.map((entry) => ({ entry, row: place(entry.scenario, origin, inflationRate) }))
   const rest = year === null ? restYear(placed.map((p) => p.row)) : { year, everyReaches: true }
   const atYear = rest.year
@@ -136,11 +148,23 @@ export function comparisonRows(
     // The plan restarted from the latest check-in sits under the plan, in its colour; its
     // years count from the check-in, which the table's hint says.
     ...(fromToday && s.id === fromToday.scenario.id
-      ? [{ key: 'from-today', name: `${tableName(s.name, names)}, from today`, color: s.color, scenario: fromToday.scenario }]
+      ? [
+          {
+            key: 'from-today',
+            name: `${tableName(s.name, names)}, from today`,
+            color: s.color,
+            scenario: fromToday.scenario,
+          },
+        ]
       : []),
   ])
   if (includeDraft) {
-    all.push({ key: 'draft', name: `${tableName(draft.name, names)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } })
+    all.push({
+      key: 'draft',
+      name: `${tableName(draft.name, names)} (editing)`,
+      color: draft.color,
+      scenario: { ...draft, id: 0 },
+    })
   }
   const origin = comparisonOrigin(scenarios, draft)
   if (origin !== null) return calendarRows(all, origin, format, inflationRate, year)
@@ -157,7 +181,11 @@ export function comparisonRows(
       horizonYears: last?.year ?? scenario.horizonYears,
       atYear,
       everyReaches: true,
-      fi: fiCell(params, scenario, key === 'from-today' || (fromToday !== null && scenario.id === fromToday.scenario.id && key !== 'draft')),
+      fi: fiCell(
+        params,
+        scenario,
+        key === 'from-today' || (fromToday !== null && scenario.id === fromToday.scenario.id && key !== 'draft'),
+      ),
       ...ownYearFigures(end, format),
       house: houseLabel(scenario.housePurchaseYear),
       // Exact: 1,000, 1,400 and 1,499 a month are three different plans, not "1k".

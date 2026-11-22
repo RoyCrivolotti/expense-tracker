@@ -43,10 +43,23 @@ const counted: Usage = {
 }
 
 /** What the model says of the counts: `usage` null is none read yet, and `note` is why they cannot be taken as they are. */
-function windowOf({ usage = counted, note = null, refresh = vi.fn(), empty = false }: { usage?: Usage | null; note?: UsageView['note']; refresh?: () => void; empty?: boolean } = {}): ExpenseModel {
-  const dataset = makeDataset({ categories: [DINING, GROCERIES], accounts: [CHECKING, CARD], flags: empty ? [] : [work], labels: empty ? [] : [trip] })
+function windowOf({
+  usage = counted,
+  note = null,
+  refresh = vi.fn(),
+  empty = false,
+}: { usage?: Usage | null; note?: UsageView['note']; refresh?: () => void; empty?: boolean } = {}): ExpenseModel {
+  const dataset = makeDataset({
+    categories: [DINING, GROCERIES],
+    accounts: [CHECKING, CARD],
+    flags: empty ? [] : [work],
+    labels: empty ? [] : [trip],
+  })
   const view: UsageView = {
-    count: (kind, id) => (usage === null ? null : usageCount(usage, kind, id)),
+    count: (
+      kind,
+      id,
+    ) => (usage === null ? null : usageCount(usage, kind, id)),
     note,
     notice: note === null ? null : <UsageNote note={note} refresh={refresh} />,
     words: note === null ? null : NOTE_WORDS[note],
@@ -54,13 +67,30 @@ function windowOf({ usage = counted, note = null, refresh = vi.fn(), empty = fal
   return { ...buildExpenseModel(dataset), useUsage: () => view }
 }
 
-const actions = { deleteCategory: vi.fn(), deleteAccount: vi.fn(), deleteFlag: vi.fn(), deleteLabel: vi.fn() } as unknown as ExpenseActions
+const actions = {
+  deleteCategory: vi.fn(),
+  deleteAccount: vi.fn(),
+  deleteFlag: vi.fn(),
+  deleteLabel: vi.fn(),
+} as unknown as ExpenseActions
 
-const inSettings = (ui: React.ReactElement) => render(<MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">{ui}</MoneyFormatProvider>)
+const inSettings = (ui: React.ReactElement) =>
+  render(
+    <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+      {ui}
+    </MoneyFormatProvider>,
+  )
 
 describe('deleting a category or account from a window', () => {
   it('asks to reassign when the server counts rows that are not held, which the window shows as none', () => {
-    render(<ConfigModal target={{ kind: 'category', record: GROCERIES }} model={windowOf({})} actions={actions} onClose={vi.fn()} />)
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={windowOf({})}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
 
@@ -69,13 +99,27 @@ describe('deleting a category or account from a window', () => {
   })
 
   it('counts statements for an account too, and deletes outright one the server counts nothing for', () => {
-    render(<ConfigModal target={{ kind: 'account', record: CARD }} model={windowOf({})} actions={actions} onClose={vi.fn()} />)
+    render(
+      <ConfigModal
+        target={{ kind: 'account', record: CARD }}
+        model={windowOf({})}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Delete account' }))
     expect(screen.getByText(/used by 7 records/)).toBeTruthy()
   })
 
   it('deletes outright what the server counts nothing for', () => {
-    render(<ConfigModal target={{ kind: 'category', record: DINING }} model={windowOf({})} actions={actions} onClose={vi.fn()} />)
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: DINING }}
+        model={windowOf({})}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
     expect(screen.getByText("This can't be undone.")).toBeTruthy()
   })
@@ -85,7 +129,12 @@ describe('deleting a category or account from a window', () => {
     ['account', CARD],
   ] as const)('cannot be asked of a %s while the counts are being read, and says they are', (kind, record) => {
     render(
-      <ConfigModal target={{ kind, record } as never} model={windowOf({ usage: null, note: 'reading' })} actions={actions} onClose={vi.fn()} />,
+      <ConfigModal
+        target={{ kind, record } as never}
+        model={windowOf({ usage: null, note: 'reading' })}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
     )
     expect(screen.getByRole('button', { name: `Delete ${kind}` })).toBeDisabled()
     expect(screen.getByRole('status')).toHaveTextContent('Reading the counts…')
@@ -111,7 +160,14 @@ describe('deleting a category or account from a window', () => {
   })
 
   it('goes by the counts it has while they may be out of date, and says so', () => {
-    render(<ConfigModal target={{ kind: 'category', record: GROCERIES }} model={windowOf({ note: 'stale' })} actions={actions} onClose={vi.fn()} />)
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={windowOf({ note: 'stale' })}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
     expect(screen.getByRole('status')).toHaveTextContent('The counts may be out of date.')
     fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
     expect(screen.getByText(/used by 4 records/)).toBeTruthy()
@@ -156,7 +212,10 @@ describe('the flag and label managers over a window', () => {
     ['failed', null],
     ['stale', counted],
   ] as const)('keep the delete of a flag or label shut while the counts are %s, and say so', async (note, usage) => {
-    for (const [Modal, kind] of [[FlagsModal, 'flag'], [LabelsModal, 'label']] as const) {
+    for (const [Modal, kind] of [
+      [FlagsModal, 'flag'],
+      [LabelsModal, 'label'],
+    ] as const) {
       const shown = inSettings(<Modal model={windowOf({ usage, note })} actions={actions} onClose={vi.fn()} />)
       await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
       expect(screen.getByRole('button', { name: `Delete ${kind}` })).toBeDisabled()
@@ -176,24 +235,27 @@ describe('the flag and label managers over a window', () => {
   it.each([
     ['flag', FlagsModal, /Every transaction flagged with it will be unflagged/, /7 transactions/],
     ['label', LabelsModal, /Every transaction with this label will lose it/, /9 transactions/],
-  ] as const)('say it without a number, and with the note, when the counts of a %s stop being current while the sheet is open', async (kind, Modal, generic, number) => {
-    const wrap = (model: ExpenseModel) => (
-      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <Modal model={model} actions={actions} onClose={vi.fn()} />
-      </MoneyFormatProvider>
-    )
-    const shown = render(wrap(windowOf({})))
-    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    await userEvent.click(screen.getByRole('button', { name: `Delete ${kind}` }))
-    expect(within(screen.getByRole('alertdialog')).getByText(number)).toBeInTheDocument()
+  ] as const)(
+    'say it without a number, and with the note, when the counts of a %s stop being current while the sheet is open',
+    async (kind, Modal, generic, number) => {
+      const wrap = (model: ExpenseModel) => (
+        <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+          <Modal model={model} actions={actions} onClose={vi.fn()} />
+        </MoneyFormatProvider>
+      )
+      const shown = render(wrap(windowOf({})))
+      await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+      await userEvent.click(screen.getByRole('button', { name: `Delete ${kind}` }))
+      expect(within(screen.getByRole('alertdialog')).getByText(number)).toBeInTheDocument()
 
-    shown.rerender(wrap(windowOf({ note: 'stale' })))
+      shown.rerender(wrap(windowOf({ note: 'stale' })))
 
-    const sheet = within(screen.getByRole('alertdialog'))
-    expect(sheet.getByText(generic)).toBeInTheDocument()
-    expect(sheet.getByText(NOTE_WORDS.stale)).toBeInTheDocument()
-    expect(sheet.queryByText(number)).toBeNull()
-  })
+      const sheet = within(screen.getByRole('alertdialog'))
+      expect(sheet.getByText(generic)).toBeInTheDocument()
+      expect(sheet.getByText(NOTE_WORDS.stale)).toBeInTheDocument()
+      expect(sheet.queryByText(number)).toBeNull()
+    },
+  )
 })
 
 describe('the notice about the counts, when there is nothing to count or to touch', () => {
@@ -201,7 +263,9 @@ describe('the notice about the counts, when there is nothing to count or to touc
     ['flags', FlagsModal],
     ['labels', LabelsModal],
   ] as const)('is not shown over an empty list of %s, which has no counts to wait for', (_name, Modal) => {
-    inSettings(<Modal model={windowOf({ usage: null, note: 'reading', empty: true })} actions={actions} onClose={vi.fn()} />)
+    inSettings(
+      <Modal model={windowOf({ usage: null, note: 'reading', empty: true })} actions={actions} onClose={vi.fn()} />,
+    )
     expect(screen.queryByText('Reading the counts…')).toBeNull()
     expect(screen.queryByRole('status')).toBeNull()
   })
@@ -217,8 +281,11 @@ describe('the notice about the counts, when there is nothing to count or to touc
   it.each([
     ['failed', 'Try again'],
     ['stale', 'Read again'],
-  ] as const)('has a "%s" link to %s at least 44px high, though it reads as a link in a line of text', (note, label) => {
-    inSettings(<LabelsModal model={windowOf({ note })} actions={actions} onClose={vi.fn()} />)
-    expect(getComputedStyle(screen.getByRole('button', { name: label })).minHeight).toBe('44px')
-  })
+  ] as const)(
+    'has a "%s" link to %s at least 44px high, though it reads as a link in a line of text',
+    (note, label) => {
+      inSettings(<LabelsModal model={windowOf({ note })} actions={actions} onClose={vi.fn()} />)
+      expect(getComputedStyle(screen.getByRole('button', { name: label })).minHeight).toBe('44px')
+    },
+  )
 })

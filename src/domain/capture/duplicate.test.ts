@@ -13,8 +13,21 @@ import {
   type TypedRow,
 } from './duplicate'
 
-const payment = (over: Partial<PaymentToMatch> = {}): PaymentToMatch => ({ localDate: '2026-11-10', amountCents: 1250, currency: 'EUR', suggestedType: 'expense', ...over })
-const row = (over: Partial<TypedRow> = {}): TypedRow => ({ id: 1, date: '2026-11-10', description: 'Cafe', type: 'expense', amountCents: 1250, ...over })
+const payment = (over: Partial<PaymentToMatch> = {}): PaymentToMatch => ({
+  localDate: '2026-11-10',
+  amountCents: 1250,
+  currency: 'EUR',
+  suggestedType: 'expense',
+  ...over,
+})
+const row = (over: Partial<TypedRow> = {}): TypedRow => ({
+  id: 1,
+  date: '2026-11-10',
+  description: 'Cafe',
+  type: 'expense',
+  amountCents: 1250,
+  ...over,
+})
 
 describe('the window', () => {
   it('is 14 days back and 3 forward, in one constant', () => {
@@ -60,7 +73,13 @@ describe('dayGap and candidateSpan', () => {
   })
 
   it('spans the matchable payments widened by the window, and is nothing when none can be matched', () => {
-    expect(candidateSpan([payment({ localDate: '2026-11-10' }), payment({ localDate: '2026-11-20' }), payment({ localDate: '2026-01-01', suggestedType: null })])).toEqual({ from: '2026-10-27', to: '2026-11-23' })
+    expect(
+      candidateSpan([
+        payment({ localDate: '2026-11-10' }),
+        payment({ localDate: '2026-11-20' }),
+        payment({ localDate: '2026-01-01', suggestedType: null }),
+      ]),
+    ).toEqual({ from: '2026-10-27', to: '2026-11-23' })
     expect(candidateSpan([payment({ amountCents: null })])).toBeNull()
     expect(candidateSpan([])).toBeNull()
   })
@@ -68,7 +87,11 @@ describe('dayGap and candidateSpan', () => {
 
 describe('possibleMatchFor', () => {
   it('finds a typed row of the same price, direction and day', () => {
-    expect(possibleMatchFor(payment(), [row({ id: 7, description: 'Cafe', date: '2026-11-10' })])).toEqual({ transactionId: 7, description: 'Cafe', date: '2026-11-10' })
+    expect(possibleMatchFor(payment(), [row({ id: 7, description: 'Cafe', date: '2026-11-10' })])).toEqual({
+      transactionId: 7,
+      description: 'Cafe',
+      date: '2026-11-10',
+    })
   })
 
   it('takes a row 14 days before and not 15, and 3 days after and not 4', () => {
@@ -86,20 +109,30 @@ describe('possibleMatchFor', () => {
   })
 
   it('matches an investment taken back out with an inflow, and a deposit with an outflow', () => {
-    expect(possibleMatchFor(payment({ suggestedType: 'income' }), [row({ type: 'investment', amountCents: -1250 })])).not.toBeNull()
+    expect(
+      possibleMatchFor(payment({ suggestedType: 'income' }), [row({ type: 'investment', amountCents: -1250 })]),
+    ).not.toBeNull()
     expect(possibleMatchFor(payment(), [row({ type: 'investment', amountCents: 1250 })])).not.toBeNull()
     expect(possibleMatchFor(payment(), [row({ type: 'investment', amountCents: -1250 })])).toBeNull()
   })
 
   it('picks the closest by date, and the highest id on a tie', () => {
-    const rows = [row({ id: 1, date: '2026-11-02' }), row({ id: 2, date: '2026-11-08' }), row({ id: 3, date: '2026-11-12' }), row({ id: 4, date: '2026-11-08' })]
+    const rows = [
+      row({ id: 1, date: '2026-11-02' }),
+      row({ id: 2, date: '2026-11-08' }),
+      row({ id: 3, date: '2026-11-12' }),
+      row({ id: 4, date: '2026-11-08' }),
+    ]
 
     expect(possibleMatchFor(payment(), rows)?.transactionId).toBe(4)
     expect(possibleMatchFor(payment(), [...rows].reverse())?.transactionId).toBe(4)
   })
 
   it('counts a day before and a day after as equally close, so the later id wins', () => {
-    expect(possibleMatchFor(payment(), [row({ id: 5, date: '2026-11-09' }), row({ id: 6, date: '2026-11-11' })])?.transactionId).toBe(6)
+    expect(
+      possibleMatchFor(payment(), [row({ id: 5, date: '2026-11-09' }), row({ id: 6, date: '2026-11-11' })])
+        ?.transactionId,
+    ).toBe(6)
   })
 
   it('matches nothing for a payment that cannot be matched', () => {
@@ -110,17 +143,29 @@ describe('possibleMatchFor', () => {
 })
 
 describe('possibleMatchesFor, one row to one payment', () => {
-  const page = (id: string, localDate: string, createdAt = `${localDate}T09:00:00.000Z`, over: Partial<PaymentToMatch> = {}): PagePayment => ({ ...payment({ localDate, ...over }), id, createdAt })
-  const ids = (m: Map<string, { transactionId: number } | null>) => Object.fromEntries([...m].map(([k, v]) => [k, v?.transactionId ?? null]))
+  const page = (
+    id: string,
+    localDate: string,
+    createdAt = `${localDate}T09:00:00.000Z`,
+    over: Partial<PaymentToMatch> = {},
+  ): PagePayment => ({ ...payment({ localDate, ...over }), id, createdAt })
+  const ids = (m: Map<string, { transactionId: number } | null>) =>
+    Object.fromEntries([...m].map(([k, v]) => [k, v?.transactionId ?? null]))
 
   it('gives a row to the payment it is closest to, and the other payment of that price gets none', () => {
-    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-11')], [row({ id: 5, date: '2026-11-10' })])
+    const result = possibleMatchesFor(
+      [page('a', '2026-11-10'), page('b', '2026-11-11')],
+      [row({ id: 5, date: '2026-11-10' })],
+    )
 
     expect(ids(result)).toEqual({ a: 5, b: null })
   })
 
   it('lets the payment that loses its row fall to its next best one', () => {
-    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-11')], [row({ id: 5, date: '2026-11-10' }), row({ id: 3, date: '2026-11-08' })])
+    const result = possibleMatchesFor(
+      [page('a', '2026-11-10'), page('b', '2026-11-11')],
+      [row({ id: 5, date: '2026-11-10' }), row({ id: 3, date: '2026-11-08' })],
+    )
 
     expect(ids(result)).toEqual({ a: 5, b: 3 })
   })
@@ -143,10 +188,12 @@ describe('possibleMatchesFor, one row to one payment', () => {
     expect(result.get('x')).toBeNull()
   })
 
-  it('does not let payments of different prices take each other\'s rows', () => {
-    const result = possibleMatchesFor([page('a', '2026-11-10'), page('b', '2026-11-10', undefined, { amountCents: 999 })], [row({ id: 5 }), row({ id: 6, amountCents: 999 })])
+  it("does not let payments of different prices take each other's rows", () => {
+    const result = possibleMatchesFor(
+      [page('a', '2026-11-10'), page('b', '2026-11-10', undefined, { amountCents: 999 })],
+      [row({ id: 5 }), row({ id: 6, amountCents: 999 })],
+    )
 
     expect(ids(result)).toEqual({ a: 5, b: 6 })
   })
 })
-

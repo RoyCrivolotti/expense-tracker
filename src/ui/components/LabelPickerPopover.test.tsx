@@ -64,10 +64,7 @@ describe('LabelPickerPopover', () => {
     renderPicker({ value: [1] })
 
     expect(screen.getByRole('button', { name: /Japan trip/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /Moving expenses/ })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
+    expect(screen.getByRole('button', { name: /Moving expenses/ })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('toggles a label on and stays open', async () => {

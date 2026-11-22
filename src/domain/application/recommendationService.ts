@@ -7,7 +7,12 @@ import { bankMerchantName } from '../capture/review'
 import type { Slot } from '../capture/slots'
 import { suggestFor, type MerchantRow } from '../capture/suggestion'
 import { cleanText } from '../capture/text'
-import type { CaptureRepository, Recommendation, RecommendationCursor, RecommendationEvent } from '../ports/captureRepository'
+import type {
+  CaptureRepository,
+  Recommendation,
+  RecommendationCursor,
+  RecommendationEvent,
+} from '../ports/captureRepository'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
 import { createTransaction, validateNewTransaction } from './transactionService'
@@ -77,7 +82,11 @@ export async function listRecommendations(
   return { recommendations, next, openCount }
 }
 
-async function openOne(captures: CaptureRepository, owner: string, id: string): Promise<Decision<{ rec: Recommendation }>> {
+async function openOne(
+  captures: CaptureRepository,
+  owner: string,
+  id: string,
+): Promise<Decision<{ rec: Recommendation }>> {
   const rec = await captures.getRecommendation(owner, id)
   if (!rec) return { ok: false, reason: 'missing' }
   return rec.state === 'open' ? { ok: true, rec } : { ok: false, reason: 'decided' }
@@ -87,7 +96,13 @@ async function openOne(captures: CaptureRepository, owner: string, id: string): 
 export type Saved = SavedRow & SavedForMerchant
 
 function savedRow(t: Pick<Transaction, 'amountCents' | 'type' | 'accountId' | 'description' | 'categoryId'>): Saved {
-  return { amountCents: t.amountCents, type: t.type, accountId: t.accountId, description: t.description, categoryId: t.categoryId }
+  return {
+    amountCents: t.amountCents,
+    type: t.type,
+    accountId: t.accountId,
+    description: t.description,
+    categoryId: t.categoryId,
+  }
 }
 
 /**
@@ -96,10 +111,25 @@ function savedRow(t: Pick<Transaction, 'amountCents' | 'type' | 'accountId' | 'd
  * own history, which the server cannot see, and then to the bank's text; the bank's text is what is compared, since the
  * phone's history rarely names a merchant.
  */
-function shownOf(rec: Recommendation, event: RecommendationEvent, slots: Slot[], merchants: MerchantRow[]): ShownRecommendation {
-  const s = suggestFor({ amountCents: rec.amountCents, accountId: rec.accountId, suggestedType: rec.suggestedType, slots }, event.facts, merchants)
+function shownOf(
+  rec: Recommendation,
+  event: RecommendationEvent,
+  slots: Slot[],
+  merchants: MerchantRow[],
+): ShownRecommendation {
+  const s = suggestFor(
+    { amountCents: rec.amountCents, accountId: rec.accountId, suggestedType: rec.suggestedType, slots },
+    event.facts,
+    merchants,
+  )
   const bankText = rec.merchantRaw === null ? '' : bankMerchantName(cleanText(rec.merchantRaw))
-  return { amountCents: s.amountCents, suggestedType: s.type, accountId: s.accountId, description: s.description ?? bankText, categoryId: s.categoryId }
+  return {
+    amountCents: s.amountCents,
+    suggestedType: s.type,
+    accountId: s.accountId,
+    description: s.description ?? bankText,
+    categoryId: s.categoryId,
+  }
 }
 
 /**
@@ -127,7 +157,8 @@ export async function learnAfterDecision(
     if (!event) return
     const { facts, templateId } = event
     const slots = storedSlots(event.slots)
-    const outcome = decision.kind === 'submitted' ? outcomeOf(shownOf(rec, event, slots, merchants), decision.saved) : decision.kind
+    const outcome =
+      decision.kind === 'submitted' ? outcomeOf(shownOf(rec, event, slots, merchants), decision.saved) : decision.kind
     const votes = decision.kind === 'dismissed' ? [] : merchantVotes(rec.merchantRaw, decision.saved)
     const at = now.toISOString()
     const learned =
@@ -192,7 +223,11 @@ export async function submitRecommendation(
   return { ok: true, transaction }
 }
 
-async function removeQuietly(expenses: ExpenseRepository, owner: string, id: number): Promise<void> {
+async function removeQuietly(
+  expenses: ExpenseRepository,
+  owner: string,
+  id: number,
+): Promise<void> {
   try {
     await expenses.deleteTransaction(owner, id)
   } catch (error) {

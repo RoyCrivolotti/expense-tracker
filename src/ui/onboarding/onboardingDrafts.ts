@@ -20,7 +20,10 @@ function presetId(name: string): string {
  * re-entry starts every preset unchecked instead, and the wizard's own
  * "Continue" gate must allow zero selections in that case.
  */
-export function useCategoryDrafts(format: MoneyFormat = EU_MONEY_FORMAT, hasExistingCategories = false) {
+export function useCategoryDrafts(
+  format: MoneyFormat = EU_MONEY_FORMAT,
+  hasExistingCategories = false,
+) {
   return useState<CategoryDraft[]>(() =>
     CATEGORY_PRESETS.map((p) => ({
       presetId: presetId(p.name),

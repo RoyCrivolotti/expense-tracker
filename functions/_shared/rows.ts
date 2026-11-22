@@ -172,9 +172,7 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     ...(r.flag_id != null ? { flagId: r.flag_id } : {}),
     ...(r.settled_by != null ? { settledBy: r.settled_by } : {}),
     ...(r.report_count != null ? { reportCount: r.report_count } : {}),
-    ...(r.report_covered_cents != null
-      ? { reportCoveredCents: r.report_covered_cents }
-      : {}),
+    ...(r.report_covered_cents != null ? { reportCoveredCents: r.report_covered_cents } : {}),
   }
 }
 
@@ -301,7 +299,10 @@ export interface WealthCheckinEntryRow {
   value_cents: number
 }
 
-export function toWealthCheckin(r: WealthCheckinRow, entries: WealthCheckinEntry[]): WealthCheckin {
+export function toWealthCheckin(
+  r: WealthCheckinRow,
+  entries: WealthCheckinEntry[],
+): WealthCheckin {
   return {
     id: r.id,
     checkinDate: r.checkin_date,

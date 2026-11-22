@@ -14,7 +14,10 @@ interface PresenceProps {
  * Where an overlay is in its life: shown, playing its exit, or gone. `session` changes
  * each time it is shown again, so a reopened overlay is a new instance.
  */
-function usePhase(show: boolean, exitMs: number): { mounted: boolean; exiting: boolean; session: number } {
+function usePhase(
+  show: boolean,
+  exitMs: number,
+): { mounted: boolean; exiting: boolean; session: number } {
   const [phase, setPhase] = useState<Phase>(show ? 'open' : 'closed')
   const [session, setSession] = useState(0)
 

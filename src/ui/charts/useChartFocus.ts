@@ -133,7 +133,12 @@ export function useChartFocus(
 }
 
 /** The pointer's x in viewBox units, or null when the svg has no screen matrix or box to read. */
-function plotX(svg: SVGSVGElement, clientX: number, clientY: number, turn: 0 | 1): number | null {
+function plotX(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number,
+  turn: 0 | 1,
+): number | null {
   if (turn === 1) return quarterTurnX(clientY, svg.getBoundingClientRect(), svg.viewBox.baseVal.width)
   const ctm = svg.getScreenCTM()
   if (!ctm) return null

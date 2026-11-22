@@ -4,7 +4,9 @@ import { reloadWhenWorkerReplaced } from './reloadWhenWorkerReplaced'
 /** A service worker container that is an event target with, or without, a controller. */
 function container(controlled: boolean) {
   const target = new EventTarget()
-  return Object.assign(target, { controller: controlled ? ({} as ServiceWorker) : null }) as unknown as ServiceWorkerContainer & EventTarget
+  return Object.assign(target, {
+    controller: controlled ? ({} as ServiceWorker) : null,
+  }) as unknown as ServiceWorkerContainer & EventTarget
 }
 
 describe('reloadWhenWorkerReplaced', () => {

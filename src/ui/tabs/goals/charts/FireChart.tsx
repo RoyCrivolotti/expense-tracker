@@ -37,7 +37,10 @@ const FIRE_LEGEND: LegendItem[] = [
  * The line before stays until the edits have stopped for a moment, and while the card is far from the
  * screen (none if there was not one yet).
  */
-function useOddsLine(draft: NewGoalScenario, paused: boolean): string | null {
+function useOddsLine(
+  draft: NewGoalScenario,
+  paused: boolean,
+): string | null {
   const format = useMoneyFormat()
   const volatility = useMarketVolatility()
   const settled = useReplayInput(draft, paused)
@@ -57,7 +60,14 @@ function useOddsLine(draft: NewGoalScenario, paused: boolean): string | null {
         runs: ODDS_RUNS,
       }),
     }))
-    return retirementOddsLine({ rate: safeWithdrawalRate, years: retirementYears, realReturn: expectedRealReturn, volatility, results, format })
+    return retirementOddsLine({
+      rate: safeWithdrawalRate,
+      years: retirementYears,
+      realReturn: expectedRealReturn,
+      volatility,
+      results,
+      format,
+    })
   }, [waiting, annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears, volatility, format])
 }
 
@@ -106,12 +116,21 @@ function FireChartImpl({
     money: (c) => formatMoneyShort(c, format),
     format,
   })
-  const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
+  const labels = useMemo(
+    () =>
+      sparseLabels(
+        balances.map((_, y) => y),
+        5,
+      ),
+    [balances],
+  )
   const series: ChartSeries[] = [{ id: 'balance', color: BALANCE_COLOR, values: balances, width: 2 }]
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: `Year ${i}`,
-    lines: [{ label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), color: BALANCE_COLOR, tone: 'neutral' }],
+    lines: [
+      { label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), color: BALANCE_COLOR, tone: 'neutral' },
+    ],
   })
 
   if (fiYear == null) {
@@ -119,8 +138,8 @@ function FireChartImpl({
       <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>FI drawdown</h3>
         <p className={styles.chartHint}>
-          FI target {target.plan} in {target.planLabel} · not reached in the horizon ({aboutOnAccount(target)}, when
-          the plan ends), so there is no drawdown to show. {targets}
+          FI target {target.plan} in {target.planLabel} · not reached in the horizon ({aboutOnAccount(target)}, when the
+          plan ends), so there is no drawdown to show. {targets}
         </p>
         {oddsLine ? <p className={styles.chartHint}>{oddsLine}</p> : null}
       </ChartShell>
@@ -131,9 +150,9 @@ function FireChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
-        FI target {target.plan} in {target.planLabel} · reached year {fiYear} ({aboutOnAccount(target)}). {targets} Post-FI only: year 0
-        on this chart is the FI year, not today, and it runs for the {draft.retirementYears} years the money
-        must last. After that it takes the plan's return every year and withdraws a constant amount in{' '}
+        FI target {target.plan} in {target.planLabel} · reached year {fiYear} ({aboutOnAccount(target)}). {targets}{' '}
+        Post-FI only: year 0 on this chart is the FI year, not today, and it runs for the {draft.retirementYears} years
+        the money must last. After that it takes the plan's return every year and withdraws a constant amount in{' '}
         {planMoneyLabel(draft.planStartDate, format)}, so it illustrates the target and is not a forecast: a bad run of
         early years would leave less.
       </p>

@@ -52,7 +52,11 @@ function number(drafts: RowDraft[]): Numbered {
 }
 
 /** One refund covers a claim's rows, which then point at it and drop their flag, as the app does. */
-function settle(stored: StoredTransaction[], month: string, ids: number[]): void {
+function settle(
+  stored: StoredTransaction[],
+  month: string,
+  ids: number[],
+): void {
   const covered = ids.flatMap((id) => stored[id - 1] ?? [])
   const total = covered.reduce((sum, row) => sum + row.amountCents, 0)
   const refundId = stored.length + 1
@@ -94,9 +98,7 @@ function attachmentsFor(transactions: Transaction[]): TransactionAttachment[] {
 export function syntheticLedger(shape: LedgerShape): ExpenseDataset {
   const endMonth = shape.endMonth ?? '2026-09'
   const rnd = mulberry32(shape.seed ?? 1)
-  const months = Array.from({ length: shape.months }, (_, i) =>
-    shiftBudgetMonth(endMonth, i - (shape.months - 1)),
-  )
+  const months = Array.from({ length: shape.months }, (_, i) => shiftBudgetMonth(endMonth, i - (shape.months - 1)))
   const accounts = syntheticAccounts()
   const plans = syntheticPlans(endMonth)
   const statements = syntheticStatements(months, endMonth)

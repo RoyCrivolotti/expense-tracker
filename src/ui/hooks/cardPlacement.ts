@@ -18,13 +18,23 @@ export type Turn = 0 | 1
 export const LOWER_RIGHT: Placement = { x: 1, y: 1 }
 
 /** The room a card has to move in: what the box has left over, never below nothing. */
-export function room(box: Size, card: Size): Size {
-  const left = (box: number, card: number) => (Number.isFinite(box - card) ? Math.max(0, box - card) : 0)
+export function room(
+  box: Size,
+  card: Size,
+): Size {
+  const left = (
+    box: number,
+    card: number,
+  ) => (Number.isFinite(box - card) ? Math.max(0, box - card) : 0)
   return { width: left(box.width, card.width), height: left(box.height, card.height) }
 }
 
 /** The pixel position of a placement. */
-export function placementToPx(placement: Placement, box: Size, card: Size): Point {
+export function placementToPx(
+  placement: Placement,
+  box: Size,
+  card: Size,
+): Point {
   const free = room(box, card)
   return { x: placement.x * free.width, y: placement.y * free.height }
 }
@@ -34,17 +44,32 @@ export function placementToPx(placement: Placement, box: Size, card: Size): Poin
  * card was, so it keeps what it had: dividing by nothing would otherwise throw away the corner it
  * was in the moment the box gets room again.
  */
-export function pxToPlacement(px: Point, box: Size, card: Size, previous: Placement): Placement {
+export function pxToPlacement(
+  px: Point,
+  box: Size,
+  card: Size,
+  previous: Placement,
+): Placement {
   const free = room(box, card)
-  const share = (value: number, span: number, before: number) =>
-    span > 0 ? Math.min(1, Math.max(0, value / span)) : before
+  const share = (
+    value: number,
+    span: number,
+    before: number,
+  ) => (span > 0 ? Math.min(1, Math.max(0, value / span)) : before)
   return { x: share(px.x, free.width, previous.x), y: share(px.y, free.height, previous.y) }
 }
 
 /** A position held inside the box: a card larger than its box sits at the start, not outside it. */
-export function clampPx(px: Point, box: Size, card: Size): Point {
+export function clampPx(
+  px: Point,
+  box: Size,
+  card: Size,
+): Point {
   const free = room(box, card)
-  const within = (value: number, span: number) => (Number.isFinite(value) ? Math.min(span, Math.max(0, value)) : 0)
+  const within = (
+    value: number,
+    span: number,
+  ) => (Number.isFinite(value) ? Math.min(span, Math.max(0, value)) : 0)
   return { x: within(px.x, free.width), y: within(px.y, free.height) }
 }
 
@@ -52,18 +77,28 @@ export function clampPx(px: Point, box: Size, card: Size): Point {
  * A pointer's movement on the screen as movement in the box's own frame. Turned a quarter turn
  * clockwise, the box's x runs down the screen and its y runs to the left.
  */
-export function toLocalDelta(dxScreen: number, dyScreen: number, turn: Turn): Point {
+export function toLocalDelta(
+  dxScreen: number,
+  dyScreen: number,
+  turn: Turn,
+): Point {
   return turn === 1 ? { x: dyScreen, y: 0 - dxScreen } : { x: dxScreen, y: dyScreen }
 }
 
 /** Whole device pixels: a card between two of them has its text drawn blurred. */
-export function onDevicePixels(px: Point, ratio: number): Point {
+export function onDevicePixels(
+  px: Point,
+  ratio: number,
+): Point {
   if (!(ratio > 0)) return px
   return { x: Math.round(px.x * ratio) / ratio, y: Math.round(px.y * ratio) / ratio }
 }
 
 /** The step an arrow key moves a card by, in the box's frame; null for any other key. */
-export function arrowDelta(key: string, step: number): Point | null {
+export function arrowDelta(
+  key: string,
+  step: number,
+): Point | null {
   switch (key) {
     case 'ArrowLeft':
       return { x: -step, y: 0 }
@@ -98,7 +133,11 @@ export interface DragSession {
  * down and not from the last move, so a card held at an edge while the pointer goes on past it comes
  * away exactly when the pointer comes back to where it would have been.
  */
-export function dragPosition(session: DragSession, clientX: number, clientY: number): Point {
+export function dragPosition(
+  session: DragSession,
+  clientX: number,
+  clientY: number,
+): Point {
   const delta = toLocalDelta(clientX - session.x0, clientY - session.y0, session.turn)
   const wanted = { x: session.start.x + delta.x, y: session.start.y + delta.y }
   return clampPx(onDevicePixels(wanted, session.dpr), session.box, session.card)

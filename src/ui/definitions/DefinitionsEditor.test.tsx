@@ -94,7 +94,9 @@ describe('DefinitionsEditor leaving', () => {
     const model = buildExpenseModel(makeDataset({ categories: [], accounts: [] }))
     render(<DefinitionsEditor model={model} actions={makeActions()} />)
     expect(screen.getByText(/No categories yet\. They group your spending/)).toBeInTheDocument()
-    expect(screen.getByText(/No accounts yet\. They are the cards and bank accounts you pay from\. Add one below\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/No accounts yet\. They are the cards and bank accounts you pay from\. Add one below\./),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+ Add category' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+ Add account' })).toBeInTheDocument()
   })

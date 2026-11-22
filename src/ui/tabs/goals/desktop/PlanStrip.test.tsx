@@ -25,7 +25,10 @@ const flat = {
 }
 const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
 
-function renderStrip(inflation: number, overrides = {}) {
+function renderStrip(
+  inflation: number,
+  overrides = {},
+) {
   return render(
     <AssumedInflationContext.Provider value={inflation}>
       <PlanStrip draft={draftOf({ ...flat, ...overrides })} milestones={[]} />
@@ -34,7 +37,7 @@ function renderStrip(inflation: number, overrides = {}) {
 }
 
 describe('PlanStrip', () => {
-  it('says where the plan ends in both moneys: in the plan\'s euros and on the account in that year', () => {
+  it("says where the plan ends in both moneys: in the plan's euros and on the account in that year", () => {
     renderStrip(0.02)
     expect(screen.getByText('Net worth at year 10')).toBeInTheDocument()
     expect(
@@ -47,7 +50,7 @@ describe('PlanStrip', () => {
     expect(screen.getByText(`${short(10_000_000)} in 2026 euros, the same on your account in 2036`)).toBeInTheDocument()
   })
 
-  it('names the year by the plan year, and the money today\'s euros, for a plan with no start date', () => {
+  it("names the year by the plan year, and the money today's euros, for a plan with no start date", () => {
     renderStrip(0.02, { horizonYears: 1, planStartDate: null })
     expect(screen.getByText('Net worth at year 1')).toBeInTheDocument()
     expect(screen.getByText(/in today's euros, about .* on your account in year 1$/)).toBeInTheDocument()

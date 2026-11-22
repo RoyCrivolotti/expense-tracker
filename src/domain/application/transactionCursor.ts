@@ -36,7 +36,10 @@ export async function filterHash(filter: TxnFilter): Promise<string> {
   return [...digest.slice(0, 8)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export async function encodeCursor(key: TransactionKey, filter: TxnFilter): Promise<string> {
+export async function encodeCursor(
+  key: TransactionKey,
+  filter: TxnFilter,
+): Promise<string> {
   const body: CursorBody = { date: key.date, id: key.id, filterHash: await filterHash(filter) }
   return toBase64Url(JSON.stringify(body))
 }
@@ -69,7 +72,10 @@ function isCursorBody(body: unknown): body is CursorBody {
 }
 
 /** The position a cursor names, provided it was cut from this same filter. */
-export async function decodeCursor(cursor: unknown, filter: TxnFilter): Promise<TransactionKey> {
+export async function decodeCursor(
+  cursor: unknown,
+  filter: TxnFilter,
+): Promise<TransactionKey> {
   if (typeof cursor !== 'string' || cursor.length === 0 || cursor.length > MAX_CURSOR_LENGTH) {
     throw new ValidationError(INVALID)
   }

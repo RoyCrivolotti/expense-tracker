@@ -6,14 +6,23 @@ type Listener = () => void
 
 const LAYOUT_HEIGHT = 800
 
-function stubViewport(height: number, scale = 1) {
+function stubViewport(
+  height: number,
+  scale = 1,
+) {
   const listeners: Listener[] = []
   const vv = {
     height,
     scale,
     offsetTop: 0,
-    addEventListener: (_type: string, fn: Listener) => listeners.push(fn),
-    removeEventListener: (_type: string, fn: Listener) => {
+    addEventListener: (
+      _type: string,
+      fn: Listener,
+    ) => listeners.push(fn),
+    removeEventListener: (
+      _type: string,
+      fn: Listener,
+    ) => {
       const at = listeners.indexOf(fn)
       if (at >= 0) listeners.splice(at, 1)
     },
@@ -25,7 +34,10 @@ function stubViewport(height: number, scale = 1) {
   }
 }
 
-function field(type: string, tag: 'input' | 'textarea' = 'input'): HTMLInputElement | HTMLTextAreaElement {
+function field(
+  type: string,
+  tag: 'input' | 'textarea' = 'input',
+): HTMLInputElement | HTMLTextAreaElement {
   const el = document.createElement(tag)
   if (tag === 'input') (el as HTMLInputElement).type = type
   document.body.appendChild(el)

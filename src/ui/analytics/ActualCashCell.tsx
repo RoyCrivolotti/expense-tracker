@@ -3,7 +3,12 @@ import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { moneyAlways } from './cells'
 import styles from './analytics.module.css'
 
-type OnSave = ((yearMonth: string, actualCashCents: number | null) => Promise<void>) | undefined
+type OnSave =
+  | ((
+      yearMonth: string,
+      actualCashCents: number | null,
+    ) => Promise<void>)
+  | undefined
 
 /** Editable real-cash input; renders read-only text when onSave is undefined. */
 export function ActualCashCell({

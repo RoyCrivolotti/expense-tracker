@@ -50,7 +50,10 @@ export const AWKWARD_DESCRIPTIONS: readonly string[] = [
 ]
 
 /** One row for each awkward description, with ids from `firstId` up, newest date first. */
-export function awkwardRows(firstId: number, overrides: Partial<Transaction> = {}): Transaction[] {
+export function awkwardRows(
+  firstId: number,
+  overrides: Partial<Transaction> = {},
+): Transaction[] {
   return AWKWARD_DESCRIPTIONS.map((description, i) =>
     makeTransaction({
       id: firstId + i,

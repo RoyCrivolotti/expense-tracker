@@ -40,7 +40,10 @@ export function newRecorder(): Recorder {
 }
 
 /** What happened since `mark` (the lengths taken before the request), or since the start. */
-export function summarize(recorder: Recorder, mark: { records: number; calls: number } = { records: 0, calls: 0 }): Summary {
+export function summarize(
+  recorder: Recorder,
+  mark: { records: number; calls: number } = { records: 0, calls: 0 },
+): Summary {
   const records = recorder.records.slice(mark.records)
   return {
     calls: recorder.calls - mark.calls,
@@ -68,11 +71,21 @@ export interface StatementTotal {
 }
 
 /** Statements since `mark`, one entry per distinct SQL text in the order first run. The text is the template, never its values. */
-export function statementsSince(recorder: Recorder, mark: { records: number }): StatementTotal[] {
+export function statementsSince(
+  recorder: Recorder,
+  mark: { records: number },
+): StatementTotal[] {
   const byText = new Map<string, StatementTotal>()
   for (const record of recorder.records.slice(mark.records)) {
     const key = `${record.batch ? 'batch' : 'single'} ${record.sql}`
-    const total = byText.get(key) ?? { sql: record.sql, runs: 0, rowsRead: 0, rowsWritten: 0, sqlMs: 0, batch: record.batch }
+    const total = byText.get(key) ?? {
+      sql: record.sql,
+      runs: 0,
+      rowsRead: 0,
+      rowsWritten: 0,
+      sqlMs: 0,
+      batch: record.batch,
+    }
     total.runs += 1
     total.rowsRead += record.rowsRead
     total.rowsWritten += record.rowsWritten

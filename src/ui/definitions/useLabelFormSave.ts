@@ -10,7 +10,10 @@ export interface LabelDraft {
 }
 
 /** Pure: the form's opening values for an existing label, or for a new one. */
-export function initialLabelDraft(label: Label | null, defaultColor: string): LabelDraft {
+export function initialLabelDraft(
+  label: Label | null,
+  defaultColor: string,
+): LabelDraft {
   return {
     name: label?.name ?? '',
     description: label?.description ?? '',
@@ -36,7 +39,10 @@ export function useLabelFormSave(
     existing,
     onDone,
     create: (draft) => actions.createLabel(draft),
-    update: (id, draft) => actions.updateLabel(id, draft),
+    update: (
+      id,
+      draft,
+    ) => actions.updateLabel(id, draft),
     remove: async (id) => {
       const { unlabeled } = await actions.deleteLabel(id)
       return { affected: unlabeled }

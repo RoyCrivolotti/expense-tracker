@@ -16,7 +16,10 @@ export interface YearFlows {
   eventsCents: number
 }
 
-function lifeEventImpact(events: LifeEvent[], year: number): number {
+function lifeEventImpact(
+  events: LifeEvent[],
+  year: number,
+): number {
   let total = 0
   for (const ev of events) {
     if (ev.year === year) total += ev.amountCents
@@ -31,12 +34,22 @@ export function purchaseWithdrawalCents(params: ProjectionParams): number {
 }
 
 /** What plan year `year` adds and takes besides growth. The first year has no year behind it. */
-export function yearFlows(params: ProjectionParams, year: number): YearFlows {
+export function yearFlows(
+  params: ProjectionParams,
+  year: number,
+): YearFlows {
   if (year <= 0) return { contributionCents: 0, eventsCents: 0 }
   const buys = params.housePurchaseYear !== null && params.housePurchaseYear > 0 && year === params.housePurchaseYear
   return {
-    contributionCents: annualContributionCents(params.monthlyContributionCents, params.contributionSteps ?? [], year, params.inflationRate),
-    eventsCents: (buys ? -purchaseWithdrawalCents(params) : 0) + (params.lifeEvents ? lifeEventImpact(params.lifeEvents, year) : 0),
+    contributionCents: annualContributionCents(
+      params.monthlyContributionCents,
+      params.contributionSteps ?? [],
+      year,
+      params.inflationRate,
+    ),
+    eventsCents:
+      (buys ? -purchaseWithdrawalCents(params) : 0) +
+      (params.lifeEvents ? lifeEventImpact(params.lifeEvents, year) : 0),
   }
 }
 
@@ -46,7 +59,11 @@ export function yearFlows(params: ProjectionParams, year: number): YearFlows {
  * line rises to, and the events then land on the anniversary (`post`). Nothing is floored: a balance
  * can go negative.
  */
-export function stepInvested(prev: number, growth: number, flows: YearFlows): { pre: number; post: number } {
+export function stepInvested(
+  prev: number,
+  growth: number,
+  flows: YearFlows,
+): { pre: number; post: number } {
   const pre = Math.round(prev * growth + flows.contributionCents)
   return { pre, post: pre + flows.eventsCents }
 }

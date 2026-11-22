@@ -39,7 +39,10 @@ function loadDismissed(key: string): Set<string> {
   }
 }
 
-function persistDismissed(key: string, set: Set<string>): void {
+function persistDismissed(
+  key: string,
+  set: Set<string>,
+): void {
   localStorage.setItem(key, JSON.stringify([...set]))
 }
 
@@ -112,12 +115,7 @@ function SuggestionRow({
         </span>
       </div>
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.addBtn}
-          onClick={onAdd}
-          aria-label={`Add ${suggestion.description}`}
-        >
+        <button type="button" className={styles.addBtn} onClick={onAdd} aria-label={`Add ${suggestion.description}`}>
           +
         </button>
         <button
@@ -152,19 +150,20 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const { stop, restore } = useStoppedSuggestions()
   const rows = useRef<HTMLDivElement>(null)
 
-  const visible = suggestions.filter(
-    (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)),
-  )
+  const visible = suggestions.filter((s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)))
 
-  const setHidden = useCallback((s: UpcomingSuggestion, hidden: boolean) => {
-    setDismissed((prev) => {
-      const next = new Set(prev)
-      if (hidden) next.add(dismissKey(s))
-      else next.delete(dismissKey(s))
-      persistDismissed(storageKey, next)
-      return next
-    })
-  }, [storageKey])
+  const setHidden = useCallback(
+    (s: UpcomingSuggestion, hidden: boolean) => {
+      setDismissed((prev) => {
+        const next = new Set(prev)
+        if (hidden) next.add(dismissKey(s))
+        else next.delete(dismissKey(s))
+        persistDismissed(storageKey, next)
+        return next
+      })
+    },
+    [storageKey],
+  )
 
   // The row the focus was on is gone; the one that takes its place, or the one before it when it
   // was the last, gets the focus.
@@ -178,7 +177,10 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
     })
   }
 
-  const handleDismiss = (s: UpcomingSuggestion, index: number) => {
+  const handleDismiss = (
+    s: UpcomingSuggestion,
+    index: number,
+  ) => {
     setHidden(s, true)
     showToast(`Dismissed ${s.description}`, 'info', {
       label: 'Undo',
@@ -188,7 +190,10 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
     focusRowAt(index)
   }
 
-  const handleStop = (s: UpcomingSuggestion, index: number) => {
+  const handleStop = (
+    s: UpcomingSuggestion,
+    index: number,
+  ) => {
     stop(s.seriesKey, { after: s.lastChargeDate, label: s.description })
     showToast(`Stopped suggesting ${s.description}`, 'info', {
       label: 'Undo',
@@ -205,7 +210,11 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const folds = visible.length > ROWS_SHOWN_IN_FULL
   const kept = folds ? visible.slice(0, ROWS_KEPT) : visible
   const folded = folds ? visible.slice(ROWS_KEPT) : []
-  const renderRow = (s: UpcomingSuggestion, index: number, last: boolean) => (
+  const renderRow = (
+    s: UpcomingSuggestion,
+    index: number,
+    last: boolean,
+  ) => (
     <SuggestionRow
       key={dismissKey(s)}
       suggestion={s}
@@ -233,9 +242,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
               // the rows that are out of sight.
               inert={!expanded}
             >
-              <div className={styles.foldInner}>
-                {folded.map((s, index) => renderRow(s, ROWS_KEPT + index, false))}
-              </div>
+              <div className={styles.foldInner}>{folded.map((s, index) => renderRow(s, ROWS_KEPT + index, false))}</div>
             </div>
           )}
         </div>

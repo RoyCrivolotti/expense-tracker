@@ -10,7 +10,10 @@ import { useEffect, useRef } from 'react'
  * this hook has already told the caller, updated synchronously on every
  * toggle and resynced from `value` whenever it actually changes.
  */
-export function useToggleIds(value: number[], onChange: (next: number[]) => void) {
+export function useToggleIds(
+  value: number[],
+  onChange: (next: number[]) => void,
+) {
   const pending = useRef(value)
   useEffect(() => {
     pending.current = value

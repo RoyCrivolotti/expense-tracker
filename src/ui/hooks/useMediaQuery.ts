@@ -2,9 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react'
 
 function list(query: string): MediaQueryList | null {
   // jsdom has no matchMedia; without it, nothing matches.
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia(query)
-    : null
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(query) : null
 }
 
 /**

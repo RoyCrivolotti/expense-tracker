@@ -38,7 +38,12 @@ const SHAPES: Shape[] = [
   { name: 'month, next page', filter: { month: '2026-03' }, after: { date: '2026-03-15', id: 900 }, walk: 'month' },
   { name: 'from a date', filter: { dateFrom: '2026-01-01' }, walk: 'date' },
   { name: 'up to a date', filter: { dateTo: '2026-01-31' }, walk: 'date' },
-  { name: 'date range, next page', filter: { dateFrom: '2026-01-01', dateTo: '2026-03-31' }, after: AFTER, walk: 'date' },
+  {
+    name: 'date range, next page',
+    filter: { dateFrom: '2026-01-01', dateTo: '2026-03-31' },
+    after: AFTER,
+    walk: 'date',
+  },
   { name: 'category', filter: { categoryId: 3 } },
   { name: 'account', filter: { accountId: 3 } },
   { name: 'type', filter: { type: 'income' }, walk: 'date' },
@@ -79,7 +84,10 @@ const WALKS = {
 const SORT = /USE TEMP B-TREE FOR ORDER BY/
 
 function expectNoFullScan(plan: string[]): void {
-  expect(plan.filter((line) => FULL_SCAN.test(line)), `full scan of transactions:\n${plan.join('\n')}`).toEqual([])
+  expect(
+    plan.filter((line) => FULL_SCAN.test(line)),
+    `full scan of transactions:\n${plan.join('\n')}`,
+  ).toEqual([])
 }
 
 describe.each([{ stats: false }, { stats: true }])('query plans (table statistics: $stats)', ({ stats }) => {
@@ -115,7 +123,10 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
       expect(text, `sorts:\n${text}`).not.toMatch(SORT)
     }
     // Looking up a row's account, statement and labels is by key as well.
-    expect(plan.filter((line) => /^SCAN (a|s|tl|l)\b/.test(line)), text).toEqual([])
+    expect(
+      plan.filter((line) => /^SCAN (a|s|tl|l)\b/.test(line)),
+      text,
+    ).toEqual([])
   })
 
   it.each(SHAPES)('summary: $name', async ({ filter }) => {
@@ -139,7 +150,9 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
       const text = plan.join('\n')
       expectNoFullScan(plan)
       if (walk === 'month') {
-        expect(text, text).toMatch(/SEARCH t USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month=\?/)
+        expect(text, text).toMatch(
+          /SEARCH t USING (COVERING )?INDEX idx_txn_owner_month_date \(owner=\? AND budget_month=\?/,
+        )
       }
       if (filter.dateFrom || filter.dateTo) {
         expect(text, text).toMatch(/SEARCH t USING (COVERING )?INDEX idx_txn_owner_date \(owner=\? AND date/)
@@ -161,9 +174,7 @@ describe.each([{ stats: false }, { stats: true }])('query plans (table statistic
       query: 'éèêëàâäôöûüçñáíóúßαβγδ'.slice(0, 8),
       labelIds: Array.from({ length: 100 }, (_, i) => i + 1),
     }
-    const used = await ran(() =>
-      repo.queryTransactions(OWNER, widest, { limit: 200, after: AFTER }),
-    )
+    const used = await ran(() => repo.queryTransactions(OWNER, widest, { limit: 200, after: AFTER }))
     const most = Math.max(...used.map((s) => s.params.length))
     expect(most).toBeLessThanOrEqual(40)
   })

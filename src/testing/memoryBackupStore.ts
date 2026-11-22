@@ -41,7 +41,10 @@ export function memoryBackupStore(initial: Record<string, string> = {}): MemoryB
     killAfter: (count) => {
       remaining = count
     },
-    put: (key, body) => {
+    put: (
+      key,
+      body,
+    ) => {
       gate('put')
       objects.set(key, body)
       return Promise.resolve()

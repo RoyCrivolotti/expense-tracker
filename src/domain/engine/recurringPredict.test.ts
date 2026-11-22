@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  classifyFrequency,
-  leadFromHistory,
-  median,
-  regularityScore,
-  usualDate,
-  usualDay,
-} from './recurringPredict'
+import { classifyFrequency, leadFromHistory, median, regularityScore, usualDate, usualDay } from './recurringPredict'
 
 describe('classifyFrequency', () => {
   it('detects weekly', () => expect(classifyFrequency(7)).toBe('weekly'))

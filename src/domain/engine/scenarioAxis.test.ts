@@ -8,14 +8,20 @@ import { projectNetWorth } from './projection'
 import { onAxis, scenarioAxis, valueOnAxisAt } from './scenarioAxis'
 import { scenarioToParams } from './scenarioProjection'
 
-const project = (plan: GoalScenario, rate = I) => projectNetWorth(scenarioToParams(plan, rate))
+const project = (
+  plan: GoalScenario,
+  rate = I,
+) => projectNetWorth(scenarioToParams(plan, rate))
 
 /** The offset of a start `days` after 1 January 2026, the sample plan's start. */
 const yearsBetweenDays = (days: number) => yearsBetween('2026-01-01', dateAtYears('2026-01-01', days / 365))
 
 describe('scenarioAxis', () => {
   it('puts every scenario at 0 when they all start on one day, which is how the chart reads them today', () => {
-    expect(scenarioAxis(['2026-01-01', '2026-01-01', '2026-01-01'])).toEqual({ origin: '2026-01-01', offsets: [0, 0, 0] })
+    expect(scenarioAxis(['2026-01-01', '2026-01-01', '2026-01-01'])).toEqual({
+      origin: '2026-01-01',
+      offsets: [0, 0, 0],
+    })
   })
 
   it('starts at the earliest start and sits each later one at the calendar years from there to its own', () => {
@@ -28,7 +34,10 @@ describe('scenarioAxis', () => {
   })
 
   it('sits a scenario with no start, or one that is not a day, at the origin, and has no origin without a date', () => {
-    expect(scenarioAxis([null, '2027-01-01', '2027-02-30', undefined])).toEqual({ origin: '2027-01-01', offsets: [0, 0, 0, 0] })
+    expect(scenarioAxis([null, '2027-01-01', '2027-02-30', undefined])).toEqual({
+      origin: '2027-01-01',
+      offsets: [0, 0, 0, 0],
+    })
     expect(scenarioAxis([null, null])).toEqual({ origin: null, offsets: [0, 0] })
     expect(scenarioAxis([])).toEqual({ origin: null, offsets: [] })
   })
@@ -71,7 +80,10 @@ describe('onAxis', () => {
       const back = Math.pow(1 + I, from.offsetYears)
       const before = points.flatMap((p) => {
         const xIndex = from.offsetYears + p.year
-        const step = p.preEventInvestedCents !== p.investedCents ? [{ xIndex, value: Math.round(p.preEventInvestedCents / back) }] : []
+        const step =
+          p.preEventInvestedCents !== p.investedCents
+            ? [{ xIndex, value: Math.round(p.preEventInvestedCents / back) }]
+            : []
         return [...step, { xIndex, value: Math.round(p.investedCents / back) }]
       })
       expect(onAxis(points, from.offsetYears, I)).toEqual(before)
@@ -112,8 +124,12 @@ describe('valueOnAxisAt', () => {
     expect(0.1 + 4 - 0.1).not.toBe(4)
     for (const offset of [0.1, 0.2, 0.3, 0.7]) {
       for (let year = 0; year <= 30; year++) {
-        expect(valueOnAxisAt(points, offset, I, offset + year)).toBe(Math.round(points[year]!.investedCents / 1.02 ** offset))
-        expect(valueOnAxisAt(points, offset, I, offset + year, 'netWorth')).toBe(Math.round(points[year]!.netWorthCents / 1.02 ** offset))
+        expect(valueOnAxisAt(points, offset, I, offset + year)).toBe(
+          Math.round(points[year]!.investedCents / 1.02 ** offset),
+        )
+        expect(valueOnAxisAt(points, offset, I, offset + year, 'netWorth')).toBe(
+          Math.round(points[year]!.netWorthCents / 1.02 ** offset),
+        )
       }
     }
   })

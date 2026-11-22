@@ -4,7 +4,10 @@ import { useBodyScrollLock } from './useBodyScrollLock'
 import { THRESHOLD_PX, usePullToRefresh } from './usePullToRefresh'
 
 /** jsdom has no TouchEvent constructor, and the hook only ever reads `touches[0]`. */
-function touch(type: string, clientY: number): Event {
+function touch(
+  type: string,
+  clientY: number,
+): Event {
   const event = new Event(type, { bubbles: true })
   Object.defineProperty(event, 'touches', { value: [{ clientY }] })
   return event

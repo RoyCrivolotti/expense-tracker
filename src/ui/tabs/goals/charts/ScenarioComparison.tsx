@@ -15,7 +15,19 @@ import { scenarioInk } from '../scenarioInk'
 import styles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
-type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears' | 'atYear' | 'monthlyLater' | 'netWorthCents' | 'investedCents' | 'ended' | 'everyReaches'>
+type Column = keyof Omit<
+  ComparisonRow,
+  | 'key'
+  | 'name'
+  | 'color'
+  | 'horizonYears'
+  | 'atYear'
+  | 'monthlyLater'
+  | 'netWorthCents'
+  | 'investedCents'
+  | 'ended'
+  | 'everyReaches'
+>
 
 /**
  * The same years the hero chart offers, so the table can be read at the window the chart
@@ -38,7 +50,11 @@ const COLUMNS: { key: Column; label: string }[] = [
 ]
 
 /** Cells hold only what the header does not say; the year rides in the hint when shared. */
-function cell(row: ComparisonRow, key: Column, sharedYear: boolean): string {
+function cell(
+  row: ComparisonRow,
+  key: Column,
+  sharedYear: boolean,
+): string {
   const value = row[key]
   if (sharedYear || (key !== 'netWorth' && key !== 'invested')) return value
   return `${value} (${row.atYear}y)`
@@ -89,9 +105,7 @@ function ScenarioComparisonImpl({
           layout="compact"
         />
       </div>
-      <p className={styles.chartHint}>
-        {origin === null ? sameDayHint(hint) : calendarHint(hint, origin)}
-      </p>
+      <p className={styles.chartHint}>{origin === null ? sameDayHint(hint) : calendarHint(hint, origin)}</p>
       <ScrollRegion label="Scenarios side by side">
         <table className={styles.milestoneTable}>
           <thead>

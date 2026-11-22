@@ -32,7 +32,10 @@ const OWN_SITE_VALUES = new Set(['same-origin', 'none'])
  * body (a delete, a request for access) needs no type. A client that is not a browser sends no `Sec-Fetch-Site` and is
  * not affected by the first rule.
  */
-export function assertWriteIsSameOriginJson(request: Request, pathname: string): void {
+export function assertWriteIsSameOriginJson(
+  request: Request,
+  pathname: string,
+): void {
   if (SAFE_METHODS.has(request.method)) return
   const site = request.headers.get('sec-fetch-site')
   if (site !== null && !OWN_SITE_VALUES.has(site)) {

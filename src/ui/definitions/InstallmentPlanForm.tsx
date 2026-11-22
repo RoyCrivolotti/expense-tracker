@@ -27,7 +27,10 @@ interface Fields {
   active: boolean
 }
 
-function initialFields(plan: InstallmentPlan, format: MoneyFormat): Fields {
+function initialFields(
+  plan: InstallmentPlan,
+  format: MoneyFormat,
+): Fields {
   return {
     description: plan.description,
     amount: formatMoneyInput(plan.amountCents, format),
@@ -42,7 +45,10 @@ function initialFields(plan: InstallmentPlan, format: MoneyFormat): Fields {
   }
 }
 
-function toPayload(f: Fields, format: MoneyFormat): NewInstallmentPlan {
+function toPayload(
+  f: Fields,
+  format: MoneyFormat,
+): NewInstallmentPlan {
   return {
     description: f.description.trim(),
     amountCents: Math.abs(parseMoneyToCents(f.amount, format)),
@@ -71,8 +77,10 @@ export function InstallmentPlanForm({ plan, model, actions, onBack, onTrapPaused
   const [f, setF] = useState<Fields>(() => initialFields(plan, format))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
-    setF((prev) => ({ ...prev, [key]: value }))
+  const set = <K extends keyof Fields>(
+    key: K,
+    value: Fields[K],
+  ) => setF((prev) => ({ ...prev, [key]: value }))
   const accounts = selectableOptions(model.dataset.accounts, f.accountId)
   const categories = selectableOptions(model.dataset.categories, f.categoryId)
 

@@ -6,7 +6,10 @@ import { monthOf, offsetOf } from './comparisonCalendar'
 import type { ComparisonRow } from './comparisonRows'
 
 /** Where net worth and invested are read, for the hint. */
-function readAt(rows: ComparisonRow[], year: number | null): string {
+function readAt(
+  rows: ComparisonRow[],
+  year: number | null,
+): string {
   const shared = rows.every((r) => r.atYear === rows[0]?.atYear)
   if (shared && rows[0]) return ` after ${rows[0].atYear} years`
   return year === null ? ' at each path’s horizon' : ` after ${year} years, or at a path’s horizon when it is shorter`
@@ -16,10 +19,15 @@ function readAt(rows: ComparisonRow[], year: number | null): string {
  * The euros the figures are in: the plan's when every row starts in the same year, and the euros of each plan's
  * own start when they do not, as each plan counts in its own.
  */
-function figuresMoney(starts: readonly (string | null)[], format: MoneyFormat): string {
+function figuresMoney(
+  starts: readonly (string | null)[],
+  format: MoneyFormat,
+): string {
   const labels = new Set(starts.map((start) => planMoneyLabel(start, format)))
   const [only] = labels
-  return labels.size === 1 && only !== undefined ? `in ${only}` : `each in the ${currencyWord(format)} of its own start date`
+  return labels.size === 1 && only !== undefined
+    ? `in ${only}`
+    : `each in the ${currencyWord(format)} of its own start date`
 }
 
 export interface HintInput {
@@ -52,12 +60,17 @@ export function sameDayHint({ rows, scenarios, draft, includeDraft, year, fromTo
  * the path it was copied from; owning it sooner raises its net worth, so the table says why rather than let it
  * read as the better plan.
  */
-export function calendarHint({ rows, scenarios, draft, year, fromToday, format }: HintInput, origin: string): string {
+export function calendarHint(
+  { rows, scenarios, draft, year, fromToday, format }: HintInput,
+  origin: string,
+): string {
   const atYear = rows[0]?.atYear ?? 0
   const rest = rows[0]?.everyReaches === false ? ', the last year shown' : ', the last year every scenario reaches'
   const when = `${monthOf(dateAtYears(origin, atYear))}${year === null ? rest : ''}`
   const ended = rows.some((r) => r.ended) ? ', or a path’s last figure when it ends sooner' : ''
-  const restart = fromToday ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}.` : ''
+  const restart = fromToday
+    ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}.`
+    : ''
   const houseAhead = [...scenarios, draft].some((s) => (s.housePurchaseYear ?? 0) > 0 && offsetOf(s, origin) > 0)
   const house = houseAhead
     ? ' A path that starts later buys its house on an anniversary of its own start, so it can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like.'

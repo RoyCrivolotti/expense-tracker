@@ -10,7 +10,10 @@ import type { Ledger } from './types'
  * and one cell per group of the remaining rows. A pinned row is never summed, so it is not counted twice
  * when the cells and the rows are added up.
  */
-export function buildLedger(dataset: ExpenseDataset, hydratedMonths: Iterable<string>): Ledger {
+export function buildLedger(
+  dataset: ExpenseDataset,
+  hydratedMonths: Iterable<string>,
+): Ledger {
   const { transactions, ...reference } = dataset
   const hydrate = new Set(hydratedMonths)
   const { pinned, rest } = partitionPinned(transactions)

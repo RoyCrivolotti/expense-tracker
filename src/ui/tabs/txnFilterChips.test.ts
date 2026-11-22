@@ -78,9 +78,7 @@ describe('buildActiveFilterChips', () => {
   })
 
   it('joins two selected labels by name', () => {
-    expect(buildActiveFilterChips(input({ labelIds: [10, 11] }))[0]?.label).toBe(
-      'Labels: Madrid trip, Moving',
-    )
+    expect(buildActiveFilterChips(input({ labelIds: [10, 11] }))[0]?.label).toBe('Labels: Madrid trip, Moving')
   })
 
   it('shows a count instead of names once more than two labels are selected', () => {
@@ -115,9 +113,7 @@ describe('buildActiveFilterChips', () => {
   it('labels type and status, and clears them', () => {
     const onTxnType = vi.fn()
     const onStatus = vi.fn()
-    const chips = buildActiveFilterChips(
-      input({ txnType: 'refund', status: 'forecast', onTxnType, onStatus }),
-    )
+    const chips = buildActiveFilterChips(input({ txnType: 'refund', status: 'forecast', onTxnType, onStatus }))
 
     expect(chips.map((c) => c.label)).toEqual(['Type: refund', 'Status: forecast'])
     chips[0]?.onClear()

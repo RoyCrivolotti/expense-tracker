@@ -30,7 +30,9 @@ function model() {
       samplePlan({ id: 2, name: 'Path B', isActive: false, color: '#10b981', sortOrder: 1 }),
     ],
     wealthAccounts: [makeWealthAccount({ id: 1 })],
-    wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: '2026-10-01', entries: [{ accountId: 1, valueCents: 8_000_000 }] })],
+    wealthCheckins: [
+      makeWealthCheckin({ id: 1, checkinDate: '2026-10-01', entries: [{ accountId: 1, valueCents: 8_000_000 }] }),
+    ],
   })
   return buildExpenseModel(dataset)
 }
@@ -53,7 +55,12 @@ describe('Start a copy later…', () => {
 
     expect(actions.createScenario).toHaveBeenCalledTimes(1)
     const input = vi.mocked(actions.createScenario).mock.calls[0]![0]
-    expect(input).toMatchObject({ name: 'Path B edited, from 2026', planStartDate: '2026-10-01', startInvestedCents: 8_000_000, sortOrder: 2 })
+    expect(input).toMatchObject({
+      name: 'Path B edited, from 2026',
+      planStartDate: '2026-10-01',
+      startInvestedCents: 8_000_000,
+      sortOrder: 2,
+    })
     expect(input).not.toHaveProperty('isActive')
     expect(actions.updateScenario).not.toHaveBeenCalled()
     expect(actions.activateScenario).not.toHaveBeenCalled()

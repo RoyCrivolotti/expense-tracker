@@ -17,7 +17,10 @@ interface Probe {
   seen: IncomingMessage[]
 }
 
-async function probe(status: number | number[], body = 'SECRET-BODY'): Promise<Probe> {
+async function probe(
+  status: number | number[],
+  body = 'SECRET-BODY',
+): Promise<Probe> {
   // A list is the answers in order, the last one repeated.
   const answers = Array.isArray(status) ? [...status] : [status]
   const seen: IncomingMessage[] = []

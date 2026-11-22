@@ -34,13 +34,7 @@ export interface ToastItem {
 }
 
 /** Presentational snackbar. State + auto-dismiss live in ToastProvider. */
-export function ToastViewport({
-  toast,
-  onDismiss,
-}: {
-  toast: ToastItem | null
-  onDismiss: () => void
-}) {
+export function ToastViewport({ toast, onDismiss }: { toast: ToastItem | null; onDismiss: () => void }) {
   // Held for its exit, so the message fades out with its words still in it instead of
   // vanishing in the middle of being read.
   return (
@@ -55,12 +49,24 @@ export function ToastViewport({
  * it is a browser's or a layout's key (AltGr is Ctrl and Alt on Windows). A toast that is already
  * leaving has been dismissed, so it no longer answers.
  */
-function useToastShortcut(action: ToastAction | undefined, answering: boolean, done: () => void) {
+function useToastShortcut(
+  action: ToastAction | undefined,
+  answering: boolean,
+  done: () => void,
+) {
   useEffect(() => {
     const shortcut = action?.shortcut
     if (!action || !shortcut || !answering) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== shortcut.code || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat) return
+      if (
+        event.code !== shortcut.code ||
+        !event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.repeat
+      )
+        return
       event.preventDefault()
       action.onAction()
       done()
@@ -83,7 +89,11 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
         role="presentation"
       >
         {toast.message}
-        {toast.action?.shortcut ? <span className={styles.srOnly}>. Press {toast.action.shortcut.label} to {toast.action.label.toLowerCase()}.</span> : null}
+        {toast.action?.shortcut ? (
+          <span className={styles.srOnly}>
+            . Press {toast.action.shortcut.label} to {toast.action.label.toLowerCase()}.
+          </span>
+        ) : null}
         {toast.action ? (
           <button
             type="button"

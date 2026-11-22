@@ -35,7 +35,10 @@ describe('validateMonthRange', () => {
   })
 
   it('has its own limit for rows and for the cube', () => {
-    const last = (from: string, months: number) => ({ from, to: shiftBudgetMonth(from, months - 1) })
+    const last = (
+      from: string,
+      months: number,
+    ) => ({ from, to: shiftBudgetMonth(from, months - 1) })
     expect(() => rowsRange(last('2020-01', MAX_ROWS_MONTHS))).not.toThrow()
     expect(() => rowsRange(last('2020-01', MAX_ROWS_MONTHS + 1))).toThrow(ValidationError)
     expect(() => cubeRange(last('2000-01', MAX_CUBE_MONTHS))).not.toThrow()
@@ -58,24 +61,39 @@ describe('readMonthRows and readMonthCube', () => {
     expect(part.to).toBe('2026-05')
     expect(part.transactions.map((t) => t.id)).toEqual([3, 2])
     const cube = await readMonthCube(repo, OWNER, { from: '2026-03', to: '2026-04' })
-    expect(cube.cells.map((c) => [c.budgetMonth, c.count])).toEqual([['2026-03', 1], ['2026-04', 1]])
+    expect(cube.cells.map((c) => [c.budgetMonth, c.count])).toEqual([
+      ['2026-03', 1],
+      ['2026-04', 1],
+    ])
   })
 
   it('ask the repository for one more than the limit, so it can tell a range is too big', async () => {
     const asked: number[] = []
     const stub = {
-      readMonthRows: (_owner: string, _range: unknown, max: number) => {
+      readMonthRows: (
+        _owner: string,
+        _range: unknown,
+        max: number,
+      ) => {
         asked.push(max)
         return Promise.resolve(null)
       },
-      readMonthCells: (_owner: string, _range: unknown, max: number) => {
+      readMonthCells: (
+        _owner: string,
+        _range: unknown,
+        max: number,
+      ) => {
         asked.push(max)
         return Promise.resolve(null)
       },
     } as unknown as ExpenseRepository
 
-    await expect(readMonthRows(stub, OWNER, { from: '2026-01', to: '2026-02' })).rejects.toThrow(`more than ${MAX_ROWS_PER_REQUEST} rows`)
-    await expect(readMonthCube(stub, OWNER, { from: '2026-01', to: '2026-02' })).rejects.toThrow(`more than ${MAX_CUBE_CELLS} cells`)
+    await expect(readMonthRows(stub, OWNER, { from: '2026-01', to: '2026-02' })).rejects.toThrow(
+      `more than ${MAX_ROWS_PER_REQUEST} rows`,
+    )
+    await expect(readMonthCube(stub, OWNER, { from: '2026-01', to: '2026-02' })).rejects.toThrow(
+      `more than ${MAX_CUBE_CELLS} cells`,
+    )
     expect(asked).toEqual([MAX_ROWS_PER_REQUEST, MAX_CUBE_CELLS])
   })
 

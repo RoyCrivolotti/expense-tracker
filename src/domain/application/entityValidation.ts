@@ -11,7 +11,10 @@ import { ValidationError } from './validationError'
 export const MAX_DESCRIPTION_LENGTH = 140
 export const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
-export function validateEntityColor(entity: string, color: string | undefined): string {
+export function validateEntityColor(
+  entity: string,
+  color: string | undefined,
+): string {
   const trimmed = color?.trim().toLowerCase()
   if (!trimmed || !HEX_COLOR.test(trimmed)) {
     throw new ValidationError(`${entity} colour must be a hex value like #6366f1`)
@@ -19,7 +22,10 @@ export function validateEntityColor(entity: string, color: string | undefined): 
   return trimmed
 }
 
-export function validateEntitySortOrder(entity: string, sortOrder: unknown): number {
+export function validateEntitySortOrder(
+  entity: string,
+  sortOrder: unknown,
+): number {
   // SQLite has type affinity, not type enforcement: a non-numeric value is
   // stored as TEXT in an INTEGER column and silently breaks every sort that
   // reads it back. An explicit null fails the NOT NULL constraint and leaks the
@@ -28,7 +34,10 @@ export function validateEntitySortOrder(entity: string, sortOrder: unknown): num
   return sortOrder as number
 }
 
-export function validateEntityActive(entity: string, active: unknown): boolean {
+export function validateEntityActive(
+  entity: string,
+  active: unknown,
+): boolean {
   if (typeof active !== 'boolean') throw new ValidationError(`${entity} active must be true or false`)
   return active
 }
@@ -38,7 +47,10 @@ export function validateEntityActive(entity: string, active: unknown): boolean {
  * string and "no description" mean the same thing to a reader, and collapsing
  * them here keeps the column NULL instead of storing ''.
  */
-export function validateEntityDescription(entity: string, description: string | undefined): string | undefined {
+export function validateEntityDescription(
+  entity: string,
+  description: string | undefined,
+): string | undefined {
   const trimmed = description?.trim()
   if (!trimmed) return undefined
   if (trimmed.length > MAX_DESCRIPTION_LENGTH) {

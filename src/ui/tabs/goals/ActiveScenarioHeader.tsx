@@ -121,16 +121,12 @@ export function ActiveScenarioHeader({
   return (
     <div className={styles.activeHeader}>
       <div className={styles.activeHeaderTop}>
-        <ColorSwatchPicker
-          color={draft.color}
-          onChange={(color) => onPatch({ color })}
-          label="Scenario color"
-        />
+        <ColorSwatchPicker color={draft.color} onChange={(color) => onPatch({ color })} label="Scenario color" />
         <input
           className={styles.renameInput}
           value={draft.name}
           aria-label="Scenario name"
-        maxLength={SCENARIO_NAME_MAX_LENGTH}
+          maxLength={SCENARIO_NAME_MAX_LENGTH}
           placeholder="Scenario name"
           onChange={(e) => onPatch({ name: e.target.value })}
         />
@@ -162,12 +158,7 @@ export function ActiveScenarioHeader({
             </button>
             {actions ? (
               <>
-                <button
-                  type="button"
-                  className={styles.btn}
-                  disabled={creating}
-                  onClick={onDuplicate}
-                >
+                <button type="button" className={styles.btn} disabled={creating} onClick={onDuplicate}>
                   Duplicate
                 </button>
                 <button type="button" className={styles.btn} onClick={() => setDeleteOpen(true)}>
@@ -189,7 +180,9 @@ export function ActiveScenarioHeader({
               </>
             ) : null}
           </div>
-          {startLater ? <StartLaterButton startLater={startLater} disabled={creating} className={styles.btnText} /> : null}
+          {startLater ? (
+            <StartLaterButton startLater={startLater} disabled={creating} className={styles.btnText} />
+          ) : null}
           <SaveAsNewRow name={draft.name} onSaveDraft={onSaveDraft} />
         </>
       ) : (

@@ -8,7 +8,13 @@ import { NARROW_MQ } from './useGoalsNarrow'
 import { useScenarioEditor } from './useScenarioEditor'
 
 const hero = vi.hoisted(
-  (): { todayIndex: number | undefined; headerAside: unknown; displaySwitch: unknown; footer: unknown; extraSeries: unknown } => ({
+  (): {
+    todayIndex: number | undefined
+    headerAside: unknown
+    displaySwitch: unknown
+    footer: unknown
+    extraSeries: unknown
+  } => ({
     todayIndex: undefined,
     headerAside: undefined,
     displaySwitch: undefined,
@@ -17,7 +23,13 @@ const hero = vi.hoisted(
   }),
 )
 vi.mock('./charts/NetWorthChart', () => ({
-  NetWorthChart: (props: { todayIndex?: number; headerAside?: unknown; displaySwitch?: unknown; footer?: unknown; extraSeries?: unknown }) => {
+  NetWorthChart: (props: {
+    todayIndex?: number
+    headerAside?: unknown
+    displaySwitch?: unknown
+    footer?: unknown
+    extraSeries?: unknown
+  }) => {
     hero.todayIndex = props.todayIndex
     hero.extraSeries = props.extraSeries
     hero.headerAside = props.headerAside
@@ -166,7 +178,10 @@ describe('PlanHero with a scenario that starts before the loaded one', () => {
     installFakeMatchMedia()
   })
 
-  function renderWith(mode: 'purchasing-power' | 'nominal', earlierStart: string) {
+  function renderWith(
+    mode: 'purchasing-power' | 'nominal',
+    earlierStart: string,
+  ) {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2028-07-01T12:00:00Z'))
     const plan = makeScenario({ id: 1, name: 'Later plan', sortOrder: 0, isActive: true, planStartDate: '2027-07-01' })
@@ -181,7 +196,14 @@ describe('PlanHero with a scenario that starts before the loaded one', () => {
         checkins={[makeWealthCheckin({ checkinDate: '2028-01-01' })]}
         accounts={[]}
         fromToday={null}
-        display={{ mode, onModeChange: vi.fn(), assumedInflation: 0, preview: null, onPreview: vi.fn(), onOpenSetting: undefined }}
+        display={{
+          mode,
+          onModeChange: vi.fn(),
+          assumedInflation: 0,
+          preview: null,
+          onPreview: vi.fn(),
+          onOpenSetting: undefined,
+        }}
       />,
     )
     render(<>{hero.footer}</>)
@@ -196,13 +218,19 @@ describe('PlanHero with a scenario that starts before the loaded one', () => {
   it('says the chart and the figures under it are in two moneys', () => {
     renderWith('purchasing-power', '2026-01-01')
     expect(
-      screen.getByText('The chart is in 2026 euros so the scenarios can be compared. The figures below are in 2027 euros, the year this scenario starts.'),
+      screen.getByText(
+        'The chart is in 2026 euros so the scenarios can be compared. The figures below are in 2027 euros, the year this scenario starts.',
+      ),
     ).toBeInTheDocument()
   })
 
   it('names the two by month when they start in one year', () => {
     renderWith('purchasing-power', '2027-01-01')
-    expect(screen.getByText(/The chart is in euros of Jan 2027 so the scenarios can be compared\. The figures below are in euros of Jul 2027, the month this scenario starts\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /The chart is in euros of Jan 2027 so the scenarios can be compared\. The figures below are in euros of Jul 2027, the month this scenario starts\./,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('says nothing of it in the Nominal view, where the chart is in the euros of each year', () => {

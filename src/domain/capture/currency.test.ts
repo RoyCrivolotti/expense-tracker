@@ -40,9 +40,12 @@ describe('currencyMarker', () => {
     expect(currencyMarker(token)).toBe(code)
   })
 
-  it.each(['', 'compra', '12,34', '-12', 'XYZ', '12km', '12h', '€12km', '1,2,3x', '...'])('finds none in %j', (token) => {
-    expect(currencyMarker(token)).toBeNull()
-  })
+  it.each(['', 'compra', '12,34', '-12', 'XYZ', '12km', '12h', '€12km', '1,2,3x', '...'])(
+    'finds none in %j',
+    (token) => {
+      expect(currencyMarker(token)).toBeNull()
+    },
+  )
 
   it('does not take a code that is also a word unless it is in capitals', () => {
     expect(currencyMarker('ALL')).toBe('ALL')
@@ -55,11 +58,14 @@ describe('currencyMarker', () => {
 })
 
 describe('currencyMarker, names that belong to objects', () => {
-  it.each(['constructor', 'Constructor.', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'])('is no marker: %j', (token) => {
-    expect(currencyMarker(token)).toBeNull()
-    expect(isMarkerToken(token)).toBe(false)
-    expect(findMarker(`12,00${token}`)).toBeNull()
-  })
+  it.each(['constructor', 'Constructor.', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'])(
+    'is no marker: %j',
+    (token) => {
+      expect(currencyMarker(token)).toBeNull()
+      expect(isMarkerToken(token)).toBe(false)
+      expect(findMarker(`12,00${token}`)).toBeNull()
+    },
+  )
 })
 
 describe('findMarker and standaloneMarker', () => {
@@ -68,7 +74,8 @@ describe('findMarker and standaloneMarker', () => {
     expect(findMarker('$')).toEqual({ code: 'USD', guess: true })
   })
   it('does not flag a code or a symbol that is one currency', () => {
-    for (const token of ['EUR', '€', 'R$', 'USD', '12,50€', 'zł']) expect(findMarker(token)).toMatchObject({ guess: false })
+    for (const token of ['EUR', '€', 'R$', 'USD', '12,50€', 'zł'])
+      expect(findMarker(token)).toMatchObject({ guess: false })
   })
   it('gives a standalone marker only for a token that is nothing else', () => {
     expect(standaloneMarker('EUR.')).toEqual({ code: 'EUR', guess: false })

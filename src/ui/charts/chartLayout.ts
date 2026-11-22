@@ -27,6 +27,10 @@ export function innerSize() {
   }
 }
 
-export function yAt(value: number, maxVal: number, innerH: number): number {
+export function yAt(
+  value: number,
+  maxVal: number,
+  innerH: number,
+): number {
   return PAD.top + innerH - (value / maxVal) * innerH
 }

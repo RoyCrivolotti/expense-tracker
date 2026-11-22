@@ -38,7 +38,11 @@ describe('GoalsNarrative', () => {
       contributionSchedule: [{ from: '2028-03', monthlyCents: 2_500_00 }],
     })
     render(<GoalsNarrative draft={draft} milestones={[]} />)
-    expect(screen.getByText(/real return and 1\.500,00 €\/mo, then 2\.500,00 €\/mo from Mar '28 invested, your portfolio reaches/)).toBeTruthy()
+    expect(
+      screen.getByText(
+        /real return and 1\.500,00 €\/mo, then 2\.500,00 €\/mo from Mar '28 invested, your portfolio reaches/,
+      ),
+    ).toBeTruthy()
   })
 
   it('says only the monthly amount for a scenario that never changes it', () => {
@@ -88,21 +92,29 @@ describe('GoalsNarrative in both moneys', () => {
   }
   const full = (cents: number) => formatCents(cents, EU_MONEY_FORMAT)
   const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
-  const renderIn = (inflation: number, draft = makeScenario(flat), compact = false) =>
+  const renderIn = (
+    inflation: number,
+    draft = makeScenario(flat),
+    compact = false,
+  ) =>
     render(
       <AssumedInflationContext.Provider value={inflation}>
         <GoalsNarrative draft={draft} milestones={[]} compact={compact} />
       </AssumedInflationContext.Provider>,
     )
 
-  it('says the full narrative is in the plan\'s euros and what the net worth comes to on the account when the plan ends', () => {
+  it("says the full narrative is in the plan's euros and what the net worth comes to on the account when the plan ends", () => {
     renderIn(0.02)
     expect(
-      screen.getByText(new RegExp(`in 10 years, in 2026 euros \\(the net worth is about ${full(12_189_944).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} on your account in 2036\\)`)),
+      screen.getByText(
+        new RegExp(
+          `in 10 years, in 2026 euros \\(the net worth is about ${full(12_189_944).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} on your account in 2036\\)`,
+        ),
+      ),
     ).toBeInTheDocument()
   })
 
-  it('says the FI target in the plan\'s euros and, when it is not reached, what it would be on the account at the end of the plan', () => {
+  it("says the FI target in the plan's euros and, when it is not reached, what it would be on the account at the end of the plan", () => {
     renderIn(0.02)
     const target = onAccountCents(75_000_000, 10, 0.02)
     expect(screen.getByText(/FI target \(.* SWR\) is/).textContent).toBe(
@@ -111,7 +123,12 @@ describe('GoalsNarrative in both moneys', () => {
   })
 
   it('says the FI target on the account in the year it is reached', () => {
-    const reaching = makeScenario({ ...flat, startInvestedCents: 50_000_000, monthlyContributionCents: 500_000, horizonYears: 20 })
+    const reaching = makeScenario({
+      ...flat,
+      startInvestedCents: 50_000_000,
+      monthlyContributionCents: 500_000,
+      horizonYears: 20,
+    })
     const { fiYear } = getNarrativeStats(reaching, [], 0.02)
     expect(fiYear).not.toBeNull()
     renderIn(0.02, reaching)
@@ -122,18 +139,24 @@ describe('GoalsNarrative in both moneys', () => {
 
   it('says once that the figures are the same with no inflation', () => {
     renderIn(0)
-    expect(screen.getByText(/in 10 years, in 2026 euros \(the net worth is the same on your account in 2036\)/)).toBeInTheDocument()
-    expect(screen.getByText(/FI target/).textContent).toContain('in 2026 euros, not reached in the horizon (the same on your account in 2036, when the plan ends)')
+    expect(
+      screen.getByText(/in 10 years, in 2026 euros \(the net worth is the same on your account in 2036\)/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/FI target/).textContent).toContain(
+      'in 2026 euros, not reached in the horizon (the same on your account in 2036, when the plan ends)',
+    )
   })
 
-  it('puts the same pair under the net worth in the phone\'s summary box', () => {
+  it("puts the same pair under the net worth in the phone's summary box", () => {
     renderIn(0.02, makeScenario(flat), true)
     expect(screen.getByText('Net worth in 10 yrs')).toBeInTheDocument()
     expect(screen.getByText(`in 2026 euros, about ${short(12_189_944)} on your account in 2036`)).toBeInTheDocument()
   })
 
-  it('names the money today\'s euros and the year by the plan year for a plan with no start date', () => {
+  it("names the money today's euros and the year by the plan year for a plan with no start date", () => {
     renderIn(0.02, makeScenario({ ...flat, planStartDate: null }))
-    expect(screen.getByText(/in today's euros \(the net worth is about .* on your account in year 10\)/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/in today's euros \(the net worth is about .* on your account in year 10\)/),
+    ).toBeInTheDocument()
   })
 })

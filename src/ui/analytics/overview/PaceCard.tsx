@@ -36,9 +36,7 @@ function PaceMeter({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }
   const pct = clamp01(pace.flexibleSpentCents / pace.flexibleBudgetCents)
   const tickPct = clamp01(pace.shouldBeTodayCents / pace.flexibleBudgetCents)
   const ghostPct =
-    pace.lastMonthSameDayCents !== null
-      ? clamp01(pace.lastMonthSameDayCents / pace.flexibleBudgetCents)
-      : null
+    pace.lastMonthSameDayCents !== null ? clamp01(pace.lastMonthSameDayCents / pace.flexibleBudgetCents) : null
   const closedNote = isFuture
     ? 'Not started — the pace clock only runs while a month is open.'
     : 'Closed month — the pace clock only runs while a month is open.'
@@ -47,9 +45,7 @@ function PaceMeter({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }
     <Card>
       <h3 className={styles.cardTitle}>Flexible spending pace</h3>
       <p className={styles.cardSub}>
-        {pace.open
-          ? `Day ${pace.dayOfMonth} of ${pace.daysInMonth} — fixed costs are counted separately.`
-          : closedNote}
+        {pace.open ? `Day ${pace.dayOfMonth} of ${pace.daysInMonth} — fixed costs are counted separately.` : closedNote}
       </p>
       <div className={styles.paceNumber}>
         {formatCentsCompact(pace.flexibleSpentCents, format)}
@@ -65,17 +61,11 @@ function PaceMeter({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }
           />
         )}
         {ghostPct !== null && (
-          <div
-            className={styles.meterGhost}
-            style={{ left: `${ghostPct * 100}%` }}
-            title="Last month, same days"
-          />
+          <div className={styles.meterGhost} style={{ left: `${ghostPct * 100}%` }} title="Last month, same days" />
         )}
       </div>
       <div className={styles.kvList}>
-        {pace.open && (
-          <Row label="Should be today" value={formatCentsCompact(pace.shouldBeTodayCents, format)} />
-        )}
+        {pace.open && <Row label="Should be today" value={formatCentsCompact(pace.shouldBeTodayCents, format)} />}
         {pace.open && (
           <Row label="At this pace, month ends near" value={formatCentsCompact(pace.projectedCents, format)} />
         )}

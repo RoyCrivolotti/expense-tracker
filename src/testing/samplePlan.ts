@@ -36,9 +36,10 @@ export function samplePlan(overrides: Partial<GoalScenario> = {}): GoalScenario 
 }
 
 /** 100k, 250k, 500k and 1M, as amounts on the account. */
-export const SAMPLE_MILESTONES: Milestone[] = [10_000_000, 25_000_000, 50_000_000, 100_000_000].map(
-  (amountCents) => ({ amountCents, label: '' }),
-)
+export const SAMPLE_MILESTONES: Milestone[] = [10_000_000, 25_000_000, 50_000_000, 100_000_000].map((amountCents) => ({
+  amountCents,
+  label: '',
+}))
 
 /** Inflation rates that tests of anything restated across years run at: none, falling prices, low and high. */
 export const TEST_INFLATION_RATES = [-0.01, 0, 0.02, 0.05]
@@ -48,7 +49,10 @@ export const TEST_INFLATION_RATES = [-0.01, 0, 0.02, 0.05]
  * horizon of 15 to 40 years, a house bought at the start, in a few years or never, one event, and a
  * change of the monthly amount in any month of the plan's first decade.
  */
-export function randomPlans(seed: number, count: number): GoalScenario[] {
+export function randomPlans(
+  seed: number,
+  count: number,
+): GoalScenario[] {
   const rand = mulberry32(seed)
   const pick = (n: number) => Math.floor(rand() * n)
   return Array.from({ length: count }, () => {
@@ -68,7 +72,12 @@ export function randomPlans(seed: number, count: number): GoalScenario[] {
       mortgageRateAnnual: rand() * 0.05,
       houseAppreciationRate: 0.01 + rand() * 0.04,
       lifeEvents: [{ year: 1 + pick(14), amountCents: Math.round((rand() - 0.4) * 5_000_000), label: 'Event' }],
-      contributionSchedule: [{ from: `${startYear + 1 + pick(9)}-${String(changeMonth).padStart(2, '0')}`, monthlyCents: Math.round(rand() * 300_000) }],
+      contributionSchedule: [
+        {
+          from: `${startYear + 1 + pick(9)}-${String(changeMonth).padStart(2, '0')}`,
+          monthlyCents: Math.round(rand() * 300_000),
+        },
+      ],
     })
   })
 }

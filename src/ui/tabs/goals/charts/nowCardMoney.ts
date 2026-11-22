@@ -28,7 +28,9 @@ export function worthInPlanMoneyNote({
   // A check-in in the year the plan started is a different money from the plan's, though it has the same year in
   // its name, so the day is named instead.
   const sameYear = latest.date.slice(0, 4) === planStartDate.slice(0, 4)
-  const money_ = sameYear ? `${currencyWord(format)} of ${formatCheckinDate(planStartDate)}` : planMoneyLabel(planStartDate, format)
+  const money_ = sameYear
+    ? `${currencyWord(format)} of ${formatCheckinDate(planStartDate)}`
+    : planMoneyLabel(planStartDate, format)
   return `worth about ${real} in ${money_}, the money the FI target is in`
 }
 
@@ -53,7 +55,14 @@ export function fiTargetMoneyNote({
   money: (cents: number) => string
   format: MoneyFormat
 }): string {
-  const target = bothMoneys({ cents: targetCents, years: fiYear ?? horizonYears, planStartDate, inflationRate, money, format })
+  const target = bothMoneys({
+    cents: targetCents,
+    years: fiYear ?? horizonYears,
+    planStartDate,
+    inflationRate,
+    money,
+    format,
+  })
   const when = fiYear != null ? ', the year the plan reaches it' : ', when the plan ends'
   return `The target is in ${target.planLabel}, ${aboutOnAccount(target)}${when}.`
 }

@@ -1,7 +1,13 @@
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { crossingYears, scenarioToParams, shortMonthYearLabel, wholeYearsToAmount, yearsBetween } from '../../../../engine'
+import {
+  crossingYears,
+  scenarioToParams,
+  shortMonthYearLabel,
+  wholeYearsToAmount,
+  yearsBetween,
+} from '../../../../engine'
 
 export { yearsBetween }
 import { tableName } from '../scenarioNames'
@@ -108,7 +114,10 @@ const SAME_DAY = 1e-9
  * after today has nothing before its start, so what it has at its start it has on that day, the
  * years to which are its cell.
  */
-export function cellFromOffset(offset: number | null, elapsedYears: number): number | null {
+export function cellFromOffset(
+  offset: number | null,
+  elapsedYears: number,
+): number | null {
   if (offset === null) return null
   if (offset <= SAME_DAY && elapsedYears >= 0) return 0
   return Math.max(0, Math.ceil(offset - elapsedYears - SAME_DAY))
@@ -148,7 +157,10 @@ export function buildRows(
 }
 
 /** The calendar year `years` whole years after the row's start. */
-export function calendarYear(row: MilestoneRow, years: number): number {
+export function calendarYear(
+  row: MilestoneRow,
+  years: number,
+): number {
   return Number(row.startDate.slice(0, 4)) + years
 }
 
@@ -165,25 +177,28 @@ const TINT_MAX = 31
  * to 31% for the longest horizon, on one scale for every row so two cells can be compared by
  * eye. Null where there is no tint to give: already there, or not within the horizon.
  */
-export function tintPercent(years: number | null, longest: number): number | null {
+export function tintPercent(
+  years: number | null,
+  longest: number,
+): number | null {
   if (years === null || years === 0) return null
   const share = Math.min(1, years / Math.max(1, longest))
   return Math.round(TINT_MIN + (TINT_MAX - TINT_MIN) * share)
 }
 
 export type Gap =
-  | { kind: 'same' }
-  | { kind: 'years'; years: number }
-  | { kind: 'later' }
-  | { kind: 'sooner' }
-  | { kind: 'neither' }
+  { kind: 'same' } | { kind: 'years'; years: number } | { kind: 'later' } | { kind: 'sooner' } | { kind: 'neither' }
 
 /**
  * How one path stands against the plan for one milestone, or null for the plan itself and when
  * there is no plan. Both sides are the years from today that the table shows, so whatever day a
  * path started on the figure is the difference between the two cells on screen.
  */
-export function gapVersus(row: MilestoneRow, plan: MilestoneRow | null, index: number): Gap | null {
+export function gapVersus(
+  row: MilestoneRow,
+  plan: MilestoneRow | null,
+  index: number,
+): Gap | null {
   if (!plan || row.kind === 'plan') return null
   const mine = row.cells[index] ?? null
   const theirs = plan.cells[index] ?? null
@@ -215,7 +230,10 @@ export function gapIsSooner(gap: Gap): boolean {
   return gap.kind === 'sooner' || (gap.kind === 'years' && gap.years < 0)
 }
 
-function gapSentence(gap: Gap, planName: string): string {
+function gapSentence(
+  gap: Gap,
+  planName: string,
+): string {
   switch (gap.kind) {
     case 'same':
       return ` That is the same as ${planName}.`
@@ -234,7 +252,11 @@ function reachedSentence(reachedOn: string | undefined): string {
   return reachedOn ? ` Your check-ins reached it by ${shortMonthYearLabel(reachedOn)}.` : ''
 }
 
-function headline(row: MilestoneRow, index: number, amount: string): string {
+function headline(
+  row: MilestoneRow,
+  index: number,
+  amount: string,
+): string {
   const years = row.cells[index] ?? null
   if (years === null) return beyondText(row, amount)
   const own = row.sinceStart[index] ?? 0
@@ -276,7 +298,10 @@ export function moveCell(
   key: CellMove,
   size: { rows: number; cols: number },
 ): { row: number; col: number } {
-  const clamp = (n: number, max: number) => Math.max(0, Math.min(max - 1, n))
+  const clamp = (
+    n: number,
+    max: number,
+  ) => Math.max(0, Math.min(max - 1, n))
   const delta: Record<CellMove, [number, number]> = {
     ArrowLeft: [0, -1],
     ArrowRight: [0, 1],
@@ -298,7 +323,11 @@ export interface CellRef {
 }
 
 /** The sentence for the cell the reader is on, or null before they have been on one. */
-export function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentences: string[][]): string | null {
+export function sentenceAt(
+  point: CellRef | null,
+  rows: MilestoneRow[],
+  sentences: string[][],
+): string | null {
   if (!point) return null
   const row = rows.findIndex((r) => r.id === point.rowId)
   return sentences[row]?.[point.index] ?? null
@@ -308,7 +337,11 @@ export function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentence
  * What a cell says in its tinted box: the years from today, or the calendar year the path's own
  * yearly step falls in. Already there is a tick in both.
  */
-export function cellText(row: MilestoneRow, index: number, unit: YearsUnit): string {
+export function cellText(
+  row: MilestoneRow,
+  index: number,
+  unit: YearsUnit,
+): string {
   const years = row.cells[index] ?? null
   const calendar = unit === 'calendar'
   if (years === 0) return '✓'
@@ -322,7 +355,11 @@ export interface GapText {
 }
 
 /** The line under a cell while the table is comparing with the plan; null where there is nothing to say. */
-export function gapLabel(row: MilestoneRow, plan: MilestoneRow | null, index: number): GapText | null {
+export function gapLabel(
+  row: MilestoneRow,
+  plan: MilestoneRow | null,
+  index: number,
+): GapText | null {
   const gap = gapVersus(row, plan, index)
   // Both already there: the check marks say it, and "=" under each is only noise.
   if (gap === null || (gap.kind === 'same' && row.cells[index] === 0)) return null
@@ -333,7 +370,10 @@ export function gapLabel(row: MilestoneRow, plan: MilestoneRow | null, index: nu
  * A row keeps the line under its cells only if one of them has something to put in it. Every
  * milestone counts, not only the page in view, so the rows do not change height with the page.
  */
-export function rowHasGaps(row: MilestoneRow, plan: MilestoneRow | null): boolean {
+export function rowHasGaps(
+  row: MilestoneRow,
+  plan: MilestoneRow | null,
+): boolean {
   return row.cells.some((_, index) => gapLabel(row, plan, index) !== null)
 }
 
@@ -354,7 +394,10 @@ export function goalsPerPage(width: number): number {
  * The milestone indices split into the fewest pages of at most `per` columns, as even as can
  * be, so no page is left with one lonely column. Everything on one page when it all fits.
  */
-export function splitPages(indices: number[], per: number): number[][] {
+export function splitPages(
+  indices: number[],
+  per: number,
+): number[][] {
   if (indices.length === 0) return []
   const pages = Math.ceil(indices.length / Math.max(1, per))
   const base = Math.floor(indices.length / pages)
@@ -373,7 +416,10 @@ export function splitPages(indices: number[], per: number): number[][] {
  * the same thing a line of text does in less room. Empty when that would be all of them, so the
  * table never ends up with nothing to show.
  */
-export function reachedByEveryRow(rows: MilestoneRow[], count: number): number[] {
+export function reachedByEveryRow(
+  rows: MilestoneRow[],
+  count: number,
+): number[] {
   if (rows.length === 0) return []
   const all = Array.from({ length: count }, (_, i) => i)
   const done = all.filter((i) => rows.every((r) => r.cells[i] === 0))
@@ -384,7 +430,10 @@ export function reachedByEveryRow(rows: MilestoneRow[], count: number): number[]
  * The rows in the order they get to one milestone: soonest first, those that never do last,
  * and rows that tie keep the order they have in the table.
  */
-export function soonestFirst(rows: MilestoneRow[], index: number): MilestoneRow[] {
+export function soonestFirst(
+  rows: MilestoneRow[],
+  index: number,
+): MilestoneRow[] {
   const rank = (row: MilestoneRow) => row.cells[index] ?? Number.POSITIVE_INFINITY
   return rows
     .map((row, position) => ({ row, position }))
@@ -393,6 +442,9 @@ export function soonestFirst(rows: MilestoneRow[], index: number): MilestoneRow[
 }
 
 /** A page's heading, "150k–400k": its first and last milestone. */
-export function pageLabel(first: string, last: string): string {
+export function pageLabel(
+  first: string,
+  last: string,
+): string {
   return first === last ? first : `${first}–${last}`
 }

@@ -5,18 +5,24 @@ import { exportSql } from './exportSql'
 const OWNER = 'owner@example.com'
 
 describe('the statement for a chunk', () => {
-  it.each(EXPORT_TABLES.filter((t) => t !== 'settings'))('%s: owner first, primary-key order, one row past the limit', (table) => {
-    const { sql, params } = exportSql(table, OWNER, undefined, 50)
+  it.each(EXPORT_TABLES.filter((t) => t !== 'settings'))(
+    '%s: owner first, primary-key order, one row past the limit',
+    (table) => {
+      const { sql, params } = exportSql(table, OWNER, undefined, 50)
 
-    expect(sql).toMatch(/\bowner = \?/)
-    expect(sql).toMatch(/ORDER BY (t\.id|id|year_month|account_id, year_month)\b/)
-    expect(sql).toMatch(/LIMIT \?$/)
-    expect(params[0]).toBe(OWNER)
-    expect(params.at(-1)).toBe(51)
-  })
+      expect(sql).toMatch(/\bowner = \?/)
+      expect(sql).toMatch(/ORDER BY (t\.id|id|year_month|account_id, year_month)\b/)
+      expect(sql).toMatch(/LIMIT \?$/)
+      expect(params[0]).toBe(OWNER)
+      expect(params.at(-1)).toBe(51)
+    },
+  )
 
   it('reads the settings row of the owner and nothing else', () => {
-    expect(exportSql('settings', OWNER, undefined, 1)).toEqual({ sql: 'SELECT * FROM settings WHERE owner = ?', params: [OWNER] })
+    expect(exportSql('settings', OWNER, undefined, 1)).toEqual({
+      sql: 'SELECT * FROM settings WHERE owner = ?',
+      params: [OWNER],
+    })
   })
 
   it('continues after the position it was given, as a number or text as the key is', () => {
@@ -34,7 +40,18 @@ describe('the statement for a chunk', () => {
 
   it('binds only values from the caller, in a fixed number, whatever the table', () => {
     for (const table of EXPORT_TABLES) {
-      const { sql, params } = exportSql(table, OWNER, table === 'accountStatements' ? '9:2026-12' : table === 'cashActuals' ? '2026-12' : table === 'settings' ? undefined : '9', 1_000)
+      const { sql, params } = exportSql(
+        table,
+        OWNER,
+        table === 'accountStatements'
+          ? '9:2026-12'
+          : table === 'cashActuals'
+            ? '2026-12'
+            : table === 'settings'
+              ? undefined
+              : '9',
+        1_000,
+      )
       expect(sql.match(/\?/g)?.length).toBe(params.length)
       expect(params.length).toBeLessThanOrEqual(4)
     }

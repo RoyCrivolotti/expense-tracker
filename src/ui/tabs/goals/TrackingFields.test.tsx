@@ -12,7 +12,10 @@ function draftWith(over: Parameters<typeof samplePlan>[0]) {
   return draft
 }
 
-function moveStartTo(date: string, over: Parameters<typeof samplePlan>[0]) {
+function moveStartTo(
+  date: string,
+  over: Parameters<typeof samplePlan>[0],
+) {
   const onChange = vi.fn()
   render(<TrackingFields draft={draftWith(over)} latest={null} onChange={onChange} />)
   fireEvent.change(screen.getByLabelText('Plan start date'), { target: { value: date } })
@@ -26,7 +29,11 @@ describe('moving the plan start date past a monthly change', () => {
   ]
 
   it('makes the change the plan starts with, so the starting amount and the history show what the plan uses', () => {
-    const onChange = moveStartTo('2026-09-01', { planStartDate: '2026-01-01', monthlyContributionCents: 100_000, contributionSchedule: changes })
+    const onChange = moveStartTo('2026-09-01', {
+      planStartDate: '2026-01-01',
+      monthlyContributionCents: 100_000,
+      contributionSchedule: changes,
+    })
     expect(onChange).toHaveBeenCalledWith({
       planStartDate: '2026-09-01',
       monthlyContributionCents: 150_000,
@@ -35,7 +42,11 @@ describe('moving the plan start date past a monthly change', () => {
   })
 
   it('changes only the date when no change has begun by the new start', () => {
-    const onChange = moveStartTo('2026-02-01', { planStartDate: '2026-01-01', monthlyContributionCents: 100_000, contributionSchedule: changes })
+    const onChange = moveStartTo('2026-02-01', {
+      planStartDate: '2026-01-01',
+      monthlyContributionCents: 100_000,
+      contributionSchedule: changes,
+    })
     expect(onChange).toHaveBeenCalledWith({ planStartDate: '2026-02-01' })
   })
 
@@ -46,7 +57,13 @@ describe('moving the plan start date past a monthly change', () => {
 
   it('does not touch the changes when the date is cleared', () => {
     const onChange = vi.fn()
-    render(<TrackingFields draft={draftWith({ planStartDate: '2026-01-01', contributionSchedule: changes })} latest={null} onChange={onChange} />)
+    render(
+      <TrackingFields
+        draft={draftWith({ planStartDate: '2026-01-01', contributionSchedule: changes })}
+        latest={null}
+        onChange={onChange}
+      />,
+    )
     fireEvent.change(screen.getByLabelText('Plan start date'), { target: { value: '' } })
     expect(onChange).toHaveBeenCalledWith({ planStartDate: null })
   })

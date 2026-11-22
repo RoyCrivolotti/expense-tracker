@@ -15,7 +15,17 @@ async function openPicker(value: number) {
 describe('ordinalDay', () => {
   it('uses st, nd, rd and th, with the teens all th', () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 28].map(ordinalDay)).toEqual([
-      '1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '28th',
+      '1st',
+      '2nd',
+      '3rd',
+      '4th',
+      '11th',
+      '12th',
+      '13th',
+      '21st',
+      '22nd',
+      '23rd',
+      '28th',
     ])
   })
 })

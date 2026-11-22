@@ -32,7 +32,10 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function alerts(): BackupAlerts & { onBackupFailed: ReturnType<typeof vi.fn>; onBucketNearLimit: ReturnType<typeof vi.fn> } {
+function alerts(): BackupAlerts & {
+  onBackupFailed: ReturnType<typeof vi.fn>
+  onBucketNearLimit: ReturnType<typeof vi.fn>
+} {
   return {
     onLargeSnapshot: vi.fn().mockResolvedValue(undefined),
     onBucketNearLimit: vi.fn().mockResolvedValue(undefined),
@@ -45,7 +48,10 @@ function alerts(): BackupAlerts & { onBackupFailed: ReturnType<typeof vi.fn>; on
 describe('the daily snapshot, with the second of three owners failing', () => {
   const broken = new Error('D1 hiccup')
   const setup = (over: Partial<BackupDeps> = {}) => {
-    const store = memoryBackupStore({ [ownerBackupKey(A, '2026-09-01')]: 'old', [ownerBackupKey(B, '2026-09-01')]: 'old' })
+    const store = memoryBackupStore({
+      [ownerBackupKey(A, '2026-09-01')]: 'old',
+      [ownerBackupKey(B, '2026-09-01')]: 'old',
+    })
     const spy = alerts()
     const repo = {
       listOwners: () => Promise.resolve([A, B, C]),
@@ -108,7 +114,9 @@ describe('the daily snapshot, with the second of three owners failing', () => {
       } as unknown as ExpenseRepository,
     })
 
-    await expect(runAllBackups(deps)).rejects.toThrow(`2 of 3 owner(s) have no backup for ${TODAY}: ${B} (no ${B}), ${C} (no ${C})`)
+    await expect(runAllBackups(deps)).rejects.toThrow(
+      `2 of 3 owner(s) have no backup for ${TODAY}: ${B} (no ${B}), ${C} (no ${C})`,
+    )
     expect(spy.onBackupFailed).toHaveBeenCalledTimes(2)
   })
 
@@ -130,7 +138,10 @@ describe('the daily snapshot, with the second of three owners failing', () => {
 
   it('is quiet when every owner is backed up', async () => {
     const { deps, spy } = setup({
-      repo: { listOwners: () => Promise.resolve([A, B, C]), loadDataset: () => Promise.resolve({}) } as unknown as ExpenseRepository,
+      repo: {
+        listOwners: () => Promise.resolve([A, B, C]),
+        loadDataset: () => Promise.resolve({}),
+      } as unknown as ExpenseRepository,
     })
 
     await expect(runAllBackups(deps)).resolves.toMatchObject({ owners: 3, dateKey: TODAY })
@@ -144,8 +155,10 @@ describe('the resumable backup, with the first of two owners failing', () => {
     const spy = alerts()
     const repo = {
       listOwners: () => Promise.resolve([A, B]),
-      readExportChunk: (owner: string, { table }: { table: string }) =>
-        owner === A ? Promise.reject(new Error('D1 hiccup')) : Promise.resolve({ table, rows: [], next: null }),
+      readExportChunk: (
+        owner: string,
+        { table }: { table: string },
+      ) => (owner === A ? Promise.reject(new Error('D1 hiccup')) : Promise.resolve({ table, rows: [], next: null })),
     } as unknown as ExpenseRepository
     return {
       store,
@@ -176,7 +189,10 @@ describe('the resumable backup, with the first of two owners failing', () => {
     for (const [key, body] of Object.entries({ ...oldBackup(A), ...oldBackup(B) })) store.objects.set(key, body)
 
     await expect(
-      runChunkedBackups({ ...deps, policy: { ...policy, bucketAlertThresholdFraction: 0 } }, () => new Date(`${TODAY}T04:00:00Z`)),
+      runChunkedBackups(
+        { ...deps, policy: { ...policy, bucketAlertThresholdFraction: 0 } },
+        () => new Date(`${TODAY}T04:00:00Z`),
+      ),
     ).rejects.toThrow('have no backup')
 
     expect(spy.onBucketNearLimit).toHaveBeenCalledOnce()
@@ -191,7 +207,10 @@ describe('the resumable backup, with the first of two owners failing', () => {
     let reads = 0
     const repo = {
       listOwners: () => Promise.resolve([A, B]),
-      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+      readExportChunk: (
+        _owner: string,
+        { table }: { table: string },
+      ) => Promise.resolve({ table, rows: [], next: null }),
     } as unknown as ExpenseRepository
     const deps = {
       repo,
@@ -204,7 +223,8 @@ describe('the resumable backup, with the first of two owners failing', () => {
     }
 
     let result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
-    for (let i = 0; i < 6 && result.failed === 0; i += 1) result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
+    for (let i = 0; i < 6 && result.failed === 0; i += 1)
+      result = await runChunkedBackups(deps, () => new Date(`${TODAY}T04:00:00Z`))
 
     expect(result).toMatchObject({ failed: 1, complete: false })
     expect(spy.onBucketNearLimit).toHaveBeenCalled()
@@ -218,7 +238,11 @@ describe('the resumable backup, with the first of two owners failing', () => {
     // A throws at once; B is started with what is left of the budget and does not finish.
     await expect(
       runChunkedBackups(
-        { ...deps, chunked: { enabled: true, maxOperations: 14, maxRows: 3_000 }, policy: { ...policy, bucketAlertThresholdFraction: 0 } },
+        {
+          ...deps,
+          chunked: { enabled: true, maxOperations: 14, maxRows: 3_000 },
+          policy: { ...policy, bucketAlertThresholdFraction: 0 },
+        },
         () => new Date(`${TODAY}T04:00:00Z`),
       ),
     ).rejects.toThrow('have no backup')
@@ -236,7 +260,10 @@ describe('the resumable backup, when it is done for the day', () => {
     const spy = alerts()
     const repo = {
       listOwners: () => Promise.resolve([A, B]),
-      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+      readExportChunk: (
+        _owner: string,
+        { table }: { table: string },
+      ) => Promise.resolve({ table, rows: [], next: null }),
     } as unknown as ExpenseRepository
     const deps = {
       repo,
@@ -257,7 +284,10 @@ describe('the resumable backup, when it is done for the day', () => {
     const store = memoryBackupStore()
     const repo = {
       listOwners: () => Promise.resolve([A, B]),
-      readExportChunk: (_owner: string, { table }: { table: string }) => Promise.resolve({ table, rows: [], next: null }),
+      readExportChunk: (
+        _owner: string,
+        { table }: { table: string },
+      ) => Promise.resolve({ table, rows: [], next: null }),
     } as unknown as ExpenseRepository
     const deps = {
       repo,

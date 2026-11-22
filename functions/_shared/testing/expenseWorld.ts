@@ -42,7 +42,10 @@ export interface World {
   clearLog(): void
   /** The owner's token as stored, or null when there is no row. */
   token(owner?: string): string | null
-  call(handler: Handler, options?: CallOptions): Promise<Response>
+  call(
+    handler: Handler,
+    options?: CallOptions,
+  ): Promise<Response>
   /** Look at every statement before it runs, and throw to fail it. */
   intercept(intercept: (sql: string) => void): void
 }
@@ -51,7 +54,10 @@ export interface World {
 function fakeBucket(): R2Bucket {
   const objects = new Map<string, Uint8Array>()
   return {
-    put: (key: string, body: ArrayBuffer) => {
+    put: (
+      key: string,
+      body: ArrayBuffer,
+    ) => {
       objects.set(key, new Uint8Array(body))
       return Promise.resolve()
     },
@@ -77,7 +83,10 @@ function fakeBucket(): R2Bucket {
   } as unknown as R2Bucket
 }
 
-export function createExpenseWorld(sqlite: SqliteHandle, d1: D1Database): World {
+export function createExpenseWorld(
+  sqlite: SqliteHandle,
+  d1: D1Database,
+): World {
   const log: string[] = []
   let intercepting: (sql: string) => void = () => undefined
   const recording = {
@@ -102,11 +111,13 @@ export function createExpenseWorld(sqlite: SqliteHandle, d1: D1Database): World 
     },
     token: (owner = OWNER) => {
       const row = sqlite.prepare('SELECT token FROM owner_revision WHERE owner = ?').get(owner) as
-        | { token: string }
-        | undefined
+        { token: string } | undefined
       return row?.token ?? null
     },
-    call: (handler, options = {}) =>
+    call: (
+      handler,
+      options = {},
+    ) =>
       invokeExpenseApiRoute({
         handler,
         repo,

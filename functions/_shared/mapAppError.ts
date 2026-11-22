@@ -7,11 +7,7 @@ import { HttpError } from './http'
  * production module importing test code to check `instanceof`.
  */
 function hasHttpStatus(error: unknown): error is Error & { status: number } {
-  return (
-    error instanceof Error &&
-    'status' in error &&
-    typeof (error as { status: unknown }).status === 'number'
-  )
+  return error instanceof Error && 'status' in error && typeof (error as { status: unknown }).status === 'number'
 }
 
 /**

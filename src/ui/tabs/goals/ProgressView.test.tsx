@@ -55,7 +55,10 @@ describe('ProgressView', () => {
     const onRebaseline = vi.fn()
     const plan = makeScenario({ id: 7, isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]
-    const behind = (id: number, date: string) =>
+    const behind = (
+      id: number,
+      date: string,
+    ) =>
       makeWealthCheckin({
         id,
         checkinDate: date,

@@ -16,7 +16,10 @@ export function installFakeIntersectionObserver() {
   const observers: FakeObserver[] = []
   class Fake {
     private readonly record: FakeObserver
-    constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    constructor(
+      callback: IntersectionObserverCallback,
+      options?: IntersectionObserverInit,
+    ) {
       this.record = { callback, options, targets: [], disconnected: false }
       observers.push(this.record)
     }
@@ -41,16 +44,32 @@ export function installFakeIntersectionObserver() {
     emitBatch(ratios: number[]) {
       for (const o of live()) {
         o.callback(
-          ratios.map((ratio) => ({ intersectionRatio: ratio, isIntersecting: ratio > 0, target: o.targets[0] }) as unknown as IntersectionObserverEntry),
+          ratios.map(
+            (ratio) =>
+              ({
+                intersectionRatio: ratio,
+                isIntersecting: ratio > 0,
+                target: o.targets[0],
+              }) as unknown as IntersectionObserverEntry,
+          ),
           {} as IntersectionObserver,
         )
       }
     },
-    emit(ratio: number, index?: number) {
+    emit(
+      ratio: number,
+      index?: number,
+    ) {
       const targets = index === undefined ? live() : [live()[index]!]
       for (const o of targets) {
         o.callback(
-          [{ intersectionRatio: ratio, isIntersecting: ratio > 0, target: o.targets[0] } as unknown as IntersectionObserverEntry],
+          [
+            {
+              intersectionRatio: ratio,
+              isIntersecting: ratio > 0,
+              target: o.targets[0],
+            } as unknown as IntersectionObserverEntry,
+          ],
           {} as IntersectionObserver,
         )
       }

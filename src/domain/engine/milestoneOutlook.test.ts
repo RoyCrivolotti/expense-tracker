@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { fiYearsExact, milestoneCrossingDate, milestoneStanding, wholeYearsToAmount, yearsToAmount } from './milestoneOutlook'
+import {
+  fiYearsExact,
+  milestoneCrossingDate,
+  milestoneStanding,
+  wholeYearsToAmount,
+  yearsToAmount,
+} from './milestoneOutlook'
 import { fireNumber, projectNetWorth, scenarioToParams, yearsToFi } from '.'
 import { makeScenario } from '../../testing/factories'
 import { DEFAULT_INFLATION_RATE } from './projectionConstants'
@@ -20,7 +26,9 @@ const G = 1 + DEFAULT_INFLATION_RATE
 
 /** What the account shows at the end of a year of the plan: the line in the plan's money grown by the inflation since. */
 function onAccount(year: number): number {
-  return Math.round(projectNetWorth(scenarioToParams(plan, DEFAULT_INFLATION_RATE))[year]!.investedCents * Math.pow(G, year))
+  return Math.round(
+    projectNetWorth(scenarioToParams(plan, DEFAULT_INFLATION_RATE))[year]!.investedCents * Math.pow(G, year),
+  )
 }
 
 describe('yearsToAmount', () => {
@@ -44,14 +52,29 @@ describe('yearsToAmount', () => {
 describe('fiYearsExact', () => {
   const fi = (over = {}) =>
     scenarioToParams(
-      makeScenario({ startInvestedCents: 50_000_000, monthlyContributionCents: 0, expectedRealReturn: 0.05, housePurchaseYear: null, horizonYears: 20, annualSpendCents: 3_000_000, safeWithdrawalRate: 0.04, lifeEvents: [], ...over }),
+      makeScenario({
+        startInvestedCents: 50_000_000,
+        monthlyContributionCents: 0,
+        expectedRealReturn: 0.05,
+        housePurchaseYear: null,
+        horizonYears: 20,
+        annualSpendCents: 3_000_000,
+        safeWithdrawalRate: 0.04,
+        lifeEvents: [],
+        ...over,
+      }),
       0,
     )
 
   it('is the day inside the year FI is reached in: between the year before and that year', () => {
-    for (const over of [{}, { monthlyContributionCents: 200_000, startInvestedCents: 1_000_000 }, { annualSpendCents: 1_500_000, startInvestedCents: 2_000_000, monthlyContributionCents: 100_000 }]) {
+    for (const over of [
+      {},
+      { monthlyContributionCents: 200_000, startInvestedCents: 1_000_000 },
+      { annualSpendCents: 1_500_000, startInvestedCents: 2_000_000, monthlyContributionCents: 100_000 },
+    ]) {
       const params = fi(over)
-      const spend = over && 'annualSpendCents' in over ? (over as { annualSpendCents: number }).annualSpendCents : 3_000_000
+      const spend =
+        over && 'annualSpendCents' in over ? (over as { annualSpendCents: number }).annualSpendCents : 3_000_000
       const year = yearsToFi(params, spend, 0.04)
       const exact = fiYearsExact(params, spend, 0.04)
       expect(year).not.toBeNull()
@@ -69,7 +92,11 @@ describe('fiYearsExact', () => {
 
   it('is the anniversary when the target is only reached by a step up on it', () => {
     // 100.000 with no growth, then a 700.000 inflow in year 5: 750.000 is first held after it.
-    const params = fi({ startInvestedCents: 10_000_000, expectedRealReturn: 0, lifeEvents: [{ label: 'Inheritance', year: 5, amountCents: 70_000_000 }] })
+    const params = fi({
+      startInvestedCents: 10_000_000,
+      expectedRealReturn: 0,
+      lifeEvents: [{ label: 'Inheritance', year: 5, amountCents: 70_000_000 }],
+    })
     expect(yearsToFi(params, 3_000_000, 0.04)).toBe(5)
     expect(fiYearsExact(params, 3_000_000, 0.04)).toBe(5)
   })
@@ -97,21 +124,27 @@ describe('milestoneStanding', () => {
   const worth = Math.round(inYearTwo.amountCents / Math.pow(G, 2))
 
   it('is reached when a check-in says so, whatever the plan thinks', () => {
-    expect(milestoneStanding({ ...inYearTwo, targetDate: '2027-01-01' }, plan, '2026-06-01', DEFAULT_INFLATION_RATE)).toEqual({
+    expect(
+      milestoneStanding({ ...inYearTwo, targetDate: '2027-01-01' }, plan, '2026-06-01', DEFAULT_INFLATION_RATE),
+    ).toEqual({
       kind: 'reached',
       on: '2026-06-01',
     })
   })
 
   it('is on track when the plan gets there before the target, late otherwise', () => {
-    expect(milestoneStanding({ ...inYearTwo, targetDate: '2028-06-01' }, plan, undefined, DEFAULT_INFLATION_RATE)).toEqual({
+    expect(
+      milestoneStanding({ ...inYearTwo, targetDate: '2028-06-01' }, plan, undefined, DEFAULT_INFLATION_RATE),
+    ).toEqual({
       kind: 'on-track',
       expected: '2028-01-01',
       target: '2028-06-01',
       worthCents: worth,
       dipsOn: null,
     })
-    expect(milestoneStanding({ ...inYearTwo, targetDate: '2027-07-01' }, plan, undefined, DEFAULT_INFLATION_RATE)).toEqual({
+    expect(
+      milestoneStanding({ ...inYearTwo, targetDate: '2027-07-01' }, plan, undefined, DEFAULT_INFLATION_RATE),
+    ).toEqual({
       kind: 'late',
       expected: '2028-01-01',
       target: '2027-07-01',
@@ -130,7 +163,15 @@ describe('milestoneStanding', () => {
       dipsOn: null,
     })
     // The target is still ahead, but "on track" would be the plan's word against the facts.
-    expect(milestoneStanding({ ...inYearTwo, targetDate: '2029-01-01' }, plan, undefined, DEFAULT_INFLATION_RATE, '2028-06-01')).toEqual({
+    expect(
+      milestoneStanding(
+        { ...inYearTwo, targetDate: '2029-01-01' },
+        plan,
+        undefined,
+        DEFAULT_INFLATION_RATE,
+        '2028-06-01',
+      ),
+    ).toEqual({
       kind: 'overdue',
       expected: '2028-01-01',
       target: '2029-01-01',
@@ -146,14 +187,21 @@ describe('milestoneStanding', () => {
   })
 
   it('cannot be dated from a malformed start date', () => {
-    expect(milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+    expect(
+      milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00, DEFAULT_INFLATION_RATE),
+    ).toBeNull()
   })
 
-  it.each(['2026-13-45', '2026-02-30', '0000-00-00', '2026-04-31'])('cannot be dated from %s, which has the shape of a date and is not one', (planStartDate) => {
-    const impossible = makeScenario({ ...plan, planStartDate })
-    expect(milestoneCrossingDate(impossible, 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
-    expect(milestoneStanding({ amountCents: 120_000_00, label: '' }, impossible, undefined, DEFAULT_INFLATION_RATE)).toMatchObject({ kind: 'unknown' })
-  })
+  it.each(['2026-13-45', '2026-02-30', '0000-00-00', '2026-04-31'])(
+    'cannot be dated from %s, which has the shape of a date and is not one',
+    (planStartDate) => {
+      const impossible = makeScenario({ ...plan, planStartDate })
+      expect(milestoneCrossingDate(impossible, 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+      expect(
+        milestoneStanding({ amountCents: 120_000_00, label: '' }, impossible, undefined, DEFAULT_INFLATION_RATE),
+      ).toMatchObject({ kind: 'unknown' })
+    },
+  )
 
   it('gives the expected date alone without a target, and says so past the horizon', () => {
     expect(milestoneStanding(inYearTwo, plan, undefined, DEFAULT_INFLATION_RATE)).toEqual({
@@ -162,7 +210,14 @@ describe('milestoneStanding', () => {
       worthCents: worth,
       dipsOn: null,
     })
-    expect(milestoneStanding({ amountCents: 1_000_000_000_00, label: '', targetDate: '2030-01-01' }, plan, undefined, DEFAULT_INFLATION_RATE)).toEqual({
+    expect(
+      milestoneStanding(
+        { amountCents: 1_000_000_000_00, label: '', targetDate: '2030-01-01' },
+        plan,
+        undefined,
+        DEFAULT_INFLATION_RATE,
+      ),
+    ).toEqual({
       kind: 'beyond-horizon',
       target: '2030-01-01',
     })
@@ -170,7 +225,9 @@ describe('milestoneStanding', () => {
 
   it('is unknown without a plan or a start date', () => {
     expect(milestoneStanding(inYearTwo, null, undefined, DEFAULT_INFLATION_RATE)).toEqual({ kind: 'unknown' })
-    expect(milestoneStanding(inYearTwo, makeScenario({ planStartDate: null }), undefined, DEFAULT_INFLATION_RATE)).toEqual({ kind: 'unknown' })
+    expect(
+      milestoneStanding(inYearTwo, makeScenario({ planStartDate: null }), undefined, DEFAULT_INFLATION_RATE),
+    ).toEqual({ kind: 'unknown' })
   })
 })
 

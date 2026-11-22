@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
 import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal, resolveMoneyFormat } from '../../engine'
 import { MoneyFormatContext } from '../hooks/moneyFormatContext'
-import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
+import {
+  makeDataset,
+  makeScenario,
+  makeTransaction,
+  makeWealthAccount,
+  makeWealthCheckin,
+} from '../../testing/factories'
 import { samplePlan } from '../../testing/samplePlan'
 
 /** The local calendar date `n` days ago; the card counts days in local time too. */
@@ -35,9 +41,17 @@ describe('GoalsCard', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 3, 10, 12))
     try {
-      const scenario = makeScenario({ id: 1, isActive: true, planStartDate: '2026-01-01', monthlyContributionCents: 100_000 })
-      const invest = (id: number, month: string, amountCents: number) =>
-        makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+      const scenario = makeScenario({
+        id: 1,
+        isActive: true,
+        planStartDate: '2026-01-01',
+        monthlyContributionCents: 100_000,
+      })
+      const invest = (
+        id: number,
+        month: string,
+        amountCents: number,
+      ) => makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
       // 1.200 a month for three months and 100 so far in April, which is still under way.
       const transactions = [
         invest(1, '2026-01', 120_000),
@@ -60,7 +74,8 @@ describe('GoalsCard', () => {
 
   it('shows ahead badge when actual invested exceeds projection', () => {
     const account = makeWealthAccount({ id: 1, kind: 'investment' })
-    const scenario = makeScenario({ isActive: true,
+    const scenario = makeScenario({
+      isActive: true,
       id: 1,
       planStartDate: '2024-01-01',
       startInvestedCents: 1_000_000,
@@ -87,7 +102,8 @@ describe('GoalsCard', () => {
 
   it('shows behind badge when actual invested is below projection', () => {
     const account = makeWealthAccount({ id: 1, kind: 'investment' })
-    const scenario = makeScenario({ isActive: true,
+    const scenario = makeScenario({
+      isActive: true,
       id: 1,
       planStartDate: '2020-01-01',
       startInvestedCents: 100_000_000,
@@ -130,13 +146,20 @@ describe('GoalsCard', () => {
           dataset={makeDataset({
             goalScenarios: [scenario],
             wealthAccounts: [account],
-            wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: balanceCents }] })],
+            wealthCheckins: [
+              makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: balanceCents }] }),
+            ],
           })}
         />,
       )
     }
     const nominalWithGap = (gapCents: number) =>
-      realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gapCents, '2020-01-01', date, DEFAULT_INFLATION_RATE)
+      realToNominal(
+        planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gapCents,
+        '2020-01-01',
+        date,
+        DEFAULT_INFLATION_RATE,
+      )
 
     it('counts months along the plan line', () => {
       badge(nominalWithGap(2_000_000))
@@ -181,9 +204,7 @@ describe('GoalsCard', () => {
 
   it('asks for the first check-in once there is an account, and not before', () => {
     const plan = makeScenario({ id: 1, isActive: true })
-    const { rerender } = render(
-      <GoalsCard dataset={makeDataset({ goalScenarios: [plan] })} onLogCheckin={vi.fn()} />,
-    )
+    const { rerender } = render(<GoalsCard dataset={makeDataset({ goalScenarios: [plan] })} onLogCheckin={vi.fn()} />)
     expect(screen.queryByText(/check-in/)).not.toBeInTheDocument()
 
     rerender(
@@ -214,12 +235,7 @@ describe('GoalsCard', () => {
 
   it('renders an "Open Goals" link when onOpenGoals is provided', () => {
     const scenario = makeScenario({ id: 1, isActive: true })
-    render(
-      <GoalsCard
-        dataset={makeDataset({ goalScenarios: [scenario] })}
-        onOpenGoals={() => undefined}
-      />,
-    )
+    render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario] })} onOpenGoals={() => undefined} />)
     expect(screen.getByRole('button', { name: 'Open Goals' })).toBeInTheDocument()
   })
 })
@@ -239,7 +255,9 @@ describe('the track badge around a house purchase', () => {
         dataset={makeDataset({
           goalScenarios: [scenario],
           wealthAccounts: [account],
-          wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] })],
+          wealthCheckins: [
+            makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] }),
+          ],
         })}
       />,
     )
@@ -257,12 +275,14 @@ describe('the track badge around a house purchase', () => {
     expect(screen.queryByText(/(months?|years?) ahead$/)).not.toBeInTheDocument()
   })
 
-  it('names the plan\'s money in the owner\'s currency in that gap', () => {
+  it("names the plan's money in the owner's currency in that gap", () => {
     const nominal = realToNominal(real + 500_000, '2026-01-01', date, inflation)
     const dataset = makeDataset({
       goalScenarios: [scenario],
       wealthAccounts: [account],
-      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] })],
+      wealthCheckins: [
+        makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] }),
+      ],
     })
     render(
       <MoneyFormatContext.Provider value={resolveMoneyFormat('USD', 'en-US')}>

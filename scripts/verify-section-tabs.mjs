@@ -36,12 +36,21 @@ const BARS = {
 const failures = []
 
 /** `detail` is only read when the check fails, and says what was measured instead. */
-function check(where, what, ok, detail = '') {
+function check(
+  where,
+  what,
+  ok,
+  detail = '',
+) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
 }
 
-const near = (a, b, tolerance = 1) => Math.abs(a - b) <= tolerance
+const near = (
+  a,
+  b,
+  tolerance = 1,
+) => Math.abs(a - b) <= tolerance
 const px = (n) => `${Math.round(n * 10) / 10}px`
 
 function startDev() {
@@ -104,13 +113,20 @@ function settled(page) {
   )
 }
 
-async function scrollTo(page, y) {
+async function scrollTo(
+  page,
+  y,
+) {
   await page.evaluate((top) => window.scrollTo(0, top), y)
   return settled(page)
 }
 
 /** A fresh page on the demo instance, on one of the app's tabs. */
-async function openApp(browser, { width, height }, tabName = null) {
+async function openApp(
+  browser,
+  { width, height },
+  tabName = null,
+) {
   const phone = width < 768
   const context = await browser.newContext({
     viewport: { width, height },
@@ -134,17 +150,27 @@ async function openApp(browser, { width, height }, tabName = null) {
   return { page, context }
 }
 
-const tab = (page, bar, name) =>
-  page.getByRole('tablist', { name: BARS[bar].label }).getByRole('tab', { name, exact: true })
+const tab = (
+  page,
+  bar,
+  name,
+) => page.getByRole('tablist', { name: BARS[bar].label }).getByRole('tab', { name, exact: true })
 
-async function pick(page, bar, name) {
+async function pick(
+  page,
+  bar,
+  name,
+) {
   await tab(page, bar, name).click()
   await page.waitForTimeout(250)
   await settled(page)
 }
 
 /** Where the bar, the header and the content of the open section are. */
-function measure(page, bar) {
+function measure(
+  page,
+  bar,
+) {
   return page.evaluate((label) => {
     const group = document.querySelector(`[role="tablist"][aria-label="${label}"]`)
     const row = group.parentElement
@@ -182,14 +208,24 @@ function addScrollRoom(page) {
  * scrolls under it, and a section tapped from down the page lands its content 8px under it
  * and comes back where it was left.
  */
-async function checkBar(browser, tabName, first, second) {
+async function checkBar(
+  browser,
+  tabName,
+  first,
+  second,
+) {
   const where = `375x812 ${tabName} ${first}`
   const { page, context } = await openApp(browser, PHONES[0], tabName)
   if (first !== BARS[tabName].sections[0]) await pick(page, tabName, first)
   let m = await measure(page, tabName)
   await scrollTo(page, Math.floor(m.max / 2))
   m = await measure(page, tabName)
-  check(where, '(a) the bar sticks to the header height less the 1px tuck', near(m.rowTop, m.header - 1, 0.5) && near(m.stickyTop, m.header - 1, 0.5), `bar is ${px(m.rowTop)} down, its sticky top is ${px(m.stickyTop)}, the header is ${px(m.header)} tall`)
+  check(
+    where,
+    '(a) the bar sticks to the header height less the 1px tuck',
+    near(m.rowTop, m.header - 1, 0.5) && near(m.stickyTop, m.header - 1, 0.5),
+    `bar is ${px(m.rowTop)} down, its sticky top is ${px(m.stickyTop)}, the header is ${px(m.header)} tall`,
+  )
   check(where, '(a) the bar is 44px high', near(m.rowHeight, 44, 0.5), px(m.rowHeight))
   check(where, '(a) what scrolls under the bar fades out', m.fade, 'no ::after under the bar')
 
@@ -197,13 +233,28 @@ async function checkBar(browser, tabName, first, second) {
   await addScrollRoom(page)
   await pick(page, tabName, second)
   m = await measure(page, tabName)
-  check(where, `(b) ${second} lands its content ${AIR}px under the bar`, m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
+  check(
+    where,
+    `(b) ${second} lands its content ${AIR}px under the bar`,
+    m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR),
+    `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`,
+  )
   await pick(page, tabName, first)
   m = await measure(page, tabName)
-  check(where, `(b) going back to ${first} puts it where it was left`, near(m.y, leftAt), `left at ${px(leftAt)}, came back to ${px(m.y)}`)
+  check(
+    where,
+    `(b) going back to ${first} puts it where it was left`,
+    near(m.y, leftAt),
+    `left at ${px(leftAt)}, came back to ${px(m.y)}`,
+  )
   await pick(page, tabName, first)
   m = await measure(page, tabName)
-  check(where, '(b) tapping the section already selected goes to the top of its content', m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
+  check(
+    where,
+    '(b) tapping the section already selected goes to the top of its content',
+    m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR),
+    `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`,
+  )
   await context.close()
 }
 
@@ -211,16 +262,30 @@ async function checkBar(browser, tabName, first, second) {
  * A tab row answers to Left and Right, not Up and Down: with a tab focused, Down scrolls the
  * page as it would anywhere else and the section stays, while Right still moves to the next one.
  */
-async function checkTabKeys(browser, tabName, first, second) {
+async function checkTabKeys(
+  browser,
+  tabName,
+  first,
+  second,
+) {
   const where = `375x812 ${tabName} bar`
   const { page, context } = await openApp(browser, PHONES[0], tabName)
-  const selected = () => page.evaluate((label) => document.querySelector(`[role="tablist"][aria-label="${label}"] [aria-selected="true"]`).textContent, BARS[tabName].label)
+  const selected = () =>
+    page.evaluate(
+      (label) => document.querySelector(`[role="tablist"][aria-label="${label}"] [aria-selected="true"]`).textContent,
+      BARS[tabName].label,
+    )
   await tab(page, tabName, first).focus()
   const y = await page.evaluate(() => window.scrollY)
   await page.keyboard.press('ArrowDown')
   await page.waitForTimeout(250)
   const moved = await settled(page)
-  check(where, '(f) ArrowDown on a tab scrolls the page and keeps the section', moved > y && (await selected()) === first, `section ${await selected()}, scrolled from ${px(y)} to ${px(moved)}`)
+  check(
+    where,
+    '(f) ArrowDown on a tab scrolls the page and keeps the section',
+    moved > y && (await selected()) === first,
+    `section ${await selected()}, scrolled from ${px(y)} to ${px(moved)}`,
+  )
   await page.keyboard.press('ArrowRight')
   await page.waitForTimeout(250)
   check(where, `(f) ArrowRight moves to ${second}`, (await selected()) === second, `section ${await selected()}`)
@@ -232,7 +297,11 @@ async function checkTabKeys(browser, tabName, first, second) {
  * has an unpainted tap area that reaches past its edges (a ::before), which would count as
  * overflow, so it is switched off for the measurement.
  */
-async function checkLabels(browser, phone, tabName) {
+async function checkLabels(
+  browser,
+  phone,
+  tabName,
+) {
   const where = `${phone.name} ${tabName} bar`
   const { page, context } = await openApp(browser, phone, tabName)
   await page.addStyleTag({ content: '[role="tablist"] [role="tab"]::before { display: none !important; }' })
@@ -258,7 +327,12 @@ async function checkLabels(browser, phone, tabName) {
     }
   }, BARS[tabName].label)
   for (const s of result.segments) {
-    check(where, `(c) "${s.label}" is shown whole`, s.scrollWidth <= s.clientWidth && s.inSegment && s.inBar && s.lines <= 1, `scrollWidth ${s.scrollWidth} against clientWidth ${s.clientWidth}, in its segment ${s.inSegment}, in the bar ${s.inBar}, ${s.lines} line(s)`)
+    check(
+      where,
+      `(c) "${s.label}" is shown whole`,
+      s.scrollWidth <= s.clientWidth && s.inSegment && s.inBar && s.lines <= 1,
+      `scrollWidth ${s.scrollWidth} against clientWidth ${s.clientWidth}, in its segment ${s.inSegment}, in the bar ${s.inBar}, ${s.lines} line(s)`,
+    )
   }
   check(where, '(c) the page does not scroll sideways', result.overflow <= 0, `${result.overflow}px too wide`)
   await context.close()
@@ -272,7 +346,12 @@ async function checkDesktop(browser) {
   let m = await measure(page, 'Settings')
   await scrollTo(page, Math.floor(m.max / 2))
   m = await measure(page, 'Settings')
-  check(where, '(d) the bar sticks to the header height less the 1px tuck', near(m.rowTop, m.header - 1, 0.5), `bar is ${px(m.rowTop)} down, the header is ${px(m.header)} tall`)
+  check(
+    where,
+    '(d) the bar sticks to the header height less the 1px tuck',
+    near(m.rowTop, m.header - 1, 0.5),
+    `bar is ${px(m.rowTop)} down, the header is ${px(m.header)} tall`,
+  )
   check(where, '(d) the bar is 36px high', near(m.rowHeight, 36, 0.5), px(m.rowHeight))
   await context.close()
 }
@@ -282,7 +361,11 @@ async function checkDesktop(browser) {
  * points over the focused control. One that the header, a section bar, the Transactions bar or a
  * day heading, or the bottom bar covers all over is a control the viewer cannot see.
  */
-async function walkFocus(page, direction, max) {
+async function walkFocus(
+  page,
+  direction,
+  max,
+) {
   const coveredBy = () =>
     page.evaluate(() => {
       const el = document.activeElement
@@ -292,7 +375,10 @@ async function walkFocus(page, direction, max) {
       const x1 = Math.min(r.right, window.innerWidth)
       const y0 = Math.max(r.top, 0)
       const y1 = Math.min(r.bottom, window.innerHeight)
-      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40)
+      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName)
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 40)
       const layers = [
         ['header', document.querySelector('header')],
         ['section bar', document.querySelector('[role="tablist"]')?.parentElement],
@@ -315,9 +401,9 @@ async function walkFocus(page, direction, max) {
     })
 
   await page.evaluate((dir) => {
-    const all = [...document.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex="0"]')].filter(
-      (el) => !el.disabled && el.tabIndex >= 0 && el.getBoundingClientRect().width > 0,
-    )
+    const all = [
+      ...document.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex="0"]'),
+    ].filter((el) => !el.disabled && el.tabIndex >= 0 && el.getBoundingClientRect().width > 0)
     window.scrollTo(0, dir === 'back' ? document.documentElement.scrollHeight : 0)
     ;(dir === 'back' ? all[all.length - 1] : all[0]).focus({ preventScroll: true })
   }, direction)
@@ -333,8 +419,15 @@ async function walkFocus(page, direction, max) {
   return stops
 }
 
-async function checkFocus(page, where, max = 200) {
-  for (const [direction, keys] of [['back', 'Shift+Tab'], ['forward', 'Tab']]) {
+async function checkFocus(
+  page,
+  where,
+  max = 200,
+) {
+  for (const [direction, keys] of [
+    ['back', 'Shift+Tab'],
+    ['forward', 'Tab'],
+  ]) {
     const stops = await walkFocus(page, direction, max)
     const hidden = stops.filter((s) => s.visible === 0 && s.by !== '')
     check(
@@ -346,7 +439,10 @@ async function checkFocus(page, where, max = 200) {
   }
 }
 
-async function checkFocusEverywhere(browser, viewport) {
+async function checkFocusEverywhere(
+  browser,
+  viewport,
+) {
   for (const tabName of ['Dashboard', 'Transactions', 'Analytics', 'Settings']) {
     const { page, context } = await openApp(browser, viewport, tabName === 'Dashboard' ? null : tabName)
     const where = `${viewport.name} ${tabName}`

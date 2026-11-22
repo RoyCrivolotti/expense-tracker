@@ -31,7 +31,12 @@ export interface SeedStep {
 
 type Row = Record<string, unknown>
 
-function jsonInsert(table: string, columns: string[], rows: Row[], keys: string[] = columns): Statement {
+function jsonInsert(
+  table: string,
+  columns: string[],
+  rows: Row[],
+  keys: string[] = columns,
+): Statement {
   const select = keys.map((k) => `json_extract(value, '$.${k}')`).join(', ')
   return {
     sql: `INSERT INTO ${table} (owner, ${columns.join(', ')}) SELECT ?1, ${select} FROM json_each(?2)`,
@@ -39,7 +44,10 @@ function jsonInsert(table: string, columns: string[], rows: Row[], keys: string[
   }
 }
 
-function chunks<T>(items: T[], first?: number): T[][] {
+function chunks<T>(
+  items: T[],
+  first?: number,
+): T[][] {
   const out: T[][] = []
   let at = 0
   let size = first ?? CHUNK
@@ -63,43 +71,179 @@ export async function readIdBases(transport: Transport): Promise<IdBases> {
   return bases
 }
 
-function reference(d: ExpenseDataset, b: IdBases): SeedStep[] {
-  const step = (table: string, columns: string[], rows: Row[], keys?: string[]): SeedStep[] =>
+function reference(
+  d: ExpenseDataset,
+  b: IdBases,
+): SeedStep[] {
+  const step = (
+    table: string,
+    columns: string[],
+    rows: Row[],
+    keys?: string[],
+  ): SeedStep[] =>
     rows.length === 0 ? [] : [{ statement: jsonInsert(table, columns, rows, keys), table, rows: rows.length }]
   return [
-    ...step('categories', ['id', 'name', 'monthly_budget_cents', 'sort_order', 'icon', 'color', 'active'],
-      d.categories.map((c) => ({ id: b.categories + c.id, name: c.name, monthly_budget_cents: c.monthlyBudgetCents, sort_order: c.sortOrder, icon: c.icon ?? null, color: c.color ?? null, active: bit(c.active) }))),
-    ...step('accounts', ['id', 'name', 'kind', 'settlement', 'active'],
-      d.accounts.map((a) => ({ id: b.accounts + a.id, name: a.name, kind: a.kind, settlement: a.settlement, active: bit(a.active) }))),
-    ...step('labels', ['id', 'name', 'color', 'description', 'sort_order', 'active'],
-      d.labels.map((l) => ({ id: b.labels + l.id, name: l.name, color: l.color, description: l.description ?? null, sort_order: l.sortOrder, active: bit(l.active) }))),
-    ...step('flags', ['id', 'name', 'color', 'description', 'sort_order', 'active', 'reimbursable', 'auto_label_id'],
-      d.flags.map((f) => ({ id: b.flags + f.id, name: f.name, color: f.color, description: f.description ?? null, sort_order: f.sortOrder, active: bit(f.active), reimbursable: bit(f.reimbursable), auto_label_id: f.autoLabelId == null ? null : b.labels + f.autoLabelId }))),
-    ...step('account_statements', ['account_id', 'year_month', 'paid', 'paid_on'],
-      d.accountStatements.map((s) => ({ account_id: b.accounts + s.accountId, year_month: s.yearMonth, paid: bit(s.paid), paid_on: s.paidOn ?? null }))),
-    ...step('cash_actuals', ['year_month', 'actual_cash_cents'],
-      d.cashActuals.map((c) => ({ year_month: c.yearMonth, actual_cash_cents: c.actualCashCents }))),
-    ...step('installment_plans', ['id', 'description', 'total_count', 'amount_cents', 'account_id', 'category_id', 'type', 'anchor_budget_month', 'start_installment_index', 'active', 'due_day_of_month'],
-      d.installmentPlans.map((p) => ({ id: b.installment_plans + p.id, description: p.description, total_count: p.totalCount, amount_cents: p.amountCents, account_id: b.accounts + p.accountId, category_id: b.categories + p.categoryId, type: p.type, anchor_budget_month: p.anchorBudgetMonth, start_installment_index: p.startInstallmentIndex, active: bit(p.active), due_day_of_month: p.dueDayOfMonth ?? null }))),
+    ...step(
+      'categories',
+      ['id', 'name', 'monthly_budget_cents', 'sort_order', 'icon', 'color', 'active'],
+      d.categories.map((c) => ({
+        id: b.categories + c.id,
+        name: c.name,
+        monthly_budget_cents: c.monthlyBudgetCents,
+        sort_order: c.sortOrder,
+        icon: c.icon ?? null,
+        color: c.color ?? null,
+        active: bit(c.active),
+      })),
+    ),
+    ...step(
+      'accounts',
+      ['id', 'name', 'kind', 'settlement', 'active'],
+      d.accounts.map((a) => ({
+        id: b.accounts + a.id,
+        name: a.name,
+        kind: a.kind,
+        settlement: a.settlement,
+        active: bit(a.active),
+      })),
+    ),
+    ...step(
+      'labels',
+      ['id', 'name', 'color', 'description', 'sort_order', 'active'],
+      d.labels.map((l) => ({
+        id: b.labels + l.id,
+        name: l.name,
+        color: l.color,
+        description: l.description ?? null,
+        sort_order: l.sortOrder,
+        active: bit(l.active),
+      })),
+    ),
+    ...step(
+      'flags',
+      ['id', 'name', 'color', 'description', 'sort_order', 'active', 'reimbursable', 'auto_label_id'],
+      d.flags.map((f) => ({
+        id: b.flags + f.id,
+        name: f.name,
+        color: f.color,
+        description: f.description ?? null,
+        sort_order: f.sortOrder,
+        active: bit(f.active),
+        reimbursable: bit(f.reimbursable),
+        auto_label_id: f.autoLabelId == null ? null : b.labels + f.autoLabelId,
+      })),
+    ),
+    ...step(
+      'account_statements',
+      ['account_id', 'year_month', 'paid', 'paid_on'],
+      d.accountStatements.map((s) => ({
+        account_id: b.accounts + s.accountId,
+        year_month: s.yearMonth,
+        paid: bit(s.paid),
+        paid_on: s.paidOn ?? null,
+      })),
+    ),
+    ...step(
+      'cash_actuals',
+      ['year_month', 'actual_cash_cents'],
+      d.cashActuals.map((c) => ({ year_month: c.yearMonth, actual_cash_cents: c.actualCashCents })),
+    ),
+    ...step(
+      'installment_plans',
+      [
+        'id',
+        'description',
+        'total_count',
+        'amount_cents',
+        'account_id',
+        'category_id',
+        'type',
+        'anchor_budget_month',
+        'start_installment_index',
+        'active',
+        'due_day_of_month',
+      ],
+      d.installmentPlans.map((p) => ({
+        id: b.installment_plans + p.id,
+        description: p.description,
+        total_count: p.totalCount,
+        amount_cents: p.amountCents,
+        account_id: b.accounts + p.accountId,
+        category_id: b.categories + p.categoryId,
+        type: p.type,
+        anchor_budget_month: p.anchorBudgetMonth,
+        start_installment_index: p.startInstallmentIndex,
+        active: bit(p.active),
+        due_day_of_month: p.dueDayOfMonth ?? null,
+      })),
+    ),
   ]
 }
 
-const TXN_COLUMNS = ['id', 'date', 'budget_month', 'description', 'description_norm', 'account_id', 'category_id', 'type', 'amount_cents', 'cancelled', 'notes', 'created_at', 'plan_id', 'installment_index', 'flag_id', 'settled_by', 'report_count', 'report_covered_cents']
+const TXN_COLUMNS = [
+  'id',
+  'date',
+  'budget_month',
+  'description',
+  'description_norm',
+  'account_id',
+  'category_id',
+  'type',
+  'amount_cents',
+  'cancelled',
+  'notes',
+  'created_at',
+  'plan_id',
+  'installment_index',
+  'flag_id',
+  'settled_by',
+  'report_count',
+  'report_covered_cents',
+]
 
-function transactions(d: ExpenseDataset, b: IdBases): SeedStep[] {
+function transactions(
+  d: ExpenseDataset,
+  b: IdBases,
+): SeedStep[] {
   const rows = d.transactions.map((t) => ({
     row: t,
-    json: { id: b.transactions + t.id, date: t.date, budget_month: t.budgetMonth, description: t.description, description_norm: normalizeDesc(t.description), account_id: b.accounts + t.accountId, category_id: b.categories + t.categoryId, type: t.type, amount_cents: t.amountCents, cancelled: bit(t.cancelled), notes: t.notes ?? null, created_at: t.createdAt ?? `${t.date}T00:00:00Z`, plan_id: t.planId == null ? null : b.installment_plans + t.planId, installment_index: t.installmentIndex ?? null, flag_id: t.flagId == null ? null : b.flags + t.flagId, settled_by: t.settledBy == null ? null : b.transactions + t.settledBy, report_count: t.reportCount ?? null, report_covered_cents: t.reportCoveredCents ?? null },
+    json: {
+      id: b.transactions + t.id,
+      date: t.date,
+      budget_month: t.budgetMonth,
+      description: t.description,
+      description_norm: normalizeDesc(t.description),
+      account_id: b.accounts + t.accountId,
+      category_id: b.categories + t.categoryId,
+      type: t.type,
+      amount_cents: t.amountCents,
+      cancelled: bit(t.cancelled),
+      notes: t.notes ?? null,
+      created_at: t.createdAt ?? `${t.date}T00:00:00Z`,
+      plan_id: t.planId == null ? null : b.installment_plans + t.planId,
+      installment_index: t.installmentIndex ?? null,
+      flag_id: t.flagId == null ? null : b.flags + t.flagId,
+      settled_by: t.settledBy == null ? null : b.transactions + t.settledBy,
+      report_count: t.reportCount ?? null,
+      report_covered_cents: t.reportCoveredCents ?? null,
+    },
   }))
   return chunks(rows, CALIBRATION_ROWS).map((part) => ({
-    statement: jsonInsert('transactions', TXN_COLUMNS, part.map((p) => p.json)),
+    statement: jsonInsert(
+      'transactions',
+      TXN_COLUMNS,
+      part.map((p) => p.json),
+    ),
     table: 'transactions',
     rows: part.length,
     expectedWritten: part.reduce((sum, p) => sum + insertWrites(p.row), 0),
   }))
 }
 
-function labelLinks(d: ExpenseDataset, b: IdBases): SeedStep[] {
+function labelLinks(
+  d: ExpenseDataset,
+  b: IdBases,
+): SeedStep[] {
   const links = d.transactions.flatMap((t) =>
     (t.labelIds ?? []).map((labelId) => ({ t: b.transactions + t.id, l: b.labels + labelId })),
   )
@@ -133,6 +277,9 @@ function revision(): SeedStep {
 }
 
 /** Every statement of the seed, in an order the foreign keys allow. */
-export function seedSteps(dataset: ExpenseDataset, bases: IdBases): SeedStep[] {
+export function seedSteps(
+  dataset: ExpenseDataset,
+  bases: IdBases,
+): SeedStep[] {
   return [...reference(dataset, bases), ...transactions(dataset, bases), ...labelLinks(dataset, bases), revision()]
 }

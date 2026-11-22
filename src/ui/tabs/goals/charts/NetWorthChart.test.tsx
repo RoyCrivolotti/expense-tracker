@@ -33,7 +33,13 @@ describe('inflateSeries and deflatePoints', () => {
 
   it('inflates the band with the line, and leaves a series without one alone', () => {
     const series: ChartSeries[] = [
-      { id: 'b1', color: '#000', values: [0, 100_000_000], kind: 'line', band: { lo: [0, 80_000_000], hi: [0, 120_000_000] } },
+      {
+        id: 'b1',
+        color: '#000',
+        values: [0, 100_000_000],
+        kind: 'line',
+        band: { lo: [0, 80_000_000], hi: [0, 120_000_000] },
+      },
       { id: 's2', color: '#000', values: [0], kind: 'line' },
     ]
     const result = inflateSeries(series, [0, 1], 0.02)
@@ -93,7 +99,13 @@ describe('inflateSeries and deflatePoints', () => {
     const onPlanReal = 100_000_000
     const onPlanNominal = Math.round(onPlanReal * 1.02)
     const line: ChartSeries = { id: 'plan', color: '#000', values: [0, onPlanReal], kind: 'line' }
-    const dot: ChartSeries = { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 1, value: onPlanNominal }] }
+    const dot: ChartSeries = {
+      id: 'actuals',
+      color: '#10b981',
+      values: [],
+      kind: 'scatter',
+      points: [{ xIndex: 1, value: onPlanNominal }],
+    }
     expect(deflatePoints([dot], 0.02)[0]!.points?.[0]?.value).toBe(onPlanReal)
     expect(inflateSeries([line], [0, 1], 0.02)[0]!.values[1]).toBe(onPlanNominal)
   })
@@ -124,7 +136,7 @@ describe('NetWorthChart', () => {
     expect(store.get()).toEqual([])
   })
 
-  it('tags each line\'s value on the chart at the year pointed at, with the band\'s over and under, only where chips are above it', () => {
+  it("tags each line's value on the chart at the year pointed at, with the band's over and under, only where chips are above it", () => {
     const tagTexts = (store: ReturnType<typeof createHeroLegendStore> | undefined) => {
       const { container, unmount } = render(
         <NetWorthChart
@@ -166,7 +178,8 @@ describe('NetWorthChart', () => {
     )
     const svg = container.querySelector('svg[role="img"]')!
     const todayChips = () =>
-      [...container.querySelectorAll('svg rect')].filter((r) => /valueTagToday/.test(r.getAttribute('class') ?? '')).length
+      [...container.querySelectorAll('svg rect')].filter((r) => /valueTagToday/.test(r.getAttribute('class') ?? ''))
+        .length
     // Before the check-in the plan from today does not exist yet.
     fireEvent.keyDown(svg, { key: 'Home' })
     expect(todayChips()).toBe(0)
@@ -198,7 +211,11 @@ describe('NetWorthChart', () => {
     )
     const lastLabel = () => {
       const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
-      return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+      return texts
+        .filter((t) => /^\d+$/.test(t))
+        .map(Number)
+        .sort((a, b) => a - b)
+        .pop()
     }
     expect(lastLabel()).toBe(30)
 
@@ -211,17 +228,31 @@ describe('NetWorthChart', () => {
 
   it('falls back to the whole horizon when the chosen window is no longer offered', () => {
     const { container, rerender } = render(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+      />,
     )
     const lastLabel = () => {
       const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
-      return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+      return texts
+        .filter((t) => /^\d+$/.test(t))
+        .map(Number)
+        .sort((a, b) => a - b)
+        .pop()
     }
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(lastLabel()).toBe(5)
 
     rerender(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 4 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 4 }}
+        variant="hero"
+      />,
     )
     // No window can cut a four-year horizon, so the picker goes entirely, and the chart
     // draws the whole horizon rather than a stale five-year cut or nothing at all.
@@ -232,11 +263,21 @@ describe('NetWorthChart', () => {
     // With shorter windows still on offer, the lost one falls back to All, not to a
     // window that happens to be first.
     rerender(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+      />,
     )
     fireEvent.click(screen.getByRole('radio', { name: '20Y' }))
     rerender(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 8 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 8 }}
+        variant="hero"
+      />,
     )
     expect(screen.queryByRole('radio', { name: '20Y' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
@@ -246,14 +287,25 @@ describe('NetWorthChart', () => {
   it('offers windows for the longest drawn horizon, not only the draft', () => {
     const long = makeScenario({ id: 9, name: 'Long', horizonYears: 40 })
     render(
-      <NetWorthChart milestones={milestones} scenarios={[long]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" activeId={null} />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[long]}
+        draft={{ ...defaultDraft, horizonYears: 5 }}
+        variant="hero"
+        activeId={null}
+      />,
     )
     expect(screen.getByRole('radio', { name: '20Y' })).toBeInTheDocument()
   })
 
   it('blanks the legend values, rather than showing zero, when a window drops the hovered year', () => {
     const { container } = render(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+      />,
     )
     const svg = container.querySelector('svg')!
     fireEvent.keyDown(svg, { key: 'End' })
@@ -297,7 +349,9 @@ describe('NetWorthChart', () => {
       )
 
       expect(pointCounts(container)).toEqual([31, 11])
-      const labels = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').filter((t) => /^\d+$/.test(t))
+      const labels = [...container.querySelectorAll('text')]
+        .map((t) => t.textContent ?? '')
+        .filter((t) => /^\d+$/.test(t))
       expect(Math.max(...labels.map(Number))).toBe(30)
     })
 
@@ -356,7 +410,11 @@ describe('NetWorthChart', () => {
     expect(screen.getByText('FI 100,0M €')).toBeInTheDocument()
     // The marker's title is not read out of an image, so the chart's own name carries the target.
     expect(container.querySelector('title')?.textContent).toMatch(/is above the top of this chart/)
-    expect(screen.getByRole('img', { name: /Invested portfolio projection by year\. The FI target, 100,0M .*, is above the top of this chart\./ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', {
+        name: /Invested portfolio projection by year\. The FI target, 100,0M .*, is above the top of this chart\./,
+      }),
+    ).toBeInTheDocument()
   })
 
   it('still draws an FI target the plan gets within reach of, with no marker', () => {
@@ -377,7 +435,12 @@ describe('NetWorthChart', () => {
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
     render(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 5 }}
+        variant="hero"
+      />,
     )
     expect(screen.queryByRole('radio', { name: 'All' })).not.toBeInTheDocument()
   })
@@ -432,7 +495,7 @@ describe('NetWorthChart', () => {
     expect(rows).toEqual(['Show Path A on chart', 'Hide Path B on chart', 'Hide Path C on chart'])
   })
 
-  it('draws the plan from today as a dotted line in the plan\'s colour, with a legend row', () => {
+  it("draws the plan from today as a dotted line in the plan's colour, with a legend row", () => {
     const plan = makeScenario({ id: 1, name: 'Path A', color: '#123456', planStartDate: '2024-01-01', isActive: true })
     const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const { container } = render(
@@ -509,7 +572,7 @@ describe('NetWorthChart', () => {
     expect(pointSeriesValueAt(points, 0)).toBe(100)
   })
 
-  it('inflates a real point series by each point\'s own year in the nominal view', () => {
+  it("inflates a real point series by each point's own year in the nominal view", () => {
     const series: ChartSeries[] = [
       { id: 'from-today', color: '#000', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 100_000_000 }] },
     ]
@@ -648,7 +711,13 @@ describe('NetWorthChart', () => {
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }))
-    const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
+    const heroProps = {
+      milestones,
+      scenarios: [defaultDraft],
+      draft: defaultDraft,
+      activeId: defaultDraft.id,
+      variant: 'hero' as const,
+    }
     media(true)
     const io = installFakeIntersectionObserver()
     const { container, unmount } = render(<NetWorthChart {...heroProps} />)
@@ -705,7 +774,13 @@ describe('NetWorthChart', () => {
       removeEventListener: vi.fn(),
     }))
     const io = installFakeIntersectionObserver()
-    const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
+    const heroProps = {
+      milestones,
+      scenarios: [defaultDraft],
+      draft: defaultDraft,
+      activeId: defaultDraft.id,
+      variant: 'hero' as const,
+    }
     const { container } = render(<NetWorthChart {...heroProps} />)
     const svg = container.querySelector('svg[role="img"]')!
     const legend = container.querySelector('ul')!.parentElement!
@@ -770,7 +845,7 @@ describe('NetWorthChart', () => {
     expect(stepToPurchase(true)).toEqual({ breakdown: true, note: true })
   })
 
-  it('fits each view to its own plan, so today\'s money is not stretched to the nominal height', () => {
+  it("fits each view to its own plan, so today's money is not stretched to the nominal height", () => {
     const axisTop = (nominalMode: boolean) => {
       const { container, unmount } = render(
         <NetWorthChart
@@ -813,7 +888,7 @@ describe('NetWorthChart', () => {
     expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(0)
   })
 
-  it('draws the nominal view at the owner\'s assumed inflation', () => {
+  it("draws the nominal view at the owner's assumed inflation", () => {
     // The chart has no rate of its own: the same plan is drawn higher at a higher inflation.
     const top = (rate: number) => {
       const { container, unmount } = render(
@@ -836,7 +911,10 @@ describe('NetWorthChart', () => {
   })
 
   it('previews the nominal view at another rate, and only there', () => {
-    const drawing = (nominalMode: boolean, viewInflation?: number) => {
+    const drawing = (
+      nominalMode: boolean,
+      viewInflation?: number,
+    ) => {
       const { container, unmount } = render(
         <NetWorthChart
           milestones={milestones}
@@ -866,7 +944,11 @@ describe('NetWorthChart', () => {
   it('draws a previewed rate as the plan projected at that rate, not the saved plan drawn higher', () => {
     // The monthly amount is euros as sent, so a plan at 6% inflation is a different real line from the one
     // at 2%. Previewing 6% over a saved 2% must draw what a saved 6% draws (the axis grows to fit it).
-    const draw = (saved: number, nominalMode: boolean, viewInflation?: number) => {
+    const draw = (
+      saved: number,
+      nominalMode: boolean,
+      viewInflation?: number,
+    ) => {
       const { container, unmount } = render(
         <AssumedInflationContext.Provider value={saved}>
           <NetWorthChart
@@ -926,24 +1008,12 @@ describe('NetWorthChart', () => {
 
   it('does not render uncertainty band on default variant', () => {
     const { container: hero } = render(
-      <NetWorthChart
-        scenarios={[defaultDraft]}
-        draft={defaultDraft}
-        milestones={milestones}
-        variant="hero"
-      />,
+      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} milestones={milestones} variant="hero" />,
     )
     const { container: def } = render(
-      <NetWorthChart
-        scenarios={[defaultDraft]}
-        draft={defaultDraft}
-        milestones={milestones}
-        variant="default"
-      />,
+      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} milestones={milestones} variant="default" />,
     )
-    expect(hero.querySelectorAll('path').length).toBeGreaterThan(
-      def.querySelectorAll('path').length,
-    )
+    expect(hero.querySelectorAll('path').length).toBeGreaterThan(def.querySelectorAll('path').length)
   })
 
   it('renders FI target reference line when FI target is not an existing milestone', () => {
@@ -995,7 +1065,10 @@ describe('NetWorthChart', () => {
   })
 
   describe('the key to the marks on the hero chart', () => {
-    const hero = (scenario = makeScenario(), extraSeries: ChartSeries[] = []) =>
+    const hero = (
+      scenario = makeScenario(),
+      extraSeries: ChartSeries[] = [],
+    ) =>
       render(
         <NetWorthChart
           milestones={milestones}
@@ -1031,7 +1104,13 @@ describe('NetWorthChart', () => {
 
     it('names the check-in dots when they are drawn', () => {
       hero(makeScenario(), [
-        { id: 'actuals-overlay', color: 'var(--color-text)', values: [], kind: 'scatter', points: [{ xIndex: 1.2, value: 20_000_000 }] },
+        {
+          id: 'actuals-overlay',
+          color: 'var(--color-text)',
+          values: [],
+          kind: 'scatter',
+          points: [{ xIndex: 1.2, value: 20_000_000 }],
+        },
       ])
       expect(screen.getByRole('list', { name: 'Marks on the chart' })).toHaveTextContent('Check-in')
     })
@@ -1051,9 +1130,17 @@ describe('NetWorthChart', () => {
   it('draws a pale preset colour in a darker ink, so its line reads on the card', () => {
     const scenario = makeScenario({ color: '#f59e0b' })
     const { container } = render(
-      <NetWorthChart milestones={milestones} scenarios={[scenario]} draft={scenario} activeId={scenario.id} variant="hero" />,
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[scenario]}
+        draft={scenario}
+        activeId={scenario.id}
+        variant="hero"
+      />,
     )
-    const strokes = [...container.querySelectorAll('svg path')].map((p) => (p as SVGElement).getAttribute('style') ?? '')
+    const strokes = [...container.querySelectorAll('svg path')].map(
+      (p) => (p as SVGElement).getAttribute('style') ?? '',
+    )
     expect(strokes.some((s) => s.includes('light-dark('))).toBe(true)
     expect(strokes.some((s) => s.includes('#f59e0b)'))).toBe(false)
   })
@@ -1124,7 +1211,13 @@ describe('NetWorthChart', () => {
 describe('computeChartDisplayData', () => {
   const years = [0, 1, 2, 3]
   const plan: ChartSeries = { id: 'plan', color: '#6366f1', values: [100_000_00, 110_000_00, 120_000_00, 130_000_00] }
-  const dot: ChartSeries = { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 104_040_00 }] }
+  const dot: ChartSeries = {
+    id: 'actuals',
+    color: '#10b981',
+    values: [],
+    kind: 'scatter',
+    points: [{ xIndex: 2, value: 104_040_00 }],
+  }
 
   it('deflates the dots and inflates the plan by the one rate it is given', () => {
     const rate = 0.05
@@ -1140,7 +1233,11 @@ describe('computeChartDisplayData', () => {
 
   it('counts the value a line reaches before a step as the highest it draws, in both views', () => {
     // A house payment takes the year down from 150 to 60, but the line climbs to 150 first.
-    const stepped: ChartSeries = { ...plan, values: [100_000_00, 110_000_00, 60_000_00, 70_000_00], preStep: [100_000_00, 110_000_00, 150_000_00, 70_000_00] }
+    const stepped: ChartSeries = {
+      ...plan,
+      values: [100_000_00, 110_000_00, 60_000_00, 70_000_00],
+      preStep: [100_000_00, 110_000_00, 150_000_00, 70_000_00],
+    }
     const real = computeChartDisplayData([stepped], [], years, false, 0.02)
     expect(real.drawnMax).toBe(150_000_00)
     const nominal = computeChartDisplayData([stepped], [], years, true, 0.02)
@@ -1148,7 +1245,7 @@ describe('computeChartDisplayData', () => {
     expect(nominal.yDomainMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
   })
 
-  it('draws a previewed rate but keeps the axis floor at the saved rate\'s, and the dots as they are', () => {
+  it("draws a previewed rate but keeps the axis floor at the saved rate's, and the dots as they are", () => {
     const saved = computeChartDisplayData([plan], [dot], years, true, 0.02)
     const preview = computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.06)
 
@@ -1175,7 +1272,8 @@ describe('computeChartDisplayData', () => {
 
   it('has no rate of its own to fall back on', () => {
     // A different rate moves both, so nothing in the chart is fixed at 2%.
-    const at = (rate: number) => computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
+    const at = (rate: number) =>
+      computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
     expect(at(0.08)).toBeLessThan(at(0.02))
   })
 })
@@ -1193,7 +1291,9 @@ describe('NetWorthChart money label', () => {
       dispatchEvent: () => false,
       onchange: null,
     }))
-  const renderHero = (props: { nominalMode?: boolean; variant?: 'hero' | 'default'; draft?: typeof defaultDraft } = {}) =>
+  const renderHero = (
+    props: { nominalMode?: boolean; variant?: 'hero' | 'default'; draft?: typeof defaultDraft } = {},
+  ) =>
     render(
       <NetWorthChart
         milestones={milestones}
@@ -1205,27 +1305,27 @@ describe('NetWorthChart money label', () => {
       />,
     )
 
-  it('names the plan\'s euros beside the title of the wide hero, without changing the title', () => {
+  it("names the plan's euros beside the title of the wide hero, without changing the title", () => {
     stubWidth(false)
     renderHero()
     expect(screen.getByRole('heading', { name: 'Invested portfolio projection' })).toBeInTheDocument()
     expect(screen.getByText('in 2026 euros')).toBeInTheDocument()
   })
 
-  it('names the account\'s euros in the Nominal view', () => {
+  it("names the account's euros in the Nominal view", () => {
     stubWidth(false)
     renderHero({ nominalMode: true })
     expect(screen.getByText('in euros on your account in each year')).toBeInTheDocument()
     expect(screen.queryByText('in 2026 euros')).not.toBeInTheDocument()
   })
 
-  it('names today\'s euros for a plan with no start date', () => {
+  it("names today's euros for a plan with no start date", () => {
     stubWidth(false)
     renderHero({ draft: { ...defaultDraft, planStartDate: null } })
     expect(screen.getByText("in today's euros")).toBeInTheDocument()
   })
 
-  it('starts the phone\'s hint with it, as the title row there has the button for the full screen', () => {
+  it("starts the phone's hint with it, as the title row there has the button for the full screen", () => {
     stubWidth(true)
     renderHero()
     expect(screen.getByText(/^In 2026 euros\. At a purchase year/)).toBeInTheDocument()
@@ -1244,7 +1344,8 @@ describe('NetWorthChart: picking a milestone', () => {
     <NetWorthChart milestones={milestones} scenarios={[]} draft={draft} variant="hero" nominalMode={nominalMode} />
   )
   const chips = () => within(screen.getByRole('group', { name: 'Milestones' })).getAllByRole('button')
-  const svgText = (container: HTMLElement) => [...container.querySelectorAll('svg text')].map((t) => t.textContent ?? '')
+  const svgText = (container: HTMLElement) =>
+    [...container.querySelectorAll('svg text')].map((t) => t.textContent ?? '')
 
   it('has no labels on the chart until a milestone is picked, and the note says what the lines are', () => {
     const { container } = render(hero())

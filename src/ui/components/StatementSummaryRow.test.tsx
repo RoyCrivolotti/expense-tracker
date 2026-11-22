@@ -14,9 +14,7 @@ describe('StatementSummaryRow', () => {
   })
 
   it('says when a statement was paid, in the paid tone', () => {
-    render(
-      <StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid paidOn="2026-06-15" />,
-    )
+    render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid paidOn="2026-06-15" />)
 
     const status = screen.getByText('Paid · 15 Jun')
     expect(status.className).toContain(styles.paid!)
@@ -52,14 +50,7 @@ describe('StatementSummaryRow', () => {
   })
 
   it('is a button named by what it shows, status and amount included', () => {
-    render(
-      <StatementSummaryRow
-        name="Iberia Icon"
-        amountCents={CHARGE}
-        paid={false}
-        onPress={vi.fn()}
-      />,
-    )
+    render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} onPress={vi.fn()} />)
 
     const name = screen.getByRole('button').textContent
     expect(screen.getByRole('button', { name: /^Iberia Icon Due/ })).toBeInTheDocument()
@@ -67,14 +58,7 @@ describe('StatementSummaryRow', () => {
   })
 
   it('shows a chevron when it can be pressed, kept out of its name', () => {
-    render(
-      <StatementSummaryRow
-        name="Iberia Icon"
-        amountCents={CHARGE}
-        paid={false}
-        onPress={vi.fn()}
-      />,
-    )
+    render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} onPress={vi.fn()} />)
 
     const button = screen.getByRole('button')
     expect(button).toHaveTextContent('›')
@@ -82,9 +66,7 @@ describe('StatementSummaryRow', () => {
   })
 
   it('has no chevron when it cannot be pressed', () => {
-    const { container } = render(
-      <StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} />,
-    )
+    const { container } = render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} />)
 
     expect(container).not.toHaveTextContent('›')
   })
@@ -100,9 +82,7 @@ describe('StatementSummaryRow', () => {
     const markPaid = () => screen.queryByRole('button', { name: 'Mark as paid today for Iberia Icon' })
 
     it('is not offered unless the caller asks for it', () => {
-      render(
-        <StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} onPress={vi.fn()} />,
-      )
+      render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} onPress={vi.fn()} />)
 
       expect(markPaid()).not.toBeInTheDocument()
     })

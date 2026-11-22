@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dismissRecommendation, linkRecommendation } from './recommendationDecisionsApi'
 
-const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+const ok = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 const ID = '0b0c0d0e-1111-4222-8333-444455556666'
 
 afterEach(() => vi.unstubAllGlobals())

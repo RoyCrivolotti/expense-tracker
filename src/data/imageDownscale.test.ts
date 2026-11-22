@@ -1,21 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  downscaleImage,
-  renderThumbnail,
-  type CanvasDeps,
-  type DownscaleLimits,
-} from './imageDownscale'
+import { downscaleImage, renderThumbnail, type CanvasDeps, type DownscaleLimits } from './imageDownscale'
 
 const limits: DownscaleLimits = { maxEdge: 1600, maxBytes: 400_000, skipUnderBytes: 100_000 }
 
-function blobOf(size: number, type = 'image/jpeg'): Blob {
+function blobOf(
+  size: number,
+  type = 'image/jpeg',
+): Blob {
   return { size, type } as Blob
 }
 
 const noSource = {} as CanvasImageSource
 
 /** Renders a blob whose size shrinks as quality drops, like a real encoder. */
-function deps(overrides: Partial<CanvasDeps> = {}, natural = { width: 4000, height: 3000 }): CanvasDeps {
+function deps(
+  overrides: Partial<CanvasDeps> = {},
+  natural = { width: 4000, height: 3000 },
+): CanvasDeps {
   return {
     decode: vi.fn().mockResolvedValue({ source: noSource, ...natural }),
     render: vi.fn((_source: CanvasImageSource, _size: unknown, quality: number) =>
@@ -58,9 +59,7 @@ describe('downscaleImage', () => {
 
   it('leaves a PDF alone', async () => {
     const decode = vi.fn()
-    expect(
-      await downscaleImage(blobOf(2_000_000, 'application/pdf'), limits, deps({ decode })),
-    ).toBeNull()
+    expect(await downscaleImage(blobOf(2_000_000, 'application/pdf'), limits, deps({ decode }))).toBeNull()
     expect(decode).not.toHaveBeenCalled()
   })
 

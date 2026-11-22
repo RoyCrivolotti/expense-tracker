@@ -22,7 +22,15 @@ function useGridArrowKeys(popoverRef: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const step =
-        e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' ? COLUMNS : e.key === 'ArrowUp' ? -COLUMNS : 0
+        e.key === 'ArrowRight'
+          ? 1
+          : e.key === 'ArrowLeft'
+            ? -1
+            : e.key === 'ArrowDown'
+              ? COLUMNS
+              : e.key === 'ArrowUp'
+                ? -COLUMNS
+                : 0
       if (step === 0) return
       const buttons = Array.from(popoverRef.current?.querySelectorAll<HTMLElement>('[role="grid"] button') ?? [])
       const idx = buttons.indexOf(document.activeElement as HTMLElement)

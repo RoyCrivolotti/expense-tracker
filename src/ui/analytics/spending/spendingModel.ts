@@ -31,7 +31,10 @@ function source(model: ExpenseModel) {
   }
 }
 
-export function spendingRows(model: ExpenseModel, query: SpendingQuery) {
+export function spendingRows(
+  model: ExpenseModel,
+  query: SpendingQuery,
+) {
   return computeSpendingGroups(
     { ...source(model), labels: model.dataset.labels },
     { ...query, months: model.months, rolloverDay: model.dataset.settings.budgetRolloverDay },
@@ -44,7 +47,10 @@ export function spendingRows(model: ExpenseModel, query: SpendingQuery) {
  * only real rows are listed: the engine hands back every candidate and the largest real ones are kept, and a
  * month that is not held lists none of the rows it has not got.
  */
-export function spendingDetail(model: ExpenseModel, query: SpendingQuery & { months: string[]; key: string }) {
+export function spendingDetail(
+  model: ExpenseModel,
+  query: SpendingQuery & { months: string[]; key: string },
+) {
   const detail = computeSpendingGroupDetail(source(model), {
     ...query,
     topCount: Infinity,

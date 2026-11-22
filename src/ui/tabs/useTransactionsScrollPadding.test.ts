@@ -6,7 +6,11 @@ import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
 const root = document.documentElement
 
 /** A sticky block as the browser would have laid it out; jsdom lays nothing out itself. */
-function pinned(top: string, height: number, attributes: Record<string, string>) {
+function pinned(
+  top: string,
+  height: number,
+  attributes: Record<string, string>,
+) {
   const el = document.createElement('div')
   for (const [name, value] of Object.entries(attributes)) el.setAttribute(name, value)
   el.style.position = 'sticky'
@@ -66,10 +70,9 @@ describe('useTransactionsScrollPadding', () => {
   it('measures again when rows come or go, and when picking rows changes the headers', () => {
     resultBar()
     const header = dayHeader()
-    const { rerender } = renderHook(
-      ({ hasRows, selecting }) => useTransactionsScrollPadding(hasRows, selecting),
-      { initialProps: { hasRows: true, selecting: false } },
-    )
+    const { rerender } = renderHook(({ hasRows, selecting }) => useTransactionsScrollPadding(hasRows, selecting), {
+      initialProps: { hasRows: true, selecting: false },
+    })
     expect(root.style.scrollPaddingTop).toBe('144px')
 
     header.remove()

@@ -15,7 +15,12 @@ export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export function receiptKey(owner: string, transactionId: number, hash: string, ext: string): string {
+export function receiptKey(
+  owner: string,
+  transactionId: number,
+  hash: string,
+  ext: string,
+): string {
   return `${owner}/${transactionId}/${hash}.${ext}`
 }
 
@@ -26,4 +31,3 @@ export function receiptThumbKey(
 ): string {
   return `${owner}/${transactionId}/${hash}_thumb.jpg`
 }
-

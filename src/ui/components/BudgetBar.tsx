@@ -21,15 +21,7 @@ interface BudgetBarProps {
   total?: boolean | undefined
 }
 
-export function BudgetBar({
-  name,
-  icon,
-  actualCents,
-  budgetCents,
-  ratio,
-  status,
-  total,
-}: BudgetBarProps) {
+export function BudgetBar({ name, icon, actualCents, budgetCents, ratio, status, total }: BudgetBarProps) {
   // A credit has no meaningful bar length — nothing was spent on balance, so the
   // track stays empty rather than rendering Math.max(2, <negative>) as a stub.
   const pct = status === 'credit' ? 0 : Math.max(2, Math.min(100, Math.round(ratio * 100)))
@@ -51,20 +43,13 @@ export function BudgetBar({
         </span>
       </div>
       <div className={styles.track}>
-        <div
-          className={`${styles.fill} ${styles[status]}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`${styles.fill} ${styles[status]}`} style={{ width: `${pct}%` }} />
       </div>
       {budgetCents > 0 && (
         <div className={styles.footer}>
           <Pill
             tone={TONE[status]}
-            title={
-              status === 'credit'
-                ? 'More came back into this category than went out this month'
-                : undefined
-            }
+            title={status === 'credit' ? 'More came back into this category than went out this month' : undefined}
           >
             {status === 'credit' ? 'Money back' : `${Math.round(ratio * 100)}%`}
           </Pill>

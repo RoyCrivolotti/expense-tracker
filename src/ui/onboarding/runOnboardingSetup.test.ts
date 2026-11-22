@@ -532,7 +532,7 @@ describe('runOnboardingSetup', () => {
     expect(deleteCategory).toHaveBeenCalledExactlyOnceWith(1)
   })
 
-  it('re-entry: seeds new categories\' sortOrder after existing ones instead of restarting at 0', async () => {
+  it("re-entry: seeds new categories' sortOrder after existing ones instead of restarting at 0", async () => {
     let dataset = emptyDataset
     const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
       dataset = patch(dataset)

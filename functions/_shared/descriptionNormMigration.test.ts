@@ -28,16 +28,26 @@ describe('migration 0038 applied to rows that already exist', () => {
   it('adds a nullable column with no default, so every old row is waiting and none is silently complete', () => {
     const sqlite = seeded()
     applyMigration(sqlite, THIS)
-    const column = (sqlite.prepare("SELECT name, type, \"notnull\" AS required, dflt_value AS dflt FROM pragma_table_info('transactions') WHERE name = 'description_norm'").all() as unknown as Array<{ type: string; required: number; dflt: unknown }>)[0]!
+    const column = (
+      sqlite
+        .prepare(
+          "SELECT name, type, \"notnull\" AS required, dflt_value AS dflt FROM pragma_table_info('transactions') WHERE name = 'description_norm'",
+        )
+        .all() as unknown as Array<{ type: string; required: number; dflt: unknown }>
+    )[0]!
     expect(column).toMatchObject({ type: 'TEXT', required: 0, dflt: null })
-    const values = sqlite.prepare('SELECT description_norm AS v FROM transactions ORDER BY id').all() as unknown as Array<{ v: unknown }>
+    const values = sqlite
+      .prepare('SELECT description_norm AS v FROM transactions ORDER BY id')
+      .all() as unknown as Array<{ v: unknown }>
     expect(values).toEqual([{ v: null }, { v: null }, { v: null }])
   })
 
   it('builds the index on the owner, the normalized text and the date, in that order', () => {
     const sqlite = seeded()
     applyMigration(sqlite, THIS)
-    const columns = sqlite.prepare("SELECT name FROM pragma_index_info('idx_txn_owner_desc_norm') ORDER BY seqno").all() as unknown as Array<{ name: string }>
+    const columns = sqlite
+      .prepare("SELECT name FROM pragma_index_info('idx_txn_owner_desc_norm') ORDER BY seqno")
+      .all() as unknown as Array<{ name: string }>
     expect(columns.map((c) => c.name)).toEqual(['owner', 'description_norm', 'date'])
   })
 
@@ -45,8 +55,13 @@ describe('migration 0038 applied to rows that already exist', () => {
     const sqlite = seeded()
     applyMigration(sqlite, THIS)
     sqlite
-      .prepare("INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, created_at) VALUES ('someone@example.com', '2026-02-01', '2026-02', 'Late', 1, 1, 'expense', 100, 0, '2026-02-01T00:00:00Z')")
+      .prepare(
+        "INSERT INTO transactions (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, created_at) VALUES ('someone@example.com', '2026-02-01', '2026-02', 'Late', 1, 1, 'expense', 100, 0, '2026-02-01T00:00:00Z')",
+      )
       .run()
-    expect((sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE description_norm IS NULL').get() as { n: number }).n).toBe(4)
+    expect(
+      (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE description_norm IS NULL').get() as { n: number })
+        .n,
+    ).toBe(4)
   })
 })

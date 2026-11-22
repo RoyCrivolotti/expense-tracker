@@ -25,7 +25,11 @@ interface Jwk {
 
 /** `<team>.cloudflareaccess.com`, from what an operator is likely to paste: no scheme, no path, lowercase. */
 export function normalizeTeamDomain(raw: string): string | null {
-  const host = raw.trim().replace(/^https:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  const host = raw
+    .trim()
+    .replace(/^https:\/\//i, '')
+    .replace(/\/+$/, '')
+    .toLowerCase()
   return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(host) ? host : null
 }
 
@@ -44,8 +48,13 @@ async function importKey(jwk: Jwk): Promise<CryptoKey | null> {
   }
 }
 
-async function fetchKeys(teamDomain: string, doFetch: typeof fetch): Promise<Map<string, CryptoKey>> {
-  const response = await doFetch(`https://${teamDomain}/cdn-cgi/access/certs`, { headers: { accept: 'application/json' } })
+async function fetchKeys(
+  teamDomain: string,
+  doFetch: typeof fetch,
+): Promise<Map<string, CryptoKey>> {
+  const response = await doFetch(`https://${teamDomain}/cdn-cgi/access/certs`, {
+    headers: { accept: 'application/json' },
+  })
   if (!response.ok) throw new Error(`certs answered ${response.status}`)
   const body = await response.json<{ keys?: Jwk[] }>()
   const keys = new Map<string, CryptoKey>()
@@ -64,7 +73,12 @@ async function fetchKeys(teamDomain: string, doFetch: typeof fetch): Promise<Map
  * request is a 503, since an identity that cannot be checked is not let through.
  */
 export function createAccessKeyCache(options: Options = {}): KeyForId & { clear(): void } {
-  const doFetch = options.fetch ?? ((input, init) => fetch(input, init))
+  const doFetch =
+    options.fetch ??
+    ((
+      input,
+      init,
+    ) => fetch(input, init))
   const now = options.now ?? Date.now
   const held = new Map<string, Held>()
   const loading = new Map<string, Promise<Held>>()
@@ -81,7 +95,10 @@ export function createAccessKeyCache(options: Options = {}): KeyForId & { clear(
     return started
   }
 
-  const keyFor: KeyForId = async (teamDomain, keyId) => {
+  const keyFor: KeyForId = async (
+    teamDomain,
+    keyId,
+  ) => {
     const current = held.get(teamDomain)
     const age = current ? now() - current.fetchedAt : Infinity
     if (current && age < TTL_MS) {

@@ -41,7 +41,10 @@ export const MAX_OUTCOME = 60
  * read the same cents, or one slot with two readings of them, answer nothing, since a guess here would be learned
  * and then repeated on every later push.
  */
-export function chooseAmountSlot(slots: readonly Slot[], savedCents: number): { index: number; mark: Candidate['mark'] } | null {
+export function chooseAmountSlot(
+  slots: readonly Slot[],
+  savedCents: number,
+): { index: number; mark: Candidate['mark'] } | null {
   const cents = Math.abs(savedCents)
   const matching = slots
     .filter((s): s is NumberSlot => s.kind === 'number' && Array.isArray(s.candidates))
@@ -58,7 +61,12 @@ export function chooseAmountSlot(slots: readonly Slot[], savedCents: number): { 
  * card digits. A push with digits gets its account from the card link instead, so learning it here would only teach
  * the template one card's account. An accept also ends a dismissal streak and brings an ignored template back.
  */
-export function learnFromAccept(facts: TemplateFacts, slots: readonly Slot[], saved: SavedRow, hadDigits: boolean): TemplateFacts {
+export function learnFromAccept(
+  facts: TemplateFacts,
+  slots: readonly Slot[],
+  saved: SavedRow,
+  hadDigits: boolean,
+): TemplateFacts {
   const amount = chooseAmountSlot(slots, saved.amountCents)
   return {
     ...facts,
@@ -76,7 +84,10 @@ export function learnFromAccept(facts: TemplateFacts, slots: readonly Slot[], sa
  * A dismissal. The third in a row on a template the person has never accepted ignores it from `now` on. One accept
  * ever keeps a template from being ignored this way, since its pushes have been real at least once.
  */
-export function learnFromDismiss(facts: TemplateFacts, now: string): TemplateFacts {
+export function learnFromDismiss(
+  facts: TemplateFacts,
+  now: string,
+): TemplateFacts {
   const dismissStreak = facts.dismissStreak + 1
   const ignore = facts.ignoredAt === null && facts.accepts === 0 && dismissStreak >= IGNORE_AFTER_DISMISSALS
   return {
@@ -102,7 +113,10 @@ export interface ShownRecommendation {
  * account, description and category they changed, `linked` or `dismissed`. Descriptions are compared trimmed, so a
  * change of case is an edit.
  */
-export function outcomeOf(shown: ShownRecommendation, decision: SavedForMerchant | 'linked' | 'dismissed'): string {
+export function outcomeOf(
+  shown: ShownRecommendation,
+  decision: SavedForMerchant | 'linked' | 'dismissed',
+): string {
   if (decision === 'linked' || decision === 'dismissed') return decision
   const changed = [
     shown.amountCents !== Math.abs(decision.amountCents) && 'amount',
@@ -115,7 +129,10 @@ export function outcomeOf(shown: ShownRecommendation, decision: SavedForMerchant
 }
 
 /** Whether the push showed card digits: the ones it stored, or a masked-digits slot. */
-export function pushHadDigits(last4: string | null, slots: readonly Slot[]): boolean {
+export function pushHadDigits(
+  last4: string | null,
+  slots: readonly Slot[],
+): boolean {
   return last4 !== null || slots.some((s) => s.kind === 'masked-digits')
 }
 

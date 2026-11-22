@@ -34,9 +34,7 @@ export function AllocationBar({
 }) {
   const format = useMoneyFormat()
   if (allocation.incomeCents <= 0) {
-    return (
-      <NeedsCard title="Where the income went">Shows once this month has income.</NeedsCard>
-    )
+    return <NeedsCard title="Where the income went">Shows once this month has income.</NeedsCard>
   }
   const segments = segmentsOf(allocation)
   const pct = (cents: number) => (cents / allocation.incomeCents) * 100
@@ -65,8 +63,7 @@ export function AllocationBar({
         ))}
         {allocation.overspent && (
           <p className={styles.allocOver}>
-            This month spent {formatCentsCompact(-allocation.leftoverCents, format)} more than it
-            earned.
+            This month spent {formatCentsCompact(-allocation.leftoverCents, format)} more than it earned.
           </p>
         )}
       </div>

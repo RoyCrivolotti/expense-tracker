@@ -44,7 +44,10 @@ export interface SuggestedStart {
 }
 
 /** The source's start when `date` is on its line (from its start to its last year), else null. */
-function onLine(source: Startable, date: string): string | null {
+function onLine(
+  source: Startable,
+  date: string,
+): string | null {
   const start = source.planStartDate
   if (!start || !isCalendarDate(start) || !isCalendarDate(date)) return null
   const years = yearsBetween(start, date)
@@ -67,11 +70,17 @@ export function suggestedStart(
 ): SuggestedStart | null {
   const start = onLine(source, date)
   if (start === null) return null
-  const usable = latestCheckin && isCalendarDate(latestCheckin.date) && latestCheckin.date >= start && latestCheckin.date <= date
+  const usable =
+    latestCheckin && isCalendarDate(latestCheckin.date) && latestCheckin.date >= start && latestCheckin.date <= date
   const checkin = usable ? latestCheckin : null
   const paidAtStartCents = paidAtStart(source, date, inflationRate)
   if (checkin && checkin.date === date) {
-    return settle({ cents: checkin.investedCents - paidAtStartCents, lowerByCents: 0, paidAtStartCents, from: 'checkin' })
+    return settle({
+      cents: checkin.investedCents - paidAtStartCents,
+      lowerByCents: 0,
+      paidAtStartCents,
+      from: 'checkin',
+    })
   }
   const [line, since] = checkin
     ? [{ ...source, ...rebaseline(source, checkin, inflationRate).patch }, checkin.date]
@@ -83,7 +92,12 @@ export function suggestedStart(
   const net = onTheLine - paidAtStartCents - ahead.costCents + ahead.inflowCents
   const cents = neverAbove({ source, points, since, date, inflationRate, inflows: ahead.inflows }, net)
   const paid = paidAtStartCents + ahead.costCents
-  return settle({ cents, lowerByCents: net - cents, paidAtStartCents: paid, from: checkin ? 'plan-from-checkin' : 'own-line' })
+  return settle({
+    cents,
+    lowerByCents: net - cents,
+    paidAtStartCents: paid,
+    from: checkin ? 'plan-from-checkin' : 'own-line',
+  })
 }
 
 /** A balance that would be below nothing is none, with what it is short by said rather than dropped. */
@@ -95,14 +109,21 @@ function settle(s: Omit<SuggestedStart, 'shortByCents'>): SuggestedStart {
  * The costs a copy started on `date` counts as paid by its start that its source pays later: those dated
  * in the copy's first year, which `costsEarly` puts behind the start. In the euros of the date.
  */
-function paidAtStart(source: Startable, date: string, inflationRate: number): number {
+function paidAtStart(
+  source: Startable,
+  date: string,
+  inflationRate: number,
+): number {
   const later = rebaseline(source, { date, investedCents: 0 }, inflationRate)
   const early = rebaseline(source, { date, investedCents: 0 }, inflationRate, { costsEarly: true })
   const factor = Math.pow(1 + inflationRate, yearsBetween(source.planStartDate!, date))
   const events = early.droppedLifeEvents
     .filter((e) => !later.droppedLifeEvents.includes(e))
     .reduce((sum, e) => sum - e.amountCents * factor, 0)
-  const house = later.house?.to != null && early.house?.to === null ? purchaseWithdrawalCents(scenarioToParams(source, inflationRate)) * factor : 0
+  const house =
+    later.house?.to != null && early.house?.to === null
+      ? purchaseWithdrawalCents(scenarioToParams(source, inflationRate)) * factor
+      : 0
   return Math.round(events + house)
 }
 
@@ -124,7 +145,12 @@ const NOTHING_AHEAD: Ahead = { costCents: 0, inflowCents: 0, inflows: [] }
  * a cost would come off later as the "never above" lowering (the right figure for the wrong reason) and an inflow
  * would be taken back off by it, since the copy would hold it months before the line does.
  */
-function aheadOnLine(source: Startable, checkin: { investedCents: number; date: string }, date: string, inflationRate: number): Ahead {
+function aheadOnLine(
+  source: Startable,
+  checkin: { investedCents: number; date: string },
+  date: string,
+  inflationRate: number,
+): Ahead {
   const r = rebaseline(source, checkin, inflationRate)
   const toDate = Math.pow(1 + inflationRate, yearsBetween(source.planStartDate!, date))
   const toLine = Math.pow(1 + inflationRate, yearsBetween(source.planStartDate!, checkin.date))
@@ -141,8 +167,16 @@ function aheadOnLine(source: Startable, checkin: { investedCents: number; date: 
 }
 
 /** A line's value on a date, in the euros of that date. */
-function valueOn(line: Startable, since: string, date: string, inflationRate: number): number | null {
-  const value = planValueAt(planLineOf(projectNetWorth(scenarioToParams(line, inflationRate))), yearsBetween(since, date))
+function valueOn(
+  line: Startable,
+  since: string,
+  date: string,
+  inflationRate: number,
+): number | null {
+  const value = planValueAt(
+    planLineOf(projectNetWorth(scenarioToParams(line, inflationRate))),
+    yearsBetween(since, date),
+  )
   return value === null ? null : Math.round(value * Math.pow(1 + inflationRate, yearsBetween(since, date)))
 }
 
@@ -158,8 +192,13 @@ interface Reading {
 }
 
 /** The copy's invested points from a starting balance, as `startLater` makes it. */
-function copyPoints(r: Reading, cents: number): YearPoint[] {
-  const patch = rebaseline(r.source, { date: r.date, investedCents: cents }, r.inflationRate, { costsEarly: true }).patch
+function copyPoints(
+  r: Reading,
+  cents: number,
+): YearPoint[] {
+  const patch = rebaseline(r.source, { date: r.date, investedCents: cents }, r.inflationRate, {
+    costsEarly: true,
+  }).patch
   return projectNetWorth(scenarioToParams({ ...r.source, ...patch }, r.inflationRate))
 }
 
@@ -168,7 +207,10 @@ function copyPoints(r: Reading, cents: number): YearPoint[] {
  * between its own anniversaries, so the gap between two of them is straight between the anniversaries
  * of either, and its highest point is at one of those.
  */
-function corners(r: Reading, copy: YearPoint[]): number[] {
+function corners(
+  r: Reading,
+  copy: YearPoint[],
+): number[] {
   const offset = yearsBetween(r.since, r.date)
   const end = Math.min(r.points.length - 1, offset + copy.length - 1)
   const own = copy.map((_, k) => offset + k).filter((t) => t <= end)
@@ -177,7 +219,10 @@ function corners(r: Reading, copy: YearPoint[]): number[] {
 }
 
 /** The most the copy started from `cents` reads above the line, in cents of the line's euros, and where. */
-function highest(r: Reading, cents: number): { excess: number; at: number } {
+function highest(
+  r: Reading,
+  cents: number,
+): { excess: number; at: number } {
   const offset = yearsBetween(r.since, r.date)
   const copy = copyPoints(r, cents)
   // Both sides of each corner: on an anniversary a line is already past that day's step.
@@ -185,7 +230,8 @@ function highest(r: Reading, cents: number): { excess: number; at: number } {
   return times.reduce(
     (most, t) => {
       const due = r.inflows.reduce((sum, i) => (t < i.until ? sum + i.cents : sum), 0)
-      const excess = valueOnAxisAt(copy, offset, r.inflationRate, t)! - valueOnAxisAt(r.points, 0, r.inflationRate, t)! - due
+      const excess =
+        valueOnAxisAt(copy, offset, r.inflationRate, t)! - valueOnAxisAt(r.points, 0, r.inflationRate, t)! - due
       return excess > most.excess ? { excess, at: t } : most
     },
     { excess: 0, at: offset },
@@ -208,13 +254,19 @@ const PROBE = 1_000_000
  * On an anniversary it is a few cents of rounding. Each pass lowers it by what the worst corner left
  * needs, which usually ends it.
  */
-function neverAbove(r: Reading, onTheLine: number): number {
+function neverAbove(
+  r: Reading,
+  onTheLine: number,
+): number {
   let cents = onTheLine
   for (let pass = 0; ; pass++) {
     const { excess, at } = highest(r, cents)
     if (excess <= 0 || pass === MAX_PASSES) return cents
     const offset = yearsBetween(r.since, r.date)
-    const perCent = (valueOnAxisAt(copyPoints(r, cents + PROBE), offset, r.inflationRate, at)! - valueOnAxisAt(copyPoints(r, cents), offset, r.inflationRate, at)!) / PROBE
+    const perCent =
+      (valueOnAxisAt(copyPoints(r, cents + PROBE), offset, r.inflationRate, at)! -
+        valueOnAxisAt(copyPoints(r, cents), offset, r.inflationRate, at)!) /
+      PROBE
     cents -= Math.max(1, Math.ceil(excess / perCent))
   }
 }
@@ -235,6 +287,10 @@ const MAX_PASSES = 8
  * Null where `suggestedStart` is: a source with no start, or a date before it or past its last year,
  * which a copy cannot start from.
  */
-export function startLater(source: Startable, at: { date: string; investedCents: number }, inflationRate: number): Rebaseline | null {
+export function startLater(
+  source: Startable,
+  at: { date: string; investedCents: number },
+  inflationRate: number,
+): Rebaseline | null {
   return onLine(source, at.date) === null ? null : rebaseline(source, at, inflationRate, { costsEarly: true })
 }

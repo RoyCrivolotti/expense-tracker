@@ -33,11 +33,7 @@ import type {
   NewWealthAccount,
   NewWealthCheckin,
 } from '../data/dataSource'
-import type {
-  TransactionPage,
-  TransactionPageRequest,
-  TransactionSummary,
-} from '../data/transactionQuery'
+import type { TransactionPage, TransactionPageRequest, TransactionSummary } from '../data/transactionQuery'
 import type { DescriptionSuggestRequest, DescriptionSuggestResult } from '../data/descriptionSuggest'
 import type { Usage } from '../data/usage'
 import type { RecurringSeries } from '../engine/recurringSeries'
@@ -64,11 +60,20 @@ export interface ExpenseRepository {
     page: TransactionPageRequest,
   ): Promise<TransactionPage>
   /** Count (capped) and net spend of the rows `filter` matches; see `TransactionSummary`. */
-  summarizeTransactions(owner: string, filter: TxnFilter): Promise<TransactionSummary>
+  summarizeTransactions(
+    owner: string,
+    filter: TxnFilter,
+  ): Promise<TransactionSummary>
   /** One row, or null if there is none with that id for this owner (a foreign id looks the same). */
-  getTransaction(owner: string, id: number): Promise<Transaction | null>
+  getTransaction(
+    owner: string,
+    id: number,
+  ): Promise<Transaction | null>
   /** The `limit` rows with the highest ids, highest first: those added last. Rows as the dataset carries them. */
-  recentTransactions(owner: string, limit: number): Promise<Transaction[]>
+  recentTransactions(
+    owner: string,
+    limit: number,
+  ): Promise<Transaction[]>
   /**
    * The parts of the ledger that are small however many transactions there are, and what the ledger
    * holds: reference tables, pinned rows (see `isPinned`), budget months and row counts. The
@@ -80,12 +85,20 @@ export interface ExpenseRepository {
    * Null when the range holds more than `maxRows` rows: a partial month would give wrong totals, so
    * it is never returned.
    */
-  readMonthRows(owner: string, range: MonthRange, maxRows: number): Promise<MonthRowsRead | null>
+  readMonthRows(
+    owner: string,
+    range: MonthRange,
+    maxRows: number,
+  ): Promise<MonthRowsRead | null>
   /**
    * The cells (`buildCells`) of the unpinned rows in `range`, ordered as `buildCells` orders them.
    * Null when there are more than `maxCells`.
    */
-  readMonthCells(owner: string, range: MonthRange, maxCells: number): Promise<MonthCell[] | null>
+  readMonthCells(
+    owner: string,
+    range: MonthRange,
+    maxCells: number,
+  ): Promise<MonthCell[] | null>
   /**
    * The owner's recurring series over the whole history, newest first: what the detectors need so that
    * a caller holding only some of the rows can finish them. `seriesFromTransactions` in the engine is
@@ -100,7 +113,10 @@ export interface ExpenseRepository {
    * `tooBroad` and no matches, and the D1 adapter answers 503 while rows still wait for their normalized
    * description.
    */
-  suggestDescriptions(owner: string, request: DescriptionSuggestRequest): Promise<DescriptionSuggestResult>
+  suggestDescriptions(
+    owner: string,
+    request: DescriptionSuggestRequest,
+  ): Promise<DescriptionSuggestResult>
   /**
    * How many transactions, plans and statements name each of the owner's categories, accounts, flags and
    * labels, with zero counts included. `usageFromDataset` in the engine is the reference.
@@ -112,16 +128,28 @@ export interface ExpenseRepository {
    * table and nothing else, so it does not run the installment backfill. The CSV export and the backup walk
    * a ledger with it; `loadDataset` is the reference for what the rows are.
    */
-  readExportChunk(owner: string, request: ExportChunkRequest): Promise<ExportChunk>
-  insertTransaction(owner: string, input: NewTransaction): Promise<Transaction>
+  readExportChunk(
+    owner: string,
+    request: ExportChunkRequest,
+  ): Promise<ExportChunk>
+  insertTransaction(
+    owner: string,
+    input: NewTransaction,
+  ): Promise<Transaction>
   updateTransaction(
     owner: string,
     id: number,
     patch: Partial<NewTransaction>,
   ): Promise<Transaction>
   /** Resolves for a row that is missing or not the owner's too, so that a repeated delete ends as the first did. */
-  deleteTransaction(owner: string, id: number): Promise<void>
-  deleteTransactions(owner: string, ids: number[]): Promise<number>
+  deleteTransaction(
+    owner: string,
+    id: number,
+  ): Promise<void>
+  deleteTransactions(
+    owner: string,
+    ids: number[],
+  ): Promise<number>
   bulkUpdateTransactions(
     owner: string,
     ids: number[],
@@ -153,17 +181,38 @@ export interface ExpenseRepository {
     paid: boolean,
     paidOn?: string,
   ): Promise<AccountStatement>
-  setCashActual(owner: string, yearMonth: string, actualCashCents: number): Promise<CashActual>
-  clearCashActual(owner: string, yearMonth: string): Promise<void>
-  createCategory(owner: string, input: NewCategory): Promise<Category>
-  updateCategory(owner: string, id: number, patch: Partial<NewCategory>): Promise<Category>
+  setCashActual(
+    owner: string,
+    yearMonth: string,
+    actualCashCents: number,
+  ): Promise<CashActual>
+  clearCashActual(
+    owner: string,
+    yearMonth: string,
+  ): Promise<void>
+  createCategory(
+    owner: string,
+    input: NewCategory,
+  ): Promise<Category>
+  updateCategory(
+    owner: string,
+    id: number,
+    patch: Partial<NewCategory>,
+  ): Promise<Category>
   deleteCategory(
     owner: string,
     id: number,
     options?: DeleteCategoryOptions,
   ): Promise<DeleteCategoryResult>
-  createAccount(owner: string, input: NewAccount): Promise<Account>
-  updateAccount(owner: string, id: number, patch: Partial<NewAccount>): Promise<Account>
+  createAccount(
+    owner: string,
+    input: NewAccount,
+  ): Promise<Account>
+  updateAccount(
+    owner: string,
+    id: number,
+    patch: Partial<NewAccount>,
+  ): Promise<Account>
   deleteAccount(
     owner: string,
     id: number,
@@ -175,61 +224,140 @@ export interface ExpenseRepository {
    * receipts" instead of breaking every dataset read.
    */
   /** Ownership gate for attachment writes; the handler holds no SQL. */
-  transactionExists(owner: string, id: number): Promise<boolean>
+  transactionExists(
+    owner: string,
+    id: number,
+  ): Promise<boolean>
   /** One transaction's receipts, or every receipt the owner has when no transaction is named. */
-  listAttachments(owner: string, transactionId?: number): Promise<TransactionAttachment[]>
+  listAttachments(
+    owner: string,
+    transactionId?: number,
+  ): Promise<TransactionAttachment[]>
   /**
    * What the serve route needs to stream one attachment. Returns null rather
    * than throwing so a miss and a foreign id are indistinguishable to the
    * caller — an attachment you do not own must look like one that is not there.
    */
-  findAttachmentSource(owner: string, id: number): Promise<AttachmentSource | null>
-  createAttachment(owner: string, input: NewAttachment): Promise<TransactionAttachment>
+  findAttachmentSource(
+    owner: string,
+    id: number,
+  ): Promise<AttachmentSource | null>
+  createAttachment(
+    owner: string,
+    input: NewAttachment,
+  ): Promise<TransactionAttachment>
   /** Returns the R2 keys to delete, so the caller can clean up the bytes. */
-  deleteAttachment(owner: string, id: number): Promise<{ objectKey: string; thumbKey?: string }>
+  deleteAttachment(
+    owner: string,
+    id: number,
+  ): Promise<{ objectKey: string; thumbKey?: string }>
   /**
    * R2 keys held by these transactions. Read before deleting them — the rows
    * carrying the keys go with the transaction.
    */
-  attachmentKeysForTransactions(owner: string, transactionIds: number[]): Promise<string[]>
+  attachmentKeysForTransactions(
+    owner: string,
+    transactionIds: number[],
+  ): Promise<string[]>
   /** Total bytes this owner is storing, for the quota check. */
   attachmentBytesUsed(owner: string): Promise<number>
-  createFlag(owner: string, input: NewFlag): Promise<Flag>
-  updateFlag(owner: string, id: number, patch: Partial<NewFlag>): Promise<Flag>
+  createFlag(
+    owner: string,
+    input: NewFlag,
+  ): Promise<Flag>
+  updateFlag(
+    owner: string,
+    id: number,
+    patch: Partial<NewFlag>,
+  ): Promise<Flag>
   /** Deletes the flag and clears it from its transactions in one batch. */
-  deleteFlag(owner: string, id: number): Promise<{ unflagged: number }>
-  createLabel(owner: string, input: NewLabel): Promise<Label>
-  updateLabel(owner: string, id: number, patch: Partial<NewLabel>): Promise<Label>
+  deleteFlag(
+    owner: string,
+    id: number,
+  ): Promise<{ unflagged: number }>
+  createLabel(
+    owner: string,
+    input: NewLabel,
+  ): Promise<Label>
+  updateLabel(
+    owner: string,
+    id: number,
+    patch: Partial<NewLabel>,
+  ): Promise<Label>
   /** Deletes the label and unlinks it from its transactions in one operation. */
-  deleteLabel(owner: string, id: number): Promise<{ unlabeled: number }>
+  deleteLabel(
+    owner: string,
+    id: number,
+  ): Promise<{ unlabeled: number }>
   /** Replaces a transaction's whole label set; ids are deduped and ownership-checked. */
   setTransactionLabels(
     owner: string,
     transactionId: number,
     labelIds: number[],
   ): Promise<Transaction>
-  updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
-  createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>
+  updateSettings(
+    owner: string,
+    patch: Partial<ExpenseSettings>,
+  ): Promise<ExpenseSettings>
+  createScenario(
+    owner: string,
+    input: NewGoalScenario,
+  ): Promise<GoalScenario>
   updateScenario(
     owner: string,
     id: number,
     patch: Partial<NewGoalScenario>,
   ): Promise<GoalScenario>
   /** Exactly one plan per owner: activating one deactivates the rest, atomically. */
-  activateScenario(owner: string, id: number): Promise<GoalScenario>
-  deleteScenario(owner: string, id: number): Promise<void>
-  bulkInsertTransactions(owner: string, inputs: NewTransaction[]): Promise<Transaction[]>
-  createInstallmentPlan(owner: string, input: NewInstallmentPlan): Promise<InstallmentPlan>
+  activateScenario(
+    owner: string,
+    id: number,
+  ): Promise<GoalScenario>
+  deleteScenario(
+    owner: string,
+    id: number,
+  ): Promise<void>
+  bulkInsertTransactions(
+    owner: string,
+    inputs: NewTransaction[],
+  ): Promise<Transaction[]>
+  createInstallmentPlan(
+    owner: string,
+    input: NewInstallmentPlan,
+  ): Promise<InstallmentPlan>
   updateInstallmentPlan(
     owner: string,
     id: number,
     patch: Partial<NewInstallmentPlan>,
   ): Promise<InstallmentPlan>
-  deleteInstallmentPlan(owner: string, id: number): Promise<void>
-  createWealthAccount(owner: string, input: NewWealthAccount): Promise<WealthAccount>
-  updateWealthAccount(owner: string, id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
-  deleteWealthAccount(owner: string, id: number): Promise<DeleteWealthAccountResult>
-  createWealthCheckin(owner: string, input: NewWealthCheckin): Promise<WealthCheckin>
-  updateWealthCheckin(owner: string, id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
-  deleteWealthCheckin(owner: string, id: number): Promise<void>
+  deleteInstallmentPlan(
+    owner: string,
+    id: number,
+  ): Promise<void>
+  createWealthAccount(
+    owner: string,
+    input: NewWealthAccount,
+  ): Promise<WealthAccount>
+  updateWealthAccount(
+    owner: string,
+    id: number,
+    patch: Partial<NewWealthAccount>,
+  ): Promise<WealthAccount>
+  deleteWealthAccount(
+    owner: string,
+    id: number,
+  ): Promise<DeleteWealthAccountResult>
+  createWealthCheckin(
+    owner: string,
+    input: NewWealthCheckin,
+  ): Promise<WealthCheckin>
+  updateWealthCheckin(
+    owner: string,
+    id: number,
+    patch: Partial<NewWealthCheckin>,
+  ): Promise<WealthCheckin>
+  deleteWealthCheckin(
+    owner: string,
+    id: number,
+  ): Promise<void>
 }

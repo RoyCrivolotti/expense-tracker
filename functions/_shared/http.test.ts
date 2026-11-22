@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_JSON_BODY_BYTES, HttpError, readJson } from './http'
 
-function post(body: BodyInit | null, headers: Record<string, string> = {}): Request {
+function post(
+  body: BodyInit | null,
+  headers: Record<string, string> = {},
+): Request {
   return new Request('https://example.test/x', { method: 'POST', body, headers })
 }
 
@@ -50,7 +53,11 @@ describe('readJson', () => {
         if (pulled > 100) controller.close()
       },
     })
-    const request = new Request('https://example.test/x', { method: 'POST', body: stream, duplex: 'half' } as RequestInit)
+    const request = new Request('https://example.test/x', {
+      method: 'POST',
+      body: stream,
+      duplex: 'half',
+    } as RequestInit)
     expect(await status(readJson(request, 1000))).toBe(413)
     expect(pulled).toBeLessThan(10)
   })

@@ -42,7 +42,13 @@ describe('SettingsTab sections', () => {
     renderSettings()
 
     expect(screen.getByRole('tablist', { name: 'Settings section' })).toBeInTheDocument()
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Preferences', 'Setup', 'Account', 'Capture', 'Data'])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Preferences',
+      'Setup',
+      'Account',
+      'Capture',
+      'Data',
+    ])
     expect(screen.getByRole('tab', { name: 'Preferences' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Preferences')
     expect(screen.getByLabelText('Default account')).toBeInTheDocument()
@@ -66,7 +72,14 @@ describe('SettingsTab sections', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Capture' }))
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Capture')
-    for (const title of ['Set up capture', 'Capture key', 'Notifications', 'Linked cards', 'Muted pushes', 'Capture diagnostics']) {
+    for (const title of [
+      'Set up capture',
+      'Capture key',
+      'Notifications',
+      'Linked cards',
+      'Muted pushes',
+      'Capture diagnostics',
+    ]) {
       // The setup steps name the key as well, once they are drawn, so a title may be on the page more than once.
       expect((await screen.findAllByText(title)).length).toBeGreaterThan(0)
     }
@@ -144,13 +157,17 @@ describe('SettingsTab setup lists, read-only', () => {
   })
 
   it('lists a category that has a budget, with no empty line', () => {
-    view(makeDataset({ categories: [{ id: 1, name: 'Dining', monthlyBudgetCents: 30_000, sortOrder: 0, active: true }] }))
+    view(
+      makeDataset({ categories: [{ id: 1, name: 'Dining', monthlyBudgetCents: 30_000, sortOrder: 0, active: true }] }),
+    )
     expect(screen.getByText('Dining')).toBeInTheDocument()
     expect(screen.queryByText('No categories yet.')).not.toBeInTheDocument()
   })
 
   it('shows no empty line when there are accounts', () => {
-    view(makeDataset({ accounts: [{ id: 10, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }] }))
+    view(
+      makeDataset({ accounts: [{ id: 10, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }] }),
+    )
     expect(screen.queryByText('No accounts yet.')).not.toBeInTheDocument()
   })
 })

@@ -23,7 +23,14 @@ interface Case {
 
 const START = '2026-01-01'
 const plan = samplePlan({ id: 1, name: 'Path A: Sample', planStartDate: START })
-const houseNow = samplePlan({ id: 2, name: 'Path B: House now', housePurchaseYear: 0, isActive: false, color: '#ef4444', annualSpendCents: 1_200_000 })
+const houseNow = samplePlan({
+  id: 2,
+  name: 'Path B: House now',
+  housePurchaseYear: 0,
+  isActive: false,
+  color: '#ef4444',
+  annualSpendCents: 1_200_000,
+})
 const neverBuys = samplePlan({
   id: 3,
   name: 'Path C: Rent',
@@ -34,18 +41,37 @@ const neverBuys = samplePlan({
   contributionSchedule: [{ from: '2028-04', monthlyCents: 150_000 }],
   lifeEvents: [{ year: 3, amountCents: -1_000_000, label: 'Car' }],
 })
-const undated = makeScenario({ id: 4, name: 'Undated', planStartDate: null, horizonYears: 25, annualSpendCents: 2_000_000 })
+const undated = makeScenario({
+  id: 4,
+  name: 'Undated',
+  planStartDate: null,
+  horizonYears: 25,
+  annualSpendCents: 2_000_000,
+})
 
 const CASES: Record<string, Case> = {
-  'three dated paths, unequal horizons, a loaded plan': { scenarios: [plan, houseNow, neverBuys], draft: scenarioToDraft(plan), includeDraft: false },
-  'the same with an edited draft': { scenarios: [plan, houseNow, neverBuys], draft: { ...scenarioToDraft(plan), monthlyContributionCents: 120_000 }, includeDraft: true },
+  'three dated paths, unequal horizons, a loaded plan': {
+    scenarios: [plan, houseNow, neverBuys],
+    draft: scenarioToDraft(plan),
+    includeDraft: false,
+  },
+  'the same with an edited draft': {
+    scenarios: [plan, houseNow, neverBuys],
+    draft: { ...scenarioToDraft(plan), monthlyContributionCents: 120_000 },
+    includeDraft: true,
+  },
   'with the plan from today': {
     scenarios: [plan, houseNow],
     draft: scenarioToDraft(plan),
     includeDraft: false,
     fromToday: planFromToday(plan, { investedCents: 9_000_000, date: '2027-03-05' }, 0.02),
   },
-  'embedded, as on a phone': { scenarios: [plan, neverBuys], draft: scenarioToDraft(plan), includeDraft: false, embedded: true },
+  'embedded, as on a phone': {
+    scenarios: [plan, neverBuys],
+    draft: scenarioToDraft(plan),
+    includeDraft: false,
+    embedded: true,
+  },
   'no start dates at all': {
     scenarios: [undated, makeScenario({ id: 5, name: 'Undated house', planStartDate: null, housePurchaseYear: 5 })],
     draft: { ...scenarioToDraft(undated), name: 'Draft' },
@@ -56,13 +82,25 @@ const CASES: Record<string, Case> = {
 
 /** The hint and every cell, row by row, at each window the table offers. */
 function readTable(c: Case): string[] {
-  render(<ScenarioComparison scenarios={c.scenarios} draft={c.draft} includeDraft={c.includeDraft} fromToday={c.fromToday ?? null} embedded={c.embedded ?? false} />)
+  render(
+    <ScenarioComparison
+      scenarios={c.scenarios}
+      draft={c.draft}
+      includeDraft={c.includeDraft}
+      fromToday={c.fromToday ?? null}
+      embedded={c.embedded ?? false}
+    />,
+  )
   const group = screen.getByRole('radiogroup', { name: 'Comparison year' })
-  const windows = within(group).getAllByRole('radio').map((r) => r.getAttribute('aria-label') ?? r.textContent ?? '')
+  const windows = within(group)
+    .getAllByRole('radio')
+    .map((r) => r.getAttribute('aria-label') ?? r.textContent ?? '')
   return windows.flatMap((label) => {
     fireEvent.click(within(group).getByRole('radio', { name: label }))
     const hint = document.querySelector('p')?.textContent ?? ''
-    const rows = screen.getAllByRole('row').map((row) => [...row.querySelectorAll('th, td')].map((cell) => cell.textContent).join(' | '))
+    const rows = screen
+      .getAllByRole('row')
+      .map((row) => [...row.querySelectorAll('th, td')].map((cell) => cell.textContent).join(' | '))
     return [`[${label}] ${hint}`, ...rows]
   })
 }

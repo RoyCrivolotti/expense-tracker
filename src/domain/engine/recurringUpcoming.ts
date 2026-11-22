@@ -52,7 +52,10 @@ interface Series {
  * booked to another budget month, counts as the one it was for. A date more than a week past is
  * given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
  */
-function pendingDate({ dates, usual, lead }: Series, today: string): string | null {
+function pendingDate(
+  { dates, usual, lead }: Series,
+  today: string,
+): string | null {
   const newest = dates[dates.length - 1]!
   // Start a month early: a usual date a few days past the month's end belongs to the month before.
   let month = shiftBudgetMonth(newest.slice(0, 7), -1)

@@ -4,7 +4,10 @@ import { ChartStartMarks, type StartMark } from './ChartStartMarks'
 
 const geo = { xForIndex: (i: number) => 50 + i * 20, scaleY: (v: number) => 200 - v, padTop: 10 }
 
-function draw(marks: StartMark[], over: Partial<Parameters<typeof ChartStartMarks>[0]> = {}) {
+function draw(
+  marks: StartMark[],
+  over: Partial<Parameters<typeof ChartStartMarks>[0]> = {},
+) {
   return render(
     <svg>
       <ChartStartMarks marks={marks} geo={geo} left={50} right={650} active={null} annotations={undefined} {...over} />

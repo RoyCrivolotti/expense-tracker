@@ -7,7 +7,10 @@ import { monthlySummaryRows } from './monthlySummaryRows'
 import styles from './analytics.module.css'
 
 /** Colour an actual against its monthly budget (only when a budget is set). */
-function cellClass(actual: number, budget: number): string | undefined {
+function cellClass(
+  actual: number,
+  budget: number,
+): string | undefined {
   if (actual === 0) return styles.zero
   if (budget <= 0) return undefined
   const ratio = actual / budget
@@ -16,7 +19,10 @@ function cellClass(actual: number, budget: number): string | undefined {
   return undefined
 }
 
-function buildTotals(rows: CategoryActuals[], months: string[]) {
+function buildTotals(
+  rows: CategoryActuals[],
+  months: string[],
+) {
   const perMonth = new Map(months.map((m) => [m, 0]))
   let budget = 0
   let ytd = 0

@@ -109,63 +109,117 @@ export interface ExpenseActions {
   createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   /** Creates the transaction a captured payment became and marks that recommendation submitted, in one write. */
-  submitRecommendation?: (id: string, input: NewTransaction, allowDuplicate?: boolean) => Promise<Transaction>
-  updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
+  submitRecommendation?: (
+    id: string,
+    input: NewTransaction,
+    allowDuplicate?: boolean,
+  ) => Promise<Transaction>
+  updateTransaction: (
+    id: number,
+    patch: Partial<NewTransaction>,
+  ) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   /** Resolves with the number of rows the server actually touched, which can be
    *  fewer than requested if some vanished elsewhere first. */
   deleteTransactions: (ids: number[]) => Promise<number>
-  updateTransactions: (ids: number[], patch: BulkTransactionPatch) => Promise<number>
+  updateTransactions: (
+    ids: number[],
+    patch: BulkTransactionPatch,
+  ) => Promise<number>
   /** Adds labels to these transactions and keeps the ones they have. Resolves with how many it reached. */
-  addLabels?: (ids: number[], labelIds: number[]) => Promise<number>
+  addLabels?: (
+    ids: number[],
+    labelIds: number[],
+  ) => Promise<number>
   /**
    * Adds labels to, and edits, every transaction `target` names (the filter, with the count and revision the user was
    * shown). Resolves with how many it changed; rejects with a 409 `ApiError` if the ledger moved since.
    */
-  updateMatching?: (target: MatchingTarget, patch: BulkTransactionPatch, labelIds?: number[]) => Promise<number>
+  updateMatching?: (
+    target: MatchingTarget,
+    patch: BulkTransactionPatch,
+    labelIds?: number[],
+  ) => Promise<number>
   setStatementPaid: (
     accountId: number,
     yearMonth: string,
     paid: boolean,
     paidOn?: string,
   ) => Promise<void>
-  setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
-  uploadAttachment: (transactionId: number, file: File) => Promise<void>
+  setCashActual: (
+    yearMonth: string,
+    actualCashCents: number | null,
+  ) => Promise<void>
+  uploadAttachment: (
+    transactionId: number,
+    file: File,
+  ) => Promise<void>
   deleteAttachment: (id: number) => Promise<void>
   createFlag: (input: NewFlag) => Promise<Flag>
-  updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
+  updateFlag: (
+    id: number,
+    patch: Partial<NewFlag>,
+  ) => Promise<void>
   /** Resolves with how many transactions were unflagged, for the toast. */
   deleteFlag: (id: number) => Promise<{ unflagged: number }>
   createLabel: (input: NewLabel) => Promise<Label>
-  updateLabel: (id: number, patch: Partial<NewLabel>) => Promise<void>
+  updateLabel: (
+    id: number,
+    patch: Partial<NewLabel>,
+  ) => Promise<void>
   /** Resolves with how many transactions were unlabeled, for the toast. */
   deleteLabel: (id: number) => Promise<{ unlabeled: number }>
   /** Replaces a transaction's whole label set. */
-  setTransactionLabels: (transactionId: number, labelIds: number[]) => Promise<void>
+  setTransactionLabels: (
+    transactionId: number,
+    labelIds: number[],
+  ) => Promise<void>
   createCategory: (input: NewCategory) => Promise<void>
-  updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>
-  deleteCategory: (id: number, options?: DeleteCategoryOptions) => Promise<DeleteCategoryResult>
+  updateCategory: (
+    id: number,
+    patch: Partial<NewCategory>,
+  ) => Promise<void>
+  deleteCategory: (
+    id: number,
+    options?: DeleteCategoryOptions,
+  ) => Promise<DeleteCategoryResult>
   createAccount: (input: NewAccount) => Promise<void>
-  updateAccount: (id: number, patch: Partial<NewAccount>) => Promise<void>
-  deleteAccount: (id: number, options?: DeleteAccountOptions) => Promise<DeleteAccountResult>
+  updateAccount: (
+    id: number,
+    patch: Partial<NewAccount>,
+  ) => Promise<void>
+  deleteAccount: (
+    id: number,
+    options?: DeleteAccountOptions,
+  ) => Promise<DeleteAccountResult>
   updateSettings: (patch: Partial<ExpenseSettings>) => Promise<void>
   createScenario: (input: NewGoalScenario) => Promise<GoalScenario>
-  updateScenario: (id: number, patch: Partial<NewGoalScenario>) => Promise<void>
+  updateScenario: (
+    id: number,
+    patch: Partial<NewGoalScenario>,
+  ) => Promise<void>
   /** Make this scenario the plan; whichever was the plan before stops being one. */
   activateScenario: (id: number) => Promise<void>
   deleteScenario: (id: number) => Promise<void>
   createInstallmentPlan: (input: NewInstallmentPlan) => Promise<InstallmentPlan>
-  updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) => Promise<void>
+  updateInstallmentPlan: (
+    id: number,
+    patch: Partial<NewInstallmentPlan>,
+  ) => Promise<void>
   deleteInstallmentPlan: (id: number) => Promise<void>
   createWealthAccount: (input: NewWealthAccount) => Promise<WealthAccount>
-  updateWealthAccount: (id: number, patch: Partial<NewWealthAccount>) => Promise<void>
+  updateWealthAccount: (
+    id: number,
+    patch: Partial<NewWealthAccount>,
+  ) => Promise<void>
   deleteWealthAccount: (id: number) => Promise<void>
   createWealthCheckin: (input: NewWealthCheckin) => Promise<WealthCheckin>
-  updateWealthCheckin: (id: number, patch: Partial<NewWealthCheckin>) => Promise<void>
+  updateWealthCheckin: (
+    id: number,
+    patch: Partial<NewWealthCheckin>,
+  ) => Promise<void>
   deleteWealthCheckin: (id: number) => Promise<void>
 }
 
 export type ExpenseModalState =
-  | { mode: 'add'; seed?: TransactionSeed; hint?: string }
-  | { mode: 'edit'; txn: Transaction }
-  | null
+  { mode: 'add'; seed?: TransactionSeed; hint?: string } | { mode: 'edit'; txn: Transaction } | null

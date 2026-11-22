@@ -143,9 +143,7 @@ describe('SwipeTransactionRow deleting', () => {
     // those too, adding a third call the lazy form should not.
     const blank: Transaction = { ...txn, description: '' }
     const categoryName = vi.spyOn(lookup, 'categoryName')
-    const { rerender } = render(
-      <SwipeTransactionRow txn={blank} lookup={lookup} showDate={false} onDelete={vi.fn()} />,
-    )
+    const { rerender } = render(<SwipeTransactionRow txn={blank} lookup={lookup} showDate={false} onDelete={vi.fn()} />)
     categoryName.mockClear()
 
     rerender(<SwipeTransactionRow txn={blank} lookup={lookup} showDate onDelete={vi.fn()} />)
@@ -172,14 +170,21 @@ describe('SwipeTransactionRow gestures', () => {
   }
 
   /** jsdom has no TouchEvent constructor; the handlers only read `touches[0]`. */
-  function touch(type: TouchType, el: Element, x = 0, y = 0) {
+  function touch(
+    type: TouchType,
+    el: Element,
+    x = 0,
+    y = 0,
+  ) {
     const event = new Event(type, { bubbles: true, cancelable: true })
     const lifting = type === 'touchend' || type === 'touchcancel'
     Object.defineProperty(event, 'touches', { value: lifting ? [] : [{ clientX: x, clientY: y }] })
     fireEvent(el, event)
   }
 
-  function renderGesturesRow(extra: { onSelect?: (t: Transaction) => void; onLongPressSelect?: (id: number) => void } = {}) {
+  function renderGesturesRow(
+    extra: { onSelect?: (t: Transaction) => void; onLongPressSelect?: (id: number) => void } = {},
+  ) {
     const view = render(
       <SwipeTransactionRow
         txn={txn}

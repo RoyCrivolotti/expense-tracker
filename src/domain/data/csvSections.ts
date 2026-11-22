@@ -4,13 +4,7 @@
  * opening balances) and the deferred-card statement paid flags.
  * Transactions and final assembly live in parseWorkbookCsv.ts.
  */
-import type {
-  Account,
-  AccountStatement,
-  CashActual,
-  Category,
-  ExpenseSettings,
-} from '../types'
+import type { Account, AccountStatement, CashActual, Category, ExpenseSettings } from '../types'
 import { parseEuroToCents } from '../engine/money'
 import { defaultExpenseSettings } from '../engine/defaults'
 
@@ -36,7 +30,10 @@ export function splitLine(line: string): string[] {
   return line.split(';').map((f) => f.trim().replace(/^"|"$/g, ''))
 }
 
-function findValue(rows: string[][], label: string): string | null {
+function findValue(
+  rows: string[][],
+  label: string,
+): string | null {
   for (const fields of rows) {
     const idx = fields.indexOf(label)
     if (idx >= 0 && idx + 1 < fields.length) return fields[idx + 1] ?? null
@@ -48,9 +45,7 @@ export function parseSettings(rows: string[][]): ExpenseSettings {
   return {
     ...defaultExpenseSettings(),
     openingCashCents: parseEuroToCents(findValue(rows, 'Opening cash balance (1 Jan)') ?? '0'),
-    openingInvestmentCents: parseEuroToCents(
-      findValue(rows, 'Opening investment balance (1 Jan)') ?? '0',
-    ),
+    openingInvestmentCents: parseEuroToCents(findValue(rows, 'Opening investment balance (1 Jan)') ?? '0'),
     defaultAccountId: null,
   }
 }
@@ -94,7 +89,10 @@ export function parseAccounts(rows: string[][]): Account[] {
 }
 
 /** Statement paid flags from the Cash Reconciliation sheet (Iberia + SC cards). */
-export function parseStatements(rows: string[][], accounts: Account[]): AccountStatement[] {
+export function parseStatements(
+  rows: string[][],
+  accounts: Account[],
+): AccountStatement[] {
   const start = rows.findIndex((f) => f[0] === 'Month' && f[1] === 'Iberia Paid?')
   if (start < 0) return []
   const iberia = accounts.find((a) => /iberia/i.test(a.name))

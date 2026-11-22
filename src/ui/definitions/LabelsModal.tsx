@@ -36,9 +36,7 @@ export function LabelsModal({
   return (
     <Modal
       title={title}
-      {...(editing
-        ? {}
-        : { subtitle: 'Permanent tags for what a transaction belongs to.' })}
+      {...(editing ? {} : { subtitle: 'Permanent tags for what a transaction belongs to.' })}
       onClose={confirming ? () => setConfirming(false) : onClose}
       trapPaused={confirming}
     >
@@ -56,15 +54,12 @@ export function LabelsModal({
         <>
           {labels.length === 0 ? (
             <EmptyState>
-              No labels yet. Create one to mark what a transaction permanently belongs to — a
-              trip, a project — regardless of any flag on it.
+              No labels yet. Create one to mark what a transaction permanently belongs to — a trip, a project —
+              regardless of any flag on it.
             </EmptyState>
           ) : (
             labels.map((label) => (
-              <div
-                key={label.id}
-                className={label.active ? styles.row : `${styles.row} ${styles.inactive}`}
-              >
+              <div key={label.id} className={label.active ? styles.row : `${styles.row} ${styles.inactive}`}>
                 <LabelGlyph label={label} className={styles.rowGlyph} />
                 <div className={styles.rowBody}>
                   <span className={styles.rowName}>
@@ -73,25 +68,19 @@ export function LabelsModal({
                   </span>
                   <span className={styles.rowMeta}>
                     {label.description ? `${label.description} · ` : ''}
-                    {usage.count('label', label.id) === null ? '—' : transactionCountLabel(usage.count('label', label.id))}
+                    {usage.count('label', label.id) === null
+                      ? '—'
+                      : transactionCountLabel(usage.count('label', label.id))}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className={defStyles.editBtn}
-                  onClick={() => setEditing({ label })}
-                >
+                <button type="button" className={defStyles.editBtn} onClick={() => setEditing({ label })}>
                   Edit
                 </button>
               </div>
             ))
           )}
           {labels.length === 0 ? null : usage.notice}
-          <button
-            type="button"
-            className={defStyles.addBtn}
-            onClick={() => setEditing({ label: null })}
-          >
+          <button type="button" className={defStyles.addBtn} onClick={() => setEditing({ label: null })}>
             + Add label
           </button>
         </>

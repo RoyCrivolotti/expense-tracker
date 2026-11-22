@@ -32,7 +32,10 @@ export interface HeroAxis {
   offsetOf: (start: string | null | undefined) => number
 }
 
-export function heroAxis(scenarios: readonly GoalScenario[], draft: Pick<NewGoalScenario, 'planStartDate'>): HeroAxis {
+export function heroAxis(
+  scenarios: readonly GoalScenario[],
+  draft: Pick<NewGoalScenario, 'planStartDate'>,
+): HeroAxis {
   const starts = [...scenarios.map((s) => s.planStartDate), draft.planStartDate]
   const { origin, offsets } = scenarioAxis(starts)
   const offsetOf = (start: string | null | undefined) => scenarioAxis([origin, start]).offsets[1] ?? 0
@@ -46,7 +49,12 @@ export function monthYear(date: string): string {
   return MONTH_YEAR.format(new Date(`${date}T00:00:00Z`))
 }
 
-const DAY_MONTH_YEAR = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
 
 /** "11 Sept 2026": a day, in the app's English whatever the browser's language. */
 export function dayMonthYear(date: string): string {
@@ -54,7 +62,11 @@ export function dayMonthYear(date: string): string {
 }
 
 /** The calendar year a scenario's last year ends in: its start's year (the axis' if it has none) and its horizon. */
-function endYear(start: string | null | undefined, origin: string, horizonYears: number): string {
+function endYear(
+  start: string | null | undefined,
+  origin: string,
+  horizonYears: number,
+): string {
   return String(Number((start ?? origin).slice(0, 4)) + horizonYears)
 }
 
@@ -81,7 +93,14 @@ export function scenarioLines(
   const sources: LineSource[] = saved
     .filter((s) => (s.id !== activeId || dirty) && !hiddenIds.has(s.id))
     .map((s) => ({ id: `saved-${s.id}`, scenarioId: s.id, name: s.name, color: s.color, dashed: false, scenario: s }))
-  sources.push({ id: 'draft', scenarioId: null, name: `${draft.name} (editing)`, color: draft.color, dashed: true, scenario: draft })
+  sources.push({
+    id: 'draft',
+    scenarioId: null,
+    name: `${draft.name} (editing)`,
+    color: draft.color,
+    dashed: true,
+    scenario: draft,
+  })
   return sources.map(({ scenario, color, ...line }) => {
     const offsetYears = axis.offsetOf(scenario.planStartDate)
     const start = scenario.planStartDate
@@ -98,7 +117,10 @@ export function scenarioLines(
 }
 
 /** How much the euros of a start `offsetYears` after the axis' origin are worth in the origin's. */
-function deflator(offsetYears: number, inflationRate: number): number {
+function deflator(
+  offsetYears: number,
+  inflationRate: number,
+): number {
   return Math.pow(1 + inflationRate, offsetYears)
 }
 
@@ -106,7 +128,11 @@ function deflator(offsetYears: number, inflationRate: number): number {
  * A scenario that starts after the axis' origin, as a line placed at its own anniversaries, in the
  * origin's euros: `onAxis` gives each anniversary, after the value the day before where a step lands.
  */
-function placedLine(points: readonly YearPoint[], offsetYears: number, inflationRate: number): Pick<ChartSeries, 'values' | 'preStep' | 'xs'> {
+function placedLine(
+  points: readonly YearPoint[],
+  offsetYears: number,
+  inflationRate: number,
+): Pick<ChartSeries, 'values' | 'preStep' | 'xs'> {
   const values: number[] = []
   const preStep: number[] = []
   const xs: number[] = []
@@ -123,7 +149,11 @@ function placedLine(points: readonly YearPoint[], offsetYears: number, inflation
 }
 
 /** A line's values as drawn: on the axis' places where it starts on the origin, at its own anniversaries otherwise. */
-function lineOf(points: readonly YearPoint[], offsetYears: number, inflationRate: number): Pick<ChartSeries, 'values' | 'preStep' | 'xs'> {
+function lineOf(
+  points: readonly YearPoint[],
+  offsetYears: number,
+  inflationRate: number,
+): Pick<ChartSeries, 'values' | 'preStep' | 'xs'> {
   return offsetYears > 0 ? placedLine(points, offsetYears, inflationRate) : lineValues(points)
 }
 
@@ -141,9 +171,17 @@ export interface HeroSeries {
  * included, so the last year shown is the one the comparison table rests on and hiding a line does not
  * move it. A hidden line is still not drawn: the axis runs on with years nothing is drawn in.
  */
-export function buildSeries(lines: ScenarioLine[], inflationRate: number, ends: readonly number[] = []): HeroSeries {
+export function buildSeries(
+  lines: ScenarioLine[],
+  inflationRate: number,
+  ends: readonly number[] = [],
+): HeroSeries {
   const projected = lines.map((line) => ({ line, points: projectNetWorth(line.params) }))
-  const reach = Math.max(0, ...ends, ...projected.map(({ line, points }) => line.offsetYears + (points[points.length - 1]?.year ?? 0)))
+  const reach = Math.max(
+    0,
+    ...ends,
+    ...projected.map(({ line, points }) => line.offsetYears + (points[points.length - 1]?.year ?? 0)),
+  )
   // A sum a hair past a whole year is that year, and must not add one to the axis.
   const last = Math.ceil(reach - 1e-9)
   const years = Array.from({ length: last + 1 }, (_, i) => i)
@@ -163,7 +201,11 @@ export function buildSeries(lines: ScenarioLine[], inflationRate: number, ends: 
  * The draft at a return three points either side, from where the draft starts: a sensitivity to the
  * return, not a range of likely outcomes.
  */
-export function bandSeries(draft: NewGoalScenario, offsetYears: number, inflationRate: number): ChartSeries {
+export function bandSeries(
+  draft: NewGoalScenario,
+  offsetYears: number,
+  inflationRate: number,
+): ChartSeries {
   const band = projectNetWorthBand(scenarioToParams(draft, inflationRate))
   const base = { id: 'uncertainty-band', color: scenarioInk(draft.color), values: [], kind: 'band' as const }
   if (offsetYears === 0) return { ...base, band }
@@ -176,7 +218,10 @@ export function bandSeries(draft: NewGoalScenario, offsetYears: number, inflatio
 }
 
 /** Where each line buys a house, on the axis. */
-export function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIndex: number }[] {
+export function purchaseMarkerIndices(
+  lines: ScenarioLine[],
+  years: number[],
+): { yearIndex: number }[] {
   const indices = new Set<number>()
   for (const line of lines) {
     const purchaseYear = line.params.housePurchaseYear
@@ -219,12 +264,21 @@ export function lineReadings(
     }
     const lastYear = own[own.length - 1]?.year ?? 0
     if (line.offsetYears === 0) return { ...s, last: s.values[lastYear] ?? read(lastYear) }
-    return { id: s.id, color: s.color, dashed: s.dashed, values: years.map(read), last: read(line.offsetYears + lastYear) }
+    return {
+      id: s.id,
+      color: s.color,
+      dashed: s.dashed,
+      values: years.map(read),
+      last: read(line.offsetYears + lastYear),
+    }
   })
 }
 
 /** Where each line that starts after the axis' origin begins, as drawn: its first point, and when. */
-export function startMarksOf(lines: ScenarioLine[], drawn: ChartSeries[]): StartMark[] {
+export function startMarksOf(
+  lines: ScenarioLine[],
+  drawn: ChartSeries[],
+): StartMark[] {
   return drawn.flatMap((s, i) => {
     const line = lines[i]
     const index = s.xs?.[0]
@@ -239,7 +293,11 @@ export function startMarksOf(lines: ScenarioLine[], drawn: ChartSeries[]): Start
  * digits, so a phone labels every tenth year, and the last year drawn is labelled only when it is far
  * enough past the last label (three fifths of a step) not to run into it.
  */
-export function axisLabels(years: number[], calendarOrigin: string | null, narrow: boolean): string[] {
+export function axisLabels(
+  years: number[],
+  calendarOrigin: string | null,
+  narrow: boolean,
+): string[] {
   if (!calendarOrigin) return sparseLabels(years, 5)
   const step = narrow ? 10 : 5
   const last = years.length - 1

@@ -16,7 +16,9 @@ export function ExpensesOfflineBanner({
   const shown = readOnly ? { online, snapshotAt } : null
   return (
     <PresenceValue value={shown} exitMs={EXIT_MS.fold}>
-      {(state) => <OfflineBanner online={state.online} {...(state.snapshotAt ? { snapshotAt: state.snapshotAt } : {})} />}
+      {(state) => (
+        <OfflineBanner online={state.online} {...(state.snapshotAt ? { snapshotAt: state.snapshotAt } : {})} />
+      )}
     </PresenceValue>
   )
 }

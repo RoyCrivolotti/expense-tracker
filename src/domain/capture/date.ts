@@ -35,7 +35,12 @@ export function parsePushDate(date: string): PushInstant | null {
   const m = date.trim().match(ISO)
   if (!m) return null
   const [year, month, day, hour, minute, second] = m.slice(1, 7).map(Number) as [
-    number, number, number, number, number, number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
   ]
   const offset = offsetMinutes(m[7] ?? '')
   if (year < 100 || offset === null || hour > 23 || minute > 59 || second > 59) return null
@@ -49,7 +54,10 @@ export function parsePushDate(date: string): PushInstant | null {
  * `new Date(instantMs).toISOString()`, but a reader can tell the phone's own time of day from it without a time
  * zone database, and a `Z` still means "offset unknown".
  */
-export function isoWithOffset(instantMs: number, offsetMinutes: number): string {
+export function isoWithOffset(
+  instantMs: number,
+  offsetMinutes: number,
+): string {
   const wall = new Date(instantMs + offsetMinutes * 60_000).toISOString().slice(0, 19)
   const abs = Math.abs(offsetMinutes)
   const zone = `${offsetMinutes < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`
@@ -57,7 +65,10 @@ export function isoWithOffset(instantMs: number, offsetMinutes: number): string 
 }
 
 /** Whether a push dated at `instantMs` is believable when the server receives it at `receivedMs`. */
-export function pushTimeVerdict(instantMs: number, receivedMs: number): 'ok' | 'too-old' | 'clock-skew' {
+export function pushTimeVerdict(
+  instantMs: number,
+  receivedMs: number,
+): 'ok' | 'too-old' | 'clock-skew' {
   if (receivedMs - instantMs > MAX_PUSH_AGE_MS) return 'too-old'
   return instantMs - receivedMs > MAX_CLOCK_SKEW_MS ? 'clock-skew' : 'ok'
 }

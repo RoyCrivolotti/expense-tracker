@@ -47,8 +47,10 @@ const put = (record: Record<string, unknown>) =>
   )
 
 /** A ledger's copy as far as these functions read one: the key, the version and the owner. */
-const putLedgerCopy = (owner: string, version = SNAPSHOT_VERSION) =>
-  put({ key: `${LEDGER_KEY_PREFIX}${owner}`, version, owner })
+const putLedgerCopy = (
+  owner: string,
+  version = SNAPSHOT_VERSION,
+) => put({ key: `${LEDGER_KEY_PREFIX}${owner}`, version, owner })
 
 const keys = () => [...(fake.stores.get('snapshots')?.keys() ?? [])]
 

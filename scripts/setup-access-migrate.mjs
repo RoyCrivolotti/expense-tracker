@@ -6,7 +6,10 @@
 import { ACCOUNT_ID, cf, findAccessApp, requireToken } from './access-api.mjs'
 import { loadStagingAccessConfig } from './staging-access-config.mjs'
 
-function printManualSteps(config, remove) {
+function printManualSteps(
+  config,
+  remove,
+) {
   console.error(`
 Could not update Access via API. Remove these from ${config.prodApp} manually:
 

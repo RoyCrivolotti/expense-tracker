@@ -81,9 +81,7 @@ export function updateUserGroupGrants(
   })
 }
 
-export function revokeAccessUser(
-  email: string,
-): Promise<{ email: string; revoked: true; dataPurged: true }> {
+export function revokeAccessUser(email: string): Promise<{ email: string; revoked: true; dataPurged: true }> {
   return req('/api/access/admin/revoke', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

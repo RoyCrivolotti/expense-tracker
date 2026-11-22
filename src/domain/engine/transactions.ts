@@ -38,7 +38,10 @@ export interface AmountRange {
 }
 
 /** Whether an amount's size falls inside the filter's amount bounds. */
-export function matchesAmountBounds(amountCents: number, filter: TxnFilter): boolean {
+export function matchesAmountBounds(
+  amountCents: number,
+  filter: TxnFilter,
+): boolean {
   const size = Math.abs(amountCents)
   if (filter.amountMinCents != null && size < filter.amountMinCents) return false
   if (filter.amountMaxCents != null && size > filter.amountMaxCents) return false
@@ -46,19 +49,29 @@ export function matchesAmountBounds(amountCents: number, filter: TxnFilter): boo
 }
 
 /** Whether an amount's size falls inside the amount the search text was read as. */
-export function matchesQueryAmount(amountCents: number, range: AmountRange | undefined): boolean {
+export function matchesQueryAmount(
+  amountCents: number,
+  range: AmountRange | undefined,
+): boolean {
   if (!range) return false
   const size = Math.abs(amountCents)
   return size >= range.fromCents && size <= range.toCents
 }
 
-function matchesQuery(txn: Transaction, query: string, range: AmountRange | undefined): boolean {
+function matchesQuery(
+  txn: Transaction,
+  query: string,
+  range: AmountRange | undefined,
+): boolean {
   if (matchesQueryAmount(txn.amountCents, range)) return true
   const haystack = `${txn.description} ${txn.notes ?? ''}`.toLowerCase()
   return haystack.includes(query.toLowerCase())
 }
 
-function matchesPeriod(txn: Transaction, filter: TxnFilter): boolean {
+function matchesPeriod(
+  txn: Transaction,
+  filter: TxnFilter,
+): boolean {
   if (filter.dateFrom || filter.dateTo) {
     if (filter.dateFrom && txn.date < filter.dateFrom) return false
     if (filter.dateTo && txn.date > filter.dateTo) return false
@@ -68,25 +81,37 @@ function matchesPeriod(txn: Transaction, filter: TxnFilter): boolean {
   return true
 }
 
-function matchesTypeAndStatus(txn: Transaction, filter: TxnFilter): boolean {
+function matchesTypeAndStatus(
+  txn: Transaction,
+  filter: TxnFilter,
+): boolean {
   if (filter.type && filter.type !== 'all' && txn.type !== filter.type) return false
   if (filter.status && filter.status !== 'all' && txn.status !== filter.status) return false
   return true
 }
 
-function matchesFlag(txn: Transaction, filter: TxnFilter): boolean {
+function matchesFlag(
+  txn: Transaction,
+  filter: TxnFilter,
+): boolean {
   if (filter.flagId == null) return true
   if (filter.flagId === 'none') return txn.flagId == null
   return txn.flagId === filter.flagId
 }
 
-function matchesLabels(txn: Transaction, filter: TxnFilter): boolean {
+function matchesLabels(
+  txn: Transaction,
+  filter: TxnFilter,
+): boolean {
   if (!filter.labelIds || filter.labelIds.length === 0) return true
   const ids = filter.labelIds
   return (txn.labelIds ?? []).some((id) => ids.includes(id))
 }
 
-function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
+function matchesDimensions(
+  txn: Transaction,
+  filter: TxnFilter,
+): boolean {
   if (filter.categoryId != null && txn.categoryId !== filter.categoryId) return false
   if (filter.accountId != null && txn.accountId !== filter.accountId) return false
   if (!matchesFlag(txn, filter)) return false
@@ -98,7 +123,10 @@ function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
 }
 
 /** Filter then sort newest first (by calendar date, then id for stability). */
-export function filterTransactions(transactions: Transaction[], filter: TxnFilter): Transaction[] {
+export function filterTransactions(
+  transactions: Transaction[],
+  filter: TxnFilter,
+): Transaction[] {
   return transactions
     .filter((txn) => matchesPeriod(txn, filter) && matchesDimensions(txn, filter))
     .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
@@ -108,11 +136,17 @@ export function filterTransactions(transactions: Transaction[], filter: TxnFilte
 export const RECENT_ACTIVITY_LIMIT = 8
 const LIMIT = RECENT_ACTIVITY_LIMIT
 
-function byDateDesc(a: Transaction, b: Transaction): number {
+function byDateDesc(
+  a: Transaction,
+  b: Transaction,
+): number {
   return b.date.localeCompare(a.date) || b.id - a.id
 }
 
-function byCreatedDesc(a: Transaction, b: Transaction): number {
+function byCreatedDesc(
+  a: Transaction,
+  b: Transaction,
+): number {
   const ca = a.createdAt ?? ''
   const cb = b.createdAt ?? ''
   if (ca !== cb) return cb.localeCompare(ca)
@@ -120,12 +154,18 @@ function byCreatedDesc(a: Transaction, b: Transaction): number {
 }
 
 /** Last N transactions by calendar date (global, all budget months). */
-export function latestTransactions(transactions: Transaction[], limit = LIMIT): Transaction[] {
+export function latestTransactions(
+  transactions: Transaction[],
+  limit = LIMIT,
+): Transaction[] {
   return [...transactions].sort(byDateDesc).slice(0, limit)
 }
 
 /** Last N transactions by when they were first saved (global). */
-export function recentlyAdded(transactions: Transaction[], limit = LIMIT): Transaction[] {
+export function recentlyAdded(
+  transactions: Transaction[],
+  limit = LIMIT,
+): Transaction[] {
   return [...transactions].sort(byCreatedDesc).slice(0, limit)
 }
 
@@ -143,4 +183,3 @@ export function netSpendCents(transactions: Transaction[]): number {
   }
   return total
 }
-

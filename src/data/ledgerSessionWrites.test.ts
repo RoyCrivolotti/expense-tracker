@@ -37,13 +37,18 @@ const unheldRow = (session: LedgerSession): Transaction => {
 
 const heldRow = (session: LedgerSession): Transaction => {
   const held = heldIds(session)
-  const row = dataset.transactions.find((t) => held.has(t.id) && !session.getState().held!.pinned.some((p) => p.id === t.id))
+  const row = dataset.transactions.find(
+    (t) => held.has(t.id) && !session.getState().held!.pinned.some((p) => p.id === t.id),
+  )
   if (!row) throw new Error('nothing is held as rows')
   return row
 }
 
 /** What the server holds once `row` has been edited. */
-const served = (source: TestSource, row: Transaction): void => {
+const served = (
+  source: TestSource,
+  row: Transaction,
+): void => {
   source.dataset = { ...dataset, transactions: dataset.transactions.map((t) => (t.id === row.id ? row : t)) }
 }
 
@@ -58,7 +63,10 @@ describe('LedgerSession, a write to rows that are not held', () => {
     const edited = { ...row, categoryId: other.id }
     served(source, edited)
 
-    const changed = session.patch((d) => patchAfterBulkUpdate(d, [edited]), { ids: [row.id], patch: { categoryId: other.id } })
+    const changed = session.patch((d) => patchAfterBulkUpdate(d, [edited]), {
+      ids: [row.id],
+      patch: { categoryId: other.id },
+    })
     await flush()
 
     expect(changed).toBe(true)
@@ -96,7 +104,9 @@ describe('LedgerSession, a write to rows that are not held', () => {
   it('reads nothing for a ledger held in full that the patch already shows, and everything for a write it cannot show', async () => {
     const { session, source } = await open(FULL)
     // A row nothing else points at, whose removal the patch alone shows.
-    const row = dataset.transactions.find((t) => t.type === 'expense' && !t.planId && !t.settledBy && !t.flagId && !t.reportCount)!
+    const row = dataset.transactions.find(
+      (t) => t.type === 'expense' && !t.planId && !t.settledBy && !t.flagId && !t.reportCount,
+    )!
 
     session.patch((d) => patchAfterBulkDelete(d, [row.id]), { ids: [row.id] })
     await flush()

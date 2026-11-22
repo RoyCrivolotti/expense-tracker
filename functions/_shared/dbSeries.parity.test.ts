@@ -72,7 +72,9 @@ describe('the series the SQL serves equal the engine’s', () => {
     const dataset = unicodeLedger()
     const kit = queryDb(dataset)
     const rows = kit.sqlite
-      .prepare('SELECT lower(trim(description)) AS k, count(*) AS n FROM transactions GROUP BY k, account_id, category_id, type')
+      .prepare(
+        'SELECT lower(trim(description)) AS k, count(*) AS n FROM transactions GROUP BY k, account_id, category_id, type',
+      )
       .all() as unknown as Array<{ k: string; n: number }>
     const sqlSeries = rows.filter((r) => r.k !== '' && r.n >= 3).length
     expect(sqlSeries).not.toBe(reference(dataset).length)

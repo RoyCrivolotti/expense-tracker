@@ -14,9 +14,7 @@ function minimalModel(): ExpenseModel {
       labels: [],
       attachments: [],
       categories: [{ id: 3, name: 'Health', monthlyBudgetCents: 0, sortOrder: 1, active: true }],
-      accounts: [
-        { id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true },
-      ],
+      accounts: [{ id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true }],
       transactions: [],
       accountStatements: [],
       cashActuals: [],
@@ -146,9 +144,7 @@ describe('initialFields', () => {
     it('opens on the next month when July is settled and August already has rows', () => {
       const model = minimalModel()
       model.dataset.settings.budgetRolloverDay = 28
-      model.dataset.accounts = [
-        { id: 2, name: 'Card', kind: 'credit', settlement: 'deferred', active: true },
-      ]
+      model.dataset.accounts = [{ id: 2, name: 'Card', kind: 'credit', settlement: 'deferred', active: true }]
       model.dataset.transactions = [
         makeTransaction({ id: 1, accountId: 2, budgetMonth: '2026-07', date: '2026-07-04' }),
         makeTransaction({ id: 2, accountId: 2, budgetMonth: '2026-08', date: '2026-07-19' }),
@@ -188,7 +184,9 @@ describe('initialFields — a seeded transaction', () => {
     model.dataset.settings = { ...model.dataset.settings, investmentCategoryId: 3 }
     expect(initialFields(deposit, model, EU_MONEY_FORMAT).categoryId).toBe(3)
     // An expense keeps its own.
-    expect(initialFields(makeTransaction({ type: 'expense', categoryId: 3 }), model, EU_MONEY_FORMAT).categoryId).toBe(3)
+    expect(initialFields(makeTransaction({ type: 'expense', categoryId: 3 }), model, EU_MONEY_FORMAT).categoryId).toBe(
+      3,
+    )
   })
 
   it('opens a negative investment as a withdrawal of its size', () => {

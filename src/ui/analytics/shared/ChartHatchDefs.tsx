@@ -9,13 +9,7 @@ export const UNPAID_FILL = `url(#${UNPAID_PATTERN_ID})`
 export function ChartHatchDefs({ stroke }: { stroke: string }) {
   return (
     <defs>
-      <pattern
-        id={UNPAID_PATTERN_ID}
-        width={5}
-        height={5}
-        patternTransform="rotate(45)"
-        patternUnits="userSpaceOnUse"
-      >
+      <pattern id={UNPAID_PATTERN_ID} width={5} height={5} patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
         <rect width={5} height={5} fill="transparent" />
         <line x1={0} y1={0} x2={0} y2={5} stroke={stroke} strokeWidth={2.5} />
       </pattern>

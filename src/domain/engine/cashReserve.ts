@@ -19,7 +19,10 @@ export interface CashReserve {
 }
 
 /** Sum of the check-in's balances in cash-kind accounts. */
-export function checkinCashCents(checkin: WealthCheckin, accounts: WealthAccount[]): number {
+export function checkinCashCents(
+  checkin: WealthCheckin,
+  accounts: WealthAccount[],
+): number {
   const cashIds = new Set(accounts.filter((a) => a.kind === 'cash').map((a) => a.id))
   return checkin.entries.filter((e) => cashIds.has(e.accountId)).reduce((s, e) => s + e.valueCents, 0)
 }
@@ -30,7 +33,10 @@ export function checkinCashCents(checkin: WealthCheckin, accounts: WealthAccount
  * month of zero and pull the average down. The month still under way (`openMonth`) is
  * left out for the same reason: its spending so far is not a month's spending.
  */
-export function averageMonthlySpendCents(transactions: Transaction[], openMonth?: string): number | null {
+export function averageMonthlySpendCents(
+  transactions: Transaction[],
+  openMonth?: string,
+): number | null {
   const months = [...computeMonthlyTotals(transactions).values()]
     .filter((m) => m.expensesCents !== 0 && (openMonth === undefined || m.month < openMonth))
     .sort((a, b) => a.month.localeCompare(b.month))
@@ -56,7 +62,6 @@ export function cashReserve(
   if (!checkin.entries.some((e) => live.some((a) => a.id === e.accountId))) return null
   const cashCents = checkinCashCents(checkin, live)
   const monthlySpendCents = averageMonthlySpendCents(transactions, openMonth)
-  const monthsCovered =
-    monthlySpendCents !== null && monthlySpendCents > 0 ? cashCents / monthlySpendCents : null
+  const monthsCovered = monthlySpendCents !== null && monthlySpendCents > 0 ? cashCents / monthlySpendCents : null
   return { cashCents, monthlySpendCents, monthsCovered, targetMonths }
 }

@@ -4,13 +4,22 @@ import { useVisualViewportRect } from './useVisualViewportRect'
 
 type Listener = () => void
 
-function stubViewport(top: number, height: number) {
+function stubViewport(
+  top: number,
+  height: number,
+) {
   const listeners: { resize: Listener[]; scroll: Listener[] } = { resize: [], scroll: [] }
   const vv = {
     offsetTop: top,
     height,
-    addEventListener: (type: 'resize' | 'scroll', fn: Listener) => listeners[type].push(fn),
-    removeEventListener: (type: 'resize' | 'scroll', fn: Listener) => {
+    addEventListener: (
+      type: 'resize' | 'scroll',
+      fn: Listener,
+    ) => listeners[type].push(fn),
+    removeEventListener: (
+      type: 'resize' | 'scroll',
+      fn: Listener,
+    ) => {
       listeners[type] = listeners[type].filter((l) => l !== fn)
     },
   }

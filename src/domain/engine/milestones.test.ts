@@ -51,9 +51,7 @@ describe('normalizeMilestones', () => {
 
   it('truncates labels longer than the storable length', () => {
     const long = 'x'.repeat(MILESTONE_LABEL_MAX_LENGTH + 10)
-    expect(normalizeMilestones([{ amountCents: 1, label: long }])[0]!.label).toHaveLength(
-      MILESTONE_LABEL_MAX_LENGTH,
-    )
+    expect(normalizeMilestones([{ amountCents: 1, label: long }])[0]!.label).toHaveLength(MILESTONE_LABEL_MAX_LENGTH)
   })
 
   it('treats a missing label as empty', () => {
@@ -123,9 +121,7 @@ describe('validateMilestones', () => {
     expect(validateMilestones([{ amountCents: 1.5, label: '' }])).toMatch(/amountCents/)
     expect(validateMilestones([{ amountCents: 0, label: '' }])).toMatch(/amountCents/)
     expect(validateMilestones([{ amountCents: -1, label: '' }])).toMatch(/amountCents/)
-    expect(validateMilestones([{ amountCents: MILESTONE_MAX_CENTS + 1, label: '' }])).toMatch(
-      /amountCents/,
-    )
+    expect(validateMilestones([{ amountCents: MILESTONE_MAX_CENTS + 1, label: '' }])).toMatch(/amountCents/)
     expect(validateMilestones([{ amountCents: '10' }])).toMatch(/amountCents/)
   })
 
@@ -184,9 +180,7 @@ describe('milestoneName', () => {
 
 describe('milestoneLabelWithAmount', () => {
   it('shows the name and the amount when named', () => {
-    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '€80k')).toBe(
-      'Deposit (€80k)',
-    )
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '€80k')).toBe('Deposit (€80k)')
   })
 
   it('shows the amount alone when unnamed', () => {
@@ -194,14 +188,12 @@ describe('milestoneLabelWithAmount', () => {
   })
 
   it('does not leave empty parentheses for a whitespace-only name', () => {
-    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: '  ' }, () => '€80k')).toBe(
-      '€80k',
-    )
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: '  ' }, () => '€80k')).toBe('€80k')
   })
 
   it('uses the formatter it is given, so callers pick full or short money', () => {
-    expect(
-      milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '80.000,00 €'),
-    ).toBe('Deposit (80.000,00 €)')
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '80.000,00 €')).toBe(
+      'Deposit (80.000,00 €)',
+    )
   })
 })

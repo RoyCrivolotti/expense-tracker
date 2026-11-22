@@ -39,7 +39,10 @@ export interface InstallmentSuggestion {
 }
 
 /** ISO date for `dueDayOfMonth` within the calendar month `yearMonth`, clamped to its length. */
-function dueDateInMonth(yearMonth: string, dueDayOfMonth: number): string {
+function dueDateInMonth(
+  yearMonth: string,
+  dueDayOfMonth: number,
+): string {
   const [y, m] = yearMonth.split('-').map(Number) as [number, number]
   const maxDay = new Date(y, m, 0).getDate()
   const day = Math.min(Math.max(dueDayOfMonth, 1), maxDay)
@@ -47,12 +50,18 @@ function dueDateInMonth(yearMonth: string, dueDayOfMonth: number): string {
 }
 
 /** Budget month a given installment index falls due. */
-export function budgetMonthForIndex(plan: InstallmentPlan, index: number): string {
+export function budgetMonthForIndex(
+  plan: InstallmentPlan,
+  index: number,
+): string {
   return shiftBudgetMonth(plan.anchorBudgetMonth, index - plan.startInstallmentIndex)
 }
 
 /** Installment index that should be due in `budgetMonth` for this plan. */
-export function expectedIndexForMonth(plan: InstallmentPlan, budgetMonth: string): number {
+export function expectedIndexForMonth(
+  plan: InstallmentPlan,
+  budgetMonth: string,
+): number {
   return plan.startInstallmentIndex + monthsBetweenBudget(plan.anchorBudgetMonth, budgetMonth)
 }
 
@@ -61,13 +70,17 @@ export function finalBudgetMonth(plan: InstallmentPlan): string {
   return budgetMonthForIndex(plan, plan.totalCount)
 }
 
-function linkedTransactions(plan: InstallmentPlan, transactions: StoredTransaction[]): StoredTransaction[] {
-  return transactions.filter(
-    (t) => t.planId === plan.id && !t.cancelled && typeof t.installmentIndex === 'number',
-  )
+function linkedTransactions(
+  plan: InstallmentPlan,
+  transactions: StoredTransaction[],
+): StoredTransaction[] {
+  return transactions.filter((t) => t.planId === plan.id && !t.cancelled && typeof t.installmentIndex === 'number')
 }
 
-function linkedIndices(plan: InstallmentPlan, transactions: StoredTransaction[]): number[] {
+function linkedIndices(
+  plan: InstallmentPlan,
+  transactions: StoredTransaction[],
+): number[] {
   return linkedTransactions(plan, transactions).map((t) => t.installmentIndex as number)
 }
 
@@ -84,7 +97,10 @@ const MAX_CALENDAR_OFFSET_MONTHS = 1
  * The earliest installment is the reference because it is the row the plan's due day and
  * anchor were captured from: a later row, including one created automatically, can't shift it.
  */
-export function calendarOffsetMonths(plan: InstallmentPlan, transactions: StoredTransaction[]): number {
+export function calendarOffsetMonths(
+  plan: InstallmentPlan,
+  transactions: StoredTransaction[],
+): number {
   const linked = linkedTransactions(plan, transactions)
   if (linked.length === 0) return 0
   const first = linked.reduce((a, b) => ((b.installmentIndex as number) < (a.installmentIndex as number) ? b : a))
@@ -120,7 +136,10 @@ export interface PaidInstallment {
 }
 
 /** Linked, non-cancelled installments logged but not yet settled (status 'forecast'). */
-export function forecastPaidCount(plan: InstallmentPlan, transactions: Transaction[]): number {
+export function forecastPaidCount(
+  plan: InstallmentPlan,
+  transactions: Transaction[],
+): number {
   return transactions.filter((t) => t.planId === plan.id && !t.cancelled && t.status === 'forecast').length
 }
 
@@ -199,7 +218,10 @@ export interface InstallmentSplit {
  *
  * Both the save path and the form preview must use this, or they disagree.
  */
-export function splitInstallmentCents(totalCents: number, totalCount: number): InstallmentSplit {
+export function splitInstallmentCents(
+  totalCents: number,
+  totalCount: number,
+): InstallmentSplit {
   const magnitude = Math.abs(totalCents)
   if (totalCount <= 0) return { perInstallmentCents: magnitude, remainderCents: 0 }
   const perInstallmentCents = Math.floor(magnitude / totalCount)

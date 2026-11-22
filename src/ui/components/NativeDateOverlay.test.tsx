@@ -55,7 +55,7 @@ describe('NativeDateOverlay', () => {
     expect(onChange).toHaveBeenCalledWith('2026-09-10')
   })
 
-  it('exposes ariaLabel as the input\'s accessible name', () => {
+  it("exposes ariaLabel as the input's accessible name", () => {
     render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
     expect(screen.getByLabelText('Date')).toHaveValue('2026-07-05')
   })

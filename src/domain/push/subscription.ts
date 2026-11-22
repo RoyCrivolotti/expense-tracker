@@ -5,7 +5,11 @@ import { PUSH_MODES, type PushMode } from '../ports/pushRepository'
  * closed to the services browsers actually use: Apple (Safari and Home Screen web apps), Google (Chrome and the
  * browsers built on it), Mozilla and Microsoft. Anything else is refused before it is stored.
  */
-export const PUSH_SERVICE_HOSTS: readonly string[] = ['web.push.apple.com', 'fcm.googleapis.com', 'updates.push.services.mozilla.com']
+export const PUSH_SERVICE_HOSTS: readonly string[] = [
+  'web.push.apple.com',
+  'fcm.googleapis.com',
+  'updates.push.services.mozilla.com',
+]
 export const PUSH_SERVICE_HOST_SUFFIXES: readonly string[] = ['.notify.windows.com']
 export const MAX_ENDPOINT_LENGTH = 1024
 
@@ -29,14 +33,20 @@ export function pushServiceEndpointOf(value: unknown): string | null {
   } catch {
     return null
   }
-  if (url.protocol !== 'https:' || url.port !== '' || url.username !== '' || url.password !== '' || url.hash !== '') return null
+  if (url.protocol !== 'https:' || url.port !== '' || url.username !== '' || url.password !== '' || url.hash !== '')
+    return null
   const host = url.hostname
-  const known = PUSH_SERVICE_HOSTS.includes(host) || PUSH_SERVICE_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix) && host.length > suffix.length)
+  const known =
+    PUSH_SERVICE_HOSTS.includes(host) ||
+    PUSH_SERVICE_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix) && host.length > suffix.length)
   return known ? url.href : null
 }
 
 /** The browser's base64url, with any `=` padding dropped, when it is exactly `length` characters long. */
-function base64urlOfLength(value: unknown, length: number): string | null {
+function base64urlOfLength(
+  value: unknown,
+  length: number,
+): string | null {
   if (typeof value !== 'string') return null
   const bare = value.replace(/=+$/, '')
   return bare.length === length && BASE64URL.test(bare) ? bare : null

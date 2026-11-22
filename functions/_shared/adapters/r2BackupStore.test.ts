@@ -6,11 +6,15 @@ describe('the R2 adapter', () => {
     const calls = { delete: [] as Array<string | string[]> }
     const objects = new Map<string, string>([['k', 'text']])
     const binding = {
-      put: (key: string, body: string) => {
+      put: (
+        key: string,
+        body: string,
+      ) => {
         objects.set(key, body)
         return Promise.resolve()
       },
-      get: (key: string) => Promise.resolve(objects.has(key) ? { text: () => Promise.resolve(objects.get(key)!) } : null),
+      get: (key: string) =>
+        Promise.resolve(objects.has(key) ? { text: () => Promise.resolve(objects.get(key)!) } : null),
       delete: (keys: string | string[]) => {
         calls.delete.push(keys)
         return Promise.resolve()

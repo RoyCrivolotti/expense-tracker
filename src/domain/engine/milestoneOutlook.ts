@@ -12,13 +12,21 @@ import { scenarioToParams } from './scenarioProjection'
 
 const YEAR_DAYS = 365.25
 
-function crossingOf(plan: GoalScenario, amountCents: number, inflationRate: number): MilestoneCrossing | null {
+function crossingOf(
+  plan: GoalScenario,
+  amountCents: number,
+  inflationRate: number,
+): MilestoneCrossing | null {
   const line = planLineOf(projectNetWorth(scenarioToParams(plan, inflationRate)))
   return milestoneCrossing(line, amountCents, inflationRate)
 }
 
 /** The fractional year, from the plan start, at which the plan first has the amount on the account. */
-export function yearsToAmount(plan: GoalScenario, amountCents: number, inflationRate: number): number | null {
+export function yearsToAmount(
+  plan: GoalScenario,
+  amountCents: number,
+  inflationRate: number,
+): number | null {
   return crossingOf(plan, amountCents, inflationRate)?.offset ?? null
 }
 
@@ -26,7 +34,11 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number, inflation
  * The fractional years from the plan's start at which it first has the amount on the account, from its own
  * parameters: the day the chip gives, before any rounding. Null when it does not get there within its horizon.
  */
-export function crossingYears(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
+export function crossingYears(
+  params: ProjectionParams,
+  amountCents: number,
+  inflationRate: number,
+): number | null {
   const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
   return crossing === null ? null : Math.max(0, crossing.offset)
 }
@@ -36,7 +48,11 @@ export function crossingYears(params: ProjectionParams, amountCents: number, inf
  * and the narrative count in, rounded up from the day the chip gives so the two never disagree. Null
  * when the plan does not get there within its horizon.
  */
-export function wholeYearsToAmount(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
+export function wholeYearsToAmount(
+  params: ProjectionParams,
+  amountCents: number,
+  inflationRate: number,
+): number | null {
   const years = crossingYears(params, amountCents, inflationRate)
   // A crossing on an anniversary is a whole number up to the bisection's last digit.
   return years === null ? null : Math.max(0, Math.ceil(years - 1e-9))
@@ -48,7 +64,11 @@ export function wholeYearsToAmount(params: ProjectionParams, amountCents: number
  * payment or an event steps up on an anniversary is reached on that anniversary, which is that year itself. Null
  * when it is not reached within the horizon.
  */
-export function fiYearsExact(params: ProjectionParams, annualSpendCents: number, swr: number): number | null {
+export function fiYearsExact(
+  params: ProjectionParams,
+  annualSpendCents: number,
+  swr: number,
+): number | null {
   const year = yearsToFi(params, annualSpendCents, swr)
   if (year === null || year === 0) return year
   const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), fireNumber(annualSpendCents, swr), 0)
@@ -57,7 +77,11 @@ export function fiYearsExact(params: ProjectionParams, annualSpendCents: number,
 }
 
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
-export function milestoneCrossingDate(plan: GoalScenario, amountCents: number, inflationRate: number): string | null {
+export function milestoneCrossingDate(
+  plan: GoalScenario,
+  amountCents: number,
+  inflationRate: number,
+): string | null {
   // A start date only the API could have written malformed must not take Progress down, nor be dated as if it were a day.
   if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const years = yearsToAmount(plan, amountCents, inflationRate)
@@ -73,7 +97,11 @@ interface Outlook {
   dipsOn: string | null
 }
 
-function outlookOf(plan: GoalScenario, amountCents: number, inflationRate: number): Outlook | null {
+function outlookOf(
+  plan: GoalScenario,
+  amountCents: number,
+  inflationRate: number,
+): Outlook | null {
   if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const crossing = crossingOf(plan, amountCents, inflationRate)
   if (crossing === null) return null

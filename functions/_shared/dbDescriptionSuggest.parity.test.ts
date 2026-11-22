@@ -5,7 +5,12 @@
  * function the index uses.
  */
 import { describe, expect, it } from 'vitest'
-import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../src/data/descriptionIndex'
+import {
+  buildDescriptionIndex,
+  mergeDescriptionMatches,
+  normalizeDescriptionKey,
+  suggestDescriptionsOf,
+} from '../../src/data/descriptionIndex'
 import { MAX_SUGGEST_KEYS, type DescriptionMatch } from '../../src/domain/data/descriptionSuggest'
 import { mulberry32 } from '../../src/domain/engine/rng'
 import type { ExpenseDataset } from '../../src/domain/types'
@@ -26,8 +31,17 @@ function dbFor(ds: ExpenseDataset) {
 }
 
 /** What the browser's index returns over the rows booked before the month `before`, for a typed prefix. */
-const reference = (ds: ExpenseDataset, prefix: string, before: string | undefined, limit: number, locale?: string): DescriptionMatch[] =>
-  keyed(ds.transactions.filter((t) => before === undefined || t.budgetMonth < before), locale ? { locale } : {}).searchEntries(prefix, limit)
+const reference = (
+  ds: ExpenseDataset,
+  prefix: string,
+  before: string | undefined,
+  limit: number,
+  locale?: string,
+): DescriptionMatch[] =>
+  keyed(
+    ds.transactions.filter((t) => before === undefined || t.budgetMonth < before),
+    locale ? { locale } : {},
+  ).searchEntries(prefix, limit)
 
 describe('the SQL answers what the browser’s index does over the older rows', () => {
   it('for generated ledgers of accents, capitals, padding and descriptions that sort as equal', async () => {
@@ -43,9 +57,15 @@ describe('the SQL answers what the browser’s index does over the older rows', 
         if (typed === '') continue
         for (const before of BEFORE) {
           for (const limit of LIMITS) {
-            const { items: served, tooBroad } = await repo.suggestDescriptions(OWNER, { prefix: typed, limit, ...(before ? { before } : {}) })
+            const { items: served, tooBroad } = await repo.suggestDescriptions(OWNER, {
+              prefix: typed,
+              limit,
+              ...(before ? { before } : {}),
+            })
             expect(tooBroad).toBe(false)
-            expect(served, JSON.stringify({ seed, prefix, before, limit })).toEqual(reference(ds, prefix, before, limit))
+            expect(served, JSON.stringify({ seed, prefix, before, limit })).toEqual(
+              reference(ds, prefix, before, limit),
+            )
             compared += 1
             found += served.length
           }
@@ -60,7 +80,22 @@ describe('the SQL answers what the browser’s index does over the older rows', 
     for (const ds of [unicodeLedger(), awkwardLedger()]) {
       const { repo } = dbFor(ds)
       const rnd = mulberry32(2)
-      for (const prefix of prefixesFor(ds.transactions, rnd).concat(['caf', 'café', 'mos', 'мо', 'мос', 'str', 'stras', 'kel', '🍕', 'ist', 'i̇s', 'οδο', 'οδος', 'rent'])) {
+      for (const prefix of prefixesFor(ds.transactions, rnd).concat([
+        'caf',
+        'café',
+        'mos',
+        'мо',
+        'мос',
+        'str',
+        'stras',
+        'kel',
+        '🍕',
+        'ist',
+        'i̇s',
+        'οδο',
+        'οδος',
+        'rent',
+      ])) {
         const typed = normalizeDescriptionKey(prefix)
         if (typed === '') continue
         const { items: served } = await repo.suggestDescriptions(OWNER, { prefix: typed, limit: 25 })
@@ -109,12 +144,18 @@ describe('merged with the browser’s own matches, the SQL’s answer joins as t
       const prefixes = prefixesFor(ds.transactions, rnd).filter(() => rnd() < 0.25)
       for (const split of ['2025-05', '2025-11']) {
         const own = buildDescriptionIndex(ds.transactions.filter((t) => t.budgetMonth >= split))
-        const cases = prefixes.flatMap((prefix) => [2, 8].map((limit) => ({ prefix, typed: normalizeDescriptionKey(prefix), limit })))
+        const cases = prefixes.flatMap((prefix) =>
+          [2, 8].map((limit) => ({ prefix, typed: normalizeDescriptionKey(prefix), limit })),
+        )
         for (const { prefix, typed, limit } of cases.filter((c) => c.typed !== '')) {
           const request = { prefix: typed, limit, before: split }
           const { items: older } = await repo.suggestDescriptions(OWNER, request)
           const merged = mergeDescriptionMatches(own.searchEntries(prefix, limit), older, { text: prefix, limit })
-          const expected = mergeDescriptionMatches(own.searchEntries(prefix, limit), suggestDescriptionsOf(ds.transactions, request).items, { text: prefix, limit })
+          const expected = mergeDescriptionMatches(
+            own.searchEntries(prefix, limit),
+            suggestDescriptionsOf(ds.transactions, request).items,
+            { text: prefix, limit },
+          )
           expect(merged, JSON.stringify({ seed, prefix, split, limit })).toEqual(expected)
           compared += 1
         }
@@ -127,7 +168,12 @@ describe('merged with the browser’s own matches, the SQL’s answer joins as t
 function shops(count: number): ExpenseDataset {
   return makeDataset({
     transactions: Array.from({ length: count }, (_, i) =>
-      makeTransaction({ id: i + 1, description: `Shop ${String(i).padStart(4, '0')}`, date: '2025-03-01', createdAt: '2025-03-01T00:00:00Z' }),
+      makeTransaction({
+        id: i + 1,
+        description: `Shop ${String(i).padStart(4, '0')}`,
+        date: '2025-03-01',
+        createdAt: '2025-03-01T00:00:00Z',
+      }),
     ),
   })
 }
@@ -149,7 +195,12 @@ describe('the bound on a broad prefix', () => {
 
   it('counts descriptions, not rows: a thousand rows of one description are one match', async () => {
     const rows = Array.from({ length: 1_000 }, (_, i) =>
-      makeTransaction({ id: i + 1, description: 'Same shop', date: `2025-01-${String((i % 28) + 1).padStart(2, '0')}`, createdAt: '2025-01-01T00:00:00Z' }),
+      makeTransaction({
+        id: i + 1,
+        description: 'Same shop',
+        date: `2025-01-${String((i % 28) + 1).padStart(2, '0')}`,
+        createdAt: '2025-01-01T00:00:00Z',
+      }),
     )
     const { repo } = dbFor(makeDataset({ transactions: rows }))
     expect((await repo.suggestDescriptions(OWNER, { prefix: 'same', limit: 8 })).items).toHaveLength(1)
@@ -177,19 +228,52 @@ describe('the bound on a broad prefix', () => {
 
 describe('the rows it reads', () => {
   it('are the owner’s only: another owner’s descriptions, newer or not, never appear', async () => {
-    const mine = makeDataset({ transactions: [makeTransaction({ id: 1, description: 'Rent flat', date: '2025-01-01', createdAt: '2025-01-01T00:00:00Z' })] })
-    const theirs = makeDataset({ transactions: [makeTransaction({ id: 1, description: 'Rent castle', date: '2026-01-01', createdAt: '2025-01-01T00:00:00Z' })] })
+    const mine = makeDataset({
+      transactions: [
+        makeTransaction({ id: 1, description: 'Rent flat', date: '2025-01-01', createdAt: '2025-01-01T00:00:00Z' }),
+      ],
+    })
+    const theirs = makeDataset({
+      transactions: [
+        makeTransaction({ id: 1, description: 'Rent castle', date: '2026-01-01', createdAt: '2025-01-01T00:00:00Z' }),
+      ],
+    })
     const kit = queryDb(mine, [{ owner: OTHER_OWNER, dataset: theirs }])
     const repo = createD1ExpenseRepository({ DB: kit.d1 })
-    expect((await repo.suggestDescriptions(OWNER, { prefix: 'rent', limit: 8 })).items.map((m) => m.label)).toEqual(['Rent flat'])
-    expect((await repo.suggestDescriptions(OTHER_OWNER, { prefix: 'rent', limit: 8 })).items.map((m) => m.label)).toEqual(['Rent castle'])
+    expect((await repo.suggestDescriptions(OWNER, { prefix: 'rent', limit: 8 })).items.map((m) => m.label)).toEqual([
+      'Rent flat',
+    ])
+    expect(
+      (await repo.suggestDescriptions(OTHER_OWNER, { prefix: 'rent', limit: 8 })).items.map((m) => m.label),
+    ).toEqual(['Rent castle'])
   })
 
   it('leave out cancelled rows, blank descriptions, and a month on or after `before`', async () => {
-    const row = (id: number, over: object) => makeTransaction({ id, description: 'Gym', date: '2025-02-01', budgetMonth: '2025-02', createdAt: '2025-01-01T00:00:00Z', ...over })
-    const ds = makeDataset({ transactions: [row(1, {}), row(2, { cancelled: true, date: '2025-03-01', budgetMonth: '2025-03', description: 'Gym plus' }), row(3, { description: '   ' }), row(4, { date: '2025-04-01', budgetMonth: '2025-04', description: 'Gym later' })] })
+    const row = (
+      id: number,
+      over: object,
+    ) =>
+      makeTransaction({
+        id,
+        description: 'Gym',
+        date: '2025-02-01',
+        budgetMonth: '2025-02',
+        createdAt: '2025-01-01T00:00:00Z',
+        ...over,
+      })
+    const ds = makeDataset({
+      transactions: [
+        row(1, {}),
+        row(2, { cancelled: true, date: '2025-03-01', budgetMonth: '2025-03', description: 'Gym plus' }),
+        row(3, { description: '   ' }),
+        row(4, { date: '2025-04-01', budgetMonth: '2025-04', description: 'Gym later' }),
+      ],
+    })
     const { repo } = dbFor(ds)
-    const labels = async (before?: string) => (await repo.suggestDescriptions(OWNER, { prefix: 'gy', limit: 8, ...(before ? { before } : {}) })).items.map((m) => m.label)
+    const labels = async (before?: string) =>
+      (await repo.suggestDescriptions(OWNER, { prefix: 'gy', limit: 8, ...(before ? { before } : {}) })).items.map(
+        (m) => m.label,
+      )
     expect(await labels()).toEqual(['Gym', 'Gym later'])
     expect(await labels('2025-04')).toEqual(['Gym'])
     expect(await labels('2025-02')).toEqual([])
@@ -199,24 +283,50 @@ describe('the rows it reads', () => {
     // A row dated in January that is booked to February, and one dated in February that is booked to January.
     const ds = makeDataset({
       transactions: [
-        makeTransaction({ id: 1, description: 'Early charge', date: '2025-01-31', budgetMonth: '2025-02', createdAt: '2025-01-01T00:00:00Z' }),
-        makeTransaction({ id: 2, description: 'Late charge', date: '2025-02-01', budgetMonth: '2025-01', createdAt: '2025-01-01T00:00:00Z' }),
+        makeTransaction({
+          id: 1,
+          description: 'Early charge',
+          date: '2025-01-31',
+          budgetMonth: '2025-02',
+          createdAt: '2025-01-01T00:00:00Z',
+        }),
+        makeTransaction({
+          id: 2,
+          description: 'Late charge',
+          date: '2025-02-01',
+          budgetMonth: '2025-01',
+          createdAt: '2025-01-01T00:00:00Z',
+        }),
       ],
     })
     const { kit, repo } = dbFor(ds)
     const memory = inMemoryExpenseRepository(await loadDataset({ DB: kit.d1 }, OWNER), OWNER)
     for (const store of [repo, memory]) {
       const older = await store.suggestDescriptions(OWNER, { prefix: 'e', limit: 8, before: '2025-02' })
-      const labels = async (prefix: string) => (await store.suggestDescriptions(OWNER, { prefix, limit: 8, before: '2025-02' })).items.map((m) => m.label)
+      const labels = async (prefix: string) =>
+        (await store.suggestDescriptions(OWNER, { prefix, limit: 8, before: '2025-02' })).items.map((m) => m.label)
       expect(older.items).toEqual([])
       expect(await labels('late')).toEqual(['Late charge'])
     }
   })
 
   it('give a description whose rows are all in the browser’s months no match', async () => {
-    const ds = makeDataset({ transactions: [makeTransaction({ id: 1, description: 'Only recent', date: '2026-03-01', budgetMonth: '2026-03', createdAt: '2026-03-01T00:00:00Z' })] })
+    const ds = makeDataset({
+      transactions: [
+        makeTransaction({
+          id: 1,
+          description: 'Only recent',
+          date: '2026-03-01',
+          budgetMonth: '2026-03',
+          createdAt: '2026-03-01T00:00:00Z',
+        }),
+      ],
+    })
     const { repo } = dbFor(ds)
-    expect(await repo.suggestDescriptions(OWNER, { prefix: 'only', limit: 8, before: '2026-01' })).toEqual({ items: [], tooBroad: false })
+    expect(await repo.suggestDescriptions(OWNER, { prefix: 'only', limit: 8, before: '2026-01' })).toEqual({
+      items: [],
+      tooBroad: false,
+    })
   })
 
   it('answer 503 while rows are waiting for their normalized description, and then answer', async () => {

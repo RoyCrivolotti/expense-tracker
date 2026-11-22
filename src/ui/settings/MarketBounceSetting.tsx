@@ -62,8 +62,8 @@ export function MarketBounceSetting({ settings, onChange }: Props) {
           </p>
         ) : null}
         <p className={styles.settingHint}>
-          How far a single year&apos;s return strays from the typical one. About two years in three land within this many
-          points either side of it, and one in three further out. The return you enter on a plan stays the typical
+          How far a single year&apos;s return strays from the typical one. About two years in three land within this
+          many points either side of it, and one in three further out. The return you enter on a plan stays the typical
           growth: this only sets how much luck can move it. A portfolio with more bonds bounces less but also grows
           less, so lower the return on your plan too.
         </p>

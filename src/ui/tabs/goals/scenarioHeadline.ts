@@ -29,15 +29,24 @@ function shortName(name: string): string {
 }
 
 /** The FI year counted from the latest check-in, which is the one that moves as check-ins land. */
-function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number, planReachesFi: boolean): string {
+function fiFromTodayLabel(
+  fromToday: PlanFromToday,
+  inflationRate: number,
+  planReachesFi: boolean,
+): string {
   const params = scenarioToParams(fromToday.scenario, inflationRate)
   const years = yearsToFi(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate)
   if (years === null) return 'from today, FI beyond the horizon'
   if (years === 0) return "FI at today's balance"
-  const month = fiAround(fromToday.scenario.planStartDate, fiYearsExact(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate))
+  const month = fiAround(
+    fromToday.scenario.planStartDate,
+    fiYearsExact(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate),
+  )
   // Said as a month, as the plan's is beside it, since the two counts of years start on different days.
   // The word FI comes from the plan's own part when it has one; with none, the restart's part has to say it.
-  return month ? `from today, ${planReachesFi ? '' : 'FI '}${month}` : `from today, FI in ${years} year${years === 1 ? '' : 's'}`
+  return month
+    ? `from today, ${planReachesFi ? '' : 'FI '}${month}`
+    : `from today, FI in ${years} year${years === 1 ? '' : 's'}`
 }
 
 /**
@@ -50,12 +59,14 @@ export interface HeadlinePace {
 }
 
 /** "plan 1.000,00 €/mo", read on the date given, with the next change after it when there is one. */
-function planPhrase(scenario: ScenarioLike, pace: HeadlinePace | null, format: MoneyFormat): string {
+function planPhrase(
+  scenario: ScenarioLike,
+  pace: HeadlinePace | null,
+  format: MoneyFormat,
+): string {
   if (!pace) return `plan ${formatCents(scenario.monthlyContributionCents, format)}/mo`
   const next = nextContributionStep(scenario, pace.today)
-  const coming = next
-    ? ` (${formatCents(next.monthlyCents, format)} from ${shortMonthYearLabel(next.from)})`
-    : ''
+  const coming = next ? ` (${formatCents(next.monthlyCents, format)} from ${shortMonthYearLabel(next.from)})` : ''
   return `plan ${formatCents(plannedMonthlyAt(scenario, pace.today), format)}/mo${coming}`
 }
 
@@ -92,7 +103,9 @@ export function scenarioHeadline(
   const fiYear = yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)
 
   // With a restart from a check-in beside it, the plan's FI is a month too, so that the two can be compared.
-  const planMonth = fromToday ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)) : null
+  const planMonth = fromToday
+    ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate))
+    : null
   const primary = [
     shortName(scenario.name),
     ...(fiYear != null ? [planMonth ? `FI ${planMonth}` : `FI year ${fiYear}`] : []),

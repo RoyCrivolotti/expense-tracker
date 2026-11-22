@@ -82,10 +82,7 @@ describe('ConfirmSheet', () => {
         onCancel={vi.fn()}
       />,
     )
-    expect(screen.getByRole('alertdialog')).toHaveAttribute(
-      'aria-describedby',
-      'confirm-message confirm-footnote',
-    )
+    expect(screen.getByRole('alertdialog')).toHaveAttribute('aria-describedby', 'confirm-message confirm-footnote')
   })
 })
 

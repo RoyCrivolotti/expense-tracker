@@ -45,7 +45,10 @@ interface Served {
 }
 
 /** Routes the browser's requests to the handlers, the way Pages does. */
-function routeFetch(world: World, seen: string[] = []) {
+function routeFetch(
+  world: World,
+  seen: string[] = [],
+) {
   const handlers: Array<[string, Handler]> = [
     ['/api/expenses/transactions/months', getMonths],
     ['/api/expenses/reference', getReference],
@@ -60,7 +63,10 @@ function routeFetch(world: World, seen: string[] = []) {
   }
 }
 
-async function serve(name: string, source: ExpenseDataset): Promise<Served> {
+async function serve(
+  name: string,
+  source: ExpenseDataset,
+): Promise<Served> {
   const sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
   seedDataset(sqlite, OWNER, source)
@@ -97,39 +103,48 @@ function listsOf(ledger: Ledger) {
 }
 
 describe('a ledger read from the routes', () => {
-  it('holds what the whole dataset makes of every viewed month, windowed or not', async () => {
-    for (const c of cases) {
-      vi.stubGlobal('fetch', routeFetch(c.world))
-      const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
-      const viewed = [months[0], months[Math.floor(months.length / 2)], months.at(-1), '2031-01'].filter(
-        (m): m is string => m !== undefined,
-      )
-      for (const month of viewed) {
-        for (const policy of [undefined, WINDOWED]) {
-          const loaded = await loadLedger(apiDataSource as Required<typeof apiDataSource>, {
-            viewed: month,
-            ...(policy ? { policy } : {}),
-          })
-          const whole = ledgerFor(c.dataset, month, policy)
-          const label = `${c.name} ${month} ${policy ? 'windowed' : 'default'}`
-          expect(listsOf(loaded.ledger), label).toEqual(listsOf(whole))
-          expect(ledgerMonths(loaded.ledger), label).toEqual(ledgerMonths(whole))
-          expect(ledgerRowCount(loaded.ledger), label).toBe(ledgerRowCount(whole))
-          expect(loaded.ledger.cells, label).toEqual(whole.cells)
-          expect(loaded.ledger.reference, label).toEqual({ ...whole.reference, attachments: [] })
+  it(
+    'holds what the whole dataset makes of every viewed month, windowed or not',
+    async () => {
+      for (const c of cases) {
+        vi.stubGlobal('fetch', routeFetch(c.world))
+        const months = sortedMonths(c.dataset.transactions.map((t) => t.budgetMonth))
+        const viewed = [months[0], months[Math.floor(months.length / 2)], months.at(-1), '2031-01'].filter(
+          (m): m is string => m !== undefined,
+        )
+        for (const month of viewed) {
+          for (const policy of [undefined, WINDOWED]) {
+            const loaded = await loadLedger(apiDataSource as Required<typeof apiDataSource>, {
+              viewed: month,
+              ...(policy ? { policy } : {}),
+            })
+            const whole = ledgerFor(c.dataset, month, policy)
+            const label = `${c.name} ${month} ${policy ? 'windowed' : 'default'}`
+            expect(listsOf(loaded.ledger), label).toEqual(listsOf(whole))
+            expect(ledgerMonths(loaded.ledger), label).toEqual(ledgerMonths(whole))
+            expect(ledgerRowCount(loaded.ledger), label).toBe(ledgerRowCount(whole))
+            expect(loaded.ledger.cells, label).toEqual(whole.cells)
+            expect(loaded.ledger.reference, label).toEqual({ ...whole.reference, attachments: [] })
+          }
         }
       }
-    }
-  }, SLOW)
+    },
+    SLOW,
+  )
 
-  it('carries the label ids in the order the dataset does', async () => {
-    for (const c of cases) {
-      vi.stubGlobal('fetch', routeFetch(c.world))
-      const loaded = await loadLedger(apiDataSource as Required<typeof apiDataSource>)
-      const served = new Map(loaded.ledger.hydrated.map((row) => [row.id, row.labelIds]))
-      for (const row of c.dataset.transactions) expect(served.get(row.id), `${c.name} ${row.id}`).toEqual(row.labelIds ?? [])
-    }
-  }, SLOW)
+  it(
+    'carries the label ids in the order the dataset does',
+    async () => {
+      for (const c of cases) {
+        vi.stubGlobal('fetch', routeFetch(c.world))
+        const loaded = await loadLedger(apiDataSource as Required<typeof apiDataSource>)
+        const served = new Map(loaded.ledger.hydrated.map((row) => [row.id, row.labelIds]))
+        for (const row of c.dataset.transactions)
+          expect(served.get(row.id), `${c.name} ${row.id}`).toEqual(row.labelIds ?? [])
+      }
+    },
+    SLOW,
+  )
 
   it('reads the revision the dataset route is tagged with', async () => {
     const c = cases[0]!
@@ -142,9 +157,14 @@ describe('a ledger read from the routes', () => {
     const seen: string[] = []
     vi.stubGlobal('fetch', async (input: string) => {
       seen.push(String(input))
-      return new Response('<!doctype html><title>app</title>', { status: 200, headers: { 'content-type': 'text/html' } })
+      return new Response('<!doctype html><title>app</title>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      })
     })
-    await expect(loadLedger(apiDataSource as Required<typeof apiDataSource>)).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(loadLedger(apiDataSource as Required<typeof apiDataSource>)).rejects.toBeInstanceOf(
+      PartsUnavailableError,
+    )
     expect(seen).toEqual(['/api/expenses/reference'])
   })
 })

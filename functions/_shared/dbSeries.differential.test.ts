@@ -17,7 +17,10 @@ import type { ExpenseDataset } from '../../src/domain/types'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { oracleSeries } from '../../src/testing/seriesOracle'
 
-async function both(dataset: ExpenseDataset, others: Array<{ owner: string; dataset: ExpenseDataset }> = []) {
+async function both(
+  dataset: ExpenseDataset,
+  others: Array<{ owner: string; dataset: ExpenseDataset }> = [],
+) {
   const kit = queryDb(dataset, others)
   const route = await createD1ExpenseRepository({ DB: kit.d1 }).readSeries(OWNER)
   const oracle = oracleSeries(kit.sqlite, OWNER)
@@ -25,13 +28,17 @@ async function both(dataset: ExpenseDataset, others: Array<{ owner: string; data
   return route
 }
 
-const find = (series: RecurringSeries[], label: string) => series.filter((s) => s.label.trim().toLowerCase() === label.toLowerCase())
+const find = (
+  series: RecurringSeries[],
+  label: string,
+) => series.filter((s) => s.label.trim().toLowerCase() === label.toLowerCase())
 
 describe('the series route and the window-function oracle agree', () => {
   it('on every corner of a series in one ledger, and the corners are all there', async () => {
     const series = await both(seriesEdgeLedger())
     expect(find(series, 'Run of 2')).toHaveLength(0)
-    for (const count of [3, 4, 5, 6, 7, 8, 12]) expect(find(series, `Run of ${count}`), `run of ${count}`).toHaveLength(1)
+    for (const count of [3, 4, 5, 6, 7, 8, 12])
+      expect(find(series, `Run of ${count}`), `run of ${count}`).toHaveLength(1)
     expect(find(series, 'Run of 5')[0]!.olderGaps).toEqual([])
     expect(find(series, 'Run of 6')[0]!.olderGaps).toHaveLength(1)
     expect(find(series, 'Run of 12')[0]!.olderGaps).toHaveLength(7)
@@ -41,7 +48,8 @@ describe('the series route and the window-function oracle agree', () => {
     expect(find(series, 'Two accounts')).toHaveLength(2)
     expect(find(series, 'Split text')).toHaveLength(0)
     expect(find(series, 'Gym')[0]!.label).toBe(' Gym')
-    for (const none of ['Cancelled one', 'Cancelled all', 'Plan payment']) expect(find(series, none), none).toHaveLength(0)
+    for (const none of ['Cancelled one', 'Cancelled all', 'Plan payment'])
+      expect(find(series, none), none).toHaveLength(0)
     expect(find(series, 'Cancelled newest')[0]!.newestDates.at(-1)).toBe('2025-04-12')
     expect(series.every((s) => s.label.trim() !== '')).toBe(true)
   })
@@ -50,7 +58,13 @@ describe('the series route and the window-function oracle agree', () => {
     const series = await both(seriesEdgeLedger())
     const [sameDay, sameDayToo] = [find(series, 'Same day')[0]!, find(series, 'Same day too')[0]!]
     expect(series.indexOf(sameDayToo)).toBeLessThan(series.indexOf(sameDay))
-    expect(find(series, 'Back dated')[0]!.newestDates).toEqual(['2025-02-28', '2025-03-30', '2025-04-30', '2025-05-30', '2025-06-30'])
+    expect(find(series, 'Back dated')[0]!.newestDates).toEqual([
+      '2025-02-28',
+      '2025-03-30',
+      '2025-04-30',
+      '2025-05-30',
+      '2025-06-30',
+    ])
   })
 
   it('on another owner’s rows of the same texts, which it must not read', async () => {
@@ -62,7 +76,12 @@ describe('the series route and the window-function oracle agree', () => {
 
   it('on the ledgers the other series tests use', async () => {
     let total = 0
-    for (const dataset of [awkwardLedger(), adversarialLedger(), unicodeLedger(), syntheticLedger({ months: 48, perMonth: 30, seed: 5 })]) {
+    for (const dataset of [
+      awkwardLedger(),
+      adversarialLedger(),
+      unicodeLedger(),
+      syntheticLedger({ months: 48, perMonth: 30, seed: 5 }),
+    ]) {
       total += (await both(dataset)).length
     }
     expect(total).toBeGreaterThan(40)

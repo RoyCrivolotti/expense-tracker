@@ -16,6 +16,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { ignoredRevisions, prLines } from './formattingCommits.mjs'
 
 const THRESHOLD = Number(process.env.DIFF_COVERAGE_THRESHOLD ?? 90)
 const LCOV_PATH = 'coverage/lcov.info'
@@ -87,12 +88,20 @@ function isRelevantFile(absPath) {
 
 const coverage = parseLcov(readFileSync(LCOV_PATH, 'utf8'))
 
-const diff = execFileSync(
-  'git',
-  ['diff', '--unified=0', `${base}...HEAD`, '--', '*.ts', '*.tsx'],
-  { encoding: 'utf8', maxBuffer: 1024 * 1024 * 100 },
-)
+const diff = execFileSync('git', ['diff', '--unified=0', `${base}...HEAD`, '--', '*.ts', '*.tsx'], {
+  encoding: 'utf8',
+  maxBuffer: 1024 * 1024 * 100,
+})
 const addedLines = parseAddedLines(diff)
+
+// A commit that only reformats code rewrites lines it did not change. When the repo lists such commits, a line is the
+// PR's only if a commit outside the list wrote it.
+const formattingCommits = ignoredRevisions(base)
+if (formattingCommits.length > 0) {
+  for (const file of addedLines.keys()) {
+    if (isRelevantFile(file)) addedLines.set(file, prLines(base, path.relative(process.cwd(), file), formattingCommits))
+  }
+}
 
 const lcovTime = statSync(LCOV_PATH).mtimeMs
 const stale = [...addedLines.keys()]

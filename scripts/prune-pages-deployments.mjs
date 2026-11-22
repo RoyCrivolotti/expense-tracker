@@ -44,8 +44,15 @@ const FINISHED_STAGE_STATUSES = new Set(['success', 'failure', 'canceled', 'skip
 const ENVIRONMENTS = ['production', 'preview']
 
 /** Cloudflare API caller. Error text keeps the status and Cloudflare's message, never a path's ids. */
-export function cloudflareApi(token, fetchImpl = fetch) {
-  return async function api(method, path, query = {}) {
+export function cloudflareApi(
+  token,
+  fetchImpl = fetch,
+) {
+  return async function api(
+    method,
+    path,
+    query = {},
+  ) {
     const url = new URL(`https://api.cloudflare.com/client/v4${path}`)
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, String(value))
     const label = `${method} ${path.replace(/\/accounts\/[^/]+/, '/accounts/:account').replace(/\/deployments\/[^/?]+/, '/deployments/:id')}`
@@ -96,11 +103,13 @@ function parseDeployment(raw) {
 /** Cloudflare does not always send `total_pages`; then it follows from the total and the page size it used. */
 function pageCount(info) {
   if (info.total_pages !== undefined && info.total_pages !== null) {
-    if (!Number.isInteger(info.total_pages)) throw new Error('The deployment listing came back in a shape this script does not know')
+    if (!Number.isInteger(info.total_pages))
+      throw new Error('The deployment listing came back in a shape this script does not know')
     return info.total_pages
   }
   const perPage = info.per_page ?? PAGE_SIZE
-  if (!Number.isInteger(perPage) || perPage < 1) throw new Error('The deployment listing came back in a shape this script does not know')
+  if (!Number.isInteger(perPage) || perPage < 1)
+    throw new Error('The deployment listing came back in a shape this script does not know')
   return Math.ceil(info.total_count / perPage)
 }
 
@@ -108,7 +117,10 @@ function pageCount(info) {
  * Every deployment of the project, or an error. Pages are walked until Cloudflare's own total is reached;
  * a short or repeated page throws, because the keep rules mean nothing over a listing with holes.
  */
-export async function listDeployments(api, project) {
+export async function listDeployments(
+  api,
+  project,
+) {
   const byId = new Map()
   let totalPages = 1
   let totalCount = 0
@@ -123,7 +135,8 @@ export async function listDeployments(api, project) {
     totalPages = pageCount(info)
     for (const raw of body.result) {
       const deployment = parseDeployment(raw)
-      if (byId.has(deployment.id)) throw new Error('The deployment listing repeated a deployment, so it moved while being read')
+      if (byId.has(deployment.id))
+        throw new Error('The deployment listing repeated a deployment, so it moved while being read')
       byId.set(deployment.id, deployment)
     }
   }
@@ -134,7 +147,10 @@ export async function listDeployments(api, project) {
 }
 
 /** The current production deployment's id and the project's custom domains, or an error. */
-export async function readProject(api, project) {
+export async function readProject(
+  api,
+  project,
+) {
   const projectBody = await api('GET', projectPath(project))
   const domainsBody = await api('GET', `${projectPath(project)}/domains`)
   const result = projectBody.result
@@ -164,7 +180,10 @@ function aliasHost(alias) {
  * An alias under `pages.dev` is a branch preview address, which the newest-N rule already covers. Any
  * other host is a custom domain, so a deployment it serves is live traffic.
  */
-function servesCustomDomain(deployment, domains) {
+function servesCustomDomain(
+  deployment,
+  domains,
+) {
   return deployment.aliases.some((alias) => {
     const host = aliasHost(alias)
     return domains.includes(host) || !host.endsWith('.pages.dev')
@@ -187,7 +206,13 @@ const isFinished = (d) => FINISHED_STAGE_STATUSES.has(d.stageStatus)
  * `force` is set on a deletion only for a deployment with a branch alias: Cloudflare refuses to delete
  * those without it, and nothing else needs it.
  */
-export function planPrune({ deployments, canonicalId, domains = /** @type {string[]} */ ([]), keepProduction = KEEP_PRODUCTION, keepPreview = KEEP_PREVIEW }) {
+export function planPrune({
+  deployments,
+  canonicalId,
+  domains = /** @type {string[]} */ ([]),
+  keepProduction = KEEP_PRODUCTION,
+  keepPreview = KEEP_PREVIEW,
+}) {
   const byNewest = [...deployments].sort((a, b) => b.createdOn - a.createdOn || a.id.localeCompare(b.id))
   if (canonicalId !== null && !byNewest.some((d) => d.id === canonicalId)) {
     throw new Error('The current production deployment is not in the listing, so the listing cannot be trusted')
@@ -222,28 +247,44 @@ export function planPrune({ deployments, canonicalId, domains = /** @type {strin
 
 const day = (ms) => new Date(ms).toISOString().slice(0, 10)
 
-function countBy(items, key) {
+function countBy(
+  items,
+  key,
+) {
   const counts = {}
   for (const item of items) counts[key(item)] = (counts[key(item)] ?? 0) + 1
   return counts
 }
 
-const describeCounts = (counts) =>
-  ENVIRONMENTS.map((env) => `${counts[env] ?? 0} ${env}`).join(', ')
+const describeCounts = (counts) => ENVIRONMENTS.map((env) => `${counts[env] ?? 0} ${env}`).join(', ')
 
 /** Counts and dates for the log. No ids. */
-export function summarize(project, plan) {
-  const lines = [`${project}: ${plan.keep.length + plan.remove.length} deployments (${describeCounts(countBy([...plan.keep, ...plan.remove], (x) => x.deployment.environment))})`]
-  const reasons = countBy(plan.keep.flatMap((k) => k.reasons), (reason) => reason)
-  lines.push(`  keeping ${plan.keep.length} (${describeCounts(countBy(plan.keep, (x) => x.deployment.environment))}); by rule: ${
-    Object.entries(reasons).map(([reason, n]) => `${reason} ${n}`).join(', ') || 'none'
-  }`)
+export function summarize(
+  project,
+  plan,
+) {
+  const lines = [
+    `${project}: ${plan.keep.length + plan.remove.length} deployments (${describeCounts(countBy([...plan.keep, ...plan.remove], (x) => x.deployment.environment))})`,
+  ]
+  const reasons = countBy(
+    plan.keep.flatMap((k) => k.reasons),
+    (reason) => reason,
+  )
+  lines.push(
+    `  keeping ${plan.keep.length} (${describeCounts(countBy(plan.keep, (x) => x.deployment.environment))}); by rule: ${
+      Object.entries(reasons)
+        .map(([reason, n]) => `${reason} ${n}`)
+        .join(', ') || 'none'
+    }`,
+  )
   if (plan.remove.length === 0) {
     lines.push('  nothing to delete')
     return lines
   }
   const dates = plan.remove.map((r) => r.deployment.createdOn)
-  lines.push(`  deleting ${plan.remove.length} (${describeCounts(countBy(plan.remove, (x) => x.deployment.environment))}), created ${day(Math.min(...dates))} to ${day(Math.max(...dates))}`)
+  lines.push(
+    `  deleting ${plan.remove.length} (${describeCounts(countBy(plan.remove, (x) => x.deployment.environment))}), created ${day(Math.min(...dates))} to ${day(Math.max(...dates))}`,
+  )
   const forced = plan.remove.filter((r) => r.force).length
   if (forced > 0) lines.push(`  ${forced} of them have a branch alias and are deleted with force`)
   return lines
@@ -263,7 +304,9 @@ export async function pruneProject({ api, project, apply, maxDelete = MAX_DELETE
     return plan
   }
   if (overCap) {
-    throw new Error(`${project}: ${plan.remove.length} deployments would be deleted, over the limit of ${maxDelete}. Nothing was deleted. Run it by hand with a dry run, then pass --max-delete if that many is right.`)
+    throw new Error(
+      `${project}: ${plan.remove.length} deployments would be deleted, over the limit of ${maxDelete}. Nothing was deleted. Run it by hand with a dry run, then pass --max-delete if that many is right.`,
+    )
   }
   for (const [index, { deployment, force }] of plan.remove.entries()) {
     try {
@@ -291,13 +334,18 @@ export function parseArgs(argv) {
     } else throw new Error(`Unknown argument: ${argv[i]}`)
   }
   if (!project || !PROJECTS.includes(project)) {
-    throw new Error(`Usage: prune-pages-deployments.mjs --project <${PROJECTS.join(' | ')}> [--delete] [--max-delete <n>]`)
+    throw new Error(
+      `Usage: prune-pages-deployments.mjs --project <${PROJECTS.join(' | ')}> [--delete] [--max-delete <n>]`,
+    )
   }
   return { project, apply, maxDelete }
 }
 
 /** @param {{ token?: string | (() => string), fetchImpl?: typeof fetch, log?: (line: string) => void }} [deps] */
-export async function main(argv, deps = {}) {
+export async function main(
+  argv,
+  deps = {},
+) {
   const { token = requireToken, fetchImpl = fetch, log = console.log } = deps
   const { project, apply, maxDelete } = parseArgs(argv)
   const api = cloudflareApi(typeof token === 'function' ? token() : token, fetchImpl)

@@ -68,10 +68,7 @@ describe('expectedFixedCents', () => {
   })
 
   it('leaves out charges in a category with no active budget', () => {
-    const noBudget = [
-      ...categories,
-      { id: 4, name: 'Unbudgeted', monthlyBudgetCents: 0, sortOrder: 3, active: true },
-    ]
+    const noBudget = [...categories, { id: 4, name: 'Unbudgeted', monthlyBudgetCents: 0, sortOrder: 3, active: true }]
     const subscription = ['2026-01', '2026-02', '2026-03'].map((m) =>
       txn({ date: `${m}-01`, budgetMonth: m, description: 'Cloud', categoryId: 4, amountCents: 900 }),
     )
@@ -124,7 +121,7 @@ describe('computeSpendingPace', () => {
     expect(pace.projectedCents).toBe(pace.flexibleSpentCents)
   })
 
-  it('runs the clock from the budget month\'s own first day under a rollover', () => {
+  it("runs the clock from the budget month's own first day under a rollover", () => {
     // Day-13 rollover on Mar 5: the March budget month began Feb 13 and runs 28 days.
     const rolled = [
       txn({ date: '2026-02-20', budgetMonth: '2026-03', description: 'Groceries early', amountCents: 9000 }),
@@ -144,10 +141,7 @@ describe('computeSpendingPace', () => {
   })
 
   it('leaves spend in categories with no active budget out of the clock, as out of the envelope', () => {
-    const noBudget = [
-      ...categories,
-      { id: 4, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 3, active: true },
-    ]
+    const noBudget = [...categories, { id: 4, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 3, active: true }]
     const spend = [
       txn({ date: '2026-03-04', description: 'Groceries run', amountCents: 9000 }),
       txn({ date: '2026-03-05', description: 'Dinner out', categoryId: 4, amountCents: 30000 }),

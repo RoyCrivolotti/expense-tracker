@@ -5,7 +5,10 @@ import type { ProjectionParams } from './projection'
  * as a price index quotes it (before inflation), and the plan's money is the euros of its start, so
  * only what the house beats inflation by counts.
  */
-export function realHouseGrowth(appreciation: number, inflationRate: number): number {
+export function realHouseGrowth(
+  appreciation: number,
+  inflationRate: number,
+): number {
   return (1 + appreciation) / (1 + inflationRate)
 }
 

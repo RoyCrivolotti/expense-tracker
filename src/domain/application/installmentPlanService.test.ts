@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_INSTALLMENT_COUNT, createPlan, patchPlan, removePlan, validateDueDay, validatePlanInput } from './installmentPlanService'
+import {
+  MAX_INSTALLMENT_COUNT,
+  createPlan,
+  patchPlan,
+  removePlan,
+  validateDueDay,
+  validatePlanInput,
+} from './installmentPlanService'
 import { ValidationError } from './validationError'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import type { NewInstallmentPlan } from '../data/dataSource'
@@ -36,14 +43,18 @@ describe('validatePlanInput', () => {
   })
 
   it('accepts the largest count and rejects one more, on create and on edit', async () => {
-    expect(validatePlanInput({ ...validPlan, totalCount: MAX_INSTALLMENT_COUNT }).totalCount).toBe(MAX_INSTALLMENT_COUNT)
+    expect(validatePlanInput({ ...validPlan, totalCount: MAX_INSTALLMENT_COUNT }).totalCount).toBe(
+      MAX_INSTALLMENT_COUNT,
+    )
     expect(() => validatePlanInput({ ...validPlan, totalCount: MAX_INSTALLMENT_COUNT + 1 })).toThrow(
       `totalCount must be ${MAX_INSTALLMENT_COUNT} or fewer`,
     )
     expect(() => validatePlanInput({ ...validPlan, totalCount: 1e9 })).toThrow('or fewer')
     const repo = repoWithDefs()
     const plan = await createPlan(repo, 'owner@example.com', validPlan)
-    await expect(patchPlan(repo, 'owner@example.com', plan.id, { totalCount: MAX_INSTALLMENT_COUNT + 1 })).rejects.toThrow('or fewer')
+    await expect(
+      patchPlan(repo, 'owner@example.com', plan.id, { totalCount: MAX_INSTALLMENT_COUNT + 1 }),
+    ).rejects.toThrow('or fewer')
   })
 
   it('rejects non-positive totalCount and amount', () => {
@@ -52,15 +63,11 @@ describe('validatePlanInput', () => {
   })
 
   it('rejects a start index outside 1..totalCount', () => {
-    expect(() => validatePlanInput({ ...validPlan, startInstallmentIndex: 25 })).toThrow(
-      'startInstallmentIndex',
-    )
+    expect(() => validatePlanInput({ ...validPlan, startInstallmentIndex: 25 })).toThrow('startInstallmentIndex')
   })
 
   it('rejects a malformed anchor month', () => {
-    expect(() => validatePlanInput({ ...validPlan, anchorBudgetMonth: '2026/01' })).toThrow(
-      'anchorBudgetMonth',
-    )
+    expect(() => validatePlanInput({ ...validPlan, anchorBudgetMonth: '2026/01' })).toThrow('anchorBudgetMonth')
   })
 })
 
@@ -97,9 +104,9 @@ describe('installment plan lifecycle', () => {
     await expect(patchPlan(repo, owner, plan.id, { startInstallmentIndex: 0 })).rejects.toThrow(
       'startInstallmentIndex must be between 1 and totalCount',
     )
-    await expect(
-      patchPlan(repo, owner, plan.id, { totalCount: 6, startInstallmentIndex: 9 }),
-    ).rejects.toThrow('startInstallmentIndex must be between 1 and totalCount')
+    await expect(patchPlan(repo, owner, plan.id, { totalCount: 6, startInstallmentIndex: 9 })).rejects.toThrow(
+      'startInstallmentIndex must be between 1 and totalCount',
+    )
   })
 
   it('still accepts a legitimate numeric edit', async () => {
@@ -169,9 +176,9 @@ describe('installment plan lifecycle', () => {
       budgetMonth: '2026-02',
     })
     expect(second.installmentIndex).toBe(15)
-    expect(() =>
-      repo.insertTransaction('owner@example.com', { ...base, installmentIndex: 14 }),
-    ).toThrow('already recorded')
+    expect(() => repo.insertTransaction('owner@example.com', { ...base, installmentIndex: 14 })).toThrow(
+      'already recorded',
+    )
   })
 })
 
@@ -184,8 +191,6 @@ describe('installment plan validation, as a client error', () => {
 
   it('refuses a plan with no account or category', () => {
     expect(() => validatePlanInput({ ...validPlan, accountId: 0 })).toThrow(ValidationError)
-    expect(() => validatePlanInput({ ...validPlan, categoryId: 0 })).toThrow(
-      'accountId and categoryId are required',
-    )
+    expect(() => validatePlanInput({ ...validPlan, categoryId: 0 })).toThrow('accountId and categoryId are required')
   })
 })

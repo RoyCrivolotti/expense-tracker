@@ -54,12 +54,18 @@ export const NO_HIDDEN: ReadonlySet<number> = new Set()
 const TAGGED_AFTER_YEARS = 1 / 12
 
 /** What a year of the axis is called: "Year 8" in plan years, "2034" on a calendar. */
-export function axisYearName(year: number, calendarOrigin: string | null): string {
+export function axisYearName(
+  year: number,
+  calendarOrigin: string | null,
+): string {
   return calendarOrigin ? yearLabel(year, calendarOrigin) : `Year ${year}`
 }
 
 /** What a row says in place of a figure for a year before the line starts, or nothing to say a dash. */
-export function rowStatus(line: ScenarioLine | undefined, year: number): string | null {
+export function rowStatus(
+  line: ScenarioLine | undefined,
+  year: number,
+): string | null {
   return line && year < line.offsetYears && line.startsIn ? `starts ${line.startsIn}` : null
 }
 
@@ -68,7 +74,11 @@ export function rowStatus(line: ScenarioLine | undefined, year: number): string 
  * comparison table gives it. Null where it has not ended, or every scenario starts on one day and a
  * line past its horizon shows a dash as it always has.
  */
-export function endedReading(line: ScenarioLine | undefined, reading: LineReading, year: number): { valueCents: number; endedIn: string } | null {
+export function endedReading(
+  line: ScenarioLine | undefined,
+  reading: LineReading,
+  year: number,
+): { valueCents: number; endedIn: string } | null {
   if (!line?.endsIn || year <= line.offsetYears || reading.last === undefined) return null
   return { valueCents: reading.last, endedIn: line.endsIn }
 }
@@ -83,18 +93,31 @@ function fromTag(line: ScenarioLine | undefined): { note: string } | Record<stri
  * one that starts part-way through a year, its purchase anniversary when that falls nearest the year
  * pointed at, since its own years never land on the axis' whole ones.
  */
-function ownYearAt(line: ScenarioLine, year: number, ownYear: number | null | undefined): number | null {
+function ownYearAt(
+  line: ScenarioLine,
+  year: number,
+  ownYear: number | null | undefined,
+): number | null {
   if (line.offsetYears === 0) return year
   return ownYear != null && Math.round(line.offsetYears + ownYear) === year ? ownYear : null
 }
 
-function breakdownAt(line: ScenarioLine, year: number): PurchaseYearBreakdown | null {
+function breakdownAt(
+  line: ScenarioLine,
+  year: number,
+): PurchaseYearBreakdown | null {
   const own = ownYearAt(line, year, line.params.housePurchaseYear)
   return own === null ? null : purchaseYearBreakdown(line.params, own)
 }
 
 /** One drawn line's row, read at `readIndex` (the year pointed at, or the resting one). */
-function rowOf(s: LineReading, line: ScenarioLine | undefined, name: string | undefined, readIndex: number | null, readYear: number | null): ScenarioLegendItem {
+function rowOf(
+  s: LineReading,
+  line: ScenarioLine | undefined,
+  name: string | undefined,
+  readIndex: number | null,
+  readYear: number | null,
+): ScenarioLegendItem {
   const scenarioId = line?.scenarioId ?? null
   // Gated on the year, not the index: a narrower window can leave a hovered index past the
   // end, and so can a scenario whose horizon is shorter than the chart's. Both read as
@@ -112,7 +135,11 @@ function rowOf(s: LineReading, line: ScenarioLine | undefined, name: string | un
 }
 
 /** A row with no figure for the year it is read at: its last figure if it has ended, a dash, or what there is to say instead. */
-function missingRow(line: ScenarioLine | undefined, reading: LineReading, year: number): { outOfRun: true; status?: string; valueCents?: number; endedIn?: string } {
+function missingRow(
+  line: ScenarioLine | undefined,
+  reading: LineReading,
+  year: number,
+): { outOfRun: true; status?: string; valueCents?: number; endedIn?: string } {
   const ended = endedReading(line, reading, year)
   if (ended) return { outOfRun: true, ...ended }
   const status = rowStatus(line, year)
@@ -123,11 +150,15 @@ function missingRow(line: ScenarioLine | undefined, reading: LineReading, year: 
  * What the legend beside a hero chart shows for a pointed-at year, and the breakdown under it. With
  * nothing pointed at, the rows read `restIndex` when given one, and nothing otherwise.
  */
-export function useChartLegendState(input: LegendInput, activeIndex: number | null, restIndex: number | null = null) {
+export function useChartLegendState(
+  input: LegendInput,
+  activeIndex: number | null,
+  restIndex: number | null = null,
+) {
   const { lines, readings, names, years, scenarios, hiddenIds = NO_HIDDEN } = input
-  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
+  const activeYear = activeIndex != null ? (years[activeIndex] ?? null) : null
   const readIndex = activeIndex ?? restIndex
-  const readYear = readIndex != null ? years[readIndex] ?? null : null
+  const readYear = readIndex != null ? (years[readIndex] ?? null) : null
   const legendItems: ScenarioLegendItem[] = useMemo(() => {
     const drawn = readings.map((s, idx) => rowOf(s, lines[idx], names[idx], readIndex, readYear))
     const drawnById = new Map(drawn.flatMap((d) => (d.scenarioId !== undefined ? [[d.scenarioId, d] as const] : [])))
@@ -135,7 +166,8 @@ export function useChartLegendState(input: LegendInput, activeIndex: number | nu
     // back from here, rather than dropping to the bottom and moving the rows under it. A
     // loaded, unchanged scenario is drawn as the draft and has no row of its own.
     const rows = scenarios.flatMap((s) => {
-      if (hiddenIds.has(s.id)) return [{ label: s.name, color: s.color, scenarioId: s.id, hidden: true, valueCents: null }]
+      if (hiddenIds.has(s.id))
+        return [{ label: s.name, color: s.color, scenarioId: s.id, hidden: true, valueCents: null }]
       const item = drawnById.get(s.id)
       return item ? [item] : []
     })

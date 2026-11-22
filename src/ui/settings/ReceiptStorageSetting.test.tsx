@@ -14,10 +14,7 @@ describe('ReceiptStorageSetting', () => {
   it('shows what is used against the cap, and how many receipts that is', () => {
     render(
       <ReceiptStorageSetting
-        attachments={[
-          makeAttachment({ id: 1, byteSize: 184_320 }),
-          makeAttachment({ id: 2, byteSize: 215_680 }),
-        ]}
+        attachments={[makeAttachment({ id: 1, byteSize: 184_320 }), makeAttachment({ id: 2, byteSize: 215_680 })]}
       />,
     )
     expect(screen.getByText('400 KB')).toBeInTheDocument()

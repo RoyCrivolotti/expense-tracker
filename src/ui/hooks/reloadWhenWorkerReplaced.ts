@@ -10,7 +10,10 @@
  * A page with no controller yet is the first install, which also fires `controllerchange` when it claims the page and
  * has nothing to replace, so it is left alone. Returns a function that stops listening.
  */
-export function reloadWhenWorkerReplaced(container: ServiceWorkerContainer | undefined, reload: () => void): () => void {
+export function reloadWhenWorkerReplaced(
+  container: ServiceWorkerContainer | undefined,
+  reload: () => void,
+): () => void {
   if (!container?.controller) return () => undefined
   let reloaded = false
   const onChange = () => {

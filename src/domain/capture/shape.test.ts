@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { readPushSlots } from './slots'
 import { MAX_SIBLING_RUN, WILDCARD, shapeId, siblingSlot, skeletonOf, tokenise, withWildcard } from './shape'
 
-const skeleton = (title: string, body: string) => skeletonOf(title, body, readPushSlots(title, body))
+const skeleton = (
+  title: string,
+  body: string,
+) => skeletonOf(title, body, readPushSlots(title, body))
 
 describe('tokenise', () => {
   it('splits on whitespace and keeps punctuation on its token', () => {
@@ -17,7 +20,10 @@ describe('tokenise', () => {
 describe('skeletonOf', () => {
   it('replaces each slot with its placeholder and folds the rest', () => {
     expect(
-      skeleton('Compra Realizada', 'Has hecho una compra de 12,34 EUR en EXAMPLE SHOP con tu tarjeta Example Card terminada *0000'),
+      skeleton(
+        'Compra Realizada',
+        'Has hecho una compra de 12,34 EUR en EXAMPLE SHOP con tu tarjeta Example Card terminada *0000',
+      ),
     ).toBe('compra realizada has hecho una compra de <N> <C> en example shop con tu tarjeta example card terminada <D>')
   })
 
@@ -38,7 +44,11 @@ describe('skeletonOf', () => {
   })
 
   it('gives one skeleton to pushes that differ only in a time, a reference or a percentage', () => {
-    const at = (time: string, ref: string, rate: string) => skeleton('Aviso', `A las ${time} cobro #${ref} (${rate}) ref${ref}`)
+    const at = (
+      time: string,
+      ref: string,
+      rate: string,
+    ) => skeleton('Aviso', `A las ${time} cobro #${ref} (${rate}) ref${ref}`)
     expect(at('09:41', '12345', '10%')).toBe('aviso a las <X> cobro <X> <X> <X>')
     expect(at('09:42', '777', '12,5%')).toBe(at('09:41', '12345', '10%'))
     expect(skeleton('', 'tarjeta **123456')).toBe('tarjeta <X>')
@@ -78,7 +88,10 @@ describe('shapeId', () => {
 })
 
 describe('siblingSlot', () => {
-  const purchase = (merchant: string, extra = 'con tu tarjeta <D>') => `compra de <N> <C> en ${merchant} ${extra}`.split(' ')
+  const purchase = (
+    merchant: string,
+    extra = 'con tu tarjeta <D>',
+  ) => `compra de <N> <C> en ${merchant} ${extra}`.split(' ')
   const words = (text: string) => text.split(' ')
 
   it('returns the one run where two purchase bodies differ in the merchant', () => {
@@ -96,7 +109,10 @@ describe('siblingSlot', () => {
       a: { start: 5, end: 7 },
       b: { start: 5, end: 9 },
     })
-    expect(siblingSlot(purchase('example'), purchase('a b c d'))).toEqual({ a: { start: 5, end: 6 }, b: { start: 5, end: 9 } })
+    expect(siblingSlot(purchase('example'), purchase('a b c d'))).toEqual({
+      a: { start: 5, end: 6 },
+      b: { start: 5, end: 9 },
+    })
   })
 
   it('pairs a push with a merchant and one without', () => {
@@ -114,8 +130,14 @@ describe('siblingSlot', () => {
 
   it('does not let the end overlap the start', () => {
     const base = words('a b c d')
-    expect(siblingSlot([...base, 'x'], [...base, 'x', 'x'])).toEqual({ a: { start: 5, end: 5 }, b: { start: 5, end: 6 } })
-    expect(siblingSlot([...base, 'x', 'x'], [...base, 'x'])).toEqual({ a: { start: 5, end: 6 }, b: { start: 5, end: 5 } })
+    expect(siblingSlot([...base, 'x'], [...base, 'x', 'x'])).toEqual({
+      a: { start: 5, end: 5 },
+      b: { start: 5, end: 6 },
+    })
+    expect(siblingSlot([...base, 'x', 'x'], [...base, 'x'])).toEqual({
+      a: { start: 5, end: 6 },
+      b: { start: 5, end: 5 },
+    })
   })
 
   it('is null for equal skeletons and for nothing', () => {
@@ -131,15 +153,23 @@ describe('siblingSlot', () => {
   })
 
   it('is null when the shared start and end cover less than half of the shorter text, and pairs at exactly half', () => {
-    expect(siblingSlot(words('a b c d e f'), words('a b c x y z'))).toEqual({ a: { start: 3, end: 6 }, b: { start: 3, end: 6 } })
+    expect(siblingSlot(words('a b c d e f'), words('a b c x y z'))).toEqual({
+      a: { start: 3, end: 6 },
+      b: { start: 3, end: 6 },
+    })
     expect(siblingSlot(words('a b c d e f g'), words('a b c x y z w'))).toBeNull()
   })
 
   it('needs three shared words that are not placeholders', () => {
     expect(siblingSlot(words('saldo <N> <C>'), words('pago <N> <C>'))).toBeNull()
     expect(siblingSlot(words('hello john'), words('hello mary'))).toBeNull()
-    expect(siblingSlot(words('<N> <C> <D> <X> <DATE> <CODE> <M> a b x'), words('<N> <C> <D> <X> <DATE> <CODE> <M> a b y'))).toBeNull()
-    expect(siblingSlot(words('<N> a b c <C> x'), words('<N> a b c <C> y'))).toEqual({ a: { start: 5, end: 6 }, b: { start: 5, end: 6 } })
+    expect(
+      siblingSlot(words('<N> <C> <D> <X> <DATE> <CODE> <M> a b x'), words('<N> <C> <D> <X> <DATE> <CODE> <M> a b y')),
+    ).toBeNull()
+    expect(siblingSlot(words('<N> a b c <C> x'), words('<N> a b c <C> y'))).toEqual({
+      a: { start: 5, end: 6 },
+      b: { start: 5, end: 6 },
+    })
     expect(siblingSlot(words('<N> a b <C> x'), words('<N> a b <C> y'))).toBeNull()
   })
 
@@ -154,8 +184,14 @@ describe('siblingSlot', () => {
   })
 
   it('finds a run at either end', () => {
-    expect(siblingSlot(words('x b c d'), words('y b c d'))).toEqual({ a: { start: 0, end: 1 }, b: { start: 0, end: 1 } })
-    expect(siblingSlot(words('a b c x'), words('a b c y'))).toEqual({ a: { start: 3, end: 4 }, b: { start: 3, end: 4 } })
+    expect(siblingSlot(words('x b c d'), words('y b c d'))).toEqual({
+      a: { start: 0, end: 1 },
+      b: { start: 0, end: 1 },
+    })
+    expect(siblingSlot(words('a b c x'), words('a b c y'))).toEqual({
+      a: { start: 3, end: 4 },
+      b: { start: 3, end: 4 },
+    })
   })
 })
 

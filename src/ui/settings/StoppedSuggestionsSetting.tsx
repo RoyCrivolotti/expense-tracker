@@ -29,7 +29,9 @@ export function StoppedSuggestionsSetting({
   const { stopped, restore } = useStoppedSuggestions()
   const anyStopped = Object.keys(stopped).length > 0
   useEffect(() => (anyStopped ? watch?.() : undefined), [anyStopped, watch])
-  const entries = Object.entries(stillStopped(transactions, stopped, known)).sort(([, a], [, b]) => a.label.localeCompare(b.label))
+  const entries = Object.entries(stillStopped(transactions, stopped, known)).sort(([, a], [, b]) =>
+    a.label.localeCompare(b.label),
+  )
   if (entries.length === 0) return null
 
   return (
@@ -37,8 +39,8 @@ export function StoppedSuggestionsSetting({
       <SectionTitle>Suggestions you stopped</SectionTitle>
       <Card>
         <p className={tabStyles.settingHint}>
-          The Upcoming card no longer suggests these on this device. One comes back by itself when you log a
-          new charge for it.
+          The Upcoming card no longer suggests these on this device. One comes back by itself when you log a new charge
+          for it.
         </p>
         <ul className={styles.list}>
           {entries.map(([seriesKey, entry]) => (

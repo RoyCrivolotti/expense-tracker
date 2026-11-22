@@ -31,7 +31,9 @@ function loadOwnerEmail() {
   const filePath = join(ROOT, 'config/access.json')
   if (!existsSync(filePath)) throw new Error('config/access.json missing')
   const raw = JSON.parse(readFileSync(filePath, 'utf8'))
-  const email = String(raw.ownerEmail ?? '').trim().toLowerCase()
+  const email = String(raw.ownerEmail ?? '')
+    .trim()
+    .toLowerCase()
   if (!email) throw new Error('access.json ownerEmail required')
   return email
 }

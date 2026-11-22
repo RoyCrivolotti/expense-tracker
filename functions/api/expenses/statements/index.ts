@@ -21,13 +21,5 @@ export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (con
     throw new HttpError(400, 'paidOn must be YYYY-MM-DD')
   }
   const { repo, owner } = context.data
-  return json(
-    await repo.setStatementPaid(
-      owner,
-      body.accountId,
-      body.yearMonth,
-      Boolean(body.paid),
-      body.paidOn,
-    ),
-  )
+  return json(await repo.setStatementPaid(owner, body.accountId, body.yearMonth, Boolean(body.paid), body.paidOn))
 }

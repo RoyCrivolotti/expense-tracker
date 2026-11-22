@@ -30,13 +30,23 @@ const PHONES = [
 
 const failures = []
 
-function report(ok, where, what, detail) {
+function report(
+  ok,
+  where,
+  what,
+  detail,
+) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
 }
 
 /** `detail` is only read when the check fails, and says what was measured instead. */
-function check(where, what, ok, detail = '') {
+function check(
+  where,
+  what,
+  ok,
+  detail = '',
+) {
   report(Boolean(ok), where, what, detail)
 }
 
@@ -100,13 +110,19 @@ function settled(page) {
   )
 }
 
-async function scrollTo(page, y) {
+async function scrollTo(
+  page,
+  y,
+) {
   await page.evaluate((top) => window.scrollTo(0, top), y)
   return settled(page)
 }
 
 /** A fresh page on the demo instance, on the Goals tab. */
-async function openGoals(browser, { width, height, root = null }) {
+async function openGoals(
+  browser,
+  { width, height, root = null },
+) {
   const context = await browser.newContext({
     viewport: { width, height },
     screen: { width, height },
@@ -129,8 +145,14 @@ async function openGoals(browser, { width, height, root = null }) {
   return { page, context }
 }
 
-const tab = (page, name) => page.getByRole('tab', { name, exact: true })
-const chip = (page, name) => page.getByRole('navigation', { name: 'Scenario sections' }).getByRole('button', { name, exact: true })
+const tab = (
+  page,
+  name,
+) => page.getByRole('tab', { name, exact: true })
+const chip = (
+  page,
+  name,
+) => page.getByRole('navigation', { name: 'Scenario sections' }).getByRole('button', { name, exact: true })
 
 /** What is pinned or fixed over the page, and where the sections of Scenarios are. */
 function measure(page) {
@@ -161,11 +183,18 @@ function measure(page) {
   })
 }
 
-const near = (a, b, tolerance = 0.5) => Math.abs(a - b) <= tolerance
+const near = (
+  a,
+  b,
+  tolerance = 0.5,
+) => Math.abs(a - b) <= tolerance
 const px = (n) => `${Math.round(n * 10) / 10}px`
 
 /** The row sticks just under the header, tucked 1px beneath it so no hairline shows between. */
-async function checkRowSticksUnderHeader(page, where) {
+async function checkRowSticksUnderHeader(
+  page,
+  where,
+) {
   await scrollTo(page, 400)
   const m = await measure(page)
   check(
@@ -178,15 +207,25 @@ async function checkRowSticksUnderHeader(page, where) {
 }
 
 /** On first load the hero chart is wholly on screen above the bottom bar, where the screen is tall. */
-async function checkChartAboveBottomBar(page, where) {
+async function checkChartAboveBottomBar(
+  page,
+  where,
+) {
   const geometry = await page.evaluate(() => {
-    const heading = [...document.querySelectorAll('*')].find((el) => el.children.length === 0 && el.textContent === 'Invested portfolio projection')
+    const heading = [...document.querySelectorAll('*')].find(
+      (el) => el.children.length === 0 && el.textContent === 'Invested portfolio projection',
+    )
     const chart = heading?.closest('section, div[class*="card"], div')?.parentElement?.querySelector('svg[role="img"]')
     const r = chart?.getBoundingClientRect()
     const bar = document.querySelector('nav[aria-label="Sections"]').getBoundingClientRect()
     return r ? { top: r.top, bottom: r.bottom, barTop: bar.top, scrolled: window.scrollY } : null
   })
-  check(where, '(b) the hero chart is found', geometry !== null, 'no chart svg after the "Invested portfolio projection" heading')
+  check(
+    where,
+    '(b) the hero chart is found',
+    geometry !== null,
+    'no chart svg after the "Invested portfolio projection" heading',
+  )
   if (!geometry) return
   check(
     where,
@@ -196,11 +235,17 @@ async function checkChartAboveBottomBar(page, where) {
   )
 }
 
-function gapOf(m, key) {
+function gapOf(
+  m,
+  key,
+) {
   return m.sections[key] - m.stack.bottom
 }
 
-async function checkAdjust(browser, phone) {
+async function checkAdjust(
+  browser,
+  phone,
+) {
   const where = `${phone.name} Scenarios`
   const { page, context } = await openGoals(browser, phone)
   await tab(page, 'Scenarios').tap()
@@ -249,11 +294,22 @@ async function checkAdjust(browser, phone) {
     `it went ${followed.join(', ')}`,
   )
   if (phone.height >= 812) {
-    check(where, '(c) with the demo data it goes Portfolio, Housing, FI', followed.join(', ') === 'Portfolio, Housing, FI', `it went ${followed.join(', ')}`)
+    check(
+      where,
+      '(c) with the demo data it goes Portfolio, Housing, FI',
+      followed.join(', ') === 'Portfolio, Housing, FI',
+      `it went ${followed.join(', ')}`,
+    )
   }
 
   // The chip's name, and the key its section is stored under.
-  const sectionKeys = { Portfolio: 'portfolio', Housing: 'housing', FI: 'fire', 'Start date': 'tracking', Events: 'events' }
+  const sectionKeys = {
+    Portfolio: 'portfolio',
+    Housing: 'housing',
+    FI: 'fire',
+    'Start date': 'tracking',
+    Events: 'events',
+  }
   for (const key of Object.keys(sectionKeys)) {
     await chip(page, key).tap()
     await settled(page)
@@ -264,9 +320,19 @@ async function checkAdjust(browser, phone) {
     if (key === 'Start date' || key === 'Events') {
       // The end of the page comes before they can reach the stack, so all that can be asked is
       // that the page went as far as it goes and the chip says where it is.
-      check(where, `(c) the ${key} chip is marked, and the page scrolled as far as it goes`, m.marked === key && (atEnd || lands), `marked ${m.marked}, ${px(gap)} under the stack, at ${px(m.y)} of ${px(m.max)}`)
+      check(
+        where,
+        `(c) the ${key} chip is marked, and the page scrolled as far as it goes`,
+        m.marked === key && (atEnd || lands),
+        `marked ${m.marked}, ${px(gap)} under the stack, at ${px(m.y)} of ${px(m.max)}`,
+      )
     } else {
-      check(where, `(c) the ${key} chip lands its section 7-9px under the stack`, lands && m.marked === key, `${px(gap)} under it, marked ${m.marked}`)
+      check(
+        where,
+        `(c) the ${key} chip lands its section 7-9px under the stack`,
+        lands && m.marked === key,
+        `${px(gap)} under it, marked ${m.marked}`,
+      )
     }
   }
 
@@ -274,12 +340,22 @@ async function checkAdjust(browser, phone) {
   await page.evaluate(() => window.scrollBy(0, -300))
   await settled(page)
   m = await measure(page)
-  check(where, '(c) a tapped chip stays marked while the page moves on its own', m.marked === 'Events', `marked ${m.marked}`)
+  check(
+    where,
+    '(c) a tapped chip stays marked while the page moves on its own',
+    m.marked === 'Events',
+    `marked ${m.marked}`,
+  )
   await page.mouse.move(phone.width / 2, phone.height / 2)
   await page.mouse.wheel(0, -200)
   await settled(page)
   m = await measure(page)
-  check(where, '(c) a tapped chip is let go of at a wheel event', m.marked !== 'Events', `still marked ${m.marked} at ${px(m.y)}`)
+  check(
+    where,
+    '(c) a tapped chip is let go of at a wheel event',
+    m.marked !== 'Events',
+    `still marked ${m.marked} at ${px(m.y)}`,
+  )
 
   await context.close()
 }
@@ -288,7 +364,10 @@ async function checkAdjust(browser, phone) {
  * A view tapped from down the page lands its content under the view row with the same air the
  * Scenarios chips leave, and tapping the one that is open goes back to that place.
  */
-async function checkContentLanding(browser, phone) {
+async function checkContentLanding(
+  browser,
+  phone,
+) {
   const where = `${phone.name} view row`
   const { page, context } = await openGoals(browser, phone)
   const gap = () =>
@@ -301,17 +380,30 @@ async function checkContentLanding(browser, phone) {
     await tab(page, name).tap()
     await settled(page)
     const first = await gap()
-    check(where, `(h) ${name} lands its content 7-9px under the row`, first >= GAP.min && first <= GAP.max, `it is ${px(first)} under it`)
+    check(
+      where,
+      `(h) ${name} lands its content 7-9px under the row`,
+      first >= GAP.min && first <= GAP.max,
+      `it is ${px(first)} under it`,
+    )
     await scrollTo(page, 400)
     await tab(page, name).tap()
     await settled(page)
     const again = await gap()
-    check(where, `(h) tapping ${name} again goes back to 7-9px under the row`, again >= GAP.min && again <= GAP.max, `it is ${px(again)} under it`)
+    check(
+      where,
+      `(h) tapping ${name} again goes back to 7-9px under the row`,
+      again >= GAP.min && again <= GAP.max,
+      `it is ${px(again)} under it`,
+    )
   }
   await context.close()
 }
 
-async function checkMemory(browser, phone) {
+async function checkMemory(
+  browser,
+  phone,
+) {
   const where = `${phone.name} Chart`
   const { page, context } = await openGoals(browser, phone)
   const room = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
@@ -324,7 +416,12 @@ async function checkMemory(browser, phone) {
   }
   await tab(page, 'Chart').tap()
   const back = await settled(page)
-  check(where, '(d) Chart comes back to 900px after Progress, Scenarios and Assumptions', near(back, 900, 1), `it came back to ${px(back)}`)
+  check(
+    where,
+    '(d) Chart comes back to 900px after Progress, Scenarios and Assumptions',
+    near(back, 900, 1),
+    `it came back to ${px(back)}`,
+  )
 
   // A link out of a view leaves it too, without the row being touched.
   await page.getByRole('radio', { name: 'Nominal' }).tap()
@@ -336,7 +433,12 @@ async function checkMemory(browser, phone) {
   await settled(page)
   await tab(page, 'Chart').tap()
   const returned = await settled(page)
-  check(where, '(d) a view left by a link, not the row, comes back to where it was left', near(returned, left, 1), `left at ${px(left)}, came back to ${px(returned)}`)
+  check(
+    where,
+    '(d) a view left by a link, not the row, comes back to where it was left',
+    near(returned, left, 1),
+    `left at ${px(left)}, came back to ${px(returned)}`,
+  )
 
   await context.close()
 }
@@ -347,7 +449,9 @@ async function checkMemory(browser, phone) {
  * would count as overflow, so it is switched off for the measurement.
  */
 async function labelsFit(page) {
-  const hideTapAreas = await page.addStyleTag({ content: '[role="tablist"] [role="tab"]::before { display: none !important; }' })
+  const hideTapAreas = await page.addStyleTag({
+    content: '[role="tablist"] [role="tab"]::before { display: none !important; }',
+  })
   const fits = await measureLabels(page)
   await hideTapAreas.evaluate((el) => el.remove())
   return fits
@@ -387,7 +491,11 @@ async function checkLabels(browser) {
       check(
         where,
         `(e) "${seg.label}" is shown whole`,
-        seg.scrollWidth <= seg.clientWidth && seg.textInBar && seg.textInSegment && seg.textOverflow !== 'ellipsis' && seg.lines <= 1,
+        seg.scrollWidth <= seg.clientWidth &&
+          seg.textInBar &&
+          seg.textInSegment &&
+          seg.textOverflow !== 'ellipsis' &&
+          seg.lines <= 1,
         `scrollWidth ${seg.scrollWidth} against clientWidth ${seg.clientWidth}, text ${px(seg.textWidth)} wide, in its segment ${seg.textInSegment}, in the bar ${seg.textInBar}, ${seg.lines} line(s)`,
       )
     }
@@ -402,9 +510,19 @@ async function checkLandscape(browser) {
   await settled(page)
   await scrollTo(page, 300)
   const m = await measure(page)
-  check(where, '(f) the stack scrolls away with the page', m.stackPosition === 'static', `its position is ${m.stackPosition}`)
+  check(
+    where,
+    '(f) the stack scrolls away with the page',
+    m.stackPosition === 'static',
+    `its position is ${m.stackPosition}`,
+  )
   const room = m.bar.top - m.row.bottom
-  check(where, '(f) at least 150px of page is visible between the row and the bottom bar', room >= 150, `${px(room)} between them`)
+  check(
+    where,
+    '(f) at least 150px of page is visible between the row and the bottom bar',
+    room >= 150,
+    `${px(room)} between them`,
+  )
   await context.close()
 }
 
@@ -413,7 +531,10 @@ async function checkLandscape(browser) {
  * points over the focused control. One the header, the row, the stack or the bottom bar covers
  * all over is a control the viewer cannot see.
  */
-async function walkFocus(page, direction) {
+async function walkFocus(
+  page,
+  direction,
+) {
   const coveredBy = () =>
     page.evaluate(() => {
       const el = document.activeElement
@@ -423,7 +544,10 @@ async function walkFocus(page, direction) {
       const x1 = Math.min(r.right, window.innerWidth)
       const y0 = Math.max(r.top, 0)
       const y1 = Math.min(r.bottom, window.innerHeight)
-      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40)
+      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName)
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 40)
       const layers = [
         ['header', document.querySelector('header')],
         ['view row', document.getElementById('goals-nav')],
@@ -444,9 +568,9 @@ async function walkFocus(page, direction) {
     })
 
   await page.evaluate((dir) => {
-    const all = [...document.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex="0"]')].filter(
-      (el) => !el.disabled && el.tabIndex >= 0 && el.getBoundingClientRect().width > 0,
-    )
+    const all = [
+      ...document.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex="0"]'),
+    ].filter((el) => !el.disabled && el.tabIndex >= 0 && el.getBoundingClientRect().width > 0)
     window.scrollTo(0, dir === 'back' ? document.documentElement.scrollHeight : 0)
     ;(dir === 'back' ? all[all.length - 1] : all[0]).focus({ preventScroll: true })
   }, direction)
@@ -462,14 +586,25 @@ async function walkFocus(page, direction) {
   return stops
 }
 
-async function checkFocus(browser, phone) {
+async function checkFocus(
+  browser,
+  phone,
+) {
   const where = `${phone.name} Scenarios`
   const { page, context } = await openGoals(browser, phone)
   await tab(page, 'Scenarios').tap()
   await settled(page)
-  for (const [direction, keys] of [['back', 'Shift+Tab'], ['forward', 'Tab']]) {
+  for (const [direction, keys] of [
+    ['back', 'Shift+Tab'],
+    ['forward', 'Tab'],
+  ]) {
     const stops = await walkFocus(page, direction)
-    check(where, `(g) a ${keys} walk visits the controls of Scenarios`, stops.length >= 20, `it visited ${stops.length}`)
+    check(
+      where,
+      `(g) a ${keys} walk visits the controls of Scenarios`,
+      stops.length >= 20,
+      `it visited ${stops.length}`,
+    )
     const hidden = stops.filter((s) => s.visible === 0)
     check(
       where,
@@ -486,7 +621,10 @@ async function checkFocus(browser, phone) {
  * stop that sits above the one before it means the page order and what is shown disagree, as it
  * did when the scenario controls came first and the chart, which is on top, only after them.
  */
-async function checkTabOrder(browser, phone) {
+async function checkTabOrder(
+  browser,
+  phone,
+) {
   const where = `${phone.name} Chart`
   const { page, context } = await openGoals(browser, phone)
   await tab(page, 'Chart').focus()
@@ -497,15 +635,32 @@ async function checkTabOrder(browser, phone) {
     const stop = await page.evaluate(() => {
       const el = document.activeElement
       if (!el || el === document.body || el.closest('nav[aria-label="Sections"]')) return null
-      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40)
-      return { name, y: el.getBoundingClientRect().top + window.scrollY, inChart: Boolean(el.closest('[class*="areaHero"]')) }
+      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName)
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 40)
+      return {
+        name,
+        y: el.getBoundingClientRect().top + window.scrollY,
+        inChart: Boolean(el.closest('[class*="areaHero"]')),
+      }
     })
     if (!stop) break
     stops.push(stop)
   }
-  check(where, '(h) Tab from the view row reaches the chart first', stops[0]?.inChart === true, `it reached "${stops[0]?.name}"`)
+  check(
+    where,
+    '(h) Tab from the view row reaches the chart first',
+    stops[0]?.inChart === true,
+    `it reached "${stops[0]?.name}"`,
+  )
   const up = stops.findIndex((stop, i) => i > 0 && stop.y < stops[i - 1].y - 2)
-  check(where, `(h) no Tab stop sits above the one before it (${stops.length} stops)`, up === -1, `"${stops[up]?.name}" is above "${stops[up - 1]?.name}"`)
+  check(
+    where,
+    `(h) no Tab stop sits above the one before it (${stops.length} stops)`,
+    up === -1,
+    `"${stops[up]?.name}" is above "${stops[up - 1]?.name}"`,
+  )
   await context.close()
 }
 

@@ -47,11 +47,7 @@ export function OnboardingAccountsStep({
         </label>
       ) : null}
       <label className={styles.checkRow}>
-        <input
-          type="checkbox"
-          checked={addCredit}
-          onChange={(e) => onAddCredit(e.target.checked)}
-        />
+        <input type="checkbox" checked={addCredit} onChange={(e) => onAddCredit(e.target.checked)} />
         <span>I also pay with a credit card that is charged once a month</span>
       </label>
       {addCredit ? (

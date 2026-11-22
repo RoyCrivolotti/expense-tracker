@@ -30,7 +30,10 @@ export function createD1AccessRepository(env: Env): AccessRepository {
     isAllowed: (email) => isAllowedUser(db, email),
     getAllowedUser: (email) => getAllowedUserRow(db, email),
     listActiveUsers: () => listActiveUserRows(db),
-    grantAccess: (email, grantedBy) => upsertAllowedUser(db, email, grantedBy),
+    grantAccess: (
+      email,
+      grantedBy,
+    ) => upsertAllowedUser(db, email, grantedBy),
     findPendingRequest: (email) => findPendingRequestRow(db, email),
     listPendingRequests: () => listPendingRequestRows(db),
     countPendingRequests: () => countPendingRequestRows(db),
@@ -45,13 +48,23 @@ export function createD1AccessRepository(env: Env): AccessRepository {
     markRequestApproved: (id) => markRequestApprovedRow(db, id),
     markRequestRejected: (id) => markRequestRejectedRow(db, id),
     revokeAccess: (email) => revokeAllowedUserRow(db, email),
-    touchLastSeen: (email, seenAt) => touchLastSeenRow(db, email, seenAt),
+    touchLastSeen: (
+      email,
+      seenAt,
+    ) => touchLastSeenRow(db, email, seenAt),
     listGroupGrants: async (email) => {
       const ids = await listGroupGrantIds(db, email)
       return ids.filter(isAccessGroupId)
     },
-    grantGroup: (email, groupId, grantedBy) => grantGroupRow(db, email, groupId, grantedBy),
-    revokeGroup: (email, groupId) => revokeGroupRow(db, email, groupId),
+    grantGroup: (
+      email,
+      groupId,
+      grantedBy,
+    ) => grantGroupRow(db, email, groupId, grantedBy),
+    revokeGroup: (
+      email,
+      groupId,
+    ) => revokeGroupRow(db, email, groupId),
     revokeAllGroups: (email) => revokeAllGroupRows(db, email),
   }
 }

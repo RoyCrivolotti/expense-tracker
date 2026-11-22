@@ -60,7 +60,11 @@ describe('useInBand', () => {
     installFakeIntersectionObserver()
     let box = { top: 10, bottom: 110 }
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      return (this.style.visibility === 'hidden' ? { top: 0, bottom: 60, height: 60 } : { ...box, height: box.bottom - box.top }) as DOMRect
+      return (
+        this.style.visibility === 'hidden'
+          ? { top: 0, bottom: 60, height: 60 }
+          : { ...box, height: box.bottom - box.top }
+      ) as DOMRect
     })
     const { result } = watch(1)
     // Half of it under the header: not fully in band yet, and nothing has reported otherwise.
@@ -95,7 +99,11 @@ describe('useInBand', () => {
     // The probes for the bars are 60px each; the element is what the test places.
     let box = { top: 100, bottom: 200 }
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      return (this.style.visibility === 'hidden' ? { top: 0, bottom: 60, height: 60 } : { ...box, height: box.bottom - box.top }) as DOMRect
+      return (
+        this.style.visibility === 'hidden'
+          ? { top: 0, bottom: 60, height: 60 }
+          : { ...box, height: box.bottom - box.top }
+      ) as DOMRect
     })
     expect(watch(1).result.current).toBe(true)
     // Half of it under the header.

@@ -44,7 +44,10 @@ const UPDATE_START = new RegExp(`UPDATE\\s+(?:OR\\s+\\w+\\s+)?${TABLE}\\s+SET\\s
  * The assignments of an UPDATE: from after SET to the WHERE or RETURNING that belongs to the statement itself
  * (not one inside a subselect in a value), or to the end of the string or statement that holds it.
  */
-export function setClause(text: string, from: number): string {
+export function setClause(
+  text: string,
+  from: number,
+): string {
   let depth = 0
   for (let i = from; i < text.length; i += 1) {
     const ch = text[i]!
@@ -59,7 +62,8 @@ export function setClause(text: string, from: number): string {
   return text.slice(from)
 }
 
-const updateClauses = (text: string): string[] => [...text.matchAll(UPDATE_START)].map((m) => setClause(text, m.index + m[0].length))
+const updateClauses = (text: string): string[] =>
+  [...text.matchAll(UPDATE_START)].map((m) => setClause(text, m.index + m[0].length))
 
 function inserts(): Statement[] {
   const found: Statement[] = []
@@ -70,7 +74,9 @@ function inserts(): Statement[] {
 }
 
 function updates(): Statement[] {
-  return Object.entries(sources).flatMap(([file, text]) => updateClauses(text).map((clause) => ({ file, text: clause })))
+  return Object.entries(sources).flatMap(([file, text]) =>
+    updateClauses(text).map((clause) => ({ file, text: clause })),
+  )
 }
 
 const sets = (clause: string): boolean => /(^|,)\s*description\s*=/.test(clause)
@@ -129,7 +135,9 @@ describe('the statements that write a transaction description', () => {
       for (const clause of updateClauses(sql)) {
         if (sets(clause)) expect(clause, path).toMatch(/\bdescription_norm\s*=/)
       }
-      expect(sql, `${path}: a table rebuild loses the column`).not.toMatch(/DROP\s+TABLE\s+(IF\s+EXISTS\s+)?["`]?transactions\b/i)
+      expect(sql, `${path}: a table rebuild loses the column`).not.toMatch(
+        /DROP\s+TABLE\s+(IF\s+EXISTS\s+)?["`]?transactions\b/i,
+      )
     }
   })
 
@@ -137,8 +145,9 @@ describe('the statements that write a transaction description', () => {
     const forgets = (statement: string): boolean => {
       const clauses = updateClauses(statement)
       const writesDescription =
-        [...statement.matchAll(INSERT)].some((m) => /\bdescription\b/.test(m[1] ?? '') && !/\bdescription_norm\b/.test(m[1]!)) ||
-        clauses.some((c) => sets(c) && !/\bdescription_norm\s*=/.test(c))
+        [...statement.matchAll(INSERT)].some(
+          (m) => /\bdescription\b/.test(m[1] ?? '') && !/\bdescription_norm\b/.test(m[1]!),
+        ) || clauses.some((c) => sets(c) && !/\bdescription_norm\s*=/.test(c))
       const noColumns = [...statement.matchAll(INSERT)].some((m) => m[1] === undefined)
       return writesDescription || noColumns
     }
@@ -156,7 +165,11 @@ describe('the statements that write a transaction description', () => {
     expect(forgets('UPDATE OR ROLLBACK transactions SET notes = ?, description = ? WHERE id = ?')).toBe(true)
     expect(forgets("UPDATE transactions SET description = 'x'")).toBe(true)
     // A WHERE inside a subselect in an earlier assignment does not end the assignments.
-    expect(forgets('UPDATE transactions SET notes = (SELECT n FROM t WHERE t.id = transactions.id), description = ? WHERE id = ?')).toBe(true)
+    expect(
+      forgets(
+        'UPDATE transactions SET notes = (SELECT n FROM t WHERE t.id = transactions.id), description = ? WHERE id = ?',
+      ),
+    ).toBe(true)
     expect(forgets('UPDATE transactions SET description = ?, description_norm = ? WHERE id = ?')).toBe(false)
     expect(forgets('UPDATE transactions SET notes = ? WHERE id = ?')).toBe(false)
     // description in a WHERE is a condition, not an assignment.

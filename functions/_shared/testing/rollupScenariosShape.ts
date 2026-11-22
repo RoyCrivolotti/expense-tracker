@@ -15,15 +15,24 @@ import { newPlan, purgeAndRestore, refillNorm, readDataset } from './rollupLinke
 import { cellOf, make, settleRows, type Scenario } from './rollupScenarios'
 import { edit } from './rollupSteps'
 
-const months = (k: Kit, owner: string) =>
-  rows(k, 'SELECT budget_month AS m, n FROM ledger_months WHERE owner = ? ORDER BY 1', owner).map((r) => [String(r.m), Number(r.n)])
+const months = (
+  k: Kit,
+  owner: string,
+) =>
+  rows(k, 'SELECT budget_month AS m, n FROM ledger_months WHERE owner = ? ORDER BY 1', owner).map((r) => [
+    String(r.m),
+    Number(r.n),
+  ])
 
 const monthLosesItsLastRow: Scenario = {
   name: 'a month that loses its last row disappears',
   run: async (k) => {
     const early = await make(k, OWNER, { budgetMonth: '2026-05', date: '2026-05-04' })
     const late = await make(k, OWNER)
-    expect(months(k, OWNER)).toEqual([['2026-05', 1], ['2026-09', 1]])
+    expect(months(k, OWNER)).toEqual([
+      ['2026-05', 1],
+      ['2026-09', 1],
+    ])
     await edit(k, OWNER, early, { budgetMonth: '2026-09', date: '2026-09-04' })
     await assertRollup(k, 'moved out of its month')
     expect(months(k, OWNER)).toEqual([['2026-09', 2]])
@@ -55,8 +64,16 @@ const categoryDeletedWithItsRows: Scenario = {
   name: 'a category deleted with its rows moved to another',
   run: async (k) => {
     const [from, to] = idsOf(k, 'categories', OWNER) as [number, number]
-    const ids = [await make(k, OWNER, { categoryId: from }), await make(k, OWNER, { categoryId: from, amountCents: 700 }), await make(k, OWNER, { categoryId: to })]
-    const reply = await call(k, OWNER, deleteCategory, `/categories/${from}`, { method: 'DELETE', params: { id: String(from) }, body: { reassignToId: to } })
+    const ids = [
+      await make(k, OWNER, { categoryId: from }),
+      await make(k, OWNER, { categoryId: from, amountCents: 700 }),
+      await make(k, OWNER, { categoryId: to }),
+    ]
+    const reply = await call(k, OWNER, deleteCategory, `/categories/${from}`, {
+      method: 'DELETE',
+      params: { id: String(from) },
+      body: { reassignToId: to },
+    })
     expect(reply.status).toBe(200)
     await assertRollup(k, 'category deleted')
     expect(cellOf(k, ids[0]!)).toEqual([[0, 3]])
@@ -75,7 +92,8 @@ const purgeThenRestore: Scenario = {
     const covered = await make(k, OTHER, { amountCents: 2500 })
     await settleRows(k, OTHER, [covered], await make(k, OTHER, { type: 'refund', amountCents: 2500 }))
     await newPlan(k, OTHER)
-    const snapshot = (owner: string) => JSON.stringify(rows(k, 'SELECT * FROM ledger_cells WHERE owner = ? ORDER BY 1, 2, 3, 4, 5, 6, 7, 8', owner))
+    const snapshot = (owner: string) =>
+      JSON.stringify(rows(k, 'SELECT * FROM ledger_cells WHERE owner = ? ORDER BY 1, 2, 3, 4, 5, 6, 7, 8', owner))
     const [before, ownersBefore] = [snapshot(OTHER), snapshot(OWNER)]
     await purgeAndRestore(k, OTHER)
     await assertRollup(k, 'purged and restored')
@@ -117,22 +135,37 @@ const countsTheApiSends: Scenario = {
   run: async (k) => {
     const flag = idsOf(k, 'flags', OWNER)[0]!
     const flagged = [await make(k, OWNER, { flagId: flag }), await make(k, OWNER, { flagId: flag })]
-    const dropped = await call(k, OWNER, deleteFlag, `/flags/${flag}`, { method: 'DELETE', params: { id: String(flag) } })
+    const dropped = await call(k, OWNER, deleteFlag, `/flags/${flag}`, {
+      method: 'DELETE',
+      params: { id: String(flag) },
+    })
     expect(dropped.body, 'rows that left the pinned cells').toEqual({ unflagged: 2 })
     await assertRollup(k, 'flag deleted')
     const ids = [...flagged, await make(k, OWNER, { type: 'investment' })]
     const theirs = await make(k, OTHER)
-    const deleted = await call(k, OWNER, deleteBulk, '/transactions/bulk', { method: 'DELETE', body: { ids: [...ids, theirs, 999_999] } })
+    const deleted = await call(k, OWNER, deleteBulk, '/transactions/bulk', {
+      method: 'DELETE',
+      body: { ids: [...ids, theirs, 999_999] },
+    })
     expect(deleted.body, 'only the owner’s rows that exist').toEqual({ deleted: 3, requested: 5 })
     await assertRollup(k, 'bulk deleted')
     const writes = countRollupWrites(k.sqlite)
     const before = writes()
-    const missing = await call(k, OWNER, deleteOne, '/transactions/999999', { method: 'DELETE', params: { id: '999999' } })
+    const missing = await call(k, OWNER, deleteOne, '/transactions/999999', {
+      method: 'DELETE',
+      params: { id: '999999' },
+    })
     expect([missing.status, missing.body], 'a row that is not there is answered ok').toEqual([200, { ok: true }])
     expect(writes() - before, 'and no trigger fired').toBe(0)
   },
 }
 
 export const shapeScenarios: Scenario[] = [
-  monthLosesItsLastRow, cancelledRow, categoryDeletedWithItsRows, purgeThenRestore, backfillOnGet, fillTouchesNoCell, countsTheApiSends,
+  monthLosesItsLastRow,
+  cancelledRow,
+  categoryDeletedWithItsRows,
+  purgeThenRestore,
+  backfillOnGet,
+  fillTouchesNoCell,
+  countsTheApiSends,
 ]

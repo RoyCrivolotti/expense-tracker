@@ -148,7 +148,7 @@ deliberately stays out of that, since retitling a PR is no reason to redeploy it
 npm run verify
 ```
 
-Symlink check → migration doc check → docs size check → PII check → lint → typecheck → test coverage →
+Symlink check → migration doc check → docs size check → PII check → formatting → lint → typecheck → test coverage →
 build → bundle budget.
 
 **A green `verify` does not mean CI will be green.** Two required checks run only in CI:
@@ -216,6 +216,8 @@ disagree. A leaving overlay is `inert`, so a second tap or Enter cannot act twic
 opacity and translate for popovers, never scale: `usePopoverPosition` measures the box.
 Tests run with motion off (`setMotionDisabledForTests`), and a test about motion switches
 it back on.
+
+**Formatting** is Prettier (`.prettierrc.json`): run `npm run format` before committing; `npm run verify` fails on unformatted code. A function with two or more parameters wraps one parameter per line, whatever its length, except a callback passed directly as an argument. Prettier cannot do that itself, so `scripts/prettierWrapParams.mjs` adds it: it is the one place a Prettier upgrade needs care, and `scripts/prettierWrapParams.test.ts` fails if the add-on stops working. The commit that first applied the formatter is in `.git-blame-ignore-revs`, which `git blame`, GitHub and the two PR gates (diff coverage, screenshots) all skip; do not add real changes to a commit you list there.
 
 **Comments** explain why this code is the way it is, not how it came to be. History belongs
 in git. A comment earns its place when it stops the next reader breaking something.

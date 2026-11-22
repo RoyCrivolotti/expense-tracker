@@ -12,21 +12,36 @@ import { type HeldLedger, ledgerOfHeld } from './ledgerHold'
 const MAX_LISTED = 5
 
 /** A row as the parts carry it: label ids ascending and always present. */
-const normal = (row: Transaction): Transaction => ({ ...row, labelIds: [...(row.labelIds ?? [])].sort((a, b) => a - b) })
+const normal = (row: Transaction): Transaction => ({
+  ...row,
+  labelIds: [...(row.labelIds ?? [])].sort((a, b) => a - b),
+})
 
-function sameJson(a: unknown, b: unknown): boolean {
+function sameJson(
+  a: unknown,
+  b: unknown,
+): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
-function rowDifferences(held: HeldLedger, dataset: ExpenseDataset): string[] {
+function rowDifferences(
+  held: HeldLedger,
+  dataset: ExpenseDataset,
+): string[] {
   const mine = new Map(assembleRows(ledgerOfHeld(held)).real.map((row) => [row.id, normal(row)]))
   const theirs = new Map(dataset.transactions.map((row) => [row.id, normal(row)]))
   const missing = [...theirs.keys()].filter((id) => !mine.has(id))
   const extra = [...mine.keys()].filter((id) => !theirs.has(id))
   const changed = [...mine.keys()].filter((id) => theirs.has(id) && !sameJson(mine.get(id), theirs.get(id)))
-  const named = (what: string, ids: number[]) =>
-    ids.length === 0 ? [] : [`${ids.length} transactions ${what}: ${ids.slice(0, MAX_LISTED).join(', ')}`]
-  return [...named('missing from the ledger', missing), ...named('only in the ledger', extra), ...named('that differ', changed)]
+  const named = (
+    what: string,
+    ids: number[],
+  ) => (ids.length === 0 ? [] : [`${ids.length} transactions ${what}: ${ids.slice(0, MAX_LISTED).join(', ')}`])
+  return [
+    ...named('missing from the ledger', missing),
+    ...named('only in the ledger', extra),
+    ...named('that differ', changed),
+  ]
 }
 
 function receiptCounts(dataset: ExpenseDataset): Record<number, number> {
@@ -40,7 +55,10 @@ function receiptCounts(dataset: ExpenseDataset): Record<number, number> {
  * they agree. A ledger that holds only a window cannot be compared row for row, so it reports that and nothing
  * else.
  */
-export function shadowDifferences(held: HeldLedger, dataset: ExpenseDataset): string[] {
+export function shadowDifferences(
+  held: HeldLedger,
+  dataset: ExpenseDataset,
+): string[] {
   if (held.cells !== null) return ['the ledger holds only a window, so it cannot be compared with the whole dataset']
   const out: string[] = []
   const reference = referenceTablesOf(dataset)

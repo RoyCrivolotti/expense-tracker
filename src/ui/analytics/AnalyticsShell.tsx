@@ -73,9 +73,7 @@ export function AnalyticsShell({
           onOpenTransactions={onOpenTransactions}
         />
       )}
-      {view === 'cash' && (
-        <CashPanel model={model} month={month} openMonth={openMonth} actions={actions} />
-      )}
+      {view === 'cash' && <CashPanel model={model} month={month} openMonth={openMonth} actions={actions} />}
     </SectionTabs>
   )
 }

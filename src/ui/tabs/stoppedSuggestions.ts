@@ -63,7 +63,10 @@ function snapshot(key: string): StoppedEntries {
   return entries
 }
 
-function commit(key: string, entries: StoppedEntries): void {
+function commit(
+  key: string,
+  entries: StoppedEntries,
+): void {
   const raw = JSON.stringify(entries)
   try {
     localStorage.setItem(key, raw)
@@ -74,7 +77,10 @@ function commit(key: string, entries: StoppedEntries): void {
   listeners.forEach((listener) => listener())
 }
 
-function subscribe(key: string, listener: () => void): () => void {
+function subscribe(
+  key: string,
+  listener: () => void,
+): () => void {
   listeners.add(listener)
   // Another tab changing the list reaches this one as a storage event.
   const onStorage = (event: StorageEvent) => {
@@ -87,11 +93,18 @@ function subscribe(key: string, listener: () => void): () => void {
   }
 }
 
-function stop(key: string, seriesKey: string, entry: StoppedEntry): void {
+function stop(
+  key: string,
+  seriesKey: string,
+  entry: StoppedEntry,
+): void {
   commit(key, { ...snapshot(key), [seriesKey]: entry })
 }
 
-function restore(key: string, seriesKey: string): void {
+function restore(
+  key: string,
+  seriesKey: string,
+): void {
   commit(key, Object.fromEntries(Object.entries(snapshot(key)).filter(([stopped]) => stopped !== seriesKey)))
 }
 
@@ -109,7 +122,10 @@ export function resetStoppedSuggestionsForTests(): void {
  */
 export function useStoppedSuggestions(): {
   stopped: StoppedEntries & StoppedSeries
-  stop: (seriesKey: string, entry: StoppedEntry) => void
+  stop: (
+    seriesKey: string,
+    entry: StoppedEntry,
+  ) => void
   restore: (seriesKey: string) => void
 } {
   const key = ownerKey(OWNER_KEYS.stopped, useAccountOwner())
@@ -117,7 +133,14 @@ export function useStoppedSuggestions(): {
   const current = useCallback(() => snapshot(key), [key])
   const stopped = useSyncExternalStore(subscribeTo, current, () => NONE)
   return useMemo(
-    () => ({ stopped, stop: (seriesKey, entry) => stop(key, seriesKey, entry), restore: (seriesKey) => restore(key, seriesKey) }),
+    () => ({
+      stopped,
+      stop: (
+        seriesKey,
+        entry,
+      ) => stop(key, seriesKey, entry),
+      restore: (seriesKey) => restore(key, seriesKey),
+    }),
     [key, stopped],
   )
 }

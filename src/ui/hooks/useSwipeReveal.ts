@@ -20,7 +20,10 @@ function applyOffset(
 }
 
 /** Horizontal swipe-to-reveal for trailing row actions (e.g. copy, delete). */
-export function useSwipeReveal(enabled: boolean, actionCount = 1) {
+export function useSwipeReveal(
+  enabled: boolean,
+  actionCount = 1,
+) {
   const revealPx = swipeRevealPx(actionCount)
   const [offset, setOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -71,18 +74,14 @@ export function useSwipeReveal(enabled: boolean, actionCount = 1) {
     setIsDragging(false)
     const elapsed = lastTime.current - startTime.current
     const velocityX = elapsed > 0 ? (lastX.current - startX.current) / elapsed : 0
-    applyOffset(setOffset, offsetRef, (current) =>
-      resolveSwipeSnap(current, revealPx, velocityX),
-    )
+    applyOffset(setOffset, offsetRef, (current) => resolveSwipeSnap(current, revealPx, velocityX))
   }
 
   const onTouchCancel = () => {
     if (!enabled) return
     setIsDragging(false)
     didSwipeRef.current = false
-    applyOffset(setOffset, offsetRef, (current) =>
-      resolveSwipeSnap(current, revealPx, 0),
-    )
+    applyOffset(setOffset, offsetRef, (current) => resolveSwipeSnap(current, revealPx, 0))
   }
 
   return {

@@ -138,10 +138,7 @@ describe('reimbursementFailureCopy', () => {
   })
 
   it('does not tell the user to just try again on a conflict', () => {
-    const conflict = new ReimbursementSettleError(
-      Object.assign(new Error('Already settled'), { status: 409 }),
-      true,
-    )
+    const conflict = new ReimbursementSettleError(Object.assign(new Error('Already settled'), { status: 409 }), true)
 
     const copy = reimbursementFailureCopy(conflict)
 
@@ -157,8 +154,6 @@ describe('reimbursementFailureCopy', () => {
   })
 
   it('falls back for an error that never reached the settle step', () => {
-    expect(reimbursementFailureCopy(new Error('offline'))).toBe(
-      'offline. Nothing was recorded — try again.',
-    )
+    expect(reimbursementFailureCopy(new Error('offline'))).toBe('offline. Nothing was recorded — try again.')
   })
 })

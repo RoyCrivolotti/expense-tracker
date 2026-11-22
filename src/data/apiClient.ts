@@ -9,7 +9,11 @@ export class ApiError extends Error {
    */
   declare readonly body: unknown
 
-  constructor(message: string, status: number, body?: unknown) {
+  constructor(
+    message: string,
+    status: number,
+    body?: unknown,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
@@ -56,14 +60,20 @@ async function answered<T>(res: Response): Promise<T> {
  * binary. Deliberately sets no content-type: the browser has to write the
  * multipart boundary itself, and supplying one would corrupt the body.
  */
-export async function reqMultipart<T>(url: string, form: FormData): Promise<T> {
+export async function reqMultipart<T>(
+  url: string,
+  form: FormData,
+): Promise<T> {
   const res = await fetch(url, { method: 'POST', credentials: 'same-origin', body: form })
   if (!res.ok) throw await toApiError(res)
   return answered<T>(res)
 }
 
 /** Shared JSON fetch wrapper for expense + access API clients. */
-export async function req<T>(url: string, init?: RequestInit): Promise<T> {
+export async function req<T>(
+  url: string,
+  init?: RequestInit,
+): Promise<T> {
   const res = await fetch(url, {
     credentials: 'same-origin',
     headers: { accept: 'application/json', ...(init?.headers ?? {}) },

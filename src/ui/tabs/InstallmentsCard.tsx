@@ -230,11 +230,7 @@ export function InstallmentsCard({ model, actions, month }: Props) {
         </button>
       </Card>
       <Presence show={managing} exitMs={EXIT_MS.sheet}>
-        <InstallmentPlansModal
-          model={model}
-          actions={actions}
-          onClose={() => setManaging(false)}
-        />
+        <InstallmentPlansModal model={model} actions={actions} onClose={() => setManaging(false)} />
       </Presence>
     </>
   )

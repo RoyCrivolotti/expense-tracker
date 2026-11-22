@@ -7,7 +7,10 @@ import {
   hydratedMonthsFor,
 } from './hydration'
 
-const run = (first: number, count: number) =>
+const run = (
+  first: number,
+  count: number,
+) =>
   Array.from({ length: count }, (_, i) => {
     const index = first + i
     return `${2024 + Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
@@ -51,7 +54,7 @@ describe('chooseHydratedMonths', () => {
     expect(chooseHydratedMonths([], '2025-06')).toEqual([])
   })
 
-  it('accepts an unsorted list with repeats, as a list of every row\'s month would be', () => {
+  it("accepts an unsorted list with repeats, as a list of every row's month would be", () => {
     expect(chooseHydratedMonths(['2025-03', '2025-01', '2025-03', '2025-02'], '2025-03', 2)).toEqual([
       '2025-02',
       '2025-03',

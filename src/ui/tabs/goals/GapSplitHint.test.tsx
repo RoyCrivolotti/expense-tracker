@@ -19,7 +19,14 @@ const split: GapSplit = {
 }
 
 const show = (over: Partial<GapSplit> = {}) =>
-  render(<GapSplitHint reading={{ ...split, ...over }} planStartDate="2026-01-01" format={EU_MONEY_FORMAT} onRebaseline={undefined} />)
+  render(
+    <GapSplitHint
+      reading={{ ...split, ...over }}
+      planStartDate="2026-01-01"
+      format={EU_MONEY_FORMAT}
+      onRebaseline={undefined}
+    />,
+  )
 
 const NOTE = 'Anything you put in that is not recorded as an investment counts as the market.'
 
@@ -37,10 +44,14 @@ describe('GapSplitHint', () => {
     expect(amountOf('You started behind the plan').className).toMatch(/gapAmountDown/)
     expect(amountOf('Investing more than planned').className).toMatch(/gapAmountUp/)
     expect(amountOf('The market doing worse than the plan assumes').className).toMatch(/gapAmountDown/)
-    expect(amountOf("The plan's line moves a year at a time (not something you did)").className).not.toMatch(/gapAmountUp|gapAmountDown/)
+    expect(amountOf("The plan's line moves a year at a time (not something you did)").className).not.toMatch(
+      /gapAmountUp|gapAmountDown/,
+    )
   })
 
   it('says an investment account was opened or emptied between the check-ins, when one was', () => {
-    expect(show({ accountsChanged: true }).container.textContent).toContain('An investment account was opened or emptied between these check-ins')
+    expect(show({ accountsChanged: true }).container.textContent).toContain(
+      'An investment account was opened or emptied between these check-ins',
+    )
   })
 })

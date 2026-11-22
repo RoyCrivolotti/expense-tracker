@@ -51,9 +51,7 @@ export function ReceiptStorageSetting({ attachments, pending = 0, ensureAll }: P
           <div className={barStyles.head}>
             <span className={barStyles.used}>
               {formatStorageSize(usage.usedBytes)}{' '}
-              <span className={barStyles.muted}>
-                of {formatStorageSize(usage.limitBytes)}
-              </span>
+              <span className={barStyles.muted}>of {formatStorageSize(usage.limitBytes)}</span>
             </span>
             <Pill tone={tone}>
               {/* Rounding hides the difference between "nearly nothing" and
@@ -62,15 +60,11 @@ export function ReceiptStorageSetting({ attachments, pending = 0, ensureAll }: P
             </Pill>
           </div>
           <div className={barStyles.track}>
-            <div
-              className={`${barStyles.fill} ${barStyles[tone]}`}
-              style={{ width: `${Math.max(1, pct)}%` }}
-            />
+            <div className={`${barStyles.fill} ${barStyles[tone]}`} style={{ width: `${Math.max(1, pct)}%` }} />
           </div>
           <p className={styles.settingHint}>
-            {usage.count} receipt{usage.count === 1 ? '' : 's'} stored. Photos are shrunk before
-            upload, so most are well under a megabyte. Deleting a receipt frees its space
-            immediately.
+            {usage.count} receipt{usage.count === 1 ? '' : 's'} stored. Photos are shrunk before upload, so most are
+            well under a megabyte. Deleting a receipt frees its space immediately.
           </p>
         </div>
       </Card>

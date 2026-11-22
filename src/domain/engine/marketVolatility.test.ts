@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_MARKET_VOLATILITY, MARKET_VOLATILITY_MAX, MARKET_VOLATILITY_MIN, MARKET_VOLATILITY_PRESETS, marketVolatilityError } from './marketVolatility'
+import {
+  DEFAULT_MARKET_VOLATILITY,
+  MARKET_VOLATILITY_MAX,
+  MARKET_VOLATILITY_MIN,
+  MARKET_VOLATILITY_PRESETS,
+  marketVolatilityError,
+} from './marketVolatility'
 
 describe('marketVolatilityError', () => {
   it('accepts the default, both bounds and a value between', () => {

@@ -19,7 +19,10 @@ interface Props {
   onDelete: () => void
 }
 
-function saveButtonText(busy: boolean, label: Label | null): string {
+function saveButtonText(
+  busy: boolean,
+  label: Label | null,
+): string {
   if (busy) return 'Saving…'
   return label ? 'Save label' : 'Add label'
 }
@@ -52,12 +55,7 @@ export function LabelFormActions({
         <button type="button" className={styles.saveBtn} disabled={busy || awaitingDelete} onClick={onSave}>
           {saveButtonText(busy, label)}
         </button>
-        <button
-          type="button"
-          className={styles.cancelBtn}
-          disabled={busy || awaitingDelete}
-          onClick={onCancel}
-        >
+        <button type="button" className={styles.cancelBtn} disabled={busy || awaitingDelete} onClick={onCancel}>
           Cancel
         </button>
       </div>

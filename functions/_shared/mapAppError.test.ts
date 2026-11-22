@@ -16,7 +16,10 @@ describe('toHttpError', () => {
   it('preserves the status of any other HTTP-shaped error (e.g. the in-memory repo test double)', () => {
     class RepoHttpErrorLike extends Error {
       readonly status: number
-      constructor(status: number, message: string) {
+      constructor(
+        status: number,
+        message: string,
+      ) {
         super(message)
         this.status = status
       }

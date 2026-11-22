@@ -24,7 +24,12 @@ const accounts: WealthAccount[] = [
   { id: 2, name: 'Savings', kind: 'cash', sortOrder: 1, archived: false },
 ]
 
-function checkin(id: number, date: string, broker: number, savings: number): WealthCheckin {
+function checkin(
+  id: number,
+  date: string,
+  broker: number,
+  savings: number,
+): WealthCheckin {
   return {
     id,
     checkinDate: date,
@@ -53,14 +58,12 @@ describe('NetWorthHistoryChart', () => {
   })
 
   it('asks for a second check-in before drawing anything', () => {
-    render(
-      <NetWorthHistoryChart checkins={[checkin(1, monthsAgo(1), 100, 50)]} accounts={accounts} />,
-    )
+    render(<NetWorthHistoryChart checkins={[checkin(1, monthsAgo(1), 100, 50)]} accounts={accounts} />)
     expect(screen.getByText(/Log a second check-in/)).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
-  it('says balances are as logged, in euros on your account, since the plan chart beside it is in the plan\'s euros', () => {
+  it("says balances are as logged, in euros on your account, since the plan chart beside it is in the plan's euros", () => {
     render(
       <NetWorthHistoryChart
         checkins={[checkin(1, monthsAgo(6), 100_000_00, 20_000_00), checkin(2, monthsAgo(3), 110_000_00, 25_000_00)]}
@@ -108,7 +111,10 @@ describe('NetWorthHistoryChart', () => {
   })
 
   it('adds an assets line once a debt is logged, so a mortgage does not read as a loss', () => {
-    const withMortgage = [...accounts, { id: 3, name: 'Mortgage', kind: 'debt' as const, sortOrder: 2, archived: false }]
+    const withMortgage = [
+      ...accounts,
+      { id: 3, name: 'Mortgage', kind: 'debt' as const, sortOrder: 2, archived: false },
+    ]
     const before = checkin(1, monthsAgo(3), 100_000_00, 50_000_00)
     const bought: WealthCheckin = {
       ...checkin(2, monthsAgo(0), 100_000_00, 10_000_00),
@@ -125,16 +131,18 @@ describe('NetWorthHistoryChart', () => {
     expect(screen.getByRole('img', { name: /assets/ })).toBeInTheDocument()
 
     // The same accounts with no debt balance logged: two lines, as before.
-    rerender(<NetWorthHistoryChart checkins={[before, checkin(2, monthsAgo(0), 110_000_00, 10_000_00)]} accounts={withMortgage} />)
+    rerender(
+      <NetWorthHistoryChart
+        checkins={[before, checkin(2, monthsAgo(0), 110_000_00, 10_000_00)]}
+        accounts={withMortgage}
+      />,
+    )
     expect(screen.queryByText('Assets')).not.toBeInTheDocument()
     expect(container.querySelectorAll('circle')).toHaveLength(4)
   })
 
   it('drops readings outside a narrower window and widens on request', () => {
-    const checkins = [
-      checkin(1, monthsAgo(30), 100_000_00, 0),
-      checkin(2, monthsAgo(1), 150_000_00, 0),
-    ]
+    const checkins = [checkin(1, monthsAgo(30), 100_000_00, 0), checkin(2, monthsAgo(1), 150_000_00, 0)]
     const { container } = render(<NetWorthHistoryChart checkins={checkins} accounts={accounts} />)
     expect(screen.getByRole('radio', { name: '5Y' })).toBeChecked()
     expect(container.querySelectorAll('circle')).toHaveLength(4)
@@ -144,10 +152,7 @@ describe('NetWorthHistoryChart', () => {
   })
 
   it('says so when a chosen window holds no check-in, instead of drawing a flat zero', () => {
-    const checkins = [
-      checkin(1, monthsAgo(30), 100_000_00, 0),
-      checkin(2, monthsAgo(13), 150_000_00, 0),
-    ]
+    const checkins = [checkin(1, monthsAgo(30), 100_000_00, 0), checkin(2, monthsAgo(13), 150_000_00, 0)]
     const { container } = render(<NetWorthHistoryChart checkins={checkins} accounts={accounts} />)
     fireEvent.click(screen.getByRole('radio', { name: '3M' }))
 

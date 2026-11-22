@@ -83,7 +83,9 @@ describe('the account ceiling', () => {
   })
 
   it('refuses when the planned writes would pass it, whoever wrote the rows already', () => {
-    expect(() => assertAccountHasRoom({ rowsRead: 0, rowsWritten: 30_000 }, 12_000)).toThrow(/account has written 30000/)
+    expect(() => assertAccountHasRoom({ rowsRead: 0, rowsWritten: 30_000 }, 12_000)).toThrow(
+      /account has written 30000/,
+    )
   })
 
   it('refuses when the account has already read too much', () => {

@@ -89,9 +89,12 @@ function EmptyList({
   canAdd,
   loading,
   onClearFilters,
-}: Pick<TransactionListProps, 'emptyState' | 'accountEmpty' | 'canAdd' | 'loading'> & { onClearFilters: (() => void) | undefined }) {
+}: Pick<TransactionListProps, 'emptyState' | 'accountEmpty' | 'canAdd' | 'loading'> & {
+  onClearFilters: (() => void) | undefined
+}) {
   if (emptyState) return <>{emptyState}</>
-  if (accountEmpty && !loading) return <EmptyState>{canAdd ? 'No transactions yet. Tap + to add one.' : 'No transactions yet.'}</EmptyState>
+  if (accountEmpty && !loading)
+    return <EmptyState>{canAdd ? 'No transactions yet. Tap + to add one.' : 'No transactions yet.'}</EmptyState>
   return (
     <EmptyState actionLabel={onClearFilters && !loading ? 'Clear filters' : undefined} onAction={onClearFilters}>
       {loading ? 'Loading…' : 'No transactions match these filters.'}
@@ -99,11 +102,21 @@ function EmptyList({
   )
 }
 
-export function TransactionList({ rows, loading, emptyState, accountEmpty, canAdd, lookup, flat = false, ...props }: TransactionListProps) {
+export function TransactionList({
+  rows,
+  loading,
+  emptyState,
+  accountEmpty,
+  canAdd,
+  lookup,
+  flat = false,
+  ...props
+}: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
   const groups = useMemo(() => (flat ? [] : groupListRowsByDay(rows)), [rows, flat])
 
-  if (rows.length === 0) return <EmptyList {...{ emptyState, accountEmpty, canAdd, loading }} onClearFilters={props.onClearFilters} />
+  if (rows.length === 0)
+    return <EmptyList {...{ emptyState, accountEmpty, canAdd, loading }} onClearFilters={props.onClearFilters} />
 
   const renderListRow = (row: TransactionListRow) => renderRow(row, lookup, props)
   if (flat) return <div className={styles.list}>{rows.map(renderListRow)}</div>
@@ -119,25 +132,13 @@ export function TransactionList({ rows, loading, emptyState, accountEmpty, canAd
   if (rows.length > WINDOW_FROM_ROWS) {
     // Row height depends on the layout of the row, so measurements are not carried over a switch.
     const signature = `${shared.selectMode}-${props.swipeDelete ?? false}`
-    return (
-      <WindowedGroups
-        groups={groups}
-        collapsedDates={collapsedDates}
-        signature={signature}
-        shared={shared}
-      />
-    )
+    return <WindowedGroups groups={groups} collapsedDates={collapsedDates} signature={signature} shared={shared} />
   }
 
   return (
     <div className={styles.list}>
       {groups.map((group) => (
-        <DayGroup
-          key={group.date}
-          group={group}
-          collapsed={collapsedDates.has(group.date)}
-          {...shared}
-        >
+        <DayGroup key={group.date} group={group} collapsed={collapsedDates.has(group.date)} {...shared}>
           {group.rows.map(renderListRow)}
         </DayGroup>
       ))}

@@ -37,7 +37,11 @@ function Harness({ turn = 0, frozen = false }: { turn?: Turn; frozen?: boolean }
   const corner = useRef<HTMLButtonElement>(null)
   useFloatingCard({ stage, card, bar, content, grip, corner, placement, choice, turn, frozen })
   // jsdom lays nothing out, so the sizes the hook reads are planted when the elements arrive.
-  const plant = (el: HTMLElement | null, sizeOf: () => { width?: number; height: number }, keys: [string, string]) => {
+  const plant = (
+    el: HTMLElement | null,
+    sizeOf: () => { width?: number; height: number },
+    keys: [string, string],
+  ) => {
     if (!el) return
     Object.defineProperty(el, keys[0], { get: () => sizeOf().width, configurable: true })
     Object.defineProperty(el, keys[1], { get: () => sizeOf().height, configurable: true })
@@ -82,7 +86,11 @@ const corner = () => screen.getByRole('button', { name: 'Size' })
 const at = () => card().style.transform
 const wide = () => card().style.width
 const high = () => card().style.height
-const touch = (clientX: number, clientY: number, over = {}) => ({
+const touch = (
+  clientX: number,
+  clientY: number,
+  over = {},
+) => ({
   clientX,
   clientY,
   pointerId: 1,
@@ -173,7 +181,7 @@ describe('useFloatingCard dragging', () => {
     expect(at()).toBe('translate3d(330px, 115px, 0)')
   })
 
-  it('reads a box turned a quarter turn from the screen\'s other axis', () => {
+  it("reads a box turned a quarter turn from the screen's other axis", () => {
     render(<Harness turn={1} />)
     fireEvent.pointerDown(grip(), touch(500, 400))
     fireEvent.pointerMove(grip(), touch(490, 420))
@@ -352,7 +360,7 @@ describe('useFloatingCard resizing', () => {
     expect(at()).toBe('translate3d(160px, 40px, 0)')
   })
 
-  it('reads a box turned a quarter turn from the screen\'s other axis', () => {
+  it("reads a box turned a quarter turn from the screen's other axis", () => {
     render(<Harness turn={1} />)
     fireEvent.pointerDown(corner(), touch(500, 300))
     // 20 to the left of the screen is 20 down the box, and 40 down the screen is 40 along it.

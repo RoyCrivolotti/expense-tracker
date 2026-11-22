@@ -59,7 +59,10 @@ export function receiptFileName(
 }
 
 /** Folder and zip name for a claim's receipts. */
-export function receiptPackName(flagName: string, from: string): string {
+export function receiptPackName(
+  flagName: string,
+  from: string,
+): string {
   const name = safeSegment(flagName)
   const period = from ? ` ${from.slice(0, 7)}` : ''
   // The fallback is the whole name, not a substitute flag name — appending

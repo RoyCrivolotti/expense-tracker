@@ -17,18 +17,24 @@ interface UploadedFile {
   arrayBuffer(): Promise<ArrayBuffer>
 }
 
-function asFile(value: ReturnType<FormData["get"]>): UploadedFile | null {
+function asFile(value: ReturnType<FormData['get']>): UploadedFile | null {
   if (value == null || typeof value === 'string') return null
   return value
 }
 
-function requireFile(form: FormData, field: string): UploadedFile {
+function requireFile(
+  form: FormData,
+  field: string,
+): UploadedFile {
   const file = asFile(form.get(field))
   if (!file) throw new HttpError(400, `${field} is required`)
   return file
 }
 
-function optionalNumber(form: FormData, field: string): number | undefined {
+function optionalNumber(
+  form: FormData,
+  field: string,
+): number | undefined {
   const raw = form.get(field)
   if (typeof raw !== 'string') return undefined
   const parsed = Number(raw)
@@ -46,7 +52,10 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
   const { repo, owner } = context.data
   try {
     const { transactionId } = singleParams(new URL(context.request.url), ['transactionId'])
-    const serve = (scope: string, id?: number) =>
+    const serve = (
+      scope: string,
+      id?: number,
+    ) =>
       serveList({
         db: context.env.DB,
         owner,
@@ -92,9 +101,7 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
         ...(thumb ? { thumb: await thumb.arrayBuffer() } : {}),
         ...(file.name ? { originalName: file.name } : {}),
         ...(optionalNumber(form, 'width') != null ? { width: optionalNumber(form, 'width') } : {}),
-        ...(optionalNumber(form, 'height') != null
-          ? { height: optionalNumber(form, 'height') }
-          : {}),
+        ...(optionalNumber(form, 'height') != null ? { height: optionalNumber(form, 'height') } : {}),
       }),
       201,
     )

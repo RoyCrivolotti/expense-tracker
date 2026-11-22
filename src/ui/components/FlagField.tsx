@@ -23,7 +23,12 @@ interface Props {
    */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
   /** Passed straight through; see FlagPickerPopover. */
-  onCreate?: ((name: string, reimbursable: boolean) => Promise<number>) | undefined
+  onCreate?:
+    | ((
+        name: string,
+        reimbursable: boolean,
+      ) => Promise<number>)
+    | undefined
 }
 
 /**

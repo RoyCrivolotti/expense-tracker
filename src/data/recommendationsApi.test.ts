@@ -9,7 +9,8 @@ import {
   submitRecommendation,
 } from './recommendationsApi'
 
-const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+const ok = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 const ID = '0b0c0d0e-1111-4222-8333-444455556666'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -63,7 +64,14 @@ describe('submitting when a typed row looks the same', () => {
     cancelled: false,
   }
   const refuse = (body: unknown) =>
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 409, headers: { 'content-type': 'application/json' } })))
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(body), { status: 409, headers: { 'content-type': 'application/json' } }),
+        ),
+    )
 
   it('sends allowDuplicate: true only when asked to, and not otherwise', async () => {
     const fetchMock = stub({ id: 7 })
@@ -71,7 +79,10 @@ describe('submitting when a typed row looks the same', () => {
     await submitRecommendation(ID, input, true)
     await submitRecommendation(ID, input)
 
-    expect(JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string)).toEqual({ ...input, allowDuplicate: true })
+    expect(JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+      ...input,
+      allowDuplicate: true,
+    })
     expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual(input)
   })
 

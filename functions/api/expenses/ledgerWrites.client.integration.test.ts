@@ -57,7 +57,10 @@ function routeFetch() {
     ['/api/expenses/reference', 'GET', getReference],
     ['/api/expenses/cube', 'GET', getCube],
   ]
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     const method = init?.method ?? 'GET'
     const handler = handlers.find(([path, verb]) => path === url.pathname && verb === method)?.[2]
@@ -76,11 +79,16 @@ function routeFetch() {
 }
 
 const ids = (where = '1 = 1'): number[] =>
-  (sqlite.prepare(`SELECT id FROM transactions WHERE owner = ? AND ${where} ORDER BY id`).all(OWNER) as Array<{ id: number }>).map(
-    (row) => row.id,
-  )
+  (
+    sqlite.prepare(`SELECT id FROM transactions WHERE owner = ? AND ${where} ORDER BY id`).all(OWNER) as Array<{
+      id: number
+    }>
+  ).map((row) => row.id)
 
-const count = (table: string, where = '1 = 1'): number =>
+const count = (
+  table: string,
+  where = '1 = 1',
+): number =>
   (sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE owner = ? AND ${where}`).get(OWNER) as { n: number }).n
 
 const labelCount = (labelId: number): number =>
@@ -123,7 +131,10 @@ describe('bulk writes larger than a request', () => {
 
   it('says how far a delete got when a later request fails, because the earlier ones stay written', async () => {
     const all = ids()
-    afterRequest.push([0, async () => vi.stubGlobal('fetch', async () => new Response('{"error":"Database is busy"}', { status: 500 }))])
+    afterRequest.push([
+      0,
+      async () => vi.stubGlobal('fetch', async () => new Response('{"error":"Database is busy"}', { status: 500 })),
+    ])
 
     await expect(source.deleteTransactions(all.slice(0, 1_203))).rejects.toThrow(
       '500 of 1,203 were done before this failed: Database is busy',
@@ -134,21 +145,25 @@ describe('bulk writes larger than a request', () => {
 
   it('edits rows in requests of at most 100 ids, however few the route would take, and answers every row it changed', async () => {
     const all = ids()
-    const category = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }).id
+    const category = (
+      sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }
+    ).id
     const edited = all.slice(0, 1_100)
 
     const result = await source.updateTransactions(edited, { categoryId: category })
 
     expect(result.updated).toBe(1_100)
     expect(result.transactions.map((row) => row.id).sort((a, b) => a - b)).toEqual(edited)
-    expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([...Array.from({ length: 11 }, () => 100)])
+    expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([
+      ...Array.from({ length: 11 }, () => 100),
+    ])
     expect(ids(`category_id = ${category}`).filter((id) => edited.includes(id))).toEqual(edited)
   })
 
   it('adds labels to rows without taking the ones they have, in requests that hold the link bound', async () => {
-    const [first, second] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>).map(
-      (row) => row.id,
-    ) as [number, number]
+    const [first, second] = (
+      sqlite.prepare('SELECT id FROM labels WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>
+    ).map((row) => row.id) as [number, number]
     const rows = ids().slice(0, 600)
     const before = labelCount(first)
 
@@ -161,20 +176,37 @@ describe('bulk writes larger than a request', () => {
     expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([500, 100])
     // 20 labels leave room for 250 rows a request.
     sent = []
-    await source.addLabelsToTransactions(rows, Array.from({ length: 20 }, () => first))
+    await source.addLabelsToTransactions(
+      rows,
+      Array.from({ length: 20 }, () => first),
+    )
     expect(sent.map((request) => (request.body.ids as number[]).length)).toEqual([250, 250, 100])
   })
 })
 
 describe('an edit on the rows a filter matches', () => {
-  const categoryOf = (): number => (sqlite.prepare('SELECT category_id AS id FROM transactions WHERE owner = ? GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1').get(OWNER) as { id: number }).id
-  const otherCategory = (than: number): number => (sqlite.prepare('SELECT id FROM categories WHERE owner = ? AND id <> ? ORDER BY id LIMIT 1').get(OWNER, than) as { id: number }).id
+  const categoryOf = (): number =>
+    (
+      sqlite
+        .prepare(
+          'SELECT category_id AS id FROM transactions WHERE owner = ? GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1',
+        )
+        .get(OWNER) as { id: number }
+    ).id
+  const otherCategory = (than: number): number =>
+    (
+      sqlite.prepare('SELECT id FROM categories WHERE owner = ? AND id <> ? ORDER BY id LIMIT 1').get(OWNER, than) as {
+        id: number
+      }
+    ).id
 
   it('adds the labels first and the edit second, with the revision the labels left', async () => {
     const category = categoryOf()
     const target = await look({ categoryId: category })
     const matching = ids(`category_id = ${category}`)
-    const [label] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>).map((row) => row.id) as [number]
+    const [label] = (
+      sqlite.prepare('SELECT id FROM labels WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number }>
+    ).map((row) => row.id) as [number]
     const to = otherCategory(category)
 
     const result = await source.updateMatchingTransactions(target, { categoryId: to }, [label])
@@ -199,7 +231,9 @@ describe('an edit on the rows a filter matches', () => {
     expect(sent.map((request) => request.method)).toEqual(['PATCH'])
 
     sent = []
-    const [label] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ?').all(OWNER) as Array<{ id: number }>).map((row) => row.id) as [number]
+    const [label] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ?').all(OWNER) as Array<{ id: number }>).map(
+      (row) => row.id,
+    ) as [number]
     await source.updateMatchingTransactions(await look({ categoryId: to }), {}, [label])
     expect(sent.map((request) => request.path)).toEqual(['/api/expenses/transactions/bulk/labels'])
   })
@@ -209,7 +243,9 @@ describe('an edit on the rows a filter matches', () => {
     const target = await look({ categoryId: category })
     await world.call(putSettings, { method: 'PUT', path: '/settings', body: { currency: 'EUR' } })
 
-    const refused = await source.updateMatchingTransactions(target, { categoryId: otherCategory(category) }).catch((e: unknown) => e)
+    const refused = await source
+      .updateMatchingTransactions(target, { categoryId: otherCategory(category) })
+      .catch((e: unknown) => e)
 
     expect(refused).toBeInstanceOf(ApiError)
     expect((refused as ApiError).status).toBe(409)
@@ -220,16 +256,23 @@ describe('an edit on the rows a filter matches', () => {
   it('stops after the labels when the rows are no longer the ones that were shown, and says so', async () => {
     const category = categoryOf()
     const target = await look({ categoryId: category })
-    const [label] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ?').all(OWNER) as Array<{ id: number }>).map((row) => row.id) as [number]
+    const [label] = (sqlite.prepare('SELECT id FROM labels WHERE owner = ?').all(OWNER) as Array<{ id: number }>).map(
+      (row) => row.id,
+    ) as [number]
     // Another tab deletes a matching row between the labels and the edit.
     const gone = ids(`category_id = ${category}`)[0]!
-    afterRequest.push([0, () => world.call(deleteBulk, { method: 'DELETE', path: '/transactions/bulk', body: { ids: [gone] } })])
+    afterRequest.push([
+      0,
+      () => world.call(deleteBulk, { method: 'DELETE', path: '/transactions/bulk', body: { ids: [gone] } }),
+    ])
 
     const failure = await source
       .updateMatchingTransactions(target, { categoryId: otherCategory(category) }, [label])
       .catch((e: unknown) => e)
 
-    expect((failure as Error).message).toContain(`${target.expectedCount - 1} transactions match now, not the ${target.expectedCount} you were shown`)
+    expect((failure as Error).message).toContain(
+      `${target.expectedCount - 1} transactions match now, not the ${target.expectedCount} you were shown`,
+    )
     expect(sent.map((request) => request.path)).not.toContain('/api/expenses/transactions/bulk')
     expect(count('transactions', `category_id = ${category}`)).toBe(target.expectedCount - 1)
   })
@@ -255,19 +298,42 @@ describe('a ledger held as a window, after a write to months it holds only as su
   }
 
   /** Rows of months the session holds no rows for, oldest first. */
-  function unheld(session: LedgerSession, n: number): number[] {
+  function unheld(
+    session: LedgerSession,
+    n: number,
+  ): number[] {
     const held = session.getState().held!
     const months = new Set(held.rows.keys())
-    const rows = sqlite.prepare('SELECT id, budget_month AS month FROM transactions WHERE owner = ? ORDER BY id').all(OWNER) as Array<{ id: number; month: string }>
-    return rows.filter((row) => !months.has(row.month) && !held.pinned.some((p) => p.id === row.id)).slice(0, n).map((row) => row.id)
+    const rows = sqlite
+      .prepare('SELECT id, budget_month AS month FROM transactions WHERE owner = ? ORDER BY id')
+      .all(OWNER) as Array<{ id: number; month: string }>
+    return rows
+      .filter((row) => !months.has(row.month) && !held.pinned.some((p) => p.id === row.id))
+      .slice(0, n)
+      .map((row) => row.id)
   }
 
-  const category = (): number => (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number }).id
+  const category = (): number =>
+    (sqlite.prepare('SELECT id FROM categories WHERE owner = ? ORDER BY id DESC LIMIT 1').get(OWNER) as { id: number })
+      .id
 
-  const writes: Array<[string, (session: LedgerSession, rows: number[], reach: boolean) => Promise<void>]> = [
+  const writes: Array<
+    [
+      string,
+      (
+        session: LedgerSession,
+        rows: number[],
+        reach: boolean,
+      ) => Promise<void>,
+    ]
+  > = [
     [
       'an edit by id',
-      async (session, rows, reach) => {
+      async (
+        session,
+        rows,
+        reach,
+      ) => {
         const patch = { categoryId: category() }
         const result = await source.updateTransactions(rows, patch)
         session.patch((d) => patchAfterBulkUpdate(d, result.transactions), reach ? { ids: rows, patch } : undefined)
@@ -275,16 +341,26 @@ describe('a ledger held as a window, after a write to months it holds only as su
     ],
     [
       'a delete by id',
-      async (session, rows, reach) => {
+      async (
+        session,
+        rows,
+        reach,
+      ) => {
         await source.deleteTransactions(rows)
         session.patch((d) => patchAfterBulkDelete(d, rows), reach ? { ids: rows } : undefined)
       },
     ],
     [
       'an edit on a filter',
-      async (session, rows, reach) => {
+      async (
+        session,
+        rows,
+        reach,
+      ) => {
         const patch = { categoryId: category() }
-        const old = (sqlite.prepare('SELECT category_id AS id FROM transactions WHERE id = ?').get(rows[0]!) as { id: number }).id
+        const old = (
+          sqlite.prepare('SELECT category_id AS id FROM transactions WHERE id = ?').get(rows[0]!) as { id: number }
+        ).id
         await source.updateMatchingTransactions(await look({ categoryId: old }), patch)
         session.patch((d) => d, reach ? { patch } : undefined)
       },
@@ -301,8 +377,12 @@ describe('a ledger held as a window, after a write to months it holds only as su
   it('reads only the sums of the month a new row is in, since the patch already counts the row and cannot know the sums', async () => {
     const session = await opened()
     const [unheldRow] = unheld(session, 1)
-    const month = (sqlite.prepare('SELECT budget_month AS month FROM transactions WHERE id = ?').get(unheldRow!) as { month: string }).month
-    const account = (sqlite.prepare('SELECT id FROM accounts WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }).id
+    const month = (
+      sqlite.prepare('SELECT budget_month AS month FROM transactions WHERE id = ?').get(unheldRow!) as { month: string }
+    ).month
+    const account = (
+      sqlite.prepare('SELECT id FROM accounts WHERE owner = ? ORDER BY id LIMIT 1').get(OWNER) as { id: number }
+    ).id
     const added = await source.createTransaction({
       date: `${month}-15`,
       budgetMonth: month,
@@ -322,25 +402,39 @@ describe('a ledger held as a window, after a write to months it holds only as su
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(sent.map((request) => request.path.replace('/api/expenses', ''))).toEqual(['/cube'])
     // The session read the sums of that month and no other, so it is the months it holds no rows for that are compared.
-    const beyondRows = (cells: ReturnType<typeof cellsOf>) => cells!.filter((cell) => !session.getState().held!.rows.has(cell.budgetMonth))
+    const beyondRows = (cells: ReturnType<typeof cellsOf>) =>
+      cells!.filter((cell) => !session.getState().held!.rows.has(cell.budgetMonth))
     await vi.waitFor(async () => expect(beyondRows(cellsOf(session))).toEqual(beyondRows(await truth())), wait)
   })
 
-  it.each(writes)('keeps the old sums of those months after %s when nothing says the write went past the rows it holds', async (_name, write) => {
-    const session = await opened()
-    const before = cellsOf(session)
-    await write(session, unheld(session, 40), false)
-    await new Promise((resolve) => setTimeout(resolve, 150))
+  it.each(writes)(
+    'keeps the old sums of those months after %s when nothing says the write went past the rows it holds',
+    async (_name, write) => {
+      const session = await opened()
+      const before = cellsOf(session)
+      await write(session, unheld(session, 40), false)
+      await new Promise((resolve) => setTimeout(resolve, 150))
 
-    expect(cellsOf(session)).toEqual(before)
-    expect(before).not.toEqual(await truth())
-  })
+      expect(cellsOf(session)).toEqual(before)
+      expect(before).not.toEqual(await truth())
+    },
+  )
 })
 
 describe('a list read in pages, after an edit on the filter it shows', () => {
   it('offers the filter as it was read, and shows what the edit moved once it reads again', async () => {
-    const category = (sqlite.prepare('SELECT category_id AS id FROM transactions WHERE owner = ? GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1').get(OWNER) as { id: number }).id
-    const to = (sqlite.prepare('SELECT id FROM categories WHERE owner = ? AND id <> ? ORDER BY id LIMIT 1').get(OWNER, category) as { id: number }).id
+    const category = (
+      sqlite
+        .prepare(
+          'SELECT category_id AS id FROM transactions WHERE owner = ? GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1',
+        )
+        .get(OWNER) as { id: number }
+    ).id
+    const to = (
+      sqlite
+        .prepare('SELECT id FROM categories WHERE owner = ? AND id <> ? ORDER BY id LIMIT 1')
+        .get(OWNER, category) as { id: number }
+    ).id
     const pager = new TransactionPager(source, { limit: 100 })
     pager.attach()
     pager.setFilter({ categoryId: category })

@@ -41,7 +41,11 @@ export async function startSite({ root, access = null, port = 0 }) {
       res.writeHead(failing, { 'content-type': 'text/plain' })
       return res.end('failing on purpose')
     }
-    const send = (status, body, type) => {
+    const send = (
+      status,
+      body,
+      type,
+    ) => {
       res.writeHead(status, { 'content-type': type, 'cache-control': 'public, max-age=0, must-revalidate' })
       res.end(body)
     }
@@ -51,11 +55,15 @@ export async function startSite({ root, access = null, port = 0 }) {
     }
     if (url.pathname.startsWith('/api/')) {
       const answer = state.api.get(url.pathname)
-      if (answer === undefined) return send(404, JSON.stringify({ error: 'There is no API behind this server' }), 'application/json')
-      return Promise.resolve(typeof answer === 'function' ? answer(url) : answer).then((body) => send(200, JSON.stringify(body), 'application/json'))
+      if (answer === undefined)
+        return send(404, JSON.stringify({ error: 'There is no API behind this server' }), 'application/json')
+      return Promise.resolve(typeof answer === 'function' ? answer(url) : answer).then((body) =>
+        send(200, JSON.stringify(body), 'application/json'),
+      )
     }
     let file = normalize(join(state.root, url.pathname === '/' ? 'index.html' : url.pathname))
-    if (!file.startsWith(state.root) || !existsSync(file) || statSync(file).isDirectory()) file = join(state.root, 'index.html')
+    if (!file.startsWith(state.root) || !existsSync(file) || statSync(file).isDirectory())
+      file = join(state.root, 'index.html')
     return send(200, readFileSync(file), TYPES[extname(file)] ?? 'application/octet-stream')
   })
   server.on('connection', (socket) => {

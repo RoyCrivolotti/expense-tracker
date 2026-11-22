@@ -16,7 +16,7 @@ function plan() {
 }
 
 describe('LazySpreadChart', () => {
-  it('holds the card\'s place with its title while it loads, then shows the card', async () => {
+  it("holds the card's place with its title while it loads, then shows the card", async () => {
     render(<LazySpreadChart draft={plan()} milestones={[]} runs={200} />)
     expect(screen.getByRole('heading', { name: 'How far luck could move the plan' })).toBeInTheDocument()
     expect(await screen.findByText(/Each of the 200 runs replays your plan/, undefined, LONG)).toBeInTheDocument()

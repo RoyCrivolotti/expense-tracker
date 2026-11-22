@@ -4,8 +4,15 @@ import type { CaptureTemplate } from '../../../src/domain/ports/captureRepositor
 import { MAX_TEMPLATE_TEXT, decideTemplate, matchTemplate, mutes } from './templates'
 
 const TITLE = 'Card payment'
-const push = (merchant: string, amount = '12,50') => readPush(TITLE, `You paid ${amount} EUR at ${merchant} with your card **4821`)
-const row = (templateId: string, skeleton: string, merchantStart: number | null = null): CaptureTemplate => ({
+const push = (
+  merchant: string,
+  amount = '12,50',
+) => readPush(TITLE, `You paid ${amount} EUR at ${merchant} with your card **4821`)
+const row = (
+  templateId: string,
+  skeleton: string,
+  merchantStart: number | null = null,
+): CaptureTemplate => ({
   ignoredAt: null,
   templateId,
   skeleton,
@@ -107,12 +114,18 @@ describe('decideTemplate', () => {
     const code = readPush(TITLE, 'Your code is 482913 for Example Cafe')
     expect(code.currencyAmount).toBeNull()
     expect(decideTemplate([], code, ids())).toEqual({ decision: { kind: 'none' }, merchant: null })
-    expect(decideTemplate([row('t1', code.skeleton)], code, ids())).toEqual({ decision: { kind: 'none' }, merchant: null })
+    expect(decideTemplate([row('t1', code.skeleton)], code, ids())).toEqual({
+      decision: { kind: 'none' },
+      merchant: null,
+    })
   })
 })
 
 describe('mutes', () => {
-  const ignored = (skeleton: string, merchantStart: number | null = null) => ({ ...row('t1', skeleton, merchantStart), ignoredAt: '2026-11-02T10:00:00.000Z' })
+  const ignored = (
+    skeleton: string,
+    merchantStart: number | null = null,
+  ) => ({ ...row('t1', skeleton, merchantStart), ignoredAt: '2026-11-02T10:00:00.000Z' })
   const wildcard = 'card payment you paid <N> <C> at <M> with your card <D>'
 
   it('mutes the same wording of an ignored template', () => {

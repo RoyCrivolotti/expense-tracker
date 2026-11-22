@@ -47,7 +47,9 @@ export function fiPatchForYears(
   years: number,
 ): { retirementYears: number; safeWithdrawalRate?: number } {
   const wasGuide = Math.abs(current.safeWithdrawalRate - recommendedWithdrawalRate(current.retirementYears)) < SAME_RATE
-  return wasGuide ? { retirementYears: years, safeWithdrawalRate: recommendedWithdrawalRate(years) } : { retirementYears: years }
+  return wasGuide
+    ? { retirementYears: years, safeWithdrawalRate: recommendedWithdrawalRate(years) }
+    : { retirementYears: years }
 }
 
 /** What a year of spending needs saved up at each of the rates the target is shown at. */

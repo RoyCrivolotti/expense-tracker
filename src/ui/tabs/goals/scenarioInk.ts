@@ -31,13 +31,20 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-export function contrastRatio(a: string, b: string): number {
+export function contrastRatio(
+  a: string,
+  b: string,
+): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
   return (hi + 0.05) / (lo + 0.05)
 }
 
 /** `hex` moved toward `target` in small steps until it has `MIN_CONTRAST` against `ground`. */
-function toward(hex: string, target: [number, number, number], ground: string): string {
+function toward(
+  hex: string,
+  target: [number, number, number],
+  ground: string,
+): string {
   const from = channels(hex)
   let mix = 0
   let out = hex

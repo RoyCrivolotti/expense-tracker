@@ -31,8 +31,10 @@ export function statementsOf(text) {
 }
 
 /** @param {Statement} statement @param {string} kind */
-const allowed = (statement, kind) =>
-  statement.notes.some((note) => new RegExp(`^lint-allow: ${kind} \\S`).test(note))
+const allowed = (
+  statement,
+  kind,
+) => statement.notes.some((note) => new RegExp(`^lint-allow: ${kind} \\S`).test(note))
 
 /**
  * What is wrong with one migration file; an empty list means nothing.
@@ -40,7 +42,10 @@ const allowed = (statement, kind) =>
  * @param {string} text
  * @returns {string[]}
  */
-export function lintMigration(file, text) {
+export function lintMigration(
+  file,
+  text,
+) {
   const problems = []
   if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(file)) {
     problems.push(`${file}: name it NNNN_lower_snake_case.sql`)
@@ -52,7 +57,8 @@ export function lintMigration(file, text) {
     const sql = statement.sql
     const shown = sql.length > 70 ? `${sql.slice(0, 70)}…` : sql
 
-    const destroys = /^DROP\s+(TABLE|COLUMN)\b/i.test(sql) || /^ALTER\s+TABLE\s+\S+\s+(DROP\s+COLUMN|RENAME)\b/i.test(sql)
+    const destroys =
+      /^DROP\s+(TABLE|COLUMN)\b/i.test(sql) || /^ALTER\s+TABLE\s+\S+\s+(DROP\s+COLUMN|RENAME)\b/i.test(sql)
     if (destroys && !allowed(statement, 'destructive')) {
       problems.push(
         `${file}: "${shown}" drops or renames something the code now running may still read. ` +
@@ -95,7 +101,9 @@ export function lintNumbering(files) {
   const numbers = [...seen.keys()].sort((a, b) => a - b)
   const gap = numbers.findIndex((n, i) => n !== i + 1)
   if (gap !== -1) {
-    problems.push(`numbering skips from ${String(gap).padStart(4, '0')} to ${String(numbers[gap]).padStart(4, '0')} at ${seen.get(numbers[gap])}`)
+    problems.push(
+      `numbering skips from ${String(gap).padStart(4, '0')} to ${String(numbers[gap]).padStart(4, '0')} at ${seen.get(numbers[gap])}`,
+    )
   }
   return problems
 }

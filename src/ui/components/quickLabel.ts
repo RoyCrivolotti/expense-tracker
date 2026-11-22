@@ -7,7 +7,10 @@ import { pickScenarioColor } from '../../domain/engine/projectionPresets'
  * A label created without leaving the transaction you are editing. Mirrors
  * quickFlagDraft, minus the reimbursable question a label never asks.
  */
-export function quickLabelDraft(name: string, existing: Label[]): NewLabel | null {
+export function quickLabelDraft(
+  name: string,
+  existing: Label[],
+): NewLabel | null {
   const trimmed = name.trim()
   if (!trimmed) return null
   return {
@@ -19,7 +22,10 @@ export function quickLabelDraft(name: string, existing: Label[]): NewLabel | nul
 }
 
 /** Case- and whitespace-insensitive, because "Japan trip" twice helps nobody. */
-export function duplicateLabelName(name: string, existing: Label[]): boolean {
+export function duplicateLabelName(
+  name: string,
+  existing: Label[],
+): boolean {
   const trimmed = name.trim().toLocaleLowerCase()
   return existing.some((l) => l.name.trim().toLocaleLowerCase() === trimmed)
 }

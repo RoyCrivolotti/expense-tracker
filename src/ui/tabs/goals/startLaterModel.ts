@@ -75,17 +75,29 @@ export interface StartLaterView {
 }
 
 /** The check-in to start from: the latest on or before the date. One after it says nothing about the date. */
-export function checkinOnOrBefore(checkins: readonly InvestedSnapshot[], date: string): InvestedSnapshot | null {
-  return checkins.filter((c) => c.date <= date).reduce<InvestedSnapshot | null>((best, c) => (!best || c.date > best.date ? c : best), null)
+export function checkinOnOrBefore(
+  checkins: readonly InvestedSnapshot[],
+  date: string,
+): InvestedSnapshot | null {
+  return checkins
+    .filter((c) => c.date <= date)
+    .reduce<InvestedSnapshot | null>((best, c) => (!best || c.date > best.date ? c : best), null)
 }
 
 /** Where the date picker opens: the latest check-in, which is the balance known for certain, else today. */
-export function defaultStartDate(checkins: readonly InvestedSnapshot[], today: string): string {
+export function defaultStartDate(
+  checkins: readonly InvestedSnapshot[],
+  today: string,
+): string {
   return checkinOnOrBefore(checkins, '9999-12-31')?.date ?? today
 }
 
 /** Why a copy of `source` cannot start on `date`, or null when it can. */
-export function startRefusal(source: NewGoalScenario, date: string, formatDate: (iso: string) => string): string | null {
+export function startRefusal(
+  source: NewGoalScenario,
+  date: string,
+  formatDate: (iso: string) => string,
+): string | null {
   const start = source.planStartDate
   if (!start || !isCalendarDate(start)) return `${source.name} has no start date. Set one under Plan start first.`
   if (date < start) return `Pick a date on or after ${source.name}'s start, ${formatDate(start)}.`
@@ -95,12 +107,21 @@ export function startRefusal(source: NewGoalScenario, date: string, formatDate: 
 }
 
 /** "<name>, from <year>", kept inside the longest name a scenario may have. */
-export function copyName(source: string, date: string): string {
+export function copyName(
+  source: string,
+  date: string,
+): string {
   const tail = `, from ${date.slice(0, 4)}`
   return `${source.slice(0, SCENARIO_NAME_MAX_LENGTH - tail.length)}${tail}`
 }
 
-function sourceLine(s: SuggestedStart | null, checkin: InvestedSnapshot | null, inputs: StartLaterInputs, names: string[], date: string): string {
+function sourceLine(
+  s: SuggestedStart | null,
+  checkin: InvestedSnapshot | null,
+  inputs: StartLaterInputs,
+  names: string[],
+  date: string,
+): string {
   const { source, format, formatDate } = inputs
   if (s && s.shortByCents > 0) return cannotPayLine(names, s.shortByCents, { start: date, format, formatDate })
   if (s?.from === 'checkin') return `Your investments in your check-in of ${formatDate(checkin!.date)}.`
@@ -114,14 +135,20 @@ function sourceLine(s: SuggestedStart | null, checkin: InvestedSnapshot | null, 
 /** Under this, a suggestion lowered by the corner rule is a cent or two of rounding and not worth a sentence. */
 const LOWER_WORTH_SAYING_CENTS = 500
 
-function lowerLine(s: SuggestedStart | null, inputs: StartLaterInputs): string | null {
+function lowerLine(
+  s: SuggestedStart | null,
+  inputs: StartLaterInputs,
+): string | null {
   if (!s || s.shortByCents > 0 || s.lowerByCents <= LOWER_WORTH_SAYING_CENTS) return null
   const name = inputs.source.name
   return `That's ${formatCentsCompact(s.lowerByCents, inputs.format)} less than ${name} has on that date. A copy that starts part way through ${name}'s year would otherwise run a little above ${name} for some months, so it starts that much lower.`
 }
 
 /** The suggestion for the date, and the copy made from the balance in use; both null for a date that cannot be used. */
-function reading(inputs: StartLaterInputs, choice: StartLaterChoice) {
+function reading(
+  inputs: StartLaterInputs,
+  choice: StartLaterChoice,
+) {
   const { source, checkins, inflationRate, formatDate } = inputs
   const { date, typedCents } = choice
   const valid = isCalendarDate(date)
@@ -136,13 +163,26 @@ function reading(inputs: StartLaterInputs, choice: StartLaterChoice) {
 }
 
 /** What Create saves: the source with the copy's fields, its own colour, last in the list. Never the plan: a new scenario is not. */
-function copyInput(inputs: StartLaterInputs, made: Rebaseline, name: string): NewGoalScenario {
+function copyInput(
+  inputs: StartLaterInputs,
+  made: Rebaseline,
+  name: string,
+): NewGoalScenario {
   const { source, scenarios } = inputs
-  return { ...source, ...made.patch, name, color: pickScenarioColor(scenarios.map((s) => s.color)), sortOrder: scenarios.length }
+  return {
+    ...source,
+    ...made.patch,
+    name,
+    color: pickScenarioColor(scenarios.map((s) => s.color)),
+    sortOrder: scenarios.length,
+  }
 }
 
 /** Whether `s` holds its house on `date`: owned from its start, or bought on or before the date. */
-export function ownsHouseBy(s: Pick<NewGoalScenario, 'housePurchaseYear' | 'planStartDate'>, date: string): boolean {
+export function ownsHouseBy(
+  s: Pick<NewGoalScenario, 'housePurchaseYear' | 'planStartDate'>,
+  date: string,
+): boolean {
   const year = s.housePurchaseYear
   const start = s.planStartDate
   return year !== null && start != null && isCalendarDate(start) && dateAtYears(start, year) <= date
@@ -153,7 +193,12 @@ export function ownsHouseBy(s: Pick<NewGoalScenario, 'housePurchaseYear' | 'plan
  * as what was left after buying, which is wrong for someone who has not bought: they are told, and offered the
  * scenario's own line instead. This is the year-0 house: a balance from the wrong side of the purchase.
  */
-function houseNote(inputs: StartLaterInputs, s: SuggestedStart | null, checkin: InvestedSnapshot | null, date: string): StartLaterView['houseNote'] {
+function houseNote(
+  inputs: StartLaterInputs,
+  s: SuggestedStart | null,
+  checkin: InvestedSnapshot | null,
+  date: string,
+): StartLaterView['houseNote'] {
   const { source, inflationRate, format } = inputs
   if (!s || !checkin || s.from === 'own-line' || !ownsHouseBy(source, checkin.date)) return null
   const own = suggestedStart(source, null, date, inflationRate)
@@ -166,7 +211,11 @@ function houseNote(inputs: StartLaterInputs, s: SuggestedStart | null, checkin: 
 }
 
 /** "in 2028 euros", and that the balance is what is left after the house when the purchase is behind the start. */
-function balanceHint(made: Rebaseline | null, date: string, format: MoneyFormat): string {
+function balanceHint(
+  made: Rebaseline | null,
+  date: string,
+  format: MoneyFormat,
+): string {
   // Behind the start, or owned from day one: either way the balance is what is left after buying.
   const owned = made !== null && ((made.house !== null && made.house.to === null) || made.patch.housePurchaseYear === 0)
   const afterHouse = owned ? ', after buying the house' : ''
@@ -179,7 +228,10 @@ function balanceHint(made: Rebaseline | null, date: string, format: MoneyFormat)
  * origin's euros. Read on the source's own end instead, the gap differed from the table's whenever another
  * scenario started earlier or ended sooner.
  */
-export function outcomeOnTable(inputs: StartLaterInputs, made: Rebaseline): CopyOutcome | null {
+export function outcomeOnTable(
+  inputs: StartLaterInputs,
+  made: Rebaseline,
+): CopyOutcome | null {
   const { source, scenarios, inflationRate } = inputs
   const copy = { ...source, ...made.patch, id: 0 }
   // The source as it is copied: the same as its saved row unless it has unsaved edits, which the copy carries.
@@ -191,13 +243,20 @@ export function outcomeOnTable(inputs: StartLaterInputs, made: Rebaseline): Copy
 }
 
 /** Nothing for a copy from a balance nobody has offered or typed, which no one can make. */
-function outcomeOf(inputs: StartLaterInputs, made: Rebaseline | null, hasBalance: boolean): string | null {
+function outcomeOf(
+  inputs: StartLaterInputs,
+  made: Rebaseline | null,
+  hasBalance: boolean,
+): string | null {
   const outcome = made && hasBalance && outcomeOnTable(inputs, made)
   return outcome ? outcomeLine(outcome, { sourceName: inputs.source.name, format: inputs.format }) : null
 }
 
 /** The whole sheet for the date, balance and name the person has set. */
-export function startLaterView(inputs: StartLaterInputs, choice: StartLaterChoice): StartLaterView {
+export function startLaterView(
+  inputs: StartLaterInputs,
+  choice: StartLaterChoice,
+): StartLaterView {
   const { source, today, format, formatDate } = inputs
   const { date, typedCents } = choice
   const { refusal, checkin, suggestion, balanceCents, made, offered } = reading(inputs, choice)

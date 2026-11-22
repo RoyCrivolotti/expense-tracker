@@ -18,7 +18,10 @@ export const EXCEPTIONS = {
 }
 
 /** The Markdown files under `dir`, as paths relative to `root`. */
-export function markdownFiles(root, dir = join(root, 'docs')) {
+export function markdownFiles(
+  root,
+  dir = join(root, 'docs'),
+) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) return markdownFiles(root, path)
@@ -33,17 +36,24 @@ export function markdownFiles(root, dir = join(root, 'docs')) {
  * @param {Record<string, string>} [exceptions]
  * @returns {string[]}
  */
-export function sizeProblems(sizes, limit = LIMIT, exceptions = EXCEPTIONS) {
+export function sizeProblems(
+  sizes,
+  limit = LIMIT,
+  exceptions = EXCEPTIONS,
+) {
   const problems = []
   for (const [file, lines] of Object.entries(sizes)) {
     if (lines > limit && !(file in exceptions)) {
-      problems.push(`${file} is ${lines} lines, over the limit of ${limit}. Split or trim it, or list it in EXCEPTIONS with a reason.`)
+      problems.push(
+        `${file} is ${lines} lines, over the limit of ${limit}. Split or trim it, or list it in EXCEPTIONS with a reason.`,
+      )
     }
   }
   for (const [file, reason] of Object.entries(exceptions)) {
     if (!reason.trim()) problems.push(`${file} is listed in EXCEPTIONS without a reason.`)
     if (!(file in sizes)) problems.push(`${file} is listed in EXCEPTIONS but does not exist. Remove it from the list.`)
-    else if (sizes[file] <= limit) problems.push(`${file} is ${sizes[file]} lines, within the limit of ${limit}. Remove it from EXCEPTIONS.`)
+    else if (sizes[file] <= limit)
+      problems.push(`${file} is ${sizes[file]} lines, within the limit of ${limit}. Remove it from EXCEPTIONS.`)
   }
   return problems
 }

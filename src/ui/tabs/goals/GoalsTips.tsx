@@ -28,13 +28,15 @@ export function GoalsStartCard({ draft, onChange, noScenarios }: StartProps) {
   const { symbol } = useMoneyFormat()
   // The draft starts from the latest check-in, dated the day it was taken, so what is typed here is the balance on that day.
   const fromCheckin = draft.planStartDate !== null && draft.planStartDate !== todayIso()
-  const start = fromCheckin ? `what your investments held on ${shortDateLabel(draft.planStartDate ?? '')}, from your latest check-in` : 'what your investments hold now, not your bank balance'
+  const start = fromCheckin
+    ? `what your investments held on ${shortDateLabel(draft.planStartDate ?? '')}, from your latest check-in`
+    : 'what your investments hold now, not your bank balance'
   return (
     <TipCard id={TIP_IDS.goals} title="A long-range plan" actionLabel="Show my plan" when={noScenarios}>
       <p>
-        Goals answers one question: if you invest the same amount every month, what could you have in 10, 20 or 30 years?
-        Start with two numbers. The rest begins at a sensible value you can change later. Nothing is saved until you save the
-        scenario.
+        Goals answers one question: if you invest the same amount every month, what could you have in 10, 20 or 30
+        years? Start with two numbers. The rest begins at a sensible value you can change later. Nothing is saved until
+        you save the scenario.
       </p>
       <div className={styles.fields}>
         <MoneyField
@@ -48,9 +50,7 @@ export function GoalsStartCard({ draft, onChange, noScenarios }: StartProps) {
           onChange={(cents) => onChange({ monthlyContributionCents: cents })}
         />
       </div>
-      <p className={styles.hint}>
-        Starting invested is {start}. Monthly investing is what you add to them each month.
-      </p>
+      <p className={styles.hint}>Starting invested is {start}. Monthly investing is what you add to them each month.</p>
     </TipCard>
   )
 }

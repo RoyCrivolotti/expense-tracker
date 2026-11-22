@@ -14,13 +14,20 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-const scenario = makeScenario({ monthlyContributionCents: 50_000, annualSpendCents: 2_400_000, rentMonthlyCents: 100_000 })
+const scenario = makeScenario({
+  monthlyContributionCents: 50_000,
+  annualSpendCents: 2_400_000,
+  rentMonthlyCents: 100_000,
+})
 const { id, isActive, ...draft } = scenario
 void id
 void isActive
 
 /** The coloured dots in the tooltip of a chart, after a point is picked. */
-function swatches(chart: ReactElement, steps = 0): number {
+function swatches(
+  chart: ReactElement,
+  steps = 0,
+): number {
   const { container, unmount } = render(chart)
   const svg = container.querySelector('svg[role="img"]')!
   fireEvent.keyDown(svg, { key: 'Home' })
@@ -63,7 +70,11 @@ describe('the colour of each series in its tooltip', () => {
     }))
     // Room above the chart, or jsdom's unmocked {0,0,0,0} rect reads as none, and the tooltip
     // (now never docking below, with a legend to fall back to instead) would not show at all.
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 600, bottom: 700, height: 100 } as DOMRect)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: 600,
+      bottom: 700,
+      height: 100,
+    } as DOMRect)
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
     const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' }, 0.02)
     const chart = (

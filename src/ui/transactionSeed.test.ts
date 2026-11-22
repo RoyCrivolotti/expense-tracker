@@ -1,12 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Transaction } from '../types'
 import type { TransactionSeed } from './actions'
-import {
-  duplicateHint,
-  isTransactionSeed,
-  openAddModal,
-  transactionToSeed,
-} from './transactionSeed'
+import { duplicateHint, isTransactionSeed, openAddModal, transactionToSeed } from './transactionSeed'
 
 const validSeed: TransactionSeed = {
   description: 'Netflix',

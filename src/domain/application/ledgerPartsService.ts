@@ -13,14 +13,20 @@ import { ValidationError } from './validationError'
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 
-function monthOf(value: unknown, key: string): string {
+function monthOf(
+  value: unknown,
+  key: string,
+): string {
   if (value === undefined) throw new ValidationError(`${key} is required, as YYYY-MM`)
   if (typeof value !== 'string' || !MONTH.test(value)) throw new ValidationError(`${key} must be YYYY-MM`)
   return value
 }
 
 /** Both ends, inclusive, and no more than `maxMonths` months between them. */
-export function validateMonthRange(input: { from?: unknown; to?: unknown }, maxMonths: number): MonthRange {
+export function validateMonthRange(
+  input: { from?: unknown; to?: unknown },
+  maxMonths: number,
+): MonthRange {
   const from = monthOf(input.from, 'from')
   const to = monthOf(input.to, 'to')
   const span = monthsBetweenBudget(from, to) + 1

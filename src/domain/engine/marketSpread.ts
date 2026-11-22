@@ -71,12 +71,20 @@ export interface SpreadResult {
  * nothing (a house paid for with more than the portfolio had) is a debt, which no market makes bigger or smaller,
  * so it grows at the plain return as the plan has it.
  */
-export function growthFor(prev: number, realReturn: number, volatility: number, draw: number): number {
+export function growthFor(
+  prev: number,
+  realReturn: number,
+  volatility: number,
+  draw: number,
+): number {
   return prev < 0 ? 1 + realReturn : (1 + realReturn) * Math.exp(volatility * draw)
 }
 
 /** The value at a percentile of sorted values, interpolating between the two nearest. */
-export function percentile(sorted: Float64Array, p: number): number {
+export function percentile(
+  sorted: Float64Array,
+  p: number,
+): number {
   const at = ((sorted.length - 1) * p) / 100
   const lo = Math.floor(at)
   const hi = Math.ceil(at)
@@ -89,7 +97,10 @@ export function percentile(sorted: Float64Array, p: number): number {
  * year `y`; the rest of the `runs` never do. Nearest-rank, not interpolated: a year between two years is not a
  * year, and an interpolation towards "never" is not a number.
  */
-export function crossingRange(byYear: readonly number[], never: number): CrossingRange {
+export function crossingRange(
+  byYear: readonly number[],
+  never: number,
+): CrossingRange {
   const runs = byYear.reduce((s, c) => s + c, 0) + never
   const at = (p: number): number => {
     const rank = Math.ceil((p / 100) * runs)
@@ -108,7 +119,11 @@ function emptyBands(): Bands {
   return { p10: [], p25: [], p50: [], p75: [], p90: [] }
 }
 
-function pushBands(bands: Bands, values: Float64Array, buffer: Float64Array): void {
+function pushBands(
+  bands: Bands,
+  values: Float64Array,
+  buffer: Float64Array,
+): void {
   buffer.set(values)
   buffer.sort()
   bands.p10.push(percentile(buffer, 10))
@@ -124,13 +139,20 @@ class Crossing {
   private left: number
   private readonly needed: (year: number) => number
 
-  constructor(runs: number, needed: (year: number) => number) {
+  constructor(
+    runs: number,
+    needed: (year: number) => number,
+  ) {
     this.first = new Uint8Array(runs).fill(NOT_YET)
     this.left = runs
     this.needed = needed
   }
 
-  see(year: number, before: Float64Array, after: Float64Array): void {
+  see(
+    year: number,
+    before: Float64Array,
+    after: Float64Array,
+  ): void {
     if (this.left === 0) return
     const bar = this.needed(year)
     for (let run = 0; run < before.length; run++) {
@@ -166,7 +188,10 @@ interface Replay {
 }
 
 /** One year on for every run: its growth (the mirror runs take the opposite draw), then the year's saving and events. */
-function advance(replay: Replay, year: number): void {
+function advance(
+  replay: Replay,
+  year: number,
+): void {
   const { pairs, runs, draws, balance, pre } = replay
   for (let run = 0; run < runs; run++) {
     const draw = draws[(year - 1) * pairs + (run >> 1)]! * (run & 1 ? -1 : 1)
@@ -183,7 +208,10 @@ function shareBelowZero(balance: Float64Array): number {
   return short / balance.length
 }
 
-function startReplay(input: SpreadInput, years: number): Replay {
+function startReplay(
+  input: SpreadInput,
+  years: number,
+): Replay {
   const { params } = input
   const pairs = Math.max(1, Math.ceil(input.runs / 2))
   const runs = pairs * 2
@@ -206,7 +234,9 @@ export function replayMarket(input: SpreadInput): SpreadResult {
   const replay = startReplay(input, years)
   // An amount on the account is worth less in the plan's money the later it is reached: `v x (1 + i)^t >= A`.
   const grown = Array.from({ length: years + 1 }, (_, year) => Math.pow(1 + params.inflationRate, year))
-  const targets = (input.milestonesCents ?? []).map((amount) => new Crossing(replay.runs, (year) => amount / grown[year]!))
+  const targets = (input.milestonesCents ?? []).map(
+    (amount) => new Crossing(replay.runs, (year) => amount / grown[year]!),
+  )
   const fiTarget = input.fiTargetCents
   const fi = typeof fiTarget === 'number' ? new Crossing(replay.runs, () => fiTarget) : null
 
@@ -224,5 +254,13 @@ export function replayMarket(input: SpreadInput): SpreadResult {
     fi?.see(year, replay.balance, replay.balance)
   }
 
-  return { years, runs: replay.runs, after, before, belowZero, milestones: targets.map((t) => t.range(years)), fi: fi?.range(years) ?? null }
+  return {
+    years,
+    runs: replay.runs,
+    after,
+    before,
+    belowZero,
+    milestones: targets.map((t) => t.range(years)),
+    fi: fi?.range(years) ?? null,
+  }
 }

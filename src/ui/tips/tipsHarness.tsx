@@ -42,16 +42,27 @@ export interface Store {
   failWrites: boolean
 }
 
-export const storeWith = (settings: Partial<ExpenseSettings> = {}, failWrites = false): Store => ({
+export const storeWith = (
+  settings: Partial<ExpenseSettings> = {},
+  failWrites = false,
+): Store => ({
   settings: { ...defaultExpenseSettings(), ...settings },
   failWrites,
 })
 
 /** The settings writes a source has been asked for, kept apart from the source so a test can read them. */
-export const written = new WeakMap<ExpenseDataSource, ReturnType<typeof vi.fn<(patch: Partial<ExpenseSettings>) => Promise<ExpenseSettings>>>>()
+export const written = new WeakMap<
+  ExpenseDataSource,
+  ReturnType<typeof vi.fn<(patch: Partial<ExpenseSettings>) => Promise<ExpenseSettings>>>
+>()
 export const writesOf = (source: ExpenseDataSource) => written.get(source)!
 
-export function sourceFor(store: Store, transactions = [makeTransaction()], canWrite = true, flags: ExpenseDataset['flags'] = []): ExpenseDataSource {
+export function sourceFor(
+  store: Store,
+  transactions = [makeTransaction()],
+  canWrite = true,
+  flags: ExpenseDataset['flags'] = [],
+): ExpenseDataSource {
   const dataset = (): ExpenseDataset => makeDataset({ ...SET_UP, transactions, flags, settings: store.settings })
   const update = vi.fn((patch: Partial<ExpenseSettings>) => {
     if (store.failWrites) return Promise.reject(new Error('offline'))
@@ -63,7 +74,10 @@ export function sourceFor(store: Store, transactions = [makeTransaction()], canW
   return source
 }
 
-export function open(source: ExpenseDataSource, accountEmail = 'one@example.com') {
+export function open(
+  source: ExpenseDataSource,
+  accountEmail = 'one@example.com',
+) {
   return render(
     <ToastProvider>
       <ExpensesApp source={source} hubGrants={allGroupsGranted()} accountEmail={accountEmail} />
@@ -85,8 +99,12 @@ export const emptySource = (store: Store): ExpenseDataSource => {
   const source: ExpenseDataSource = {
     ...base,
     load: () => Promise.resolve(makeDataset({ settings: store.settings })),
-    createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }),
-    createAccount: vi.fn().mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
+    createCategory: vi
+      .fn()
+      .mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }),
+    createAccount: vi
+      .fn()
+      .mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }),
   }
   written.set(source, writesOf(base))
   return source

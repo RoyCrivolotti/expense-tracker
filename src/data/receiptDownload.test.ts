@@ -1,11 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NamedReceipt } from '../domain/engine/receiptFiles'
-import {
-  browserReceiptDelivery,
-  deliverReceipts,
-  type ReceiptDeliveryDeps,
-} from './receiptDownload'
+import { browserReceiptDelivery, deliverReceipts, type ReceiptDeliveryDeps } from './receiptDownload'
 
 const receipts: NamedReceipt[] = [
   { attachmentId: 5, filename: 'R1 - 2026-08-19 - Tren - 175,26 €.jpg' },
@@ -17,9 +13,7 @@ const receipts: NamedReceipt[] = [
  * unbound-method rule rejects `expect(deps.saveBlob)`, and rightly so.
  */
 function harness(overrides: Partial<ReceiptDeliveryDeps> = {}) {
-  const fetchReceipt = vi.fn((id: number) =>
-    Promise.resolve(new Blob([`bytes-${id}`], { type: 'image/jpeg' })),
-  )
+  const fetchReceipt = vi.fn((id: number) => Promise.resolve(new Blob([`bytes-${id}`], { type: 'image/jpeg' })))
   const canShareFiles = vi.fn(() => false)
   const shareFiles = vi.fn((_files: File[], _title: string) => Promise.resolve())
   const saveBlob = vi.fn()
@@ -38,9 +32,7 @@ describe('deliverReceipts', () => {
     // The phone case, and the only route to Mail or the Photos library — a
     // download cannot reach either.
     const { deps, shareFiles, saveBlob } = harness({ canShareFiles: vi.fn(() => true) })
-    await expect(deliverReceipts(receipts, 'Work travel 2026-08 receipts', deps)).resolves.toBe(
-      'shared',
-    )
+    await expect(deliverReceipts(receipts, 'Work travel 2026-08 receipts', deps)).resolves.toBe('shared')
 
     const [files, title] = shareFiles.mock.calls[0]!
     expect(files.map((f) => f.name)).toEqual(receipts.map((r) => r.filename))
@@ -50,9 +42,7 @@ describe('deliverReceipts', () => {
 
   it('falls back to one zip rather than one download per receipt', async () => {
     const { deps, shareFiles, saveBlob } = harness()
-    await expect(deliverReceipts(receipts, 'Work travel 2026-08 receipts', deps)).resolves.toBe(
-      'zipped',
-    )
+    await expect(deliverReceipts(receipts, 'Work travel 2026-08 receipts', deps)).resolves.toBe('zipped')
 
     expect(shareFiles).not.toHaveBeenCalled()
     const [blob, filename] = saveBlob.mock.calls[0]! as [Blob, string]
@@ -89,9 +79,7 @@ describe('deliverReceipts', () => {
     // was complete.
     const { deps, saveBlob, shareFiles } = harness({
       fetchReceipt: vi.fn((id: number) =>
-        id === 6
-          ? Promise.reject(new Error('Could not load receipt 6'))
-          : Promise.resolve(new Blob(['ok'])),
+        id === 6 ? Promise.reject(new Error('Could not load receipt 6')) : Promise.resolve(new Blob(['ok'])),
       ),
     })
     await expect(deliverReceipts(receipts, 'pack', deps)).rejects.toThrow('Could not load receipt 6')
@@ -122,7 +110,10 @@ describe('browserReceiptDelivery', () => {
   })
 
   it('throws on a non-ok response rather than zipping an error page', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 404 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 404 })),
+    )
     await expect(browserReceiptDelivery.fetchReceipt(42)).rejects.toThrow('Could not load receipt 42')
   })
 

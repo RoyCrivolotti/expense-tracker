@@ -102,7 +102,9 @@ export function isUsagePart(body: unknown): body is UsagePart {
       const list = body[kind]
       return (
         Array.isArray(list) &&
-        list.every((record) => isObject(record) && typeof record.id === 'number' && typeof record.transactions === 'number')
+        list.every(
+          (record) => isObject(record) && typeof record.id === 'number' && typeof record.transactions === 'number',
+        )
       )
     })
   )

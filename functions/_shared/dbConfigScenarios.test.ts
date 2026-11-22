@@ -66,7 +66,7 @@ describe('activateScenario', () => {
     expect(result.isActive).toBe(true)
   })
 
-  it('is a 404 when the row is not the owner\'s', async () => {
+  it("is a 404 when the row is not the owner's", async () => {
     const { env } = stubEnv({ batchResults: [{ results: [] }, { results: [] }] })
 
     await expect(activateScenario(env, OWNER, 7)).rejects.toMatchObject({

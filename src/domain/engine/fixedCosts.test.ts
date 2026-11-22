@@ -38,10 +38,12 @@ const plan: InstallmentPlan = {
   active: true,
 }
 
-const monthly = (description: string, categoryId: number, cents: number, months: string[]) =>
-  months.map((m) =>
-    txn({ date: `${m}-01`, budgetMonth: m, description, categoryId, amountCents: cents }),
-  )
+const monthly = (
+  description: string,
+  categoryId: number,
+  cents: number,
+  months: string[],
+) => months.map((m) => txn({ date: `${m}-01`, budgetMonth: m, description, categoryId, amountCents: cents }))
 
 describe('detectedFixedCosts', () => {
   const rows = [

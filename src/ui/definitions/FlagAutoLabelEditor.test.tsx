@@ -26,10 +26,7 @@ describe('FlagAutoLabelEditor', () => {
   it('opens on "No auto-label" when the flag has none configured', () => {
     renderEditor()
 
-    expect(screen.getByRole('button', { name: /No auto-label/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByRole('button', { name: /No auto-label/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('opens on the currently configured label', () => {
@@ -37,10 +34,7 @@ describe('FlagAutoLabelEditor', () => {
     renderEditor({ flag })
 
     expect(screen.getByRole('button', { name: /Work trip/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /No auto-label/ })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
+    expect(screen.getByRole('button', { name: /No auto-label/ })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('lists every label as a choice', () => {

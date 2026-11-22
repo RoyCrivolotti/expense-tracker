@@ -71,9 +71,7 @@ describe('useFlagFormSave', () => {
   it('starts a first flag at sort order 0', async () => {
     const createFlag = vi.fn().mockResolvedValue(flag)
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(null, [], actionsWith({ createFlag }), onDone),
-    )
+    const { result } = renderHook(() => useFlagFormSave(null, [], actionsWith({ createFlag }), onDone))
 
     act(() => result.current.save(draft))
 
@@ -85,9 +83,7 @@ describe('useFlagFormSave', () => {
     const updateFlag = vi.fn().mockResolvedValue(undefined)
     const createFlag = vi.fn()
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(flag, [flag], actionsWith({ updateFlag, createFlag }), onDone),
-    )
+    const { result } = renderHook(() => useFlagFormSave(flag, [flag], actionsWith({ updateFlag, createFlag }), onDone))
 
     act(() => result.current.save({ ...draft, name: 'Client travel' }))
 
@@ -99,9 +95,7 @@ describe('useFlagFormSave', () => {
   it('refuses a blank name without calling the API', () => {
     const createFlag = vi.fn()
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(null, [], actionsWith({ createFlag }), onDone),
-    )
+    const { result } = renderHook(() => useFlagFormSave(null, [], actionsWith({ createFlag }), onDone))
 
     act(() => result.current.save({ ...draft, name: '   ' }))
 
@@ -113,9 +107,7 @@ describe('useFlagFormSave', () => {
   it('surfaces a server error and stays open', async () => {
     const createFlag = vi.fn().mockRejectedValue(new Error('Flag name is required'))
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(null, [], actionsWith({ createFlag }), onDone),
-    )
+    const { result } = renderHook(() => useFlagFormSave(null, [], actionsWith({ createFlag }), onDone))
 
     act(() => result.current.save(draft))
 
@@ -127,9 +119,7 @@ describe('useFlagFormSave', () => {
   it('deletes an existing flag', async () => {
     const deleteFlag = vi.fn().mockResolvedValue({ unflagged: 2 })
     const onDone = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(flag, [flag], actionsWith({ deleteFlag }), onDone),
-    )
+    const { result } = renderHook(() => useFlagFormSave(flag, [flag], actionsWith({ deleteFlag }), onDone))
 
     act(() => result.current.remove())
 
@@ -139,9 +129,7 @@ describe('useFlagFormSave', () => {
 
   it('does nothing on delete when there is no flag yet', () => {
     const deleteFlag = vi.fn()
-    const { result } = renderHook(() =>
-      useFlagFormSave(null, [], actionsWith({ deleteFlag }), vi.fn()),
-    )
+    const { result } = renderHook(() => useFlagFormSave(null, [], actionsWith({ deleteFlag }), vi.fn()))
 
     act(() => result.current.remove())
 

@@ -27,7 +27,10 @@ export function datasetOfHeld(held: HeldLedger): ExpenseDataset {
   return ledgerDataset(ledger, assembleRows(ledger).real)
 }
 
-function sameRow(a: Transaction, b: Transaction): boolean {
+function sameRow(
+  a: Transaction,
+  b: Transaction,
+): boolean {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof Transaction>
   for (const key of keys) {
     const x = a[key]
@@ -43,17 +46,25 @@ function sameRow(a: Transaction, b: Transaction): boolean {
 
 /** What a sum is made of: a row that differs in none of these leaves every sum as it was. */
 const CELL_FIELDS = ['budgetMonth', 'accountId', 'categoryId', 'type', 'cancelled', 'amountCents'] as const
-const sameCell = (a: Transaction, b: Transaction): boolean => CELL_FIELDS.every((key) => a[key] === b[key])
+const sameCell = (
+  a: Transaction,
+  b: Transaction,
+): boolean => CELL_FIELDS.every((key) => a[key] === b[key])
 
-function sameTables(before: ExpenseDataset, after: ExpenseDataset): boolean {
+function sameTables(
+  before: ExpenseDataset,
+  after: ExpenseDataset,
+): boolean {
   const a = referenceTablesOf(before)
   const b = referenceTablesOf(after)
   return (Object.keys(a) as (keyof typeof a)[]).every((key) => JSON.stringify(a[key]) === JSON.stringify(b[key]))
 }
 
 /** The order the API lists rows in: newest date first, the higher id first on a date. */
-export const byApiOrder = (a: Transaction, b: Transaction): number =>
-  a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1
+export const byApiOrder = (
+  a: Transaction,
+  b: Transaction,
+): number => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
 
 interface Delta {
   counts: Map<string, number>
@@ -63,7 +74,10 @@ interface Delta {
 }
 
 /** How one row's change moves the number of rows in each month. */
-function countChange(b: Transaction | undefined, a: Transaction | undefined): Array<[string, number]> {
+function countChange(
+  b: Transaction | undefined,
+  a: Transaction | undefined,
+): Array<[string, number]> {
   if (!a) return b ? [[b.budgetMonth, -1]] : []
   if (!b) return [[a.budgetMonth, 1]]
   return a.budgetMonth === b.budgetMonth
@@ -75,14 +89,22 @@ function countChange(b: Transaction | undefined, a: Transaction | undefined): Ar
 }
 
 /** The months whose sums a row's change moves: where it was summed and where it is summed now. */
-function staleChange(b: Transaction | undefined, a: Transaction | undefined, was: ReadonlySet<number>, now: ReadonlySet<number>): string[] {
+function staleChange(
+  b: Transaction | undefined,
+  a: Transaction | undefined,
+  was: ReadonlySet<number>,
+  now: ReadonlySet<number>,
+): string[] {
   const summedBefore = b !== undefined && !isPinned(b, was)
   const summedAfter = a !== undefined && !isPinned(a, now)
   if (a && b && summedBefore && summedAfter && sameCell(a, b)) return []
   return [...(b && summedBefore ? [b.budgetMonth] : []), ...(a && summedAfter ? [a.budgetMonth] : [])]
 }
 
-function diffRows(before: ExpenseDataset, after: ExpenseDataset): Delta {
+function diffRows(
+  before: ExpenseDataset,
+  after: ExpenseDataset,
+): Delta {
   const was = new Map(before.transactions.map((row) => [row.id, row]))
   const now = new Map(after.transactions.map((row) => [row.id, row]))
   const wasPayments = settlementPaymentIds(before.transactions)
@@ -102,7 +124,10 @@ function diffRows(before: ExpenseDataset, after: ExpenseDataset): Delta {
 
 const idsOf = (list: readonly TransactionAttachment[]): string => list.map((a) => a.id).join(',')
 
-function receiptsOf(list: readonly TransactionAttachment[], id: number): TransactionAttachment[] {
+function receiptsOf(
+  list: readonly TransactionAttachment[],
+  id: number,
+): TransactionAttachment[] {
   return list.filter((a) => a.transactionId === id)
 }
 
@@ -111,7 +136,12 @@ function receiptsOf(list: readonly TransactionAttachment[], id: number): Transac
  * dataset now has, and its count follows; one that is gone loses both. A list that gained a receipt before the
  * transaction's list was read is partial, so it is returned for a read of the whole list.
  */
-function patchReceipts(held: HeldLedger, before: ExpenseDataset, after: ExpenseDataset, removed: readonly number[]) {
+function patchReceipts(
+  held: HeldLedger,
+  before: ExpenseDataset,
+  after: ExpenseDataset,
+  removed: readonly number[],
+) {
   const receipts = new Map(held.receipts)
   const counts = { ...held.attachmentCounts }
   const partial: number[] = []
@@ -132,7 +162,10 @@ function patchReceipts(held: HeldLedger, before: ExpenseDataset, after: ExpenseD
 }
 
 /** The month index and counts after a delta: a month with no row left is gone. */
-function recount(held: HeldLedger, counts: ReadonlyMap<string, number>) {
+function recount(
+  held: HeldLedger,
+  counts: ReadonlyMap<string, number>,
+) {
   const rowsPerMonth = { ...held.rowsPerMonth }
   let rowCount = held.rowCount
   for (const [month, by] of counts) {
@@ -148,7 +181,12 @@ function recount(held: HeldLedger, counts: ReadonlyMap<string, number>) {
  * that has some now is held with those rows when it is one the screens want, because they are all of
  * its rows; any other month the patch put an unpinned row in is left to the sums.
  */
-export function reconcileHeld(held: HeldLedger, before: ExpenseDataset, after: ExpenseDataset, viewed: string): Reconciled {
+export function reconcileHeld(
+  held: HeldLedger,
+  before: ExpenseDataset,
+  after: ExpenseDataset,
+  viewed: string,
+): Reconciled {
   const reference = !sameTables(before, after)
   const delta = diffRows(before, after)
   const receiptsChanged = idsOf(before.attachments) !== idsOf(after.attachments)
@@ -176,7 +214,10 @@ export function reconcileHeld(held: HeldLedger, before: ExpenseDataset, after: E
   }
   const fresh = wantedMonths(next, viewed).filter((month) => !rows.has(month) && !held.months.includes(month))
   for (const month of fresh) rows.set(month, byMonth.get(month) ?? [])
-  const stale = held.cells === null ? [] : sortedMonths([...delta.stale].filter((month) => months.includes(month) || held.months.includes(month)))
+  const stale =
+    held.cells === null
+      ? []
+      : sortedMonths([...delta.stale].filter((month) => months.includes(month) || held.months.includes(month)))
   const changed = { reference, rows: delta.changed, receipts: receiptsChanged }
   return { held: next, changed, stale, partialReceipts: receipts.partial }
 }

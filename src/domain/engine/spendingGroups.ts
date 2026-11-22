@@ -83,9 +83,7 @@ function membershipsOf(
     return [{ key: String(txn.categoryId), name: cat?.name ?? 'Uncategorised' }]
   }
   if (groupBy === 'fixedFlexible') {
-    return classifier.isFixed(txn)
-      ? [{ key: 'fixed', name: 'Fixed' }]
-      : [{ key: 'flexible', name: 'Flexible' }]
+    return classifier.isFixed(txn) ? [{ key: 'fixed', name: 'Fixed' }] : [{ key: 'flexible', name: 'Flexible' }]
   }
   if (groupBy === 'description') {
     const key = normalizeDesc(txn.description)
@@ -105,8 +103,7 @@ export function groupMatcher(
   classifier: FixedSpendClassifier,
 ): (txn: Transaction) => boolean {
   if (groupBy === 'category') return (txn) => String(txn.categoryId) === key
-  if (groupBy === 'fixedFlexible')
-    return (txn) => (classifier.isFixed(txn) ? 'fixed' : 'flexible') === key
+  if (groupBy === 'fixedFlexible') return (txn) => (classifier.isFixed(txn) ? 'fixed' : 'flexible') === key
   if (groupBy === 'description') return (txn) => normalizeDesc(txn.description) === key
   return (txn) => (txn.labelIds ?? []).some((id) => String(id) === key)
 }
@@ -136,7 +133,12 @@ interface CollectScope {
   avgMonths: Set<string>
 }
 
-function addToGroup(agg: GroupAgg, txn: Transaction, signed: number, scope: CollectScope): void {
+function addToGroup(
+  agg: GroupAgg,
+  txn: Transaction,
+  signed: number,
+  scope: CollectScope,
+): void {
   const inDays = withinCut(txn.date, txn.budgetMonth, scope.cut)
   // The open month's spark point obeys the same-days clamp the row total does,
   // so a tapped row never shows two different numbers for the same month.
@@ -231,7 +233,10 @@ export type SpendingSort = 'amount' | 'items'
  * 1.200 € rent line outranks thirty coffees by amount and never by count. Ties fall back to
  * the amount.
  */
-export function sortSpendingRows(rows: SpendingGroupRow[], by: SpendingSort): SpendingGroupRow[] {
+export function sortSpendingRows(
+  rows: SpendingGroupRow[],
+  by: SpendingSort,
+): SpendingGroupRow[] {
   if (by === 'amount') return rows
   return [...rows].sort((a, b) => b.txnCount - a.txnCount || b.currentCents - a.currentCents)
 }

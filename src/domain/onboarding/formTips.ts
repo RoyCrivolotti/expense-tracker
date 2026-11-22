@@ -7,12 +7,18 @@
 export const FIRST_PAYMENTS = 10
 
 /** The line that says what is enough shows while the account has no payment, and only on the form for a new one. */
-export function showFirstPaymentLine(transactionCount: number, editing: boolean): boolean {
+export function showFirstPaymentLine(
+  transactionCount: number,
+  editing: boolean,
+): boolean {
   return !editing && transactionCount === 0
 }
 
 /** The line about reusing a name shows for a person's first payments, on a new one. */
-export function showDescriptionLine(transactionCount: number, editing: boolean): boolean {
+export function showDescriptionLine(
+  transactionCount: number,
+  editing: boolean,
+): boolean {
   return !editing && transactionCount < FIRST_PAYMENTS
 }
 
@@ -21,6 +27,11 @@ export function showDescriptionLine(transactionCount: number, editing: boolean):
  * one who moved it by hand) for a person's first payments, on a new one: an edit keeps the month the payment has and is not
  * being asked to choose. `date` is `YYYY-MM-DD` and `budgetMonth` is `YYYY-MM`.
  */
-export function showBudgetMonthLine(transactionCount: number, date: string, budgetMonth: string, editing: boolean): boolean {
+export function showBudgetMonthLine(
+  transactionCount: number,
+  date: string,
+  budgetMonth: string,
+  editing: boolean,
+): boolean {
   return !editing && transactionCount < FIRST_PAYMENTS && date.slice(0, 7) !== budgetMonth
 }

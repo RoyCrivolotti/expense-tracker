@@ -1,11 +1,18 @@
-export function json(data: unknown, status = 200): Response {
+export function json(
+  data: unknown,
+  status = 200,
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'content-type': 'application/json; charset=utf-8' },
   })
 }
 
-export function error(status: number, message: string, headers: Record<string, string> = {}): Response {
+export function error(
+  status: number,
+  message: string,
+  headers: Record<string, string> = {},
+): Response {
   const response = json({ error: message }, status)
   for (const [name, value] of Object.entries(headers)) response.headers.set(name, value)
   return response
@@ -15,7 +22,11 @@ export function error(status: number, message: string, headers: Record<string, s
 export class HttpError extends Error {
   readonly status: number
   readonly headers: Record<string, string>
-  constructor(status: number, message: string, headers: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    message: string,
+    headers: Record<string, string> = {},
+  ) {
     super(message)
     this.status = status
     this.headers = headers
@@ -52,7 +63,10 @@ const TOO_LARGE = 'Request body too large'
  * soon as it crosses `maxBytes`, without reading the rest. A declared `content-length` over the cap
  * is refused before the first byte is read.
  */
-export async function readJson<T>(request: Request, maxBytes = DEFAULT_JSON_BODY_BYTES): Promise<T> {
+export async function readJson<T>(
+  request: Request,
+  maxBytes = DEFAULT_JSON_BODY_BYTES,
+): Promise<T> {
   const declared = Number(request.headers.get('content-length'))
   if (Number.isFinite(declared) && declared > maxBytes) {
     await request.body?.cancel().catch(() => undefined)
@@ -70,9 +84,13 @@ export async function readJson<T>(request: Request, maxBytes = DEFAULT_JSON_BODY
   return body
 }
 
-async function readCappedText(request: Request, maxBytes: number): Promise<string> {
+async function readCappedText(
+  request: Request,
+  maxBytes: number,
+): Promise<string> {
   if (request.body === null) return ''
-  const reader: ReadableStreamDefaultReader<Uint8Array> = request.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
+  const reader: ReadableStreamDefaultReader<Uint8Array> =
+    request.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
   const decoder = new TextDecoder()
   let received = 0
   let text = ''

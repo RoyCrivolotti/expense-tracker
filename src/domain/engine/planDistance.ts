@@ -28,18 +28,23 @@ export interface PlanDistance {
  * it never has it (or there is no line on that day).
  */
 export type PlanMeasure =
-  | ({ kind: 'along' } & PlanDistance)
-  | { kind: 'unmeasured'; reason: 'across-event' | 'outside-line' }
+  ({ kind: 'along' } & PlanDistance) | { kind: 'unmeasured'; reason: 'across-event' | 'outside-line' }
 
 const OUTSIDE: PlanMeasure = { kind: 'unmeasured', reason: 'outside-line' }
 const ACROSS: PlanMeasure = { kind: 'unmeasured', reason: 'across-event' }
 
 /** The line on a segment at `t`, unrounded: the search solves for a time, and cents would nudge it. */
-function onSegment(s: PlanSegment, t: number): number {
+function onSegment(
+  s: PlanSegment,
+  t: number,
+): number {
   return s.start + (t - s.from) * (s.end - s.start)
 }
 
-function along(offset: number, t: number): PlanMeasure {
+function along(
+  offset: number,
+  t: number,
+): PlanMeasure {
   return { kind: 'along', months: (t - offset) * 12, atOffset: t }
 }
 
@@ -48,7 +53,12 @@ function along(offset: number, t: number): PlanMeasure {
  * step too small to end the stretch can jump over the balance, which the line then has on the day of
  * the step.
  */
-function firstReaching(line: PlanLine, offset: number, to: number, balance: number): number | null {
+function firstReaching(
+  line: PlanLine,
+  offset: number,
+  to: number,
+  balance: number,
+): number | null {
   for (let i = Math.floor(offset); i < to; i++) {
     const segment = line.segments[i]
     if (!segment || segment.end < balance) continue
@@ -65,7 +75,12 @@ function firstReaching(line: PlanLine, offset: number, to: number, balance: numb
  * step too small to end the stretch can jump over the balance, which the line then left on the day of
  * the step.
  */
-function lastAt(line: PlanLine, offset: number, from: number, balance: number): number | null {
+function lastAt(
+  line: PlanLine,
+  offset: number,
+  from: number,
+  balance: number,
+): number | null {
   for (let i = Math.floor(offset); i >= from; i--) {
     const segment = line.segments[i]
     if (!segment || segment.start > balance) continue
@@ -78,13 +93,23 @@ function lastAt(line: PlanLine, offset: number, from: number, balance: number): 
 }
 
 /** Whether any part of the line outside the stretch has the balance, which is what makes a step the reason. */
-function elsewhere(line: PlanLine, from: number, to: number, ahead: boolean, balance: number): boolean {
+function elsewhere(
+  line: PlanLine,
+  from: number,
+  to: number,
+  ahead: boolean,
+  balance: number,
+): boolean {
   const reach = (s: PlanSegment) => (ahead ? Math.max(s.start, s.end) >= balance : Math.min(s.start, s.end) <= balance)
   return ahead ? line.segments.slice(to).some(reach) : line.segments.slice(0, from).some(reach)
 }
 
 /** The months between `offset` and the point of the line that has `balanceCents`, or why there are none. */
-export function measurePlanDistance(line: PlanLine, offset: number, balanceCents: number): PlanMeasure {
+export function measurePlanDistance(
+  line: PlanLine,
+  offset: number,
+  balanceCents: number,
+): PlanMeasure {
   if (line.segments.length < 1 || !(offset >= 0) || offset >= line.horizon) return OUTSIDE
   const stretch = stretchAround(line, offset)
   const segment = line.segments[Math.floor(offset)]

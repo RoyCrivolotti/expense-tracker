@@ -56,9 +56,7 @@ export function makeTransaction(overrides: Partial<Transaction> = {}): Transacti
 }
 
 /** Build a minimal valid TransactionAttachment for tests. */
-export function makeAttachment(
-  overrides: Partial<TransactionAttachment> = {},
-): TransactionAttachment {
+export function makeAttachment(overrides: Partial<TransactionAttachment> = {}): TransactionAttachment {
   return {
     id: 1,
     transactionId: 1,

@@ -32,7 +32,10 @@ export function isStuck(el: HTMLElement | null): boolean {
  * rendered it. `smooth` is for a tap on what is already open, where nothing else changes on
  * screen; `auto` jumps, since the content has just been swapped in.
  */
-export function scrollToAnchor(id: string, behavior: 'auto' | 'smooth'): void {
+export function scrollToAnchor(
+  id: string,
+  behavior: 'auto' | 'smooth',
+): void {
   afterRender(() => {
     const anchor = document.getElementById(id)
     if (!anchor) return
@@ -49,7 +52,10 @@ export function scrollToAnchor(id: string, behavior: 'auto' | 'smooth'): void {
  * is for what the offset only means once restored, such as folded sections that must be open
  * again for the page to be as long as it was.
  */
-export function restoreScroll(top: number, beforeScroll?: () => void): void {
+export function restoreScroll(
+  top: number,
+  beforeScroll?: () => void,
+): void {
   afterRender(() => {
     beforeScroll?.()
     window.scrollTo({ top, behavior: 'auto' })

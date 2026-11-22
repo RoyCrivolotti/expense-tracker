@@ -8,7 +8,10 @@ import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactio
 import { TransactionPager, type PagerState } from './transactionPager'
 
 /** A pager with a screen attached to it, as the Transactions tab is while it is open. */
-function pagerOf(source: TestSource, options?: ConstructorParameters<typeof TransactionPager>[1]): TransactionPager {
+function pagerOf(
+  source: TestSource,
+  options?: ConstructorParameters<typeof TransactionPager>[1],
+): TransactionPager {
   const pager = new TransactionPager(source, options)
   pager.attach()
   return pager
@@ -40,7 +43,10 @@ async function drain(pager: TransactionPager): Promise<PagerState> {
 
 const ids = (rows: readonly Transaction[]) => rows.map((row) => row.id)
 const ledger = awkwardLedger()
-const idsOf = (filter: TxnFilter, from: Transaction[] = ledger.transactions) => ids(filterTransactions(from, filter))
+const idsOf = (
+  filter: TxnFilter,
+  from: Transaction[] = ledger.transactions,
+) => ids(filterTransactions(from, filter))
 
 describe('TransactionPager', () => {
   it('holds, for any filter and page size, the rows the engine lists, in its order, with the summary beside them', async () => {
@@ -61,7 +67,10 @@ describe('TransactionPager', () => {
     const seen: Array<[TxnFilter, string | undefined]> = []
     const cursors: Array<string | null> = []
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = async (filter, request) => {
+    source.readTransactionPage = async (
+      filter,
+      request,
+    ) => {
       seen.push([filter, request?.cursor])
       const page = await read(filter, request)
       cursors.push(page.nextCursor)
@@ -104,8 +113,10 @@ describe('TransactionPager', () => {
     const source = memorySource(ledger)
     const read = source.readTransactionPage.bind(source)
     const release: Array<() => void> = []
-    source.readTransactionPage = (filter, request) =>
-      new Promise((resolve) => release.push(() => resolve(read(filter, request))))
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => new Promise((resolve) => release.push(() => resolve(read(filter, request))))
     const pager = pagerOf(source, { limit: 20 })
     pager.setFilter({ status: 'posted' })
     pager.setFilter({ status: 'forecast' })
@@ -130,7 +141,10 @@ describe('TransactionPager', () => {
 describe('TransactionPager, a ledger that changes while it is read', () => {
   const first = ledger.transactions.slice().sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
 
-  async function afterFirstPage(change: (dataset: ExpenseDataset) => ExpenseDataset, limit = 25) {
+  async function afterFirstPage(
+    change: (dataset: ExpenseDataset) => ExpenseDataset,
+    limit = 25,
+  ) {
     const source = memorySource(ledger)
     const pager = pagerOf(source, { limit })
     pager.setFilter({})
@@ -146,7 +160,9 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
     const older = first[200]!
     const { state } = await afterFirstPage((d) => ({
       ...d,
-      transactions: d.transactions.map((t) => (t.id === moved.id ? { ...t, date: older.date, description: 'Edited' } : t)),
+      transactions: d.transactions.map((t) =>
+        t.id === moved.id ? { ...t, date: older.date, description: 'Edited' } : t,
+      ),
     }))
     const held = ids(state.rows)
     expect(new Set(held).size).toBe(held.length)
@@ -156,9 +172,22 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
   })
 
   it('shows a row added past the cursor and not one added before it, until the list is read again', async () => {
-    const before = makeTransaction({ id: 9_000_001, date: first[0]!.date, budgetMonth: first[0]!.budgetMonth, status: 'posted' })
-    const past = makeTransaction({ id: 9_000_002, date: first[300]!.date, budgetMonth: first[300]!.budgetMonth, status: 'posted' })
-    const { state, pager, changed } = await afterFirstPage((d) => ({ ...d, transactions: [...d.transactions, before, past] }))
+    const before = makeTransaction({
+      id: 9_000_001,
+      date: first[0]!.date,
+      budgetMonth: first[0]!.budgetMonth,
+      status: 'posted',
+    })
+    const past = makeTransaction({
+      id: 9_000_002,
+      date: first[300]!.date,
+      budgetMonth: first[300]!.budgetMonth,
+      status: 'posted',
+    })
+    const { state, pager, changed } = await afterFirstPage((d) => ({
+      ...d,
+      transactions: [...d.transactions, before, past],
+    }))
     expect(ids(state.rows)).toContain(past.id)
     expect(ids(state.rows)).not.toContain(before.id)
     void pager.refresh()
@@ -168,7 +197,10 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
 
   it('keeps a row deleted from the pages already read until the list is read again, and never hides another', async () => {
     const gone = first[5]!
-    const { state, pager, changed } = await afterFirstPage((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== gone.id) }))
+    const { state, pager, changed } = await afterFirstPage((d) => ({
+      ...d,
+      transactions: d.transactions.filter((t) => t.id !== gone.id),
+    }))
     expect(ids(state.rows)).toEqual(ids(first))
     void pager.refresh()
     expect(ids((await drain(pager)).rows)).toEqual(idsOf({}, changed.transactions))
@@ -191,10 +223,19 @@ describe('TransactionPager, a ledger that changes while it is read', () => {
 })
 
 describe('TransactionPager, reads that fail', () => {
-  function failing(source: TestSource, shape: (call: number, cursor: string | undefined) => 'fail' | 'bad-cursor' | 'ok') {
+  function failing(
+    source: TestSource,
+    shape: (
+      call: number,
+      cursor: string | undefined,
+    ) => 'fail' | 'bad-cursor' | 'ok',
+  ) {
     const read = source.readTransactionPage.bind(source)
     let call = 0
-    source.readTransactionPage = async (filter, request) => {
+    source.readTransactionPage = async (
+      filter,
+      request,
+    ) => {
       const what = shape(call++, request?.cursor)
       if (what === 'fail') throw new Error('offline')
       const page = await read(filter, request)
@@ -282,7 +323,10 @@ describe('TransactionPager, a filter the caller owns', () => {
     const source = memorySource(ledger)
     const seen: TxnFilter[] = []
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = (filter, request) => {
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => {
       seen.push(filter)
       return read(filter, request)
     }
@@ -300,7 +344,9 @@ describe('TransactionPager, a filter the caller owns', () => {
     expect(seen.length).toBeGreaterThan(1)
     for (const filter of seen) {
       expect(filter).toEqual(wanted)
-      expect(Object.isFrozen(filter) && Object.isFrozen(filter.labelIds) && Object.isFrozen(filter.queryAmount)).toBe(true)
+      expect(Object.isFrozen(filter) && Object.isFrozen(filter.labelIds) && Object.isFrozen(filter.queryAmount)).toBe(
+        true,
+      )
     }
   })
 })
@@ -335,7 +381,10 @@ describe('TransactionPager, a burst of filters', () => {
     const source = memorySource(ledger)
     const signals: AbortSignal[] = []
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = (filter, request) => {
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => {
       if (request?.signal) signals.push(request.signal)
       return read(filter, request)
     }
@@ -442,7 +491,10 @@ describe('TransactionPager, the retry and the summary', () => {
     const source = memorySource(ledger)
     const read = source.readTransactionPage.bind(source)
     let failures = 1
-    source.readTransactionPage = async (filter, request) => {
+    source.readTransactionPage = async (
+      filter,
+      request,
+    ) => {
       if (filter.status === 'forecast' && failures-- > 0) throw new Error('offline')
       return read(filter, request)
     }
@@ -509,7 +561,11 @@ describe('TransactionPager, the retry and the summary', () => {
 
 describe('TransactionPager, a refresh after a write', () => {
   /** Reads `pages` pages of a filter, as a reader scrolling down does. */
-  async function scrolled(source: TestSource, pages: number, limit = 20) {
+  async function scrolled(
+    source: TestSource,
+    pages: number,
+    limit = 20,
+  ) {
     const pager = pagerOf(source, { limit })
     pager.setFilter({})
     for (let at = 1; at < pages; at += 1) {
@@ -527,7 +583,10 @@ describe('TransactionPager, a refresh after a write', () => {
     expect(held).toHaveLength(260)
     const limits: Array<number | undefined> = []
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = (filter, request) => {
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => {
       limits.push(request?.limit)
       return read(filter, request)
     }
@@ -571,14 +630,20 @@ describe('TransactionPager, a refresh after a write', () => {
     const pager = await scrolled(source, 4)
     const signals: AbortSignal[] = []
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = (filter, request) => {
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => {
       if (request?.signal) signals.push(request.signal)
       return read(filter, request)
     }
     const [first, second] = [ledger.transactions[2]!, ledger.transactions[30]!]
     source.dataset = { ...ledger, transactions: ledger.transactions.filter((t) => t.id !== first.id) }
     void pager.refresh()
-    const after: ExpenseDataset = { ...ledger, transactions: ledger.transactions.filter((t) => t.id !== first.id && t.id !== second.id) }
+    const after: ExpenseDataset = {
+      ...ledger,
+      transactions: ledger.transactions.filter((t) => t.id !== first.id && t.id !== second.id),
+    }
     source.dataset = after
     void pager.refresh()
     expect(signals[0]!.aborted).toBe(true)
@@ -639,7 +704,10 @@ describe('TransactionPager, with no screen showing the list', () => {
 describe('TransactionPager, the rows a write on a filter may name', () => {
   const filter: TxnFilter = { categoryId: ledger.categories[0]!.id }
 
-  async function ready(source = memorySource(ledger), options?: ConstructorParameters<typeof TransactionPager>[1]) {
+  async function ready(
+    source = memorySource(ledger),
+    options?: ConstructorParameters<typeof TransactionPager>[1],
+  ) {
     const pager = pagerOf(source, options)
     pager.setFilter(filter)
     await drain(pager)
@@ -676,7 +744,8 @@ describe('TransactionPager, the rows a write on a filter may name', () => {
 
   it('gives nothing when more rows match than a write on a filter may reach', async () => {
     const source = memorySource(ledger)
-    source.readTransactionSummary = () => Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
+    source.readTransactionSummary = () =>
+      Promise.resolve({ revision: 'r', count: 1000, capped: true, netSpendCents: 0 })
     const { pager } = await ready(source)
 
     expect(pager.matching()).toBeNull()
@@ -694,7 +763,11 @@ describe('TransactionPager, the rows a write on a filter may name', () => {
 })
 
 describe('TransactionPager, what refresh reports', () => {
-  async function scrolled(source: TestSource, pages: number, limit = 20) {
+  async function scrolled(
+    source: TestSource,
+    pages: number,
+    limit = 20,
+  ) {
     const pager = pagerOf(source, { limit })
     pager.setFilter({})
     for (let at = 1; at < pages; at += 1) {
@@ -709,7 +782,10 @@ describe('TransactionPager, what refresh reports', () => {
     const source = memorySource(ledger)
     const pager = await scrolled(source, 3)
     const edited = pager.getState().rows[3]!
-    source.dataset = { ...ledger, transactions: ledger.transactions.map((t) => (t.id === edited.id ? { ...t, description: 'Edited' } : t)) }
+    source.dataset = {
+      ...ledger,
+      transactions: ledger.transactions.map((t) => (t.id === edited.id ? { ...t, description: 'Edited' } : t)),
+    }
     const done = pager.refresh({ summary: true })
     expect(pager.getState().refreshing).toBe(true)
     await done
@@ -780,7 +856,12 @@ describe('TransactionPager, rows patched in before the read that follows a write
     pager.patchRows({ upserted: [{ ...row, description: 'Patched' }], removed: [] })
     expect(pager.getState().rows[2]!.description).toBe('Patched')
     expect(pager.getState().summaryStale).toBe(true)
-    source.dataset = { ...ledger, transactions: ledger.transactions.map((t) => (t.id === row.id ? { ...t, description: 'What the server holds' } : t)) }
+    source.dataset = {
+      ...ledger,
+      transactions: ledger.transactions.map((t) =>
+        t.id === row.id ? { ...t, description: 'What the server holds' } : t,
+      ),
+    }
     await pager.refresh({ summary: true })
     expect(pager.getState().rows.find((r) => r.id === row.id)!.description).toBe('What the server holds')
     expect(pager.getState().summaryStale).toBe(false)

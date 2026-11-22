@@ -23,7 +23,14 @@ describe('slotsJson', () => {
   })
 
   it('stops at a slot too long for the column rather than skip it', () => {
-    const huge: Slot = { kind: 'number', index: 1, raw: '9'.repeat(2500), candidates: [], currency: null, negative: false }
+    const huge: Slot = {
+      kind: 'number',
+      index: 1,
+      raw: '9'.repeat(2500),
+      candidates: [],
+      currency: null,
+      negative: false,
+    }
     expect(slotsJson([code(0), huge, code(2)])).toBe(JSON.stringify([code(0)]))
   })
 })

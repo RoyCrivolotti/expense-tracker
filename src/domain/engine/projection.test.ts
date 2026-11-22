@@ -48,9 +48,7 @@ describe('projection invested milestones', () => {
   })
 
   it('house from day one tracks equity separately from invested balance', () => {
-    const owned = projectNetWorth(
-      baseParams({ startInvestedCents: 1_000_000, housePurchaseYear: 0 }),
-    )
+    const owned = projectNetWorth(baseParams({ startInvestedCents: 1_000_000, housePurchaseYear: 0 }))
     expect(owned[5]!.houseEquityCents).toBeGreaterThan(0)
     expect(owned[5]!.netWorthCents).toBeGreaterThan(owned[5]!.investedCents)
   })
@@ -86,9 +84,7 @@ describe('projection invested milestones', () => {
     expect(breakdown!.downPaymentCents).toBe(Math.round(priceAtPurchase * 0.35))
     expect(breakdown!.totalWithdrawalCents).toBe(Math.round(priceAtPurchase * 0.35) + 50_000)
     expect(breakdown!.endInvestedCents).toBe(projectInvested(params)[10])
-    expect(breakdown!.netChangeCents).toBe(
-      breakdown!.endInvestedCents - breakdown!.startInvestedCents,
-    )
+    expect(breakdown!.netChangeCents).toBe(breakdown!.endInvestedCents - breakdown!.startInvestedCents)
     expect(Math.abs(breakdown!.netChangeCents)).toBeLessThan(breakdown!.totalWithdrawalCents)
   })
 
@@ -128,21 +124,21 @@ const hasFrParity =
 
 describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
   it('matches milestone_matrix.csv for seeded paths', () => {
-    const seed = JSON.parse(
-      readFileSync(join(frDir!, 'config/goal-scenarios.seed.json'), 'utf8'),
-    ) as { scenarios: Array<{
-      name: string
-      startInvestedCents: number
-      monthlyContributionCents: number
-      expectedRealReturn: number
-      housePriceCents: number
-      downPaymentFraction: number
-      housePurchaseYear: number | null
-      transactionCostsCents: number
-      mortgageTermYears: number
-      mortgageRateAnnual: number
-      houseAppreciationRate: number
-    }> }
+    const seed = JSON.parse(readFileSync(join(frDir!, 'config/goal-scenarios.seed.json'), 'utf8')) as {
+      scenarios: Array<{
+        name: string
+        startInvestedCents: number
+        monthlyContributionCents: number
+        expectedRealReturn: number
+        housePriceCents: number
+        downPaymentFraction: number
+        housePurchaseYear: number | null
+        transactionCostsCents: number
+        mortgageTermYears: number
+        mortgageRateAnnual: number
+        houseAppreciationRate: number
+      }>
+    }
 
     const csv = readFileSync(join(frDir!, 'data/milestone_matrix.csv'), 'utf8').trim().split('\n')
     const headers = csv[0]!.split(',').slice(1)
@@ -230,7 +226,7 @@ describe('life events', () => {
 describe('monthly amounts as euros sent', () => {
   const paying = { expectedRealReturn: 0, startInvestedCents: 0, monthlyContributionCents: 100_000, horizonYears: 20 }
 
-  it('counts a flat amount for less each year in the plan\'s money, and for the full amount with no inflation', () => {
+  it("counts a flat amount for less each year in the plan's money, and for the full amount with no inflation", () => {
     const none = projectNetWorth(baseParams({ ...paying, inflationRate: 0 }))
     expect(none.map((p) => p.annualContributionCents).slice(1)).toEqual(Array(20).fill(1_200_000))
 
@@ -249,7 +245,8 @@ describe('monthly amounts as euros sent', () => {
   })
 
   it('leaves a plan with a higher inflation lower at the end, since the same euros buy less', () => {
-    const at = (inflationRate: number) => projectNetWorth(baseParams({ horizonYears: 30, inflationRate }))[30]!.investedCents
+    const at = (inflationRate: number) =>
+      projectNetWorth(baseParams({ horizonYears: 30, inflationRate }))[30]!.investedCents
     expect(at(0.03)).toBeLessThan(at(0.02))
     expect(at(0.02)).toBeLessThan(at(0))
   })
@@ -304,16 +301,17 @@ describe('the house and the mortgage in a real plan', () => {
   // The price is today's. Bought in year 5, the house has risen for five years by what it beats
   // inflation by, and the loan is what is left after the down payment on that price.
   const todaysPrice = 400_000_000
-  const priceAt = (year: number, appreciation = DEFAULT_HOUSE_APPRECIATION, inflation = DEFAULT_INFLATION_RATE) =>
-    Math.round(todaysPrice * ((1 + appreciation) / (1 + inflation)) ** year)
+  const priceAt = (
+    year: number,
+    appreciation = DEFAULT_HOUSE_APPRECIATION,
+    inflation = DEFAULT_INFLATION_RATE,
+  ) => Math.round(todaysPrice * ((1 + appreciation) / (1 + inflation)) ** year)
   const price = priceAt(5)
   const loan = price - Math.round(price * 0.2)
 
   it('grows the house only by what its appreciation beats inflation by', () => {
     // Appreciation equal to inflation is no growth in today's money at all.
-    const flat = projectNetWorth(
-      baseParams({ housePurchaseYear: 5, houseAppreciationRate: DEFAULT_INFLATION_RATE }),
-    )
+    const flat = projectNetWorth(baseParams({ housePurchaseYear: 5, houseAppreciationRate: DEFAULT_INFLATION_RATE }))
     expect(flat[5]!.houseEquityCents).toBe(todaysPrice)
     expect(flat[25]!.houseEquityCents).toBe(todaysPrice)
 
@@ -325,20 +323,24 @@ describe('the house and the mortgage in a real plan', () => {
     expect(grown[4]!.houseEquityCents).toBe(0)
   })
 
-  it('owes what the bank\'s schedule leaves, in today\'s money', () => {
+  it("owes what the bank's schedule leaves, in today's money", () => {
     const rate = 0.03
     const months = 360
     const i = rate / 12
     const payment = (loan * i) / (1 - (1 + i) ** -months)
     const nominalBalance = (elapsed: number) => loan * (1 + i) ** elapsed - payment * (((1 + i) ** elapsed - 1) / i)
 
-    const points = projectNetWorth(baseParams({ housePurchaseYear: 5, mortgageRateAnnual: rate, mortgageTermYears: 30 }))
+    const points = projectNetWorth(
+      baseParams({ housePurchaseYear: 5, mortgageRateAnnual: rate, mortgageTermYears: 30 }),
+    )
     // Ten years in, the nominal balance, brought back ten years at the assumed inflation.
     const expected = nominalBalance(120) / (1 + DEFAULT_INFLATION_RATE) ** 10
     expect(Math.abs(points[15]!.mortgageBalanceCents - expected)).toBeLessThanOrEqual(2)
     // It is the full loan the day it is taken, and is paid off at the end of the term.
     expect(points[5]!.mortgageBalanceCents).toBe(loan)
-    expect(projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageTermYears: 30 }))[30]!.mortgageBalanceCents).toBe(0)
+    expect(projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageTermYears: 30 }))[30]!.mortgageBalanceCents).toBe(
+      0,
+    )
   })
 
   it('takes inflation off a loan with no interest too', () => {
@@ -346,7 +348,7 @@ describe('the house and the mortgage in a real plan', () => {
     // Owned from day one, so the loan is on today's price. Half repaid after ten years, and what is
     // left counted in today's money.
     const ownedLoan = todaysPrice - Math.round(todaysPrice * 0.2)
-    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((ownedLoan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
+    expect(points[10]!.mortgageBalanceCents).toBe(Math.round(ownedLoan / 2 / (1 + DEFAULT_INFLATION_RATE) ** 10))
   })
 
   it('uses the inflation it is given, not a default', () => {

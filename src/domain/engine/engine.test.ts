@@ -15,12 +15,7 @@ import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate, parseIsoDate }
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals, investedYtdCents } from './monthlyTotals'
-import {
-  computeBudgetHealth,
-  computeCategoryActuals,
-  computeYtdBudgetHealth,
-  sumBudgetHealth,
-} from './categoryBudget'
+import { computeBudgetHealth, computeCategoryActuals, computeYtdBudgetHealth, sumBudgetHealth } from './categoryBudget'
 import { netSpendCents } from './transactions'
 
 describe('money', () => {
@@ -263,9 +258,7 @@ describe('status derivation', () => {
   })
   it('deferred card is posted only when the month is paid', () => {
     expect(deriveStatus({ ...base, accountId: 2 }, card, statements)).toBe('posted')
-    expect(deriveStatus({ ...base, accountId: 2, budgetMonth: '2026-02' }, card, statements)).toBe(
-      'forecast',
-    )
+    expect(deriveStatus({ ...base, accountId: 2, budgetMonth: '2026-02' }, card, statements)).toBe('forecast')
   })
   it('cancelled wins regardless of account', () => {
     expect(deriveStatus({ ...base, accountId: 1, cancelled: true }, debit, [])).toBe('cancelled')
@@ -319,11 +312,7 @@ describe('monthly totals', () => {
       cancelled: false,
     },
   ]
-  const txns = deriveTransactions(
-    stored,
-    [debit, card],
-    [{ accountId: 2, yearMonth: '2026-01', paid: true }],
-  )
+  const txns = deriveTransactions(stored, [debit, card], [{ accountId: 2, yearMonth: '2026-01', paid: true }])
 
   it('nets refunds and excludes forecast/unpaid card charges', () => {
     const totals = computeMonthlyTotals(txns)
@@ -344,9 +333,7 @@ describe('monthly totals', () => {
 })
 
 describe('computeCategoryActuals YTD', () => {
-  const categories = [
-    { id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
-  ]
+  const categories = [{ id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true }]
   const base = {
     description: '',
     accountId: 1,
@@ -434,9 +421,7 @@ describe('netSpendCents', () => {
 
 describe('budget health', () => {
   it('flags over/warning/under by ratio', () => {
-    const categories = [
-      { id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true }]
     const txns: Transaction[] = [
       {
         id: 1,
@@ -460,9 +445,7 @@ describe('budget health', () => {
     // A reimbursement booked against Travel repays more than the month spent.
     // The ratio goes negative, which used to slip past both thresholds and land
     // on `under` — a green "under budget" pill reading "-45%".
-    const categories = [
-      { id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true }]
     const base = {
       date: '2026-03-04',
       budgetMonth: '2026-03',
@@ -485,9 +468,7 @@ describe('budget health', () => {
   it('keeps an exactly-zero category under, not credit', () => {
     // The boundary matters: a refund that exactly cancels the spend is "nothing
     // spent", not "money back". Only a ratio below zero is a credit.
-    const categories = [
-      { id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true }]
     const base = {
       date: '2026-03-04',
       budgetMonth: '2026-03',
@@ -507,9 +488,7 @@ describe('budget health', () => {
   })
 
   it('includes forecast charges when includeForecast is set', () => {
-    const categories = [
-      { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true }]
     const txns: Transaction[] = [
       {
         id: 1,
@@ -531,9 +510,7 @@ describe('budget health', () => {
   })
 
   it('sums YTD actuals within calendar year through selected month', () => {
-    const categories = [
-      { id: 1, name: 'Food', monthlyBudgetCents: 10000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Food', monthlyBudgetCents: 10000, sortOrder: 0, active: true }]
     const txns: Transaction[] = [
       {
         id: 1,
@@ -578,9 +555,7 @@ describe('budget health', () => {
   })
 
   it('flags YTD over and warning by cumulative ratio', () => {
-    const categories = [
-      { id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true }]
     const txns: Transaction[] = [
       {
         id: 1,
@@ -605,9 +580,7 @@ describe('budget health', () => {
   })
 
   it('includes forecast charges in YTD when includeForecast is set', () => {
-    const categories = [
-      { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
-    ]
+    const categories = [{ id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true }]
     const txns: Transaction[] = [
       {
         id: 1,

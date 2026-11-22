@@ -11,7 +11,10 @@ export interface FlagDraft {
 }
 
 /** Pure: the form's opening values for an existing flag, or for a new one. */
-export function initialFlagDraft(flag: Flag | null, defaultColor: string): FlagDraft {
+export function initialFlagDraft(
+  flag: Flag | null,
+  defaultColor: string,
+): FlagDraft {
   return {
     name: flag?.name ?? '',
     description: flag?.description ?? '',
@@ -41,7 +44,10 @@ export function useFlagFormSave(
     existing,
     onDone,
     create: (draft) => actions.createFlag(draft),
-    update: (id, draft) => actions.updateFlag(id, draft),
+    update: (
+      id,
+      draft,
+    ) => actions.updateFlag(id, draft),
     remove: async (id) => {
       const { unflagged } = await actions.deleteFlag(id)
       return { affected: unflagged }

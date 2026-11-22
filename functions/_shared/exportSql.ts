@@ -29,7 +29,12 @@ const TRANSACTIONS = `SELECT ${COLUMNS}, ${STATUS_SQL} AS status, ${LABEL_IDS_SQ
   FROM transactions t ${STATUS_JOINS}
   WHERE t.owner = ? AND t.id > ? ORDER BY t.id LIMIT ?`
 
-function keyed({ table, key }: Keyed, owner: string, after: SqlParam[], limit: number): Sql {
+function keyed(
+  { table, key }: Keyed,
+  owner: string,
+  after: SqlParam[],
+  limit: number,
+): Sql {
   const columns = key.split(', ')
   const position =
     after.length === 0
@@ -44,8 +49,14 @@ function keyed({ table, key }: Keyed, owner: string, after: SqlParam[], limit: n
 }
 
 /** The read for one chunk of `table`; `after` is the cursor of the chunk before it, already checked. */
-export function exportSql(table: ExportTable, owner: string, after: string | undefined, limit: number): Sql {
-  if (table === 'transactions') return { sql: TRANSACTIONS, params: [owner, after === undefined ? 0 : Number(after), limit + 1] }
+export function exportSql(
+  table: ExportTable,
+  owner: string,
+  after: string | undefined,
+  limit: number,
+): Sql {
+  if (table === 'transactions')
+    return { sql: TRANSACTIONS, params: [owner, after === undefined ? 0 : Number(after), limit + 1] }
   if (table === 'settings') return { sql: 'SELECT * FROM settings WHERE owner = ?', params: [owner] }
   if (table === 'cashActuals') {
     return keyed({ table: 'cash_actuals', key: 'year_month' }, owner, after === undefined ? [] : [after], limit)

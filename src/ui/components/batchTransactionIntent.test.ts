@@ -37,9 +37,7 @@ describe('buildBatchTransactions', () => {
       [
         batch({
           date: '2026-03-10',
-          rows: [
-            row({ id: 'r1', description: 'Mercadona', amount: '12,50', categoryId: 2, accountId: 4 }),
-          ],
+          rows: [row({ id: 'r1', description: 'Mercadona', amount: '12,50', categoryId: 2, accountId: 4 })],
         }),
       ],
       EU_MONEY_FORMAT,

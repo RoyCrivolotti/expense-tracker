@@ -1,7 +1,13 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { SCENARIO_NAME_MAX_LENGTH, dateAtYears, formatCentsCompact, formatMoneyInput, tryParseMoneyToCents } from '../../../engine'
+import {
+  SCENARIO_NAME_MAX_LENGTH,
+  dateAtYears,
+  formatCentsCompact,
+  formatMoneyInput,
+  tryParseMoneyToCents,
+} from '../../../engine'
 import { DateInput } from '../../components/DateInput'
 import { Modal } from '../../components/Modal'
 import { todayIso } from '../../components/transactionFormState'
@@ -53,7 +59,15 @@ function Named({ text, source }: { text: string; source: NewGoalScenario }): Rea
  * The starting balance as typed. It is read when the box is left (or on Enter), as the editor's money fields
  * are, so a half-typed figure never moves the suggestion's lines under the person's cursor.
  */
-function BalanceField({ view, source, onTyped }: { view: StartLaterView; source: NewGoalScenario; onTyped: (cents: number | null) => void }) {
+function BalanceField({
+  view,
+  source,
+  onTyped,
+}: {
+  view: StartLaterView
+  source: NewGoalScenario
+  onTyped: (cents: number | null) => void
+}) {
   const format = useMoneyFormat()
   const named = (text: string) => <Named text={text} source={source} />
   const commit = (input: HTMLInputElement) => {
@@ -102,7 +116,13 @@ function BalanceField({ view, source, onTyped }: { view: StartLaterView; source:
 }
 
 /** "Start date", and why the date cannot be used when it cannot. */
-function StartDateField(props: { source: NewGoalScenario; date: string; refusal: string | null; onDate: (date: string) => void; onPicker: (open: boolean) => void }) {
+function StartDateField(props: {
+  source: NewGoalScenario
+  date: string
+  refusal: string | null
+  onDate: (date: string) => void
+  onPicker: (open: boolean) => void
+}) {
   const { source, date, refusal } = props
   const start = source.planStartDate
   return (
@@ -162,10 +182,18 @@ export function StartLaterSheet({ onCreate, onClose, ...live }: SheetProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const [today] = useState(todayIso)
-  const [choice, setChoice] = useState<StartLaterChoice>(() => ({ date: defaultStartDate(checkins, today), typedCents: null, typedName: null }))
+  const [choice, setChoice] = useState<StartLaterChoice>(() => ({
+    date: defaultStartDate(checkins, today),
+    typedCents: null,
+    typedName: null,
+  }))
   const [pickerOpen, setPickerOpen] = useState(false)
   const view = useMemo(
-    () => startLaterView({ source, checkins, scenarios, inflationRate, today, format, formatDate: formatCheckinDate }, choice),
+    () =>
+      startLaterView(
+        { source, checkins, scenarios, inflationRate, today, format, formatDate: formatCheckinDate },
+        choice,
+      ),
     [source, checkins, scenarios, inflationRate, today, format, choice],
   )
   const set = (patch: Partial<StartLaterChoice>) => setChoice((c) => ({ ...c, ...patch }))
@@ -180,8 +208,16 @@ export function StartLaterSheet({ onCreate, onClose, ...live }: SheetProps) {
   return (
     <Modal title={`Start a copy of "${source.name}" later`} onClose={onClose} trapPaused={pickerOpen}>
       <div className={styles.body}>
-        <StartDateField source={source} date={choice.date} refusal={view.refusal} onDate={(date) => set({ date })} onPicker={setPickerOpen} />
-        {view.refusal ? null : <BalanceField view={view} source={source} onTyped={(typedCents) => set({ typedCents })} />}
+        <StartDateField
+          source={source}
+          date={choice.date}
+          refusal={view.refusal}
+          onDate={(date) => set({ date })}
+          onPicker={setPickerOpen}
+        />
+        {view.refusal ? null : (
+          <BalanceField view={view} source={source} onTyped={(typedCents) => set({ typedCents })} />
+        )}
         {view.refusal ? null : <Changes view={view} source={source} />}
         <label className={goalStyles.field}>
           <span className={goalStyles.fieldLabel}>Name</span>
@@ -196,7 +232,12 @@ export function StartLaterSheet({ onCreate, onClose, ...live }: SheetProps) {
           <button type="button" className={goalStyles.btn} onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className={`${goalStyles.btn} ${goalStyles.btnPrimary}`} disabled={!view.input} onClick={create}>
+          <button
+            type="button"
+            className={`${goalStyles.btn} ${goalStyles.btnPrimary}`}
+            disabled={!view.input}
+            onClick={create}
+          >
             Create scenario
           </button>
         </div>

@@ -9,10 +9,7 @@ import { netSpendCents } from './transactions'
  * different shape than the server ever sends. Destructuring in the parameter
  * position also keeps the discarded binding inside ESLint's `argsIgnorePattern`.
  */
-export function withoutFlag<T extends { flagId?: number }>({
-  flagId: _flagId,
-  ...rest
-}: T): Omit<T, 'flagId'> {
+export function withoutFlag<T extends { flagId?: number }>({ flagId: _flagId, ...rest }: T): Omit<T, 'flagId'> {
   return rest
 }
 
@@ -123,7 +120,10 @@ function bucketByFlag(transactions: Transaction[]): Map<number, Transaction[]> {
   return byFlag
 }
 
-function toGroup(flag: Flag, rows: Transaction[] | undefined): FlagGroup | null {
+function toGroup(
+  flag: Flag,
+  rows: Transaction[] | undefined,
+): FlagGroup | null {
   if (!rows || rows.length === 0) return null
   return {
     flag,
@@ -162,7 +162,10 @@ export function summarizeFlagGroups(groups: FlagGroup[]): {
  * `flagId` (settled before this fallback existed, or settled by something that
  * never clears it) are unaffected — that direct link always wins first.
  */
-export function settledFlagId(rows: Transaction[], flags: Flag[]): number | undefined {
+export function settledFlagId(
+  rows: Transaction[],
+  flags: Flag[],
+): number | undefined {
   const direct = rows.find((t) => t.flagId != null)?.flagId
   if (direct != null) return direct
   const viaAutoLabel = flags.find((f) => {

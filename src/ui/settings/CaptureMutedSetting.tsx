@@ -122,7 +122,12 @@ export function CaptureMutedSetting() {
           {found && found.length > 0 ? (
             <ul className={keyStyles.list}>
               {found.map((wording) => (
-                <MutedRow key={wording.templateId} wording={wording} busy={busy} onUnmute={() => void unmute(wording.templateId)} />
+                <MutedRow
+                  key={wording.templateId}
+                  wording={wording}
+                  busy={busy}
+                  onUnmute={() => void unmute(wording.templateId)}
+                />
               ))}
             </ul>
           ) : null}

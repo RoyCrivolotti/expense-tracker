@@ -18,7 +18,14 @@ function loadEmails() {
     if (fromEnv.startsWith('[')) {
       return [...new Set(JSON.parse(fromEnv).map((e) => String(e).trim().toLowerCase()))]
     }
-    return [...new Set(fromEnv.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))]
+    return [
+      ...new Set(
+        fromEnv
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ]
   }
   const filePath = join(ROOT, 'config/allowed-emails.json')
   if (!existsSync(filePath)) {

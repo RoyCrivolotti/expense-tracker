@@ -5,7 +5,12 @@ import { portfolioReturn, readReturn } from './portfolioReturn'
 
 const accounts = [makeWealthAccount({ id: 1, kind: 'investment' }), makeWealthAccount({ id: 2, kind: 'cash' })]
 
-function checkin(id: number, date: string, invested: number, createdAt?: string) {
+function checkin(
+  id: number,
+  date: string,
+  invested: number,
+  createdAt?: string,
+) {
   return makeWealthCheckin({
     id,
     checkinDate: date,
@@ -16,8 +21,11 @@ function checkin(id: number, date: string, invested: number, createdAt?: string)
     ],
   })
 }
-const deposit = (date: string, amountCents: number, over = {}) =>
-  makeTransaction({ date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents, ...over })
+const deposit = (
+  date: string,
+  amountCents: number,
+  over = {},
+) => makeTransaction({ date, budgetMonth: date.slice(0, 7), type: 'investment', amountCents, ...over })
 
 /** A plan that expects 1.000 a month, and one that expects nothing. */
 const investing = makeScenario({ monthlyContributionCents: 100_000, planStartDate: '2024-01-01' })
@@ -78,11 +86,19 @@ describe('readReturn', () => {
 
   it('asks whether the plan expects investing at the end of the period, not at its start: a plan that starts paying part way through does', () => {
     // 0 a month until June 2026, then 1.000: the period (March 2026 to March 2027) ends in the paying part.
-    const later = makeScenario({ monthlyContributionCents: 0, planStartDate: '2026-01-01', contributionSchedule: [{ from: '2026-06', monthlyCents: 100_000 }] })
+    const later = makeScenario({
+      monthlyContributionCents: 0,
+      planStartDate: '2026-01-01',
+      contributionSchedule: [{ from: '2026-06', monthlyCents: 100_000 }],
+    })
     const march = [checkin(1, '2026-03-01', 100_000_00), checkin(2, '2027-03-01', 105_000_00)]
     expect(readReturn(march, accounts, [], later)?.kind).toBe('no-investments')
     // And the other way round: paying at the start and paused by the end expects nothing.
-    const paused = makeScenario({ monthlyContributionCents: 100_000, planStartDate: '2026-01-01', contributionSchedule: [{ from: '2026-06', monthlyCents: 0 }] })
+    const paused = makeScenario({
+      monthlyContributionCents: 100_000,
+      planStartDate: '2026-01-01',
+      contributionSchedule: [{ from: '2026-06', monthlyCents: 0 }],
+    })
     expect(readReturn(march, accounts, [], paused)?.kind).toBe('figure')
   })
 
@@ -93,7 +109,10 @@ describe('readReturn', () => {
   it('does not count a transaction outside the period, a cancelled one or a forecast one as recorded', () => {
     const outside = [deposit('2024-12-31', 5_000_00), deposit('2026-01-02', 5_000_00)]
     expect(readReturn(year, accounts, outside, investing)?.kind).toBe('no-investments')
-    const unreal = [deposit('2025-06-01', 5_000_00, { status: 'cancelled' }), deposit('2025-07-01', 5_000_00, { status: 'forecast' })]
+    const unreal = [
+      deposit('2025-06-01', 5_000_00, { status: 'cancelled' }),
+      deposit('2025-07-01', 5_000_00, { status: 'forecast' }),
+    ]
     expect(readReturn(year, accounts, unreal, investing)?.kind).toBe('no-investments')
   })
 
@@ -103,14 +122,21 @@ describe('readReturn', () => {
 
   it('hides a return above 30% a year, which is money moved in that nothing accounts for', () => {
     // An account opened with 10k put in on day 29 of 30, then 10.2k, then 11k a year on, which a return of about 2% over that month annualises to well over 30% a year.
-    const opened = [checkin(1, '2025-01-01', 0), checkin(2, '2025-01-31', 10_200_00), checkin(3, '2026-01-01', 11_000_00)]
+    const opened = [
+      checkin(1, '2025-01-01', 0),
+      checkin(2, '2025-01-31', 10_200_00),
+      checkin(3, '2026-01-01', 11_000_00),
+    ]
     const reading = readReturn(opened, accounts, [deposit('2025-01-30', 10_000_00)], investing)
     expect(reading?.kind).toBe('too-high')
     if (reading?.kind === 'too-high') expect(reading.ret.judgedReturn).toBeGreaterThan(0.5)
   })
 
   it('judges a stretch under a year by the growth it had, not by what it would be over a year', () => {
-    const window = (end: number, last = '2025-01-31') => [checkin(1, '2025-01-01', 100_000_00), checkin(2, last, end)]
+    const window = (
+      end: number,
+      last = '2025-01-31',
+    ) => [checkin(1, '2025-01-01', 100_000_00), checkin(2, last, end)]
     // A good month or quarter is not money moved in: +3% in 30 days compounds to over 40% a year and
     // is an ordinary market month; +7% in three months and +26% in eleven months likewise.
     expect(readReturn(window(103_000_00), accounts, [], idle)?.kind).toBe('figure')
@@ -148,7 +174,12 @@ describe('readReturn', () => {
     })
     expect(scaled(100)).toEqual(scaled(1))
     const tooHigh = (k: number) =>
-      readReturn([checkin(1, '2025-01-01', 100_000_00 * k), checkin(2, '2026-01-01', 150_000_00 * k)], accounts, [], idle)?.kind
+      readReturn(
+        [checkin(1, '2025-01-01', 100_000_00 * k), checkin(2, '2026-01-01', 150_000_00 * k)],
+        accounts,
+        [],
+        idle,
+      )?.kind
     expect(tooHigh(0.01)).toBe(tooHigh(1000))
   })
 

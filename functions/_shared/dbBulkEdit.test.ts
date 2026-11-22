@@ -57,12 +57,18 @@ function dump(db: DatabaseSync = ledger.db): unknown {
          FROM transactions ORDER BY id`,
       )
       .all(),
-    labels: db.prepare('SELECT transaction_id, label_id FROM transaction_labels ORDER BY transaction_id, label_id').all(),
+    labels: db
+      .prepare('SELECT transaction_id, label_id FROM transaction_labels ORDER BY transaction_id, label_id')
+      .all(),
   }
 }
 
-const edit = (filter: TxnFilter, expectedCount: number, patch: BulkTransactionPatch, owner = OWNER) =>
-  repo.bulkUpdateTransactionsByFilter(owner, { filter, expectedCount }, patch)
+const edit = (
+  filter: TxnFilter,
+  expectedCount: number,
+  patch: BulkTransactionPatch,
+  owner = OWNER,
+) => repo.bulkUpdateTransactionsByFilter(owner, { filter, expectedCount }, patch)
 
 describe('editing the rows a filter matches', () => {
   it('changes those rows and no others, and says how many', async () => {
@@ -129,7 +135,9 @@ describe('editing the rows a filter matches', () => {
   it('stamps the payment with what it covers, as settling by ids does', async () => {
     await edit({ ...EXPENSES, month: '2026-09' }, 4, { settledBy: A.paymentA })
 
-    expect(ledger.db.prepare('SELECT report_count, report_covered_cents FROM transactions WHERE id = ?').get(A.paymentA)).toEqual({
+    expect(
+      ledger.db.prepare('SELECT report_count, report_covered_cents FROM transactions WHERE id = ?').get(A.paymentA),
+    ).toEqual({
       report_count: 4,
       report_covered_cents: 1_001 + 1_002 + 1_004 + 1_005,
     })
@@ -209,7 +217,10 @@ describe('a request that races another', () => {
     useDatabase(beforeEachBatch(ledger.d1, other))
   }
 
-  const insertExpense = (id: number, month = '2026-08') =>
+  const insertExpense = (
+    id: number,
+    month = '2026-08',
+  ) =>
     ledger.db
       .prepare(
         `INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
@@ -242,7 +253,9 @@ describe('a request that races another', () => {
     })
 
     expect(idsWhere(ledger.db, 'category_id = ? AND id IN (1, 4, 72)', A.travel)).toEqual([4])
-    expect(ledger.db.prepare('SELECT category_id FROM transactions WHERE id = 4').get()).toEqual({ category_id: A.travel })
+    expect(ledger.db.prepare('SELECT category_id FROM transactions WHERE id = 4').get()).toEqual({
+      category_id: A.travel,
+    })
   })
 
   it('writes nothing when a row of the filter is deleted in the gap', async () => {
@@ -253,7 +266,9 @@ describe('a request that races another', () => {
       message: BULK_CHANGED_MESSAGE,
     })
 
-    expect(ledger.db.prepare('SELECT category_id FROM transactions WHERE id = 1').get()).toEqual({ category_id: A.food })
+    expect(ledger.db.prepare('SELECT category_id FROM transactions WHERE id = 1').get()).toEqual({
+      category_id: A.food,
+    })
   })
 
   it('writes nothing when another payment settles one of the rows in the gap', async () => {
@@ -323,7 +338,9 @@ describe('isolation between owners', () => {
     await edit(forged, 6, { description: 'Mine now' }).catch((e: unknown) => e)
     await edit(EXPENSES, 6, { description: 'Mine now' })
 
-    const rows = ledger.db.prepare("SELECT owner, description FROM transactions WHERE description = 'Mine now'").all() as Array<{ owner: string }>
+    const rows = ledger.db
+      .prepare("SELECT owner, description FROM transactions WHERE description = 'Mine now'")
+      .all() as Array<{ owner: string }>
     expect(rows).toHaveLength(6)
     expect(new Set(rows.map((r) => r.owner))).toEqual(new Set([OWNER]))
     const after = dump() as { transactions: Array<{ owner: string }> }
@@ -350,7 +367,8 @@ describe('the cap', () => {
       `INSERT INTO transactions (owner,id,date,budget_month,description,account_id,category_id,type,amount_cents,cancelled)
        VALUES (?,?,?,?,?,?,?,'expense',100,0)`,
     )
-    for (let i = 0; i < rows; i += 1) insert.run(OWNER, 10_000 + i, '2026-08-10', '2026-08', `Bulk ${i}`, A.account, A.food)
+    for (let i = 0; i < rows; i += 1)
+      insert.run(OWNER, 10_000 + i, '2026-08-10', '2026-08', `Bulk ${i}`, A.account, A.food)
     insert.run(OWNER, 10_000 + rows, '2026-09-10', '2026-09', 'September', A.account, A.food)
     small.db.exec('COMMIT')
     ledger = small
@@ -375,7 +393,9 @@ describe('the cap', () => {
       message: bulkTooManyMessage(),
     })
 
-    expect(ledger.db.prepare('SELECT COUNT(*) AS n FROM transactions WHERE category_id = ?').get(A.travel)).toEqual(before)
+    expect(ledger.db.prepare('SELECT COUNT(*) AS n FROM transactions WHERE category_id = ?').get(A.travel)).toEqual(
+      before,
+    )
   })
 
   it('reads one row past the cap to know, not the whole ledger', async () => {
@@ -388,11 +408,13 @@ describe('the cap', () => {
         return {
           bind: (...values: unknown[]) => {
             const bound = statement.bind(...values)
-            return { all: async () => {
-              const out = await bound.all()
-              returned = out.results.length
-              return out
-            } }
+            return {
+              all: async () => {
+                const out = await bound.all()
+                returned = out.results.length
+                return out
+              },
+            }
           },
         }
       },

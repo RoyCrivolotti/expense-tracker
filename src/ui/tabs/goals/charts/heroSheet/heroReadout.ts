@@ -18,5 +18,9 @@ export function readoutSentence(
   const values = items
     .filter((item) => !item.hidden && item.valueCents !== null)
     .map((item) => `${item.label} ${withEnded(formatValue(item.valueCents as number), item.endedIn)}.`)
-  return [typeof year === 'number' ? `Year ${year}.` : `${year}.`, ...values, ...(purchaseYear ? ['A purchase year.'] : [])].join(' ')
+  return [
+    typeof year === 'number' ? `Year ${year}.` : `${year}.`,
+    ...values,
+    ...(purchaseYear ? ['A purchase year.'] : []),
+  ].join(' ')
 }

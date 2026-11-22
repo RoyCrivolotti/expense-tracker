@@ -26,7 +26,10 @@ function rulesUnder(condition: string): CSSStyleRule[] {
 const phoneRules = () => rulesUnder('(max-width: 899px)')
 
 /** The phone `order` of each area, with the rules for Scenarios (`inAdjust`) winning over the plain ones. */
-function phoneOrders(areas: string[], inAdjust: boolean): number[] {
+function phoneOrders(
+  areas: string[],
+  inAdjust: boolean,
+): number[] {
   const rules = phoneRules()
   return areas.map((area) => {
     const cls = `.${styles[area]}`
@@ -87,7 +90,10 @@ describe('the page order of the Plan blocks', () => {
       element(a).compareDocumentPosition(element(b)) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
     )
   /** The areas as the phone's CSS puts them on screen, top to bottom. */
-  const inShownOrder = (areas: string[], inAdjust: boolean) => {
+  const inShownOrder = (
+    areas: string[],
+    inAdjust: boolean,
+  ) => {
     const orders = phoneOrders(areas, inAdjust)
     return [...areas].sort((a, b) => orders[areas.indexOf(a)]! - orders[areas.indexOf(b)]!)
   }
@@ -137,7 +143,9 @@ describe('the page order of the Plan blocks', () => {
       screen.getByRole('heading', { name: 'Detailed charts' }),
     ]
 
-    expect([...top].reverse().sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))).toEqual(top)
+    expect(
+      [...top].reverse().sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)),
+    ).toEqual(top)
   })
 
   it('keeps the edits made to the draft when the window crosses 900px, both ways', async () => {

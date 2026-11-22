@@ -30,7 +30,11 @@ function txn(partial: Partial<Transaction>): Transaction {
   return makeTransaction({ id: nextId++, ...partial })
 }
 
-function view(transactions: Transaction[], month: string, withBudget = false) {
+function view(
+  transactions: Transaction[],
+  month: string,
+  withBudget = false,
+) {
   const model = buildExpenseModel(
     makeDataset({
       categories: [
@@ -54,7 +58,10 @@ function view(transactions: Transaction[], month: string, withBudget = false) {
   )
 }
 
-const month = (m: string, extra: Partial<Transaction> = {}) => [
+const month = (
+  m: string,
+  extra: Partial<Transaction> = {},
+) => [
   txn({ date: `${m}-01`, budgetMonth: m, type: 'income', amountCents: 300_000, ...extra }),
   txn({ date: `${m}-04`, budgetMonth: m, categoryId: 1, amountCents: 40_000, ...extra }),
 ]

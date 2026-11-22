@@ -40,9 +40,7 @@ export async function findAttachmentSource(
   owner: string,
   id: number,
 ): Promise<AttachmentSource | null> {
-  const row = await env.DB.prepare(
-    'SELECT * FROM transaction_attachments WHERE id = ? AND owner = ?',
-  )
+  const row = await env.DB.prepare('SELECT * FROM transaction_attachments WHERE id = ? AND owner = ?')
     .bind(id, owner)
     .first<AttachmentRow>()
   if (!row) return null
@@ -104,16 +102,17 @@ export async function deleteAttachment(
   owner: string,
   id: number,
 ): Promise<{ objectKey: string; thumbKey?: string }> {
-  const row = await env.DB.prepare(
-    'DELETE FROM transaction_attachments WHERE id = ? AND owner = ? RETURNING *',
-  )
+  const row = await env.DB.prepare('DELETE FROM transaction_attachments WHERE id = ? AND owner = ? RETURNING *')
     .bind(id, owner)
     .first<AttachmentRow>()
   if (!row) throw new HttpError(404, 'Attachment not found')
   return { objectKey: row.object_key, ...(row.thumb_key ? { thumbKey: row.thumb_key } : {}) }
 }
 
-export async function attachmentBytesUsed(env: Env, owner: string): Promise<number> {
+export async function attachmentBytesUsed(
+  env: Env,
+  owner: string,
+): Promise<number> {
   // One cheap D1 aggregate rather than an R2 list, which would burn Class A ops
   // on every upload.
   const row = await env.DB.prepare(
@@ -144,10 +143,11 @@ export async function attachmentKeysForTransactions(
 }
 
 /** Every stored key for one owner, for revoke cleanup. */
-export async function ownerAttachmentKeys(env: Env, owner: string): Promise<string[]> {
-  const { results } = await env.DB.prepare(
-    'SELECT object_key, thumb_key FROM transaction_attachments WHERE owner = ?',
-  )
+export async function ownerAttachmentKeys(
+  env: Env,
+  owner: string,
+): Promise<string[]> {
+  const { results } = await env.DB.prepare('SELECT object_key, thumb_key FROM transaction_attachments WHERE owner = ?')
     .bind(owner)
     .all<{ object_key: string; thumb_key: string | null }>()
   return (results ?? []).flatMap((r) => (r.thumb_key ? [r.object_key, r.thumb_key] : [r.object_key]))

@@ -10,7 +10,11 @@ const JUMP_MIN_CENTS = 10_000
 
 const yearsAfter = (n: number) => (n === 1 ? '1 year after buying' : `${n} years after buying`)
 
-function invested(cents: number, previous: number | undefined, format: MoneyFormat): string {
+function invested(
+  cents: number,
+  previous: number | undefined,
+  format: MoneyFormat,
+): string {
   if (cents <= 0) return 'nothing'
   const now = formatCentsCompact(cents, format)
   const jumped = previous !== undefined && Math.abs(cents - previous) >= Math.max(JUMP_MIN_CENTS, JUMP_SHARE * previous)
@@ -30,7 +34,10 @@ export function rentVsBuyTooltip(
   const p = points[index]
   if (!p) return { title: '', lines: [] }
   const short = (cents: number) => formatMoneyShort(cents, format)
-  const detail = (label: string, value: string): TooltipLine => ({ label, value, tone: 'neutral', variant: 'detail' })
+  const detail = (
+    label: string,
+    value: string,
+  ): TooltipLine => ({ label, value, tone: 'neutral', variant: 'detail' })
   const after = p.year > 0
   const lines: TooltipLine[] = [
     { label: 'Renter total', value: short(p.rentNetWorthCents), color: rentColor, tone: 'neutral' },

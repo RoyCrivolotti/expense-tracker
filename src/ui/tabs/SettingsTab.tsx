@@ -91,9 +91,8 @@ function Definitions({ model }: { model: ExpenseModel }) {
         <div className={styles.defRow}>
           <span>Default account</span>
           <span>
-            {dataset.accounts.find(
-              (a) => a.id === resolveDefaultAccountId(dataset.accounts, dataset.settings),
-            )?.name ?? '—'}
+            {dataset.accounts.find((a) => a.id === resolveDefaultAccountId(dataset.accounts, dataset.settings))?.name ??
+              '—'}
           </span>
         </div>
       </Card>
@@ -144,10 +143,7 @@ function PreferencesView({
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
 
       {actions && (
-        <OwnerPreferences
-          settings={model.dataset.settings}
-          onChange={(patch) => actions.updateSettings(patch)}
-        />
+        <OwnerPreferences settings={model.dataset.settings} onChange={(patch) => actions.updateSettings(patch)} />
       )}
 
       {actions && (
@@ -159,7 +155,13 @@ function PreferencesView({
         />
       )}
 
-      {actions && <StoppedSuggestionsSetting transactions={model.dataset.transactions} known={model.newestCharges} watch={model.watchHistory} />}
+      {actions && (
+        <StoppedSuggestionsSetting
+          transactions={model.dataset.transactions}
+          known={model.newestCharges}
+          watch={model.watchHistory}
+        />
+      )}
     </>
   )
 }
@@ -175,15 +177,9 @@ function SetupView({
 }) {
   return (
     <>
-      {actions && onRunSetup && (
-        <HelpSetting firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
-      )}
+      {actions && onRunSetup && <HelpSetting firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />}
 
-      {actions ? (
-        <DefinitionsEditor model={model} actions={actions} />
-      ) : (
-        <Definitions model={model} />
-      )}
+      {actions ? <DefinitionsEditor model={model} actions={actions} /> : <Definitions model={model} />}
 
       {actions && (
         <>

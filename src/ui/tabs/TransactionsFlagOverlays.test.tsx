@@ -49,7 +49,10 @@ const withMoney = (props: Props) => (
 )
 
 /** Everything closed unless `overrides` opens it. `update` changes props on the same mount. */
-function renderOverlays(dataset: ExpenseDataset, overrides: Partial<Props> = {}) {
+function renderOverlays(
+  dataset: ExpenseDataset,
+  overrides: Partial<Props> = {},
+) {
   const callbacks = {
     onCloseReport: vi.fn(),
     onOpenReport: vi.fn(),

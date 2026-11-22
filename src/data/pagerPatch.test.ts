@@ -4,7 +4,11 @@ import type { Transaction } from '../domain/types'
 import { makeTransaction } from '../testing/factories'
 import { patchedRows, rowChangesOf } from './pagerPatch'
 
-const row = (id: number, date: string, over: Partial<Transaction> = {}): Transaction => makeTransaction({ id, date, budgetMonth: date.slice(0, 7), ...over })
+const row = (
+  id: number,
+  date: string,
+  over: Partial<Transaction> = {},
+): Transaction => makeTransaction({ id, date, budgetMonth: date.slice(0, 7), ...over })
 /** Newest first, as the API gives rows. */
 const list = (...rows: Transaction[]): Transaction[] => [...rows].sort(byApiOrder)
 const ids = (rows: readonly Transaction[]) => rows.map((r) => r.id)
@@ -58,7 +62,9 @@ describe('patchedRows', () => {
 
   it('adds a new row that the filter matches, before the end of what was read, even when more is to come', () => {
     const fresh = row(9, '2026-08-04', { categoryId: 1 })
-    expect(ids(patchedRows(list(a, b, d), { categoryId: 1 }, false, { upserted: [fresh], removed: [] }))).toEqual([5, 9, 4, 2])
+    expect(ids(patchedRows(list(a, b, d), { categoryId: 1 }, false, { upserted: [fresh], removed: [] }))).toEqual([
+      5, 9, 4, 2,
+    ])
   })
 
   it('does not add a new row the filter does not match', () => {

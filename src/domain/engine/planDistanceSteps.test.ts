@@ -61,7 +61,9 @@ describe('measurePlanDistance across a house payment', () => {
 })
 
 describe('measurePlanDistance across a bonus', () => {
-  const line = planLineOf(project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 3_000_000, label: 'Bonus' }] }))
+  const line = planLineOf(
+    project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 3_000_000, label: 'Bonus' }] }),
+  )
 
   it('is 0 on plan the week before it and does not measure a deficit that only the bonus clears', () => {
     const before = 5 - WEEK
@@ -101,7 +103,13 @@ describe('measurePlanDistance against a brute-force walk of the line', () => {
   }
 
   /** The first time on the way from `from` to `to` at which the line passes the test, found by walking it in small steps. */
-  function walk(line: ReturnType<typeof planLineOf>, from: number, to: number, step: number, passes: (v: number) => boolean): number | null {
+  function walk(
+    line: ReturnType<typeof planLineOf>,
+    from: number,
+    to: number,
+    step: number,
+    passes: (v: number) => boolean,
+  ): number | null {
     for (let t = from; step > 0 ? t <= to : t >= to; t += step) {
       if (passes(planValueAt(line, t)!)) return t
     }
@@ -188,13 +196,20 @@ describe('measurePlanDistance when the balance is reached only after a step in t
   it('says a step is why, not that the balance is off the line, when the line has it only just after the step', () => {
     // A 300.000 euro bonus in year 9 of a 10-year plan: a balance a little above the value after it is on the line
     // only in the year that follows the bonus, the last one.
-    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 9, amountCents: 30_000_000, label: 'Bonus' }] })
+    const points = project({
+      housePurchaseYear: null,
+      horizonYears: 10,
+      lifeEvents: [{ year: 9, amountCents: 30_000_000, label: 'Bonus' }],
+    })
     const line = planLineOf(points)
     const lead = points[9]!.investedCents + 100_000
     expect(lead).toBeLessThan(points[10]!.preEventInvestedCents)
     expect(measurePlanDistance(line, 9 - WEEK, lead)).toEqual({ kind: 'unmeasured', reason: 'across-event' })
     // A balance far above anything the plan ever holds is not on the line at all.
-    expect(measurePlanDistance(line, 9 - WEEK, points[10]!.investedCents * 2)).toEqual({ kind: 'unmeasured', reason: 'outside-line' })
+    expect(measurePlanDistance(line, 9 - WEEK, points[10]!.investedCents * 2)).toEqual({
+      kind: 'unmeasured',
+      reason: 'outside-line',
+    })
   })
 })
 
@@ -215,7 +230,15 @@ describe('monthBand', () => {
   })
 
   it('has a floor, so a line that does not move still has a few cents of room for rounding', () => {
-    expect(monthBand(planLineOf([{ year: 0, investedCents: 5000 }, { year: 1, investedCents: 5000 }]), 0.5)).toBe(100)
+    expect(
+      monthBand(
+        planLineOf([
+          { year: 0, investedCents: 5000 },
+          { year: 1, investedCents: 5000 },
+        ]),
+        0.5,
+      ),
+    ).toBe(100)
   })
 
   it('reads the last year at the last day, where there is no year after it', () => {
@@ -291,7 +314,9 @@ describe('readAgainst', () => {
   it('does not stretch the window past a month, or to a step that is too small to end a stretch', () => {
     expect(nearStep(line, 8 - 45 / 365)).toBeNull()
     expect(nearStep(line, 8 + 45 / 365)).toBeNull()
-    const bonus = planLineOf(project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }))
+    const bonus = planLineOf(
+      project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }),
+    )
     expect(nearStep(bonus, 5 - 7 / 365)).toBeNull()
   })
 

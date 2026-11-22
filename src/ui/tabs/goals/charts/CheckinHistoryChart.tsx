@@ -5,12 +5,7 @@ import { Card } from '../../../components/primitives'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend } from '../../../charts/ChartLegend'
-import {
-  projectNetWorth,
-  scenarioToParams,
-  yearOffsetFromDate,
-  formatPercent,
-} from '../../../../engine'
+import { projectNetWorth, scenarioToParams, yearOffsetFromDate, formatPercent } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -48,8 +43,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
     const windowYears = Math.min(years, plan.horizonYears)
     const series = windowSeries(points, planStartDate, windowYears, stepMonthsFor(windowYears))
     const scatter = realCheckinPoints(checkins, accounts, planStartDate, windowYears, series.stepYears, inflationRate)
-    const todayIndex =
-      elapsedYears >= 0 && elapsedYears <= windowYears ? elapsedYears / series.stepYears : undefined
+    const todayIndex = elapsedYears >= 0 && elapsedYears <= windowYears ? elapsedYears / series.stepYears : undefined
     // Roughly one tick's worth of the fitted axis, so the labels get enough decimals.
     const shown = [...series.values, ...scatter.map((p) => p.value)]
     const tickStep = (Math.max(...shown) - Math.min(...shown)) / 5
@@ -106,8 +100,8 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         />
       </div>
       <p className={goalStyles.chartHint}>
-        In {planMoneyLabel(planStartDate, format)}: each check-in is brought back at {formatPercent(inflationRate, format)} a year
-        to sit against the plan.
+        In {planMoneyLabel(planStartDate, format)}: each check-in is brought back at{' '}
+        {formatPercent(inflationRate, format)} a year to sit against the plan.
       </p>
       <LinearChart
         height={narrow ? 180 : 220}

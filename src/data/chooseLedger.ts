@@ -27,9 +27,13 @@ const hasOversizedMonth = ({ rowsPerMonth }: ReferencePart): boolean =>
  * reference is read once. Offline, or when that read fails, a snapshot of this owner's, of every row or of a window,
  * is enough to go on.
  */
-export async function chooseLedger(source: ExpenseDataSource, owner: string | undefined): Promise<Chosen> {
+export async function chooseLedger(
+  source: ExpenseDataSource,
+  owner: string | undefined,
+): Promise<Chosen> {
   if (!hasLedgerParts(source)) return 'fallback'
-  const saved = async (): Promise<Chosen> => ((owner ? await loadLedgerSnapshot(owner) : null) ? { ledger: source } : 'fallback')
+  const saved = async (): Promise<Chosen> =>
+    (owner ? await loadLedgerSnapshot(owner) : null) ? { ledger: source } : 'fallback'
   if (!isOnline()) return saved()
   try {
     const reference = await source.readReferencePart()

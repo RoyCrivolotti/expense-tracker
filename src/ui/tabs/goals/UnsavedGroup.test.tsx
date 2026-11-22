@@ -48,7 +48,7 @@ describe('UnsavedGroup', () => {
     expect(actions.onDiscard).toHaveBeenCalledTimes(1)
   })
 
-  it('saves under the scenario\'s name once there is one, with no reason left behind', async () => {
+  it("saves under the scenario's name once there is one, with no reason left behind", async () => {
     const { actions, showToast, rerender } = setup('')
     rerender(<UnsavedGroup unsaved={{ ...actions, name: 'Path A' }} onGone={vi.fn()} />)
 

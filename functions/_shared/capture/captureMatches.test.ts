@@ -16,8 +16,12 @@ beforeEach(async () => {
   repo = createD1CaptureRepository({ DB: sqliteD1(sqlite) })
   await repo.createKey({ keyId: 'k1', owner: ALICE, label: 'Phone', secretHash: 'h1', createdAt: T0 })
   await repo.createKey({ keyId: 'kb', owner: BOB, label: 'Phone', secretHash: 'hb', createdAt: T0 })
-  sqlite.exec("INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, 'alice@example.com', 'Main', 'debit', 'immediate', 1)")
-  sqlite.exec("INSERT INTO categories (id, owner, name, monthly_budget_cents, sort_order, active) VALUES (1, 'alice@example.com', 'Food', 0, 1, 1)")
+  sqlite.exec(
+    "INSERT INTO accounts (id, owner, name, kind, settlement, active) VALUES (1, 'alice@example.com', 'Main', 'debit', 'immediate', 1)",
+  )
+  sqlite.exec(
+    "INSERT INTO categories (id, owner, name, monthly_budget_cents, sort_order, active) VALUES (1, 'alice@example.com', 'Food', 0, 1, 1)",
+  )
 })
 
 interface Typed {
@@ -36,7 +40,15 @@ function typed(o: Typed = {}): number {
       `INSERT INTO transactions (date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, owner)
        VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)`,
     )
-    .run((o.date ?? '2026-11-10'), (o.date ?? '2026-11-10').slice(0, 7), o.description ?? 'Cafe', o.type ?? 'expense', o.amountCents ?? 1250, o.cancelled ?? 0, o.owner ?? ALICE)
+    .run(
+      o.date ?? '2026-11-10',
+      (o.date ?? '2026-11-10').slice(0, 7),
+      o.description ?? 'Cafe',
+      o.type ?? 'expense',
+      o.amountCents ?? 1250,
+      o.cancelled ?? 0,
+      o.owner ?? ALICE,
+    )
   return Number(result.lastInsertRowid)
 }
 
@@ -52,20 +64,45 @@ async function push(o: Push = {}): Promise<string> {
   n += 1
   const ok = await repo.recordCapture(
     {
-      id: `e${n}`, keyId: o.key ?? 'k1', source: 'iberia', replayKey: `r${n}`, kind: 'push', amountCents: 1250, currency: 'EUR',
-      merchantRaw: 'CAFE EXAMPLE', last4: '4821', accountDigits: null, shapeId: 'one-wording', occurredAt: T0, localDate: o.localDate ?? '2026-11-10', offsetMinutes: 60, receivedAt: T0, body: null,
+      id: `e${n}`,
+      keyId: o.key ?? 'k1',
+      source: 'iberia',
+      replayKey: `r${n}`,
+      kind: 'push',
+      amountCents: 1250,
+      currency: 'EUR',
+      merchantRaw: 'CAFE EXAMPLE',
+      last4: '4821',
+      accountDigits: null,
+      shapeId: 'one-wording',
+      occurredAt: T0,
+      localDate: o.localDate ?? '2026-11-10',
+      offsetMinutes: 60,
+      receivedAt: T0,
+      body: null,
     },
     {
-      id: `rec${n}`, accountId: null, amountCents: o.amountCents === undefined ? 1250 : o.amountCents, currency: o.currency === undefined ? 'EUR' : o.currency,
-      occurredAt: `${o.localDate ?? '2026-11-10'}T09:41:07+01:00`, localDate: o.localDate ?? '2026-11-10', merchantRaw: 'CAFE EXAMPLE', descriptionSuggested: null,
-      suggestedType: o.suggestedType === undefined ? 'expense' : o.suggestedType, createdAt: T0,
+      id: `rec${n}`,
+      accountId: null,
+      amountCents: o.amountCents === undefined ? 1250 : o.amountCents,
+      currency: o.currency === undefined ? 'EUR' : o.currency,
+      occurredAt: `${o.localDate ?? '2026-11-10'}T09:41:07+01:00`,
+      localDate: o.localDate ?? '2026-11-10',
+      merchantRaw: 'CAFE EXAMPLE',
+      descriptionSuggested: null,
+      suggestedType: o.suggestedType === undefined ? 'expense' : o.suggestedType,
+      createdAt: T0,
     },
   )
   expect(ok).toBe('created')
   return `rec${n}`
 }
 
-const matchOf = async (id: string, owner = ALICE): Promise<Recommendation['possibleMatch']> => (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.possibleMatch
+const matchOf = async (
+  id: string,
+  owner = ALICE,
+): Promise<Recommendation['possibleMatch']> =>
+  (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.possibleMatch
 
 describe('the typed row a recommendation may duplicate', () => {
   it('is the row of the same price, direction and day, with its id, description and date', async () => {
@@ -92,7 +129,9 @@ describe('the typed row a recommendation may duplicate', () => {
     const id = await push()
     const early = typed({ date: '2026-10-26' })
     expect(await matchOf(id)).toBeNull()
-    sqlite.prepare('UPDATE transactions SET date = ?, budget_month = ? WHERE id = ?').run('2026-10-27', '2026-10', early)
+    sqlite
+      .prepare('UPDATE transactions SET date = ?, budget_month = ? WHERE id = ?')
+      .run('2026-10-27', '2026-10', early)
     expect((await matchOf(id))?.transactionId).toBe(early)
     sqlite.prepare('UPDATE transactions SET date = ? WHERE id = ?').run('2026-11-13', early)
     expect((await matchOf(id))?.transactionId).toBe(early)
@@ -151,7 +190,7 @@ describe('the typed row a recommendation may duplicate', () => {
     expect((await matchOf(id))?.transactionId).toBe(row)
   })
 
-  it('never takes another person\'s row, and never gives theirs a match from ours', async () => {
+  it("never takes another person's row, and never gives theirs a match from ours", async () => {
     const mine = await push()
     const theirs = await push({ key: 'kb' })
     typed({ owner: BOB })
@@ -180,7 +219,11 @@ describe('the typed row a recommendation may duplicate', () => {
     const rowA = typed({ amountCents: 1250, date: '2026-11-09' })
     const rowB = typed({ amountCents: 4590, date: '2026-11-02' })
 
-    expect([(await matchOf(a))?.transactionId, (await matchOf(b))?.transactionId, await matchOf(c)]).toEqual([rowA, rowB, null])
+    expect([(await matchOf(a))?.transactionId, (await matchOf(b))?.transactionId, await matchOf(c)]).toEqual([
+      rowA,
+      rowB,
+      null,
+    ])
   })
 
   it('gives one typed row to one payment of a page, the closest, and never offers it twice', async () => {
@@ -198,7 +241,9 @@ describe('the typed row a recommendation may duplicate', () => {
     const newer = typed({ date: '2026-11-10' })
     const sameDay = typed({ date: '2026-11-10' })
 
-    const read = sqlite.prepare(MATCH_CANDIDATES_SQL).all(ALICE, '2026-10-01', '2026-11-30', '[1250]') as Array<{ id: number }>
+    const read = sqlite.prepare(MATCH_CANDIDATES_SQL).all(ALICE, '2026-10-01', '2026-11-30', '[1250]') as Array<{
+      id: number
+    }>
 
     expect(read.map((r) => r.id)).toEqual([sameDay, newer, old])
   })

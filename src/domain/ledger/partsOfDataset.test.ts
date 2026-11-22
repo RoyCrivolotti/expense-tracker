@@ -4,8 +4,11 @@ import { makeAttachment, makeDataset, makeTransaction } from '../../testing/fact
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import { ledgerReferenceOf, monthCellsOf, monthRowsOf } from './partsOfDataset'
 
-const row = (id: number, month: string, over: Parameters<typeof makeTransaction>[0] = {}) =>
-  makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
+const row = (
+  id: number,
+  month: string,
+  over: Parameters<typeof makeTransaction>[0] = {},
+) => makeTransaction({ id, date: `${month}-10`, budgetMonth: month, ...over })
 
 const dataset = makeDataset({
   transactions: [
@@ -18,7 +21,11 @@ const dataset = makeDataset({
     row(7, '2026-04', { type: 'refund' }),
     row(8, '2026-04', { labelIds: [3, 1, 2] }),
   ],
-  attachments: [makeAttachment({ id: 1, transactionId: 5 }), makeAttachment({ id: 2, transactionId: 5 }), makeAttachment({ id: 3, transactionId: 1 })],
+  attachments: [
+    makeAttachment({ id: 1, transactionId: 5 }),
+    makeAttachment({ id: 2, transactionId: 5 }),
+    makeAttachment({ id: 3, transactionId: 1 }),
+  ],
 })
 
 describe('ledgerReferenceOf', () => {
@@ -26,7 +33,11 @@ describe('ledgerReferenceOf', () => {
 
   it('pins what partitionPinned pins, including the payment a row points at, newest first', () => {
     expect(part.pinned.map((t) => t.id)).toEqual([7, 6, 5, 2])
-    expect(part.pinned.map((t) => t.id)).toEqual(partitionPinned(dataset.transactions).pinned.map((t) => t.id).sort((a, b) => b - a))
+    expect(part.pinned.map((t) => t.id)).toEqual(
+      partitionPinned(dataset.transactions)
+        .pinned.map((t) => t.id)
+        .sort((a, b) => b - a),
+    )
   })
 
   it('counts the months that have any row, a month of cancelled rows included', () => {
@@ -41,12 +52,30 @@ describe('ledgerReferenceOf', () => {
 
   it('leaves out the transactions and the receipt list, and keeps every other table', () => {
     expect(Object.keys(part.reference).sort()).toEqual(
-      ['accountStatements', 'accounts', 'cashActuals', 'categories', 'flags', 'goalScenarios', 'installmentPlans', 'labels', 'settings', 'wealthAccounts', 'wealthCheckins'].sort(),
+      [
+        'accountStatements',
+        'accounts',
+        'cashActuals',
+        'categories',
+        'flags',
+        'goalScenarios',
+        'installmentPlans',
+        'labels',
+        'settings',
+        'wealthAccounts',
+        'wealthCheckins',
+      ].sort(),
     )
   })
 
   it('is empty for an empty ledger', () => {
-    expect(ledgerReferenceOf(makeDataset())).toMatchObject({ pinned: [], months: [], rowsPerMonth: {}, rowCount: 0, attachmentCounts: {} })
+    expect(ledgerReferenceOf(makeDataset())).toMatchObject({
+      pinned: [],
+      months: [],
+      rowsPerMonth: {},
+      rowCount: 0,
+      attachmentCounts: {},
+    })
   })
 })
 
@@ -59,7 +88,9 @@ describe('monthRowsOf', () => {
   })
 
   it('narrows to the range, ends included', () => {
-    expect(monthRowsOf(dataset, { from: '2026-02', to: '2026-03' }, 100)!.transactions.map((t) => t.id)).toEqual([6, 5, 4, 3])
+    expect(monthRowsOf(dataset, { from: '2026-02', to: '2026-03' }, 100)!.transactions.map((t) => t.id)).toEqual([
+      6, 5, 4, 3,
+    ])
     expect(monthRowsOf(dataset, { from: '2027-01', to: '2027-02' }, 100)!.transactions).toEqual([])
   })
 
@@ -72,7 +103,14 @@ describe('monthRowsOf', () => {
 describe('monthCellsOf', () => {
   it('sums the unpinned rows of the range as buildCells does, leaving the pinned ones out', () => {
     const cells = monthCellsOf(dataset, { from: '2026-01', to: '2026-04' }, 100)!
-    expect(cells).toEqual(buildCells([dataset.transactions[0]!, dataset.transactions[2]!, dataset.transactions[3]!, dataset.transactions[7]!]))
+    expect(cells).toEqual(
+      buildCells([
+        dataset.transactions[0]!,
+        dataset.transactions[2]!,
+        dataset.transactions[3]!,
+        dataset.transactions[7]!,
+      ]),
+    )
     expect(cells.reduce((n, c) => n + c.count, 0)).toBe(4)
   })
 
@@ -86,8 +124,10 @@ describe('the in-memory repository', () => {
   it('answers each owner from their own rows', async () => {
     const repo = inMemoryExpenseRepository({ transactions: [row(1, '2026-01')] }, 'a@example.com')
     expect((await repo.readLedgerReference('a@example.com')).months).toEqual(['2026-01'])
-    expect((await repo.readLedgerReference('b@example.com'))).toMatchObject({ months: [], rowCount: 0, pinned: [] })
-    expect((await repo.readMonthRows('a@example.com', { from: '2026-01', to: '2026-12' }, 10))?.transactions).toHaveLength(1)
+    expect(await repo.readLedgerReference('b@example.com')).toMatchObject({ months: [], rowCount: 0, pinned: [] })
+    expect(
+      (await repo.readMonthRows('a@example.com', { from: '2026-01', to: '2026-12' }, 10))?.transactions,
+    ).toHaveLength(1)
     expect(await repo.readMonthCells('b@example.com', { from: '2026-01', to: '2026-01' }, 10)).toEqual([])
   })
 })

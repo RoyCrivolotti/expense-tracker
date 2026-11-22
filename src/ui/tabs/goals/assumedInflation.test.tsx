@@ -8,7 +8,13 @@ import { WealthSummaryCard } from './WealthSummaryCard'
 import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { ScenarioComparison } from './charts/ScenarioComparison'
-import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import {
+  makeDataset,
+  makeScenario,
+  makeTransaction,
+  makeWealthAccount,
+  makeWealthCheckin,
+} from '../../../testing/factories'
 import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 
 /**
@@ -36,7 +42,10 @@ const checkins = [
   makeWealthCheckin({ id: 3, checkinDate: '2026-07-01', entries: [{ accountId: 1, valueCents: 15_500_000 }] }),
 ]
 
-function textAt(rate: number, ui: ReactElement): string {
+function textAt(
+  rate: number,
+  ui: ReactElement,
+): string {
   const { container, unmount } = render(
     <AssumedInflationContext.Provider value={rate}>{ui}</AssumedInflationContext.Provider>,
   )
@@ -45,10 +54,12 @@ function textAt(rate: number, ui: ReactElement): string {
   return text
 }
 
-describe('components read the assumed inflation from the owner\'s setting', () => {
+describe("components read the assumed inflation from the owner's setting", () => {
   it('the Progress snapshot: the on-track figure and the return hint', () => {
     // The plan expects investing, so one is recorded in the period: without it the return is not given at all.
-    const recorded = [makeTransaction({ date: '2025-01-15', budgetMonth: '2025-01', type: 'investment', amountCents: 100_000 })]
+    const recorded = [
+      makeTransaction({ date: '2025-01-15', budgetMonth: '2025-01', type: 'investment', amountCents: 100_000 }),
+    ]
     const ui = <WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} transactions={recorded} />
     const low = textAt(0.02, ui)
     const high = textAt(0.06, ui)
@@ -58,7 +69,7 @@ describe('components read the assumed inflation from the owner\'s setting', () =
     expect(high).toMatch(/6,0% inflation is taken off/)
   })
 
-  it('the check-in history: each row\'s gap to the plan', () => {
+  it("the check-in history: each row's gap to the plan", () => {
     const ui = <CheckinList checkins={checkins} accounts={accounts} plan={plan} canWrite={false} actions={undefined} />
     expect(textAt(0.06, ui)).not.toBe(textAt(0.02, ui))
   })

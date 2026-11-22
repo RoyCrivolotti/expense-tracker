@@ -62,7 +62,10 @@ function routeFetch(world: World) {
     [/^\/api\/expenses\/categories\/(\d+)$/, 'DELETE', deleteCategory],
     [/^\/api\/expenses\/statements$/, 'PUT', putStatement],
   ]
-  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  return async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = new URL(String(input), 'https://expenses.test')
     const method = init?.method ?? 'GET'
     for (const [pattern, verb, handler] of routes) {
@@ -88,7 +91,10 @@ interface Step {
   write: (months: string[]) => Promise<(d: ExpenseDataset) => ExpenseDataset>
 }
 
-const recent = (months: string[]): TxnFilter => ({ dateFrom: `${months[months.length - 3]!}-01`, dateTo: `${months[months.length - 1]!}-31` })
+const recent = (months: string[]): TxnFilter => ({
+  dateFrom: `${months[months.length - 3]!}-01`,
+  dateTo: `${months[months.length - 1]!}-31`,
+})
 
 const STEPS: Step[] = [
   {
@@ -162,7 +168,10 @@ beforeAll(() => {
 afterAll(() => vi.useRealTimers())
 afterEach(() => vi.unstubAllGlobals())
 
-function shuffled<T>(items: T[], seed: number): T[] {
+function shuffled<T>(
+  items: T[],
+  seed: number,
+): T[] {
   const rnd = mulberry32(seed)
   const order = [...items]
   for (let i = order.length - 1; i > 0; i -= 1) {
@@ -198,32 +207,36 @@ describe.each([
   ['a ledger held in full', FULL],
   ['a window', WINDOWED],
 ] as const)('a write the server cascades, with %s', (_config, policy) => {
-  it.each([1, 2, 3, 4])('refreshes the list only when patch() says so, and the list then equals a fresh read (order %i)', async (seed) => {
-    pinClock('2026-08-20')
-    const sqlite = migratedDatabase()
-    sqlite.exec('PRAGMA foreign_keys = OFF')
-    seedDataset(sqlite, OWNER, source)
-    world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
-    vi.stubGlobal('fetch', routeFetch(world))
-    const session = new LedgerSession(apiLedgerParts, { policy })
-    await session.open()
-    const pager = new TransactionPager(apiLedgerParts)
-    pager.attach()
+  it.each([1, 2, 3, 4])(
+    'refreshes the list only when patch() says so, and the list then equals a fresh read (order %i)',
+    async (seed) => {
+      pinClock('2026-08-20')
+      const sqlite = migratedDatabase()
+      sqlite.exec('PRAGMA foreign_keys = OFF')
+      seedDataset(sqlite, OWNER, source)
+      world = createExpenseWorld(sqlite, sqliteD1(sqlite, newStats()))
+      vi.stubGlobal('fetch', routeFetch(world))
+      const session = new LedgerSession(apiLedgerParts, { policy })
+      await session.open()
+      const pager = new TransactionPager(apiLedgerParts)
+      pager.attach()
 
-    for (const step of shuffled(STEPS, seed)) {
-      const filter = step.filter(months)
-      pager.setFilter(filter)
-      await listOf(pager)
-      const patch = await step.write(months)
-      applyWrite(session, pager, patch)
-      // The session reads the ledger again after a cascade, at the same time as the list.
-      await new Promise((resolve) => setTimeout(resolve, 60))
-      const shown = await listOf(pager)
-      const fresh = await freshList(filter)
+      for (const step of shuffled(STEPS, seed)) {
+        const filter = step.filter(months)
+        pager.setFilter(filter)
+        await listOf(pager)
+        const patch = await step.write(months)
+        applyWrite(session, pager, patch)
+        // The session reads the ledger again after a cascade, at the same time as the list.
+        await new Promise((resolve) => setTimeout(resolve, 60))
+        const shown = await listOf(pager)
+        const fresh = await freshList(filter)
 
-      expect(comparable(shown.rows), `${step.name}, order ${seed}`).toEqual(comparable(fresh.rows))
-      await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
-      expect(pager.getState().summary?.count, `${step.name}, order ${seed}`).toBe(fresh.rows.length)
-    }
-  }, SLOW)
+        expect(comparable(shown.rows), `${step.name}, order ${seed}`).toEqual(comparable(fresh.rows))
+        await vi.waitFor(() => expect(pager.getState().summaryStale).toBe(false))
+        expect(pager.getState().summary?.count, `${step.name}, order ${seed}`).toBe(fresh.rows.length)
+      }
+    },
+    SLOW,
+  )
 })

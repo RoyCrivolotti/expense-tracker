@@ -17,7 +17,10 @@ function deferred() {
 }
 
 /** Finishes a pending save, inside act so the field's reaction is part of the step. */
-async function settle(save: ReturnType<typeof deferred>, failure?: Error) {
+async function settle(
+  save: ReturnType<typeof deferred>,
+  failure?: Error,
+) {
   await act(async () => {
     if (failure) save.reject(failure)
     else save.resolve()
@@ -25,13 +28,19 @@ async function settle(save: ReturnType<typeof deferred>, failure?: Error) {
   })
 }
 
-function renderSetting(budgetRolloverDay = 13, onChange = vi.fn().mockResolvedValue(undefined)) {
+function renderSetting(
+  budgetRolloverDay = 13,
+  onChange = vi.fn().mockResolvedValue(undefined),
+) {
   const settings = { ...makeDataset().settings, budgetRolloverDay }
   const view = render(<PreferencesSetting settings={settings} onChange={onChange} />)
   return { onChange, settings, view }
 }
 
-async function pick(user: ReturnType<typeof userEvent.setup>, day: string) {
+async function pick(
+  user: ReturnType<typeof userEvent.setup>,
+  day: string,
+) {
   await user.click(screen.getByRole('button', { name: TRIGGER }))
   await user.click(screen.getByRole('button', { name: day }))
 }

@@ -36,7 +36,9 @@ describe.each([false, true])('the series statement, with table statistics: %s', 
     expect(ran).toHaveLength(1)
     const plan = planOf(kit.sqlite, ran[0]!)
     expect(plan, plan.join('\n')).toHaveLength(1)
-    expect(plan[0]).toMatch(/^SEARCH transactions USING INDEX idx_txn_owner_desc_norm \(owner=\? AND description_norm>\?\)$/)
+    expect(plan[0]).toMatch(
+      /^SEARCH transactions USING INDEX idx_txn_owner_desc_norm \(owner=\? AND description_norm>\?\)$/,
+    )
   })
 
   it('stays inside D1’s bound-parameter limit and binds the owner and nothing else it could be asked for', async () => {

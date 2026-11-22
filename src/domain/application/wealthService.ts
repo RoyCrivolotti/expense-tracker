@@ -42,11 +42,14 @@ const MAX_BALANCE_CENTS = 1e13
 function assertEntries(entries: unknown): void {
   if (!Array.isArray(entries)) throw new ValidationError('entries must be an array')
   for (const entry of entries as unknown[]) {
-    if (typeof entry !== 'object' || entry === null) throw new ValidationError('each of the entries must be an object with accountId and valueCents')
+    if (typeof entry !== 'object' || entry === null)
+      throw new ValidationError('each of the entries must be an object with accountId and valueCents')
     const { accountId, valueCents } = entry as Record<string, unknown>
     if (!Number.isInteger(accountId)) throw new ValidationError('entries: accountId must be a whole number')
     if (!Number.isSafeInteger(valueCents) || Math.abs(valueCents as number) > MAX_BALANCE_CENTS) {
-      throw new ValidationError('entries: valueCents must be a whole number of cents, a hundred billion euros at most either way')
+      throw new ValidationError(
+        'entries: valueCents must be a whole number of cents, a hundred billion euros at most either way',
+      )
     }
   }
 }

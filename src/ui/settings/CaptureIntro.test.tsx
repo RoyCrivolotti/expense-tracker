@@ -18,8 +18,25 @@ vi.mock('../../config/device', async (original) => ({
 }))
 
 const key = { keyId: '0123456789abcdef', label: 'My iPhone', createdAt: '2026-11-03T09:00:00.000Z', lastUsedAt: null }
-const diagnostics = { received: 0, recommended: 0, grouped: 0, unread: 0, addedAsIs: 0, edited: 0, linked: 0, dismissed: 0, open: 0, muted: 0 }
-const none: statusApi.SourceStatus = { source: 'iberia', lastCaptureAt: null, received: 0, unrecognised: 0, diagnostics }
+const diagnostics = {
+  received: 0,
+  recommended: 0,
+  grouped: 0,
+  unread: 0,
+  addedAsIs: 0,
+  edited: 0,
+  linked: 0,
+  dismissed: 0,
+  open: 0,
+  muted: 0,
+}
+const none: statusApi.SourceStatus = {
+  source: 'iberia',
+  lastCaptureAt: null,
+  received: 0,
+  unrecognised: 0,
+  diagnostics,
+}
 
 const region = () => screen.queryByRole('region', { name: 'Capture (optional)' })
 const toggle = () => screen.getByRole('button', { name: /(Show|Hide) the steps/ })
@@ -38,7 +55,12 @@ beforeEach(() => {
   localStorage.clear()
   vi.mocked(device.devicePlatform).mockReturnValue('iphone')
   vi.mocked(keysApi.fetchCaptureKeys).mockResolvedValue([])
-  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({ sources: [none, { ...none, source: 'santander' }], malformed: 0, endpoint: 'https://capture.example.workers.dev/capture', shortcutUrl: null })
+  vi.mocked(statusApi.fetchCaptureStatus).mockResolvedValue({
+    sources: [none, { ...none, source: 'santander' }],
+    malformed: 0,
+    endpoint: 'https://capture.example.workers.dev/capture',
+    shortcutUrl: null,
+  })
 })
 afterEach(() => {
   cleanup()
@@ -46,18 +68,23 @@ afterEach(() => {
 })
 
 describe('the Capture card', () => {
-  it.each(['iphone', 'ipad', 'unknown'] as const)('says what capture is, needs and costs on %s before the steps, to a person with no key', async (platform) => {
-    vi.mocked(device.devicePlatform).mockReturnValue(platform)
-    show()
-    expect(await screen.findByRole('region', { name: 'Capture (optional)' })).toBeInTheDocument()
-    expect(screen.getByText(/Turns your bank app.s payment notifications into payments to confirm with a tap/)).toBeInTheDocument()
-    expect(screen.getByText('Needs an iPhone or iPad with the Shortcuts app, tested on iOS 27.')).toBeInTheDocument()
-    expect(screen.getByText('Takes about ten minutes, once per device.')).toBeInTheDocument()
-    expect(screen.getByText('Adding payments by hand always works without it.')).toBeInTheDocument()
-    const card = region()!
-    const steps = screen.getByText('Set up capture')
-    expect(card.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
+  it.each(['iphone', 'ipad', 'unknown'] as const)(
+    'says what capture is, needs and costs on %s before the steps, to a person with no key',
+    async (platform) => {
+      vi.mocked(device.devicePlatform).mockReturnValue(platform)
+      show()
+      expect(await screen.findByRole('region', { name: 'Capture (optional)' })).toBeInTheDocument()
+      expect(
+        screen.getByText(/Turns your bank app.s payment notifications into payments to confirm with a tap/),
+      ).toBeInTheDocument()
+      expect(screen.getByText('Needs an iPhone or iPad with the Shortcuts app, tested on iOS 27.')).toBeInTheDocument()
+      expect(screen.getByText('Takes about ten minutes, once per device.')).toBeInTheDocument()
+      expect(screen.getByText('Adding payments by hand always works without it.')).toBeInTheDocument()
+      const card = region()!
+      const steps = screen.getByText('Set up capture')
+      expect(card.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    },
+  )
 
   it('waits for the keys to be read, and is not there when a key exists, which puts it away for good', async () => {
     vi.mocked(keysApi.fetchCaptureKeys).mockResolvedValue([key])
@@ -157,11 +184,14 @@ describe('the Capture card', () => {
     expect(region()).toBeNull()
   })
 
-  it.each(['android', 'mac', 'windows', 'linux'] as const)('is not drawn on %s, which says in its own words that capture is not there', (platform) => {
-    vi.mocked(device.devicePlatform).mockReturnValue(platform)
-    show()
-    expect(screen.getByText(/It does not exist on Android or on a computer\./)).toBeInTheDocument()
-    expect(region()).toBeNull()
-    expect(keysApi.fetchCaptureKeys).not.toHaveBeenCalled()
-  })
+  it.each(['android', 'mac', 'windows', 'linux'] as const)(
+    'is not drawn on %s, which says in its own words that capture is not there',
+    (platform) => {
+      vi.mocked(device.devicePlatform).mockReturnValue(platform)
+      show()
+      expect(screen.getByText(/It does not exist on Android or on a computer\./)).toBeInTheDocument()
+      expect(region()).toBeNull()
+      expect(keysApi.fetchCaptureKeys).not.toHaveBeenCalled()
+    },
+  )
 })

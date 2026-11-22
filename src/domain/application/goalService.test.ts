@@ -14,9 +14,12 @@ function newScenario(overrides: Partial<NewGoalScenario> = {}): NewGoalScenario 
 }
 
 describe('the mortgage term', () => {
-  it.each([25, 24.58333, 0.5, 1, 0.0027, 0.001])('accepts %s years, a part of a year included, since a loan can have months or days left', (years) => {
-    expect(() => validateScenarioNumbers({ mortgageTermYears: years })).not.toThrow()
-  })
+  it.each([25, 24.58333, 0.5, 1, 0.0027, 0.001])(
+    'accepts %s years, a part of a year included, since a loan can have months or days left',
+    (years) => {
+      expect(() => validateScenarioNumbers({ mortgageTermYears: years })).not.toThrow()
+    },
+  )
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 101, 5e-324, 1e-9, 0.0009])('refuses %s years', (years) => {
     expect(() => validateScenarioNumbers({ mortgageTermYears: years })).toThrow(
@@ -25,7 +28,9 @@ describe('the mortgage term', () => {
   })
 
   it('still asks for a whole number of years for the horizon', () => {
-    expect(() => validateScenarioNumbers({ horizonYears: 25.5 })).toThrow('horizonYears must be a whole number of years, at least 1')
+    expect(() => validateScenarioNumbers({ horizonYears: 25.5 })).toThrow(
+      'horizonYears must be a whole number of years, at least 1',
+    )
   })
 })
 
@@ -34,13 +39,20 @@ describe('the years the money must last', () => {
     expect(() => validateScenarioNumbers({ retirementYears: years })).not.toThrow()
   })
 
-  it.each([0, -5, 30.5, Number.NaN, Number.POSITIVE_INFINITY])('refuses %s years: a whole number of them, at least one', (years) => {
-    expect(() => validateScenarioNumbers({ retirementYears: years })).toThrow('retirementYears must be a whole number of years, at least 1')
-  })
+  it.each([0, -5, 30.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    'refuses %s years: a whole number of them, at least one',
+    (years) => {
+      expect(() => validateScenarioNumbers({ retirementYears: years })).toThrow(
+        'retirementYears must be a whole number of years, at least 1',
+      )
+    },
+  )
 
   it('refuses a number the drawdown would loop over for ever, and says the most', () => {
     expect(() => validateScenarioNumbers({ retirementYears: 101 })).toThrow('retirementYears must be between 1 and 100')
-    expect(() => validateScenarioNumbers({ retirementYears: 1_000_000_000 })).toThrow('retirementYears must be between 1 and 100')
+    expect(() => validateScenarioNumbers({ retirementYears: 1_000_000_000 })).toThrow(
+      'retirementYears must be between 1 and 100',
+    )
   })
 
   it('is 30 years for a scenario created without one, as a client that predates it sends', async () => {
@@ -99,9 +111,12 @@ describe('the plan start date', () => {
     expect(() => validateScenarioNumbers({ planStartDate })).not.toThrow()
   })
 
-  it.each(['garbage', '2026-13-45', '2026-02-30', '2025-02-29', '', 20260101 as unknown as string])('refuses %s, which is not a calendar date', (planStartDate) => {
-    expect(() => validateScenarioNumbers({ planStartDate })).toThrow('planStartDate must be a calendar date, or null')
-  })
+  it.each(['garbage', '2026-13-45', '2026-02-30', '2025-02-29', '', 20260101 as unknown as string])(
+    'refuses %s, which is not a calendar date',
+    (planStartDate) => {
+      expect(() => validateScenarioNumbers({ planStartDate })).toThrow('planStartDate must be a calendar date, or null')
+    },
+  )
 
   it('leaves a patch that does not mention it alone', () => {
     expect(() => validateScenarioNumbers({ horizonYears: 20 })).not.toThrow()
@@ -138,9 +153,9 @@ describe('validateScenarioNumbers', () => {
   })
 
   it('refuses a rate that is not a number, including one sent as a string', () => {
-    expect(() =>
-      validateScenarioNumbers({ expectedRealReturn: '0.07' as unknown as number }),
-    ).toThrow('expectedRealReturn must be a number')
+    expect(() => validateScenarioNumbers({ expectedRealReturn: '0.07' as unknown as number })).toThrow(
+      'expectedRealReturn must be a number',
+    )
   })
 
   it('allows a negative expected return, which is a real scenario to model', () => {
@@ -149,9 +164,7 @@ describe('validateScenarioNumbers', () => {
 
   it('allows the ranges the sliders offer, and a little beyond them', () => {
     // Deliberately wider than the UI: these bounds are the engine's, not the slider's.
-    expect(() =>
-      validateScenarioNumbers({ horizonYears: 50, safeWithdrawalRate: 0.12 }),
-    ).not.toThrow()
+    expect(() => validateScenarioNumbers({ horizonYears: 50, safeWithdrawalRate: 0.12 })).not.toThrow()
   })
 
   it('ignores fields a patch does not carry', () => {
@@ -162,18 +175,16 @@ describe('validateScenarioNumbers', () => {
 describe('the scenario write paths', () => {
   it('rejects the bad value on create', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
-    await expect(
-      createScenario(repo, OWNER, newScenario({ safeWithdrawalRate: 0 })),
-    ).rejects.toThrow('safeWithdrawalRate')
+    await expect(createScenario(repo, OWNER, newScenario({ safeWithdrawalRate: 0 }))).rejects.toThrow(
+      'safeWithdrawalRate',
+    )
   })
 
   it('rejects it on edit too, which is the path that had no checks at all', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
     const saved = await createScenario(repo, OWNER, newScenario())
 
-    await expect(
-      patchScenario(repo, OWNER, saved.id, { safeWithdrawalRate: 0 }),
-    ).rejects.toThrow('safeWithdrawalRate')
+    await expect(patchScenario(repo, OWNER, saved.id, { safeWithdrawalRate: 0 })).rejects.toThrow('safeWithdrawalRate')
   })
 
   it('still saves a legitimate scenario', async () => {
@@ -305,22 +316,22 @@ describe('the plan', () => {
     await expect(patchScenario(repo, OWNER, saved.id, { isActive: false })).rejects.toThrow(
       'isActive can only be set to true',
     )
-    await expect(
-      patchScenario(repo, OWNER, saved.id, { isActive: true, horizonYears: 20 }),
-    ).rejects.toThrow('only on its own')
+    await expect(patchScenario(repo, OWNER, saved.id, { isActive: true, horizonYears: 20 })).rejects.toThrow(
+      'only on its own',
+    )
   })
 
   it('is a 404 for a scenario the owner does not have', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
-    await expect(patchScenario(repo, OWNER, 999, { isActive: true })).rejects.toThrow(
-      'Scenario not found',
-    )
+    await expect(patchScenario(repo, OWNER, 999, { isActive: true })).rejects.toThrow('Scenario not found')
   })
 })
 
 describe('what a scenario may hold', () => {
-  const refuses = (patch: Record<string, unknown>) => expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).toThrow()
-  const accepts = (patch: Record<string, unknown>) => expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).not.toThrow()
+  const refuses = (patch: Record<string, unknown>) =>
+    expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).toThrow()
+  const accepts = (patch: Record<string, unknown>) =>
+    expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).not.toThrow()
 
   it.each([
     ['horizonYears', 9e15],
@@ -376,15 +387,20 @@ describe('what a scenario may hold', () => {
 })
 
 describe('creating a scenario with a number left out', () => {
-  it.each(['horizonYears', 'startInvestedCents', 'expectedRealReturn', 'housePriceCents', 'mortgageTermYears', 'safeWithdrawalRate', 'annualSpendCents'])(
-    'says %s is required, as a bad request, instead of failing in the database',
-    async (key) => {
-      const repo = inMemoryExpenseRepository()
-      const input = newScenario() as unknown as Record<string, unknown>
-      delete input[key]
-      await expect(createScenario(repo, OWNER, input as unknown as NewGoalScenario)).rejects.toThrow(`${key} is required`)
-    },
-  )
+  it.each([
+    'horizonYears',
+    'startInvestedCents',
+    'expectedRealReturn',
+    'housePriceCents',
+    'mortgageTermYears',
+    'safeWithdrawalRate',
+    'annualSpendCents',
+  ])('says %s is required, as a bad request, instead of failing in the database', async (key) => {
+    const repo = inMemoryExpenseRepository()
+    const input = newScenario() as unknown as Record<string, unknown>
+    delete input[key]
+    await expect(createScenario(repo, OWNER, input as unknown as NewGoalScenario)).rejects.toThrow(`${key} is required`)
+  })
 
   it('still takes a request from a client that predates the newer fields', async () => {
     const repo = inMemoryExpenseRepository()

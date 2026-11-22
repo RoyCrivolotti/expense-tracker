@@ -53,11 +53,23 @@ const BASE = '/api/expenses'
  */
 const parts = () => import('./apiLedgerParts').then((m) => m.apiLedgerParts)
 const PART_READS = [
-  'readReferencePart', 'readMonthsPart', 'readCubePart', 'readReceiptsPart', 'readTransactionPage',
-  'readTransactionSummary', 'readSeriesPart', 'readUsagePart', 'readTransactionExport', 'readRecentTransactions', 'readDescriptionSuggest',
+  'readReferencePart',
+  'readMonthsPart',
+  'readCubePart',
+  'readReceiptsPart',
+  'readTransactionPage',
+  'readTransactionSummary',
+  'readSeriesPart',
+  'readUsagePart',
+  'readTransactionExport',
+  'readRecentTransactions',
+  'readDescriptionSuggest',
 ] as const
 const lazyParts = Object.fromEntries(
-  PART_READS.map((name) => [name, (...args: unknown[]) => parts().then((p) => (p[name] as (...a: unknown[]) => unknown)(...args))]),
+  PART_READS.map((name) => [
+    name,
+    (...args: unknown[]) => parts().then((p) => (p[name] as (...a: unknown[]) => unknown)(...args)),
+  ]),
 ) as unknown as LedgerPartsSource
 
 export const apiDataSource: ExpenseDataSource = {
@@ -76,7 +88,10 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ transactions: inputs }),
     }).then((r) => r.transactions),
-  updateTransaction: (id: number, patch: Partial<NewTransaction>) =>
+  updateTransaction: (
+    id: number,
+    patch: Partial<NewTransaction>,
+  ) =>
     req<Transaction>(`${BASE}/transactions/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -91,25 +106,39 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ids }),
     }),
-  updateTransactions: (ids: number[], patch: BulkTransactionPatch) =>
+  updateTransactions: (
+    ids: number[],
+    patch: BulkTransactionPatch,
+  ) =>
     req<{ updated: number; transactions: Transaction[] }>(`${BASE}/transactions/bulk`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ids, patch }),
     }),
-  setStatementPaid: (accountId: number, yearMonth: string, paid: boolean, paidOn?: string) =>
+  setStatementPaid: (
+    accountId: number,
+    yearMonth: string,
+    paid: boolean,
+    paidOn?: string,
+  ) =>
     req<AccountStatement>(`${BASE}/statements`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ accountId, yearMonth, paid, ...(paidOn ? { paidOn } : {}) }),
     }),
-  setCashActual: (yearMonth: string, actualCashCents: number | null) =>
+  setCashActual: (
+    yearMonth: string,
+    actualCashCents: number | null,
+  ) =>
     req<CashActual | null>(`${BASE}/cash-actuals`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ yearMonth, actualCashCents }),
     }),
-  uploadAttachment: async (transactionId: number, file: File) => {
+  uploadAttachment: async (
+    transactionId: number,
+    file: File,
+  ) => {
     const form = new FormData()
     form.set('transactionId', String(transactionId))
     const shrunk = await downscaleImage(file, {
@@ -134,29 +163,36 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateFlag: (id: number, patch: Partial<NewFlag>) =>
+  updateFlag: (
+    id: number,
+    patch: Partial<NewFlag>,
+  ) =>
     req<Flag>(`${BASE}/flags/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
-  deleteFlag: (id: number) =>
-    req<{ unflagged: number }>(`${BASE}/flags/${id}`, { method: 'DELETE' }),
+  deleteFlag: (id: number) => req<{ unflagged: number }>(`${BASE}/flags/${id}`, { method: 'DELETE' }),
   createLabel: (input: NewLabel) =>
     req<Label>(`${BASE}/labels`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateLabel: (id: number, patch: Partial<NewLabel>) =>
+  updateLabel: (
+    id: number,
+    patch: Partial<NewLabel>,
+  ) =>
     req<Label>(`${BASE}/labels/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
-  deleteLabel: (id: number) =>
-    req<{ unlabeled: number }>(`${BASE}/labels/${id}`, { method: 'DELETE' }),
-  setTransactionLabels: (transactionId: number, labelIds: number[]) =>
+  deleteLabel: (id: number) => req<{ unlabeled: number }>(`${BASE}/labels/${id}`, { method: 'DELETE' }),
+  setTransactionLabels: (
+    transactionId: number,
+    labelIds: number[],
+  ) =>
     req<Transaction>(`${BASE}/transactions/${transactionId}/labels`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
@@ -168,13 +204,19 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateCategory: (id: number, patch: Partial<NewCategory>) =>
+  updateCategory: (
+    id: number,
+    patch: Partial<NewCategory>,
+  ) =>
     req<Category>(`${BASE}/categories/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
-  deleteCategory: (id: number, options?: DeleteCategoryOptions) =>
+  deleteCategory: (
+    id: number,
+    options?: DeleteCategoryOptions,
+  ) =>
     req<DeleteCategoryResult>(`${BASE}/categories/${id}`, {
       method: 'DELETE',
       headers: { 'content-type': 'application/json' },
@@ -186,13 +228,19 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateAccount: (id: number, patch: Partial<NewAccount>) =>
+  updateAccount: (
+    id: number,
+    patch: Partial<NewAccount>,
+  ) =>
     req<Account>(`${BASE}/accounts/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
-  deleteAccount: (id: number, options?: DeleteAccountOptions) =>
+  deleteAccount: (
+    id: number,
+    options?: DeleteAccountOptions,
+  ) =>
     req<DeleteAccountResult>(`${BASE}/accounts/${id}`, {
       method: 'DELETE',
       headers: { 'content-type': 'application/json' },
@@ -210,7 +258,10 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateScenario: (id: number, patch: Partial<NewGoalScenario>) =>
+  updateScenario: (
+    id: number,
+    patch: Partial<NewGoalScenario>,
+  ) =>
     req<GoalScenario>(`${BASE}/scenarios/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -231,7 +282,10 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) =>
+  updateInstallmentPlan: (
+    id: number,
+    patch: Partial<NewInstallmentPlan>,
+  ) =>
     req<InstallmentPlan>(`${BASE}/installment-plans/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -246,7 +300,10 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateWealthAccount: (id: number, patch: Partial<NewWealthAccount>) =>
+  updateWealthAccount: (
+    id: number,
+    patch: Partial<NewWealthAccount>,
+  ) =>
     req<WealthAccount>(`${BASE}/wealth-accounts/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -254,15 +311,19 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   // An answer from before the route said which keeps the assumption this client always made: archived.
   deleteWealthAccount: (id: number) =>
-    req<{ archived?: boolean }>(`${BASE}/wealth-accounts/${id}`, { method: 'DELETE' })
-      .then(({ archived }) => ({ archived: archived ?? true })),
+    req<{ archived?: boolean }>(`${BASE}/wealth-accounts/${id}`, { method: 'DELETE' }).then(({ archived }) => ({
+      archived: archived ?? true,
+    })),
   createWealthCheckin: (input: NewWealthCheckin) =>
     req<WealthCheckin>(`${BASE}/wealth-checkins`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  updateWealthCheckin: (id: number, patch: Partial<NewWealthCheckin>) =>
+  updateWealthCheckin: (
+    id: number,
+    patch: Partial<NewWealthCheckin>,
+  ) =>
     req<WealthCheckin>(`${BASE}/wealth-checkins/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },

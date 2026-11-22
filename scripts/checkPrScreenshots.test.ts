@@ -22,10 +22,9 @@ describe('evidenceImages', () => {
   })
 
   it('still accepts a pasted attachment or an externally hosted image', () => {
-    const body = [
-      image('https://github.com/user-attachments/assets/abc'),
-      image('https://example.com/shot.png'),
-    ].join('\n')
+    const body = [image('https://github.com/user-attachments/assets/abc'), image('https://example.com/shot.png')].join(
+      '\n',
+    )
     expect(evidenceImages(body)).toHaveLength(2)
   })
 

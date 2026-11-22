@@ -13,14 +13,18 @@ interface StatementStub {
  * delete really does go through a single `batch()`.
  */
 function stubEnv(opts: {
-  first?: (sql: string, args: unknown[]) => unknown
+  first?: (
+    sql: string,
+    args: unknown[],
+  ) => unknown
   batch?: (stmts: StatementStub[]) => unknown[]
-  run?: (sql: string, args: unknown[]) => unknown
+  run?: (
+    sql: string,
+    args: unknown[],
+  ) => unknown
 }) {
   const first = opts.first ?? (() => null)
-  const batch = vi.fn(
-    opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))),
-  )
+  const batch = vi.fn(opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))))
   const run = vi.fn((sql: string, args: unknown[]) => (opts.run ?? (() => ({ meta: { changes: 0 } })))(sql, args))
   const prepare = vi.fn((sql: string) => ({
     bind: (...args: unknown[]) => ({
@@ -50,7 +54,10 @@ describe('createFlag', () => {
   it('inserts an owner-scoped row and maps it back to a Flag', () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return { ...FLAG_ROW, description: 'Reimbursable' }
       },
@@ -83,7 +90,10 @@ describe('createFlag', () => {
   it('binds a missing description as NULL and an inactive flag as 0', async () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return { ...FLAG_ROW, active: 0 }
       },
@@ -120,7 +130,10 @@ describe('createFlag', () => {
   it('binds a configured auto-label after checking the owner has it', async () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (sql, args) => {
+      first: (
+        sql,
+        args,
+      ) => {
         if (sql.includes('FROM labels')) return { ok: 1 }
         bound = args
         return { ...FLAG_ROW, auto_label_id: 5 }
@@ -237,7 +250,10 @@ describe('updateFlag', () => {
   it('stores an empty description as NULL', async () => {
     let bound: unknown[] = []
     const { env } = stubEnv({
-      first: (_sql, args) => {
+      first: (
+        _sql,
+        args,
+      ) => {
         bound = args
         return { id: 1, name: 'Work', color: '#6366f1', description: null, sort_order: 0, active: 1 }
       },

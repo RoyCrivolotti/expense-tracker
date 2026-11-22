@@ -112,10 +112,7 @@ export function useScenarioEditor(
   // as a draft with no saved scenario behind it, which is what the tabs and the buttons must
   // say. Reading the id from the state alone left them naming one that no longer exists.
   const activeId = activeScenario?.id ?? null
-  const dirty = useMemo(
-    () => activeScenario !== null && differsFrom(draft, activeScenario),
-    [activeScenario, draft],
-  )
+  const dirty = useMemo(() => activeScenario !== null && differsFrom(draft, activeScenario), [activeScenario, draft])
   const { hiddenIds, onToggleVisible } = useHiddenLines(dataset.goalScenarios, activeScenario, dirty)
   // A detached draft has no saved scenario of its own, so loading another one would drop
   // its edits just as surely; it is measured against the scenario it came from.
@@ -128,13 +125,16 @@ export function useScenarioEditor(
   const { blank, clearBlank } = useBlankDraft(first, baseId, baseScenario, draft)
   const unsaved = hasUnsavedEdits({ dirty, loaded: activeScenario, base: baseScenario, blank, draft })
 
-  const selectScenario = useCallback((scenario: GoalScenario) => {
-    clearBlank()
-    setActiveId(scenario.id)
-    setBaseId(scenario.id)
-    setSynced(scenario)
-    setDraft(scenarioToDraft(scenario))
-  }, [clearBlank])
+  const selectScenario = useCallback(
+    (scenario: GoalScenario) => {
+      clearBlank()
+      setActiveId(scenario.id)
+      setBaseId(scenario.id)
+      setSynced(scenario)
+      setDraft(scenarioToDraft(scenario))
+    },
+    [clearBlank],
+  )
 
   const onActivate = useCallback(() => {
     if (!actions || activeId == null) return

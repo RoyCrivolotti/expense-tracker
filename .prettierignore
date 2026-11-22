@@ -1,0 +1,24 @@
+# Only code is formatted (the format scripts name the globs); this keeps an editor's
+# "format on save" and a bare `prettier --write .` off everything else.
+node_modules
+dist
+coverage
+.wrangler
+package-lock.json
+migrations
+fixtures
+docs
+config
+public
+content
+*.snap
+*.md
+*.css
+*.json
+*.sql
+*.csv
+*.yml
+*.yaml
+*.toml
+*.svg
+*.html

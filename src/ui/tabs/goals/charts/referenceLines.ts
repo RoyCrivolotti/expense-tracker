@@ -30,7 +30,11 @@ interface Input {
 /** How far above what is drawn a target may be and still be drawn. */
 const CEILING_SHARE = 1.15
 
-const curveOf = (id: string, years: number[], at: (year: number) => number): RefCurve => ({
+const curveOf = (
+  id: string,
+  years: number[],
+  at: (year: number) => number,
+): RefCurve => ({
   id,
   values: years.map((y) => Math.round(at(y))),
 })
@@ -72,7 +76,15 @@ function realView({ amounts, ceiling, years, growth, fi, picked }: View): Drawn 
   return { lines: fi !== null ? [fi] : [], curves, highlight }
 }
 
-export function referenceLines({ milestones, fiTargetCents, drawnMax, years, inflationRate, nominalMode, pickedCents = null }: Input): ReferenceLines {
+export function referenceLines({
+  milestones,
+  fiTargetCents,
+  drawnMax,
+  years,
+  inflationRate,
+  nominalMode,
+  pickedCents = null,
+}: Input): ReferenceLines {
   const ceiling = drawnMax != null && drawnMax > 0 ? drawnMax * CEILING_SHARE : Infinity
   const fiFits = fiTargetCents !== null && fiTargetCents <= ceiling
   const view: View = {
@@ -83,5 +95,8 @@ export function referenceLines({ milestones, fiTargetCents, drawnMax, years, inf
     fi: fiFits ? fiTargetCents : null,
     picked: pickedCents,
   }
-  return { ...(nominalMode ? nominalView(view) : realView(view)), fiAbove: fiTargetCents !== null && !fiFits ? fiTargetCents : null }
+  return {
+    ...(nominalMode ? nominalView(view) : realView(view)),
+    fiAbove: fiTargetCents !== null && !fiFits ? fiTargetCents : null,
+  }
 }

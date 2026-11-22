@@ -128,9 +128,7 @@ describe('TxnFilters', () => {
           hasActiveFilters: true,
           secondaryFilterCount: 1,
           categoryId: 3,
-          categories: [
-            { id: 3, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
-          ],
+          categories: [{ id: 3, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true }],
           onClearFilters,
         })}
       />,
@@ -207,9 +205,7 @@ describe('TxnFilters', () => {
     render(
       <TxnFilters
         {...baseProps({
-          labels: [
-            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
-          ],
+          labels: [{ id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true }],
           onLabelIds,
         })}
       />,
@@ -246,9 +242,7 @@ describe('TxnFilters', () => {
     render(
       <TxnFilters
         {...baseProps({
-          labels: [
-            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
-          ],
+          labels: [{ id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true }],
         })}
       />,
     )
@@ -266,9 +260,7 @@ describe('TxnFilters', () => {
     render(
       <TxnFilters
         {...baseProps({
-          labels: [
-            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
-          ],
+          labels: [{ id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true }],
           labelIds: [10],
           onLabelIds,
         })}
@@ -314,9 +306,10 @@ describe('TxnFilters', () => {
     await user.click(screen.getByRole('button', { name: /Filters/ }))
 
     const group = screen.getByRole('group', { name: 'Amount' })
-    expect(within(group).getAllByRole('textbox').map((box) => box.getAttribute('aria-label'))).toEqual([
-      'Minimum amount',
-      'Maximum amount',
-    ])
+    expect(
+      within(group)
+        .getAllByRole('textbox')
+        .map((box) => box.getAttribute('aria-label')),
+    ).toEqual(['Minimum amount', 'Maximum amount'])
   })
 })

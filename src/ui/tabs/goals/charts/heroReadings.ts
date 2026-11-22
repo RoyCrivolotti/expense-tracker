@@ -34,7 +34,18 @@ interface Input {
  * on the last year a drawn line reaches and the rows show nothing, as they always have.
  */
 export function useHeroReadings(input: Input) {
-  const { lines, points, displaySeries, names, years, inflationRate, nominalMode, scenarios, hiddenIds, calendarOrigin } = input
+  const {
+    lines,
+    points,
+    displaySeries,
+    names,
+    years,
+    inflationRate,
+    nominalMode,
+    scenarios,
+    hiddenIds,
+    calendarOrigin,
+  } = input
   const readings = useMemo(
     () => lineReadings(lines, points, displaySeries, years, inflationRate, nominalMode),
     [lines, points, displaySeries, years, inflationRate, nominalMode],
@@ -43,7 +54,10 @@ export function useHeroReadings(input: Input) {
     () => (calendarOrigin ? restYear(axisSpans(lines, scenarios, calendarOrigin), years.length - 1) : null),
     [calendarOrigin, lines, scenarios, years],
   )
-  const calendar = useMemo(() => (calendarOrigin && rest ? { origin: calendarOrigin, rest } : null), [calendarOrigin, rest])
+  const calendar = useMemo(
+    () => (calendarOrigin && rest ? { origin: calendarOrigin, rest } : null),
+    [calendarOrigin, rest],
+  )
   const legendInput: LegendInput = useMemo(
     () => ({ lines, readings, names, years, scenarios, hiddenIds, calendarOrigin }),
     [lines, readings, names, years, scenarios, hiddenIds, calendarOrigin],
@@ -53,7 +67,10 @@ export function useHeroReadings(input: Input) {
   const legend = useChartLegendState(legendInput, input.activeIndex, legendRest)
   // With one start day the axis runs to the longest scenario, hidden ones included, so the chips rest on
   // the last year a line that is drawn reaches, not on the axis' end where a hidden line's years are empty.
-  const drawnEnd = useMemo(() => Math.min(years.length - 1, Math.max(0, ...lines.map((l) => l.params.horizonYears))), [lines, years])
+  const drawnEnd = useMemo(
+    () => Math.min(years.length - 1, Math.max(0, ...lines.map((l) => l.params.horizonYears))),
+    [lines, years],
+  )
   usePublishHeroLegend(input.legendStore, legendInput, input.activeIndex, rest?.index ?? drawnEnd)
   const tooltip = useHeroTooltip(legendInput, input.fromTodayLine, input.fromTodayLabel)
   const { legendItems, readYear } = legend
@@ -62,7 +79,11 @@ export function useHeroReadings(input: Input) {
     [legendItems, input.fromTodayLine, input.fromTodayLabel, readYear],
   )
   const sheetReading = useMemo(
-    () => ({ ...legendInput, restIndex: rest?.index ?? null, restNote: calendar ? restNote(calendar.rest, calendar.origin) : undefined }),
+    () => ({
+      ...legendInput,
+      restIndex: rest?.index ?? null,
+      restNote: calendar ? restNote(calendar.rest, calendar.origin) : undefined,
+    }),
     [legendInput, rest, calendar],
   )
   return { ...legend, legendWithFromToday, tooltip, calendar, sheetReading }

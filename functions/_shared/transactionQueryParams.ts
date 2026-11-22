@@ -19,7 +19,10 @@ function labelIdsOf(values: string[]): number[] {
   return values.flatMap((value) => value.split(',')).map(numeric)
 }
 
-function single(url: URL, key: string): string | undefined {
+function single(
+  url: URL,
+  key: string,
+): string | undefined {
   const values = url.searchParams.getAll(key).filter((value) => value !== '')
   if (values.length > 1) throw new ValidationError(`${key} was given more than once`)
   return values[0]

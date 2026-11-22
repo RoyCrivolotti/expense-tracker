@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  claimActiveTooltip,
-  releaseActiveTooltip,
-  __resetActiveTooltipRegistryForTests,
-} from './activeTooltipRegistry'
+import { claimActiveTooltip, releaseActiveTooltip, __resetActiveTooltipRegistryForTests } from './activeTooltipRegistry'
 
 describe('activeTooltipRegistry', () => {
   beforeEach(() => {

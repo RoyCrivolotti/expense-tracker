@@ -17,7 +17,10 @@ const breakdown: PurchaseYearBreakdown = {
   netChangeCents: -6_100_000,
 }
 
-function entry(id: string, label: string): ScenarioLegendBreakdown {
+function entry(
+  id: string,
+  label: string,
+): ScenarioLegendBreakdown {
   return { id, label, color: '#6366f1', breakdown }
 }
 
@@ -145,24 +148,40 @@ describe('BreakdownSlot', () => {
     const { rerender } = render(<BreakdownSlot {...props}>The chart's note</BreakdownSlot>)
     expect(screen.getByText("The chart's note")).toBeInTheDocument()
 
-    rerender(<BreakdownSlot {...props} breakdowns={[entry('a', 'Path A')]}>The chart's note</BreakdownSlot>)
+    rerender(
+      <BreakdownSlot {...props} breakdowns={[entry('a', 'Path A')]}>
+        The chart's note
+      </BreakdownSlot>,
+    )
     expect(screen.queryByText("The chart's note")).not.toBeInTheDocument()
     expect(screen.getByText('Path A')).toBeInTheDocument()
   })
 
   it('shows the note on a house already owned at year 0 in the same place', () => {
-    render(<BreakdownSlot {...props} yearZeroHint>The chart's note</BreakdownSlot>)
+    render(
+      <BreakdownSlot {...props} yearZeroHint>
+        The chart's note
+      </BreakdownSlot>,
+    )
     expect(screen.getByText(/House already owned/)).toBeInTheDocument()
   })
 
-  it('keeps room for a breakdown only where a line has a purchase, and a taller one when it says today\'s money', () => {
+  it("keeps room for a breakdown only where a line has a purchase, and a taller one when it says today's money", () => {
     const { container, rerender } = render(<BreakdownSlot {...props}>x</BreakdownSlot>)
     const classes = () => (container.firstElementChild as HTMLElement).className
     const plain = classes()
-    rerender(<BreakdownSlot {...props} reserve>x</BreakdownSlot>)
+    rerender(
+      <BreakdownSlot {...props} reserve>
+        x
+      </BreakdownSlot>,
+    )
     const reserved = classes()
     expect(reserved).not.toBe(plain)
-    rerender(<BreakdownSlot {...props} reserve breakdownInTodaysMoney>x</BreakdownSlot>)
+    rerender(
+      <BreakdownSlot {...props} reserve breakdownInTodaysMoney>
+        x
+      </BreakdownSlot>,
+    )
     expect(classes()).not.toBe(reserved)
   })
 })
@@ -170,7 +189,7 @@ describe('BreakdownSlot', () => {
 describe('ScenarioSeriesLegend amounts', () => {
   const items = [{ label: 'Path A, from today', color: '#6366f1', dotted: true, valueCents: 253_000_000 }]
 
-  it('writes millions to two decimals where the scenarios\' chips are above the chart, and to one otherwise', () => {
+  it("writes millions to two decimals where the scenarios' chips are above the chart, and to one otherwise", () => {
     const props = { items, activeYear: 5, breakdowns: [] }
     const { rerender } = render(<ScenarioSeriesLegend {...props} chipsAbove />)
     expect(screen.getByText('2,53M €')).toBeInTheDocument()

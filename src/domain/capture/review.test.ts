@@ -52,9 +52,15 @@ describe('bankMerchantName', () => {
 })
 
 const TODAY = '2026-11-14'
-const history = (rows: HistoryRow[], bank = 'CAFE EXAMPLE 0042') => merchantHistory(buildMerchantIndex(rows, TODAY), bank)
-const rows = (n: number, over: Partial<HistoryRow> = {}, from = 100): HistoryRow[] =>
-  Array.from({ length: n }, (_, i) => row({ id: from + i, date: `2026-0${(i % 9) + 1}-10`, ...over }))
+const history = (
+  rows: HistoryRow[],
+  bank = 'CAFE EXAMPLE 0042',
+) => merchantHistory(buildMerchantIndex(rows, TODAY), bank)
+const rows = (
+  n: number,
+  over: Partial<HistoryRow> = {},
+  from = 100,
+): HistoryRow[] => Array.from({ length: n }, (_, i) => row({ id: from + i, date: `2026-0${(i % 9) + 1}-10`, ...over }))
 
 describe('merchantHistory', () => {
   it('counts typed expenses with the merchant name and reads the usual description and category', () => {
@@ -69,7 +75,10 @@ describe('merchantHistory', () => {
 
   it('prefers the usual description to a newer one-off', () => {
     // The merchant key drops words that hold a digit, so "Cafe Example 7" is this merchant under another description.
-    const held = [...rows(4, { description: 'Cafe Example' }), row({ id: 900, date: '2026-11-10', description: 'Cafe Example 7', categoryId: 9 })]
+    const held = [
+      ...rows(4, { description: 'Cafe Example' }),
+      row({ id: 900, date: '2026-11-10', description: 'Cafe Example 7', categoryId: 9 }),
+    ]
 
     expect(history(held, 'Cafe Example')).toMatchObject({ label: 'Cafe Example', categoryId: 3, settled: true })
   })
@@ -96,7 +105,10 @@ describe('merchantHistory', () => {
   })
 
   // Three rows of one description on `edge` against two recent rows of another: the three win only if `edge` is in the window.
-  const winnerWith = (today: string, edge: string) => {
+  const winnerWith = (
+    today: string,
+    edge: string,
+  ) => {
     const held = [
       ...[1, 2, 3].map((id) => row({ id, date: edge, description: 'Cafe Example 2' })),
       ...[4, 5].map((id) => row({ id, date: today, description: 'Cafe Example 1' })),
@@ -147,16 +159,16 @@ describe('merchantHistory', () => {
   })
 
   it('gives a category tie to the more recent row', () => {
-    const held = [
-      row({ id: 1, date: '2026-09-01', categoryId: 4 }),
-      row({ id: 2, date: '2026-10-01', categoryId: 6 }),
-    ]
+    const held = [row({ id: 1, date: '2026-09-01', categoryId: 4 }), row({ id: 2, date: '2026-10-01', categoryId: 6 })]
 
     expect(history(held, 'Cafe Example').categoryId).toBe(6)
   })
 
   it('settles on a lead of 3 to 2 and of 2 to 1, and not on 2 to 2 or 1 to 1', () => {
-    const mix = (a: number, b: number) => [
+    const mix = (
+      a: number,
+      b: number,
+    ) => [
       ...Array.from({ length: a }, (_, i) => row({ id: 10 + i, date: '2026-09-01', description: 'Cafe Example 1' })),
       ...Array.from({ length: b }, (_, i) => row({ id: 50 + i, date: '2026-09-02', description: 'Cafe Example 2' })),
     ]
@@ -178,13 +190,19 @@ describe('merchantHistory', () => {
   })
 
   it('is settled when the history is old but never varies', () => {
-    const held = [row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }), row({ id: 2, date: '2026-11-01', description: 'cafe example 1' })]
+    const held = [
+      row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }),
+      row({ id: 2, date: '2026-11-01', description: 'cafe example 1' }),
+    ]
 
     expect(history(held, 'Cafe Example')).toMatchObject({ label: 'cafe example 1', sightings: 2, settled: true })
   })
 
   it('is not settled on old history that varies, when too little of it is recent to vote', () => {
-    const held = [row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }), row({ id: 2, date: '2026-11-01', description: 'Cafe Example 2' })]
+    const held = [
+      row({ id: 1, date: '2025-09-01', description: 'Cafe Example 1' }),
+      row({ id: 2, date: '2026-11-01', description: 'Cafe Example 2' }),
+    ]
 
     expect(history(held, 'Cafe Example')).toMatchObject({ label: 'Cafe Example 2', settled: false })
   })
@@ -206,7 +224,10 @@ describe('merchantHistory', () => {
   })
 
   it('needs the winner at least twice to settle', () => {
-    expect(history([row({ id: 1 }), row({ id: 2, description: 'Cafe Example 5', date: '2026-10-02' })], 'Cafe Example').settled).toBe(false)
+    expect(
+      history([row({ id: 1 }), row({ id: 2, description: 'Cafe Example 5', date: '2026-10-02' })], 'Cafe Example')
+        .settled,
+    ).toBe(false)
   })
 
   it('falls back to the newest row when fewer than two are recent, and does not settle', () => {
@@ -216,10 +237,15 @@ describe('merchantHistory', () => {
       row({ id: 3, date: '2026-10-01', description: 'Cafe Example 9', categoryId: 2 }),
     ]
 
-    expect(history(held, 'Cafe Example')).toEqual({ sightings: 3, label: 'Cafe Example 9', categoryId: 2, settled: false })
+    expect(history(held, 'Cafe Example')).toEqual({
+      sightings: 3,
+      label: 'Cafe Example 9',
+      categoryId: 2,
+      settled: false,
+    })
   })
 
-  it('reads the window from this device\'s calendar day when none is given', () => {
+  it("reads the window from this device's calendar day when none is given", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 10, 14, 12))
     try {
@@ -256,8 +282,16 @@ describe('merchantHistory', () => {
 })
 
 const monthWith = (rolloverDay: number) => (day: string) => defaultBudgetMonth(day, rolloverDay)
-const edge = (rolloverDay: number, day: string, minute: number | null, arrived: string | null = null) => otherBudgetDays(monthWith(rolloverDay), day, minute, arrived)
-const at = (h: number, m = 0) => h * 60 + m
+const edge = (
+  rolloverDay: number,
+  day: string,
+  minute: number | null,
+  arrived: string | null = null,
+) => otherBudgetDays(monthWith(rolloverDay), day, minute, arrived)
+const at = (
+  h: number,
+  m = 0,
+) => h * 60 + m
 
 describe('shiftDay', () => {
   it('moves across months, years and a leap day', () => {
@@ -341,8 +375,30 @@ describe('otherBudgetDays with a settled month', () => {
   const dataset = (paid: boolean) => ({
     accounts: [{ id: 2, name: 'Card', kind: 'credit' as const, settlement: 'deferred' as const, active: true }],
     transactions: [
-      { id: 1, date: '2026-11-03', budgetMonth: '2026-11', description: 'x', accountId: 2, categoryId: 1, type: 'expense' as const, amountCents: 100, cancelled: false, status: 'posted' as const },
-      { id: 2, date: '2026-12-01', budgetMonth: '2026-12', description: 'y', accountId: 2, categoryId: 1, type: 'expense' as const, amountCents: 100, cancelled: false, status: 'posted' as const },
+      {
+        id: 1,
+        date: '2026-11-03',
+        budgetMonth: '2026-11',
+        description: 'x',
+        accountId: 2,
+        categoryId: 1,
+        type: 'expense' as const,
+        amountCents: 100,
+        cancelled: false,
+        status: 'posted' as const,
+      },
+      {
+        id: 2,
+        date: '2026-12-01',
+        budgetMonth: '2026-12',
+        description: 'y',
+        accountId: 2,
+        categoryId: 1,
+        type: 'expense' as const,
+        amountCents: 100,
+        cancelled: false,
+        status: 'posted' as const,
+      },
     ],
     accountStatements: paid ? [{ accountId: 2, yearMonth: '2026-11', paid: true }] : [],
   })
@@ -375,7 +431,12 @@ describe('paymentClock', () => {
   it('reads the same in any zone: it does not use the device clock', () => {
     const a = paymentClock('2026-11-30T23:30:00-05:00', '2026-11-30', '2026-12-01T04:31:00Z')
 
-    expect(a).toMatchObject({ minuteOfDay: 23 * 60 + 30, time: '23:30', arrivedDate: '2026-11-30', arrivedTime: '23:31' })
+    expect(a).toMatchObject({
+      minuteOfDay: 23 * 60 + 30,
+      time: '23:30',
+      arrivedDate: '2026-11-30',
+      arrivedTime: '23:31',
+    })
   })
 
   it('has no clock for a row written in UTC, or one whose day is not the payment day', () => {
@@ -387,7 +448,11 @@ describe('paymentClock', () => {
   })
 
   it('keeps the time of day when the arrival cannot be read', () => {
-    expect(paymentClock('2026-11-30T23:52:07+01:00', '2026-11-30', 'nope')).toMatchObject({ time: '23:52', arrivedDate: null, arrivedTime: null })
+    expect(paymentClock('2026-11-30T23:52:07+01:00', '2026-11-30', 'nope')).toMatchObject({
+      time: '23:52',
+      arrivedDate: null,
+      arrivedTime: null,
+    })
   })
 })
 
@@ -441,7 +506,8 @@ describe('reviewReasons', () => {
     for (const suggestedType of ['expense', 'income', 'refund', 'investment', null] as const) {
       for (const amountCents of [null, 0, 1250]) {
         const reasons = reviewReasons({ ...clean, suggestedType, amountCents })
-        const addable = suggestedType !== null && suggestedType !== 'investment' && amountCents !== null && amountCents > 0
+        const addable =
+          suggestedType !== null && suggestedType !== 'investment' && amountCents !== null && amountCents > 0
         expect(reasons.length === 0, `${suggestedType} ${amountCents}`).toBe(addable)
       }
     }
@@ -452,7 +518,11 @@ describe('reviewReasons', () => {
   })
 
   it('names the server’s reasons in plain words, the amount next to the other amount reasons', () => {
-    expect(reviewReasons({ ...clean, amountCents: 0, amountRelearned: true, newShape: true })).toEqual(['zero-amount', 'amount-relearned', 'new-shape'])
+    expect(reviewReasons({ ...clean, amountCents: 0, amountRelearned: true, newShape: true })).toEqual([
+      'zero-amount',
+      'amount-relearned',
+      'new-shape',
+    ])
     expect([REVIEW_TEXT['new-shape'], REVIEW_TEXT['amount-relearned']]).toEqual(['New push wording', 'Amount re-read'])
   })
 

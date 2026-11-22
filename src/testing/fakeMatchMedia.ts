@@ -20,10 +20,16 @@ export function installFakeMatchMedia(matching: (query: string) => boolean = () 
     onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
-    addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
+    addEventListener: (
+      _type: string,
+      listener: (event: MediaQueryListEvent) => void,
+    ) => {
       listeners.set(query, (listeners.get(query) ?? new Set()).add(listener))
     },
-    removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
+    removeEventListener: (
+      _type: string,
+      listener: (event: MediaQueryListEvent) => void,
+    ) => {
       listeners.get(query)?.delete(listener)
     },
     dispatchEvent: vi.fn(),
@@ -38,7 +44,10 @@ export function installFakeMatchMedia(matching: (query: string) => boolean = () 
     listenerCount(query: string) {
       return listeners.get(query)?.size ?? 0
     },
-    change(query: string, matches: boolean) {
+    change(
+      query: string,
+      matches: boolean,
+    ) {
       changed.set(query, matches)
       listeners.get(query)?.forEach((listener) => listener({ matches, media: query } as MediaQueryListEvent))
     },

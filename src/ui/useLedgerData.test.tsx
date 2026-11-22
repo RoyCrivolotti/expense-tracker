@@ -92,7 +92,9 @@ describe('useLedgerData', () => {
       source.move('r2')
       act(() => {
         if (Object.keys(receipt).length > 0) noteWriteResponse(new Headers(receipt))
-        hook.result.current.applyPatch((d) => patchAfterSettings(d, { ...d.settings, openingCashCents: 100 }, ['openingCashCents']))
+        hook.result.current.applyPatch((d) =>
+          patchAfterSettings(d, { ...d.settings, openingCashCents: 100 }, ['openingCashCents']),
+        )
       })
       source.calls.length = 0
       act(() => hook.result.current.viewMonth!(months[10]!))
@@ -172,10 +174,16 @@ describe('useLedgerData', () => {
     const ids = [...new Set(small.attachments.map((a) => a.transactionId))]
     expect(model.dataset.attachments).toEqual([])
     expect(model.receiptsPending).toBe(ids.length)
-    expect(model.lookup.attachmentCount(ids[0]!)).toBe(small.attachments.filter((a) => a.transactionId === ids[0]).length)
+    expect(model.lookup.attachmentCount(ids[0]!)).toBe(
+      small.attachments.filter((a) => a.transactionId === ids[0]).length,
+    )
     expect(model.lookup.attachments(ids[0]!)).toEqual([])
     act(() => model.ensureReceipts!([ids[0]!]))
-    await waitFor(() => expect(result.current.model!.lookup.attachments(ids[0]!)).toHaveLength(small.attachments.filter((a) => a.transactionId === ids[0]).length))
+    await waitFor(() =>
+      expect(result.current.model!.lookup.attachments(ids[0]!)).toHaveLength(
+        small.attachments.filter((a) => a.transactionId === ids[0]).length,
+      ),
+    )
     expect(result.current.model!.receiptsPending).toBe(ids.length - 1)
     act(() => result.current.model!.ensureReceipts!(ids))
     await waitFor(() => expect(result.current.model!.receiptsPending).toBe(0))
@@ -194,7 +202,9 @@ describe('useLedgerData, the recurring series', () => {
     expect(dataset.transactions.length).toBeLessThan(big.transactions.length)
     expect(exportAll?.count).toBe(big.transactions.length)
     const rows = await exportAll!.read()
-    const newestFirst = [...big.transactions].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
+    const newestFirst = [...big.transactions].sort((a, b) =>
+      a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1,
+    )
     expect(rows.map((t) => t.id)).toEqual(newestFirst.map((t) => t.id))
 
     const full = memorySource(small)
@@ -211,7 +221,12 @@ describe('useLedgerData, the recurring series', () => {
     const { recent } = result.current.model!
     const byDate = [...big.transactions].sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
     expect((await recent!.latest()).map((t) => t.id)).toEqual(byDate.slice(0, 8).map((t) => t.id))
-    expect((await recent!.added()).map((t) => t.id)).toEqual([...big.transactions].sort((a, b) => b.id - a.id).slice(0, 8).map((t) => t.id))
+    expect((await recent!.added()).map((t) => t.id)).toEqual(
+      [...big.transactions]
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 8)
+        .map((t) => t.id),
+    )
     expect(windowed.calls.slice(-2)).toEqual(['page', 'recent'])
   })
 
@@ -340,7 +355,11 @@ describe('useLedgerData, snapshots', () => {
     expect(result.current.fromCache).toBe(true)
     expect(result.current.model!.historyNote).toMatch(/You're offline/)
     expect(offline.calls).toEqual([])
-    const heldMonths = new Set((await readLedgerParts(source, { policy: WINDOWED })).rows.flatMap((read) => sortedMonths(read.transactions.map((t) => t.budgetMonth))))
+    const heldMonths = new Set(
+      (await readLedgerParts(source, { policy: WINDOWED })).rows.flatMap((read) =>
+        sortedMonths(read.transactions.map((t) => t.budgetMonth)),
+      ),
+    )
     expect(result.current.model!.savedMonths).toEqual(heldMonths)
     expect(heldMonths.size).toBeLessThan(months.length)
   })
@@ -367,7 +386,9 @@ describe('useLedgerData, snapshots', () => {
     expect(result.current.fromCache).toBe(true)
     expect(result.current.snapshotAt).toBeDefined()
     expect(source.calls).toEqual([])
-    expect(comparable(result.current.model!.dataset.transactions)).toEqual(comparable(buildExpenseModel(small).dataset.transactions))
+    expect(comparable(result.current.model!.dataset.transactions)).toEqual(
+      comparable(buildExpenseModel(small).dataset.transactions),
+    )
     const before = result.current.model
     act(() => result.current.applyPatch((d) => ({ ...d, settings: { ...d.settings, openingCashCents: 1 } })))
     expect(result.current.model).toBe(before)
@@ -401,17 +422,20 @@ describe('useLedgerData, snapshots', () => {
     expect(fallback.result.current.fromCache).toBe(true)
   })
 
-  it.each([401, 403])('shows the failure and not the snapshot when the server answers %i, and removes the snapshot', async (status) => {
-    await withSnapshot()
-    const refused = memorySource(small)
-    refused.readReferencePart = () => Promise.reject(new ApiError('Refused', status))
+  it.each([401, 403])(
+    'shows the failure and not the snapshot when the server answers %i, and removes the snapshot',
+    async (status) => {
+      await withSnapshot()
+      const refused = memorySource(small)
+      refused.readReferencePart = () => Promise.reject(new ApiError('Refused', status))
 
-    const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
+      const { result } = renderHook(() => useLedgerData(refused, { owner: OWNER }))
 
-    await waitFor(() => expect(result.current.status).toBe('error'))
-    expect(result.current.error).toBe('Refused')
-    await waitFor(() => expect(keys()).toEqual([]))
-  })
+      await waitFor(() => expect(result.current.status).toBe('error'))
+      expect(result.current.error).toBe('Refused')
+      await waitFor(() => expect(keys()).toEqual([]))
+    },
+  )
 
   it('does not show the snapshot after a refusal even when the store will not let it be removed', async () => {
     await withSnapshot()
@@ -442,7 +466,9 @@ describe('useLedgerData, snapshots', () => {
     vi.useRealTimers()
     expect(result.current.fromCache).toBe(false)
     expect(result.current.refreshOutcome).toBe('ok')
-    await waitFor(() => expect((fake.stores.get('snapshots')!.get(`ledger:${OWNER}`) as { savedAt: string }).savedAt).not.toBe(before))
+    await waitFor(() =>
+      expect((fake.stores.get('snapshots')!.get(`ledger:${OWNER}`) as { savedAt: string }).savedAt).not.toBe(before),
+    )
   })
 
   it('does not turn a load that worked into one that failed when the snapshot cannot be written', async () => {
@@ -541,7 +567,12 @@ describe('useLedgerData, a read in the background that fails', () => {
   it('tells the screens when the sums of a month a write moved cannot be read', async () => {
     const { source, result } = await ready(WINDOWED)
     source.readCubePart = () => Promise.reject(new Error('sums down'))
-    const added = makeTransaction({ id: 900_001, date: `${months[3]!}-12`, budgetMonth: months[3]!, description: 'Added' })
+    const added = makeTransaction({
+      id: 900_001,
+      date: `${months[3]!}-12`,
+      budgetMonth: months[3]!,
+      description: 'Added',
+    })
     act(() => result.current.applyPatch((d) => patchAfterTransactionCreate(d, added)))
     await waitFor(() => expect(result.current.backgroundError).toBe('sums down'))
     expect(result.current.status).toBe('ready')
@@ -609,10 +640,22 @@ describe('useLedgerData, the list read in pages', () => {
   })
 
   it.each([
-    ['a plan deleted, whose instalments the server unlinks', (d: ExpenseDataset) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id)],
-    ['a flag given an auto-label, which the server puts on its rows', (d: ExpenseDataset) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })],
-    ['a label deleted, which the server takes off its rows', (d: ExpenseDataset) => patchAfterLabelDelete(d, d.labels[0]!.id)],
-    ['a card statement marked unpaid', (d: ExpenseDataset) => patchAfterStatementPaid(d, { accountId: 3, yearMonth: months[2]!, paid: false })],
+    [
+      'a plan deleted, whose instalments the server unlinks',
+      (d: ExpenseDataset) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id),
+    ],
+    [
+      'a flag given an auto-label, which the server puts on its rows',
+      (d: ExpenseDataset) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id }),
+    ],
+    [
+      'a label deleted, which the server takes off its rows',
+      (d: ExpenseDataset) => patchAfterLabelDelete(d, d.labels[0]!.id),
+    ],
+    [
+      'a card statement marked unpaid',
+      (d: ExpenseDataset) => patchAfterStatementPaid(d, { accountId: 3, yearMonth: months[2]!, paid: false }),
+    ],
   ])('reads the list again after %s, which the patch alone does not show', async (_name, write) => {
     const { source, result } = await started()
     const before = pageReads(source)
@@ -635,7 +678,8 @@ describe('useLedgerData, the list read in pages', () => {
       }
       return { ...started_, release }
     }
-    const plan = (d: ExpenseDataset) => patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Sofa' })
+    const plan = (d: ExpenseDataset) =>
+      patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Sofa' })
 
     it('reads the list after the ledger when a plan was written, so that its instalments are in it', async () => {
       const { source, result, release } = await gatedReference()
@@ -770,15 +814,25 @@ describe('useLedgerData, the list read in pages', () => {
     const row = pager.getState().rows[0]!
     const gate: { release: () => void } = { release: () => undefined }
     const read = source.readTransactionPage.bind(source)
-    source.readTransactionPage = async (filter, request) => {
+    source.readTransactionPage = async (
+      filter,
+      request,
+    ) => {
       await new Promise<void>((resolve) => (gate.release = resolve))
       return read(filter, request)
     }
-    act(() => result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...row, description: 'Renamed by the patch' })))
+    act(() =>
+      result.current.applyPatch((d) => patchAfterTransactionUpdate(d, { ...row, description: 'Renamed by the patch' })),
+    )
     // The read of the list has not answered, and the row on screen already says what the patch says.
     await waitFor(() => expect(pager.getState().refreshing).toBe(true))
     expect(pager.getState().rows.find((r) => r.id === row.id)!.description).toBe('Renamed by the patch')
-    source.dataset = { ...small, transactions: small.transactions.map((t) => (t.id === row.id ? { ...t, description: 'Renamed by the server' } : t)) }
+    source.dataset = {
+      ...small,
+      transactions: small.transactions.map((t) =>
+        t.id === row.id ? { ...t, description: 'Renamed by the server' } : t,
+      ),
+    }
     gate.release()
     await waitFor(() => expect(pager.getState().refreshing).toBe(false))
     expect(pager.getState().rows.find((r) => r.id === row.id)!.description).toBe('Renamed by the server')
@@ -789,11 +843,18 @@ describe('useLedgerData, the list read in pages', () => {
     const row = pager.getState().rows[0]!
     const read = source.readTransactionPage.bind(source)
     const gate: { release: () => void } = { release: () => undefined }
-    source.readTransactionPage = async (filter, request) => {
+    source.readTransactionPage = async (
+      filter,
+      request,
+    ) => {
       await new Promise<void>((resolve) => (gate.release = resolve))
       return read(filter, request)
     }
-    act(() => result.current.applyPatch((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== row.id) }), { ids: [row.id] }))
+    act(() =>
+      result.current.applyPatch((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== row.id) }), {
+        ids: [row.id],
+      }),
+    )
     await waitFor(() => expect(pager.getState().refreshing).toBe(true))
     expect(pager.getState().rows.some((r) => r.id === row.id)).toBe(false)
     gate.release()

@@ -19,7 +19,11 @@ function rules(file: string): { selector: string; body: string }[] {
 
 describe('goals styles', () => {
   it('sets text on the accent colour in the contrast colour, which is dark where the accent is light', () => {
-    for (const file of ['tabs/goals/goals.module.css', 'tabs/goals/progress.module.css', 'components/SegmentedControl.module.css']) {
+    for (const file of [
+      'tabs/goals/goals.module.css',
+      'tabs/goals/progress.module.css',
+      'components/SegmentedControl.module.css',
+    ]) {
       for (const { selector, body } of rules(file)) {
         if (!/background(-color)?:\s*var\(--color-accent\)\s*;/.test(body)) continue
         const color = /(?:^|;|\s)color:\s*([^;]+);/.exec(body)?.[1]?.trim()
@@ -40,7 +44,8 @@ describe('goals styles', () => {
 
   it('draws the amounts in the gap split in the success and danger colours', () => {
     const progress = rules('tabs/goals/progress.module.css')
-    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(progress.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+    const colour = (selector: string) =>
+      /(?:^|;|\s)color:\s*([^;]+);/.exec(progress.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
 
     expect(colour('.gapAmountUp')).toBe('var(--exp-success)')
     expect(colour('.gapAmountDown')).toBe('var(--exp-danger)')
@@ -63,7 +68,8 @@ describe('goals styles', () => {
 
   it('draws the amounts in the monthly-investing list in the success and danger colours', () => {
     const goals = rules('tabs/goals/goals.module.css')
-    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(goals.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+    const colour = (selector: string) =>
+      /(?:^|;|\s)color:\s*([^;]+);/.exec(goals.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
 
     expect(colour('.lifeEventInflow')).toBe('var(--exp-success)')
     expect(colour('.lifeEventOutflow')).toBe('var(--exp-danger)')
@@ -106,7 +112,9 @@ describe('goals styles', () => {
   it('keeps the stepper under the spending where it is when the line above it grows from two lines to three, on a phone', () => {
     const css = stylesheet('tabs/goals/goals.module.css')
 
-    expect(css).toMatch(/@media \(max-width: \d+px\) \{[^@]*\.fieldHintReserve\s*\{[^}]*min-height:\s*calc\(3 \* 1\.4em\)/)
+    expect(css).toMatch(
+      /@media \(max-width: \d+px\) \{[^@]*\.fieldHintReserve\s*\{[^}]*min-height:\s*calc\(3 \* 1\.4em\)/,
+    )
   })
 })
 
@@ -115,7 +123,10 @@ describe('the width at which Goals changes from the phone layout to the wide one
   const wideMin = narrowMax + 1
 
   /** The pixel widths a stylesheet's media queries switch at, for one kind of bound. */
-  function widths(file: string, bound: 'max' | 'min'): number[] {
+  function widths(
+    file: string,
+    bound: 'max' | 'min',
+  ): number[] {
     const found = stylesheet(file).matchAll(new RegExp(`@media[^{]*\\(${bound}-width:\\s*(\\d+)px\\)`, 'g'))
     return [...found].map((m) => Number(m[1]))
   }
@@ -173,10 +184,11 @@ describe('the wide plan on a touch screen', () => {
     expect(coarse).toMatch(/\.starrable > \.star::after\s*\{[^}]*inset:\s*-0\.825rem -0\.9rem/)
   })
 
-  it('makes a star\'s tap area 44px high wherever it is, a star being 1.1rem', () => {
+  it("makes a star's tap area 44px high wherever it is, a star being 1.1rem", () => {
     const coarse = block('pointer: coarse')
     const height = (selector: string) => {
-      const [top = '0', , bottom = top] = new RegExp(`${selector}\\s*\\{[^}]*inset:\\s*([^;]*);`).exec(coarse)?.[1]?.split(' ') ?? []
+      const [top = '0', , bottom = top] =
+        new RegExp(`${selector}\\s*\\{[^}]*inset:\\s*([^;]*);`).exec(coarse)?.[1]?.split(' ') ?? []
       return 1.1 - Number.parseFloat(top) - Number.parseFloat(bottom)
     }
     expect(height('\\.leverHead \\.star::after')).toBeCloseTo(2.75, 5)
@@ -196,10 +208,14 @@ describe('the wide plan on a touch screen', () => {
 
     it('is not inside a stacking context of its own, which would hold it above its neighbours', () => {
       // Held back, a star is dimmed: an opacity on the button did that, and the area went over the inputs.
-      const buttons = plan.filter((r) => /^[^,]*\.star(?![A-Za-z])[^,]*$/.test(r.selector) && !/svg|::/.test(r.selector))
+      const buttons = plan.filter(
+        (r) => /^[^,]*\.star(?![A-Za-z])[^,]*$/.test(r.selector) && !/svg|::/.test(r.selector),
+      )
       expect(buttons.length).toBeGreaterThan(3)
       for (const { selector, body: declarations } of buttons) {
-        expect(declarations, selector).not.toMatch(/(^|[;\s])(opacity|transform|filter|will-change|z-index|isolation|contain|mix-blend-mode)\s*:/)
+        expect(declarations, selector).not.toMatch(
+          /(^|[;\s])(opacity|transform|filter|will-change|z-index|isolation|contain|mix-blend-mode)\s*:/,
+        )
       }
       expect(body('.star:disabled svg')).toMatch(/opacity:\s*0\.6/)
     })
@@ -256,11 +272,17 @@ describe('small muted text', () => {
 })
 
 /** What a stylesheet says under one media query: the rules inside every block of it, and the sheet without them. */
-function underQuery(file: string, query: string): { inside: { selector: string; body: string }[]; outside: string } {
+function underQuery(
+  file: string,
+  query: string,
+): { inside: { selector: string; body: string }[]; outside: string } {
   const css = stylesheet(file)
   const block = new RegExp(`@media ${query.replace(/[()]/g, '\\$&')} \\{([\\s\\S]*?)\\n\\}`, 'g')
   const inside = [...css.matchAll(block)].flatMap((m) =>
-    [...(m[1] ?? '').matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((r) => ({ selector: (r[1] ?? '').trim(), body: r[2] ?? '' })),
+    [...(m[1] ?? '').matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((r) => ({
+      selector: (r[1] ?? '').trim(),
+      body: r[2] ?? '',
+    })),
   )
   return { inside, outside: css.replace(block, '') }
 }
@@ -287,7 +309,7 @@ describe('the inputs panel on a touch screen', () => {
     expect(stepper.find((r) => r.selector === '.wrap')?.body).toMatch(/gap:\s*var\(--stepper-gap,\s*0\.25rem\)/)
   })
 
-  it('keeps a stepper narrow enough to end inside its column, where the next column\'s star hangs', () => {
+  it("keeps a stepper narrow enough to end inside its column, where the next column's star hangs", () => {
     // 133px with the 8px gap and a 75px word is the 216px the narrowest column is; the 141px it was reached 9px past.
     expect(rule('.stack')).toMatch(/--stepper-input-width:\s*2\.5rem/)
     expect(rule('.stack .fieldRow')).toMatch(/gap:\s*0\.5rem/)
@@ -303,7 +325,12 @@ describe('the inputs panel on a touch screen', () => {
   })
 
   it('takes the life event buttons, the sign labels and the help line to 44px', () => {
-    const selectors = ['.stack .addLifeEventBtn', '.stack .lifeEventCancelBtn', '.stack .lifeEventSignLabel', '.stack .controlSummary']
+    const selectors = [
+      '.stack .addLifeEventBtn',
+      '.stack .lifeEventCancelBtn',
+      '.stack .lifeEventSignLabel',
+      '.stack .controlSummary',
+    ]
     const sized = goals.inside.find((r) => selectors.every((s) => r.selector.includes(s)))
 
     expect(sized?.body).toMatch(/min-height:\s*2\.75rem/)
@@ -402,7 +429,7 @@ describe('the levers bar where it is held to the bottom edge', () => {
     expect(held.outside).toMatch(/\.leverGrid\s*\{[^}]*repeat\(auto-fit/)
   })
 
-  it('clips a result figure that is wider than its column, instead of taking the levers\' room', () => {
+  it("clips a result figure that is wider than its column, instead of taking the levers' room", () => {
     expect(held.outside).toMatch(/\.leverSide\s*\{[^}]*max-width:\s*15rem/)
     expect(held.outside).toMatch(/\.leverResult\s*\{[^}]*text-overflow:\s*ellipsis/)
   })

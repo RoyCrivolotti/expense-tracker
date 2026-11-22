@@ -6,12 +6,18 @@ import { byApiOrder } from './ledgerReconcile'
 const ATTEMPTS = 3
 
 /** Every chunk in turn, or null when one of them was read under another revision than the first. */
-async function walk(source: Pick<LedgerPartsSource, 'readTransactionExport'>, signal: AbortSignal | undefined): Promise<Transaction[] | null> {
+async function walk(
+  source: Pick<LedgerPartsSource, 'readTransactionExport'>,
+  signal: AbortSignal | undefined,
+): Promise<Transaction[] | null> {
   const rows: Transaction[] = []
   let revision: string | undefined
   let after: string | undefined
   for (;;) {
-    const chunk = await source.readTransactionExport({ ...(after !== undefined ? { after } : {}), ...(signal ? { signal } : {}) })
+    const chunk = await source.readTransactionExport({
+      ...(after !== undefined ? { after } : {}),
+      ...(signal ? { signal } : {}),
+    })
     if (revision !== undefined && chunk.revision !== revision) return null
     revision = chunk.revision
     for (const row of chunk.rows) rows.push(row)

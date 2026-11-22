@@ -15,7 +15,11 @@ function Host() {
   )
 }
 
-const at = (x: number, y: number, pointerId = 1) => ({ clientX: x, clientY: y, pointerId })
+const at = (
+  x: number,
+  y: number,
+  pointerId = 1,
+) => ({ clientX: x, clientY: y, pointerId })
 
 describe('useDismissOnOutsidePointer', () => {
   it('dismisses on a tap outside', () => {

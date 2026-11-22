@@ -42,14 +42,23 @@ beforeAll(async () => {
   theirIds = new Set(theirs.map((t) => t.id))
 })
 
-const list = (query: string, email: string | false = OWNER) =>
-  invokePagesRoute(getList, { env, method: 'GET', url: `${BASE}/list?${query}`, email })
-const summary = (query: string, email: string | false = OWNER) =>
-  invokePagesRoute(getSummary, { env, method: 'GET', url: `${BASE}/summary?${query}`, email })
-const one = (id: string, email: string | false = OWNER) =>
-  invokePagesRoute(getOne, { env, method: 'GET', url: `${BASE}/${id}`, params: { id }, email })
+const list = (
+  query: string,
+  email: string | false = OWNER,
+) => invokePagesRoute(getList, { env, method: 'GET', url: `${BASE}/list?${query}`, email })
+const summary = (
+  query: string,
+  email: string | false = OWNER,
+) => invokePagesRoute(getSummary, { env, method: 'GET', url: `${BASE}/summary?${query}`, email })
+const one = (
+  id: string,
+  email: string | false = OWNER,
+) => invokePagesRoute(getOne, { env, method: 'GET', url: `${BASE}/${id}`, params: { id }, email })
 
-async function pagesOf(query: string, email = OWNER): Promise<Transaction[]> {
+async function pagesOf(
+  query: string,
+  email = OWNER,
+): Promise<Transaction[]> {
   const out: Transaction[] = []
   let cursor: string | null = null
   for (let i = 0; i < 100; i += 1) {
@@ -163,8 +172,11 @@ describe('GET /transactions/summary', () => {
     const first = await read()
 
     expect(await read()).toBe(first)
-    expect(await (await invokePagesRoute(getSummary, { env, method: 'GET', url: `${BASE}/summary`, email: OTHER_OWNER })).json())
-      .not.toMatchObject({ revision: first })
+    expect(
+      await (
+        await invokePagesRoute(getSummary, { env, method: 'GET', url: `${BASE}/summary`, email: OTHER_OWNER })
+      ).json(),
+    ).not.toMatchObject({ revision: first })
     sqlite.prepare("UPDATE owner_revision SET token = 'moved' WHERE owner = ?").run(OWNER)
     expect(await read()).toBe('moved')
   })
@@ -217,7 +229,10 @@ describe('one owner never sees another’s rows', () => {
     const aCategory = mine[0]?.categoryId ?? 0
     for (const query of [`categoryId=${aCategory}`, `accountId=${mine[0]?.accountId ?? 0}`, 'flagId=2', 'labelIds=2']) {
       const body = (await (await list(`${query}&limit=200`, OTHER_OWNER)).json()) as ListBody
-      expect(body.items.every((t) => theirIds.has(t.id)), query).toBe(true)
+      expect(
+        body.items.every((t) => theirIds.has(t.id)),
+        query,
+      ).toBe(true)
     }
     const nothing = (await (await list(`categoryId=${aCategory}`, OTHER_OWNER)).json()) as ListBody
     expect(nothing.items).toEqual([])

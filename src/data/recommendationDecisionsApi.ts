@@ -8,7 +8,10 @@ export async function dismissRecommendation(id: string): Promise<void> {
 }
 
 /** The person already typed this payment: point the recommendation at that row and create nothing. */
-export async function linkRecommendation(id: string, transactionId: number): Promise<void> {
+export async function linkRecommendation(
+  id: string,
+  transactionId: number,
+): Promise<void> {
   await req<{ ok: true }>(path(id, 'link'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

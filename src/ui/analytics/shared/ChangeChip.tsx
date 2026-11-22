@@ -14,7 +14,11 @@ interface Props {
   kind?: 'money' | 'rate'
 }
 
-function chipText(value: number, baseline: number, kind: 'money' | 'rate'): string | null {
+function chipText(
+  value: number,
+  baseline: number,
+  kind: 'money' | 'rate',
+): string | null {
   if (kind === 'rate') {
     const pts = (value - baseline) * 100
     if (Math.abs(pts) < FLAT_RATE_PTS) return null

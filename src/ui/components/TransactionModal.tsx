@@ -16,14 +16,21 @@ import styles from './TransactionModal.module.css'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 /** "Installment 21/24 · Last payment Nov 2026" for a plan-linked edit. */
-function installmentNote(editing: Transaction | null, model: ExpenseModel): string | undefined {
+function installmentNote(
+  editing: Transaction | null,
+  model: ExpenseModel,
+): string | undefined {
   if (!editing || editing.planId == null || editing.installmentIndex == null) return undefined
   const plan = model.lookup.installmentPlan(editing.planId)
   if (!plan) return undefined
   return `Installment ${editing.installmentIndex}/${plan.totalCount} · Last payment ${shortMonthFullYearLabel(finalBudgetMonth(plan))}`
 }
 
-function titleFor(editing: Transaction | null, mode: 'single' | 'batch', formView: 'fields' | 'installment'): string {
+function titleFor(
+  editing: Transaction | null,
+  mode: 'single' | 'batch',
+  formView: 'fields' | 'installment',
+): string {
   if (mode === 'batch') return 'Add multiple transactions'
   if (formView === 'installment') return 'Installment plan'
   return editing ? 'Edit transaction' : 'New transaction'
@@ -56,7 +63,10 @@ function ModeToggle({ mode, onChange }: { mode: 'single' | 'batch'; onChange: (m
 
 /** Guards a modal's close against silently discarding unsaved input: closing
  * while `isDirty` shows a confirm sheet instead of closing immediately. */
-function useCloseGuard(isDirty: boolean, onClose: () => void) {
+function useCloseGuard(
+  isDirty: boolean,
+  onClose: () => void,
+) {
   const [confirming, setConfirming] = useState(false)
   const requestClose = () => {
     if (isDirty) {

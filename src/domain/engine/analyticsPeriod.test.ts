@@ -40,12 +40,7 @@ describe('monthsForPeriod', () => {
   it('returns the single month, the calendar year to date, or the last twelve', () => {
     expect(monthsForPeriod(MONTHS, '2026-02', 'month')).toEqual(['2026-02'])
     expect(monthsForPeriod(MONTHS, '2026-02', 'ytd')).toEqual(['2026-01', '2026-02'])
-    expect(monthsForPeriod(MONTHS, '2026-02', 'last12')).toEqual([
-      '2025-11',
-      '2025-12',
-      '2026-01',
-      '2026-02',
-    ])
+    expect(monthsForPeriod(MONTHS, '2026-02', 'last12')).toEqual(['2025-11', '2025-12', '2026-01', '2026-02'])
   })
   it('never looks past the selected month', () => {
     expect(monthsForPeriod(MONTHS, '2025-12', 'last12')).toEqual(['2025-11', '2025-12'])
@@ -76,7 +71,7 @@ describe('sameDaysCut', () => {
     expect(sameDaysCut('2026-04', '2026-03-17')).toBeNull()
   })
 
-  it('counts days from the budget month\'s own first day under a rollover', () => {
+  it("counts days from the budget month's own first day under a rollover", () => {
     // Day-13 rollover: the budget month under way on Oct 5 is October, which began Sep 13.
     expect(sameDaysCut('2026-10', '2026-10-05', '2026-10', 13)?.elapsedDays).toBe(23)
     // Oct 13 starts November's budget month, so that is day 1 of it.

@@ -83,15 +83,15 @@ function formatInconsistent({ owner, dateKey, attempt, final }: InconsistentBack
 /** Email + console composite; skips email when recipients or sender are unavailable. */
 export function createEmailBackupAlerts(
   inner: BackupAlerts,
-  sendEmail: (subject: string, text: string) => Promise<void>,
+  sendEmail: (
+    subject: string,
+    text: string,
+  ) => Promise<void>,
 ): BackupAlerts {
   return {
     async onLargeSnapshot(details) {
       await inner.onLargeSnapshot(details)
-      await sendEmail(
-        `[expense-tracker] Large backup snapshot (${details.owner})`,
-        formatLargeSnapshot(details),
-      )
+      await sendEmail(`[expense-tracker] Large backup snapshot (${details.owner})`, formatLargeSnapshot(details))
     },
     async onBucketNearLimit(details) {
       await inner.onBucketNearLimit(details)
@@ -107,7 +107,10 @@ export function createEmailBackupAlerts(
     },
     async onBackupFailed(details) {
       await inner.onBackupFailed(details)
-      await sendEmail(`[expense-tracker] No backup today: it failed (${details.owner}, ${details.dateKey})`, formatFailed(details))
+      await sendEmail(
+        `[expense-tracker] No backup today: it failed (${details.owner}, ${details.dateKey})`,
+        formatFailed(details),
+      )
     },
     async onIncompleteBackup(details) {
       await inner.onIncompleteBackup(details)

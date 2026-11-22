@@ -54,11 +54,10 @@ export function InflationSetting({ settings, onChange, scrollIntoView = false }:
             </p>
           ) : null}
           <p className={styles.settingHint}>
-            Goals counts in the {word} of each plan&apos;s start date ({planMoneyLabel('2026-01-01', format)}, say), so an
-            amount there is worth what it bought then. Check-ins, the house and the mortgage are brought back to those{' '}
-            {word} at this rate. What you invest each month is what you send, so it counts for less each
-            year at this rate, and the Nominal view inflates the plan by it to show what your account
-            will read.
+            Goals counts in the {word} of each plan&apos;s start date ({planMoneyLabel('2026-01-01', format)}, say), so
+            an amount there is worth what it bought then. Check-ins, the house and the mortgage are brought back to
+            those {word} at this rate. What you invest each month is what you send, so it counts for less each year at
+            this rate, and the Nominal view inflates the plan by it to show what your account will read.
           </p>
         </div>
       </Card>

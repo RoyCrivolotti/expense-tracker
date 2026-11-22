@@ -4,7 +4,12 @@
  * SQLite with the real migrations, and a database holding two owners.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MAX_SUGGEST_KEYS, MAX_SUGGEST_LIMIT, MAX_SUGGEST_PREFIX, type DescriptionMatch } from '../../../../src/domain/data/descriptionSuggest'
+import {
+  MAX_SUGGEST_KEYS,
+  MAX_SUGGEST_LIMIT,
+  MAX_SUGGEST_PREFIX,
+  type DescriptionMatch,
+} from '../../../../src/domain/data/descriptionSuggest'
 import type { ExpenseDataset } from '../../../../src/domain/types'
 import { descriptionDataset, keyed } from '../../../../src/testing/descriptionLedger'
 import { makeDataset, makeTransaction } from '../../../../src/testing/factories'
@@ -22,9 +27,16 @@ let sqlite: Sqlite
 let world: World
 let mine: ExpenseDataset
 
-const withReference = (ds: ExpenseDataset): ExpenseDataset => ({ ...ds, accounts: syntheticAccounts(), categories: syntheticCategories() })
+const withReference = (ds: ExpenseDataset): ExpenseDataset => ({
+  ...ds,
+  accounts: syntheticAccounts(),
+  categories: syntheticCategories(),
+})
 
-function build(ds: ExpenseDataset, seed?: { descriptionNorm: boolean }) {
+function build(
+  ds: ExpenseDataset,
+  seed?: { descriptionNorm: boolean },
+) {
   sqlite = migratedDatabase()
   sqlite.exec('PRAGMA foreign_keys = OFF')
   world = createExpenseWorld(sqlite, sqliteD1(sqlite))
@@ -32,7 +44,12 @@ function build(ds: ExpenseDataset, seed?: { descriptionNorm: boolean }) {
   seedDataset(sqlite, OWNER, mine, seed)
   const theirs = makeDataset({
     transactions: [
-      makeTransaction({ id: 1, description: 'Market on the moon', date: '2024-01-01', createdAt: '2024-01-01T00:00:00Z' }),
+      makeTransaction({
+        id: 1,
+        description: 'Market on the moon',
+        date: '2024-01-01',
+        createdAt: '2024-01-01T00:00:00Z',
+      }),
       makeTransaction({ id: 2, description: 'Moonshine', date: '2024-01-02', createdAt: '2024-01-01T00:00:00Z' }),
     ],
   })
@@ -48,7 +65,10 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const get = (query: string, email = OWNER) => world.call(onRequestGet, { path: `/descriptions/suggest?${query}`, email })
+const get = (
+  query: string,
+  email = OWNER,
+) => world.call(onRequestGet, { path: `/descriptions/suggest?${query}`, email })
 
 async function items(query: string): Promise<DescriptionMatch[]> {
   const response = await get(query)
@@ -105,14 +125,25 @@ describe('GET /descriptions/suggest', () => {
   it('serves the owner’s own rows only', async () => {
     expect((await items('q=mar')).map((m) => m.label)).toEqual([])
     const theirs = await get('q=mar', OTHER)
-    expect(((await theirs.json()) as { items: DescriptionMatch[] }).items.map((m) => m.label)).toEqual(['Market on the moon'])
+    expect(((await theirs.json()) as { items: DescriptionMatch[] }).items.map((m) => m.label)).toEqual([
+      'Market on the moon',
+    ])
   })
 
   it('reads a row written a moment ago, with its normalized description set by the write', async () => {
     const created = await world.call(postTransaction, {
       method: 'POST',
       path: '/transactions',
-      body: { date: '2026-10-10', budgetMonth: '2026-10', description: 'Éclair du jour', accountId: 1, categoryId: 1, type: 'expense', amountCents: 5, cancelled: false },
+      body: {
+        date: '2026-10-10',
+        budgetMonth: '2026-10',
+        description: 'Éclair du jour',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 5,
+        cancelled: false,
+      },
     })
     expect(created.status).toBe(201)
     expect((await items('q=%C3%89clair')).map((m) => m.label)).toEqual(['Éclair du jour'])
@@ -149,7 +180,12 @@ describe('what it refuses', () => {
 
   it('answers a prefix that matches too many descriptions with 200 and tooBroad, and a list once it is longer', async () => {
     const rows = Array.from({ length: MAX_SUGGEST_KEYS + 1 }, (_, i) =>
-      makeTransaction({ id: i + 1, description: `Shop ${String(i).padStart(4, '0')}`, date: '2025-03-01', createdAt: '2025-03-01T00:00:00Z' }),
+      makeTransaction({
+        id: i + 1,
+        description: `Shop ${String(i).padStart(4, '0')}`,
+        date: '2025-03-01',
+        createdAt: '2025-03-01T00:00:00Z',
+      }),
     )
     build(makeDataset({ transactions: rows }))
     const broad = await get('q=shop')
@@ -178,7 +214,11 @@ describe('while descriptions are still waiting for their normalized form', () =>
     // A token that exists before the first request, which is the one that fills.
     sqlite.prepare('INSERT INTO owner_revision (owner, token) VALUES (?, ?)').run(OWNER, 'before-the-fill')
     const waiting = (): number =>
-      (sqlite.prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL').get(OWNER) as { n: number }).n
+      (
+        sqlite
+          .prepare('SELECT count(*) AS n FROM transactions WHERE owner = ? AND description_norm IS NULL')
+          .get(OWNER) as { n: number }
+      ).n
     expect(waiting()).toBeGreaterThan(0)
     expect((await get('q=ca')).status).toBe(200)
     expect(waiting()).toBe(0)

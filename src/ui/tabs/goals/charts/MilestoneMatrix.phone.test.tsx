@@ -46,13 +46,27 @@ function cardIs(px: number) {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(px)
 }
 
-function renderTable(milestones = EIGHT, scenarios = [plan, slower], reached = new Map<number, string>()) {
+function renderTable(
+  milestones = EIGHT,
+  scenarios = [plan, slower],
+  reached = new Map<number, string>(),
+) {
   return render(
-    <MilestoneMatrix scenarios={scenarios} draft={draft} milestones={milestones} reached={reached} includeDraft={false} />,
+    <MilestoneMatrix
+      scenarios={scenarios}
+      draft={draft}
+      milestones={milestones}
+      reached={reached}
+      includeDraft={false}
+    />,
   )
 }
 
-const heads = () => screen.getAllByRole('columnheader').slice(1).map((h) => h.textContent ?? '')
+const heads = () =>
+  screen
+    .getAllByRole('columnheader')
+    .slice(1)
+    .map((h) => h.textContent ?? '')
 const items = () => within(screen.getByRole('list', { name: /^Paths in the order/ })).getAllByRole('listitem')
 const chips = (name: string) => within(screen.getByRole('radiogroup', { name })).getAllByRole('radio')
 
@@ -97,7 +111,9 @@ describe('the table on a phone, paged by width', () => {
     cardIs(327)
     renderTable()
 
-    expect(screen.getByRole('rowheader', { name: /A path with quite a long name \(editing, from today\)/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('rowheader', { name: /A path with quite a long name \(editing, from today\)/ }),
+    ).toBeInTheDocument()
   })
 
   it('splits twice as many milestones into more pages, none of them one column', () => {
@@ -150,7 +166,9 @@ describe('the table on a phone, paged by width', () => {
   it('does not leave the sentence of a cell that is no longer on the page', async () => {
     cardIs(327)
     renderTable()
-    await userEvent.click(within(screen.getAllByRole('row')[1] as HTMLElement).getAllByRole('gridcell')[0] as HTMLElement)
+    await userEvent.click(
+      within(screen.getAllByRole('row')[1] as HTMLElement).getAllByRole('gridcell')[0] as HTMLElement,
+    )
     expect(screen.getByText(/^Path A reaches/, { selector: 'p[aria-live]' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('radio', { name: /^500k/ }))
@@ -194,22 +212,34 @@ describe('what is already there', () => {
     expect(screen.getByText(/Already there on every path: 100k €, Starter \(50k €\)/)).toBeInTheDocument()
   })
 
-  it('says the check-ins\' date once when they agree on it, and leaves it out when they do not', () => {
+  it("says the check-ins' date once when they agree on it, and leaves it out when they do not", () => {
     cardIs(327)
     const rich = [plan, slower].map((s) => ({ ...s, startInvestedCents: 20_000_000 }))
-    const same = new Map([[10_000_000, '2026-05-14'], [15_000_000, '2026-05-14']])
+    const same = new Map([
+      [10_000_000, '2026-05-14'],
+      [15_000_000, '2026-05-14'],
+    ])
     const { unmount } = renderTable(amounts(100, 150, 500), rich, same)
     expect(screen.getByText(/^Already there on every path: 100k €, 150k € \(by May '26\)$/)).toBeInTheDocument()
     unmount()
 
-    const differ = new Map([[10_000_000, '2026-05-14'], [15_000_000, '2026-08-02']])
+    const differ = new Map([
+      [10_000_000, '2026-05-14'],
+      [15_000_000, '2026-08-02'],
+    ])
     renderTable(amounts(100, 150, 500), rich, differ)
     expect(screen.getByText(/^Already there on every path: 100k €, 150k €$/)).toBeInTheDocument()
   })
 
   it('keeps a milestone one path has not reached as a column, with its tick where it has', () => {
     cardIs(327)
-    const low = makeScenario({ id: 3, name: 'Starts lower', planStartDate: '2026-01-01', startInvestedCents: 2_000_000, monthlyContributionCents: 100_000 })
+    const low = makeScenario({
+      id: 3,
+      name: 'Starts lower',
+      planStartDate: '2026-01-01',
+      startInvestedCents: 2_000_000,
+      monthlyContributionCents: 100_000,
+    })
     renderTable(amounts(100, 500), [plan, low])
 
     expect(screen.queryByText(/Already there on every path/)).not.toBeInTheDocument()
@@ -235,7 +265,16 @@ describe('reading by goal', () => {
   it('picks one milestone, from every one still ahead, and lists the paths under it', async () => {
     await byGoal()
 
-    expect(chips('Milestone').map((c) => c.textContent)).toEqual(['150k €', '200k €', '300k €', '400k €', '500k €', '750k €', '1,0M €', '2,0M €'])
+    expect(chips('Milestone').map((c) => c.textContent)).toEqual([
+      '150k €',
+      '200k €',
+      '300k €',
+      '400k €',
+      '500k €',
+      '750k €',
+      '1,0M €',
+      '2,0M €',
+    ])
     expect(screen.getByText('1 of 8')).toBeInTheDocument()
     expect(screen.queryByRole('grid')).not.toBeInTheDocument()
     expect(items()).toHaveLength(2)

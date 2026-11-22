@@ -5,7 +5,10 @@ import { makeScenario } from '../../../testing/factories'
 import type { ExpenseActions } from '../../actions'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
-function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
+function makeAccount(
+  id: number,
+  kind: WealthAccount['kind'] = 'investment',
+): WealthAccount {
   return { id, name: `Broker ${id}`, kind, sortOrder: id, archived: false }
 }
 
@@ -26,41 +29,61 @@ function makeActions(): ExpenseActions {
 
 describe('CheckinList', () => {
   it('shows empty state when no check-ins', () => {
-    render(
-      <CheckinList
-        checkins={[]}
-        accounts={[]}
-        plan={null}
-        canWrite={true}
-        actions={makeActions()}
-      />,
-    )
+    render(<CheckinList checkins={[]} accounts={[]} plan={null} canWrite={true} actions={makeActions()} />)
     expect(screen.getByText(/no check-ins yet/i)).toBeInTheDocument()
   })
 
   it('points at Assumptions, where an account is made, when there is none to log a balance against', () => {
     render(<CheckinList checkins={[]} accounts={[]} plan={null} canWrite={true} actions={makeActions()} />)
-    expect(screen.getByText('No check-ins yet. Set up an account in Assumptions first, then log a balance.')).toBeInTheDocument()
+    expect(
+      screen.getByText('No check-ins yet. Set up an account in Assumptions first, then log a balance.'),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/above/)).not.toBeInTheDocument()
   })
 
   it('points at the form above only when there is an account for it to log against', () => {
-    render(<CheckinList checkins={[]} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={makeActions()} />)
+    render(
+      <CheckinList checkins={[]} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={makeActions()} />,
+    )
     expect(screen.getByText('No check-ins yet. Log your first snapshot above.')).toBeInTheDocument()
   })
 
-  it('says what the gap on a row is of: the investments, in the plan\'s euros, not the total beside it', () => {
+  it("says what the gap on a row is of: the investments, in the plan's euros, not the total beside it", () => {
     const plan = makeScenario({ planStartDate: '2020-01-01' })
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
-    render(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={plan} canWrite={true} actions={makeActions()} />)
+    render(
+      <CheckinList
+        checkins={checkins}
+        accounts={[makeAccount(1)]}
+        plan={plan}
+        canWrite={true}
+        actions={makeActions()}
+      />,
+    )
     expect(screen.getByText('The gap to the plan is for your investments, in 2020 euros.')).toBeInTheDocument()
   })
 
-  it('has no such line without a plan to take a gap from, and names today\'s euros for a plan with no start date', () => {
+  it("has no such line without a plan to take a gap from, and names today's euros for a plan with no start date", () => {
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
-    const { rerender } = render(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={makeActions()} />)
+    const { rerender } = render(
+      <CheckinList
+        checkins={checkins}
+        accounts={[makeAccount(1)]}
+        plan={null}
+        canWrite={true}
+        actions={makeActions()}
+      />,
+    )
     expect(screen.queryByText(/The gap to the plan/)).not.toBeInTheDocument()
-    rerender(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={makeScenario({ planStartDate: null })} canWrite={true} actions={makeActions()} />)
+    rerender(
+      <CheckinList
+        checkins={checkins}
+        accounts={[makeAccount(1)]}
+        plan={makeScenario({ planStartDate: null })}
+        canWrite={true}
+        actions={makeActions()}
+      />,
+    )
     expect(screen.queryByText(/The gap to the plan/)).not.toBeInTheDocument()
   })
 
@@ -70,15 +93,7 @@ describe('CheckinList', () => {
       makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
       makeCheckin(2, '2025-06-01', [{ accountId: 1, valueCents: 200_000_00 }]),
     ]
-    render(
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={null}
-        canWrite={true}
-        actions={makeActions()}
-      />,
-    )
+    render(<CheckinList checkins={checkins} accounts={accounts} plan={null} canWrite={true} actions={makeActions()} />)
     const items = screen.getAllByText(/broker/i)
     expect(items.length).toBeGreaterThan(0)
   })
@@ -86,15 +101,7 @@ describe('CheckinList', () => {
   it('shows note when present', () => {
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2025-06-01', [], 'Test note here')]
-    render(
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={null}
-        canWrite={true}
-        actions={makeActions()}
-      />,
-    )
+    render(<CheckinList checkins={checkins} accounts={accounts} plan={null} canWrite={true} actions={makeActions()} />)
     expect(screen.getByText('Test note here')).toBeInTheDocument()
   })
 
@@ -106,13 +113,7 @@ describe('CheckinList', () => {
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 999_999_99 }])]
     render(
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={scenario}
-        canWrite={true}
-        actions={makeActions()}
-      />,
+      <CheckinList checkins={checkins} accounts={accounts} plan={scenario} canWrite={true} actions={makeActions()} />,
     )
     expect(screen.getByText(/history/i)).toBeInTheDocument()
   })
@@ -120,15 +121,7 @@ describe('CheckinList', () => {
   it('hides delete button when canWrite is false', () => {
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
-    render(
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={null}
-        canWrite={false}
-        actions={undefined}
-      />,
-    )
+    render(<CheckinList checkins={checkins} accounts={accounts} plan={null} canWrite={false} actions={undefined} />)
     expect(screen.queryByRole('button', { name: /delete check-in/i })).not.toBeInTheDocument()
   })
 
@@ -136,15 +129,7 @@ describe('CheckinList', () => {
     const actions = makeActions()
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
-    render(
-      <CheckinList
-        checkins={checkins}
-        accounts={accounts}
-        plan={null}
-        canWrite={true}
-        actions={actions}
-      />,
-    )
+    render(<CheckinList checkins={checkins} accounts={accounts} plan={null} canWrite={true} actions={actions} />)
     fireEvent.click(screen.getByRole('button', { name: /delete check-in/i }))
 
     expect(screen.getByText(/Delete the .*2025 check-in\?/)).toBeInTheDocument()
@@ -158,13 +143,7 @@ describe('CheckinList', () => {
     const actions = makeActions()
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
     render(
-      <CheckinList
-        checkins={checkins}
-        accounts={[makeAccount(1)]}
-        plan={null}
-        canWrite={true}
-        actions={actions}
-      />,
+      <CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={actions} />,
     )
     fireEvent.click(screen.getByRole('button', { name: /delete check-in/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))

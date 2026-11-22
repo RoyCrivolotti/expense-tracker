@@ -29,7 +29,10 @@ function before(p: ProjectionParams): { invested: number; pre: number }[] {
   for (let year = 0; year <= p.horizonYears; year++) {
     let pre = invested
     if (year > 0) {
-      invested = Math.round(invested * (1 + p.expectedRealReturn) + annualContributionCents(p.monthlyContributionCents, p.contributionSteps ?? [], year, p.inflationRate))
+      invested = Math.round(
+        invested * (1 + p.expectedRealReturn) +
+          annualContributionCents(p.monthlyContributionCents, p.contributionSteps ?? [], year, p.inflationRate),
+      )
       pre = invested
       if (p.housePurchaseYear !== null && p.housePurchaseYear > 0 && year === p.housePurchaseYear) {
         invested -= Math.round(housePriceAtPurchaseCents(p) * p.downPaymentFraction) + p.transactionCostsCents
@@ -54,10 +57,12 @@ describe('yearFlows', () => {
     expect(yearFlows(params(), 0)).toEqual({ contributionCents: 0, eventsCents: 0 })
   })
 
-  it('is the year\'s saving in the plan\'s money, the same figure the schedule gives', () => {
+  it("is the year's saving in the plan's money, the same figure the schedule gives", () => {
     const p = params({ housePurchaseYear: null })
     for (const year of [1, 2, 10, 30]) {
-      expect(yearFlows(p, year).contributionCents).toBe(annualContributionCents(p.monthlyContributionCents, [], year, p.inflationRate))
+      expect(yearFlows(p, year).contributionCents).toBe(
+        annualContributionCents(p.monthlyContributionCents, [], year, p.inflationRate),
+      )
       expect(yearFlows(p, year).eventsCents).toBe(0)
     }
   })
@@ -71,7 +76,13 @@ describe('yearFlows', () => {
   })
 
   it('adds the life events of the year to the house, in either direction', () => {
-    const p = params({ lifeEvents: [{ year: 8, amountCents: 1_000_000, label: 'Gift' }, { year: 8, amountCents: -250_000, label: 'Car' }, { year: 3, amountCents: 7, label: 'Other' }] })
+    const p = params({
+      lifeEvents: [
+        { year: 8, amountCents: 1_000_000, label: 'Gift' },
+        { year: 8, amountCents: -250_000, label: 'Car' },
+        { year: 3, amountCents: 7, label: 'Other' },
+      ],
+    })
     const down = Math.round(housePriceAtPurchaseCents(p) * 0.2)
     expect(yearFlows(p, 8).eventsCents).toBe(-(down + 600_000) + 1_000_000 - 250_000)
     expect(yearFlows(p, 3).eventsCents).toBe(7)
@@ -84,14 +95,16 @@ describe('yearFlows', () => {
 })
 
 describe('stepInvested', () => {
-  it('grows the balance, adds the year\'s saving, and that is the value before the events; then the events', () => {
+  it("grows the balance, adds the year's saving, and that is the value before the events; then the events", () => {
     const step = stepInvested(10_000_000, 1.05, { contributionCents: 1_200_000, eventsCents: -3_000_000 })
     expect(step.pre).toBe(Math.round(10_000_000 * 1.05 + 1_200_000))
     expect(step.post).toBe(step.pre - 3_000_000)
   })
 
   it('rounds once, to a cent, as the plan does', () => {
-    expect(stepInvested(1_234_567, 1.0523, { contributionCents: 99_999, eventsCents: 0 }).pre).toBe(Math.round(1_234_567 * 1.0523 + 99_999))
+    expect(stepInvested(1_234_567, 1.0523, { contributionCents: 99_999, eventsCents: 0 }).pre).toBe(
+      Math.round(1_234_567 * 1.0523 + 99_999),
+    )
   })
 
   it('does not floor a balance that goes negative', () => {
@@ -99,7 +112,7 @@ describe('stepInvested', () => {
   })
 })
 
-describe('the plan\'s projection with the shared step', () => {
+describe("the plan's projection with the shared step", () => {
   it('is what it was, to the cent, for random plans with houses, events, a changing monthly amount and any return', () => {
     const rand = rng(17)
     for (let n = 0; n < 150; n++) {
@@ -111,7 +124,16 @@ describe('the plan\'s projection with the shared step', () => {
         housePurchaseYear: [null, 0, 1, 5, 12][Math.floor(rand() * 5)]!,
         housePriceCents: Math.round(10_000_000 + rand() * 40_000_000),
         inflationRate: rand() * 0.05,
-        lifeEvents: rand() < 0.6 ? [{ year: 1 + Math.floor(rand() * 20), amountCents: Math.round((rand() - 0.5) * 8_000_000), label: 'Event' }] : [],
+        lifeEvents:
+          rand() < 0.6
+            ? [
+                {
+                  year: 1 + Math.floor(rand() * 20),
+                  amountCents: Math.round((rand() - 0.5) * 8_000_000),
+                  label: 'Event',
+                },
+              ]
+            : [],
         contributionSteps: rand() < 0.5 ? [{ offsetYears: 3.5, monthlyCents: Math.round(rand() * 400_000) }] : [],
       })
       const was = before(p)

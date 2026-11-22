@@ -3,7 +3,11 @@ import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import type { RetirementOdds } from '../../../../engine'
 import { retirementOddsLine, runsOfHundred } from './retirementOddsLine'
 
-const odds = (lasts: number, unluckiestTenth = 30, years = 30): RetirementOdds => ({ runs: 10_000, years, lasts, unluckiestTenth })
+const odds = (
+  lasts: number,
+  unluckiestTenth = 30,
+  years = 30,
+): RetirementOdds => ({ runs: 10_000, years, lasts, unluckiestTenth })
 const line = (over: Partial<Parameters<typeof retirementOddsLine>[0]> = {}) =>
   retirementOddsLine({
     rate: 0.04,
@@ -30,19 +34,25 @@ describe('runsOfHundred', () => {
 })
 
 describe('retirementOddsLine', () => {
-  it('says how often the money lasts at the plan\'s rate, how long it lasts in the unluckiest tenth, and the other rates', () => {
+  it("says how often the money lasts at the plan's rate, how long it lasts in the unluckiest tenth, and the other rates", () => {
     expect(line()).toBe(
       'Started at the target, with the spending taken out each year, the money lasts all 30 years in 86 of 100 runs at your 4,0% (in 10 of the 100 it lasts 25 years or less), 91 at 3,5% and 95 at 3,0%. The typical return is 5,0% a year with a bounce of 15,0%. Each year is drawn independently from one kind of investment, with spending that never changes and no tax, so real history can come out higher or lower, and the odds move a lot with these inputs.',
     )
   })
 
   it('leaves the worst tenth out when it lasts the whole time too', () => {
-    const text = line({ results: [{ rate: 0.04, odds: odds(0.97) }, { rate: 0.035, odds: odds(0.99) }, { rate: 0.03, odds: odds(1) }] })
+    const text = line({
+      results: [
+        { rate: 0.04, odds: odds(0.97) },
+        { rate: 0.035, odds: odds(0.99) },
+        { rate: 0.03, odds: odds(1) },
+      ],
+    })
     expect(text).not.toContain('10 of the 100')
     expect(text).toContain('in 97 of 100 runs at your 4,0%')
   })
 
-  it('names the plan\'s own rate first and lists only the usual rates that differ from it', () => {
+  it("names the plan's own rate first and lists only the usual rates that differ from it", () => {
     const text = line({
       rate: 0.0325,
       years: 50,
@@ -63,13 +73,30 @@ describe('retirementOddsLine', () => {
   })
 
   it('says it in the singular for one year, and that the money runs out in the first year when it does', () => {
-    const one = (years: number) => line({ years: 30, results: [{ rate: 0.04, odds: odds(0.8, years, 30) }, { rate: 0.035, odds: odds(0.9, 30, 30) }, { rate: 0.03, odds: odds(1, 30, 30) }] })!
+    const one = (years: number) =>
+      line({
+        years: 30,
+        results: [
+          { rate: 0.04, odds: odds(0.8, years, 30) },
+          { rate: 0.035, odds: odds(0.9, 30, 30) },
+          { rate: 0.03, odds: odds(1, 30, 30) },
+        ],
+      })!
     expect(one(1)).toContain('(in 10 of the 100 it lasts 1 year or less)')
     expect(one(0)).toContain('(in 10 of the 100 the money runs out in the first year)')
   })
 
   it('says "year" for one year', () => {
-    expect(line({ years: 1, results: [{ rate: 0.04, odds: odds(0.99, 1, 1) }, { rate: 0.035, odds: odds(1, 1, 1) }, { rate: 0.03, odds: odds(1, 1, 1) }] })).toContain('all 1 year in')
+    expect(
+      line({
+        years: 1,
+        results: [
+          { rate: 0.04, odds: odds(0.99, 1, 1) },
+          { rate: 0.035, odds: odds(1, 1, 1) },
+          { rate: 0.03, odds: odds(1, 1, 1) },
+        ],
+      }),
+    ).toContain('all 1 year in')
   })
 
   it('has nothing to say without any result', () => {

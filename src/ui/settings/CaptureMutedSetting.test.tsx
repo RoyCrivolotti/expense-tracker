@@ -21,12 +21,17 @@ describe('the muted pushes card', () => {
     vi.mocked(api.fetchMutedWordings).mockResolvedValue([])
     render(<CaptureMutedSetting />)
 
-    expect(await screen.findByText(/Nothing is muted\. A wording you dismiss three times in a row stops being suggested/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Nothing is muted\. A wording you dismiss three times in a row stops being suggested/),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('shows each muted wording by its masked words, its source, how it was used and when it was muted', async () => {
-    vi.mocked(api.fetchMutedWordings).mockResolvedValue([muted(), muted({ templateId: 'other', source: 'otherbank', skeleton: 'code <CODE>', seen: 1, dismissals: 1 })])
+    vi.mocked(api.fetchMutedWordings).mockResolvedValue([
+      muted(),
+      muted({ templateId: 'other', source: 'otherbank', skeleton: 'code <CODE>', seen: 1, dismissals: 1 }),
+    ])
     render(<CaptureMutedSetting />)
 
     const rows = await screen.findAllByRole('listitem')
@@ -38,8 +43,12 @@ describe('the muted pushes card', () => {
     expect(rows[0]).toHaveTextContent(/special offer save\s*number\s*currency\s*on\s*merchant\s*today/)
     expect(rows[0]).toHaveTextContent(/newbank · seen 5 times, dismissed 3 times · muted 10 Nov/)
     expect(rows[1]).toHaveTextContent(/otherbank · seen once, dismissed once/)
-    expect(first.getByRole('button')).toHaveAccessibleName('Suggest again the newbank wording: special offer save number currency on merchant today')
-    expect(within(rows[1] as HTMLElement).getByRole('button')).toHaveAccessibleName('Suggest again the otherbank wording: code code')
+    expect(first.getByRole('button')).toHaveAccessibleName(
+      'Suggest again the newbank wording: special offer save number currency on merchant today',
+    )
+    expect(within(rows[1] as HTMLElement).getByRole('button')).toHaveAccessibleName(
+      'Suggest again the otherbank wording: code code',
+    )
   })
 
   it('un-mutes a wording and reads the list again', async () => {
@@ -61,7 +70,9 @@ describe('the muted pushes card', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Suggest again the newbank wording/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Request failed (500)')
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Suggest again the newbank wording/ })).toBeEnabled())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Suggest again the newbank wording/ })).toBeEnabled(),
+    )
     expect(api.fetchMutedWordings).toHaveBeenCalledTimes(1)
   })
 

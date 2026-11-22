@@ -8,7 +8,10 @@ import { NO_ROWS, type RowSlice } from './windowLayout'
  * been folded keeps what it had until the fold has played, or the rows would vanish at once and
  * there would be nothing left to fold. A group that starts folded has no fold to play.
  */
-export function useFoldedSlice(slice: RowSlice, collapsed: boolean): RowSlice {
+export function useFoldedSlice(
+  slice: RowSlice,
+  collapsed: boolean,
+): RowSlice {
   const held = useHeldWhen(slice, collapsed)
   const [folded, setFolded] = useState(collapsed)
   // Adjusting state while rendering, as Presence does: unfolding shows the rows in the same

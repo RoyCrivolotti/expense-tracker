@@ -43,14 +43,18 @@ interface Stored {
 }
 
 const stored = (): Stored[] =>
-  sqlite.prepare('SELECT id, description, description_norm, plan_id FROM transactions ORDER BY id').all() as unknown as Stored[]
+  sqlite
+    .prepare('SELECT id, description, description_norm, plan_id FROM transactions ORDER BY id')
+    .all() as unknown as Stored[]
 
 /** Every row holds the normalization of its own description; a missing value counts as wrong. */
 function expectEveryRowInSync(): void {
   const rows = stored()
   expect(rows.length).toBeGreaterThan(0)
   for (const row of rows) {
-    expect(row.description_norm, `row ${row.id} ${JSON.stringify(row.description)}`).toBe(normalizeDesc(row.description))
+    expect(row.description_norm, `row ${row.id} ${JSON.stringify(row.description)}`).toBe(
+      normalizeDesc(row.description),
+    )
   }
 }
 
@@ -116,10 +120,11 @@ describe('the routes that write a description', () => {
       world.call(patchBulk, { method: 'PATCH', path: '/transactions/bulk', body: { ids: [first, second], patch } })
 
     expect((await bulk({ description: 'СОВМЕСТНЫЙ Заказ' })).status).toBe(200)
-    expect(stored().filter((r) => r.id === first || r.id === second).map((r) => r.description_norm)).toEqual([
-      'совместный заказ',
-      'совместный заказ',
-    ])
+    expect(
+      stored()
+        .filter((r) => r.id === first || r.id === second)
+        .map((r) => r.description_norm),
+    ).toEqual(['совместный заказ', 'совместный заказ'])
 
     expect((await bulk({ categoryId: ids.travel })).status).toBe(200)
     expect(stored().find((r) => r.id === first)?.description_norm).toBe('совместный заказ')
@@ -158,7 +163,9 @@ describe('the routes that write a description', () => {
 
 describe('the check', () => {
   it('fails for a row whose description was written without its value', () => {
-    sqlite.prepare("UPDATE transactions SET description = 'Changed behind its back' WHERE id = ?").run(ids.transactions[0]!)
+    sqlite
+      .prepare("UPDATE transactions SET description = 'Changed behind its back' WHERE id = ?")
+      .run(ids.transactions[0]!)
     expect(expectEveryRowInSync).toThrow()
   })
 

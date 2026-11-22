@@ -39,7 +39,9 @@ describe('PullToRefreshIndicator', () => {
   })
 
   it('turns to the accent once the pull is far enough to refresh', () => {
-    const { container, rerender } = render(<PullToRefreshIndicator pullPx={THRESHOLD_PX - 1} isPulling refreshing={false} />)
+    const { container, rerender } = render(
+      <PullToRefreshIndicator pullPx={THRESHOLD_PX - 1} isPulling refreshing={false} />,
+    )
     expect(strip(container).className).not.toContain('ready')
 
     rerender(<PullToRefreshIndicator pullPx={THRESHOLD_PX} isPulling refreshing={false} />)

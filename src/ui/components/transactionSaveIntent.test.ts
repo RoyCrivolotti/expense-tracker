@@ -28,9 +28,7 @@ describe('createTransactionWithIntent', () => {
     })
 
     expect(createInstallmentPlan).toHaveBeenCalledTimes(1)
-    expect(createTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ planId: 9, installmentIndex: 14 }),
-    )
+    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ planId: 9, installmentIndex: 14 }))
   })
 
   it('rolls back the created plan when linking the transaction fails', async () => {
@@ -108,12 +106,8 @@ describe('createTransactionWithIntent', () => {
         { kind: 'new', totalCount: count, installmentIndex: 1, splitTotal: true },
       )
 
-      expect(createInstallmentPlan).toHaveBeenCalledWith(
-        expect.objectContaining({ amountCents: restCents }),
-      )
-      expect(createTransaction).toHaveBeenCalledWith(
-        expect.objectContaining({ amountCents: firstCents }),
-      )
+      expect(createInstallmentPlan).toHaveBeenCalledWith(expect.objectContaining({ amountCents: restCents }))
+      expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountCents: firstCents }))
       // The property under test, stated directly: this installment plus the remaining
       // (count - 1) at the plan's stored amount must equal the entered total.
       expect(firstCents + restCents * (count - 1)).toBe(totalCents)
@@ -131,8 +125,7 @@ describe('createTransactionWithIntent', () => {
       { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
     )
 
-    const planAmount = (createInstallmentPlan.mock.calls[0]?.[0] as { amountCents: number })
-      .amountCents
+    const planAmount = (createInstallmentPlan.mock.calls[0]?.[0] as { amountCents: number }).amountCents
     const txnAmount = (createTransaction.mock.calls[0]?.[0] as { amountCents: number }).amountCents
     expect(txnAmount - planAmount).toBe(1)
   })
@@ -160,9 +153,7 @@ describe('createTransactionWithIntent', () => {
     await createTransactionWithIntent(actions, input, { kind: 'link', planId: 3, installmentIndex: 5 })
 
     expect(createInstallmentPlan).not.toHaveBeenCalled()
-    expect(createTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ planId: 3, installmentIndex: 5 }),
-    )
+    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ planId: 3, installmentIndex: 5 }))
   })
 
   it('creates a plain transaction with no intent', async () => {

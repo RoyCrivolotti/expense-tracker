@@ -27,7 +27,11 @@ describe('boxMuller', () => {
   })
 
   it('stays finite when a uniform is exactly zero, which would otherwise be a logarithm of nothing', () => {
-    for (const [u1, u2] of [[0, 0], [0, 0.5], [0, 0.999999]] as const) {
+    for (const [u1, u2] of [
+      [0, 0],
+      [0, 0.5],
+      [0, 0.999999],
+    ] as const) {
       const [z0, z1] = boxMuller(u1, u2)
       expect(Number.isFinite(z0)).toBe(true)
       expect(Number.isFinite(z1)).toBe(true)

@@ -13,14 +13,7 @@
  */
 import { vi } from 'vitest'
 import type { ExpenseActions } from '../ui/actions'
-import {
-  makeFlag,
-  makeLabel,
-  makeScenario,
-  makeTransaction,
-  makeWealthAccount,
-  makeWealthCheckin,
-} from './factories'
+import { makeFlag, makeLabel, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from './factories'
 
 export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
   return {

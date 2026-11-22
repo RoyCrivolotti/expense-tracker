@@ -26,15 +26,12 @@ export function FlagList({ model, actions }: { model: ExpenseModel; actions: Exp
       <Card>
         {flags.length === 0 ? (
           <p className={styles.deleteNote}>
-            No flags yet. Flags mark transactions you need to follow up on — expenses to claim
-            back, say — and group them in the Transactions tab.
+            No flags yet. Flags mark transactions you need to follow up on — expenses to claim back, say — and group
+            them in the Transactions tab.
           </p>
         ) : (
           flags.map((flag) => (
-            <div
-              key={flag.id}
-              className={flag.active ? styles.row : `${styles.row} ${styles.inactive}`}
-            >
+            <div key={flag.id} className={flag.active ? styles.row : `${styles.row} ${styles.inactive}`}>
               <div className={styles.rowMain}>
                 <span className={styles.rowName}>
                   <FlagGlyph flag={flag} className={flagStyles.rowGlyph} /> {flag.name}

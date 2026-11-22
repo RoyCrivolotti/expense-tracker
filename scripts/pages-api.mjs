@@ -1,6 +1,9 @@
 import { ACCOUNT_ID, cf } from './access-api.mjs'
 
-export async function findPagesProject(token, projectName) {
+export async function findPagesProject(
+  token,
+  projectName,
+) {
   try {
     return await cf(token, `/accounts/${ACCOUNT_ID}/pages/projects/${projectName}`)
   } catch (err) {
@@ -11,7 +14,11 @@ export async function findPagesProject(token, projectName) {
   }
 }
 
-export async function ensurePagesDomain(token, projectName, domain) {
+export async function ensurePagesDomain(
+  token,
+  projectName,
+  domain,
+) {
   let domains
   try {
     domains = await cf(token, `/accounts/${ACCOUNT_ID}/pages/projects/${projectName}/domains`)

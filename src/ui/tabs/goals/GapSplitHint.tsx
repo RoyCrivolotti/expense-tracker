@@ -10,7 +10,10 @@ import goalStyles from './goals.module.css'
 const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 } as const
 
 /** Why saving and the market are said together, and what would tell them apart. */
-function mergedNote(reason: MergedReason, since: string): string {
+function mergedNote(
+  reason: MergedReason,
+  since: string,
+): string {
   if (reason === 'none-recorded') {
     return `Shown together because nothing is recorded as an investment since ${since}: what you put in cannot be told from the market.`
   }
@@ -20,11 +23,17 @@ function mergedNote(reason: MergedReason, since: string): string {
   return 'Shown together because the balance grew faster than markets usually give, which is usually money moved in that is not recorded.'
 }
 
-function signed(euros: number, format: MoneyFormat): string {
+function signed(
+  euros: number,
+  format: MoneyFormat,
+): string {
   return `${euros > 0 ? '+' : '−'}${formatCentsCompact(Math.abs(euros) * 100, format)}`
 }
 
-function headline(split: GapSplit, format: MoneyFormat): string {
+function headline(
+  split: GapSplit,
+  format: MoneyFormat,
+): string {
   const [gap] = wholeEuros([split.gapCents])
   const money = formatCentsCompact(Math.abs(gap!) * 100, format)
   if (split.verdict === 'on-track') return gap === 0 ? 'On track' : `On track, ${signed(gap!, format)} from the plan`
@@ -37,7 +46,9 @@ function Rows({ split, format }: { split: GapSplit; format: MoneyFormat }) {
       {gapRows(split).map((row) => (
         <li key={row.key} className={`${styles.gapRow} ${row.muted ? styles.gapRowMuted : ''}`}>
           <span>{row.label}</span>
-          <span className={`${styles.gapAmount} ${row.muted ? '' : row.euros > 0 ? styles.gapAmountUp : styles.gapAmountDown}`}>
+          <span
+            className={`${styles.gapAmount} ${row.muted ? '' : row.euros > 0 ? styles.gapAmountUp : styles.gapAmountDown}`}
+          >
             {signed(row.euros, format)}
           </span>
         </li>
@@ -95,8 +106,8 @@ export function GapSplitHint({
       <Rows split={reading} format={format} />
       {behindFromTheMarket(reading) ? (
         <p style={hintStyle}>
-          What you put in is about what the plan asks, or more, so this gap comes from the market and where the plan started,
-          not from your investing.
+          What you put in is about what the plan asks, or more, so this gap comes from the market and where the plan
+          started, not from your investing.
         </p>
       ) : null}
       <Notes split={reading} />

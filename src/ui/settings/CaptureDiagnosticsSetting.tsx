@@ -27,7 +27,8 @@ function Rates({ diagnostics }: { diagnostics: SourceDiagnostics }) {
   if (!rates) return <p className={`${styles.rates} ${tabStyles.settingHint}`}>Nothing decided yet.</p>
   return (
     <p className={styles.rates}>
-      Of {rates.decided} decided: {rates.addedAsIs}% added as shown, {rates.edited}% edited, {rates.dismissed}% dismissed.
+      Of {rates.decided} decided: {rates.addedAsIs}% added as shown, {rates.edited}% edited, {rates.dismissed}%
+      dismissed.
     </p>
   )
 }
@@ -83,7 +84,9 @@ export function CaptureDiagnosticsSetting() {
               {error}
             </p>
           ) : null}
-          {sources && sources.length === 0 ? <p className={tabStyles.settingHint}>Nothing has reached the app yet.</p> : null}
+          {sources && sources.length === 0 ? (
+            <p className={tabStyles.settingHint}>Nothing has reached the app yet.</p>
+          ) : null}
           {sources && sources.length > 0 ? (
             <ul className={styles.sources}>
               {sources.map((status) => (

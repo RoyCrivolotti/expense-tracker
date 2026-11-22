@@ -16,7 +16,10 @@ function isAuthScopeError(output) {
   return /Authentication error|code: 10000|incorrect permissions on your API token/i.test(output)
 }
 
-function run(cmd, args) {
+function run(
+  cmd,
+  args,
+) {
   return spawnSync(cmd, args, {
     cwd: ROOT,
     encoding: 'utf8',

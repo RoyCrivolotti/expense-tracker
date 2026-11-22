@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
-import {
-  keepClearOfStack,
-  landOnAdjustControls,
-  pinnedBottom,
-  scrollToAdjustSection,
-} from './scrollToAdjustSection'
+import { keepClearOfStack, landOnAdjustControls, pinnedBottom, scrollToAdjustSection } from './scrollToAdjustSection'
 
 /** What the stack measures on a 375px phone: the chart and the row of chips. */
 const STACK_HEIGHT = 164
 
-function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
+function mount(
+  tag: 'div' | 'details',
+  id: string,
+  rect: Partial<DOMRect> = {},
+  height = 0,
+) {
   const el = document.createElement(tag)
   el.id = id
   vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: 0, ...rect } as DOMRect)
@@ -21,7 +21,10 @@ function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, 
 }
 
 /** jsdom lays nothing out, so what the browser would resolve is written as inline style. */
-function pin(el: HTMLElement, top?: string) {
+function pin(
+  el: HTMLElement,
+  top?: string,
+) {
   el.style.position = 'sticky'
   if (top !== undefined) el.style.top = top
 }
@@ -152,7 +155,10 @@ describe('landOnAdjustControls', () => {
 
 describe('keepClearOfStack', () => {
   /** A field that has focus, as one that has just taken it does, at `top` in the viewport. */
-  function focusedFieldAt(top: number, id = 'a-field') {
+  function focusedFieldAt(
+    top: number,
+    id = 'a-field',
+  ) {
     const field = document.createElement('input')
     field.id = id
     vi.spyOn(field, 'getBoundingClientRect').mockReturnValue({ top } as DOMRect)
@@ -161,7 +167,10 @@ describe('keepClearOfStack', () => {
     return field
   }
 
-  function stackAt(top: number, bottom: number) {
+  function stackAt(
+    top: number,
+    bottom: number,
+  ) {
     pin(mount('div', ADJUST_STACK_ID, { top, bottom }))
   }
 

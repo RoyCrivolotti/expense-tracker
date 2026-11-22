@@ -59,9 +59,7 @@ describe('canApplyBulkEdit', () => {
 
   it('is false while the description is on but empty, even with another field on', () => {
     expect(canApplyBulkEdit(fields({ descriptionEnabled: true, description: '' }))).toBe(false)
-    expect(
-      canApplyBulkEdit(fields({ descriptionEnabled: true, description: '', categoryEnabled: true })),
-    ).toBe(false)
+    expect(canApplyBulkEdit(fields({ descriptionEnabled: true, description: '', categoryEnabled: true }))).toBe(false)
   })
 
   it('treats spaces alone as blank', () => {

@@ -88,7 +88,10 @@ async function backfillPlan(
   if (inserted) await maybeCompletePlan(env, owner, plan.id)
 }
 
-export async function backfillInstallments(env: Env, owner: string): Promise<void> {
+export async function backfillInstallments(
+  env: Env,
+  owner: string,
+): Promise<void> {
   const { results: planRows } = await env.DB.prepare(
     `SELECT p.* FROM installment_plans p
      JOIN accounts a ON a.id = p.account_id AND a.owner = p.owner
@@ -119,9 +122,7 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
   // here would leave a plan's next installment stuck until the calendar
   // catches up, days or weeks after the rest of the app (and a manual "+")
   // would already treat it as due.
-  const settingsRow = await env.DB.prepare(
-    'SELECT budget_rollover_day FROM settings WHERE owner = ?',
-  )
+  const settingsRow = await env.DB.prepare('SELECT budget_rollover_day FROM settings WHERE owner = ?')
     .bind(owner)
     .first<{ budget_rollover_day: number | null }>()
   // Server clock (UTC), not the user's local one — right at a day boundary
@@ -149,7 +150,10 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
  * `backfillInstallments` for a read: a failure is logged and the read goes on without the rows that
  * were not inserted, rather than failing a request that only wanted to look.
  */
-export async function backfillForRead(env: Env, owner: string): Promise<void> {
+export async function backfillForRead(
+  env: Env,
+  owner: string,
+): Promise<void> {
   await backfillInstallments(env, owner).catch((err) => {
     console.error('installment backfill failed', err)
   })

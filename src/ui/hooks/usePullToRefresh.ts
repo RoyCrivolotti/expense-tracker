@@ -21,11 +21,10 @@ function scrollTop(): number {
 }
 
 /** Pull-to-refresh when the document is scrolled to the top (mobile). */
-export function usePullToRefresh({
-  onRefresh,
-  enabled = true,
-  refreshing = false,
-}: Options): { pullPx: number; isPulling: boolean } {
+export function usePullToRefresh({ onRefresh, enabled = true, refreshing = false }: Options): {
+  pullPx: number
+  isPulling: boolean
+} {
   const startY = useRef(0)
   const pullDistance = useRef(0)
   const pulling = useRef(false)

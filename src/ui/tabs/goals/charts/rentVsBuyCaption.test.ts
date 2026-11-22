@@ -28,8 +28,12 @@ describe('rentVsBuyCaption', () => {
   })
 
   it('prices a purchase today at the price today, and a later one at what the house costs then', () => {
-    expect(rentVsBuyCaptionParts({ ...base, startYear: 0 }).lead).toContain('Priced as if bought today, at 324.352,82 €, in 2026 euros')
-    expect(rentVsBuyCaptionParts(base).lead).toContain('Compared from year 8, at the 324.352,82 € the house will cost then')
+    expect(rentVsBuyCaptionParts({ ...base, startYear: 0 }).lead).toContain(
+      'Priced as if bought today, at 324.352,82 €, in 2026 euros',
+    )
+    expect(rentVsBuyCaptionParts(base).lead).toContain(
+      'Compared from year 8, at the 324.352,82 € the house will cost then',
+    )
   })
 
   it('keeps what stops a wrong decision in view and the long assumptions behind the disclosure: the lead is about 50 words', () => {
@@ -49,23 +53,35 @@ describe('rentVsBuyCaption', () => {
 
   it('says which way what it leaves out leans, so a close result can be read against it', () => {
     const text = rentVsBuyCaption(base)
-    expect(text).toContain('Rent that rises faster than prices favours buying; selling costs and renovation favour renting')
-    expect(text).toContain('mortgage interest relief and tax on investment gains depend on your country and are not counted')
+    expect(text).toContain(
+      'Rent that rises faster than prices favours buying; selling costs and renovation favour renting',
+    )
+    expect(text).toContain(
+      'mortgage interest relief and tax on investment gains depend on your country and are not counted',
+    )
   })
 
   it("states the assumptions it makes: rent flat in real terms, the scenario's own upkeep, no costs of selling", () => {
     const text = rentVsBuyCaption({ ...base, carryRate: 0.04 })
-    expect(text).toContain("Assumes rent stays the same in real terms, upkeep, tax and insurance of 4,0% of the house's value a year, and no costs of selling.")
-    expect(rentVsBuyCaption({ ...base, carryRate: 0 })).toContain("upkeep, tax and insurance of 0,0% of the house's value a year")
+    expect(text).toContain(
+      "Assumes rent stays the same in real terms, upkeep, tax and insurance of 4,0% of the house's value a year, and no costs of selling.",
+    )
+    expect(rentVsBuyCaption({ ...base, carryRate: 0 })).toContain(
+      "upkeep, tax and insurance of 0,0% of the house's value a year",
+    )
   })
 
-  it('says what the loan costs on the account, which is fixed, so it shrinks in the plan\'s euros, and nothing without a loan', () => {
-    expect(rentVsBuyCaption(base)).toContain('The loan costs 1.441,72 € a month on the account and stays that, so in these euros it shrinks each year.')
+  it("says what the loan costs on the account, which is fixed, so it shrinks in the plan's euros, and nothing without a loan", () => {
+    expect(rentVsBuyCaption(base)).toContain(
+      'The loan costs 1.441,72 € a month on the account and stays that, so in these euros it shrinks each year.',
+    )
     expect(rentVsBuyCaption({ ...base, paymentCents: 0 })).not.toContain('The loan costs')
   })
 
-  it('says the buyer spends the fees at once, so the buyer\'s line starts lower, and nothing when there are none', () => {
-    expect(rentVsBuyCaption(base)).toContain("The buyer spends the 6.000 € fees at once, so the buyer's line starts lower.")
+  it("says the buyer spends the fees at once, so the buyer's line starts lower, and nothing when there are none", () => {
+    expect(rentVsBuyCaption(base)).toContain(
+      "The buyer spends the 6.000 € fees at once, so the buyer's line starts lower.",
+    )
     expect(rentVsBuyCaption({ ...base, feesCents: 0 })).not.toContain('fees at once')
   })
 
@@ -73,7 +89,9 @@ describe('rentVsBuyCaption', () => {
     expect(rentVsBuyCaption(base)).toContain(
       "Savings grow at the plan's 5,0% a year and the house gains 1,0% a year, both after inflation: a different return or house growth can change who leads.",
     )
-    expect(rentVsBuyCaption({ ...base, realReturn: 0.07, houseGrowth: 0 })).toContain("the plan's 7,0% a year and the house gains 0,0% a year")
+    expect(rentVsBuyCaption({ ...base, realReturn: 0.07, houseGrowth: 0 })).toContain(
+      "the plan's 7,0% a year and the house gains 0,0% a year",
+    )
   })
 
   it('says that the plan takes only the down payment and the fees from the portfolio, so while owning costs more a month than renting a house adds more to its net worth than here', () => {
@@ -87,15 +105,21 @@ describe('rentVsBuyCaption', () => {
 
   it('says when the loan is paid off, in the year after buying it falls in, part way through a year too', () => {
     expect(rentVsBuyCaption(base)).toContain('The loan is paid off in year 25 after you buy.')
-    expect(rentVsBuyCaption({ ...base, loanPaidOffYear: 24 + 7 / 12 })).toContain('The loan is paid off in year 25 after you buy.')
+    expect(rentVsBuyCaption({ ...base, loanPaidOffYear: 24 + 7 / 12 })).toContain(
+      'The loan is paid off in year 25 after you buy.',
+    )
     expect(rentVsBuyCaption({ ...base, loanPaidOffYear: null })).not.toContain('The loan is paid off')
   })
 
   it('says what owning costs a month against renting, in the same words as the marker on the chart', () => {
-    expect(rentVsBuyCaption(base)).toContain('From year 26 owning costs less a month than renting, for the rest of the chart.')
+    expect(rentVsBuyCaption(base)).toContain(
+      'From year 26 owning costs less a month than renting, for the rest of the chart.',
+    )
     expect(rentVsBuyCaption({ ...base, ownCheaper: { fromYear: 26, stays: false } })).toContain(
       'Owning first costs less a month than renting in year 26, though not for the rest of the chart.',
     )
-    expect(rentVsBuyCaption({ ...base, ownCheaper: null })).toContain('Owning costs at least as much a month as renting throughout.')
+    expect(rentVsBuyCaption({ ...base, ownCheaper: null })).toContain(
+      'Owning costs at least as much a month as renting throughout.',
+    )
   })
 })

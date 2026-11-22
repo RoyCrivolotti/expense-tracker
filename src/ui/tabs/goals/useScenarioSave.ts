@@ -35,7 +35,10 @@ export function useScenarioSave(
       .then(() => {
         // A change or an event still open to add is not in the draft that was written.
         const open = openFormCount() > 0
-        showToast(open ? `Saved ${name}. What you are still adding or editing is not in it yet.` : `Saved ${name}`, 'success')
+        showToast(
+          open ? `Saved ${name}. What you are still adding or editing is not in it yet.` : `Saved ${name}`,
+          'success',
+        )
       })
       .finally(() => {
         inFlight.current = false

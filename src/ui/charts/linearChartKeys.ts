@@ -13,11 +13,17 @@ export function tooltipShows(
  * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
  * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
  */
-export function tabIndexFor(tooltipMode: 'full' | 'hidden', onActiveIndexChange: ((index: number | null) => void) | undefined): 0 | -1 {
+export function tabIndexFor(
+  tooltipMode: 'full' | 'hidden',
+  onActiveIndexChange: ((index: number | null) => void) | undefined,
+): 0 | -1 {
   return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
 }
 
 /** What names the text that says how to use a chart from the keyboard, for the chart that can be. */
-export function describedBy(steppable: boolean, id: string): { 'aria-describedby'?: string } {
+export function describedBy(
+  steppable: boolean,
+  id: string,
+): { 'aria-describedby'?: string } {
   return steppable ? { 'aria-describedby': id } : {}
 }

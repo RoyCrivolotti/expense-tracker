@@ -18,7 +18,8 @@ describe('comparisonRows', () => {
         makeScenario({ id: 3, name: 'Path C: Buy in year 5', housePurchaseYear: 5 }),
       ],
       draft,
-      EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE,
+      EU_MONEY_FORMAT,
+      DEFAULT_INFLATION_RATE,
     )
     expect(rows.map((r) => r.name)).toEqual(['Path A', 'Path B', 'Path C', 'Path D (editing)'])
     expect(rows.map((r) => r.house)).toEqual(['never', 'owned', 'year 5', 'never'])
@@ -91,12 +92,21 @@ describe('comparisonRows', () => {
       contributionSchedule: [{ from: '2027-03', monthlyCents: 2_000_00 }],
     })
     rerender(<ScenarioComparison scenarios={[plain, changing]} draft={draft} includeDraft={false} />)
-    expect(screen.getByText(/monthly is what each path invests, and what a change to it comes to\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/monthly is what each path invests, and what a change to it comes to\./),
+    ).toBeInTheDocument()
     expect(screen.getByText('then 2.000,00 €')).toBeInTheDocument()
   })
 
   it('lists the plan from today under the plan, in its colour, counting years from the check-in', () => {
-    const plan = makeScenario({ id: 2, name: 'Path B: Plan', color: '#abcdef', planStartDate: '2024-01-01', isActive: true, housePurchaseYear: null })
+    const plan = makeScenario({
+      id: 2,
+      name: 'Path B: Plan',
+      color: '#abcdef',
+      planStartDate: '2024-01-01',
+      isActive: true,
+      housePurchaseYear: null,
+    })
     const other = makeScenario({ id: 3, name: 'Path C', housePurchaseYear: null })
     const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const rows = comparisonRows([plan, other], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false, 10, fromToday)
@@ -118,7 +128,11 @@ describe('comparisonRows', () => {
     )
     expect(screen.getByText('Path B, from today')).toBeInTheDocument()
     // Its money restarts too: the saved plan is in the euros of 2024, this row in those of 2026.
-    expect(screen.getByText(/restarted from the balance in your latest check-in, 1 Jan 2026, and counts its years and its euros from there \(2026 euros\)/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /restarted from the balance in your latest check-in, 1 Jan 2026, and counts its years and its euros from there \(2026 euros\)/,
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByText(/Net worth and invested are .*, in 2024 euros/)).toBeInTheDocument()
     // The two counts of years start on different days, so FI is given as a month for both.
     expect(screen.getByText(/FI is given as a month for the plan and its restart/)).toBeInTheDocument()
@@ -128,7 +142,8 @@ describe('comparisonRows', () => {
     const rows = comparisonRows(
       [],
       { ...draft, annualSpendCents: 900_000_00, safeWithdrawalRate: 0.03, horizonYears: 5 },
-      EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE,
+      EU_MONEY_FORMAT,
+      DEFAULT_INFLATION_RATE,
     )
     expect(rows[0]!.fi).toBe('not in horizon')
   })
@@ -150,12 +165,7 @@ describe('ScenarioComparison', () => {
   })
 
   it('renders the table with one row per path', () => {
-    render(
-      <ScenarioComparison
-        scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only' })]}
-        draft={draft}
-      />,
-    )
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only' })]} draft={draft} />)
     expect(screen.getByText('Scenarios side by side')).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.getByText('Path D (editing)')).toBeInTheDocument()
@@ -175,14 +185,25 @@ describe('ScenarioComparison', () => {
     expect(screen.queryByText(/\(editing\)/)).not.toBeInTheDocument()
   })
 
-  it('says which euros the figures are in, the plan\'s, as the whole plan is', () => {
+  it("says which euros the figures are in, the plan's, as the whole plan is", () => {
     render(<ScenarioComparison scenarios={[]} draft={{ ...draft, planStartDate: '2026-01-01' }} />)
-    expect(screen.getByText(/Net worth and invested are .*, in 2026 euros; FI and the house purchase/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Net worth and invested are .*, in 2026 euros; FI and the house purchase/),
+    ).toBeInTheDocument()
   })
 
   it('reads every row on one date, in the euros of the earliest start, when the rows start on different days', () => {
-    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]} draft={{ ...draft, planStartDate: '2026-01-01' }} />)
-    expect(screen.getByText(/^Net worth and invested are on the same date for every path, Jan 2054, the last year every scenario reaches, in 2024 euros; FI and the house purchase are given as a month;/)).toBeInTheDocument()
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]}
+        draft={{ ...draft, planStartDate: '2026-01-01' }}
+      />,
+    )
+    expect(
+      screen.getByText(
+        /^Net worth and invested are on the same date for every path, Jan 2054, the last year every scenario reaches, in 2024 euros; FI and the house purchase are given as a month;/,
+      ),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/each in the euros of its own start date/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
@@ -190,13 +211,27 @@ describe('ScenarioComparison', () => {
   })
 
   it('says the date is the last year shown when one path ends before another starts', () => {
-    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2026-01-01', horizonYears: 5 })]} draft={{ ...draft, planStartDate: '2032-01-01', horizonYears: 10 }} />)
-    expect(screen.getByText(/^Net worth and invested are on the same date for every path, Jan 2042, the last year shown, in 2026 euros, or a path’s last figure when it ends sooner;/)).toBeInTheDocument()
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, planStartDate: '2026-01-01', horizonYears: 5 })]}
+        draft={{ ...draft, planStartDate: '2032-01-01', horizonYears: 10 }}
+      />,
+    )
+    expect(
+      screen.getByText(
+        /^Net worth and invested are on the same date for every path, Jan 2042, the last year shown, in 2026 euros, or a path’s last figure when it ends sooner;/,
+      ),
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/\(ended 2031\)$/)).toHaveLength(2)
   })
 
   it('offers the windows a later start reaches into', () => {
-    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01', horizonYears: 8 })]} draft={{ ...draft, planStartDate: '2029-01-01', horizonYears: 8 }} />)
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01', horizonYears: 8 })]}
+        draft={{ ...draft, planStartDate: '2029-01-01', horizonYears: 8 }}
+      />,
+    )
     expect(screen.getByRole('radiogroup', { name: 'Comparison year' })).toHaveTextContent('5Y10YHorizon')
     fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
     // The first path ended in 2032; the second has not ended by 2034.
@@ -206,10 +241,21 @@ describe('ScenarioComparison', () => {
 
   it('says why a later path can show more net worth only when one has a house still to buy', () => {
     const early = makeScenario({ id: 1, name: 'Early', planStartDate: '2024-01-01', housePurchaseYear: 6 })
-    const why = /A path that starts later buys its house on an anniversary of its own start, so it can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./
-    const { rerender } = render(<ScenarioComparison scenarios={[early]} draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 5 }} />)
+    const why =
+      /A path that starts later buys its house on an anniversary of its own start, so it can own it sooner than the same purchase elsewhere and show more net worth for that; invested compares like with like\./
+    const { rerender } = render(
+      <ScenarioComparison
+        scenarios={[early]}
+        draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 5 }}
+      />,
+    )
     expect(screen.getByText(why)).toBeInTheDocument()
-    rerender(<ScenarioComparison scenarios={[early]} draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 0 }} />)
+    rerender(
+      <ScenarioComparison
+        scenarios={[early]}
+        draft={{ ...draft, planStartDate: '2025-06-01', housePurchaseYear: 0 }}
+      />,
+    )
     expect(screen.queryByText(why)).not.toBeInTheDocument()
   })
 
@@ -223,15 +269,23 @@ describe('ScenarioComparison', () => {
         fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
-    expect(screen.getByText(/"From today" is your plan restarted from the balance in your latest check-in, 1 Jan 2026\.$/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/"From today" is your plan restarted from the balance in your latest check-in, 1 Jan 2026\.$/),
+    ).toBeInTheDocument()
   })
 
-  it('names only the saved plans\' euros when the draft has a row of its own no more', () => {
-    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]} draft={{ ...draft, planStartDate: '2026-01-01' }} includeDraft={false} />)
+  it("names only the saved plans' euros when the draft has a row of its own no more", () => {
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]}
+        draft={{ ...draft, planStartDate: '2026-01-01' }}
+        includeDraft={false}
+      />,
+    )
     expect(screen.getByText(/, in 2024 euros; FI and the house purchase/)).toBeInTheDocument()
   })
 
-  it('says today\'s euros for a plan with no start date', () => {
+  it("says today's euros for a plan with no start date", () => {
     render(<ScenarioComparison scenarios={[]} draft={{ ...draft, planStartDate: null }} />)
     expect(screen.getByText(/, in today's euros; FI and the house purchase/)).toBeInTheDocument()
   })
@@ -249,7 +303,7 @@ describe('ScenarioComparison', () => {
     errors.mockRestore()
   })
 
-  it('offers the hero chart\'s windows and reads the table at the chosen one', () => {
+  it("offers the hero chart's windows and reads the table at the chosen one", () => {
     render(
       <ScenarioComparison
         scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only', horizonYears: 30 })]}

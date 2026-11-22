@@ -64,9 +64,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest, otherPlan }: Pl
         <AdjustStack
           draft={editor.deferredDraft}
           unsaved={
-            actions != null && dirty
-              ? { name: draft.name, saving, onSave: onSaveChanges, onDiscard }
-              : undefined
+            actions != null && dirty ? { name: draft.name, saving, onSave: onSaveChanges, onDiscard } : undefined
           }
         />
       ) : null}

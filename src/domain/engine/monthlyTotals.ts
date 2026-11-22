@@ -42,7 +42,10 @@ function emptyTotals(month: string): MonthlyTotals {
   }
 }
 
-function applyTxn(acc: MonthlyTotals, txn: Transaction): void {
+function applyTxn(
+  acc: MonthlyTotals,
+  txn: Transaction,
+): void {
   if (txn.type === 'income') {
     acc.incomeCents += txn.amountCents
     return
@@ -54,10 +57,7 @@ function applyTxn(acc: MonthlyTotals, txn: Transaction): void {
   }
   const signed = txn.type === 'refund' ? -txn.amountCents : txn.amountCents
   acc.expensesCents += signed
-  acc.netExpenseByAccount.set(
-    txn.accountId,
-    (acc.netExpenseByAccount.get(txn.accountId) ?? 0) + signed,
-  )
+  acc.netExpenseByAccount.set(txn.accountId, (acc.netExpenseByAccount.get(txn.accountId) ?? 0) + signed)
 }
 
 /** Compute totals for every budget month present in `transactions`. */

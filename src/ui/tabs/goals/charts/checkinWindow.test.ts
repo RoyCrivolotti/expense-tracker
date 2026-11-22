@@ -86,6 +86,16 @@ describe('windowSeries through a house payment', () => {
   })
 
   it('has nothing to step for a plan without a payment', () => {
-    expect(windowSeries([{ year: 0, investedCents: 1_200 }, { year: 1, investedCents: 2_400 }], '2026-01-01', 1, 1).preStep).toBeUndefined()
+    expect(
+      windowSeries(
+        [
+          { year: 0, investedCents: 1_200 },
+          { year: 1, investedCents: 2_400 },
+        ],
+        '2026-01-01',
+        1,
+        1,
+      ).preStep,
+    ).toBeUndefined()
   })
 })

@@ -7,7 +7,10 @@
 export const DATASET_FORMAT = 1
 
 /** Weak, because the body can be re-encoded in transit (compression) without changing what it means. */
-export function datasetEtag(token: string, budgetMonth: string): string {
+export function datasetEtag(
+  token: string,
+  budgetMonth: string,
+): string {
   return `W/"${token}-${budgetMonth}-${DATASET_FORMAT}"`
 }
 
@@ -26,7 +29,11 @@ export type PartName = 'reference' | 'months' | 'cube' | 'series' | 'usage' | 'a
  * changed. The token and budget month are the same as the dataset's, so a write or a new month moves
  * every part's tag together with the dataset's.
  */
-export function partEtag(part: PartName, revision: { token: string; budgetMonth: string }, scope = ''): string {
+export function partEtag(
+  part: PartName,
+  revision: { token: string; budgetMonth: string },
+  scope = '',
+): string {
   const suffix = scope === '' ? '' : `-${scope}`
   return `W/"${revision.token}-${revision.budgetMonth}-${part}${PARTS_FORMAT}${suffix}"`
 }
@@ -40,7 +47,10 @@ function opaqueTag(value: string): string {
  * browser's cache revalidation always names the tag it holds, and answering a wildcard with a body is
  * always correct.
  */
-export function ifNoneMatchMatches(header: string | null, etag: string): boolean {
+export function ifNoneMatchMatches(
+  header: string | null,
+  etag: string,
+): boolean {
   if (!header) return false
   const current = opaqueTag(etag)
   return header.split(',').some((candidate) => opaqueTag(candidate) === current)

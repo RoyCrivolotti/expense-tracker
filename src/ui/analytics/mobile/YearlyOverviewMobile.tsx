@@ -50,10 +50,7 @@ function Row({
   return (
     <div className={styles.row}>
       <span className={styles.rowLabel}>{label}</span>
-      <span
-        className={styles.rowValue}
-        style={{ ...(color ? { color } : {}), ...(bold ? { fontWeight: 700 } : {}) }}
-      >
+      <span className={styles.rowValue} style={{ ...(color ? { color } : {}), ...(bold ? { fontWeight: 700 } : {}) }}>
         {display}
       </span>
     </div>

@@ -20,10 +20,14 @@ export function parsePush(text: string): RawPush | null {
   const { source, app, title, body, date } = value as Record<string, unknown>
   const word = isSourceWord(source) ? source : isText(app, MAX_APP_NAME_LENGTH) ? sourceWordOf(app) : null
   if (word === null) return null
-  if (!isText(title, MAX_TITLE_LENGTH) || !isText(body, MAX_BODY_TEXT_LENGTH) || !isText(date, MAX_DATE_LENGTH)) return null
+  if (!isText(title, MAX_TITLE_LENGTH) || !isText(body, MAX_BODY_TEXT_LENGTH) || !isText(date, MAX_DATE_LENGTH))
+    return null
   return { source: word, title, body, date }
 }
 
-function isText(value: unknown, max: number): value is string {
+function isText(
+  value: unknown,
+  max: number,
+): value is string {
   return typeof value === 'string' && value.length <= max
 }

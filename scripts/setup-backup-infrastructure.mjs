@@ -18,7 +18,10 @@ const PAGES_PROJECT = 'expense-tracker'
 const BUCKET = 'roy-expenses-backups'
 const DB_ID = '3dcefc85-e172-4fd0-a623-f2f15120c9d9'
 
-async function cf(path, init = {}) {
+async function cf(
+  path,
+  init = {},
+) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...init,
     headers: {
@@ -51,9 +54,7 @@ function ensureBucket() {
       return true
     }
     if (out.includes('10042') || out.includes('enable R2')) {
-      console.warn(
-        'R2 is not enabled on this account — enable it in the Cloudflare dashboard first, then re-run.',
-      )
+      console.warn('R2 is not enabled on this account — enable it in the Cloudflare dashboard first, then re-run.')
       return false
     }
     throw err
@@ -82,9 +83,7 @@ async function syncBackupsBinding() {
 
 async function main() {
   if (!TOKEN) {
-    throw new Error(
-      'No Cloudflare token — set CLOUDFLARE_API_TOKEN or run wrangler login',
-    )
+    throw new Error('No Cloudflare token — set CLOUDFLARE_API_TOKEN or run wrangler login')
   }
   const bucketReady = ensureBucket()
   if (!bucketReady) {

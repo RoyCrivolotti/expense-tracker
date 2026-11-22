@@ -34,7 +34,10 @@ const MARKER_START = '<!-- staging-preview:start -->'
 const MARKER_END = '<!-- staging-preview:end -->'
 const BLOCK_RE = new RegExp(`${MARKER_START}[\\s\\S]*?${MARKER_END}`)
 
-function upsertStagingBlock(body, previewUrl) {
+function upsertStagingBlock(
+  body,
+  previewUrl,
+) {
   const block = `${MARKER_START}\n**Staging preview:** ${previewUrl}\n${MARKER_END}`
   if (BLOCK_RE.test(body)) return body.replace(BLOCK_RE, block)
   const trimmed = body.replace(/\s+$/, '')

@@ -22,7 +22,9 @@ export function FixedCostsCard({ items }: { items: FixedCostItem[] }) {
   const format = useMoneyFormat()
   if (items.length === 0) {
     return (
-      <NeedsCard title="Detected fixed costs">Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.</NeedsCard>
+      <NeedsCard title="Detected fixed costs">
+        Shows once a charge repeats 3 times (monthly, every 3 months or yearly), or you have an instalment plan.
+      </NeedsCard>
     )
   }
   return (
@@ -30,9 +32,8 @@ export function FixedCostsCard({ items }: { items: FixedCostItem[] }) {
       <details className={styles.fixedDetails}>
         <summary className={styles.fixedSummary}>Detected fixed costs ({items.length})</summary>
         <p className={styles.cardSub}>
-          What the app counts as fixed. A charge missing here has not repeated 3 times at a regular
-          rhythm yet. The ones marked as in the budget are taken out of this month&apos;s flexible
-          pace budget.
+          What the app counts as fixed. A charge missing here has not repeated 3 times at a regular rhythm yet. The ones
+          marked as in the budget are taken out of this month&apos;s flexible pace budget.
         </p>
         <div className={styles.fixedList}>
           {items.map((item) => (

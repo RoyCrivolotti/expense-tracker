@@ -8,7 +8,11 @@ export function requireToken() {
   return token
 }
 
-export async function cf(token, path, init = {}) {
+export async function cf(
+  token,
+  path,
+  init = {},
+) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...init,
     headers: {
@@ -29,7 +33,10 @@ export async function listAccessApps(token) {
   return cf(token, `/accounts/${ACCOUNT_ID}/access/apps?per_page=100`)
 }
 
-export async function findAccessApp(token, name) {
+export async function findAccessApp(
+  token,
+  name,
+) {
   const apps = await listAccessApps(token)
   return apps.find((a) => a.name === name) ?? null
 }
@@ -40,7 +47,10 @@ export function googleIdpRule(idps) {
   return { identity: { id: google.id } }
 }
 
-export async function ensureGoogleAllowPolicies(token, appId) {
+export async function ensureGoogleAllowPolicies(
+  token,
+  appId,
+) {
   const idps = await cf(token, `/accounts/${ACCOUNT_ID}/access/identity_providers?per_page=100`)
   const googleRule = googleIdpRule(idps)
   const policies = await cf(token, `/accounts/${ACCOUNT_ID}/access/apps/${appId}/policies?per_page=100`)
@@ -83,7 +93,11 @@ export async function ensureGoogleAllowPolicies(token, appId) {
   }
 }
 
-export async function syncAccessHostnames(token, app, hostnames) {
+export async function syncAccessHostnames(
+  token,
+  app,
+  hostnames,
+) {
   const domains = new Set(app.domains ?? [])
   const added = []
   for (const host of hostnames) {

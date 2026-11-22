@@ -33,7 +33,9 @@ export function MilestonePicker({
   if (!available) return null
   return (
     <div className={styles.milestonePicker}>
-      {shown ? <p className={`${styles.chartHint} ${styles.chartCaption}`}>{milestoneNote(nominalMode, format)}</p> : null}
+      {shown ? (
+        <p className={`${styles.chartHint} ${styles.chartCaption}`}>{milestoneNote(nominalMode, format)}</p>
+      ) : null}
       <div className={styles.milestoneChips} role="group" aria-label="Milestones">
         <button
           type="button"

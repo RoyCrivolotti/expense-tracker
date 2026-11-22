@@ -93,7 +93,10 @@ function RentVsOwnChartImpl({
       <ChartLegend
         items={[
           { label: `Renter: money invested (starts at ${short(first.rentNetWorthCents)})`, color: RENT_COLOR },
-          { label: `Buyer: house less loan, plus savings (starts at ${short(first.buyNetWorthCents)})`, color: BUY_COLOR },
+          {
+            label: `Buyer: house less loan, plus savings (starts at ${short(first.buyNetWorthCents)})`,
+            color: BUY_COLOR,
+          },
         ]}
       />
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>{caption.lead}</p>

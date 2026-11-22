@@ -57,9 +57,7 @@ describe('projectRentVsBuy', () => {
   })
 
   it('cheap rent (renter invests the surplus) never lets buying break even', () => {
-    const result = projectRentVsBuy(
-      input({ rentMonthlyCents: 10_000, params: baseParams({ horizonYears: 20 }) }),
-    )
+    const result = projectRentVsBuy(input({ rentMonthlyCents: 10_000, params: baseParams({ horizonYears: 20 }) }))
     expect(result.breakevenYear).toBeNull()
   })
 
@@ -91,7 +89,7 @@ describe('projectRentVsBuy', () => {
     expect(last.rentNetWorthCents).toBeGreaterThan(last.buyNetWorthCents)
   })
 
-  it('counts the mortgage payment in today\'s money, so it shrinks against a constant rent', () => {
+  it("counts the mortgage payment in today's money, so it shrinks against a constant rent", () => {
     const params = baseParams({ housePurchaseYear: null })
     const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
     // Rent equal to the payment: at a fixed nominal payment the buyer is ahead in today's

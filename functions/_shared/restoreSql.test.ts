@@ -66,7 +66,18 @@ describe('restoreStatements', () => {
   it('stores the normalized description beside each description', () => {
     const tables = emptyTables()
     tables.transactions = [
-      { id: 1, date: '2026-01-02', budgetMonth: '2026-01', description: '  Café   Au Lait ', accountId: 1, categoryId: 1, type: 'expense', amountCents: 450, cancelled: false, labelIds: [] },
+      {
+        id: 1,
+        date: '2026-01-02',
+        budgetMonth: '2026-01',
+        description: '  Café   Au Lait ',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 450,
+        cancelled: false,
+        labelIds: [],
+      },
     ]
 
     const [sql] = restoreStatements('a@b.com', tables)
@@ -79,7 +90,14 @@ describe('restoreStatements', () => {
     const tables = emptyTables()
     tables.attachments = [
       { id: 7, transactionId: 1, contentType: 'image/jpeg', byteSize: 10, createdAt: '2026-01-02', hasThumb: true },
-      { id: 8, transactionId: 1, contentType: 'application/pdf', byteSize: 10, createdAt: '2026-01-02', hasThumb: false },
+      {
+        id: 8,
+        transactionId: 1,
+        contentType: 'application/pdf',
+        byteSize: 10,
+        createdAt: '2026-01-02',
+        hasThumb: false,
+      },
     ]
 
     const [withThumb, without] = restoreStatements('a@b.com', tables)
@@ -102,7 +120,17 @@ describe('restoreStatements', () => {
   it('writes the settings of the dataset, defaults included, and the check-in entries beside their check-in', () => {
     const tables = emptyTables()
     tables.settings = [defaultExpenseSettings()]
-    tables.wealthCheckins = [{ id: 3, checkinDate: '2026-06-01', createdAt: '2026-06-01 10:00:00', entries: [{ accountId: 2, valueCents: 500 }, { accountId: 4, valueCents: 700 }] }]
+    tables.wealthCheckins = [
+      {
+        id: 3,
+        checkinDate: '2026-06-01',
+        createdAt: '2026-06-01 10:00:00',
+        entries: [
+          { accountId: 2, valueCents: 500 },
+          { accountId: 4, valueCents: 700 },
+        ],
+      },
+    ]
 
     const statements = restoreStatements('a@b.com', tables)
 
@@ -125,7 +153,9 @@ describe('restoreScript', () => {
     const script = restoreScript('a@b.com', tables, '2026-10-19T04:00:00.000Z')
 
     const lines = script.split('\n')
-    expect(lines[0]).toBe(`-- Restore of one owner: ${statements.length} statements, generated 2026-10-19T04:00:00.000Z.`)
+    expect(lines[0]).toBe(
+      `-- Restore of one owner: ${statements.length} statements, generated 2026-10-19T04:00:00.000Z.`,
+    )
     expect(lines[1]).toContain('none of this owner')
     expect(lines.filter((l) => l.startsWith('INSERT'))).toHaveLength(statements.length)
     expect(lines.filter((l) => l.startsWith('INSERT')).every((l) => l.endsWith(';'))).toBe(true)

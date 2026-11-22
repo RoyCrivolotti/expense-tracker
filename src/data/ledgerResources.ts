@@ -12,14 +12,20 @@ export type Epochs = Readonly<Record<Resource, number>>
 
 export const NO_EPOCHS: Epochs = { reference: 0, rows: 0, cube: 0 }
 
-export function bump(epochs: Epochs, resources: readonly Resource[]): Epochs {
+export function bump(
+  epochs: Epochs,
+  resources: readonly Resource[],
+): Epochs {
   const next = { ...epochs }
   for (const resource of resources) next[resource] += 1
   return next
 }
 
 /** Which resources a read that started at `started` may still replace, now that the epochs are `now`. */
-export function stillCurrent(started: Epochs, now: Epochs): Record<Resource, boolean> {
+export function stillCurrent(
+  started: Epochs,
+  now: Epochs,
+): Record<Resource, boolean> {
   return {
     reference: started.reference === now.reference,
     rows: started.rows === now.rows,
@@ -32,7 +38,10 @@ export function stillCurrent(started: Epochs, now: Epochs): Record<Resource, boo
  * hold it, and the sums that are kept do not have it either, so it keeps its rows: dropping them would take it out of
  * the totals.
  */
-function withRowsOfUnsummedMonths(held: HeldLedger, rows: HeldLedger['rows']): HeldLedger['rows'] {
+function withRowsOfUnsummedMonths(
+  held: HeldLedger,
+  rows: HeldLedger['rows'],
+): HeldLedger['rows'] {
   const summed = new Set((held.cells ?? []).map((cell) => cell.budgetMonth))
   const kept = new Map(rows)
   for (const [month, list] of held.rows) if (!kept.has(month) && !summed.has(month)) kept.set(month, list)
@@ -44,7 +53,11 @@ function withRowsOfUnsummedMonths(held: HeldLedger, rows: HeldLedger['rows']): H
  * read started keeps its value. The revision is the read's only when every resource took it: otherwise
  * what is held is part this read and part later local writes, and no revision describes that.
  */
-export function mergeRead(held: HeldLedger, read: HeldLedger, current: Record<Resource, boolean>): HeldLedger {
+export function mergeRead(
+  held: HeldLedger,
+  read: HeldLedger,
+  current: Record<Resource, boolean>,
+): HeldLedger {
   let next = held
   if (current.reference) {
     next = {

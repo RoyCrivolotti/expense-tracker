@@ -47,7 +47,10 @@ interface Served {
   months: string[]
 }
 
-async function serve(name: string, source: ExpenseDataset): Promise<Served> {
+async function serve(
+  name: string,
+  source: ExpenseDataset,
+): Promise<Served> {
   const kit = queryDb(source)
   const env: Env = { DB: kit.d1 }
   const repo = createD1ExpenseRepository(env)
@@ -57,7 +60,11 @@ async function serve(name: string, source: ExpenseDataset): Promise<Served> {
   return { name, kit, repo, rows, dataset: { ...dataset, transactions: rows }, months }
 }
 
-const inRange = (t: Transaction, from: string, to: string) => t.budgetMonth >= from && t.budgetMonth <= to
+const inRange = (
+  t: Transaction,
+  from: string,
+  to: string,
+) => t.budgetMonth >= from && t.budgetMonth <= to
 
 /** Single months, three month windows, the whole span, and ranges with nothing in them. */
 function rangesOf(months: string[]): Array<[string, string]> {
@@ -66,7 +73,13 @@ function rangesOf(months: string[]): Array<[string, string]> {
   const last = months.at(-1)!
   const single = months.map((m): [string, string] => [m, m])
   const windows = months.map((m): [string, string] => [m, shiftBudgetMonth(m, 2)])
-  return [...single, ...windows, [first, last], [shiftBudgetMonth(last, 1), shiftBudgetMonth(last, 5)], [shiftBudgetMonth(first, -9), shiftBudgetMonth(first, -1)]]
+  return [
+    ...single,
+    ...windows,
+    [first, last],
+    [shiftBudgetMonth(last, 1), shiftBudgetMonth(last, 5)],
+    [shiftBudgetMonth(first, -9), shiftBudgetMonth(first, -1)],
+  ]
 }
 
 const cases: Served[] = []
@@ -108,33 +121,48 @@ describe('the test ledgers', () => {
 })
 
 describe('the reference part', () => {
-  it('holds the reference tables, the pinned rows, the months and the counts of every ledger', async () => {
-    for (const c of cases) {
-      const part = await c.repo.readLedgerReference(OWNER)
-      expect(part.reference, c.name).toEqual(referenceTablesOf(c.dataset))
-      expect(part.pinned, c.name).toEqual(partitionPinned(c.rows).pinned)
-      expect(part.months, c.name).toEqual(c.months)
-      expect(part.rowCount, c.name).toBe(c.rows.length)
-      expect(Object.values(part.rowsPerMonth).reduce((a, b) => a + b, 0), c.name).toBe(c.rows.length)
-      for (const month of c.months) {
-        expect(part.rowsPerMonth[month], `${c.name} ${month}`).toBe(c.rows.filter((t) => t.budgetMonth === month).length)
+  it(
+    'holds the reference tables, the pinned rows, the months and the counts of every ledger',
+    async () => {
+      for (const c of cases) {
+        const part = await c.repo.readLedgerReference(OWNER)
+        expect(part.reference, c.name).toEqual(referenceTablesOf(c.dataset))
+        expect(part.pinned, c.name).toEqual(partitionPinned(c.rows).pinned)
+        expect(part.months, c.name).toEqual(c.months)
+        expect(part.rowCount, c.name).toBe(c.rows.length)
+        expect(
+          Object.values(part.rowsPerMonth).reduce((a, b) => a + b, 0),
+          c.name,
+        ).toBe(c.rows.length)
+        for (const month of c.months) {
+          expect(part.rowsPerMonth[month], `${c.name} ${month}`).toBe(
+            c.rows.filter((t) => t.budgetMonth === month).length,
+          )
+        }
       }
-    }
-  }, SLOW)
+    },
+    SLOW,
+  )
 
   it('counts receipts on the pinned rows that have any, and on no other', async () => {
     const c = cases.find((x) => x.name === 'synthetic')!
     const part = await c.repo.readLedgerReference(OWNER)
     const want: Record<number, number> = {}
     const pinned = new Set(part.pinned.map((t) => t.id))
-    for (const a of c.dataset.attachments) if (pinned.has(a.transactionId)) want[a.transactionId] = (want[a.transactionId] ?? 0) + 1
+    for (const a of c.dataset.attachments)
+      if (pinned.has(a.transactionId)) want[a.transactionId] = (want[a.transactionId] ?? 0) + 1
     expect(Object.keys(want).length).toBeGreaterThan(0)
     expect(part.attachmentCounts).toEqual(want)
   })
 
-  it('is what the in-memory reference computes from the same dataset', async () => {
-    for (const c of cases) expect(await c.repo.readLedgerReference(OWNER), c.name).toEqual(ledgerReferenceOf(c.dataset))
-  }, SLOW)
+  it(
+    'is what the in-memory reference computes from the same dataset',
+    async () => {
+      for (const c of cases)
+        expect(await c.repo.readLedgerReference(OWNER), c.name).toEqual(ledgerReferenceOf(c.dataset))
+    },
+    SLOW,
+  )
 
   it('sends the pinned rows in the order the API returns rows', async () => {
     const c = cases.find((x) => x.name === 'adversarial')!
@@ -146,18 +174,22 @@ describe('the reference part', () => {
 })
 
 describe('the rows of a range of months', () => {
-  it('are the dataset’s rows in that range, in the order the API returns them', async () => {
-    let compared = 0
-    for (const c of cases) {
-      for (const [from, to] of rangesOf(c.months)) {
-        const part = await c.repo.readMonthRows(OWNER, { from, to }, EVERY_ROW)
-        const want = c.rows.filter((t) => inRange(t, from, to))
-        expect(part?.transactions, `${c.name} ${from}..${to}`).toEqual(want)
-        compared += want.length
+  it(
+    'are the dataset’s rows in that range, in the order the API returns them',
+    async () => {
+      let compared = 0
+      for (const c of cases) {
+        for (const [from, to] of rangesOf(c.months)) {
+          const part = await c.repo.readMonthRows(OWNER, { from, to }, EVERY_ROW)
+          const want = c.rows.filter((t) => inRange(t, from, to))
+          expect(part?.transactions, `${c.name} ${from}..${to}`).toEqual(want)
+          compared += want.length
+        }
       }
-    }
-    expect(compared).toBeGreaterThan(20_000)
-  }, SLOW)
+      expect(compared).toBeGreaterThan(20_000)
+    },
+    SLOW,
+  )
 
   it('count the receipts of exactly the rows they carry', async () => {
     const c = cases.find((x) => x.name === 'synthetic')!
@@ -170,19 +202,23 @@ describe('the rows of a range of months', () => {
 })
 
 describe('the cube of a range of months', () => {
-  it('is what buildCells makes of the unpinned rows in it, for every month and range', async () => {
-    let cellCount = 0
-    for (const c of cases) {
-      const unpinned = partitionPinned(c.rows).rest
-      for (const [from, to] of rangesOf(c.months)) {
-        const cells = await c.repo.readMonthCells(OWNER, { from, to }, EVERY_ROW)
-        const want = buildCells(unpinned.filter((t) => inRange(t, from, to)))
-        expect(cells, `${c.name} ${from}..${to}`).toEqual(want)
-        cellCount += want.length
+  it(
+    'is what buildCells makes of the unpinned rows in it, for every month and range',
+    async () => {
+      let cellCount = 0
+      for (const c of cases) {
+        const unpinned = partitionPinned(c.rows).rest
+        for (const [from, to] of rangesOf(c.months)) {
+          const cells = await c.repo.readMonthCells(OWNER, { from, to }, EVERY_ROW)
+          const want = buildCells(unpinned.filter((t) => inRange(t, from, to)))
+          expect(cells, `${c.name} ${from}..${to}`).toEqual(want)
+          cellCount += want.length
+        }
       }
-    }
-    expect(cellCount).toBeGreaterThan(10_000)
-  }, SLOW)
+      expect(cellCount).toBeGreaterThan(10_000)
+    },
+    SLOW,
+  )
 
   it('keeps the cell of a month that has only cancelled rows, and of a sum of zero', async () => {
     const c = cases.find((x) => x.name === 'adversarial')!
@@ -192,17 +228,24 @@ describe('the cube of a range of months', () => {
     expect((cells ?? []).some((cell) => cell.amountCents === 0 && cell.count > 0)).toBe(true)
   })
 
-  it('never holds a pinned row: the counts of the cube and the pinned rows add up to every row', async () => {
-    for (const c of cases) {
-      const part = await c.repo.readLedgerReference(OWNER)
-      const cells = (await c.repo.readMonthCells(OWNER, { from: '0001-01', to: '9999-12' }, EVERY_ROW)) ?? []
-      expect(cells.reduce((n, cell) => n + cell.count, 0) + part.pinned.length, c.name).toBe(c.rows.length)
-    }
-  }, SLOW)
+  it(
+    'never holds a pinned row: the counts of the cube and the pinned rows add up to every row',
+    async () => {
+      for (const c of cases) {
+        const part = await c.repo.readLedgerReference(OWNER)
+        const cells = (await c.repo.readMonthCells(OWNER, { from: '0001-01', to: '9999-12' }, EVERY_ROW)) ?? []
+        expect(cells.reduce((n, cell) => n + cell.count, 0) + part.pinned.length, c.name).toBe(c.rows.length)
+      }
+    },
+    SLOW,
+  )
 })
 
 /** The three parts put together the way a client would, for a screen showing `viewed`. */
-async function assembled(c: Served, viewed: string): Promise<Ledger> {
+async function assembled(
+  c: Served,
+  viewed: string,
+): Promise<Ledger> {
   const ref = await c.repo.readLedgerReference(OWNER)
   const hydratedMonths = hydratedMonthsFor(ref.months, ref.rowCount, viewed, WINDOWED)
   const range = { from: hydratedMonths[0] ?? '9999-01', to: hydratedMonths.at(-1) ?? '9999-01' }
@@ -222,32 +265,44 @@ async function assembled(c: Served, viewed: string): Promise<Ledger> {
 describe('reference, rows and cube put together', () => {
   const sample = ['synthetic', 'adversarial', 'awkward', ...[1, 4, 9, 17, 23, 31].map((s) => `random ${s}`)]
 
-  it('are the ledger the model builds from the whole dataset', async () => {
-    for (const c of cases.filter((x) => sample.includes(x.name))) {
-      for (const viewed of [c.months.at(-1) ?? '2026-06', c.months[Math.floor(c.months.length / 2)] ?? '2026-06']) {
-        const want = buildLedger(c.dataset, hydratedMonthsFor(c.months, c.rows.length, viewed, WINDOWED))
-        const got = await assembled(c, viewed)
-        expect(got, `${c.name} ${viewed}`).toEqual({ ...want, reference: { ...want.reference, attachments: [] } })
-      }
-    }
-  }, SLOW)
-
-  it('give the engines the same answers as the whole ledger, apart from the global lists', async () => {
-    const keys = Object.keys(outputs(randomLedger(0), wholeLedger(randomLedger(0)), '2026-06', classifyFixedSpend([])))
-      .filter((key) => !(key in GLOBAL_DIFFERENCES))
-    expect(keys.length).toBeGreaterThan(40)
-    for (const c of cases.filter((x) => sample.includes(x.name))) {
-      const classifier = classifyFixedSpend(c.rows)
-      const groups = recurringFixedGroups(c.rows)
-      for (const viewed of [c.months.at(-1) ?? '2026-06', c.months[Math.floor(c.months.length / 2)] ?? '2026-06']) {
-        const lists = assembleRows(await assembled(c, viewed))
-        for (const clock of [LATER, openAt(viewed)]) {
-          const options = { clock, classifier, groups }
-          expect(differing(c.dataset, viewed, wholeLedger(c.dataset), lists, keys, options), `${c.name} ${viewed}`).toEqual([])
+  it(
+    'are the ledger the model builds from the whole dataset',
+    async () => {
+      for (const c of cases.filter((x) => sample.includes(x.name))) {
+        for (const viewed of [c.months.at(-1) ?? '2026-06', c.months[Math.floor(c.months.length / 2)] ?? '2026-06']) {
+          const want = buildLedger(c.dataset, hydratedMonthsFor(c.months, c.rows.length, viewed, WINDOWED))
+          const got = await assembled(c, viewed)
+          expect(got, `${c.name} ${viewed}`).toEqual({ ...want, reference: { ...want.reference, attachments: [] } })
         }
       }
-    }
-  }, SLOW)
+    },
+    SLOW,
+  )
+
+  it(
+    'give the engines the same answers as the whole ledger, apart from the global lists',
+    async () => {
+      const keys = Object.keys(
+        outputs(randomLedger(0), wholeLedger(randomLedger(0)), '2026-06', classifyFixedSpend([])),
+      ).filter((key) => !(key in GLOBAL_DIFFERENCES))
+      expect(keys.length).toBeGreaterThan(40)
+      for (const c of cases.filter((x) => sample.includes(x.name))) {
+        const classifier = classifyFixedSpend(c.rows)
+        const groups = recurringFixedGroups(c.rows)
+        for (const viewed of [c.months.at(-1) ?? '2026-06', c.months[Math.floor(c.months.length / 2)] ?? '2026-06']) {
+          const lists = assembleRows(await assembled(c, viewed))
+          for (const clock of [LATER, openAt(viewed)]) {
+            const options = { clock, classifier, groups }
+            expect(
+              differing(c.dataset, viewed, wholeLedger(c.dataset), lists, keys, options),
+              `${c.name} ${viewed}`,
+            ).toEqual([])
+          }
+        }
+      }
+    },
+    SLOW,
+  )
 })
 
 describe('the statements', () => {
@@ -265,6 +320,8 @@ describe('the statements', () => {
   it('are refused by the stand-in when they bind more than it allows, so the limit is live here', async () => {
     const strict = queryDb(syntheticLedger({ months: 2, perMonth: 5 }), [], { maxBoundParameters: 2 })
     const repo = createD1ExpenseRepository({ DB: strict.d1 })
-    await expect(repo.readMonthRows(OWNER, { from: '2026-01', to: '2026-12' }, 10)).rejects.toThrow(/too many SQL variables/)
+    await expect(repo.readMonthRows(OWNER, { from: '2026-01', to: '2026-12' }, 10)).rejects.toThrow(
+      /too many SQL variables/,
+    )
   })
 })

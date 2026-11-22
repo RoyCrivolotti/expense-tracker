@@ -10,7 +10,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { apiLedgerParts } from '../../../src/data/apiLedgerParts'
 import { mulberry32 } from '../../../src/domain/engine/rng'
 import type { ExpenseDataset } from '../../../src/domain/types'
-import { buildDescriptionIndex, mergeDescriptionMatches, normalizeDescriptionKey, suggestDescriptionsOf } from '../../../src/data/descriptionIndex'
+import {
+  buildDescriptionIndex,
+  mergeDescriptionMatches,
+  normalizeDescriptionKey,
+  suggestDescriptionsOf,
+} from '../../../src/data/descriptionIndex'
 import { descriptionDataset, prefixesFor } from '../../../src/testing/descriptionLedger'
 import { seedDataset } from '../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
@@ -73,7 +78,10 @@ describe('what a window suggests once the typing settles', () => {
           await vi.advanceTimersByTimeAsync(300)
         })
         await vi.waitFor(() =>
-          expect(view.result.current.map((s) => s.label), JSON.stringify({ before, prefix })).toEqual(expected(prefix)),
+          expect(
+            view.result.current.map((s) => s.label),
+            JSON.stringify({ before, prefix }),
+          ).toEqual(expected(prefix)),
         )
         compared += 1
       }

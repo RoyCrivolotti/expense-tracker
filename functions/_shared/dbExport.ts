@@ -1,4 +1,9 @@
-import { exportCursorOf, type ExportChunk, type ExportChunkRequest, type ExportTable } from '../domain/data/exportTables'
+import {
+  exportCursorOf,
+  type ExportChunk,
+  type ExportChunkRequest,
+  type ExportTable,
+} from '../domain/data/exportTables'
 import type { Env } from './env'
 import { toTransaction, type QueryRow } from './dbTransactionQuery'
 import { checkinsOf } from './dbReference'
@@ -48,7 +53,11 @@ const MAPPERS: Partial<Record<ExportTable, Mapper>> = {
   transactions: (r: QueryRow) => toTransaction(r),
 }
 
-async function readRows(env: Env, owner: string, request: ExportChunkRequest): Promise<unknown[]> {
+async function readRows(
+  env: Env,
+  owner: string,
+  request: ExportChunkRequest,
+): Promise<unknown[]> {
   const { sql, params } = exportSql(request.table, owner, request.after, request.limit)
   const result = await env.DB.prepare(sql)
     .bind(...params)
@@ -57,7 +66,11 @@ async function readRows(env: Env, owner: string, request: ExportChunkRequest): P
 }
 
 /** A check-in carries its entries in the dataset, so the entries of the chunk's check-ins come in one more read. */
-async function withEntries(env: Env, owner: string, checkins: WealthCheckinRow[]): Promise<object[]> {
+async function withEntries(
+  env: Env,
+  owner: string,
+  checkins: WealthCheckinRow[],
+): Promise<object[]> {
   if (checkins.length === 0) return []
   const result = await env.DB.prepare(CHECKIN_ENTRIES_SQL)
     .bind(owner, idList(checkins.map((c) => c.id)))
@@ -65,7 +78,12 @@ async function withEntries(env: Env, owner: string, checkins: WealthCheckinRow[]
   return checkinsOf(checkins, result.results ?? [])
 }
 
-async function shape(env: Env, owner: string, table: ExportTable, raw: unknown[]): Promise<object[]> {
+async function shape(
+  env: Env,
+  owner: string,
+  table: ExportTable,
+  raw: unknown[],
+): Promise<object[]> {
   if (table === 'settings') return raw.length > 0 ? [toSettings(raw[0] as SettingsRow)] : []
   if (table === 'wealthCheckins') return withEntries(env, owner, raw as WealthCheckinRow[])
   return raw.map((row) => (MAPPERS[table] as Mapper)(row as never))

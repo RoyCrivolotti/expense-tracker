@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { guardCsvValue, unguardCsvValue } from './csvFormulaGuard'
 
 describe('guardCsvValue', () => {
-  it.each(['=cmd', '+1+1', '-50% at Zara', '@SUM(A1)', '\tfoo', '\rfoo'])(
-    'neutralises a leading %j',
-    (value) => {
-      expect(guardCsvValue(value)).toBe(`'${value}`)
-    },
-  )
+  it.each(['=cmd', '+1+1', '-50% at Zara', '@SUM(A1)', '\tfoo', '\rfoo'])('neutralises a leading %j', (value) => {
+    expect(guardCsvValue(value)).toBe(`'${value}`)
+  })
 
   it('leaves an ordinary value alone', () => {
     expect(guardCsvValue('Mercadona')).toBe('Mercadona')

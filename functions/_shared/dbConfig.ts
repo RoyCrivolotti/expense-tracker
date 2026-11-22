@@ -1,10 +1,4 @@
-import type {
-  Account,
-  Category,
-  ExpenseSettings,
-  GoalScenario,
-  Milestone,
-} from '../domain/types'
+import type { Account, Category, ExpenseSettings, GoalScenario, Milestone } from '../domain/types'
 import { settingsPatchError } from '../domain/settingsChecks'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
@@ -32,10 +26,17 @@ import {
 } from './rows'
 
 type ColumnMap<T> = Record<keyof T, string>
-type Coerce<T> = (key: keyof T, value: unknown) => unknown
+type Coerce<T> = (
+  key: keyof T,
+  value: unknown,
+) => unknown
 
 /** Build the SET clause + bound values for a partial update; rejects empty patches. */
-function buildUpdate<T>(columns: ColumnMap<T>, patch: Partial<T>, coerce: Coerce<T>) {
+function buildUpdate<T>(
+  columns: ColumnMap<T>,
+  patch: Partial<T>,
+  coerce: Coerce<T>,
+) {
   const keys = (Object.keys(patch) as (keyof T)[]).filter((k) => Object.hasOwn(columns, k))
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   return {
@@ -52,8 +53,10 @@ const CATEGORY_COLUMNS: ColumnMap<NewCategory> = {
   color: 'color',
   active: 'active',
 }
-const coerceCategory: Coerce<NewCategory> = (key, value) =>
-  key === 'active' ? (value ? 1 : 0) : (value ?? null)
+const coerceCategory: Coerce<NewCategory> = (
+  key,
+  value,
+) => (key === 'active' ? (value ? 1 : 0) : (value ?? null))
 
 export async function createCategory(
   env: Env,
@@ -85,23 +88,23 @@ export async function updateCategory(
   patch: Partial<NewCategory>,
 ): Promise<Category> {
   const { sets, values } = buildUpdate(CATEGORY_COLUMNS, patch, coerceCategory)
-  const row = await env.DB.prepare(
-    `UPDATE categories SET ${sets} WHERE id = ? AND owner = ? RETURNING *`,
-  )
+  const row = await env.DB.prepare(`UPDATE categories SET ${sets} WHERE id = ? AND owner = ? RETURNING *`)
     .bind(...values, id, owner)
     .first<CategoryRow>()
   if (!row) throw new HttpError(404, 'Category not found')
   return toCategory(row)
 }
 
-async function countCategoryUsage(env: Env, owner: string, id: number): Promise<number> {
+async function countCategoryUsage(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<number> {
   const [txns, plans] = await Promise.all([
     env.DB.prepare('SELECT COUNT(*) AS n FROM transactions WHERE category_id = ? AND owner = ?')
       .bind(id, owner)
       .first<{ n: number }>(),
-    env.DB.prepare(
-      'SELECT COUNT(*) AS n FROM installment_plans WHERE category_id = ? AND owner = ?',
-    )
+    env.DB.prepare('SELECT COUNT(*) AS n FROM installment_plans WHERE category_id = ? AND owner = ?')
       .bind(id, owner)
       .first<{ n: number }>(),
   ])
@@ -109,7 +112,11 @@ async function countCategoryUsage(env: Env, owner: string, id: number): Promise<
 }
 
 /** Forgets a category as the one investments are filed under, when it is. */
-function clearInvestmentCategory(env: Env, owner: string, id: number) {
+function clearInvestmentCategory(
+  env: Env,
+  owner: string,
+  id: number,
+) {
   return env.DB.prepare(
     'UPDATE settings SET investment_category_id = NULL WHERE owner = ? AND investment_category_id = ?',
   ).bind(owner, id)
@@ -164,25 +171,23 @@ export async function deleteCategory(
     return deletePlainCategory(env, owner, id)
   }
 
-  const { targetId, createdCategory } = await resolveCategoryDeleteTarget(
-    env,
-    owner,
-    id,
-    reassignToId,
-    createInput,
-  )
+  const { targetId, createdCategory } = await resolveCategoryDeleteTarget(env, owner, id, reassignToId, createInput)
 
   try {
     // Move referencing rows and delete the source category as one D1 batch (implicit
     // transaction) so a mid-batch failure never leaves rows reassigned without the
     // source actually being deleted, or vice versa.
     const results = await env.DB.batch([
-      env.DB.prepare(
-        'UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?',
-      ).bind(targetId, id, owner),
-      env.DB.prepare(
-        'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
-      ).bind(targetId, id, owner),
+      env.DB.prepare('UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?').bind(
+        targetId,
+        id,
+        owner,
+      ),
+      env.DB.prepare('UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?').bind(
+        targetId,
+        id,
+        owner,
+      ),
       clearInvestmentCategory(env, owner, id),
       env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner),
     ])
@@ -201,7 +206,11 @@ export async function deleteCategory(
   }
 }
 
-async function deleteOrphanedCategory(env: Env, owner: string, id: number): Promise<void> {
+async function deleteOrphanedCategory(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<void> {
   try {
     await env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner).run()
   } catch {
@@ -215,10 +224,16 @@ const ACCOUNT_COLUMNS: ColumnMap<NewAccount> = {
   settlement: 'settlement',
   active: 'active',
 }
-const coerceAccount: Coerce<NewAccount> = (key, value) =>
-  key === 'active' ? (value ? 1 : 0) : (value ?? null)
+const coerceAccount: Coerce<NewAccount> = (
+  key,
+  value,
+) => (key === 'active' ? (value ? 1 : 0) : (value ?? null))
 
-export async function createAccount(env: Env, owner: string, input: NewAccount): Promise<Account> {
+export async function createAccount(
+  env: Env,
+  owner: string,
+  input: NewAccount,
+): Promise<Account> {
   const row = await env.DB.prepare(
     `INSERT INTO accounts (owner, name, kind, settlement, active) VALUES (?, ?, ?, ?, ?) RETURNING *`,
   )
@@ -235,28 +250,26 @@ export async function updateAccount(
   patch: Partial<NewAccount>,
 ): Promise<Account> {
   const { sets, values } = buildUpdate(ACCOUNT_COLUMNS, patch, coerceAccount)
-  const row = await env.DB.prepare(
-    `UPDATE accounts SET ${sets} WHERE id = ? AND owner = ? RETURNING *`,
-  )
+  const row = await env.DB.prepare(`UPDATE accounts SET ${sets} WHERE id = ? AND owner = ? RETURNING *`)
     .bind(...values, id, owner)
     .first<AccountRow>()
   if (!row) throw new HttpError(404, 'Account not found')
   return toAccount(row)
 }
 
-async function countAccountUsage(env: Env, owner: string, id: number): Promise<number> {
+async function countAccountUsage(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<number> {
   const [txns, plans, statements] = await Promise.all([
     env.DB.prepare('SELECT COUNT(*) AS n FROM transactions WHERE account_id = ? AND owner = ?')
       .bind(id, owner)
       .first<{ n: number }>(),
-    env.DB.prepare(
-      'SELECT COUNT(*) AS n FROM installment_plans WHERE account_id = ? AND owner = ?',
-    )
+    env.DB.prepare('SELECT COUNT(*) AS n FROM installment_plans WHERE account_id = ? AND owner = ?')
       .bind(id, owner)
       .first<{ n: number }>(),
-    env.DB.prepare(
-      'SELECT COUNT(*) AS n FROM account_statements WHERE account_id = ? AND owner = ?',
-    )
+    env.DB.prepare('SELECT COUNT(*) AS n FROM account_statements WHERE account_id = ? AND owner = ?')
       .bind(id, owner)
       .first<{ n: number }>(),
   ])
@@ -273,9 +286,10 @@ async function deletePlainAccount(
   // An unused account can still be settings.defaultAccountId (e.g. set as default, then
   // never actually used) — clear it in the same batch so the delete can't leave it dangling.
   const results = await env.DB.batch([
-    env.DB.prepare(
-      'UPDATE settings SET default_account_id = NULL WHERE owner = ? AND default_account_id = ?',
-    ).bind(owner, id),
+    env.DB.prepare('UPDATE settings SET default_account_id = NULL WHERE owner = ? AND default_account_id = ?').bind(
+      owner,
+      id,
+    ),
     env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner),
   ])
   const deleteResult = results[results.length - 1]
@@ -314,13 +328,7 @@ export async function deleteAccount(
     return deletePlainAccount(env, owner, id)
   }
 
-  const { targetId, createdAccount } = await resolveAccountDeleteTarget(
-    env,
-    owner,
-    id,
-    reassignToId,
-    createInput,
-  )
+  const { targetId, createdAccount } = await resolveAccountDeleteTarget(env, owner, id, reassignToId, createInput)
 
   try {
     // account_statements has a composite key of (owner, account_id, year_month); if the
@@ -329,12 +337,16 @@ export async function deleteAccount(
     // (the target's existing paid state wins), then move whatever is left, then the rest
     // of the reassignment + delete — all as one D1 batch so it's all-or-nothing.
     const results = await env.DB.batch([
-      env.DB.prepare(
-        'UPDATE transactions SET account_id = ? WHERE account_id = ? AND owner = ?',
-      ).bind(targetId, id, owner),
-      env.DB.prepare(
-        'UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?',
-      ).bind(targetId, id, owner),
+      env.DB.prepare('UPDATE transactions SET account_id = ? WHERE account_id = ? AND owner = ?').bind(
+        targetId,
+        id,
+        owner,
+      ),
+      env.DB.prepare('UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?').bind(
+        targetId,
+        id,
+        owner,
+      ),
       env.DB.prepare(
         `DELETE FROM account_statements
          WHERE owner = ? AND account_id = ?
@@ -342,14 +354,18 @@ export async function deleteAccount(
              SELECT year_month FROM account_statements WHERE owner = ? AND account_id = ?
            )`,
       ).bind(owner, id, owner, targetId),
-      env.DB.prepare(
-        'UPDATE account_statements SET account_id = ? WHERE account_id = ? AND owner = ?',
-      ).bind(targetId, id, owner),
+      env.DB.prepare('UPDATE account_statements SET account_id = ? WHERE account_id = ? AND owner = ?').bind(
+        targetId,
+        id,
+        owner,
+      ),
       // If the deleted account was the configured default, move the default along with
       // everything else — otherwise settings keeps pointing at a row that no longer exists.
-      env.DB.prepare(
-        'UPDATE settings SET default_account_id = ? WHERE owner = ? AND default_account_id = ?',
-      ).bind(targetId, owner, id),
+      env.DB.prepare('UPDATE settings SET default_account_id = ? WHERE owner = ? AND default_account_id = ?').bind(
+        targetId,
+        owner,
+        id,
+      ),
       env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner),
     ])
     const deleteResult = results[results.length - 1]
@@ -364,7 +380,11 @@ export async function deleteAccount(
   }
 }
 
-async function deleteOrphanedAccount(env: Env, owner: string, id: number): Promise<void> {
+async function deleteOrphanedAccount(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<void> {
   try {
     await env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner).run()
   } catch {
@@ -404,7 +424,10 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
 export const CASH_RESERVE_MAX_MONTHS = 60
-const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
+const coerceSettings: Coerce<ExpenseSettings> = (
+  key,
+  value,
+) => {
   if (key === 'milestones') {
     return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
   }
@@ -436,11 +459,17 @@ const MAX_OPENING_CENTS = 1e13
 function assertOpeningBalances(patch: Partial<ExpenseSettings>): void {
   const invested = patch.openingInvestmentCents
   if (invested !== undefined && (!Number.isSafeInteger(invested) || invested < 0 || invested > MAX_OPENING_CENTS)) {
-    throw new HttpError(400, 'openingInvestmentCents must be a whole number of cents, zero or more, at most a hundred billion euros')
+    throw new HttpError(
+      400,
+      'openingInvestmentCents must be a whole number of cents, zero or more, at most a hundred billion euros',
+    )
   }
   const cash = patch.openingCashCents
   if (cash !== undefined && (!Number.isSafeInteger(cash) || Math.abs(cash) > MAX_OPENING_CENTS)) {
-    throw new HttpError(400, 'openingCashCents must be a whole number of cents, a hundred billion euros at most either way')
+    throw new HttpError(
+      400,
+      'openingCashCents must be a whole number of cents, a hundred billion euros at most either way',
+    )
   }
 }
 
@@ -449,9 +478,7 @@ function assertSettingsPatch(patch: Partial<ExpenseSettings>): void {
   assertOpeningBalances(patch)
   if (
     patch.budgetRolloverDay != null &&
-    (!Number.isInteger(patch.budgetRolloverDay) ||
-      patch.budgetRolloverDay < 1 ||
-      patch.budgetRolloverDay > 28)
+    (!Number.isInteger(patch.budgetRolloverDay) || patch.budgetRolloverDay < 1 || patch.budgetRolloverDay > 28)
   ) {
     throw new HttpError(400, 'budgetRolloverDay must be between 1 and 28')
   }
@@ -508,7 +535,10 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   retirementYears: 'retirement_years',
 }
 
-const coerceScenario: Coerce<NewGoalScenario> = (k, v) => {
+const coerceScenario: Coerce<NewGoalScenario> = (
+  k,
+  v,
+) => {
   if (k === 'lifeEvents' || k === 'contributionSchedule') return JSON.stringify(v ?? [])
   return v ?? null
 }
@@ -614,9 +644,11 @@ export async function updateScenario(
   return toGoalScenario(row)
 }
 
-export async function deleteScenario(env: Env, owner: string, id: number): Promise<void> {
-  const result = await env.DB.prepare('DELETE FROM goal_scenarios WHERE id = ? AND owner = ?')
-    .bind(id, owner)
-    .run()
+export async function deleteScenario(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<void> {
+  const result = await env.DB.prepare('DELETE FROM goal_scenarios WHERE id = ? AND owner = ?').bind(id, owner).run()
   if (result.meta.changes === 0) throw new HttpError(404, 'Scenario not found')
 }

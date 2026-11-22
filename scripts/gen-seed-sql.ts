@@ -27,8 +27,7 @@ if (!dir) throw new Error('Set FINANCIAL_REVIEW_DIR to the workbook export direc
 const csv = readFileSync(`${dir}/data/expenses_v3.csv`, 'utf8')
 const d = parseWorkbookCsv(csv)
 
-const str = (v: string | null | undefined): string =>
-  v == null ? 'NULL' : `'${v.replace(/'/g, "''")}'`
+const str = (v: string | null | undefined): string => (v == null ? 'NULL' : `'${v.replace(/'/g, "''")}'`)
 const num = (v: number): string => String(v)
 const bit = (v: boolean): string => (v ? '1' : '0')
 const owner = str(OWNER)

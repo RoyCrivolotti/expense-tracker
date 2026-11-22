@@ -54,7 +54,10 @@ function fromTodayText(date: string | null | undefined): string {
  * plan restarted from the latest one reaches it after the target (or not at all), the plan's own date
  * is no longer what to expect, and a green chip beside a "Behind plan" page would say the opposite.
  */
-function slipsPastTarget(standing: MilestoneStanding, date: string | null | undefined): standing is Extract<MilestoneStanding, { kind: 'on-track' }> {
+function slipsPastTarget(
+  standing: MilestoneStanding,
+  date: string | null | undefined,
+): standing is Extract<MilestoneStanding, { kind: 'on-track' }> {
   return standing.kind === 'on-track' && date !== undefined && (date === null || date > standing.target)
 }
 
@@ -63,10 +66,16 @@ function slipsPastTarget(standing: MilestoneStanding, date: string | null | unde
  * start on that day (the 500.000 on the account is less by then), and when a house payment or event
  * takes the plan back under it.
  */
-function outlookText(standing: MilestoneStanding, moneyLabel: string, format: MoneyFormat): string {
+function outlookText(
+  standing: MilestoneStanding,
+  moneyLabel: string,
+  format: MoneyFormat,
+): string {
   if (!('worthCents' in standing)) return ''
   const worth = ` (worth about ${formatCentsCompact(standing.worthCents, format)} in ${moneyLabel})`
-  const dips = standing.dipsOn ? `; the plan falls back below it in ${shortMonthFullYearLabel(standing.dipsOn.slice(0, 7))}` : ''
+  const dips = standing.dipsOn
+    ? `; the plan falls back below it in ${shortMonthFullYearLabel(standing.dipsOn.slice(0, 7))}`
+    : ''
   return worth + dips
 }
 
@@ -100,7 +109,9 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
     case 'beyond-horizon':
       return {
         mark: '→',
-        text: standing.target ? `not within the horizon, target ${formatCheckinDate(standing.target)}` : 'not within the horizon',
+        text: standing.target
+          ? `not within the horizon, target ${formatCheckinDate(standing.target)}`
+          : 'not within the horizon',
         tone: standing.target ? 'bad' : 'muted',
       }
     case 'unknown':
@@ -112,13 +123,7 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
  * Every milestone with where it stands: reached by a check-in, or dated by the plan and set
  * against its target. Without a datable plan only the reached ones are worth a line.
  */
-export function ReachedMilestones({
-  milestones,
-  reached,
-  plan = null,
-  latestCheckin = null,
-  fromToday = null,
-}: Props) {
+export function ReachedMilestones({ milestones, reached, plan = null, latestCheckin = null, fromToday = null }: Props) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const asOf = latestCheckin?.checkinDate ?? null

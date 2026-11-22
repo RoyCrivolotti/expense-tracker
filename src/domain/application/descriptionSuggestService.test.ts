@@ -52,7 +52,9 @@ describe('validateDescriptionSuggest', () => {
     expect(refused({ q: '   ' })).toThrow('q must not be blank')
     expect(refused({ q: '\t\u00a0' })).toThrow('q must not be blank')
     expect(refused({ q: 'x'.repeat(MAX_SUGGEST_PREFIX + 1) })).toThrow(`${MAX_SUGGEST_PREFIX} characters or fewer`)
-    expect(refused({ q: `${' '.repeat(MAX_SUGGEST_PREFIX * 4)}x` })).toThrow(`${MAX_SUGGEST_PREFIX} characters or fewer`)
+    expect(refused({ q: `${' '.repeat(MAX_SUGGEST_PREFIX * 4)}x` })).toThrow(
+      `${MAX_SUGGEST_PREFIX} characters or fewer`,
+    )
     expect(() => validateDescriptionSuggest({ q: 'x'.repeat(MAX_SUGGEST_PREFIX) })).not.toThrow()
   })
 
@@ -63,7 +65,9 @@ describe('validateDescriptionSuggest', () => {
   })
 
   it('counts a letter outside the basic plane as one character, not two', () => {
-    expect(validateDescriptionSuggest({ q: '🍕'.repeat(MAX_SUGGEST_PREFIX) }).prefix).toHaveLength(MAX_SUGGEST_PREFIX * 2)
+    expect(validateDescriptionSuggest({ q: '🍕'.repeat(MAX_SUGGEST_PREFIX) }).prefix).toHaveLength(
+      MAX_SUGGEST_PREFIX * 2,
+    )
     expect(refused({ q: '🍕'.repeat(MAX_SUGGEST_PREFIX + 1) })).toThrow(`${MAX_SUGGEST_PREFIX} characters or fewer`)
   })
 
@@ -73,7 +77,18 @@ describe('validateDescriptionSuggest', () => {
   })
 
   it('refuses a cut-off that is not a budget month, a date included', () => {
-    for (const before of ['2026-13', '2026-00', '2026-1', '26-01', '2026-01-31', '2026-02-30', 'yesterday', '', 5, null]) {
+    for (const before of [
+      '2026-13',
+      '2026-00',
+      '2026-1',
+      '26-01',
+      '2026-01-31',
+      '2026-02-30',
+      'yesterday',
+      '',
+      5,
+      null,
+    ]) {
       expect(refused({ q: 'ma', before }), String(before)).toThrow('before must be a budget month, YYYY-MM')
     }
   })
@@ -96,7 +111,10 @@ describe('validateDescriptionSuggest', () => {
     const rnd = mulberry32(8)
     const pieces = ['A', 'É', 'ß', 'İ', 'Σ', 'ς', 'σ', 'ǅ', 'K', '🍕', ' ', '\t', 'ẞ', 'Ω', 'i', 'I']
     for (let i = 0; i < 3_000; i += 1) {
-      const text = Array.from({ length: 1 + Math.floor(rnd() * 8) }, () => pieces[Math.floor(rnd() * pieces.length)]!).join('')
+      const text = Array.from(
+        { length: 1 + Math.floor(rnd() * 8) },
+        () => pieces[Math.floor(rnd() * pieces.length)]!,
+      ).join('')
       expect(normalizeDesc(normalizeDesc(text)), JSON.stringify(text)).toBe(normalizeDesc(text))
     }
   })

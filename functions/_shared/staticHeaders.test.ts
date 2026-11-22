@@ -13,7 +13,11 @@ const rules = text
 describe('public/_headers', () => {
   it('applies one set of headers to every static file', () => {
     expect(rules[0]).toBe('/*')
-    expect(rules.slice(1).sort()).toEqual(['Referrer-Policy: same-origin', 'X-Content-Type-Options: nosniff', 'X-Frame-Options: DENY'])
+    expect(rules.slice(1).sort()).toEqual([
+      'Referrer-Policy: same-origin',
+      'X-Content-Type-Options: nosniff',
+      'X-Frame-Options: DENY',
+    ])
   })
 
   it('sets no Content-Security-Policy, which has not been soaked with the service worker', () => {

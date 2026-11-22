@@ -46,12 +46,7 @@ function renderModal(
   const onClose = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <FlagsModal
-        model={modelFor(dataset)}
-        actions={actions}
-        onClose={onClose}
-        {...extra}
-      />
+      <FlagsModal model={modelFor(dataset)} actions={actions} onClose={onClose} {...extra} />
     </MoneyFormatProvider>,
   )
   return { actions, onClose }
@@ -118,9 +113,7 @@ describe('FlagsModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await userEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
     // The form has a Cancel of its own, which would leave the form rather than the confirm.
-    await userEvent.click(
-      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }),
-    )
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }))
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save flag' })).toBeInTheDocument()
@@ -180,11 +173,7 @@ describe('FlagsModal — reaching an archived claim', () => {
     // This is the only route back to it.
     const archived = makeFlag({ id: 1, name: 'Work travel', active: false })
     const onOpenReport = vi.fn()
-    const { onClose } = renderModal(
-      makeDataset({ flags: [archived], transactions: [txn(1)] }),
-      {},
-      { onOpenReport },
-    )
+    const { onClose } = renderModal(makeDataset({ flags: [archived], transactions: [txn(1)] }), {}, { onOpenReport })
 
     await userEvent.click(screen.getByRole('button', { name: 'Expense report' }))
 
@@ -258,9 +247,7 @@ describe('FlagsModal — deleting while the confirm sheet leaves', () => {
 
     // The leaving confirm sheet has a Cancel of its own; the form's is the one outside it.
     const confirm = screen.getByRole('alertdialog')
-    const formCancel = screen
-      .getAllByRole('button', { name: 'Cancel' })
-      .find((button) => !confirm.contains(button))
+    const formCancel = screen.getAllByRole('button', { name: 'Cancel' }).find((button) => !confirm.contains(button))
     expect(screen.getByRole('button', { name: /Save|Create/ })).toBeDisabled()
     expect(formCancel).toBeDisabled()
   })

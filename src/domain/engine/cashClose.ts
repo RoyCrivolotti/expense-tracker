@@ -51,11 +51,12 @@ export function firstCountedMonth(rows: CashRow[]): string | null {
  * the prompt permanent. Shared by the Cash banner and the Overview signal so
  * the two always name the same month.
  */
-export function readyToCountMonth(rows: CashRow[], openMonth?: string): string | null {
+export function readyToCountMonth(
+  rows: CashRow[],
+  openMonth?: string,
+): string | null {
   const start = firstCountedMonth(rows)
-  const ready = [...rows]
-    .reverse()
-    .find((r) => monthCloseStatus(r, undefined, openMonth, start) === 'ready')
+  const ready = [...rows].reverse().find((r) => monthCloseStatus(r, undefined, openMonth, start) === 'ready')
   return ready?.month ?? null
 }
 

@@ -42,7 +42,10 @@ async function windowAround(viewed: string) {
 }
 
 /** The held ledger with the sums of every month it holds as rows read as well, as they are once a write has touched them. */
-async function withSumsOfHeldMonths(source: ReturnType<typeof memorySource>, held: ReturnType<typeof holdParts>) {
+async function withSumsOfHeldMonths(
+  source: ReturnType<typeof memorySource>,
+  held: ReturnType<typeof holdParts>,
+) {
   const parts = await Promise.all([...held.rows.keys()].map((month) => source.readCubePart({ from: month, to: month })))
   return holdCells(held, parts)
 }
@@ -70,7 +73,16 @@ describe('holdParts', () => {
   it('counts the receipts of the pinned rows and of the rows it holds', async () => {
     const withReceipts = {
       ...dataset,
-      attachments: [{ id: 1, transactionId: dataset.transactions[0]!.id, contentType: 'image/jpeg', byteSize: 1, createdAt: 'x', hasThumb: true }],
+      attachments: [
+        {
+          id: 1,
+          transactionId: dataset.transactions[0]!.id,
+          contentType: 'image/jpeg',
+          byteSize: 1,
+          createdAt: 'x',
+          hasThumb: true,
+        },
+      ],
     }
     const held = holdParts(await readLedgerParts(memorySource(withReceipts)))
     expect(held.attachmentCounts).toEqual({ [dataset.transactions[0]!.id]: 1 })
@@ -179,8 +191,14 @@ describe('holding sums and a reference again', () => {
     const bent = { ...part, cells: part.cells.map((c) => ({ ...c, amountCents: c.amountCents + 1 })) }
     const next = holdCells(held, [bent])
     const changed = next.cells!.filter((c) => c.budgetMonth === months[3])
-    expect(changed.every((c, i) => c.amountCents === part.cells.filter((x) => x.budgetMonth === months[3])[i]!.amountCents + 1)).toBe(true)
-    expect(next.cells!.filter((c) => c.budgetMonth === months[10])).toEqual(held.cells!.filter((c) => c.budgetMonth === months[10]))
+    expect(
+      changed.every(
+        (c, i) => c.amountCents === part.cells.filter((x) => x.budgetMonth === months[3])[i]!.amountCents + 1,
+      ),
+    ).toBe(true)
+    expect(next.cells!.filter((c) => c.budgetMonth === months[10])).toEqual(
+      held.cells!.filter((c) => c.budgetMonth === months[10]),
+    )
     expect(next.cells!.map((c) => c.budgetMonth)).toEqual([...next.cells!.map((c) => c.budgetMonth)].sort())
   })
 

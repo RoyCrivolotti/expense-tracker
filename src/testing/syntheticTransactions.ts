@@ -16,8 +16,15 @@ export interface RowDraft extends Omit<StoredTransaction, 'id'> {
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
-const pick = <T>(items: readonly T[], rnd: Rng): T => items[Math.floor(rnd() * items.length)] as T
-const between = (lo: number, hi: number, rnd: Rng): number => lo + Math.floor(rnd() * (hi - lo + 1))
+const pick = <T>(
+  items: readonly T[],
+  rnd: Rng,
+): T => items[Math.floor(rnd() * items.length)] as T
+const between = (
+  lo: number,
+  hi: number,
+  rnd: Rng,
+): number => lo + Math.floor(rnd() * (hi - lo + 1))
 
 /** [merchant, category, min cents, max cents] */
 const MERCHANTS: ReadonlyArray<readonly [string, number, number, number]> = [
@@ -42,44 +49,109 @@ const MERCHANTS: ReadonlyArray<readonly [string, number, number, number]> = [
 function row(
   month: string,
   day: number,
-  fields: Pick<RowDraft, 'description' | 'accountId' | 'categoryId' | 'type' | 'amountCents'> &
-    Partial<RowDraft>,
+  fields: Pick<RowDraft, 'description' | 'accountId' | 'categoryId' | 'type' | 'amountCents'> & Partial<RowDraft>,
 ): RowDraft {
   const date = `${month}-${pad(Math.min(day, 28))}`
   return { date, budgetMonth: month, cancelled: false, labelIds: [], createdAt: `${date}T09:00:00Z`, ...fields }
 }
 
-function seriesRows(month: string, monthIndex: number): RowDraft[] {
+function seriesRows(
+  month: string,
+  monthIndex: number,
+): RowDraft[] {
   const mm = Number(month.slice(5))
   const out: RowDraft[] = [
-    row(month, 1, { description: 'Rent', accountId: CHECKING, categoryId: CAT.rent, type: 'expense', amountCents: 95_000 }),
-    row(month, 5, { description: 'Music streaming', accountId: VISA, categoryId: CAT.subscriptions, type: 'expense', amountCents: 1_099 }),
-    row(month, 8, { description: 'Gym membership', accountId: CHECKING, categoryId: CAT.health, type: 'expense', amountCents: 3_900 }),
-    row(month, 25, { description: 'Salary', accountId: CHECKING, categoryId: CAT.salary, type: 'income', amountCents: 320_000 }),
-    row(month, 26, { description: 'Index fund', accountId: CHECKING, categoryId: CAT.investments, type: 'investment', amountCents: 80_000 }),
+    row(month, 1, {
+      description: 'Rent',
+      accountId: CHECKING,
+      categoryId: CAT.rent,
+      type: 'expense',
+      amountCents: 95_000,
+    }),
+    row(month, 5, {
+      description: 'Music streaming',
+      accountId: VISA,
+      categoryId: CAT.subscriptions,
+      type: 'expense',
+      amountCents: 1_099,
+    }),
+    row(month, 8, {
+      description: 'Gym membership',
+      accountId: CHECKING,
+      categoryId: CAT.health,
+      type: 'expense',
+      amountCents: 3_900,
+    }),
+    row(month, 25, {
+      description: 'Salary',
+      accountId: CHECKING,
+      categoryId: CAT.salary,
+      type: 'income',
+      amountCents: 320_000,
+    }),
+    row(month, 26, {
+      description: 'Index fund',
+      accountId: CHECKING,
+      categoryId: CAT.investments,
+      type: 'investment',
+      amountCents: 80_000,
+    }),
   ]
   if (mm % 3 === 1) {
-    out.push(row(month, 14, { description: 'Water bill', accountId: CHECKING, categoryId: CAT.utilities, type: 'expense', amountCents: 6_400 }))
+    out.push(
+      row(month, 14, {
+        description: 'Water bill',
+        accountId: CHECKING,
+        categoryId: CAT.utilities,
+        type: 'expense',
+        amountCents: 6_400,
+      }),
+    )
   }
   if (mm === 3) {
-    out.push(row(month, 10, { description: 'Car insurance', accountId: CHECKING, categoryId: CAT.insurance, type: 'expense', amountCents: 48_000 }))
+    out.push(
+      row(month, 10, {
+        description: 'Car insurance',
+        accountId: CHECKING,
+        categoryId: CAT.insurance,
+        type: 'expense',
+        amountCents: 48_000,
+      }),
+    )
   }
   if (monthIndex % 9 === 8) {
-    out.push(row(month, 20, { description: 'Broker withdrawal', accountId: CHECKING, categoryId: CAT.investments, type: 'investment', amountCents: -25_000 }))
+    out.push(
+      row(month, 20, {
+        description: 'Broker withdrawal',
+        accountId: CHECKING,
+        categoryId: CAT.investments,
+        type: 'investment',
+        amountCents: -25_000,
+      }),
+    )
   }
   return out
 }
 
 function claimRows(month: string): RowDraft[] {
   const group = `claim-${month}`
-  const trip = { accountId: TRAVEL_CARD, categoryId: CAT.travel, type: 'expense' as const, flagId: 1, claimGroup: group }
+  const trip = {
+    accountId: TRAVEL_CARD,
+    categoryId: CAT.travel,
+    type: 'expense' as const,
+    flagId: 1,
+    claimGroup: group,
+  }
   return [
     row(month, 9, { ...trip, description: 'Client trip train', amountCents: 12_800 }),
     row(month, 10, { ...trip, description: 'Client trip hotel', amountCents: 21_000 }),
   ]
 }
 
-function ordinaryRow(month: string, rnd: Rng): RowDraft {
+function ordinaryRow(
+  month: string,
+  rnd: Rng,
+): RowDraft {
   const [name, categoryId, lo, hi] = pick(MERCHANTS, rnd)
   const accountId = pick([CHECKING, CHECKING, CASH, VISA, VISA, TRAVEL_CARD], rnd)
   const roll = rnd()
@@ -98,7 +170,10 @@ function ordinaryRow(month: string, rnd: Rng): RowDraft {
 }
 
 /** The instalment of each plan that falls due in `month`, if any. */
-export function planDrafts(month: string, plans: InstallmentPlan[]): RowDraft[] {
+export function planDrafts(
+  month: string,
+  plans: InstallmentPlan[],
+): RowDraft[] {
   return plans.flatMap((plan) => {
     const index = monthsBetweenBudget(plan.anchorBudgetMonth, month) + plan.startInstallmentIndex
     if (index < plan.startInstallmentIndex || index > plan.totalCount) return []
@@ -118,7 +193,12 @@ export function planDrafts(month: string, plans: InstallmentPlan[]): RowDraft[] 
 }
 
 /** One month of rows, before ids are assigned. */
-export function monthDrafts(month: string, monthIndex: number, perMonth: number, rnd: Rng): RowDraft[] {
+export function monthDrafts(
+  month: string,
+  monthIndex: number,
+  perMonth: number,
+  rnd: Rng,
+): RowDraft[] {
   const rows = seriesRows(month, monthIndex)
   if (monthIndex % 6 === 5) rows.push(...claimRows(month))
   for (let i = 0; i < perMonth; i += 1) rows.push(ordinaryRow(month, rnd))

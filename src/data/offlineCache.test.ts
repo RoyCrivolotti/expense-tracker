@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { defaultExpenseSettings } from '../engine'
 import { installFakeIndexedDb } from '../testing/fakeIndexedDb'
 import type { ExpenseDataset } from '../types'
-import { SNAPSHOT_VERSION, forgetOfflineSnapshot, isCompatibleSnapshot, loadOfflineSnapshot, saveOfflineSnapshot } from './offlineCache'
+import {
+  SNAPSHOT_VERSION,
+  forgetOfflineSnapshot,
+  isCompatibleSnapshot,
+  loadOfflineSnapshot,
+  saveOfflineSnapshot,
+} from './offlineCache'
 
 const OWNER = 'alice@example.com'
 

@@ -80,7 +80,12 @@ export function uploadForm(transactionId: number): FormData {
   return form
 }
 
-async function created(world: World, handler: Handler, path: string, body: unknown): Promise<number> {
+async function created(
+  world: World,
+  handler: Handler,
+  path: string,
+  body: unknown,
+): Promise<number> {
   const response = await world.call(handler, { method: 'POST', path, body })
   if (response.status !== 201) {
     throw new Error(`seeding ${path}: ${response.status} ${await response.text()}`)
@@ -88,13 +93,25 @@ async function created(world: World, handler: Handler, path: string, body: unkno
   return (await response.json<{ id: number }>()).id
 }
 
-async function ok(world: World, handler: Handler, method: string, path: string, body: unknown, params?: Record<string, string>) {
+async function ok(
+  world: World,
+  handler: Handler,
+  method: string,
+  path: string,
+  body: unknown,
+  params?: Record<string, string>,
+) {
   const response = await world.call(handler, { method, path, body, ...(params ? { params } : {}) })
   if (response.status !== 200) throw new Error(`seeding ${method} ${path}: ${response.status}`)
   return response
 }
 
-export function expense(accountId: number, categoryId: number, description: string, day: string) {
+export function expense(
+  accountId: number,
+  categoryId: number,
+  description: string,
+  day: string,
+) {
   return {
     date: day,
     budgetMonth: day.slice(0, 7),
@@ -109,16 +126,35 @@ export function expense(accountId: number, categoryId: number, description: stri
 
 type Reference = Pick<
   SeededIds,
-  'debit' | 'card' | 'spareAccount' | 'groceries' | 'travel' | 'spareCategory' | 'flag' | 'spareFlag' | 'label' | 'spareLabel'
+  | 'debit'
+  | 'card'
+  | 'spareAccount'
+  | 'groceries'
+  | 'travel'
+  | 'spareCategory'
+  | 'flag'
+  | 'spareFlag'
+  | 'label'
+  | 'spareLabel'
 >
 
 async function seedReference(world: World): Promise<Reference> {
-  const account = (name: string, kind: string, settlement: string) =>
-    created(world, postAccount, '/accounts', { name, kind, settlement, active: true })
-  const category = (name: string, sortOrder: number) =>
-    created(world, postCategory, '/categories', { name, monthlyBudgetCents: 50_000, sortOrder, active: true })
-  const tag = (handler: Handler, path: string, name: string, color: string, sortOrder: number) =>
-    created(world, handler, path, { name, color, sortOrder, active: true })
+  const account = (
+    name: string,
+    kind: string,
+    settlement: string,
+  ) => created(world, postAccount, '/accounts', { name, kind, settlement, active: true })
+  const category = (
+    name: string,
+    sortOrder: number,
+  ) => created(world, postCategory, '/categories', { name, monthlyBudgetCents: 50_000, sortOrder, active: true })
+  const tag = (
+    handler: Handler,
+    path: string,
+    name: string,
+    color: string,
+    sortOrder: number,
+  ) => created(world, handler, path, { name, color, sortOrder, active: true })
   return {
     debit: await account('Debit', 'debit', 'immediate'),
     card: await account('Card', 'credit', 'deferred'),
@@ -133,18 +169,29 @@ async function seedReference(world: World): Promise<Reference> {
   }
 }
 
-type Ledger = Pick<
-  SeededIds,
-  'transactions' | 'spareTransaction' | 'plan' | 'attachment'
->
+type Ledger = Pick<SeededIds, 'transactions' | 'spareTransaction' | 'plan' | 'attachment'>
 
-async function seedLedgerRows(world: World, r: Reference): Promise<Ledger> {
-  const txn = (accountId: number, categoryId: number, description: string, day: string) =>
-    created(world, postTransaction, '/transactions', expense(accountId, categoryId, description, day))
+async function seedLedgerRows(
+  world: World,
+  r: Reference,
+): Promise<Ledger> {
+  const txn = (
+    accountId: number,
+    categoryId: number,
+    description: string,
+    day: string,
+  ) => created(world, postTransaction, '/transactions', expense(accountId, categoryId, description, day))
   const t1 = await txn(r.debit, r.groceries, 'Market', '2026-10-02')
   const t2 = await txn(r.card, r.travel, 'Train', '2026-10-05')
   const spareTransaction = await txn(r.debit, r.groceries, 'Spare', '2026-10-06')
-  await ok(world, putTransactionLabels, 'PUT', `/transactions/${t2}/labels`, { labelIds: [r.label] }, { id: String(t2) })
+  await ok(
+    world,
+    putTransactionLabels,
+    'PUT',
+    `/transactions/${t2}/labels`,
+    { labelIds: [r.label] },
+    { id: String(t2) },
+  )
   const plan = await created(world, postPlan, '/installment-plans', {
     description: 'Sofa',
     totalCount: 3,
@@ -156,7 +203,12 @@ async function seedLedgerRows(world: World, r: Reference): Promise<Ledger> {
     startInstallmentIndex: 1,
     active: true,
   })
-  await ok(world, putStatement, 'PUT', '/statements', { accountId: r.card, yearMonth: '2026-09', paid: true, paidOn: '2026-09-20' })
+  await ok(world, putStatement, 'PUT', '/statements', {
+    accountId: r.card,
+    yearMonth: '2026-09',
+    paid: true,
+    paidOn: '2026-09-20',
+  })
   await ok(world, putCashActual, 'PUT', '/cash-actuals', { yearMonth: '2026-09', actualCashCents: 150_000 })
   const uploaded = await world.call(postAttachment, { method: 'POST', path: '/attachments', rawBody: uploadForm(t1) })
   if (uploaded.status !== 201) throw new Error(`seeding attachment: ${uploaded.status}`)
@@ -171,7 +223,10 @@ type Planning = Pick<
 
 async function seedPlanning(world: World): Promise<Planning> {
   const wealthAccount = await created(world, postWealthAccount, '/wealth-accounts', {
-    name: 'Broker', kind: 'investment', sortOrder: 0, archived: false,
+    name: 'Broker',
+    kind: 'investment',
+    sortOrder: 0,
+    archived: false,
   })
   const entries = [{ accountId: wealthAccount, valueCents: 5_000_000 }]
   return {
@@ -179,7 +234,10 @@ async function seedPlanning(world: World): Promise<Planning> {
     spareScenario: await created(world, postScenario, '/scenarios', scenarioInput({ name: 'Spare' })),
     wealthAccount,
     spareWealthAccount: await created(world, postWealthAccount, '/wealth-accounts', {
-      name: 'Spare wealth account', kind: 'cash', sortOrder: 1, archived: false,
+      name: 'Spare wealth account',
+      kind: 'cash',
+      sortOrder: 1,
+      archived: false,
     }),
     checkin: await created(world, postCheckin, '/wealth-checkins', { checkinDate: '2026-06-01', note: 'Q2', entries }),
     spareCheckin: await created(world, postCheckin, '/wealth-checkins', { checkinDate: '2026-07-01', entries }),

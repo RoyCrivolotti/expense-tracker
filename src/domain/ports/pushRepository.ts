@@ -61,14 +61,26 @@ export interface PushRepository {
   saveSubscription(subscription: NewPushSubscription): Promise<string | null>
   listDevices(owner: string): Promise<PushDevice[]>
   /** False when the id is not this person's. */
-  deleteSubscription(owner: string, id: string): Promise<boolean>
+  deleteSubscription(
+    owner: string,
+    id: string,
+  ): Promise<boolean>
   /** The person's devices with what a send needs, oldest first. */
   listTargets(owner: string): Promise<PushTarget[]>
   /** Notes the push service's answer to a send to one of the person's devices. */
-  recordSend(owner: string, id: string, status: number, at: string): Promise<void>
+  recordSend(
+    owner: string,
+    id: string,
+    status: number,
+    at: string,
+  ): Promise<void>
   getSettings(owner: string): Promise<PushSettings | null>
   /** Writes the person's choice. With `onlyIfMissing` an existing row is left as it is, which is how a first device gets the default. */
-  saveSettings(owner: string, settings: { mode: PushMode; timeZone: string }, onlyIfMissing: boolean): Promise<void>
+  saveSettings(
+    owner: string,
+    settings: { mode: PushMode; timeZone: string },
+    onlyIfMissing: boolean,
+  ): Promise<void>
   /** Everyone whose mode is `daily` or `weekly`. The hourly cron reads this across owners: it has none. */
   listSummaryPeople(): Promise<SummaryPerson[]>
   /**
@@ -76,5 +88,9 @@ export interface PushRepository {
    * cron runs in the same hour exactly one gets true and sends. False when another run got there first or the person
    * left the summary modes.
    */
-  claimSummary(owner: string, expected: string | null, at: string): Promise<boolean>
+  claimSummary(
+    owner: string,
+    expected: string | null,
+    at: string,
+  ): Promise<boolean>
 }

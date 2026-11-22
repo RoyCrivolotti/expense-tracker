@@ -54,9 +54,7 @@ export function validateContributionSchedule(value: unknown): string | null {
 
 /** In date order, with nothing but the two fields. Call `validateContributionSchedule` first. */
 export function normalizeContributionSchedule(steps: readonly ContributionStep[]): ContributionStep[] {
-  return steps
-    .map(({ from, monthlyCents }) => ({ from, monthlyCents }))
-    .sort((a, b) => a.from.localeCompare(b.from))
+  return steps.map(({ from, monthlyCents }) => ({ from, monthlyCents })).sort((a, b) => a.from.localeCompare(b.from))
 }
 
 /**
@@ -122,7 +120,11 @@ export function scheduleSteps(
  * or the amount of the latest step that has begun. A step at or before the plan start is the amount
  * the plan starts with.
  */
-export function monthlyCentsAt(baseCents: number, steps: readonly ScheduleStep[], t: number): number {
+export function monthlyCentsAt(
+  baseCents: number,
+  steps: readonly ScheduleStep[],
+  t: number,
+): number {
   let amount = baseCents
   for (const step of steps) {
     if (step.offsetYears > t) break
@@ -136,7 +138,11 @@ export function monthlyCentsAt(baseCents: number, steps: readonly ScheduleStep[]
  * then is worth in the money of the plan start, `(1 + inflation) ** -t`. With no inflation it is
  * the plain length of the span.
  */
-function discountedYears(from: number, to: number, rate: number): number {
+function discountedYears(
+  from: number,
+  to: number,
+  rate: number,
+): number {
   if (rate === 0) return to - from
   const k = Math.log1p(rate)
   return (Math.exp(-k * from) - Math.exp(-k * to)) / k
@@ -187,7 +193,10 @@ export function annualContributionCents(
 export type PlannedMonthly = Pick<GoalScenario, 'planStartDate' | 'monthlyContributionCents' | 'contributionSchedule'>
 
 /** Years from the plan start to a date, never before it; 0 with no start to count from. */
-function offsetOn(scenario: PlannedMonthly, date: string): number {
+function offsetOn(
+  scenario: PlannedMonthly,
+  date: string,
+): number {
   if (!scenario.planStartDate) return 0
   return Math.max(0, yearsBetween(scenario.planStartDate, date))
 }
@@ -196,7 +205,10 @@ function offsetOn(scenario: PlannedMonthly, date: string): number {
  * What the plan invests each month on a date (`YYYY-MM-DD`): the base amount, or the change in
  * force. A date before the plan start reads as the start.
  */
-export function plannedMonthlyAt(scenario: PlannedMonthly, date: string): number {
+export function plannedMonthlyAt(
+  scenario: PlannedMonthly,
+  date: string,
+): number {
   const steps = scheduleSteps(scenario.planStartDate, scenario.contributionSchedule)
   return monthlyCentsAt(scenario.monthlyContributionCents, steps, offsetOn(scenario, date))
 }
@@ -206,7 +218,10 @@ export function plannedMonthlyAt(scenario: PlannedMonthly, date: string): number
  * middle: the figure the pace actually kept is set against, which is also a mean of months. Zero
  * for no months.
  */
-export function plannedMonthlyAverage(scenario: PlannedMonthly, months: readonly string[]): number {
+export function plannedMonthlyAverage(
+  scenario: PlannedMonthly,
+  months: readonly string[],
+): number {
   if (months.length === 0) return 0
   const total = months.reduce((sum, month) => sum + plannedMonthlyAt(scenario, `${month}-15`), 0)
   return Math.round(total / months.length)

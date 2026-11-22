@@ -21,7 +21,10 @@ function lastsLine(years: number): string {
 }
 
 /** A withdrawal rate as it is usually said: one decimal, two for a quarter point such as 3,25%. */
-function rateText(rate: number, format: MoneyFormat): string {
+function rateText(
+  rate: number,
+  format: MoneyFormat,
+): string {
   const tenths = rate * 1000
   return formatPercent(rate, format, Math.abs(tenths - Math.round(tenths)) < 1e-9 ? 1 : 2)
 }
@@ -51,7 +54,12 @@ export function retirementOddsLine({
   const unit = years === 1 ? 'year' : 'years'
   const worst = own.odds.unluckiestTenth < years ? ` (in 10 of the 100 ${lastsLine(own.odds.unluckiestTenth)})` : ''
   const rest = others.map((r) => `${runsOfHundred(r.odds.lasts)} at ${rateText(r.rate, format)}`)
-  const list = rest.length === 0 ? '' : rest.length === 1 ? `, ${rest[0]}` : `, ${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`
+  const list =
+    rest.length === 0
+      ? ''
+      : rest.length === 1
+        ? `, ${rest[0]}`
+        : `, ${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`
   return (
     `Started at the target, with the spending taken out each year, the money lasts all ${years} ${unit} in ` +
     `${runsOfHundred(own.odds.lasts)} of 100 runs at your ${rateText(rate, format)}${worst}${list}. ` +

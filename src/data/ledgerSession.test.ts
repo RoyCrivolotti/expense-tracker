@@ -53,24 +53,37 @@ function gated(source: TestSource) {
       gate.delete(kind)
     }
   }
-  const late = async <T>(kind: string, answer: Promise<T>): Promise<T> => {
+  const late = async <T>(
+    kind: string,
+    answer: Promise<T>,
+  ): Promise<T> => {
     const result = await answer
     const pending = gate.get(kind)
     if (pending) await pending
     return result
   }
-  const read = { reference: source.readReferencePart.bind(source), months: source.readMonthsPart.bind(source), cube: source.readCubePart.bind(source) }
+  const read = {
+    reference: source.readReferencePart.bind(source),
+    months: source.readMonthsPart.bind(source),
+    cube: source.readCubePart.bind(source),
+  }
   source.readReferencePart = () => late('reference', read.reference())
   source.readMonthsPart = (range) => late('months', read.months(range))
   source.readCubePart = (range) => late('cube', read.cube(range))
   return hold
 }
 
-const calls = (source: TestSource, prefix: string) => source.calls.filter((c) => c.startsWith(prefix))
+const calls = (
+  source: TestSource,
+  prefix: string,
+) => source.calls.filter((c) => c.startsWith(prefix))
 const flush = () => new Promise((resolve) => setTimeout(resolve, 5))
 
-const row = (id: number, month: string, over: Partial<Transaction> = {}) =>
-  makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}`, ...over })
+const row = (
+  id: number,
+  month: string,
+  over: Partial<Transaction> = {},
+) => makeTransaction({ id, date: `${month}-12`, budgetMonth: month, description: `New ${id}`, ...over })
 
 describe('rangesOfMonths', () => {
   it('joins consecutive months and keeps the gaps apart', () => {
@@ -220,7 +233,7 @@ describe('LedgerSession, a month being read and a write to it', () => {
     await flush()
     const rows = session.getState().held!.rows.get(month)
     expect(rows?.some((t) => t.id === added.id)).toBe(true)
-    expect(rows).toHaveLength((dataset.transactions.filter((t) => t.budgetMonth === month).length) + 1)
+    expect(rows).toHaveLength(dataset.transactions.filter((t) => t.budgetMonth === month).length + 1)
   })
 })
 
@@ -245,7 +258,9 @@ describe('LedgerSession, receipts', () => {
     await flush()
     expect(calls(source, 'receipts:').sort()).toEqual([`receipts:${ids[0]}`, `receipts:${ids[1]}`].sort())
     const { held } = session.getState()
-    expect(held!.receipts.get(ids[0]!)!.map((a) => a.id)).toEqual(small.attachments.filter((a) => a.transactionId === ids[0]).map((a) => a.id))
+    expect(held!.receipts.get(ids[0]!)!.map((a) => a.id)).toEqual(
+      small.attachments.filter((a) => a.transactionId === ids[0]).map((a) => a.id),
+    )
     session.loadReceipts([ids[0]!])
     await flush()
     expect(calls(source, 'receipts:')).toHaveLength(2)
@@ -265,16 +280,20 @@ describe('LedgerSession, receipts', () => {
     await flush()
     await flush()
     expect(session.getState().held!.receipts.size).toBe(ids.length)
-    expect(session.getState().held!.attachmentCounts).toEqual(Object.fromEntries(ids.map((id) => [id, small.attachments.filter((a) => a.transactionId === id).length])))
+    expect(session.getState().held!.attachmentCounts).toEqual(
+      Object.fromEntries(ids.map((id) => [id, small.attachments.filter((a) => a.transactionId === id).length])),
+    )
   })
 
   describe('many lists at once', () => {
     const many = {
       ...small,
-      attachments: small.transactions.slice(0, 10).flatMap((t, i) => [
-        makeAttachment({ id: 100 + i * 2, transactionId: t.id }),
-        makeAttachment({ id: 101 + i * 2, transactionId: t.id }),
-      ]),
+      attachments: small.transactions
+        .slice(0, 10)
+        .flatMap((t, i) => [
+          makeAttachment({ id: 100 + i * 2, transactionId: t.id }),
+          makeAttachment({ id: 101 + i * 2, transactionId: t.id }),
+        ]),
     }
     const manyIds = many.transactions.slice(0, 10).map((t) => t.id)
 
@@ -301,7 +320,12 @@ describe('LedgerSession, receipts', () => {
       const { source, session } = await openedMany()
       session.loadReceipts(manyIds.slice(0, 3))
       await flush()
-      expect(calls(source, 'receipts').sort()).toEqual(manyIds.slice(0, 3).map((id) => `receipts:${id}`).sort())
+      expect(calls(source, 'receipts').sort()).toEqual(
+        manyIds
+          .slice(0, 3)
+          .map((id) => `receipts:${id}`)
+          .sort(),
+      )
     })
 
     it('holds an empty list, and a count that matches it, for a transaction whose receipts were deleted meanwhile', async () => {
@@ -350,10 +374,18 @@ describe('LedgerSession, receipts', () => {
     const added = makeAttachment({ id: 9_001, transactionId: id })
     source.dataset = { ...small, attachments: [...small.attachments, added] }
     session.patch((d) => patchAfterAttachmentAdd(d, added))
-    expect(session.getState().held!.receipts.get(id)!.map((a) => a.id)).toEqual([9_001])
+    expect(
+      session
+        .getState()
+        .held!.receipts.get(id)!
+        .map((a) => a.id),
+    ).toEqual([9_001])
     await flush()
     expect(calls(source, 'receipts:')).toEqual([`receipts:${id}`])
-    const list = session.getState().held!.receipts.get(id)!.map((a) => a.id)
+    const list = session
+      .getState()
+      .held!.receipts.get(id)!
+      .map((a) => a.id)
     expect(list).toEqual([...small.attachments.filter((a) => a.transactionId === id).map((a) => a.id), 9_001])
     expect(session.getState().held!.attachmentCounts[id]).toBe(list.length)
   })
@@ -447,7 +479,10 @@ describe('LedgerSession, a month that cannot be read', () => {
     const source = memorySource(dataset)
     const session = new LedgerSession(source, { policy: WINDOWED })
     await session.open()
-    session.patch((d) => ({ ...d, transactions: d.transactions.map((t, i) => (i === 0 ? { ...t, description: 'x' } : t)) }))
+    session.patch((d) => ({
+      ...d,
+      transactions: d.transactions.map((t, i) => (i === 0 ? { ...t, description: 'x' } : t)),
+    }))
     source.readReferencePart = () => Promise.reject(new Error('down'))
     const seen: boolean[] = []
     session.subscribe(() => seen.push(session.getState().hydrating))
@@ -486,7 +521,12 @@ describe('LedgerSession, writes', () => {
     session.patch((d) => patchAfterTransactionUpdate(d, { ...target, description: 'Renamed' }))
     await flush()
     expect(source.calls).toEqual([])
-    expect(session.getState().held!.rows.get(newest)!.find((t) => t.id === target.id)!.description).toBe('Renamed')
+    expect(
+      session
+        .getState()
+        .held!.rows.get(newest)!
+        .find((t) => t.id === target.id)!.description,
+    ).toBe('Renamed')
   })
 
   it('ignores a patch that changes nothing', async () => {
@@ -540,7 +580,9 @@ describe('LedgerSession, writes', () => {
     await flush()
     await flush()
     const { held } = session.getState()
-    expect(held!.cells!.filter((c) => c.budgetMonth === old)).toEqual(buildLedger(truth, []).cells.filter((c) => c.budgetMonth === old))
+    expect(held!.cells!.filter((c) => c.budgetMonth === old)).toEqual(
+      buildLedger(truth, []).cells.filter((c) => c.budgetMonth === old),
+    )
   })
 
   it('reports a failed read of sums and keeps what it holds', async () => {
@@ -619,7 +661,9 @@ describe('LedgerSession, a write the server answered with more than the patch sh
     const session = new LedgerSession(source, { policy: WINDOWED })
     await session.open()
     // Deleting a flag unpins its rows, so the old months they sit in are summed and wait for sums.
-    const flagId = session.getState().held!.pinned.find((t) => t.flagId != null && !session.getState().held!.rows.has(t.budgetMonth))!.flagId!
+    const flagId = session
+      .getState()
+      .held!.pinned.find((t) => t.flagId != null && !session.getState().held!.rows.has(t.budgetMonth))!.flagId!
     let truth: ExpenseDataset = {
       ...dataset,
       flags: dataset.flags.filter((f) => f.id !== flagId),
@@ -659,7 +703,12 @@ describe('LedgerSession, a refresh and a write at once', () => {
     source.dataset = { ...dataset, transactions: dataset.transactions.map((t) => (t.id === target.id ? renamed : t)) }
     session.patch((d) => patchAfterTransactionUpdate(d, renamed))
     session.subscribe(() =>
-      seen.push(session.getState().held!.rows.get(newest)?.find((t) => t.id === target.id)?.description),
+      seen.push(
+        session
+          .getState()
+          .held!.rows.get(newest)
+          ?.find((t) => t.id === target.id)?.description,
+      ),
     )
     open()
     await refreshing
@@ -733,7 +782,11 @@ describe('LedgerSession, two refreshes at once', () => {
     await newer
     const fresh = new LedgerSession(memorySource(source.dataset), { policy: WINDOWED })
     await fresh.open()
-    const descriptionOf = () => session.getState().held!.rows.get(newest)!.find((t) => t.id === target.id)!.description
+    const descriptionOf = () =>
+      session
+        .getState()
+        .held!.rows.get(newest)!
+        .find((t) => t.id === target.id)!.description
     expect(descriptionOf()).toBe('Renamed on the server')
     for (const release of waiting.slice(0, olderReads)) release()
     await older
@@ -857,14 +910,18 @@ describe('LedgerSession, an empty ledger', () => {
 const OLD = 9_999
 function withOldOnly(): ExpenseDataset {
   const oldest = months[0]!
-  const rows = dataset.transactions.filter((t) => t.budgetMonth === oldest && t.type === 'expense' && !t.planId && t.flagId == null && !t.settledBy)
+  const rows = dataset.transactions.filter(
+    (t) => t.budgetMonth === oldest && t.type === 'expense' && !t.planId && t.flagId == null && !t.settledBy,
+  )
   const used = new Set(rows.slice(0, 2).map((t) => t.id))
   return {
     ...dataset,
     categories: [...dataset.categories, { id: OLD, name: 'Old', monthlyBudgetCents: 0, sortOrder: 99, active: true }],
     accounts: [...dataset.accounts, { id: OLD, name: 'Old', kind: 'debit', settlement: 'immediate', active: true }],
     labels: [...dataset.labels, { id: OLD, name: 'Old', color: '#10b981', sortOrder: 99, active: true }],
-    transactions: dataset.transactions.map((t) => (used.has(t.id) ? { ...t, categoryId: OLD, accountId: OLD, labelIds: [OLD] } : t)),
+    transactions: dataset.transactions.map((t) =>
+      used.has(t.id) ? { ...t, categoryId: OLD, accountId: OLD, labelIds: [OLD] } : t,
+    ),
   }
 }
 
@@ -872,15 +929,31 @@ type Write = (d: ExpenseDataset) => ExpenseDataset
 
 /** Writes the server answers with more than the patch shows, as a screen makes them. */
 const CASCADES: Array<[string, Write]> = [
-  ['a plan deleted, whose instalments the server unlinks', (d) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id)],
+  [
+    'a plan deleted, whose instalments the server unlinks',
+    (d) => patchAfterInstallmentPlanDelete(d, d.installmentPlans[0]!.id),
+  ],
   [
     'a plan added, whose instalments the server inserts',
     (d) => patchAfterInstallmentPlanCreate(d, { ...d.installmentPlans[0]!, id: 9_001, description: 'Laptop' }),
   ],
-  ['a plan changed', (d) => patchAfterInstallmentPlanUpdate(d, { ...d.installmentPlans[0]!, totalCount: d.installmentPlans[0]!.totalCount + 1 })],
-  ['a flag given an auto-label, which the server puts on the rows it flags', (d) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id })],
+  [
+    'a plan changed',
+    (d) =>
+      patchAfterInstallmentPlanUpdate(d, {
+        ...d.installmentPlans[0]!,
+        totalCount: d.installmentPlans[0]!.totalCount + 1,
+      }),
+  ],
+  [
+    'a flag given an auto-label, which the server puts on the rows it flags',
+    (d) => patchAfterFlag(d, { ...d.flags[0]!, autoLabelId: d.labels[0]!.id }),
+  ],
   ['a flag deleted', (d) => patchAfterFlagDelete(d, d.flags[0]!.id)],
-  ['a category deleted, its rows moved', (d) => patchAfterCategoryDelete(d, OLD, { reassignedToId: d.categories[0]!.id })],
+  [
+    'a category deleted, its rows moved',
+    (d) => patchAfterCategoryDelete(d, OLD, { reassignedToId: d.categories[0]!.id }),
+  ],
   ['an account deleted, its rows moved', (d) => patchAfterAccountDelete(d, OLD, { reassignedToId: d.accounts[0]!.id })],
   ['a label deleted, taken off its rows', (d) => patchAfterLabelDelete(d, OLD)],
   [
@@ -889,28 +962,38 @@ const CASCADES: Array<[string, Write]> = [
   ],
   [
     'a row settled by a payment, which the server stamps with what it covered',
-    (d) => patchAfterBulkUpdate(d, [{ ...d.transactions.find((t) => t.type === 'expense' && !t.settledBy && !t.planId)!, settledBy: d.transactions.find((t) => (t.reportCount ?? 0) > 0)!.id }]),
+    (d) =>
+      patchAfterBulkUpdate(d, [
+        {
+          ...d.transactions.find((t) => t.type === 'expense' && !t.settledBy && !t.planId)!,
+          settledBy: d.transactions.find((t) => (t.reportCount ?? 0) > 0)!.id,
+        },
+      ]),
   ],
 ]
 
 describe('LedgerSession, what patch() tells a screen, which reads its list again when it is true', () => {
-  it.each(CASCADES.flatMap(([name, write]) => [[name, 'a ledger held in full', write, FULL] as const, [name, 'a window', write, WINDOWED] as const]))(
-    'is true for %s, in %s',
-    async (_name, _config, write, policy) => {
-      const source = memorySource(withOldOnly())
-      const session = new LedgerSession(source, { policy })
-      await session.open()
-      await flush()
+  it.each(
+    CASCADES.flatMap(([name, write]) => [
+      [name, 'a ledger held in full', write, FULL] as const,
+      [name, 'a window', write, WINDOWED] as const,
+    ]),
+  )('is true for %s, in %s', async (_name, _config, write, policy) => {
+    const source = memorySource(withOldOnly())
+    const session = new LedgerSession(source, { policy })
+    await session.open()
+    await flush()
 
-      expect(session.patch(write)).toBe(true)
-    },
-  )
+    expect(session.patch(write)).toBe(true)
+  })
 
   it('is false for a patch that changed nothing, and for a write to a held row the patch shows in full', async () => {
     const source = memorySource(dataset)
     const session = new LedgerSession(source, { policy: WINDOWED })
     await session.open()
-    const held = [...session.getState().held!.rows.values()].flat().find((t) => !t.planId && t.flagId == null && !t.settledBy)!
+    const held = [...session.getState().held!.rows.values()]
+      .flat()
+      .find((t) => !t.planId && t.flagId == null && !t.settledBy)!
 
     expect(session.patch((d) => d)).toBe(false)
     expect(session.patch((d) => patchAfterTransactionUpdate(d, { ...held, notes: 'noted' }))).toBe(true)

@@ -25,9 +25,15 @@ describe('the portfolio before a year’s house payment and events', () => {
   })
 
   it('counts a life event as part of the step, up for money in and down for money out', () => {
-    const inflow = points({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 2_000_000, label: 'Bonus' }] })
+    const inflow = points({
+      housePurchaseYear: null,
+      lifeEvents: [{ year: 5, amountCents: 2_000_000, label: 'Bonus' }],
+    })
     expect(inflow[5]!.investedCents - inflow[5]!.preEventInvestedCents).toBe(2_000_000)
-    const outflow = points({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: -2_000_000, label: 'Car' }] })
+    const outflow = points({
+      housePurchaseYear: null,
+      lifeEvents: [{ year: 5, amountCents: -2_000_000, label: 'Car' }],
+    })
     expect(outflow[5]!.investedCents - outflow[5]!.preEventInvestedCents).toBe(-2_000_000)
   })
 
@@ -46,6 +52,8 @@ describe('the portfolio before a year’s house payment and events', () => {
     const params = scenarioToParams(samplePlan(), SAMPLE_INFLATION)
     const breakdown = purchaseYearBreakdown(params, 8)!
     expect(breakdown.beforePurchaseCents).toBe(projectNetWorth(params)[8]!.preEventInvestedCents)
-    expect(breakdown.startInvestedCents + breakdown.growthCents + breakdown.contributionCents).toBe(breakdown.beforePurchaseCents)
+    expect(breakdown.startInvestedCents + breakdown.growthCents + breakdown.contributionCents).toBe(
+      breakdown.beforePurchaseCents,
+    )
   })
 })

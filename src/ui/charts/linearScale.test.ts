@@ -65,7 +65,12 @@ describe('niceScale', () => {
   })
 
   it('never lists a tick twice, even for a flat or tiny range', () => {
-    for (const [min, max] of [[100, 100], [0, 0], [5, 5.4], [0, 1]] as const) {
+    for (const [min, max] of [
+      [100, 100],
+      [0, 0],
+      [5, 5.4],
+      [0, 1],
+    ] as const) {
       const { ticks } = niceScale(min, max)
       expect(new Set(ticks).size).toBe(ticks.length)
     }
@@ -123,7 +128,12 @@ describe('stackAreas', () => {
 
 describe('linePath', () => {
   it('builds an SVG path starting with a move command', () => {
-    expect(linePath([{ x: 0, y: 0 }, { x: 10, y: 5 }])).toBe('M0.0,0.0 L10.0,5.0')
+    expect(
+      linePath([
+        { x: 0, y: 0 },
+        { x: 10, y: 5 },
+      ]),
+    ).toBe('M0.0,0.0 L10.0,5.0')
   })
 })
 

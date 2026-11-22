@@ -68,13 +68,20 @@ export function fetchRecommendations(after?: string): Promise<RecommendationPage
   return req<RecommendationPage>(`/api/recommendations?${query}`)
 }
 
-export const path = (id: string, action: string) => `/api/recommendations/${encodeURIComponent(id)}/${action}`
+export const path = (
+  id: string,
+  action: string,
+) => `/api/recommendations/${encodeURIComponent(id)}/${action}`
 
 /**
  * Creates the transaction the person edited and marks the recommendation done, in one request. Rejects with
  * `PossibleDuplicateError`, and nothing created, when a typed row already looks like it; `allowDuplicate` adds it anyway.
  */
-export async function submitRecommendation(id: string, input: NewTransaction, allowDuplicate = false): Promise<Transaction> {
+export async function submitRecommendation(
+  id: string,
+  input: NewTransaction,
+  allowDuplicate = false,
+): Promise<Transaction> {
   try {
     return await req<Transaction>(path(id, 'submit'), {
       method: 'POST',

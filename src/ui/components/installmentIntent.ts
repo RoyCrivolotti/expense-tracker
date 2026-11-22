@@ -30,7 +30,10 @@ function parseCount(value: string): number | null {
   return Number.isInteger(n) && n >= 1 ? n : null
 }
 
-function validateIndex(installmentIndex: string, totalCount: number): number | null {
+function validateIndex(
+  installmentIndex: string,
+  totalCount: number,
+): number | null {
   const idx = Number(installmentIndex)
   if (!Number.isInteger(idx) || idx < 1 || idx > totalCount) return null
   return idx

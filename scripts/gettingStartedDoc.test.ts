@@ -32,7 +32,9 @@ describe('docs/GETTING-STARTED.md', () => {
   })
 
   it('is listed in the docs index with its audience and linked from the root README', () => {
-    expect(readFileSync('docs/README.md', 'utf8')).toMatch(/\[GETTING-STARTED\.md\]\(\.\/GETTING-STARTED\.md\) \| User \|/)
+    expect(readFileSync('docs/README.md', 'utf8')).toMatch(
+      /\[GETTING-STARTED\.md\]\(\.\/GETTING-STARTED\.md\) \| User \|/,
+    )
     expect(readFileSync('README.md', 'utf8')).toContain('docs/GETTING-STARTED.md')
   })
 

@@ -103,9 +103,7 @@ function deriveOne(
 ): Transaction {
   const account = accounts.find((a) => a.id === stored.accountId)
   const status = account ? deriveStatus(stored, account, statements) : 'posted'
-  const labelIds = transactionLabels
-    .filter((tl) => tl.transactionId === stored.id)
-    .map((tl) => tl.labelId)
+  const labelIds = transactionLabels.filter((tl) => tl.transactionId === stored.id).map((tl) => tl.labelId)
   // Set last so it always wins over anything spread in from `stored` — a seeded
   // transaction can carry a stray `labelIds` (seeding is Partial<ExpenseDataset>,
   // and a Transaction literal may include it), but this store's own
@@ -133,9 +131,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     // A seeded transaction's own `labelIds` is dropped here, not read: the
     // store's source of truth for which labels a transaction carries is
     // `transactionLabels` above, seeded through the dedicated field instead.
-    transactions: (seed.transactions ?? []).map(
-      ({ status: _status, labelIds: _labelIds, ...stored }) => stored,
-    ),
+    transactions: (seed.transactions ?? []).map(({ status: _status, labelIds: _labelIds, ...stored }) => stored),
     statements: list(seed.accountStatements),
     cashActuals: list(seed.cashActuals),
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
@@ -168,7 +164,10 @@ export function inMemoryExpenseRepository(
    * double that breaks tenancy is not mirroring the thing it exists to mirror.
    */
   const keysById = new Map<string, { objectKey: string; thumbKey?: string }>()
-  const keyOf = (owner: string, id: number) => `${owner}#${id}`
+  const keyOf = (
+    owner: string,
+    id: number,
+  ) => `${owner}#${id}`
   stores.set(ownerKey(seedOwner), emptyStore(seed))
 
   function storeFor(owner: string): OwnerStore {
@@ -201,44 +200,62 @@ export function inMemoryExpenseRepository(
   }
 
   /**
- * Release rows that pointed at a deleted reimbursement, as the D1 cascade does.
- *
- * Without it the double lets a payment go while the rows it covered keep
- * pointing at it — so they stay out of the Flagged card, neither owed nor
- * reimbursed, and every test of the undo passes against the wrong behaviour.
- */
-function releaseSettledBy(store: OwnerStore, deletedIds: number[]): void {
-  const gone = new Set(deletedIds)
-  store.transactions = store.transactions.map((row) =>
-    row.settledBy != null && gone.has(row.settledBy) ? withoutSettlement(row) : row,
-  )
-}
+   * Release rows that pointed at a deleted reimbursement, as the D1 cascade does.
+   *
+   * Without it the double lets a payment go while the rows it covered keep
+   * pointing at it — so they stay out of the Flagged card, neither owed nor
+   * reimbursed, and every test of the undo passes against the wrong behaviour.
+   */
+  function releaseSettledBy(
+    store: OwnerStore,
+    deletedIds: number[],
+  ): void {
+    const gone = new Set(deletedIds)
+    store.transactions = store.transactions.map((row) =>
+      row.settledBy != null && gone.has(row.settledBy) ? withoutSettlement(row) : row,
+    )
+  }
 
-function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
+  function assertOwnedAccount(
+    store: OwnerStore,
+    accountId: number,
+  ): Account {
     const account = store.accounts.find((a) => a.id === accountId)
     if (!account) throw new RepoHttpError(400, 'Invalid accountId')
     return account
   }
 
-  function assertOwnedCategory(store: OwnerStore, categoryId: number): Category {
+  function assertOwnedCategory(
+    store: OwnerStore,
+    categoryId: number,
+  ): Category {
     const category = store.categories.find((c) => c.id === categoryId)
     if (!category) throw new RepoHttpError(400, 'Invalid categoryId')
     return category
   }
 
-  function assertOwnedFlag(store: OwnerStore, flagId: number): Flag {
+  function assertOwnedFlag(
+    store: OwnerStore,
+    flagId: number,
+  ): Flag {
     const flag = store.flags.find((f) => f.id === flagId)
     if (!flag) throw new RepoHttpError(400, 'Invalid flagId')
     return flag
   }
 
-  function assertOwnedLabel(store: OwnerStore, labelId: number): Label {
+  function assertOwnedLabel(
+    store: OwnerStore,
+    labelId: number,
+  ): Label {
     const label = store.labels.find((l) => l.id === labelId)
     if (!label) throw new RepoHttpError(400, 'Invalid labelId')
     return label
   }
 
-  function assertOwnedPlan(store: OwnerStore, planId: number): InstallmentPlan {
+  function assertOwnedPlan(
+    store: OwnerStore,
+    planId: number,
+  ): InstallmentPlan {
     const plan = store.installmentPlans.find((p) => p.id === planId)
     if (!plan) throw new RepoHttpError(400, 'Invalid planId')
     return plan
@@ -262,7 +279,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
    * it covered. Without it a test would show a past report that can never drift, and
    * the drift warning would be provably untested.
    */
-  function stampReportSnapshot(store: OwnerStore, paymentId: number): void {
+  function stampReportSnapshot(
+    store: OwnerStore,
+    paymentId: number,
+  ): void {
     const covered = store.transactions.filter((t) => t.settledBy === paymentId)
     store.transactions = store.transactions.map((t) =>
       t.id === paymentId
@@ -285,10 +305,12 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   /** Whether `store.transactionLabels` already links this pair. */
-  function alreadyLabeled(store: OwnerStore, transactionId: number, labelId: number): boolean {
-    return store.transactionLabels.some(
-      (tl) => tl.transactionId === transactionId && tl.labelId === labelId,
-    )
+  function alreadyLabeled(
+    store: OwnerStore,
+    transactionId: number,
+    labelId: number,
+  ): boolean {
+    return store.transactionLabels.some((tl) => tl.transactionId === transactionId && tl.labelId === labelId)
   }
 
   /**
@@ -296,7 +318,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
    * transaction currently carrying `flagId` picks up `labelId`, deduped against
    * one it already has some other way.
    */
-  function applyLabelToFlaggedTransactions(store: OwnerStore, flagId: number, labelId: number): void {
+  function applyLabelToFlaggedTransactions(
+    store: OwnerStore,
+    flagId: number,
+    labelId: number,
+  ): void {
     for (const t of store.transactions) {
       if (t.flagId === flagId && !alreadyLabeled(store, t.id, labelId)) {
         store.transactionLabels.push({ transactionId: t.id, labelId })
@@ -305,7 +331,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   /** Mirrors dbWrite.ts's maybeApplyAutoLabelStatement: the forward half. */
-  function maybeApplyAutoLabel(store: OwnerStore, transactionId: number, flagId: number | undefined): void {
+  function maybeApplyAutoLabel(
+    store: OwnerStore,
+    transactionId: number,
+    flagId: number | undefined,
+  ): void {
     if (flagId == null) return
     const labelId = store.flags.find((f) => f.id === flagId)?.autoLabelId
     if (labelId != null && !alreadyLabeled(store, transactionId, labelId)) {
@@ -358,13 +388,19 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
    * the first, and the reimbursement integration suite — which runs only against this
    * double — would pass while production rejects the same input.
    */
-  function assertNotSettledElsewhere(stored: StoredTransaction, settledBy: number): void {
+  function assertNotSettledElsewhere(
+    stored: StoredTransaction,
+    settledBy: number,
+  ): void {
     if (stored.settledBy != null && stored.settledBy !== settledBy) {
       throw new RepoHttpError(409, 'Transaction is already settled by another reimbursement')
     }
   }
 
-  function createCategoryInStore(store: OwnerStore, input: NewCategory): Category {
+  function createCategoryInStore(
+    store: OwnerStore,
+    input: NewCategory,
+  ): Category {
     const category: Category = {
       id: nextId(store.categories),
       name: input.name,
@@ -378,7 +414,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return category
   }
 
-  function createAccountInStore(store: OwnerStore, input: NewAccount): Account {
+  function createAccountInStore(
+    store: OwnerStore,
+    input: NewAccount,
+  ): Account {
     const account: Account = {
       id: nextId(store.accounts),
       name: input.name,
@@ -390,13 +429,19 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return account
   }
 
-  function countCategoryUsage(store: OwnerStore, id: number): number {
+  function countCategoryUsage(
+    store: OwnerStore,
+    id: number,
+  ): number {
     const txns = store.transactions.filter((t) => t.categoryId === id).length
     const plans = store.installmentPlans.filter((p) => p.categoryId === id).length
     return txns + plans
   }
 
-  function countAccountUsage(store: OwnerStore, id: number): number {
+  function countAccountUsage(
+    store: OwnerStore,
+    id: number,
+  ): number {
     const txns = store.transactions.filter((t) => t.accountId === id).length
     const plans = store.installmentPlans.filter((p) => p.accountId === id).length
     const statements = store.statements.filter((s) => s.accountId === id).length
@@ -435,9 +480,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     const index = store.categories.findIndex((c) => c.id === id)
     if (index < 0) throw new RepoHttpError(404, 'Category not found')
     store.categories.splice(index, 1)
-    store.transactions = store.transactions.map((t) =>
-      t.categoryId === id ? { ...t, categoryId: targetId } : t,
-    )
+    store.transactions = store.transactions.map((t) => (t.categoryId === id ? { ...t, categoryId: targetId } : t))
     store.installmentPlans = store.installmentPlans.map((p) =>
       p.categoryId === id ? { ...p, categoryId: targetId } : p,
     )
@@ -445,7 +488,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   /** Mirrors the D1 adapter: move (or clear) settings.defaultAccountId if it pointed at the deleted account. */
-  function syncDefaultAccountId(store: OwnerStore, deletedId: number, newTargetId: number | null): void {
+  function syncDefaultAccountId(
+    store: OwnerStore,
+    deletedId: number,
+    newTargetId: number | null,
+  ): void {
     if (store.settings.defaultAccountId !== deletedId) return
     store.settings = { ...store.settings, defaultAccountId: newTargetId }
   }
@@ -483,17 +530,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     const index = store.accounts.findIndex((a) => a.id === id)
     if (index < 0) throw new RepoHttpError(404, 'Account not found')
     store.accounts.splice(index, 1)
-    store.transactions = store.transactions.map((t) =>
-      t.accountId === id ? { ...t, accountId: targetId } : t,
-    )
-    store.installmentPlans = store.installmentPlans.map((p) =>
-      p.accountId === id ? { ...p, accountId: targetId } : p,
-    )
+    store.transactions = store.transactions.map((t) => (t.accountId === id ? { ...t, accountId: targetId } : t))
+    store.installmentPlans = store.installmentPlans.map((p) => (p.accountId === id ? { ...p, accountId: targetId } : p))
     // Mirror the D1 adapter: drop the source's statement for any month the target
     // already has one for (composite key can't hold both), then move the rest.
-    const targetMonths = new Set(
-      store.statements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth),
-    )
+    const targetMonths = new Set(store.statements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth))
     store.statements = store.statements
       .filter((s) => !(s.accountId === id && targetMonths.has(s.yearMonth)))
       .map((s) => (s.accountId === id ? { ...s, accountId: targetId } : s))
@@ -514,10 +555,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     if (input.planId == null) return null
     const plan = assertOwnedPlan(store, input.planId)
     const existing = store.transactions
-      .filter(
-        (t) =>
-          t.planId === plan.id && typeof t.installmentIndex === 'number' && t.id !== excludeId,
-      )
+      .filter((t) => t.planId === plan.id && typeof t.installmentIndex === 'number' && t.id !== excludeId)
       .map((t) => t.installmentIndex as number)
     const nextIndex = existing.length > 0 ? Math.max(...existing) + 1 : plan.startInstallmentIndex
     const installmentIndex = input.installmentIndex ?? nextIndex
@@ -528,7 +566,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   /** Attachment rows die with their transaction, as they do in D1. */
-  function dropAttachmentsFor(owner: string, store: OwnerStore, transactionIds: number[]): void {
+  function dropAttachmentsFor(
+    owner: string,
+    store: OwnerStore,
+    transactionIds: number[],
+  ): void {
     const wanted = new Set(transactionIds)
     for (const attachment of store.attachments) {
       if (wanted.has(attachment.transactionId)) keysById.delete(keyOf(owner, attachment.id))
@@ -536,13 +578,19 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     store.attachments = store.attachments.filter((a) => !wanted.has(a.transactionId))
   }
 
-  function findStored(store: OwnerStore, id: number): StoredTransaction {
+  function findStored(
+    store: OwnerStore,
+    id: number,
+  ): StoredTransaction {
     const txn = store.transactions.find((row) => row.id === id)
     if (!txn) throw new RepoHttpError(404, 'Transaction not found')
     return txn
   }
 
-  function insertOne(owner: string, input: NewTransaction): Transaction {
+  function insertOne(
+    owner: string,
+    input: NewTransaction,
+  ): Transaction {
     const store = storeFor(owner)
     assertOwnedAccount(store, input.accountId)
     assertOwnedCategory(store, input.categoryId)
@@ -596,39 +644,70 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     readLedgerReference: (owner) => Promise.resolve(ledgerReferenceOf(datasetOf(owner))),
 
-    readMonthRows: (owner, range, maxRows) =>
-      Promise.resolve(monthRowsOf(datasetOf(owner), range, maxRows)),
+    readMonthRows: (
+      owner,
+      range,
+      maxRows,
+    ) => Promise.resolve(monthRowsOf(datasetOf(owner), range, maxRows)),
 
-    readMonthCells: (owner, range, maxCells) =>
-      Promise.resolve(monthCellsOf(datasetOf(owner), range, maxCells)),
+    readMonthCells: (
+      owner,
+      range,
+      maxCells,
+    ) => Promise.resolve(monthCellsOf(datasetOf(owner), range, maxCells)),
 
     listOwners: () => Promise.resolve([...stores.keys()]),
 
-    readExportChunk: (owner, request) => Promise.resolve(exportChunkOf(datasetOf(owner), request)),
+    readExportChunk: (
+      owner,
+      request,
+    ) => Promise.resolve(exportChunkOf(datasetOf(owner), request)),
 
-    queryTransactions: (owner, filter, page) =>
-      Promise.resolve(pageOf(derivedTransactions(storeFor(owner)), filter, page)),
+    queryTransactions: (
+      owner,
+      filter,
+      page,
+    ) => Promise.resolve(pageOf(derivedTransactions(storeFor(owner)), filter, page)),
 
-    summarizeTransactions: (owner, filter) =>
-      Promise.resolve(summaryOf(derivedTransactions(storeFor(owner)), filter)),
+    summarizeTransactions: (
+      owner,
+      filter,
+    ) => Promise.resolve(summaryOf(derivedTransactions(storeFor(owner)), filter)),
 
-    getTransaction: (owner, id) =>
-      Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
+    getTransaction: (
+      owner,
+      id,
+    ) => Promise.resolve(oneOf(derivedTransactions(storeFor(owner)), id)),
 
-    recentTransactions: (owner, limit) => Promise.resolve(recentOf(derivedTransactions(storeFor(owner)), limit)),
+    recentTransactions: (
+      owner,
+      limit,
+    ) => Promise.resolve(recentOf(derivedTransactions(storeFor(owner)), limit)),
 
     readSeries: (owner) => Promise.resolve(seriesFromTransactions(derivedTransactions(storeFor(owner)))),
 
     readUsage: (owner) => Promise.resolve(usageFromDataset(datasetOf(owner))),
 
-    suggestDescriptions: (owner, request) => Promise.resolve(suggestDescriptionsOf(derivedTransactions(storeFor(owner)), request)),
+    suggestDescriptions: (
+      owner,
+      request,
+    ) => Promise.resolve(suggestDescriptionsOf(derivedTransactions(storeFor(owner)), request)),
 
-    insertTransaction: (owner, input) => Promise.resolve(insertOne(owner, input)),
+    insertTransaction: (
+      owner,
+      input,
+    ) => Promise.resolve(insertOne(owner, input)),
 
-    bulkInsertTransactions: (owner, inputs) =>
-      Promise.resolve(inputs.map((input) => insertOne(owner, input))),
+    bulkInsertTransactions: (
+      owner,
+      inputs,
+    ) => Promise.resolve(inputs.map((input) => insertOne(owner, input))),
 
-    updateTransaction: (owner, id, patch) => {
+    updateTransaction: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const existing = findStored(store, id)
       if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
@@ -666,12 +745,13 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       }
       const index = store.transactions.findIndex((row) => row.id === id)
       store.transactions[index] = updated
-      return Promise.resolve(
-        deriveOne(updated, store.accounts, store.statements, store.transactionLabels),
-      )
+      return Promise.resolve(deriveOne(updated, store.accounts, store.statements, store.transactionLabels))
     },
 
-    deleteTransaction: (owner, id) => {
+    deleteTransaction: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const index = store.transactions.findIndex((row) => row.id === id)
       if (index < 0) return Promise.resolve()
@@ -684,7 +764,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve()
     },
 
-    deleteTransactions: (owner, ids) => {
+    deleteTransactions: (
+      owner,
+      ids,
+    ) => {
       const store = storeFor(owner)
       const idSet = new Set(ids)
       const before = store.transactions.length
@@ -695,7 +778,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve(before - store.transactions.length)
     },
 
-    bulkUpdateTransactions: (owner, ids, patch: BulkTransactionPatch) => {
+    bulkUpdateTransactions: (
+      owner,
+      ids,
+      patch: BulkTransactionPatch,
+    ) => {
       const store = storeFor(owner)
       if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
@@ -725,10 +812,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         // (exactOptionalPropertyTypes).
         const unflagged = 'flagId' in patch ? withoutFlag(stored) : stored
         const base = 'settledBy' in patch ? withoutSettlement(unflagged) : unflagged
-        const withFlag: StoredTransaction =
-          flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
-        const next: StoredTransaction =
-          settledBy != null ? { ...withFlag, settledBy } : withFlag
+        const withFlag: StoredTransaction = flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
+        const next: StoredTransaction = settledBy != null ? { ...withFlag, settledBy } : withFlag
         // Before deriveOne below, not after the loop: deriveOne reads
         // store.transactionLabels for this row's labelIds right here.
         if (flagId != null) maybeApplyAutoLabel(store, next.id, flagId)
@@ -739,25 +824,36 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve(updated)
     },
 
-    bulkUpdateTransactionsByFilter: async (owner, target, patch) => {
+    bulkUpdateTransactionsByFilter: async (
+      owner,
+      target,
+      patch,
+    ) => {
       const ids = idsMatching(derivedTransactions(storeFor(owner)), target)
       if (ids.length > 0) await repository.bulkUpdateTransactions(owner, ids, patch)
       return { updated: ids.length }
     },
 
     // A promise constructor turns a throw into a rejection, as the port promises and a database call does.
-    addLabelsToTransactions: (owner, target, labelIds) =>
-      new Promise((resolve) => resolve(addLabels(owner, target, labelIds))),
+    addLabelsToTransactions: (
+      owner,
+      target,
+      labelIds,
+    ) => new Promise((resolve) => resolve(addLabels(owner, target, labelIds))),
 
-    setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) => {
+    setStatementPaid: (
+      owner,
+      accountId,
+      yearMonth,
+      paid,
+      paidOn,
+    ) => {
       const store = storeFor(owner)
       assertOwnedAccount(store, accountId)
       if (paid && !paidOn) {
         return Promise.reject(new Error('paidOn is required when paid is true'))
       }
-      const existing = store.statements.find(
-        (s) => s.accountId === accountId && s.yearMonth === yearMonth,
-      )
+      const existing = store.statements.find((s) => s.accountId === accountId && s.yearMonth === yearMonth)
       if (existing) {
         existing.paid = paid
         if (paid && paidOn) existing.paidOn = paidOn
@@ -774,7 +870,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...statement })
     },
 
-    setCashActual: (owner, yearMonth, actualCashCents) => {
+    setCashActual: (
+      owner,
+      yearMonth,
+      actualCashCents,
+    ) => {
       const store = storeFor(owner)
       const existing = store.cashActuals.find((c) => c.yearMonth === yearMonth)
       if (existing) {
@@ -786,24 +886,36 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...row })
     },
 
-    clearCashActual: (owner, yearMonth) => {
+    clearCashActual: (
+      owner,
+      yearMonth,
+    ) => {
       const store = storeFor(owner)
       store.cashActuals = store.cashActuals.filter((c) => c.yearMonth !== yearMonth)
       return Promise.resolve()
     },
 
-    transactionExists: (owner, id) => {
+    transactionExists: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       return Promise.resolve(store.transactions.some((t) => t.id === id))
     },
 
-    listAttachments: (owner, transactionId) => {
+    listAttachments: (
+      owner,
+      transactionId,
+    ) => {
       const store = storeFor(owner)
       const mine = store.attachments.filter((a) => transactionId === undefined || a.transactionId === transactionId)
       return Promise.resolve([...mine].sort((a, b) => a.transactionId - b.transactionId || a.id - b.id))
     },
 
-    findAttachmentSource: (owner, id) => {
+    findAttachmentSource: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const attachment = store.attachments.find((a) => a.id === id)
       const keys = keysById.get(keyOf(owner, id))
@@ -816,7 +928,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       })
     },
 
-    createAttachment: (owner, input) => {
+    createAttachment: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const attachment: TransactionAttachment = {
         id: nextId(store.attachments),
@@ -839,7 +954,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...attachment })
     },
 
-    deleteAttachment: (owner, id) => {
+    deleteAttachment: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const index = store.attachments.findIndex((a) => a.id === id)
       const keys = keysById.get(keyOf(owner, id))
@@ -851,7 +969,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve(keys)
     },
 
-    attachmentKeysForTransactions: (owner, transactionIds) => {
+    attachmentKeysForTransactions: (
+      owner,
+      transactionIds,
+    ) => {
       const store = storeFor(owner)
       const wanted = new Set(transactionIds)
       return Promise.resolve(
@@ -870,7 +991,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve(store.attachments.reduce((sum, a) => sum + a.byteSize, 0))
     },
 
-    createFlag: (owner, input) => {
+    createFlag: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const { autoLabelId, ...rest } = input
       const flag: Flag = { ...rest, id: nextId(store.flags), ...(autoLabelId != null ? { autoLabelId } : {}) }
@@ -879,7 +1003,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...flag })
     },
 
-    updateFlag: (owner, id, patch) => {
+    updateFlag: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.flags.findIndex((f) => f.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Flag not found')
@@ -907,7 +1035,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...next })
     },
 
-    deleteFlag: (owner, id) => {
+    deleteFlag: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       assertOwnedFlag(store, id)
       let unflagged = 0
@@ -920,7 +1051,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ unflagged })
     },
 
-    createLabel: (owner, input) => {
+    createLabel: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const label: Label = { ...input, id: nextId(store.labels) }
       store.labels.push(label)
@@ -928,7 +1062,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...label })
     },
 
-    updateLabel: (owner, id, patch) => {
+    updateLabel: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.labels.findIndex((l) => l.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Label not found')
@@ -947,7 +1085,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...next })
     },
 
-    deleteLabel: (owner, id) => {
+    deleteLabel: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       assertOwnedLabel(store, id)
       const before = store.transactionLabels.length
@@ -959,25 +1100,34 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ unlabeled: before - store.transactionLabels.length })
     },
 
-    setTransactionLabels: (owner, transactionId, labelIds) => {
+    setTransactionLabels: (
+      owner,
+      transactionId,
+      labelIds,
+    ) => {
       const store = storeFor(owner)
       assertOwnedTransactionId(store, transactionId, 'transactionId')
       const deduped = [...new Set(labelIds)]
       for (const labelId of deduped) assertOwnedLabel(store, labelId)
-      store.transactionLabels = store.transactionLabels.filter(
-        (tl) => tl.transactionId !== transactionId,
-      )
+      store.transactionLabels = store.transactionLabels.filter((tl) => tl.transactionId !== transactionId)
       for (const labelId of deduped) store.transactionLabels.push({ transactionId, labelId })
       const stored = findStored(store, transactionId)
       return Promise.resolve(deriveOne(stored, store.accounts, store.statements, store.transactionLabels))
     },
 
-    createCategory: (owner, input) => {
+    createCategory: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       return Promise.resolve({ ...createCategoryInStore(store, input) })
     },
 
-    updateCategory: (owner, id, patch) => {
+    updateCategory: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.categories.findIndex((c) => c.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Category not found')
@@ -988,17 +1138,28 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated })
     },
 
-    deleteCategory: (owner, id, options) => {
+    deleteCategory: (
+      owner,
+      id,
+      options,
+    ) => {
       const store = storeFor(owner)
       return Promise.resolve(deleteCategoryInStore(store, id, options))
     },
 
-    createAccount: (owner, input) => {
+    createAccount: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       return Promise.resolve({ ...createAccountInStore(store, input) })
     },
 
-    updateAccount: (owner, id, patch) => {
+    updateAccount: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.accounts.findIndex((a) => a.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Account not found')
@@ -1009,21 +1170,26 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated })
     },
 
-    deleteAccount: (owner, id, options) => {
+    deleteAccount: (
+      owner,
+      id,
+      options,
+    ) => {
       const store = storeFor(owner)
       return Promise.resolve(deleteAccountInStore(store, id, options))
     },
 
-    updateSettings: (owner, patch) => {
+    updateSettings: (
+      owner,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const keys = Object.keys(patch) as (keyof ExpenseSettings)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
       if (patch.defaultAccountId != null) assertOwnedAccount(store, patch.defaultAccountId)
       if (
         patch.budgetRolloverDay != null &&
-        (!Number.isInteger(patch.budgetRolloverDay) ||
-          patch.budgetRolloverDay < 1 ||
-          patch.budgetRolloverDay > 28)
+        (!Number.isInteger(patch.budgetRolloverDay) || patch.budgetRolloverDay < 1 || patch.budgetRolloverDay > 28)
       ) {
         throw new RepoHttpError(400, 'budgetRolloverDay must be between 1 and 28')
       }
@@ -1037,7 +1203,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...store.settings })
     },
 
-    createScenario: (owner, input) => {
+    createScenario: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       if (!input.name?.trim()) throw new RepoHttpError(400, 'Scenario name is required')
       const scenario: GoalScenario = {
@@ -1050,7 +1219,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...scenario })
     },
 
-    activateScenario: (owner, id) => {
+    activateScenario: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const target = store.goalScenarios.find((s) => s.id === id)
       if (!target) throw new RepoHttpError(404, 'Scenario not found')
@@ -1058,7 +1230,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...target, isActive: true })
     },
 
-    updateScenario: (owner, id, patch) => {
+    updateScenario: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.goalScenarios.findIndex((s) => s.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Scenario not found')
@@ -1069,7 +1245,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated })
     },
 
-    deleteScenario: (owner, id) => {
+    deleteScenario: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const index = store.goalScenarios.findIndex((s) => s.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Scenario not found')
@@ -1077,7 +1256,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve()
     },
 
-    createInstallmentPlan: (owner, input) => {
+    createInstallmentPlan: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const validated = validatePlanInput(input)
       assertOwnedAccount(store, validated.accountId)
@@ -1092,7 +1274,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...plan })
     },
 
-    updateInstallmentPlan: (owner, id, patch) => {
+    updateInstallmentPlan: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.installmentPlans.findIndex((p) => p.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
@@ -1111,7 +1297,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated })
     },
 
-    deleteInstallmentPlan: (owner, id) => {
+    deleteInstallmentPlan: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const index = store.installmentPlans.findIndex((p) => p.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
@@ -1128,7 +1317,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve()
     },
 
-    createWealthAccount: (owner, input) => {
+    createWealthAccount: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const name = input.name?.trim()
       if (!name) return Promise.reject(new RepoHttpError(400, 'Account name is required'))
@@ -1145,12 +1337,15 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...account })
     },
 
-    updateWealthAccount: (owner, id, patch) => {
+    updateWealthAccount: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.wealthAccounts.findIndex((a) => a.id === id)
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
-      if (Object.keys(patch).length === 0)
-        return Promise.reject(new RepoHttpError(400, 'Empty patch'))
+      if (Object.keys(patch).length === 0) return Promise.reject(new RepoHttpError(400, 'Empty patch'))
       const badKind = patch.kind !== undefined ? invalidWealthKind(patch.kind) : undefined
       if (badKind) return Promise.reject(badKind)
       const updated = { ...store.wealthAccounts[index]!, ...patch, id }
@@ -1158,11 +1353,12 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated })
     },
 
-    deleteWealthAccount: (owner, id) => {
+    deleteWealthAccount: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
-      const hasEntries = store.wealthCheckins.some((c) =>
-        c.entries.some((e) => e.accountId === id),
-      )
+      const hasEntries = store.wealthCheckins.some((c) => c.entries.some((e) => e.accountId === id))
       if (hasEntries) {
         const index = store.wealthAccounts.findIndex((a) => a.id === id)
         if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
@@ -1175,7 +1371,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ archived: false })
     },
 
-    createWealthCheckin: (owner, input) => {
+    createWealthCheckin: (
+      owner,
+      input,
+    ) => {
       const store = storeFor(owner)
       const badDate = invalidCheckinDate(input.checkinDate)
       if (badDate) return Promise.reject(badDate)
@@ -1192,12 +1391,15 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...checkin, entries: [...checkin.entries] })
     },
 
-    updateWealthCheckin: (owner, id, patch) => {
+    updateWealthCheckin: (
+      owner,
+      id,
+      patch,
+    ) => {
       const store = storeFor(owner)
       const index = store.wealthCheckins.findIndex((c) => c.id === id)
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))
-      if (Object.keys(patch).length === 0)
-        return Promise.reject(new RepoHttpError(400, 'Empty patch'))
+      if (Object.keys(patch).length === 0) return Promise.reject(new RepoHttpError(400, 'Empty patch'))
       const badDate = patch.checkinDate !== undefined ? invalidCheckinDate(patch.checkinDate) : undefined
       if (badDate) return Promise.reject(badDate)
       const unowned = patch.entries !== undefined ? unownedWealthAccount(store, patch.entries) : undefined
@@ -1214,7 +1416,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       return Promise.resolve({ ...updated, entries: [...updated.entries] })
     },
 
-    deleteWealthCheckin: (owner, id) => {
+    deleteWealthCheckin: (
+      owner,
+      id,
+    ) => {
       const store = storeFor(owner)
       const index = store.wealthCheckins.findIndex((c) => c.id === id)
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))

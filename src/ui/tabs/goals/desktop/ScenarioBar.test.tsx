@@ -72,7 +72,7 @@ describe('ScenarioBar', () => {
     expect(tab('Path B')).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('puts the whole name of a scenario in its tab\'s tooltip, since a long one is cut short there', () => {
+  it("puts the whole name of a scenario in its tab's tooltip, since a long one is cut short there", () => {
     const name = 'A very long scenario name that would make its tab as wide as the whole row of tabs'
     render(<Harness initial={[plan, makeScenario({ id: 3, name, sortOrder: 1 })]} actions={makeActions()} />)
 

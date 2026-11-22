@@ -81,7 +81,10 @@ function PaceHint({
   )
   // The plan's figure over these same months: one amount for a plan that never changes it, and
   // otherwise what it averages, with where it started and where it is now.
-  const planned = plannedMonthlyAverage(plan, months.map((m) => m.month))
+  const planned = plannedMonthlyAverage(
+    plan,
+    months.map((m) => m.month),
+  )
   if (months.length === 0 || planned <= 0) return null
   const plannedFirst = plannedMonthlyAt(plan, `${months[0]!.month}-15`)
   const plannedNow = plannedMonthlyAt(plan, `${months[months.length - 1]!.month}-15`)
@@ -113,7 +116,11 @@ function PaceHint({
 function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: MoneyFormat }) {
   const cash = formatMoneyShort(reserve.cashCents, format)
   if (reserve.monthsCovered === null) {
-    return <p style={hintStyle}>Cash reserve: <strong>{cash}</strong>.</p>
+    return (
+      <p style={hintStyle}>
+        Cash reserve: <strong>{cash}</strong>.
+      </p>
+    )
   }
   const months = reserve.monthsCovered.toFixed(1)
   // Judged on the figure shown: 5.96 reads "6.0", and "6.0 months" in red against a
@@ -130,10 +137,8 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
   return (
     <p style={hintStyle}>
       Cash reserve: <strong>{cash}</strong> covers{' '}
-      <strong style={{ color: met ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
-        {months} months
-      </strong>{' '}
-      of spending, against a target of {reserve.targetMonths} months.
+      <strong style={{ color: met ? 'var(--exp-success)' : 'var(--exp-danger)' }}>{months} months</strong> of spending,
+      against a target of {reserve.targetMonths} months.
     </p>
   )
 }
@@ -185,8 +190,7 @@ function FigureHint({
     const expected = plan ? Math.pow((1 + plan.expectedRealReturn) * (1 + inflationRate), ret.years) - 1 : null
     return (
       <p style={hintStyle}>
-        Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong>{' '}
-        since {since}
+        Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong> since {since}
         {plan && expected !== null
           ? `, where ${plan.name} assumes about ${formatPercent(expected, format)} over the same days (${planRate} after inflation, with ${formatPercent(inflationRate, format)} inflation)`
           : ''}
@@ -206,8 +210,8 @@ function FigureHint({
       <strong style={settled ? { color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' } : undefined}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
-      since {since}, about {formatPercent(real, format)} once{' '}
-      {formatPercent(inflationRate, format)} inflation is taken off
+      since {since}, about {formatPercent(real, format)} once {formatPercent(inflationRate, format)} inflation is taken
+      off
       {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
       {plan && !settled ? ` A few years of returns say little about a long-run ${planRate}.` : ''}
     </p>
@@ -237,8 +241,8 @@ function UnrecordedHint({
     const monthly = plan ? formatCents(plannedMonthlyAt(plan, ret.endDate), format) : ''
     return (
       <p style={hintStyle}>
-        {plan ? `${plan.name} expects ${monthly} a month, but ` : ''}no investments are recorded since {since}, so
-        the balance may include money you moved in, which a return would count as growth. {fix}
+        {plan ? `${plan.name} expects ${monthly} a month, but ` : ''}no investments are recorded since {since}, so the
+        balance may include money you moved in, which a return would count as growth. {fix}
       </p>
     )
   }
@@ -289,7 +293,8 @@ function StatusRow({
       <span>
         {STATUS_WORDS[verdict]}{' '}
         <span className={[styles.summaryDelta, delta].join(' ')}>
-          ({ahead ? '+' : ''}{formatMoneyShort(status.deltaCents, format)})
+          ({ahead ? '+' : ''}
+          {formatMoneyShort(status.deltaCents, format)})
         </span>
         {fromTheMarket ? <span className={styles.summaryPlanName}> · not from your investing</span> : null}
         {planName ? <span className={styles.summaryPlanName}> · measured against {planName}</span> : null}
@@ -318,7 +323,8 @@ function NearStepHint({ nearStep }: { nearStep: NonNullable<TrackStatus['nearSte
   return (
     <p style={hintStyle}>
       The plan&apos;s house purchase or one-off event falls on {formatCheckinDate(nearStep.date)}, within a month of
-      this check-in, so your balance is read against the plan with it {nearStep.counted === 'made' ? 'already made' : 'not yet made'}.
+      this check-in, so your balance is read against the plan with it{' '}
+      {nearStep.counted === 'made' ? 'already made' : 'not yet made'}.
     </p>
   )
 }
@@ -331,12 +337,13 @@ function NearStepHint({ nearStep }: { nearStep: NonNullable<TrackStatus['nearSte
 function PlanGapHint({ status, fromTheMarket }: { status: TrackStatus; fromTheMarket: boolean }) {
   if (status.nearStep) return <NearStepHint nearStep={status.nearStep} />
   if (status.onTrack) return null
-  if (status.deltaMonths && status.planDate) return <MonthsHint months={status.deltaMonths} planDate={status.planDate} muted={fromTheMarket} />
+  if (status.deltaMonths && status.planDate)
+    return <MonthsHint months={status.deltaMonths} planDate={status.planDate} muted={fromTheMarket} />
   if (status.monthsReason !== 'across-event') return null
   return (
     <p style={hintStyle}>
-      Months are not counted across a house purchase or a one-off event: the plan&apos;s line steps there, so
-      only the gap is shown.
+      Months are not counted across a house purchase or a one-off event: the plan&apos;s line steps there, so only the
+      gap is shown.
     </p>
   )
 }
@@ -370,8 +377,17 @@ function SnapshotHints({
   return (
     <>
       {status ? <PlanGapHint status={status} fromTheMarket={isBehindFromTheMarket(gap)} /> : null}
-      {gap ? <GapSplitHint reading={gap} planStartDate={plan?.planStartDate ?? null} format={format} onRebaseline={onRebaseline} /> : null}
-      {plan ? <PaceHint plan={plan} sumTransactions={sumTransactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
+      {gap ? (
+        <GapSplitHint
+          reading={gap}
+          planStartDate={plan?.planStartDate ?? null}
+          format={format}
+          onRebaseline={onRebaseline}
+        />
+      ) : null}
+      {plan ? (
+        <PaceHint plan={plan} sumTransactions={sumTransactions} openBudgetMonth={openBudgetMonth} format={format} />
+      ) : null}
       {reading ? <ReturnHint reading={reading} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
     </>
@@ -456,9 +472,7 @@ export function WealthSummaryCard({
           {status ? (
             <>
               <span>Plan projection, in {planMoneyLabel(plan?.planStartDate, format)}</span>
-              <span className={styles.summaryValue}>
-                {formatMoneyShort(status.projectedInvestedCents, format)}
-              </span>
+              <span className={styles.summaryValue}>{formatMoneyShort(status.projectedInvestedCents, format)}</span>
             </>
           ) : null}
         </div>

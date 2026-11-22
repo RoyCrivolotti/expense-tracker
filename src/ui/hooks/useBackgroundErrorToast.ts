@@ -6,7 +6,10 @@ import { useToast } from './useToast'
  * button that reads it again. It speaks once per failure: the message comes back only after the error has
  * been cleared by a refresh that worked.
  */
-export function useBackgroundErrorToast(error: string | null | undefined, refresh: () => void): void {
+export function useBackgroundErrorToast(
+  error: string | null | undefined,
+  refresh: () => void,
+): void {
   const { showToast } = useToast()
   useEffect(() => {
     if (!error) return

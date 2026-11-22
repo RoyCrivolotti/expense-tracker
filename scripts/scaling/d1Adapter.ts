@@ -39,7 +39,11 @@ export function measuredDb(options: AdapterOptions): MeasuredDb {
     if (shouldStop?.()) throw new Error('Stopped: the stop file is present')
     assertStatementAllowed(statement.sql, statement.params, writesEnabled)
   }
-  const note = (statement: Statement, reply: D1Reply, batch: boolean): void => {
+  const note = (
+    statement: Statement,
+    reply: D1Reply,
+    batch: boolean,
+  ): void => {
     ledger.record(reply.meta)
     recorder.records.push({
       sql: statement.sql,
@@ -58,7 +62,10 @@ export function measuredDb(options: AdapterOptions): MeasuredDb {
     return reply
   }
 
-  const statement = (sql: string, params: unknown[]): Bound => ({
+  const statement = (
+    sql: string,
+    params: unknown[],
+  ): Bound => ({
     sql,
     params,
     bind: (...values) => statement(sql, values),

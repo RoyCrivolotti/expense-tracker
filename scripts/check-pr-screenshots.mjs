@@ -10,6 +10,7 @@
  * in Actions), and a base ref/sha with enough history to diff against.
  */
 import { execFileSync } from 'node:child_process'
+import { filesTouchedByPr, ignoredRevisions } from './formattingCommits.mjs'
 import { evidenceImages } from './prScreenshotEvidence.mjs'
 
 const VISUAL_FILE_RE = /^(?:src\/ui\/.*|.*\.module\.css)$/
@@ -35,9 +36,12 @@ const pr = prArgIndex !== -1 ? process.argv[prArgIndex + 1] : undefined
 if (!base) usageError('missing --base <git-ref-or-sha>')
 if (!pr) usageError('missing --pr <number>')
 
-const changedFiles = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { encoding: 'utf8' })
+const diffedFiles = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { encoding: 'utf8' })
   .split('\n')
   .filter(Boolean)
+// A file that only a formatting commit (one listed in .git-blame-ignore-revs) changed is not a change to what the file shows.
+const formattingCommits = ignoredRevisions(base)
+const changedFiles = formattingCommits.length > 0 ? filesTouchedByPr(base, diffedFiles, formattingCommits) : diffedFiles
 
 const visualFiles = changedFiles.filter((f) => VISUAL_FILE_RE.test(f) && !TEST_FILE_RE.test(f))
 if (visualFiles.length === 0) {

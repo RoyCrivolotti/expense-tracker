@@ -15,7 +15,10 @@ export interface RecordingTransport extends Transport {
   sent: Statement[]
 }
 
-function reply(results: Record<string, unknown>[], changes: number): D1Reply {
+function reply(
+  results: Record<string, unknown>[],
+  changes: number,
+): D1Reply {
   return {
     results,
     success: true,

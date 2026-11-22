@@ -31,7 +31,10 @@ export function realCheckinPoints(
  * is still the nearest thing to say, named by its date so it does not pass for a reading
  * taken there. Null only when there are no readings at all.
  */
-export function nearestScatter(points: ScatterPoint[], index: number): { value: number; on: string | null } | null {
+export function nearestScatter(
+  points: ScatterPoint[],
+  index: number,
+): { value: number; on: string | null } | null {
   let best: ScatterPoint | null = null
   let bestDist = Infinity
   for (const p of points) {
@@ -48,11 +51,17 @@ export function nearestScatter(points: ScatterPoint[], index: number): { value: 
 export { pointSeriesValueAt } from '../../../charts/linearScale'
 
 /** A tooltip label, with the reading's date when it is not the step's own. */
-export function readingLabel(label: string, on: string | null): string {
+export function readingLabel(
+  label: string,
+  on: string | null,
+): string {
   return on ? `${label}, ${on}` : label
 }
 
-export function nearestScatterValue(points: ScatterPoint[], index: number): number | null {
+export function nearestScatterValue(
+  points: ScatterPoint[],
+  index: number,
+): number | null {
   let best: ScatterPoint | null = null
   let bestDist = Infinity
   for (const p of points) {
@@ -88,7 +97,11 @@ export function buildCheckinTooltip(
       : [{ label: 'Plan', value: formatMoneyShort(plan, format), color: planColor }]
   const actual = nearestScatter(scatterPoints, i)
   if (actual !== null) {
-    lines.push({ label: readingLabel('Actual', actual.on), value: formatMoneyShort(actual.value, format), color: actualColor })
+    lines.push({
+      label: readingLabel('Actual', actual.on),
+      value: formatMoneyShort(actual.value, format),
+      color: actualColor,
+    })
   }
   return { title: titles[i] ?? String(i), lines }
 }

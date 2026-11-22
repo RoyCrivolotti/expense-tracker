@@ -19,7 +19,10 @@ beforeAll(() => {
   })
 })
 
-function makeLine(id: string, values: number[]): ChartSeries {
+function makeLine(
+  id: string,
+  values: number[],
+): ChartSeries {
   return { id, color: '#6366f1', values }
 }
 
@@ -166,14 +169,21 @@ describe('LinearChart', () => {
 
   describe('lines of different lengths', () => {
     /** The x of each point in a line's path, in order. */
-    const xsOf = (path: Element) => [...(path.getAttribute('d') ?? '').matchAll(/[ML]([\d.]+),/g)].map((m) => Number(m[1]))
+    const xsOf = (path: Element) =>
+      [...(path.getAttribute('d') ?? '').matchAll(/[ML]([\d.]+),/g)].map((m) => Number(m[1]))
 
-    function drawn(first: number[], second: number[]) {
+    function drawn(
+      first: number[],
+      second: number[],
+    ) {
       const { container } = render(
         <LinearChart
           {...defaultProps}
           xLabels={['0', '1', '2', '3', '4']}
-          series={[{ ...makeLine('a', first), color: '#6366f1' }, { ...makeLine('b', second), color: '#10b981' }]}
+          series={[
+            { ...makeLine('a', first), color: '#6366f1' },
+            { ...makeLine('b', second), color: '#10b981' },
+          ]}
         />,
       )
       const [a, b] = [...container.querySelectorAll('path[fill="none"]')]
@@ -288,33 +298,30 @@ describe('LinearChart', () => {
 
     afterEach(() => vi.restoreAllMocks())
 
-    function inABox(width: number, height: number) {
+    function inABox(
+      width: number,
+      height: number,
+    ) {
       vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width)
       vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(height)
     }
 
     it('is drawn at the height of its box, and keeps the wrapper free of padding', () => {
       inABox(700, 262)
-      const { container } = render(
-        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
-      )
+      const { container } = render(<LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />)
       expect(viewBoxOf(container)).toBe('0 0 700 262')
       expect(container.firstElementChild!.className).toContain(chartStyles.chartWrapFill)
     })
 
     it('is drawn at its height prop until its box has been measured', () => {
       inABox(700, 0)
-      const { container } = render(
-        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
-      )
+      const { container } = render(<LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />)
       expect(viewBoxOf(container)).toBe('0 0 700 200')
     })
 
     it('is never drawn shorter than there is room for a plot', () => {
       inABox(700, 60)
-      const { container } = render(
-        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
-      )
+      const { container } = render(<LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />)
       expect(viewBoxOf(container)).toBe('0 0 700 120')
     })
 
@@ -417,20 +424,13 @@ describe('LinearChart', () => {
   })
 
   it('draws in a viewBox as wide as its container, in CSS pixels', () => {
-    const { container } = render(
-      <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />,
-    )
+    const { container } = render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
     // jsdom lays nothing out, so the fallback width applies until something measures.
     expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 360 200')
   })
 
   it('renders with a single line series', () => {
-    const { container } = render(
-      <LinearChart
-        {...defaultProps}
-        series={[makeLine('s1', [10, 20, 30])]}
-      />,
-    )
+    const { container } = render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
     expect(container.querySelector('svg')).not.toBeNull()
     expect(container.querySelectorAll('path').length).toBeGreaterThan(0)
   })
@@ -446,7 +446,10 @@ describe('LinearChart', () => {
             color: '#22c55e',
             values: [],
             kind: 'scatter',
-            points: [{ xIndex: 0.5, value: 15 }, { xIndex: 1.5, value: 25 }],
+            points: [
+              { xIndex: 0.5, value: 15 },
+              { xIndex: 1.5, value: 25 },
+            ],
           },
         ]}
       />,
@@ -479,11 +482,7 @@ describe('LinearChart', () => {
 
   it('renders today marker when todayIndex is provided', () => {
     const { container } = render(
-      <LinearChart
-        {...defaultProps}
-        series={[makeLine('s1', [10, 20, 30])]}
-        todayIndex={1}
-      />,
+      <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} todayIndex={1} />,
     )
     const lines = container.querySelectorAll('line')
     // grid lines + today marker line
@@ -512,13 +511,7 @@ describe('LinearChart', () => {
 
   it('calls onActiveIndexChange when provided', () => {
     const cb = vi.fn()
-    render(
-      <LinearChart
-        {...defaultProps}
-        series={[makeLine('s1', [10, 20, 30])]}
-        onActiveIndexChange={cb}
-      />,
-    )
+    render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} onActiveIndexChange={cb} />)
     // Initially no active index — cb called with null
     expect(cb).toHaveBeenCalledWith(null)
   })
@@ -527,9 +520,7 @@ describe('LinearChart', () => {
     const { container } = render(
       <LinearChart {...defaultProps} series={[makeLine('line', [10, 20, 30])]} yDomainMax={1000} />,
     )
-    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) =>
-      Number(t.textContent),
-    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => Number(t.textContent))
     expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(1000)
   })
 
@@ -550,9 +541,7 @@ describe('LinearChart', () => {
         yDomainMax={50}
       />,
     )
-    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) =>
-      Number(t.textContent),
-    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => Number(t.textContent))
     expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(500)
   })
 
@@ -601,7 +590,9 @@ describe('LinearChart', () => {
       <LinearChart
         {...defaultProps}
         xLabels={['a', 'b', 'c']}
-        series={[{ id: 'band', color: '#6366f1', values: [], kind: 'band', band: { lo: [10, 15, 20], hi: [50, 90, 300] } }]}
+        series={[
+          { id: 'band', color: '#6366f1', values: [], kind: 'band', band: { lo: [10, 15, 20], hi: [50, 90, 300] } },
+        ]}
       />,
     )
     const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')]
@@ -611,17 +602,10 @@ describe('LinearChart', () => {
   })
 
   it('renders without todayIndex without error', () => {
-    expect(() =>
-      render(
-        <LinearChart
-          {...defaultProps}
-          series={[makeLine('s1', [10, 20, 30])]}
-        />,
-      ),
-    ).not.toThrow()
+    expect(() => render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)).not.toThrow()
   })
 
-  it('closes the other chart\'s tooltip when a second one opens, so only one shows at a time', () => {
+  it("closes the other chart's tooltip when a second one opens, so only one shows at a time", () => {
     const { container } = render(
       <>
         <LinearChart
@@ -682,7 +666,13 @@ describe('LinearChart', () => {
 describe('a line and band that start part-way along the axis', () => {
   // 0..4 across 360px less the margins (56 left, 16 right): 72px a place.
   const at = (place: number) => 56 + place * 72
-  const later: ChartSeries = { id: 'later', color: '#f59e0b', values: [20, 30, 25], preStep: [20, 35, 28], xs: [1.5, 2.5, 3.5] }
+  const later: ChartSeries = {
+    id: 'later',
+    color: '#f59e0b',
+    values: [20, 30, 25],
+    preStep: [20, 35, 28],
+    xs: [1.5, 2.5, 3.5],
+  }
   const band: ChartSeries = {
     id: 'band',
     color: '#f59e0b',
@@ -691,11 +681,17 @@ describe('a line and band that start part-way along the axis', () => {
     xs: [1.5, 2.5, 3.5],
     band: { lo: [20, 26, 22], hi: [20, 34, 30] },
   }
-  const props = { ...defaultProps, xLabels: ['0', '1', '2', '3', '4'], series: [makeLine('first', [10, 12, 14, 16, 18]), later, band] }
+  const props = {
+    ...defaultProps,
+    xLabels: ['0', '1', '2', '3', '4'],
+    series: [makeLine('first', [10, 12, 14, 16, 18]), later, band],
+  }
 
   it('draws the line from its own first x, with nothing before it, and the band beside it', () => {
     const { container } = render(<LinearChart {...props} />)
-    const path = [...container.querySelectorAll('path')].find((p) => p.getAttribute('style')?.includes('245, 158, 11') && p.getAttribute('fill') === 'none')!
+    const path = [...container.querySelectorAll('path')].find(
+      (p) => p.getAttribute('style')?.includes('245, 158, 11') && p.getAttribute('fill') === 'none',
+    )!
     const xs = (path.getAttribute('d') ?? '').match(/[ML]\s?([\d.]+)/g)!.map((m) => Number(m.replace(/[ML]\s?/, '')))
     expect(xs[0]).toBeCloseTo(at(1.5), 1)
     expect(Math.min(...xs)).toBeCloseTo(at(1.5), 1)

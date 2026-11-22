@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apiDataSource } from './apiDataSource'
 
-function mockFetchOnce(body: unknown, ok = true) {
+function mockFetchOnce(
+  body: unknown,
+  ok = true,
+) {
   const fetchMock = vi.fn().mockResolvedValue({
     ok,
     status: ok ? 200 : 400,

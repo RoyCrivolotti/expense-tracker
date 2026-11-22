@@ -33,7 +33,10 @@ function firstMonthAfter(planStartDate: string): string {
 }
 
 /** An amount a month, or "pause" for none: nothing is sent, which is not the same as 0,00 € a month. */
-function amountLabel(cents: number, format: MoneyFormat): string {
+function amountLabel(
+  cents: number,
+  format: MoneyFormat,
+): string {
   return cents === 0 ? 'pause' : `${formatCents(cents, format)}/mo`
 }
 
@@ -57,7 +60,10 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
     setAdding(false)
   }
 
-  function saveStep(index: number, step: ContributionStep) {
+  function saveStep(
+    index: number,
+    step: ContributionStep,
+  ) {
     onChange(normalizeContributionSchedule(steps.map((s, i) => (i === index ? step : s))))
     setEditing(null)
   }
@@ -69,7 +75,9 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
           <span className={styles.lifeEventStepLabel}>
             {planStartDate === null ? 'at the start' : `from ${shortDateLabel(planStartDate)}`}
           </span>
-          <span className={baseCents === 0 ? styles.lifeEventYear : styles.lifeEventInflow}>{amountLabel(baseCents, format)}</span>
+          <span className={baseCents === 0 ? styles.lifeEventYear : styles.lifeEventInflow}>
+            {amountLabel(baseCents, format)}
+          </span>
         </li>
         {steps.map((step, index) =>
           editing === index && planStartDate !== null ? (
@@ -126,7 +134,10 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
         <StepForm
           steps={steps}
           planStartDate={planStartDate}
-          initial={{ from: firstMonthAfter(planStartDate), monthlyCents: steps[steps.length - 1]?.monthlyCents ?? baseCents }}
+          initial={{
+            from: firstMonthAfter(planStartDate),
+            monthlyCents: steps[steps.length - 1]?.monthlyCents ?? baseCents,
+          }}
           submitLabel="Add"
           onSubmit={addStep}
           onCancel={() => setAdding(false)}
@@ -145,7 +156,9 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
         </button>
       )}
       {full ? (
-        <p className={styles.fieldHint}>A scenario can have {CONTRIBUTION_STEP_MAX_COUNT} changes. Remove one to add another.</p>
+        <p className={styles.fieldHint}>
+          A scenario can have {CONTRIBUTION_STEP_MAX_COUNT} changes. Remove one to add another.
+        </p>
       ) : null}
     </div>
   )

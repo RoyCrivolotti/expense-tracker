@@ -26,7 +26,10 @@ export interface StarredLevers {
 /** The session can no longer write (it went read-only) with a choice still waiting to be sent. */
 class WriterGone extends Error {}
 
-const sameList = (a: readonly LeverKey[], b: readonly LeverKey[]) => a.length === b.length && a.every((key, i) => key === b[i])
+const sameList = (
+  a: readonly LeverKey[],
+  b: readonly LeverKey[],
+) => a.length === b.length && a.every((key, i) => key === b[i])
 
 /**
  * The inputs the owner keeps in the Goals page's bar, for every control that changes them: the
@@ -37,7 +40,10 @@ const sameList = (a: readonly LeverKey[], b: readonly LeverKey[]) => a.length ==
  * since a bar still showing what was clicked reads as saved. Without `save` (a read-only session)
  * nothing can be chosen.
  */
-export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefined): StarredLevers {
+export function useStarredLevers(
+  saved: readonly LeverKey[],
+  save: Save | undefined,
+): StarredLevers {
   const { showToast } = useToast()
   const [draft, setDraft] = useState<readonly LeverKey[]>(saved)
   // True from the first choice until the last has landed: the saved list arriving in the middle
@@ -88,7 +94,9 @@ export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefi
         current.current = savedRef.current
         setDraft(savedRef.current)
         showToast(
-          e instanceof WriterGone ? "This session can no longer save changes, so the last choice wasn't saved." : failureMessage(e),
+          e instanceof WriterGone
+            ? "This session can no longer save changes, so the last choice wasn't saved."
+            : failureMessage(e),
           'error',
         )
       } finally {

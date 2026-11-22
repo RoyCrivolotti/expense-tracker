@@ -26,14 +26,16 @@ export function viewportBounds(): ViewportBounds {
 }
 
 function readSafeInset(side: 'left' | 'right' | 'top'): number {
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue(`env(safe-area-inset-${side})`)
-    .trim()
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(`env(safe-area-inset-${side})`).trim()
   const n = Number.parseFloat(raw)
   return Number.isFinite(n) ? n : 0
 }
 
-export function clampTooltipLeft(centerX: number, width: number, bounds: ViewportBounds): number {
+export function clampTooltipLeft(
+  centerX: number,
+  width: number,
+  bounds: ViewportBounds,
+): number {
   const half = width / 2
   const minLeft = bounds.minLeft
   const maxLeft = Math.max(minLeft, bounds.maxRight - width)

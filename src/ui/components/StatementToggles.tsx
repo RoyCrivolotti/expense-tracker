@@ -39,9 +39,7 @@ function findPaidOn(
   accountId: number,
   yearMonth: string,
 ): string | undefined {
-  return model.dataset.accountStatements.find(
-    (s) => s.accountId === accountId && s.yearMonth === yearMonth,
-  )?.paidOn
+  return model.dataset.accountStatements.find((s) => s.accountId === accountId && s.yearMonth === yearMonth)?.paidOn
 }
 
 export function StatementToggles({ model, onToggle }: Props) {
@@ -59,8 +57,10 @@ export function StatementToggles({ model, onToggle }: Props) {
     [sums],
   )
 
-  const chargeCents = (accountId: number, yearMonth: string): number =>
-    reconciliation.find((r) => r.month === yearMonth)?.cardCharges.get(accountId)?.chargeCents ?? 0
+  const chargeCents = (
+    accountId: number,
+    yearMonth: string,
+  ): number => reconciliation.find((r) => r.month === yearMonth)?.cardCharges.get(accountId)?.chargeCents ?? 0
 
   const save = async (
     accountId: number,
@@ -114,9 +114,7 @@ export function StatementToggles({ model, onToggle }: Props) {
                   paid={paid}
                   paidOn={findPaidOn(model, account.id, m)}
                   disabled={pending === key}
-                  {...(amountCents !== 0
-                    ? { onPress: () => setEditing({ accountId: account.id, yearMonth: m }) }
-                    : {})}
+                  {...(amountCents !== 0 ? { onPress: () => setEditing({ accountId: account.id, yearMonth: m }) } : {})}
                 />
               )
             })}

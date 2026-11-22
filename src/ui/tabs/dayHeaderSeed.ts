@@ -9,6 +9,11 @@ import type { TxnDateScope } from './txnDateScope'
  * row added from its header is meant to land there too, not where the date rule would file it. The other scopes mix
  * budget months, and the date rule decides, as the form does when the date is changed by hand.
  */
-export function dayHeaderSeed(model: ExpenseModel, month: string, scope: TxnDateScope, date: string): TransactionSeed {
+export function dayHeaderSeed(
+  model: ExpenseModel,
+  month: string,
+  scope: TxnDateScope,
+  date: string,
+): TransactionSeed {
   return { date, budgetMonth: scope === 'budgetMonth' ? month : suggestBudgetMonth(model, date) }
 }

@@ -114,9 +114,9 @@ describe('createWealthCheckin', () => {
 
   it('throws for invalid date format', async () => {
     const repo = inMemoryExpenseRepository()
-    await expect(
-      createWealthCheckin(repo, OWNER, { checkinDate: '2024/06/01', entries: [] }),
-    ).rejects.toThrow('checkinDate must be YYYY-MM-DD')
+    await expect(createWealthCheckin(repo, OWNER, { checkinDate: '2024/06/01', entries: [] })).rejects.toThrow(
+      'checkinDate must be YYYY-MM-DD',
+    )
   })
 })
 
@@ -159,7 +159,12 @@ describe('removeWealthCheckin', () => {
 describe('the balances of a check-in', () => {
   async function withAccount() {
     const repo = inMemoryExpenseRepository()
-    const account = await createWealthAccount(repo, OWNER, { name: 'Broker', kind: 'investment', sortOrder: 0, archived: false })
+    const account = await createWealthAccount(repo, OWNER, {
+      name: 'Broker',
+      kind: 'investment',
+      sortOrder: 0,
+      archived: false,
+    })
     const checkin = (entries: unknown) =>
       ({ checkinDate: '2026-06-01', entries }) as unknown as Parameters<typeof createWealthCheckin>[2]
     const entry = (valueCents: unknown) => [{ accountId: account.id, valueCents }]
@@ -198,6 +203,8 @@ describe('the balances of a check-in', () => {
   it('checks the balances of an edit as well', async () => {
     const { repo, checkin, entry } = await withAccount()
     const saved = await createWealthCheckin(repo, OWNER, checkin(entry(5_000_00)))
-    await expect(patchWealthCheckin(repo, OWNER, saved.id, { entries: entry(1e14) as never })).rejects.toThrow(/valueCents/)
+    await expect(patchWealthCheckin(repo, OWNER, saved.id, { entries: entry(1e14) as never })).rejects.toThrow(
+      /valueCents/,
+    )
   })
 })

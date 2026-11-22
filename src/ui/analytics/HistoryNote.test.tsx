@@ -7,7 +7,11 @@ const modelWith = (historyNote?: string) => ({ ...(historyNote ? { historyNote }
 
 describe('HistoryNote', () => {
   it('says what the model says about the figures that need the recurring charges, as a status', () => {
-    render(<HistoryNote model={modelWith('Reading the recurring charges. Until they arrive, the figures use the months loaded.')} />)
+    render(
+      <HistoryNote
+        model={modelWith('Reading the recurring charges. Until they arrive, the figures use the months loaded.')}
+      />,
+    )
     expect(screen.getByRole('status')).toHaveTextContent('Reading the recurring charges.')
   })
 

@@ -33,7 +33,8 @@ const months = [...new Set(dataset.transactions.map((t) => t.budgetMonth))].sort
 
 function servingSource() {
   const parts = memorySource(dataset)
-  return Object.assign(parts, { canWrite: false, load: vi.fn().mockResolvedValue(dataset) }) as typeof parts & ExpenseDataSource & { load: ReturnType<typeof vi.fn> }
+  return Object.assign(parts, { canWrite: false, load: vi.fn().mockResolvedValue(dataset) }) as typeof parts &
+    ExpenseDataSource & { load: ReturnType<typeof vi.fn> }
 }
 
 const app = (source: ExpenseDataSource) => (

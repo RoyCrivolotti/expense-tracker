@@ -37,7 +37,10 @@ export interface ReimbursementDraft {
  * until the card statement is marked paid. Nothing errors; the figures are
  * simply wrong.
  */
-export function reimbursementAccountId(accounts: Account[], preferredId: number): number {
+export function reimbursementAccountId(
+  accounts: Account[],
+  preferredId: number,
+): number {
   const immediate = accounts.filter((a) => a.active && a.settlement === 'immediate')
   const preferred = immediate.find((a) => a.id === preferredId)
   return preferred?.id ?? immediate[0]?.id ?? accounts.find((a) => a.active)?.id ?? 0
@@ -69,7 +72,10 @@ export function dominantCategoryId(rows: Transaction[]): number {
 }
 
 /** What the selected rows come to: expenses add, refunds subtract. */
-export function selectedTotalCents(rows: Transaction[], selectedIds: Iterable<number>): number {
+export function selectedTotalCents(
+  rows: Transaction[],
+  selectedIds: Iterable<number>,
+): number {
   const wanted = new Set(selectedIds)
   let total = 0
   for (const txn of rows) {
@@ -118,7 +124,10 @@ export function buildReimbursementDraft(
 
 type DraftRows = Pick<ReimbursementDraft, 'candidates' | 'credits'>
 
-function coversEveryLine(draft: DraftRows, selectedIds: Iterable<number>): boolean {
+function coversEveryLine(
+  draft: DraftRows,
+  selectedIds: Iterable<number>,
+): boolean {
   const wanted = new Set(selectedIds)
   return draft.candidates.every((t) => wanted.has(t.id))
 }
@@ -136,7 +145,10 @@ export function creditedCents(draft: DraftRows): number {
  * lines is just those lines. The refunds stay on the flag and go on reducing what is
  * left, which is where they belong until the claim closes.
  */
-export function paymentForSelection(draft: DraftRows, selectedIds: Iterable<number>): number {
+export function paymentForSelection(
+  draft: DraftRows,
+  selectedIds: Iterable<number>,
+): number {
   const ids = [...selectedIds]
   const lines = selectedTotalCents(draft.candidates, ids)
   if (!coversEveryLine(draft, ids)) return lines
@@ -147,7 +159,10 @@ export function paymentForSelection(draft: DraftRows, selectedIds: Iterable<numb
  * What the Flagged card will show once this payment lands: the lines left unticked,
  * less the refunds, which stay on the flag until the claim closes.
  */
-export function leftOwedCents(draft: DraftRows, selectedIds: Iterable<number>): number {
+export function leftOwedCents(
+  draft: DraftRows,
+  selectedIds: Iterable<number>,
+): number {
   const wanted = new Set(selectedIds)
   const unticked = draft.candidates.filter((t) => !wanted.has(t.id)).map((t) => t.id)
   if (unticked.length === 0) return 0
@@ -160,7 +175,10 @@ export function leftOwedCents(draft: DraftRows, selectedIds: Iterable<number>): 
  * their amount, and the payment's record of what it covered disagreed with the claim
  * document by exactly that much.
  */
-export function settleIdsFor(draft: DraftRows, selectedIds: Iterable<number>): number[] {
+export function settleIdsFor(
+  draft: DraftRows,
+  selectedIds: Iterable<number>,
+): number[] {
   const ids = [...selectedIds]
   if (!coversEveryLine(draft, ids)) return ids
   return [...ids, ...draft.credits.map((t) => t.id)]

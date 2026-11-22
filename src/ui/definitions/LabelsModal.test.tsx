@@ -32,7 +32,10 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
   return { dataset, lookup: buildLookup(dataset), descriptionIndex: {}, months: [] } as unknown as ExpenseModel
 }
 
-function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions> = {}) {
+function renderModal(
+  dataset: ExpenseDataset,
+  overrides: Partial<ExpenseActions> = {},
+) {
   const actions = {
     createLabel: vi.fn().mockResolvedValue(trip),
     updateLabel: vi.fn().mockResolvedValue(undefined),
@@ -109,9 +112,7 @@ describe('LabelsModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await userEvent.click(screen.getByRole('button', { name: 'Delete label' }))
     // The form has a Cancel of its own, which would leave the form rather than the confirm.
-    await userEvent.click(
-      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }),
-    )
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }))
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save label' })).toBeInTheDocument()
@@ -221,9 +222,7 @@ describe('LabelsModal — deleting while the confirm sheet leaves', () => {
 
     // The leaving confirm sheet has a Cancel of its own; the form's is the one outside it.
     const confirm = screen.getByRole('alertdialog')
-    const formCancel = screen
-      .getAllByRole('button', { name: 'Cancel' })
-      .find((button) => !confirm.contains(button))
+    const formCancel = screen.getAllByRole('button', { name: 'Cancel' }).find((button) => !confirm.contains(button))
     expect(screen.getByRole('button', { name: /Save|Add/ })).toBeDisabled()
     expect(formCancel).toBeDisabled()
   })

@@ -48,7 +48,8 @@ async function lookUp(withLedger: boolean): Promise<string | null> {
       note(await readSnapshot(store))
       if (withLedger) {
         for (const key of await ask(store.getAllKeys())) {
-          if (typeof key === 'string' && key.startsWith(LEDGER_KEY_PREFIX)) note((await ask(store.get(key))) as Named | undefined)
+          if (typeof key === 'string' && key.startsWith(LEDGER_KEY_PREFIX))
+            note((await ask(store.get(key))) as Named | undefined)
         }
       }
       return found

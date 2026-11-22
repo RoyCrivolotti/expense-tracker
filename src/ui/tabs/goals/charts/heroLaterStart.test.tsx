@@ -1,7 +1,15 @@
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { GoalScenario } from '../../../../types'
-import { planFromToday, projectNetWorth, scenarioToParams, startLater, suggestedStart, valueOnAxisAt, yearsBetween } from '../../../../engine'
+import {
+  planFromToday,
+  projectNetWorth,
+  scenarioToParams,
+  startLater,
+  suggestedStart,
+  valueOnAxisAt,
+  yearsBetween,
+} from '../../../../engine'
 import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { SAMPLE_MILESTONES, samplePlan } from '../../../../testing/samplePlan'
@@ -27,7 +35,16 @@ const plan = samplePlan({ id: 1, name: 'Plan', sortOrder: 0, isActive: true, pla
 const LATER_START = '2027-07-01'
 const later: GoalScenario = (() => {
   const start = suggestedStart(plan, null, LATER_START, RATE)!
-  return { ...plan, ...startLater(plan, { date: LATER_START, investedCents: start.cents }, RATE)!.patch, id: 2, name: 'Later', sortOrder: 1, isActive: false, color: '#f59e0b', planStartDate: LATER_START }
+  return {
+    ...plan,
+    ...startLater(plan, { date: LATER_START, investedCents: start.cents }, RATE)!.patch,
+    id: 2,
+    name: 'Later',
+    sortOrder: 1,
+    isActive: false,
+    color: '#f59e0b',
+    planStartDate: LATER_START,
+  }
 })()
 const offset = yearsBetween('2026-01-01', LATER_START)
 const laterPoints = projectNetWorth(scenarioToParams(later, RATE))
@@ -36,17 +53,28 @@ const engineAt = (year: number) => valueOnAxisAt(laterPoints, offset, RATE, year
 function Chart(props: Partial<Parameters<typeof NetWorthChart>[0]>) {
   return (
     <AssumedInflationContext.Provider value={RATE}>
-      <NetWorthChart milestones={SAMPLE_MILESTONES} scenarios={[plan, later]} draft={plan} activeId={plan.id} variant="hero" {...props} />
+      <NetWorthChart
+        milestones={SAMPLE_MILESTONES}
+        scenarios={[plan, later]}
+        draft={plan}
+        activeId={plan.id}
+        variant="hero"
+        {...props}
+      />
     </AssumedInflationContext.Provider>
   )
 }
 
 const svgOf = (root: HTMLElement) => root.querySelector('svg[role="img"]') as SVGSVGElement
-function pointAt(svg: Element, year: number) {
+function pointAt(
+  svg: Element,
+  year: number,
+) {
   fireEvent.keyDown(svg, { key: 'Home' })
   for (let i = 0; i < year; i++) fireEvent.keyDown(svg, { key: 'ArrowRight' })
 }
-const laterChip = (store: ReturnType<typeof createHeroLegendStore>) => store.get().find((i) => i.scenarioId === later.id)
+const laterChip = (store: ReturnType<typeof createHeroLegendStore>) =>
+  store.get().find((i) => i.scenarioId === later.id)
 
 afterEach(() => installFakeMatchMedia())
 
@@ -82,7 +110,9 @@ describe('a scenario that starts later, read on the hero chart', () => {
     const svg = svgOf(dialog)
     pointAt(svg, 10)
     expect(within(dialog).getByText('2036', { selector: 'p' })).toBeInTheDocument()
-    expect(within(dialog).getByText('Later').closest('li')).toHaveTextContent(formatMoneyShort(engineAt(10)!, EU_MONEY_FORMAT))
+    expect(within(dialog).getByText('Later').closest('li')).toHaveTextContent(
+      formatMoneyShort(engineAt(10)!, EU_MONEY_FORMAT),
+    )
     // Past the plan's end, on a calendar, the plan gives its last figure and the year it ended, as the table does.
     pointAt(svg, 31)
     const last = formatMoneyShort(projectNetWorth(scenarioToParams(plan, RATE)).at(-1)!.investedCents, EU_MONEY_FORMAT)
@@ -97,8 +127,23 @@ describe('a scenario that starts later, read on the hero chart', () => {
     const { result } = renderHook(() =>
       useChartLegendState(
         {
-          lines: [{ id: 'l', scenarioId: 2, name: 'Later', color: '#000', dashed: false, params: scenarioToParams(later, RATE), offsetYears: offset, startsIn: 'Jul 2027', endsIn: '2057', ownMoney: '2027 euros' }],
-          readings: [{ id: 'l', color: '#000', values: Array.from({ length: 33 }, (_, y) => engineAt(y) ?? undefined) }],
+          lines: [
+            {
+              id: 'l',
+              scenarioId: 2,
+              name: 'Later',
+              color: '#000',
+              dashed: false,
+              params: scenarioToParams(later, RATE),
+              offsetYears: offset,
+              startsIn: 'Jul 2027',
+              endsIn: '2057',
+              ownMoney: '2027 euros',
+            },
+          ],
+          readings: [
+            { id: 'l', color: '#000', values: Array.from({ length: 33 }, (_, y) => engineAt(y) ?? undefined) },
+          ],
           names: ['Later'],
           years: Array.from({ length: 33 }, (_, y) => y),
           scenarios: [later],
@@ -123,13 +168,24 @@ describe('a scenario that starts later, read on the hero chart', () => {
     act(() => io.emit(0.5))
     const last = projectNetWorth(scenarioToParams(plan, RATE)).at(-1)!.investedCents
     expect(store.get().find((i) => i.label.startsWith('Plan'))).toMatchObject({ valueCents: last, endedIn: '2056' })
-    expect(within(screen.getByRole('tooltip')).getByText(`${formatMoneyShort(last, EU_MONEY_FORMAT)} (ended 2056)`)).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('tooltip')).getByText(`${formatMoneyShort(last, EU_MONEY_FORMAT)} (ended 2056)`),
+    ).toBeInTheDocument()
   })
 
   it('rests on the last year every scenario reaches with one hidden, as the comparison table does', () => {
-    const short = samplePlan({ id: 3, name: 'Short', sortOrder: 2, isActive: false, planStartDate: '2026-01-01', horizonYears: 20 })
+    const short = samplePlan({
+      id: 3,
+      name: 'Short',
+      sortOrder: 2,
+      isActive: false,
+      planStartDate: '2026-01-01',
+      horizonYears: 20,
+    })
     render(<Chart legendStore={createHeroLegendStore()} scenarios={[plan, later, short]} hiddenIds={new Set([3])} />)
-    expect(screen.getByText(/The values in the chips above are for 2046, the last year every scenario reaches/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/The values in the chips above are for 2046, the last year every scenario reaches/),
+    ).toBeInTheDocument()
   })
 
   it('names calendar years on its axis and says which year the chips are for', () => {
@@ -137,7 +193,11 @@ describe('a scenario that starts later, read on the hero chart', () => {
     const { container } = render(<Chart legendStore={store} />)
     const labels = [...svgOf(container).querySelectorAll('text')].map((t) => t.textContent)
     expect(labels).toEqual(expect.arrayContaining(['2026', '2031', '2056']))
-    expect(screen.getByText('The values in the chips above are for 2056, the last year every scenario reaches, or for the year you point at.')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'The values in the chips above are for 2056, the last year every scenario reaches, or for the year you point at.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('marks where it starts, and says when while nothing is pointed at', () => {
@@ -175,7 +235,12 @@ describe('a scenario that starts later, read on the hero chart', () => {
 
   it('moves the band, the purchase, the events and the FI line with the draft when it is the one edited', () => {
     // A spend whose FI target is far above the plan, so it is marked on the chart's top edge with its figure.
-    const draft = { ...later, lifeEvents: [{ year: 3, label: 'Car', amountCents: -1_000_000 }], annualSpendCents: 40_000_000, safeWithdrawalRate: 0.04 }
+    const draft = {
+      ...later,
+      lifeEvents: [{ year: 3, label: 'Car', amountCents: -1_000_000 }],
+      annualSpendCents: 40_000_000,
+      safeWithdrawalRate: 0.04,
+    }
     const { container } = render(<Chart draft={draft} activeId={later.id} legendStore={createHeroLegendStore()} />)
     const band = container.querySelector('path[aria-hidden][style*="fill"]')!
     const firstX = Number((band.getAttribute('d') ?? '').match(/M\s?([\d.]+)/)![1])
@@ -196,17 +261,42 @@ describe('the plan from today on a plan that starts after another scenario', () 
     const own = fromTodayPoints(fromToday, RATE)
     const placed = fromTodayPoints(fromToday, RATE, offset)
     expect(placed[0]!.xIndex).toBeCloseTo(own[0]!.xIndex + offset, 9)
-    expect(placed.at(-1)!.value).toBe(Math.round(own.at(-1)!.value * Math.pow(1 + RATE, -offset)) || placed.at(-1)!.value)
+    expect(placed.at(-1)!.value).toBe(
+      Math.round(own.at(-1)!.value * Math.pow(1 + RATE, -offset)) || placed.at(-1)!.value,
+    )
     expect(Math.abs(placed.at(-1)!.value - own.at(-1)!.value / Math.pow(1 + RATE, offset))).toBeLessThanOrEqual(1)
   })
 })
 
 describe('a milestone picked on a calendar axis', () => {
   it('dots a later scenario where its own years put it, at that day’s worth', () => {
-    const lines = [{ id: 'l', name: 'Later', color: '#000', params: scenarioToParams(later, RATE), planStartDate: LATER_START, offsetYears: offset }]
+    const lines = [
+      {
+        id: 'l',
+        name: 'Later',
+        color: '#000',
+        params: scenarioToParams(later, RATE),
+        planStartDate: LATER_START,
+        offsetYears: offset,
+      },
+    ]
     const years = Array.from({ length: 33 }, (_, y) => y)
-    const { dots } = pickCrossings({ lines, amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20' })
-    const atOrigin = pickCrossings({ lines: [{ ...lines[0]!, offsetYears: 0 }], amountCents: 50_000_000, inflationRate: RATE, nominalMode: false, years, today: '2026-11-20' })
+    const { dots } = pickCrossings({
+      lines,
+      amountCents: 50_000_000,
+      inflationRate: RATE,
+      nominalMode: false,
+      years,
+      today: '2026-11-20',
+    })
+    const atOrigin = pickCrossings({
+      lines: [{ ...lines[0]!, offsetYears: 0 }],
+      amountCents: 50_000_000,
+      inflationRate: RATE,
+      nominalMode: false,
+      years,
+      today: '2026-11-20',
+    })
     expect(dots[0]!.index).toBeCloseTo(atOrigin.dots[0]!.index + offset, 9)
     expect(dots[0]!.value).toBeCloseTo(50_000_000 / Math.pow(1 + RATE, dots[0]!.index), 3)
   })
@@ -215,7 +305,15 @@ describe('a milestone picked on a calendar axis', () => {
 describe('the axis with a scenario hidden', () => {
   // The comparison table's figures: A from 2026 for 5 years, B from 2032 for 10.
   const a = samplePlan({ id: 1, name: 'A', sortOrder: 0, isActive: true, planStartDate: '2026-01-01', horizonYears: 5 })
-  const b = samplePlan({ id: 2, name: 'B', sortOrder: 1, isActive: false, color: '#f59e0b', planStartDate: '2032-01-01', horizonYears: 10 })
+  const b = samplePlan({
+    id: 2,
+    name: 'B',
+    sortOrder: 1,
+    isActive: false,
+    color: '#f59e0b',
+    planStartDate: '2032-01-01',
+    horizonYears: 10,
+  })
 
   function lastYearShown(props: Partial<Parameters<typeof NetWorthChart>[0]>) {
     installFakeMatchMedia((q) => q === NARROW_MQ)
@@ -230,7 +328,8 @@ describe('the axis with a scenario hidden', () => {
 
   it('runs to 2042 with B hidden and rests there, where the table does, with A’s last figure', () => {
     installFakeMatchMedia((q) => q === NARROW_MQ)
-    const lines = (container: HTMLElement) => container.querySelectorAll('svg[role="img"] path[fill="none"][style*="stroke"]').length
+    const lines = (container: HTMLElement) =>
+      container.querySelectorAll('svg[role="img"] path[fill="none"][style*="stroke"]').length
     const both = render(<Chart scenarios={[a, b]} draft={a} activeId={a.id} />)
     const drawnWithB = lines(both.container)
     both.unmount()
@@ -260,7 +359,15 @@ describe('the axis with a scenario hidden', () => {
   it('still rests the chips on the last year a drawn line reaches with the longest hidden on one start day', () => {
     const longer = { ...plan, id: 3, name: 'Longer', sortOrder: 2, isActive: false, horizonYears: 40 }
     const store = createHeroLegendStore()
-    render(<Chart legendStore={store} scenarios={[plan, longer]} draft={plan} activeId={plan.id} hiddenIds={new Set([longer.id])} />)
+    render(
+      <Chart
+        legendStore={store}
+        scenarios={[plan, longer]}
+        draft={plan}
+        activeId={plan.id}
+        hiddenIds={new Set([longer.id])}
+      />,
+    )
     // The axis runs to 40; the plan ends at 30 and its chip reads there rather than in blank years.
     expect(store.get().find((i) => i.label.startsWith('Plan'))?.valueCents).not.toBeNull()
   })

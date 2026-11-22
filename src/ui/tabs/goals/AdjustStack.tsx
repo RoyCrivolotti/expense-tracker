@@ -12,13 +12,7 @@ import styles from './goals.module.css'
  * CSS hides the block from 900px up, but a hidden chart still recomputes a projection nobody
  * sees, so a window widened past the phone layout drops it rather than hiding it.
  */
-export function AdjustStack({
-  draft,
-  unsaved,
-}: {
-  draft: NewGoalScenario
-  unsaved?: UnsavedActions | undefined
-}) {
+export function AdjustStack({ draft, unsaved }: { draft: NewGoalScenario; unsaved?: UnsavedActions | undefined }) {
   const narrow = useGoalsNarrow()
   if (!narrow) return null
   return (

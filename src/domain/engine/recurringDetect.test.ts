@@ -4,9 +4,7 @@ import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
   it('groups by normalized description, account, category, and type', () => {
-    const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
-      makeTxn({ date, description: 'Netflix', accountId: 2 }),
-    )
+    const txns = monthlyDates(2026, 1, 5, 4).map((date) => makeTxn({ date, description: 'Netflix', accountId: 2 }))
     const groups = groupTransactions(txns)
     expect(groups).toHaveLength(1)
     expect(groups[0]!.dates).toHaveLength(4)
@@ -24,9 +22,7 @@ describe('groupTransactions', () => {
   })
 
   it('excludes cancelled transactions', () => {
-    const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
-      makeTxn({ date, description: 'Netflix', cancelled: true }),
-    )
+    const txns = monthlyDates(2026, 1, 5, 4).map((date) => makeTxn({ date, description: 'Netflix', cancelled: true }))
     expect(groupTransactions(txns)).toHaveLength(0)
   })
 
@@ -59,9 +55,7 @@ describe('groupTransactions', () => {
   })
 
   it('excludes installment-plan payments (they are a declared schedule)', () => {
-    const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
-      makeTxn({ date, description: 'Iphone, Cetelam', planId: 9 }),
-    )
+    const txns = monthlyDates(2026, 1, 5, 4).map((date) => makeTxn({ date, description: 'Iphone, Cetelam', planId: 9 }))
     expect(groupTransactions(txns)).toHaveLength(0)
   })
 

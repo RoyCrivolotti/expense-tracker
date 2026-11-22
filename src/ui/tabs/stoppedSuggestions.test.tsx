@@ -123,7 +123,11 @@ describe('useStoppedSuggestions for a signed-in person', () => {
     resetStoppedSuggestionsForTests()
   })
 
-  const as = (owner: string) => ({ wrapper: ({ children }: { children: ReactNode }) => <AccountOwnerContext value={owner}>{children}</AccountOwnerContext> })
+  const as = (owner: string) => ({
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <AccountOwnerContext value={owner}>{children}</AccountOwnerContext>
+    ),
+  })
 
   it('keeps the list under the person’s own key, and the next person on the browser starts with nothing', () => {
     const alice = renderHook(() => useStoppedSuggestions(), as('alice@example.com'))

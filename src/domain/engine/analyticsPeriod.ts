@@ -55,12 +55,18 @@ function pad2(n: number): string {
 }
 
 /** First calendar date of a budget month: day 1, or the rollover day of the month before. */
-export function budgetMonthStart(month: string, rolloverDay: number = 1): string {
+export function budgetMonthStart(
+  month: string,
+  rolloverDay: number = 1,
+): string {
   return rolloverDay > 1 ? `${priorBudgetMonth(month)}-${pad2(rolloverDay)}` : `${month}-01`
 }
 
 /** How many calendar days a budget month spans. */
-export function budgetMonthLength(month: string, rolloverDay: number = 1): number {
+export function budgetMonthLength(
+  month: string,
+  rolloverDay: number = 1,
+): number {
   return daysBetween(budgetMonthStart(month, rolloverDay), budgetMonthStart(shiftBudgetMonth(month, 1), rolloverDay))
 }
 
@@ -88,7 +94,11 @@ export function sameDaysCut(
 }
 
 /** The same cut applied to another budget month, and whether `date` falls inside it. */
-export function withinCut(date: string, month: string, cut: SameDaysCut | null): boolean {
+export function withinCut(
+  date: string,
+  month: string,
+  cut: SameDaysCut | null,
+): boolean {
   if (cut === null) return true
   let cutoff = cut.cutoffs.get(month)
   if (cutoff === undefined) {
@@ -98,14 +108,20 @@ export function withinCut(date: string, month: string, cut: SameDaysCut | null):
   return date <= cutoff
 }
 
-function countsOn(txn: Transaction, opts: BasisOptions): boolean {
+function countsOn(
+  txn: Transaction,
+  opts: BasisOptions,
+): boolean {
   if (txn.status === 'cancelled') return false
   if (!opts.includeForecast && txn.status === 'forecast') return false
   return true
 }
 
 /** Signed net-expense cents (expense − refund), or null for other types / excluded statuses. */
-export function signedExpense(txn: Transaction, opts: BasisOptions): number | null {
+export function signedExpense(
+  txn: Transaction,
+  opts: BasisOptions,
+): number | null {
   if (!countsOn(txn, opts)) return null
   if (txn.type === 'expense') return txn.amountCents
   if (txn.type === 'refund') return -txn.amountCents
@@ -130,7 +146,10 @@ export function spendThroughCut(
 }
 
 /** Net expense cents still sitting on unpaid card statements for a budget month. */
-export function unpaidExpenseCents(transactions: Transaction[], month: string): number {
+export function unpaidExpenseCents(
+  transactions: Transaction[],
+  month: string,
+): number {
   let total = 0
   for (const txn of transactions) {
     if (txn.budgetMonth !== month || txn.status !== 'forecast') continue

@@ -49,7 +49,11 @@ interface ScenarioSeriesLegendProps {
 }
 
 /** What the legend says before a year is pointed at: what it is told to, else how to use it, and which year the rows are for. */
-function legendHint(override: string | undefined, togglable: boolean, restNote: string | undefined): string {
+function legendHint(
+  override: string | undefined,
+  togglable: boolean,
+  restNote: string | undefined,
+): string {
   if (restNote !== undefined) return `${legendHint(override, togglable, undefined)} ${restNote}`
   if (override !== undefined) return override
   return togglable
@@ -81,11 +85,23 @@ interface LegendMainProps {
 }
 
 /** The year pointed at, or how to point at one, and the rows; no rows where the chips above have them. */
-function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout, chipsAbove, calendarOrigin }: LegendMainProps) {
+function LegendMain({
+  items,
+  activeYear,
+  hint,
+  format,
+  onToggle,
+  listRef,
+  layout,
+  chipsAbove,
+  calendarOrigin,
+}: LegendMainProps) {
   return (
     <>
       {activeYear != null ? (
-        <p className={styles.yearHeader}>{calendarOrigin ? yearLabel(activeYear, calendarOrigin) : <>Year {activeYear}</>}</p>
+        <p className={styles.yearHeader}>
+          {calendarOrigin ? yearLabel(activeYear, calendarOrigin) : <>Year {activeYear}</>}
+        </p>
       ) : (
         <p className={styles.hint}>{hint}</p>
       )}
@@ -158,11 +174,7 @@ export function ScenarioSeriesLegend({
   return (
     <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
       {main}
-      {floats ? (
-        <div className={floaterClass(floatSide)}>{extras}</div>
-      ) : (
-        extras
-      )}
+      {floats ? <div className={floaterClass(floatSide)}>{extras}</div> : extras}
     </div>
   )
 }

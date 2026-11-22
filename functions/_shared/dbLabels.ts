@@ -16,26 +16,26 @@ const LABEL_COLUMNS: ColumnMap = {
   active: 'active',
 }
 
-function coerce(key: keyof NewLabel, value: unknown): unknown {
+function coerce(
+  key: keyof NewLabel,
+  value: unknown,
+): unknown {
   if (key === 'active') return value ? 1 : 0
   // An explicit '' from the editor means "no description"; store NULL for it.
   if (key === 'description') return value === '' ? null : (value ?? null)
   return value ?? null
 }
 
-export async function createLabel(env: Env, owner: string, input: NewLabel): Promise<Label> {
+export async function createLabel(
+  env: Env,
+  owner: string,
+  input: NewLabel,
+): Promise<Label> {
   const row = await env.DB.prepare(
     `INSERT INTO labels (owner, name, color, description, sort_order, active)
      VALUES (?, ?, ?, ?, ?, ?) RETURNING *`,
   )
-    .bind(
-      owner,
-      input.name,
-      input.color,
-      input.description ?? null,
-      input.sortOrder,
-      input.active ? 1 : 0,
-    )
+    .bind(owner, input.name, input.color, input.description ?? null, input.sortOrder, input.active ? 1 : 0)
     .first<LabelRow>()
   if (!row) throw new HttpError(500, 'Label insert failed')
   return toLabel(row)
@@ -78,9 +78,7 @@ export async function deleteLabel(
     env.DB.prepare('DELETE FROM transaction_labels WHERE label_id = ?').bind(id),
     // A flag configured to auto-apply this label must not keep pointing at a
     // label that no longer exists (migration 0029's own invariant).
-    env.DB
-      .prepare('UPDATE flags SET auto_label_id = NULL WHERE auto_label_id = ? AND owner = ?')
-      .bind(id, owner),
+    env.DB.prepare('UPDATE flags SET auto_label_id = NULL WHERE auto_label_id = ? AND owner = ?').bind(id, owner),
     env.DB.prepare('DELETE FROM labels WHERE id = ? AND owner = ?').bind(id, owner),
   ])
   return { unlabeled: cleared?.meta?.changes ?? 0 }
@@ -120,9 +118,10 @@ export async function setTransactionLabels(
   await env.DB.batch([
     env.DB.prepare('DELETE FROM transaction_labels WHERE transaction_id = ?').bind(transactionId),
     ...labelIds.map((labelId) =>
-      env.DB
-        .prepare('INSERT INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)')
-        .bind(transactionId, labelId),
+      env.DB.prepare('INSERT INTO transaction_labels (transaction_id, label_id) VALUES (?, ?)').bind(
+        transactionId,
+        labelId,
+      ),
     ),
   ])
   const row = await env.DB.prepare('SELECT * FROM transactions WHERE id = ? AND owner = ?')

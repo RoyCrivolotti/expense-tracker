@@ -18,7 +18,10 @@ interface Props {
   paid: boolean
   paidOn?: string | undefined
   disabled?: boolean
-  onSave: (paid: boolean, paidOn?: string) => Promise<void>
+  onSave: (
+    paid: boolean,
+    paidOn?: string,
+  ) => Promise<void>
   onClose: () => void
 }
 
@@ -41,7 +44,11 @@ export function StatementPaymentSheet({
   const [datePopoverOpen, setDatePopoverOpen] = usePopoverTrapPause()
 
   // The sheet stays open when the save fails, so the user can see why and try again.
-  const persist = async (nextPaid: boolean, nextPaidOn: string | undefined, closeAfter: boolean) => {
+  const persist = async (
+    nextPaid: boolean,
+    nextPaidOn: string | undefined,
+    closeAfter: boolean,
+  ) => {
     setError(null)
     try {
       await onSave(nextPaid, nextPaidOn)

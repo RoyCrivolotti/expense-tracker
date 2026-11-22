@@ -34,7 +34,10 @@ const rows = (n: number): NewTransaction[] =>
 type Failure = 'dropped' | 'refused'
 
 /** A server holding `served.dataset`, whose second request is saved and then dropped, or refused and not saved. */
-function server(served: { dataset: ExpenseDataset }, failure: Failure) {
+function server(
+  served: { dataset: ExpenseDataset },
+  failure: Failure,
+) {
   let requests = 0
   let nextId = 50_000
   return (inputs: NewTransaction[]): Promise<Transaction[]> => {
@@ -72,7 +75,9 @@ describe('an import whose second request fails, in the app that holds the whole 
     await waitFor(() => expect(result.current.data.status).toBe('ready'))
     await importAll(result.current.actions!)
     // The first request's two rows were patched in; the second request's two are only on the server.
-    await waitFor(() => expect(result.current.data.model!.dataset.transactions).toHaveLength(base.transactions.length + 4))
+    await waitFor(() =>
+      expect(result.current.data.model!.dataset.transactions).toHaveLength(base.transactions.length + 4),
+    )
     expect(load).toHaveBeenCalledTimes(2)
   })
 
@@ -109,7 +114,9 @@ describe('an import whose second request fails, in the app that holds a ledger',
     const { result } = started('dropped')
     await waitFor(() => expect(result.current.data.status).toBe('ready'))
     await importAll(result.current.actions!)
-    await waitFor(() => expect(result.current.data.model!.dataset.transactions).toHaveLength(base.transactions.length + 4))
+    await waitFor(() =>
+      expect(result.current.data.model!.dataset.transactions).toHaveLength(base.transactions.length + 4),
+    )
   })
 
   it('does not read the ledger again for a request the server refused', async () => {

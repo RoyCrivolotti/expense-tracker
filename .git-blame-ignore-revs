@@ -1,0 +1,3 @@
+# The commit that ran Prettier over the code. git blame (and GitHub) skip it, and so do
+# coverage:diff and check:pr-screenshots, so only what a PR really changed is measured.
+b5549e8a6001b112733e5714da01f4ea6f6928e5

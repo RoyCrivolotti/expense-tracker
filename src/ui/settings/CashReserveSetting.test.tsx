@@ -26,7 +26,9 @@ describe('CashReserveSetting', () => {
     )
     const input = screen.getByLabelText('Months of spending to hold in cash')
     fireEvent.change(input, { target: { value: '9' } })
-    rerender(<CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 4 }} onChange={onChange} />)
+    rerender(
+      <CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 4 }} onChange={onChange} />,
+    )
     expect(input).toHaveValue(4)
   })
 
@@ -79,7 +81,9 @@ describe('CashReserveSetting', () => {
     fireEvent.blur(input)
 
     // A field still showing 9 would read as saved when it is not.
-    expect(await screen.findByRole('alert')).toHaveTextContent("Something went wrong, so that change probably wasn't saved.")
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Something went wrong, so that change probably wasn't saved.",
+    )
     expect(input).toHaveValue(3)
 
     // Typing again clears the message.

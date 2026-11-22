@@ -21,7 +21,10 @@ const basePlan: InstallmentPlan = {
   active: true,
 }
 
-function installment(index: number, overrides: Partial<Transaction> = {}): Transaction {
+function installment(
+  index: number,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return makeTransaction({
     id: index,
     budgetMonth: `2026-0${index}`,
@@ -31,7 +34,10 @@ function installment(index: number, overrides: Partial<Transaction> = {}): Trans
   })
 }
 
-function modelWith(plans: InstallmentPlan[], transactions: Transaction[] = []): ExpenseModel {
+function modelWith(
+  plans: InstallmentPlan[],
+  transactions: Transaction[] = [],
+): ExpenseModel {
   return {
     dataset: makeDataset({ installmentPlans: plans, transactions }),
     lookup: makeLookup(),
@@ -42,9 +48,7 @@ function modelWith(plans: InstallmentPlan[], transactions: Transaction[] = []): 
 
 describe('InstallmentPlansModal', () => {
   it('shows an empty state when there are no plans', () => {
-    render(
-      <InstallmentPlansModal model={modelWith([])} actions={makeActions()} onClose={() => {}} />,
-    )
+    render(<InstallmentPlansModal model={modelWith([])} actions={makeActions()} onClose={() => {}} />)
     expect(screen.getByText('No installment plans yet.')).toBeTruthy()
   })
 
@@ -99,7 +103,10 @@ describe('InstallmentPlansModal', () => {
   it('never shows a negative paid count when a forecast charge has no installment number', () => {
     render(
       <InstallmentPlansModal
-        model={modelWith([basePlan], [makeTransaction({ id: 1, budgetMonth: '2026-01', planId: basePlan.id, status: 'forecast' })])}
+        model={modelWith(
+          [basePlan],
+          [makeTransaction({ id: 1, budgetMonth: '2026-01', planId: basePlan.id, status: 'forecast' })],
+        )}
         actions={makeActions()}
         onClose={() => {}}
       />,
@@ -109,9 +116,7 @@ describe('InstallmentPlansModal', () => {
 
   it('clicking Complete toggles the plan active flag off', async () => {
     const actions = makeActions()
-    render(
-      <InstallmentPlansModal model={modelWith([basePlan])} actions={actions} onClose={() => {}} />,
-    )
+    render(<InstallmentPlansModal model={modelWith([basePlan])} actions={actions} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Complete' }))
     expect(actions.updateInstallmentPlan).toHaveBeenCalledWith(basePlan.id, { active: false })
   })
@@ -119,9 +124,7 @@ describe('InstallmentPlansModal', () => {
   it('clicking Reactivate on an inactive plan toggles it back on', async () => {
     const actions = makeActions()
     const inactivePlan = { ...basePlan, active: false }
-    render(
-      <InstallmentPlansModal model={modelWith([inactivePlan])} actions={actions} onClose={() => {}} />,
-    )
+    render(<InstallmentPlansModal model={modelWith([inactivePlan])} actions={actions} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Reactivate' }))
     expect(actions.updateInstallmentPlan).toHaveBeenCalledWith(inactivePlan.id, { active: true })
   })
@@ -129,11 +132,7 @@ describe('InstallmentPlansModal', () => {
   it('renders an inactive plan with the inactive row style', () => {
     const inactivePlan = { ...basePlan, active: false }
     const { container } = render(
-      <InstallmentPlansModal
-        model={modelWith([inactivePlan])}
-        actions={makeActions()}
-        onClose={() => {}}
-      />,
+      <InstallmentPlansModal model={modelWith([inactivePlan])} actions={makeActions()} onClose={() => {}} />,
     )
     const row = container.getElementsByClassName(styles.planRow!)[0]!
     expect(row.className).toContain(styles.inactive!)
@@ -149,9 +148,7 @@ describe('InstallmentPlansModal', () => {
 
   it('closes just the anchor month popover on Escape, not the whole modal', async () => {
     const onClose = vi.fn()
-    render(
-      <InstallmentPlansModal model={modelWith([basePlan])} actions={makeActions()} onClose={onClose} />,
-    )
+    render(<InstallmentPlansModal model={modelWith([basePlan])} actions={makeActions()} onClose={onClose} />)
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     fireEvent.click(screen.getByRole('button', { name: 'Anchor budget month' }))
     expect(screen.getByRole('dialog', { name: 'Choose a month' })).toBeInTheDocument()

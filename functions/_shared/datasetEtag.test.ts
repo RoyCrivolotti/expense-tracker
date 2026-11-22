@@ -45,7 +45,11 @@ describe('ifNoneMatchMatches', () => {
 })
 
 /** Every path through the JSON with the types seen there, so a renamed, added or dropped field shows. */
-function shapeOf(value: unknown, path = '$', out = new Set<string>()): Set<string> {
+function shapeOf(
+  value: unknown,
+  path = '$',
+  out = new Set<string>(),
+): Set<string> {
   if (Array.isArray(value)) {
     out.add(`${path}[]`)
     for (const item of value) shapeOf(item, `${path}[]`, out)

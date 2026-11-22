@@ -19,13 +19,7 @@ import { formatMoneyAxis, formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import { nearestScatter, readingLabel } from './checkinChartUtils'
-import {
-  HISTORY_WINDOWS,
-  defaultHistoryWindow,
-  historyAxis,
-  xIndexFor,
-  type HistoryWindowKey,
-} from './historyWindow'
+import { HISTORY_WINDOWS, defaultHistoryWindow, historyAxis, xIndexFor, type HistoryWindowKey } from './historyWindow'
 import goalStyles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
@@ -41,7 +35,10 @@ const INVESTED_COLOR = '#10b981'
 const ASSETS_COLOR = '#f59e0b'
 
 /** The net worth reading nearest each axis step, in x. */
-function nearestByStep(points: ScatterPoint[], steps: number): number[] {
+function nearestByStep(
+  points: ScatterPoint[],
+  steps: number,
+): number[] {
   return Array.from({ length: steps + 1 }, (_, i) => {
     let best = points[0]
     for (const p of points) {
@@ -65,7 +62,16 @@ function chartParts(model: HistoryModel) {
     { id: 'calendar', color: 'transparent', values: model.carrier },
     { id: 'net-worth', color: NET_WORTH_COLOR, values: [], kind: 'scatter', points: model.netWorth, connect: true },
     ...(withDebt
-      ? [{ id: 'assets', color: ASSETS_COLOR, values: [], kind: 'scatter' as const, points: model.assets, connect: true }]
+      ? [
+          {
+            id: 'assets',
+            color: ASSETS_COLOR,
+            values: [],
+            kind: 'scatter' as const,
+            points: model.assets,
+            connect: true,
+          },
+        ]
       : []),
     { id: 'invested', color: INVESTED_COLOR, values: [], kind: 'scatter', points: model.invested, connect: true },
   ]
@@ -84,10 +90,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
   const format = useMoneyFormat()
   const narrow = useGoalsNarrow()
   const today = todayIso()
-  const sorted = useMemo(
-    () => [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate)),
-    [checkins],
-  )
+  const sorted = useMemo(() => [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate)), [checkins])
   const earliest = sorted[0]?.checkinDate ?? null
   const [chosen, setChosen] = useState<HistoryWindowKey | null>(null)
   const window = chosen ?? defaultHistoryWindow(earliest, today)
@@ -164,9 +167,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
       {model.netWorth.length === 0 ? (
         // A window chosen by hand can miss every check-in; the carrier would then draw a
         // flat line at zero, which reads as a balance of nothing.
-        <p className={progressStyles.emptyHint}>
-          No check-in in the last {windowLabel}. Widen the window to see them.
-        </p>
+        <p className={progressStyles.emptyHint}>No check-in in the last {windowLabel}. Widen the window to see them.</p>
       ) : (
         <>
           <LinearChart

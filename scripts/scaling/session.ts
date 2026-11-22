@@ -19,7 +19,10 @@ import type { AccountUsage, D1Reply, RestOptions, Statement, Transport } from '.
 
 export interface Files {
   readJson: (path: string) => unknown
-  writeJson: (path: string, value: unknown) => void
+  writeJson: (
+    path: string,
+    value: unknown,
+  ) => void
   exists: (path: string) => boolean
 }
 
@@ -31,7 +34,10 @@ export interface Deps {
   files: Files
   transportFor: (options: RestOptions) => Transport
   describe: (options: RestOptions) => Promise<{ uuid: string; name: string }>
-  usage: (options: Omit<RestOptions, 'databaseId'>, day: string) => Promise<AccountUsage>
+  usage: (
+    options: Omit<RestOptions, 'databaseId'>,
+    day: string,
+  ) => Promise<AccountUsage>
   print: (line: string) => void
   stopRequested: () => boolean
   /** The route matrix, passed in because it runs the app's own handlers, which Node's typecheck cannot read. */
@@ -67,7 +73,12 @@ function storedDays(files: Files): SpendTotals[] {
   return stored.days ?? []
 }
 
-async function accountUsage(args: Args, deps: Deps, base: Omit<RestOptions, 'databaseId'>, day: string): Promise<AccountUsage | undefined> {
+async function accountUsage(
+  args: Args,
+  deps: Deps,
+  base: Omit<RestOptions, 'databaseId'>,
+  day: string,
+): Promise<AccountUsage | undefined> {
   if (args.accountWrittenToday !== undefined) {
     return { rowsRead: args.accountReadToday ?? 0, rowsWritten: args.accountWrittenToday, byDatabase: {} }
   }
@@ -76,14 +87,21 @@ async function accountUsage(args: Args, deps: Deps, base: Omit<RestOptions, 'dat
   } catch (error) {
     if (args.write) {
       const why = error instanceof Error ? error.message : String(error)
-      throw new Error(`${why}\nRead today's rows written from the dashboard (D1 > Metrics) and pass --account-written-today N`, { cause: error })
+      throw new Error(
+        `${why}\nRead today's rows written from the dashboard (D1 > Metrics) and pass --account-written-today N`,
+        { cause: error },
+      )
     }
     return undefined
   }
 }
 
 /** Every statement, single or batched, passes the write guard and the stop file before it is sent. */
-export function guarded(inner: Transport, writesEnabled: boolean, shouldStop: () => boolean = () => false): Transport {
+export function guarded(
+  inner: Transport,
+  writesEnabled: boolean,
+  shouldStop: () => boolean = () => false,
+): Transport {
   const admit = (statement: Statement): void => {
     if (shouldStop()) throw new Error('Stopped: the stop file is present')
     assertStatementAllowed(statement.sql, statement.params, writesEnabled)
@@ -101,7 +119,11 @@ export function guarded(inner: Transport, writesEnabled: boolean, shouldStop: ()
 }
 
 /** `plannedWritten` is what this command expects to write today; read-only commands pass 0. */
-export async function openSession(args: Args, deps: Deps, plannedWritten: number): Promise<Session> {
+export async function openSession(
+  args: Args,
+  deps: Deps,
+  plannedWritten: number,
+): Promise<Session> {
   assertNotProduction(args.database)
   const { token, accountId } = credentials(deps.env)
   const dev = deps.readDevConfig()

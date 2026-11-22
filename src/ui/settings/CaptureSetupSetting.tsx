@@ -73,7 +73,10 @@ function SetupOnThisDevice() {
   )
 }
 
-function tickedText(count: number, ticked: number): string {
+function tickedText(
+  count: number,
+  ticked: number,
+): string {
   return `${count} steps, ${ticked === 0 ? 'none ticked' : ticked === count ? 'all ticked' : `${ticked} ticked`}`
 }
 
@@ -99,14 +102,29 @@ function useSteps(setup: Setup) {
 }
 
 /** The numbered steps behind the row that opens and closes them. */
-function StepsFold({ setup, steps, byHand, back, toggle }: { setup: Setup; toggle: Ref<HTMLButtonElement> } & Omit<ReturnType<typeof useSteps>, 'group'>) {
+function StepsFold({
+  setup,
+  steps,
+  byHand,
+  back,
+  toggle,
+}: { setup: Setup; toggle: Ref<HTMLButtonElement> } & Omit<ReturnType<typeof useSteps>, 'group'>) {
   const foldId = useId()
   const open = setup.stepsOpen
   return (
     <div>
-      <button ref={toggle} type="button" className={styles.toggle} aria-expanded={open} aria-controls={foldId} onClick={() => setup.showSteps(!open)}>
+      <button
+        ref={toggle}
+        type="button"
+        className={styles.toggle}
+        aria-expanded={open}
+        aria-controls={foldId}
+        onClick={() => setup.showSteps(!open)}
+      >
         <span>{open ? 'Hide the steps' : 'Show the steps'}</span>
-        <span className={styles.toggleCount}>{tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}</span>
+        <span className={styles.toggleCount}>
+          {tickedText(steps.length, steps.filter((s) => setup.ticks.has(s.id)).length)}
+        </span>
       </button>
       {/* Kept in the DOM so it can fold; `inert` keeps touch, focus and screen readers out of what is out of sight. */}
       <div id={foldId} className={open ? styles.fold : `${styles.fold} ${styles.folded}`} inert={!open}>
@@ -141,7 +159,8 @@ function SetupSteps({ setup, toggle }: { setup: Setup; toggle: Ref<HTMLButtonEle
   return (
     <div ref={group} className={tabStyles.settingGroup}>
       <p className={tabStyles.settingHint}>
-        Each notification that shows an amount with its currency becomes a payment for you to review; the rest are only counted.
+        Each notification that shows an amount with its currency becomes a payment for you to review; the rest are only
+        counted.
       </p>
       {setup.error ? (
         <p className={tabStyles.settingError} role="alert">

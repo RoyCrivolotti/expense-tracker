@@ -33,7 +33,10 @@ export interface MilestonePick {
 const MS_DAY = 86_400_000
 
 /** Whole months from one calendar date to a later one, rounded. */
-function monthsBetween(from: string, to: string): number {
+function monthsBetween(
+  from: string,
+  to: string,
+): number {
   const days = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / MS_DAY
   return Math.round(days / (365.25 / 12))
 }
@@ -49,7 +52,10 @@ export function inText(months: number): string {
 }
 
 /** The place on the x axis, fractional between two years, of a year offset; null outside the years drawn. */
-function indexOfYear(years: readonly number[], t: number): number | null {
+function indexOfYear(
+  years: readonly number[],
+  t: number,
+): number | null {
   const first = years[0]
   const last = years[years.length - 1]
   if (first === undefined || last === undefined || t < first || t > last) return null
@@ -77,7 +83,14 @@ interface PickInput {
  * own line, in the chart's money (the amount itself in Nominal, the amount less the inflation so far in Purchasing
  * power), labelled with the calendar year it reaches it in. Its row says the month and how long from today.
  */
-export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, years, today }: PickInput): MilestonePick {
+export function pickCrossings({
+  lines,
+  amountCents,
+  inflationRate,
+  nominalMode,
+  years,
+  today,
+}: PickInput): MilestonePick {
   const dots: AnnotationDot[] = []
   const rows: PickRow[] = []
   for (const line of lines) {
@@ -96,7 +109,12 @@ export function pickCrossings({ lines, amountCents, inflationRate, nominalMode, 
       dots.push({ index, value, color: line.color, label })
     }
     const month = date ? monthYear(date) : label
-    rows.push({ id: line.id, name: line.name, color: line.color, text: date ? `${month}, ${inText(monthsBetween(today, date))}` : month })
+    rows.push({
+      id: line.id,
+      name: line.name,
+      color: line.color,
+      text: date ? `${month}, ${inText(monthsBetween(today, date))}` : month,
+    })
   }
   return { dots, rows }
 }
@@ -134,7 +152,10 @@ export function endNoteFor({
 }
 
 /** What the grey dotted lines are, in the words of the view the chart is in: the two views move different lines. */
-export function milestoneNote(nominalMode: boolean, format: MoneyFormat): string {
+export function milestoneNote(
+  nominalMode: boolean,
+  format: MoneyFormat,
+): string {
   const money = currencyWord(format)
   return nominalMode
     ? `Grey dotted lines are your milestones. They are amounts on your account, so they stay level here. The FI target is in the plan\u2019s ${money}, so it rises with prices.`

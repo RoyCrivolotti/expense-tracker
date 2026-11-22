@@ -26,7 +26,10 @@ export interface FormFields {
   labelIds: number[]
 }
 
-export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) => void
+export type Setter = <K extends keyof FormFields>(
+  key: K,
+  value: FormFields[K],
+) => void
 
 /** Today's date in the user's local calendar (not UTC — `toISOString` can read
  * as yesterday for part of the day in a positive-UTC-offset timezone). */
@@ -39,13 +42,20 @@ export function todayIso(): string {
 }
 
 /** Budget month to offer a new transaction dated `date`: the date rule, unless that month is settled. */
-export function suggestBudgetMonth(model: ExpenseModel, date: string): string {
+export function suggestBudgetMonth(
+  model: ExpenseModel,
+  date: string,
+): string {
   const { dataset } = model
   return recommendedBudgetMonth(date, todayIso(), dataset.settings.budgetRolloverDay, dataset)
 }
 
 /** What changing the date does: for a new transaction the budget month follows it, an edit keeps the month it has. */
-export function dateChanger(model: ExpenseModel, editing: Transaction | null, set: Setter) {
+export function dateChanger(
+  model: ExpenseModel,
+  editing: Transaction | null,
+  set: Setter,
+) {
   return (date: string) => {
     set('date', date)
     if (!editing) set('budgetMonth', suggestBudgetMonth(model, date))
@@ -72,7 +82,11 @@ function defaultFields(model: ExpenseModel): FormFields {
   }
 }
 
-function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFormat): FormFields {
+function applySeed(
+  defaults: FormFields,
+  seed: TransactionSeed,
+  format: MoneyFormat,
+): FormFields {
   return {
     ...defaults,
     ...(seed.type != null ? { type: seed.type } : {}),
@@ -110,7 +124,10 @@ export function initialFields(
  * An investment is filed under the investments category whichever way the money moves,
  * so a row that opens as one, or turns into one, takes that category over its own.
  */
-export function lockInvestmentCategory(fields: FormFields, model: ExpenseModel): FormFields {
+export function lockInvestmentCategory(
+  fields: FormFields,
+  model: ExpenseModel,
+): FormFields {
   if (fields.type !== 'investment') return fields
   const locked = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
   return locked === null ? fields : { ...fields, categoryId: locked }

@@ -16,7 +16,11 @@ export interface OnboardingConfirmSummaryInput {
 export const ONBOARDING_CONFIRM_FOOTNOTE =
   "This adds to what you already have — it doesn't check for or merge duplicate categories or accounts."
 
-function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
+function pluralize(
+  count: number,
+  singular: string,
+  plural: string = `${singular}s`,
+): string {
   return count === 1 ? singular : plural
 }
 

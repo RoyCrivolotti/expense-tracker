@@ -22,14 +22,17 @@ const money = (cents: number) => `${Math.round(cents / 100).toLocaleString('de-D
 const result = replayMarket({ params, volatility: 0.15, runs: 2_000, milestonesCents: [10_000_000, 100_000_000] })
 
 describe('rangeLabel', () => {
-  const at = (lo: number, hi: number) => rangeLabel(lo, hi, '2026-01-01', 30)
+  const at = (
+    lo: number,
+    hi: number,
+  ) => rangeLabel(lo, hi, '2026-01-01', 30)
 
   it('names the years a range runs from and to, and one year once', () => {
     expect(at(18, 23)).toBe('2044 to 2049')
     expect(at(18, 18)).toBe('2044')
   })
 
-  it('says a range that runs past the plan\'s end does so, and one that never starts does too', () => {
+  it("says a range that runs past the plan's end does so, and one that never starts does too", () => {
     expect(at(23, Infinity)).toBe('2049 to after 2056')
     expect(at(Infinity, Infinity)).toBe('not within 30 years')
   })
@@ -42,7 +45,10 @@ describe('rangeLabel', () => {
 
 describe('milestoneRows', () => {
   const rows = milestoneRows({
-    milestones: [{ amountCents: 10_000_000, label: '' }, { amountCents: 100_000_000, label: 'A million' }],
+    milestones: [
+      { amountCents: 10_000_000, label: '' },
+      { amountCents: 100_000_000, label: 'A million' },
+    ],
     result,
     planStartDate: '2026-01-01',
     years: 30,
@@ -85,15 +91,29 @@ describe('milestoneRows', () => {
 describe('fiRow', () => {
   const withFi = replayMarket({ params, volatility: 0.15, runs: 2_000, fiTargetCents: 75_000_000 })
 
-  it('says the FI target in the plan\'s euros, as every other screen names them, with its years and how many runs get there', () => {
-    const row = fiRow({ result: withFi, planStartDate: '2026-01-01', years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!
+  it("says the FI target in the plan's euros, as every other screen names them, with its years and how many runs get there", () => {
+    const row = fiRow({
+      result: withFi,
+      planStartDate: '2026-01-01',
+      years: 30,
+      money,
+      targetCents: 75_000_000,
+      format: EU_MONEY_FORMAT,
+    })!
     expect(row.label).toBe('FI target (750.000 € in 2026 euros)')
     expect(row.middle).toMatch(/^\d{4}( to (after )?\d{4})?$|^not within 30 years$/)
     expect(row.gets).toMatch(/^\d+ of 100$/)
   })
 
   it('names the euros of today for a plan with no start date', () => {
-    const row = fiRow({ result: withFi, planStartDate: null, years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!
+    const row = fiRow({
+      result: withFi,
+      planStartDate: null,
+      years: 30,
+      money,
+      targetCents: 75_000_000,
+      format: EU_MONEY_FORMAT,
+    })!
     expect(row.label).toBe("FI target (750.000 € in today's euros)")
   })
 
@@ -103,7 +123,10 @@ describe('fiRow', () => {
 
   it('does not round a run in a thousand that never gets there up to all of them', () => {
     const near = { ...withFi, fi: { ...withFi.fi!, share: 0.9991 } }
-    expect(fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!.gets).toBe('99 of 100')
+    expect(
+      fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!
+        .gets,
+    ).toBe('99 of 100')
   })
 })
 
@@ -119,7 +142,7 @@ describe('spreadSeries', () => {
     expect(series.find((s) => s.id === 'p10')).toMatchObject({ dashed: true, values: result.after.p10 })
   })
 
-  it('rises to the value before a house payment and drops to the one after, as the plan\'s line does', () => {
+  it("rises to the value before a house payment and drops to the one after, as the plan's line does", () => {
     expect(series.find((s) => s.id === 'plan')!.preStep).toEqual(points.map((p) => p.preEventInvestedCents))
     expect(series.find((s) => s.id === 'median')!.preStep).toEqual(result.before.p50)
     expect(series.find((s) => s.id === 'band')!.band!.loPre).toEqual(result.before.p25)
@@ -129,12 +152,24 @@ describe('spreadSeries', () => {
     const nominal = spreadSeries({ plan: points, result, inflationRate: I, nominal: true })
     const plan30 = nominal.find((s) => s.id === 'plan')!.values[30]!
     expect(plan30).toBe(Math.round(points[30]!.investedCents * Math.pow(1 + I, 30)))
-    expect(nominal.find((s) => s.id === 'median')!.values[10]).toBe(Math.round(result.after.p50[10]! * Math.pow(1 + I, 10)))
+    expect(nominal.find((s) => s.id === 'median')!.values[10]).toBe(
+      Math.round(result.after.p50[10]! * Math.pow(1 + I, 10)),
+    )
   })
 })
 
 describe('spreadHeadline', () => {
-  const headline = (over = {}) => spreadHeadline({ result, plan: points, money, moneyLabel: '2026 euros', nominal: false, runs: 10_000, format: EU_MONEY_FORMAT, ...over })
+  const headline = (over = {}) =>
+    spreadHeadline({
+      result,
+      plan: points,
+      money,
+      moneyLabel: '2026 euros',
+      nominal: false,
+      runs: 10_000,
+      format: EU_MONEY_FORMAT,
+      ...over,
+    })
 
   it('opens by saying what a run is, before the figures use the word', () => {
     expect(headline()).toMatch(/^The plan replayed in 10\.000 markets, each one a run\. In year 30/)
@@ -146,7 +181,7 @@ describe('spreadHeadline', () => {
     expect(headline()).toContain('the unluckiest tenth below')
   })
 
-  it('says where the middle run and the two tenths end, against the plan\'s line, in the money it is drawn in', () => {
+  it("says where the middle run and the two tenths end, against the plan's line, in the money it is drawn in", () => {
     const text = headline()
     expect(text).toContain('In year 30, in 2026 euros')
     expect(text).toContain(`the middle run ends at ${money(result.after.p50[30]!)}`)
@@ -171,7 +206,8 @@ describe('spreadHeadline', () => {
 })
 
 describe('spreadCaption', () => {
-  const caption = (over = {}) => spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT, ...over })
+  const caption = (over = {}) =>
+    spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT, ...over })
   const { lead, details } = caption()
 
   it('leads with what stays as planned, which is what stops the card being read as a forecast of everything', () => {
@@ -197,7 +233,9 @@ describe('spreadCaption', () => {
   })
 
   it('uses the volatility and the return it is given', () => {
-    expect(caption({ volatility: 0.11, realReturn: 0.07 }).details.join(' ')).toContain('the typical 7,0% a year times a luck factor with a bounce of 11,0%')
+    expect(caption({ volatility: 0.11, realReturn: 0.07 }).details.join(' ')).toContain(
+      'the typical 7,0% a year times a luck factor with a bounce of 11,0%',
+    )
   })
 })
 
@@ -218,7 +256,10 @@ describe('spreadWarning', () => {
   })
 
   it('says how many runs run out of money, and from which year, when it is more than one in twenty', () => {
-    const thin = scenarioToParams(samplePlan({ startInvestedCents: 1_000_000, monthlyContributionCents: 0, housePurchaseYear: 3 }), I)
+    const thin = scenarioToParams(
+      samplePlan({ startInvestedCents: 1_000_000, monthlyContributionCents: 0, housePurchaseYear: 3 }),
+      I,
+    )
     const out = replayMarket({ params: thin, volatility: 0.15, runs: 500 })
     const text = spreadWarning(out)!
     expect(text).toMatch(/In \d+% of the runs the portfolio is below nothing from year 3/)

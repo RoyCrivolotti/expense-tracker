@@ -54,10 +54,11 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
   // is not. The form only creates, so a field never starts from this check-in's own row.
   const [touched, setTouched] = useState<ReadonlySet<number>>(() => new Set())
 
-  const setEntry = (accountId: number, valueCents: number) => {
-    setEntries((prev) =>
-      prev.map((e) => (e.accountId === accountId ? { ...e, valueCents } : e)),
-    )
+  const setEntry = (
+    accountId: number,
+    valueCents: number,
+  ) => {
+    setEntries((prev) => prev.map((e) => (e.accountId === accountId ? { ...e, valueCents } : e)))
     setTouched((prev) => (prev.has(accountId) ? prev : new Set(prev).add(accountId)))
   }
   // What each box held when it was entered. Typing "1e9" passes through "1", which is an amount, so the last amount
@@ -67,7 +68,10 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
   const readBalance = (raw: string): number | null => (raw.trim() === '' ? 0 : tryParseMoneyToCents(raw, format))
   // Leaving the box (or Enter): the amount it holds, written back as the form will use it. Text that is not an
   // amount puts back what the box held when it was entered, and a zero is an empty box with the zero as its placeholder.
-  const commitBalance = (input: HTMLInputElement, entry: EntryDraft) => {
+  const commitBalance = (
+    input: HTMLInputElement,
+    entry: EntryDraft,
+  ) => {
     const cents = readBalance(input.value) ?? heldOnEntry.current.get(entry.accountId) ?? entry.valueCents
     setEntry(entry.accountId, cents)
     input.value = cents === 0 ? '' : formatMoneyInput(cents, format)
@@ -109,9 +113,7 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
     return (
       <Card>
         <h3 className={goalStyles.sectionTitle}>New check-in</h3>
-        <p className={styles.emptyHint}>
-          Add at least one wealth account before logging a check-in.
-        </p>
+        <p className={styles.emptyHint}>Add at least one wealth account before logging a check-in.</p>
       </Card>
     )
   }
@@ -122,12 +124,7 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
       <div className={styles.checkinForm}>
         <div className={styles.formField}>
           <span className={styles.formLabel}>Date</span>
-          <DateInput
-            value={date}
-            ariaLabel="Date"
-            max={today}
-            onChange={setDate}
-          />
+          <DateInput value={date} ariaLabel="Date" max={today} onChange={setDate} />
         </div>
 
         <div className={styles.formField}>
@@ -197,7 +194,9 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
         <div className={styles.formActions}>
           <button
             className={goalStyles.btn}
-            onClick={() => { void handleSubmit() }}
+            onClick={() => {
+              void handleSubmit()
+            }}
             disabled={submitting || !date || empty}
           >
             {submitting ? 'Saving…' : 'Save check-in'}

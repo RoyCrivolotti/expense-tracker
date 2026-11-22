@@ -5,10 +5,15 @@ import { planLineOf, planValueAt } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
-const lineOf = (over = {}, inflation = SAMPLE_INFLATION) =>
-  planLineOf(projectNetWorth(scenarioToParams(samplePlan(over), inflation)))
+const lineOf = (
+  over = {},
+  inflation = SAMPLE_INFLATION,
+) => planLineOf(projectNetWorth(scenarioToParams(samplePlan(over), inflation)))
 const G = 1 + SAMPLE_INFLATION
-const screenAt = (line: ReturnType<typeof planLineOf>, t: number) => planValueAt(line, t)! * Math.pow(G, t)
+const screenAt = (
+  line: ReturnType<typeof planLineOf>,
+  t: number,
+) => planValueAt(line, t)! * Math.pow(G, t)
 
 describe('milestoneCrossing', () => {
   it('dates a milestone on the line in euros on the account, which is later in the plan than the line itself', () => {
@@ -103,7 +108,11 @@ describe('milestoneCrossing on a line that falls', () => {
     { year: 0, investedCents: 1_000_000 },
     { year: 1, investedCents: 800_000 },
   ])
-  const walk = (line: ReturnType<typeof planLineOf>, test: (screen: number) => boolean, from = 0) => {
+  const walk = (
+    line: ReturnType<typeof planLineOf>,
+    test: (screen: number) => boolean,
+    from = 0,
+  ) => {
     for (let t = from; t <= 1; t += 1 / 100_000) if (test(planValueAt(line, t)! * Math.pow(g, t))) return t
     return null
   }
@@ -165,7 +174,9 @@ describe('milestoneCrossing against a walk of the account day by day', () => {
           startInvestedCents: Math.round(1_000_000 + rand() * 20_000_000),
           monthlyContributionCents: Math.round(rand() * 250_000),
           expectedRealReturn: rand() * 0.09,
-          lifeEvents: [{ year: 1 + Math.floor(rand() * 20), amountCents: Math.round((rand() - 0.5) * 8_000_000), label: 'Event' }],
+          lifeEvents: [
+            { year: 1 + Math.floor(rand() * 20), amountCents: Math.round((rand() - 0.5) * 8_000_000), label: 'Event' },
+          ],
         },
         inflation,
       )

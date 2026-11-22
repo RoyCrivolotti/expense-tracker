@@ -25,7 +25,10 @@ interface ModalProps {
  * The scrim and, once the sheet is leaving, how it leaves. `--exit-ms` is what `Presence`
  * holds the sheet in the DOM for, so the CSS animation and the mount cannot disagree.
  */
-function overlayVars(progress: number, exit: { release: SheetRelease | null; ms: number } | null): CSSProperties {
+function overlayVars(
+  progress: number,
+  exit: { release: SheetRelease | null; ms: number } | null,
+): CSSProperties {
   if (!exit) return { '--scrim': String(SCRIM_ALPHA * (1 - progress)) } as CSSProperties
   const { release } = exit
   return {
@@ -42,14 +45,7 @@ function bandPosition(viewport: { top: number; height: number } | null): CSSProp
   return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
-export function Modal({
-  title,
-  subtitle,
-  onClose,
-  onBack,
-  children,
-  trapPaused = false,
-}: ModalProps) {
+export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
   const { leaving, exitMs } = useExit()
@@ -98,10 +94,7 @@ export function Modal({
     >
       {/* The scrim covers the whole screen; only this band tracks the visible
           slice, so nothing behind the modal can show through above the sheet. */}
-      <div
-        className={styles.band}
-        style={bandPosition(viewport)}
-      >
+      <div className={styles.band} style={bandPosition(viewport)}>
         <div
           ref={sheetRef}
           className={sheetClasses}

@@ -6,10 +6,7 @@ import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import styles from './DatePicker.module.css'
 
-const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-] as const
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 
 function currentYearMonth(): string {
   const d = new Date()
@@ -88,11 +85,9 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
           const m = i + 1
           const isSelected = viewYear === valYear && m === valMonth
           const isCurrent = viewYear === thisY && m === thisM
-          const cls = [
-            styles.monthBtn,
-            isCurrent ? styles.monthCurrent : '',
-            isSelected ? styles.monthSelected : '',
-          ].filter(Boolean).join(' ')
+          const cls = [styles.monthBtn, isCurrent ? styles.monthCurrent : '', isSelected ? styles.monthSelected : '']
+            .filter(Boolean)
+            .join(' ')
           return (
             <button
               key={label}

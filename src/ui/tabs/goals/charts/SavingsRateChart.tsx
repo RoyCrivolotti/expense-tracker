@@ -52,10 +52,7 @@ function SavingsRateChartImpl({
   )
   // What the plan invests in each of those months. It is one amount for a plan that never changes
   // its monthly figure, and then it is drawn as a line across, as it always was.
-  const planned = useMemo(
-    () => recent.map((m) => plannedMonthlyAt(draft, `${m.month}-15`)),
-    [recent, draft],
-  )
+  const planned = useMemo(() => recent.map((m) => plannedMonthlyAt(draft, `${m.month}-15`)), [recent, draft])
   const labels = useMemo(() => {
     const step = Math.max(1, Math.ceil(recent.length / 6))
     return sparseLabels(
@@ -84,8 +81,18 @@ function SavingsRateChartImpl({
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: recent[i]?.month ?? '',
     lines: [
-      { label: 'Invested', value: formatMoneyShort(recent[i]?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
-      { label: 'Net saving', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), color: SAVING_COLOR, tone: 'neutral' },
+      {
+        label: 'Invested',
+        value: formatMoneyShort(recent[i]?.investedCents ?? 0, format),
+        color: INVESTED_COLOR,
+        tone: 'neutral',
+      },
+      {
+        label: 'Net saving',
+        value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format),
+        color: SAVING_COLOR,
+        tone: 'neutral',
+      },
       { label: 'Plan', value: formatMoneyShort(planned[i] ?? planFirst, format), color: PLAN_COLOR, tone: 'neutral' },
     ],
   })
@@ -99,8 +106,8 @@ function SavingsRateChartImpl({
         {planChanges
           ? `the plan, which goes from ${formatMoneyShort(planFirst, format)} to ${formatMoneyShort(planLast, format)}/mo over these months`
           : `the ${formatMoneyShort(planFirst, format)}/mo this scenario assumes`}
-        . The fainter line is net saving, what was left after expenses; the gap is money that stayed in
-        the current account. In {currencyWord(format)} as they went through the account.
+        . The fainter line is net saving, what was left after expenses; the gap is money that stayed in the current
+        account. In {currencyWord(format)} as they went through the account.
       </p>
       <LinearChart
         height={height}

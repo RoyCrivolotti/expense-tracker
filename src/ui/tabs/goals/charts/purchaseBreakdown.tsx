@@ -59,9 +59,7 @@ function BreakdownRows({
         {rows.map((row) => (
           <li key={row.label} className={styles.breakdownRow}>
             <span className={styles.breakdownLabel}>{row.label}</span>
-            <span className={row.tone ? styles[`tone_${row.tone}`] : styles.breakdownValue}>
-              {row.value}
-            </span>
+            <span className={row.tone ? styles[`tone_${row.tone}`] : styles.breakdownValue}>{row.value}</span>
           </li>
         ))}
       </ul>
@@ -85,7 +83,9 @@ export function BreakdownExtras({
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdownInTodaysMoney ? (
-            <p className={styles.breakdownNote}>The purchase breakdown is in the plan's {currencyWord(format)}, not in the Nominal values above.</p>
+            <p className={styles.breakdownNote}>
+              The purchase breakdown is in the plan's {currencyWord(format)}, not in the Nominal values above.
+            </p>
           ) : null}
           {breakdowns.map((entry) => (
             <BreakdownRows key={entry.id} {...entry} format={format} />
@@ -111,7 +111,10 @@ interface BreakdownSlotProps {
   children: ReactNode
 }
 
-function slotClass(reserve: boolean, withNote: boolean): string {
+function slotClass(
+  reserve: boolean,
+  withNote: boolean,
+): string {
   if (!reserve) return styles.slot ?? ''
   return `${styles.slot} ${withNote ? styles.slotReservedNote : styles.slotReserved}`
 }
@@ -121,7 +124,13 @@ function slotClass(reserve: boolean, withNote: boolean): string {
  * year's breakdown while it is. Nothing is covered, and nothing moves when it changes, because the
  * room is kept when a line has a purchase.
  */
-export function BreakdownSlot({ breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, children }: BreakdownSlotProps) {
+export function BreakdownSlot({
+  breakdowns,
+  yearZeroHint,
+  breakdownInTodaysMoney,
+  reserve,
+  children,
+}: BreakdownSlotProps) {
   const format = useMoneyFormat()
   const showing = breakdowns.length > 0 || yearZeroHint
   return (

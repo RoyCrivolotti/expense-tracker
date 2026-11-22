@@ -30,7 +30,10 @@ function layOutAt(top: number) {
 }
 
 /** The nav, with the content anchor the page would put under it, and a frame that runs at once. */
-function renderNav(value: 'chart' | 'adjust' | 'progress' | 'assumptions', onChange = vi.fn()) {
+function renderNav(
+  value: 'chart' | 'adjust' | 'progress' | 'assumptions',
+  onChange = vi.fn(),
+) {
   const target = document.createElement('div')
   target.id = GOALS_CONTENT_ANCHOR_ID
   const scrollIntoView = vi.fn()
@@ -108,9 +111,7 @@ describe('GoalsMobileNav', () => {
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
-    expect(onChange.mock.invocationCallOrder[0]).toBeLessThan(
-      scrollIntoView.mock.invocationCallOrder[0]!,
-    )
+    expect(onChange.mock.invocationCallOrder[0]).toBeLessThan(scrollIntoView.mock.invocationCallOrder[0]!)
   })
 
   it('scrolls smoothly when the segment already selected is tapped', async () => {
@@ -237,7 +238,7 @@ describe('GoalsMobileNav', () => {
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 111, behavior: 'auto' })
     })
 
-    it('keeps each view\'s own place, so Scenarios comes back where Scenarios was left', async () => {
+    it("keeps each view's own place, so Scenarios comes back where Scenarios was left", async () => {
       const user = userEvent.setup()
       const controls = document.createElement('details')
       controls.id = adjustSectionId('portfolio')

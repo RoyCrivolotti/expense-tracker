@@ -74,14 +74,21 @@ describe('setup memory', () => {
     const store = new Map<string, string>()
     const storage = {
       getItem: (k: string) => store.get(k) ?? null,
-      setItem: (k: string, v: string) => void store.set(k, v),
+      setItem: (
+        k: string,
+        v: string,
+      ) => void store.set(k, v),
     }
     writeSetupMemory(storage, { ticks: ['ios'], endpoint: 'https://x.example' })
     expect(readSetupMemory(storage)).toEqual({ ticks: ['ios'], endpoint: 'https://x.example' })
     expect(readSetupMemory({ getItem: () => 'not json' })).toEqual({ ticks: [], endpoint: '' })
     expect(readSetupMemory({ getItem: () => '{"ticks":[1,"a"],"endpoint":5}' })).toEqual({ ticks: ['a'], endpoint: '' })
     expect(readSetupMemory(null)).toEqual({ ticks: [], endpoint: '' })
-    expect(readSetupMemory({ getItem: () => '{"steps":"closed"}' })).toEqual({ ticks: [], endpoint: '', steps: 'closed' })
+    expect(readSetupMemory({ getItem: () => '{"steps":"closed"}' })).toEqual({
+      ticks: [],
+      endpoint: '',
+      steps: 'closed',
+    })
     expect(readSetupMemory({ getItem: () => '{"steps":"ajar"}' })).toEqual({ ticks: [], endpoint: '' })
     expect(readSetupMemory({ getItem: () => '{"byHand":true}' })).toEqual({ ticks: [], endpoint: '', byHand: true })
     expect(readSetupMemory({ getItem: () => '{"byHand":"yes"}' })).toEqual({ ticks: [], endpoint: '' })
@@ -105,7 +112,10 @@ describe('setup memory per person', () => {
     return {
       store,
       getItem: (k: string) => store.get(k) ?? null,
-      setItem: (k: string, v: string) => void store.set(k, v),
+      setItem: (
+        k: string,
+        v: string,
+      ) => void store.set(k, v),
       removeItem: (k: string) => void store.delete(k),
     }
   }

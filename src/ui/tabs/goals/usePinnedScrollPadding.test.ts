@@ -5,7 +5,11 @@ import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
 import { usePinnedScrollPadding } from './usePinnedScrollPadding'
 
 /** A sticky block as the browser would have laid it out; jsdom lays nothing out itself. */
-function pinned(id: string, top: string, height: number) {
+function pinned(
+  id: string,
+  top: string,
+  height: number,
+) {
   const el = document.createElement('div')
   el.id = id
   el.style.position = 'sticky'

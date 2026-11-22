@@ -14,13 +14,7 @@ import {
 import type { InvestedSnapshot } from './checkinDate'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
-import {
-  entryDraftPatch,
-  mobileViewOf,
-  type AssumptionsFocus,
-  type MobilePlanView,
-  type TabView,
-} from './goalsView'
+import { entryDraftPatch, mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useBaselineToast } from './useBaselineToast'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
@@ -120,10 +114,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     }
   }, [dataset.wealthCheckins, dataset.wealthAccounts])
   const sums = sumsOf(model)
-  const monthly = useMemo(
-    () => monthlyFlows(computeMonthlyTotals(sums.transactions)),
-    [sums.transactions],
-  )
+  const monthly = useMemo(() => monthlyFlows(computeMonthlyTotals(sums.transactions)), [sums.transactions])
   const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The plan as it stands from the latest check-in: derived, never saved, and null until
   // there is a dated plan and a check-in to restart it from.
@@ -134,10 +125,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
   // Seeds a new draft's monthly contribution: what has actually gone into the
   // portfolio, not what was left over after expenses.
-  const avgSaving = useMemo(
-    () => averageMonthlyCents(monthly.map((m) => m.investedCents)),
-    [monthly],
-  )
+  const avgSaving = useMemo(() => averageMonthlyCents(monthly.map((m) => m.investedCents)), [monthly])
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
   // The Analytics baseline lands as a draft edit, once per arrival (the tab remounts on
@@ -166,9 +154,21 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
 
   return (
     <div className={styles.stack}>
-      <GoalsTitleRow narrow={narrow} viewSwitch={viewSwitch} showActions={view === 'plan'} editor={editor} actions={actions} />
+      <GoalsTitleRow
+        narrow={narrow}
+        viewSwitch={viewSwitch}
+        showActions={view === 'plan'}
+        editor={editor}
+        actions={actions}
+      />
 
-      <GoalsTips view={view} narrow={narrow} half={mobilePlanView} editor={editor} noScenarios={dataset.goalScenarios.length === 0} />
+      <GoalsTips
+        view={view}
+        narrow={narrow}
+        half={mobilePlanView}
+        editor={editor}
+        noScenarios={dataset.goalScenarios.length === 0}
+      />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}

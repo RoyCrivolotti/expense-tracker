@@ -59,10 +59,7 @@ describe('TransactionsTab — result summary', () => {
     expect(summary().getByText('0 items')).toBeInTheDocument()
 
     rerender(
-      <TransactionsTab
-        model={modelFor([makeTransaction({ id: 1 }), makeTransaction({ id: 2 })])}
-        month="2025-01"
-      />,
+      <TransactionsTab model={modelFor([makeTransaction({ id: 1 }), makeTransaction({ id: 2 })])} month="2025-01" />,
     )
     expect(summary().getByText('2 items')).toBeInTheDocument()
   })
@@ -173,23 +170,17 @@ describe('TransactionsTab statement payments', () => {
       target: { value: '2026-06-20' },
     })
 
-    await waitFor(() =>
-      expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-20'),
-    )
+    await waitFor(() => expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-20'))
     expect(sheet).toBeInTheDocument()
   })
 
   it('shows the new paid date once the save has changed the model', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
-    const { rerender } = render(
-      <TransactionsTab model={paidStatementModel()} month="2026-06" actions={actions} />,
-    )
+    const { rerender } = render(<TransactionsTab model={paidStatementModel()} month="2026-06" actions={actions} />)
     await user.click(screen.getByRole('button', { name: /Iberia Icon statement/ }))
 
-    rerender(
-      <TransactionsTab model={paidStatementModel('2026-06-20')} month="2026-06" actions={actions} />,
-    )
+    rerender(<TransactionsTab model={paidStatementModel('2026-06-20')} month="2026-06" actions={actions} />)
 
     const sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
     expect(within(sheet).getByLabelText('Statement paid on')).toHaveValue('2026-06-20')
@@ -250,9 +241,7 @@ describe('TransactionsTab reimbursements', () => {
 
     await user.click(within(sheet).getByRole('button', { name: /^Record / }))
 
-    await waitFor(() =>
-      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99, flagId: null }),
-    )
+    await waitFor(() => expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99, flagId: null }))
     expect(actions.createTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'refund', amountCents: 10_000 }),
     )
@@ -322,9 +311,7 @@ describe('TransactionsTab — clearing a flag', () => {
     const sheet = screen.getByRole('alertdialog')
     await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
 
-    await waitFor(() =>
-      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { flagId: null }),
-    )
+    await waitFor(() => expect(actions.updateTransactions).toHaveBeenCalledWith([7], { flagId: null }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
@@ -383,9 +370,7 @@ describe('TransactionsTab — clearing a flag', () => {
     const sheet = screen.getByRole('alertdialog')
     await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
 
-    await waitFor(() =>
-      expect(actions.updateTransactions).toHaveBeenCalledWith([7, 8], { flagId: null }),
-    )
+    await waitFor(() => expect(actions.updateTransactions).toHaveBeenCalledWith([7, 8], { flagId: null }))
   })
 
   it('empties the Flagged card once the group it showed is actually cleared', async () => {
@@ -493,7 +478,12 @@ describe('TransactionsTab upcoming charges', () => {
   })
 
   /** A monthly charge on `day` from January for `count` months, booked `offset` budget months after its own. */
-  const monthlyOn = (description: string, day: number, count: number, offset = 0) =>
+  const monthlyOn = (
+    description: string,
+    day: number,
+    count: number,
+    offset = 0,
+  ) =>
     Array.from({ length: count }, (_, i) => {
       const pad = (n: number) => String(n).padStart(2, '0')
       return makeTransaction({
@@ -519,9 +509,7 @@ describe('TransactionsTab upcoming charges', () => {
 
     expect(screen.getByText('For Nov')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Add Gym' }))
-    expect(actions.onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ date: '2026-10-20', budgetMonth: '2026-11' }),
-    )
+    expect(actions.onAdd).toHaveBeenCalledWith(expect.objectContaining({ date: '2026-10-20', budgetMonth: '2026-11' }))
   })
 
   it('files a charge from the closed month under the open one, where the add form would', () => {
@@ -532,9 +520,7 @@ describe('TransactionsTab upcoming charges', () => {
     render(<TransactionsTab model={model} month="2026-12" actions={actions} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Delivery' }))
-    expect(actions.onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ date: '2026-11-05', budgetMonth: '2026-12' }),
-    )
+    expect(actions.onAdd).toHaveBeenCalledWith(expect.objectContaining({ date: '2026-11-05', budgetMonth: '2026-12' }))
     expect(screen.queryByText(/^For /)).not.toBeInTheDocument()
   })
 
@@ -547,9 +533,7 @@ describe('TransactionsTab upcoming charges', () => {
 
     expect(screen.getByText('For Jan')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Add Rent' }))
-    expect(actions.onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ date: '2026-12-02', budgetMonth: '2027-01' }),
-    )
+    expect(actions.onAdd).toHaveBeenCalledWith(expect.objectContaining({ date: '2026-12-02', budgetMonth: '2027-01' }))
   })
 
   it('is not there in read-only mode, where nothing could be added', () => {

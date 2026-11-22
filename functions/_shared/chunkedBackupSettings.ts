@@ -28,7 +28,12 @@ export const MIN_STEP_OPERATIONS = 12
  */
 export const MAX_STEP_OPERATIONS = 46
 
-function parseWithin(raw: string | undefined, fallback: number, min: number, max: number): number {
+function parseWithin(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
   if (!raw?.trim()) return fallback
   const n = Number.parseInt(raw, 10)
   return Number.isFinite(n) && n >= min && n <= max ? n : fallback

@@ -17,12 +17,22 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-  keyFor = (_team, id) => Promise.resolve(id === 'key-1' ? publicKey : null)
+  keyFor = (
+    _team,
+    id,
+  ) => Promise.resolve(id === 'key-1' ? publicKey : null)
 })
 
 const claims = (over: Record<string, unknown> = {}) => claimsFor('Roy@Example.com', over, NOW)
-const verify = (token: string, now = NOW) => verifyAccessJwt(token, CONFIG, keyFor, now)
-const refused = async (token: string) => verify(token).then(() => null, (error: { status: number }) => error.status)
+const verify = (
+  token: string,
+  now = NOW,
+) => verifyAccessJwt(token, CONFIG, keyFor, now)
+const refused = async (token: string) =>
+  verify(token).then(
+    () => null,
+    (error: { status: number }) => error.status,
+  )
 
 describe('a token Access signed for this application', () => {
   it('gives the email it carries, lowercased', async () => {
@@ -104,12 +114,18 @@ describe('a token that is refused with a 401', () => {
     expect(await refused(await idp.sign(claims(), { alg: 'RS384' }))).toBe(401)
   })
 
-  it.each(['', 'abc', 'a.b', 'a.b.c.d', '..', '!!!.???.***', `${base64Url('[]')}.${base64Url('{}')}.x`, `${base64Url('{"alg":"RS256"}')}.${base64Url('{}')}.x`])(
-    'is not a token: %j',
-    async (token) => {
-      expect(await refused(token)).toBe(401)
-    },
-  )
+  it.each([
+    '',
+    'abc',
+    'a.b',
+    'a.b.c.d',
+    '..',
+    '!!!.???.***',
+    `${base64Url('[]')}.${base64Url('{}')}.x`,
+    `${base64Url('{"alg":"RS256"}')}.${base64Url('{}')}.x`,
+  ])('is not a token: %j', async (token) => {
+    expect(await refused(token)).toBe(401)
+  })
 
   it('has a part whose length cannot be base64 at all, where atob would throw: one more than a multiple of 4', async () => {
     const token = await idp.sign(claims())
@@ -128,7 +144,9 @@ describe('a token that is refused with a 401', () => {
   it('names no key, and asks for none', async () => {
     const asked = vi.fn(keyFor)
 
-    const error = await verifyAccessJwt(await idp.sign(claims(), { kid: null }), CONFIG, asked, NOW).catch((e: { status: number }) => e)
+    const error = await verifyAccessJwt(await idp.sign(claims(), { kid: null }), CONFIG, asked, NOW).catch(
+      (e: { status: number }) => e,
+    )
 
     expect((error as { status: number }).status).toBe(401)
     expect(asked).not.toHaveBeenCalled()

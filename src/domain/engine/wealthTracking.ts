@@ -63,13 +63,19 @@ export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>
  * anniversary, which is where the plan's yearly points and its steps are. Null if either date is
  * missing or malformed.
  */
-export function yearOffsetFromDate(planStartDate: string, targetDate: string): number | null {
+export function yearOffsetFromDate(
+  planStartDate: string,
+  targetDate: string,
+): number | null {
   if (!isCalendarDate(planStartDate) || !isCalendarDate(targetDate)) return null
   return yearsBetween(planStartDate, targetDate)
 }
 
 /** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
-export function dateAtOffset(planStartDate: string, offsetYears: number): string {
+export function dateAtOffset(
+  planStartDate: string,
+  offsetYears: number,
+): string {
   return dateAtYears(planStartDate, offsetYears)
 }
 
@@ -91,7 +97,11 @@ export function planValueAtOffset(
  * for a given scenario.  Returns null when planStartDate is not set on the
  * scenario or the date is unparseable.
  */
-export function planValueAtDate(scenario: GoalScenario, date: string, inflationRate: number): number | null {
+export function planValueAtDate(
+  scenario: GoalScenario,
+  date: string,
+  inflationRate: number,
+): number | null {
   if (!scenario.planStartDate) return null
   const offset = yearOffsetFromDate(scenario.planStartDate, date)
   if (offset === null) return null
@@ -107,16 +117,15 @@ export function checkinInvestedCents(
   checkin: WealthCheckin,
   accounts: WealthAccount[],
 ): number {
-  const investmentIds = new Set(
-    accounts.filter((a) => a.kind === 'investment').map((a) => a.id),
-  )
-  return checkin.entries
-    .filter((e) => investmentIds.has(e.accountId))
-    .reduce((sum, e) => sum + e.valueCents, 0)
+  const investmentIds = new Set(accounts.filter((a) => a.kind === 'investment').map((a) => a.id))
+  return checkin.entries.filter((e) => investmentIds.has(e.accountId)).reduce((sum, e) => sum + e.valueCents, 0)
 }
 
 /** Sum of everything owned in a check-in (cents): every account that is not a debt. */
-export function checkinAssetsCents(checkin: WealthCheckin, accounts: WealthAccount[]): number {
+export function checkinAssetsCents(
+  checkin: WealthCheckin,
+  accounts: WealthAccount[],
+): number {
   const debtIds = new Set(accounts.filter((a) => a.kind === 'debt').map((a) => a.id))
   const known = new Set(accounts.map((a) => a.id))
   return checkin.entries
@@ -125,7 +134,10 @@ export function checkinAssetsCents(checkin: WealthCheckin, accounts: WealthAccou
 }
 
 /** Whether any check-in records a balance against a debt account. */
-export function hasDebtEntries(checkins: WealthCheckin[], accounts: WealthAccount[]): boolean {
+export function hasDebtEntries(
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+): boolean {
   const debtIds = new Set(accounts.filter((a) => a.kind === 'debt').map((a) => a.id))
   if (debtIds.size === 0) return false
   return checkins.some((c) => c.entries.some((e) => debtIds.has(e.accountId) && e.valueCents !== 0))
@@ -188,7 +200,12 @@ export function trackStatus(
   if (offset === null) return null
   const line = planLineOf(projectNetWorth(scenarioToParams(scenario, inflationRate)))
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
-  const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
+  const actualRealInvestedCents = nominalToReal(
+    actualInvestedCents,
+    scenario.planStartDate,
+    checkin.checkinDate,
+    inflationRate,
+  )
   // Within a month of a step the balance is read against whichever side of it it is on: a house
   // bought a fortnight early or late is not 70.000 euros ahead or behind.
   const reading = readAgainst(line, offset, actualRealInvestedCents)
@@ -199,9 +216,7 @@ export function trackStatus(
   // A gap in money is read along the plan's line, not divided by a monthly amount: that way it
   // counts the plan's own growth, does not jump where the amount changes, and still means
   // something during a pause. Across a house payment or event there are no months to read.
-  const measure = reading.nearStep
-    ? ACROSS_STEP
-    : measurePlanDistance(line, offset, actualRealInvestedCents)
+  const measure = reading.nearStep ? ACROSS_STEP : measurePlanDistance(line, offset, actualRealInvestedCents)
   const along = measure.kind === 'along' ? measure : null
 
   return {
@@ -252,9 +267,7 @@ export function milestonesReached(
  */
 export function latestCheckin(checkins: WealthCheckin[]): WealthCheckin | null {
   if (checkins.length === 0) return null
-  return checkins.reduce((best, c) =>
-    c.checkinDate > best.checkinDate ? c : best,
-  )
+  return checkins.reduce((best, c) => (c.checkinDate > best.checkinDate ? c : best))
 }
 
 /**

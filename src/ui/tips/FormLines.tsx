@@ -30,10 +30,17 @@ export function DescriptionLine({ model, editing }: ModelProps & { editing: bool
 }
 
 /** Under the budget month, when it is not the date's month, for a person's first payments. */
-export function BudgetMonthLine({ model, form, editing }: ModelProps & { form: Pick<FormFields, 'date' | 'budgetMonth'>; editing: boolean }) {
+export function BudgetMonthLine({
+  model,
+  form,
+  editing,
+}: ModelProps & { form: Pick<FormFields, 'date' | 'budgetMonth'>; editing: boolean }) {
   const active = useFormLinesActive()
   return (
-    <FormTip show={active && showBudgetMonthLine(transactionCount(model), form.date, form.budgetMonth, editing)} tone="hint">
+    <FormTip
+      show={active && showBudgetMonthLine(transactionCount(model), form.date, form.budgetMonth, editing)}
+      tone="hint"
+    >
       Which month&rsquo;s budget this counts in. Usually the month of the date.
     </FormTip>
   )

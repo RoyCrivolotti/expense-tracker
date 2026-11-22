@@ -13,10 +13,16 @@ interface OutcomeRow {
   open: number
 }
 
-export function status(db: D1Database): Pick<CaptureRepository, 'countedSources' | 'readSourceOutcomes' | 'countMutedTemplates'> {
+export function status(
+  db: D1Database,
+): Pick<CaptureRepository, 'countedSources' | 'readSourceOutcomes' | 'countMutedTemplates'> {
   return {
-    countedSources: async (owner) => (await rows<{ source: string }>(db, COUNTED_SOURCES_SQL, owner)).map((r) => r.source),
-    readSourceOutcomes: async (owner, fromDay) =>
+    countedSources: async (owner) =>
+      (await rows<{ source: string }>(db, COUNTED_SOURCES_SQL, owner)).map((r) => r.source),
+    readSourceOutcomes: async (
+      owner,
+      fromDay,
+    ) =>
       (await rows<OutcomeRow>(db, SOURCE_OUTCOMES_SQL, owner, fromDay)).map((r) => ({
         source: r.source,
         recommended: r.recommended,

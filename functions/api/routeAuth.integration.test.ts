@@ -58,7 +58,9 @@ function routePath(file: string): string {
 }
 
 function paramsOf(file: string): Record<string, string> {
-  return Object.fromEntries([...file.matchAll(/\[(\w+)\]/g)].map((m) => [m[1] as string, PARAM_VALUE[m[1] as string] ?? '1']))
+  return Object.fromEntries(
+    [...file.matchAll(/\[(\w+)\]/g)].map((m) => [m[1] as string, PARAM_VALUE[m[1] as string] ?? '1']),
+  )
 }
 
 const routes: Route[] = []
@@ -69,7 +71,12 @@ for (const [file, exports] of Object.entries(modules)) {
   const handlers = [['', exports.onRequest], ...METHODS.map((m) => [m, exports[`onRequest${m}`]] as const)]
   for (const [method, handler] of handlers) {
     if (typeof handler !== 'function') continue
-    routes.push({ key: `${method === '' ? 'ANY' : method.toUpperCase()} ${new URL(url).pathname}`, url, method: method === '' ? 'GET' : method.toUpperCase(), handler: handler as Handler })
+    routes.push({
+      key: `${method === '' ? 'ANY' : method.toUpperCase()} ${new URL(url).pathname}`,
+      url,
+      method: method === '' ? 'GET' : method.toUpperCase(),
+      handler: handler as Handler,
+    })
   }
 }
 routes.sort((a, b) => a.key.localeCompare(b.key))
@@ -82,7 +89,10 @@ beforeAll(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
-const call = (route: Route, email: string | false) =>
+const call = (
+  route: Route,
+  email: string | false,
+) =>
   invokeExpenseApiRoute({
     handler: route.handler,
     repo: createD1ExpenseRepository(world.env),

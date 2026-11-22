@@ -16,19 +16,24 @@ const MODE_LABELS: Record<PushMode, string> = {
 const MODE_EXPLAINED: Record<PushMode, string> = {
   each: 'You get a notification for each payment as it arrives.',
   daily: 'You get one summary a day, at 20:00. Choose “For every payment” to hear about each one as it arrives.',
-  weekly: 'You get one summary a week, on Monday at 20:00. Choose “For every payment” to hear about each one as it arrives.',
+  weekly:
+    'You get one summary a week, on Monday at 20:00. Choose “For every payment” to hear about each one as it arrives.',
 }
 
-const NOT_INSTALLED = 'Add the app to your Home Screen first (Share, then Add to Home Screen), then turn this on from the installed app.'
+const NOT_INSTALLED =
+  'Add the app to your Home Screen first (Share, then Add to Home Screen), then turn this on from the installed app.'
 const UNSUPPORTED = 'This browser cannot receive notifications. Turn them on from the app installed on your phone.'
 const NOT_CONFIGURED = 'Notifications are not set up on this server.'
-const DENIED = 'Notifications are off for this app in your device’s Settings, Notifications. Allow them there, then come back.'
+const DENIED =
+  'Notifications are off for this app in your device’s Settings, Notifications. Allow them there, then come back.'
 
 function sentText(device: PushDeviceInfo): string {
   const since = `Since ${shortDayLabel(device.createdAt.slice(0, 10))}`
   if (device.lastSentAt === null) return `${since} · nothing sent yet`
   const sent = `last sent ${shortDayLabel(device.lastSentAt.slice(0, 10))}`
-  return device.lastStatus !== null && device.lastStatus >= 400 ? `${since} · ${sent}, not delivered` : `${since} · ${sent}`
+  return device.lastStatus !== null && device.lastStatus >= 400
+    ? `${since} · ${sent}, not delivered`
+    : `${since} · ${sent}`
 }
 
 function Devices({ push }: { push: PushDevice }) {
@@ -39,14 +44,20 @@ function Devices({ push }: { push: PushDevice }) {
       {list.devices.map((device) => (
         <li key={device.id} className={styles.row}>
           <span className={styles.name}>
-            <span className={styles.label}>{device.id === thisId ? `${device.label} (this device)` : device.label}</span>
+            <span className={styles.label}>
+              {device.id === thisId ? `${device.label} (this device)` : device.label}
+            </span>
             <span className={styles.meta}>{sentText(device)}</span>
           </span>
           <button
             type="button"
             className={styles.quiet}
             disabled={busy}
-            aria-label={device.id === thisId ? `Turn off ${device.label} (this device)` : `Turn off ${device.label}, on since ${shortDayLabel(device.createdAt.slice(0, 10))}`}
+            aria-label={
+              device.id === thisId
+                ? `Turn off ${device.label} (this device)`
+                : `Turn off ${device.label}, on since ${shortDayLabel(device.createdAt.slice(0, 10))}`
+            }
             onClick={() => void (device.id === thisId ? push.turnOff() : push.forget(device.id))}
           >
             Turn off
@@ -65,7 +76,13 @@ function Choice({ push }: { push: PushDevice }) {
       <legend>Tell me</legend>
       {PUSH_MODES.map((mode) => (
         <label key={mode} className={styles.mode}>
-          <input type="radio" name="push-mode" checked={settings.mode === mode} disabled={push.busy} onChange={() => void push.choose(mode)} />
+          <input
+            type="radio"
+            name="push-mode"
+            checked={settings.mode === mode}
+            disabled={push.busy}
+            onChange={() => void push.choose(mode)}
+          />
           {MODE_LABELS[mode]}
         </label>
       ))}

@@ -21,23 +21,45 @@ export interface Scenario {
 }
 
 /** A row with every field fixed: September, the owner's first account and category, 10.00 spent. */
-export async function make(k: Kit, owner: string, over: Record<string, unknown> = {}): Promise<number> {
+export async function make(
+  k: Kit,
+  owner: string,
+  over: Record<string, unknown> = {},
+): Promise<number> {
   const body = {
-    date: '2026-09-10', budgetMonth: '2026-09', description: 'Market', accountId: idsOf(k, 'accounts', owner)[0],
-    categoryId: idsOf(k, 'categories', owner)[0], type: 'expense', amountCents: 1000, cancelled: false, ...over,
+    date: '2026-09-10',
+    budgetMonth: '2026-09',
+    description: 'Market',
+    accountId: idsOf(k, 'accounts', owner)[0],
+    categoryId: idsOf(k, 'categories', owner)[0],
+    type: 'expense',
+    amountCents: 1000,
+    cancelled: false,
+    ...over,
   }
   const reply = await call(k, owner, postTransaction, '/transactions', { method: 'POST', body })
   expect(reply.status).toBe(201)
   return Number(reply.body.id)
 }
 
-export async function settleRows(k: Kit, owner: string, ids: number[], settledBy: number | null): Promise<void> {
-  const reply = await call(k, owner, patchBulk, '/transactions/bulk', { method: 'PATCH', body: { ids, patch: { settledBy } } })
+export async function settleRows(
+  k: Kit,
+  owner: string,
+  ids: number[],
+  settledBy: number | null,
+): Promise<void> {
+  const reply = await call(k, owner, patchBulk, '/transactions/bulk', {
+    method: 'PATCH',
+    body: { ids, patch: { settledBy } },
+  })
   expect(reply.status).toBe(200)
 }
 
 /** The cell a row belongs to, as the rollup holds it: `[pinned, count]`, or nothing if the cell is missing. */
-export function cellOf(k: Kit, id: number): Array<[number, number]> {
+export function cellOf(
+  k: Kit,
+  id: number,
+): Array<[number, number]> {
   return rows(
     k,
     `SELECT c.pinned, c.n FROM transactions t JOIN ledger_cells c ON c.owner = t.owner AND c.budget_month = t.budget_month
@@ -50,15 +72,26 @@ export function cellOf(k: Kit, id: number): Array<[number, number]> {
 }
 
 /** Deletes every row of the owner's smallest month, so that month has to leave the rollup. */
-export async function emptySmallestMonth(k: Kit, owner: string): Promise<void> {
-  const [smallest] = rows(k, 'SELECT budget_month AS m FROM transactions WHERE owner = ? GROUP BY 1 ORDER BY COUNT(*), 1 LIMIT 1', owner)
+export async function emptySmallestMonth(
+  k: Kit,
+  owner: string,
+): Promise<void> {
+  const [smallest] = rows(
+    k,
+    'SELECT budget_month AS m FROM transactions WHERE owner = ? GROUP BY 1 ORDER BY COUNT(*), 1 LIMIT 1',
+    owner,
+  )
   if (!smallest) return
   const ids = idsOf(k, 'transactions', owner, `budget_month = '${String(smallest.m)}'`)
   const reply = await call(k, owner, deleteBulk, '/transactions/bulk', { method: 'DELETE', body: { ids } })
   expect(reply.status).toBe(200)
 }
 
-const raw = (k: Kit, sql: string, ...params: Array<string | number | null>) => k.sqlite.prepare(sql).run(...params)
+const raw = (
+  k: Kit,
+  sql: string,
+  ...params: Array<string | number | null>
+) => k.sqlite.prepare(sql).run(...params)
 
 const paymentPinnedOnlyByPointer: Scenario = {
   name: 'a payment that is pinned only because a row points at it',
@@ -76,7 +109,10 @@ const paymentPinnedOnlyByPointer: Scenario = {
     expect(cube, 'the payment sits in an unpinned cell, and the reader leaves it out').toEqual([])
     await settleRows(k, OWNER, [expense], null)
     await assertRollup(k, 'unsettled')
-    expect(rows(k, CUBE_FROM_CELLS_SQL, OWNER, '2026-09', '2026-09').map((r) => r.n), 'the unsettled expense and the payment, now both unpinned').toEqual([1, 1])
+    expect(
+      rows(k, CUBE_FROM_CELLS_SQL, OWNER, '2026-09', '2026-09').map((r) => r.n),
+      'the unsettled expense and the payment, now both unpinned',
+    ).toEqual([1, 1])
   },
 }
 
@@ -100,7 +136,10 @@ const rowMovesBetweenPinnedAndUnpinned: Scenario = {
     for (const [name, write, pinned] of steps) {
       await write()
       await assertRollup(k, name)
-      expect(cellOf(k, id).map(([p]) => p), name).toEqual([pinned])
+      expect(
+        cellOf(k, id).map(([p]) => p),
+        name,
+      ).toEqual([pinned])
     }
     raw(k, 'UPDATE transactions SET report_count = NULL WHERE id = ?', id)
     await assertRollup(k, 'count back to NULL')
@@ -136,13 +175,19 @@ const editFormResendsValues: Scenario = {
     }
     const flags = idsOf(k, 'flags', OWNER)
     expect(await cost(formOf(k, id)), 'nothing changed').toBe(0)
-    expect(await cost({ ...formOf(k, id), notes: 'a note', description: 'Renamed', date: '2026-09-20' }), 'columns that are not in a cell').toBe(0)
+    expect(
+      await cost({ ...formOf(k, id), notes: 'a note', description: 'Renamed', date: '2026-09-20' }),
+      'columns that are not in a cell',
+    ).toBe(0)
     expect(await cost({ ...formOf(k, id), amountCents: 2500 }), 'amount only').toBe(1)
     expect(await cost({ flagId: flags[0]! }), 'unpinned to pinned').toBeGreaterThan(1)
     expect(await cost({ flagId: flags[1]! }), 'another flag, still pinned').toBe(0)
     expect(await cost({ ...formOf(k, id), type: 'investment' }), 'another type').toBeGreaterThan(1)
     expect(await cost({ ...formOf(k, id), amountCents: -2500 }), 'the sign of the amount alone').toBeGreaterThan(1)
-    expect(await cost({ ...formOf(k, id), budgetMonth: '2026-08', date: '2026-08-10' }), 'another month').toBeGreaterThan(1)
+    expect(
+      await cost({ ...formOf(k, id), budgetMonth: '2026-08', date: '2026-08-10' }),
+      'another month',
+    ).toBeGreaterThan(1)
   },
 }
 
@@ -151,7 +196,8 @@ const bothOwnersAreIndependent: Scenario = {
   run: async (k) => {
     const mine = await make(k, OWNER)
     const theirs = await make(k, OTHER)
-    const snapshot = () => JSON.stringify(rows(k, 'SELECT * FROM ledger_cells WHERE owner = ? ORDER BY 1, 2, 3, 4, 5, 6, 7, 8', OTHER))
+    const snapshot = () =>
+      JSON.stringify(rows(k, 'SELECT * FROM ledger_cells WHERE owner = ? ORDER BY 1, 2, 3, 4, 5, 6, 7, 8', OTHER))
     const before = snapshot()
     await edit(k, OWNER, mine, { amountCents: 5000, categoryId: idsOf(k, 'categories', OWNER)[1] })
     await settleRows(k, OWNER, [mine], await make(k, OWNER, { type: 'refund' }))
@@ -171,12 +217,29 @@ const amountOfPinnedRow: Scenario = {
       ['investment', () => make(k, OWNER, { type: 'investment' })],
       ['flag', () => make(k, OWNER, { flagId: flag })],
       ['plan', async () => (await newPlan(k, OWNER), idsOf(k, 'transactions', OWNER, 'plan_id IS NOT NULL')[0]!)],
-      ['settled', async () => { const id = await make(k, OWNER); await settleRows(k, OWNER, [id], await make(k, OWNER, { type: 'refund' })); return id }],
-      ['covered count', async () => { const id = await make(k, OWNER, { type: 'refund' }); raw(k, 'UPDATE transactions SET report_count = 2 WHERE id = ?', id); return id }],
+      [
+        'settled',
+        async () => {
+          const id = await make(k, OWNER)
+          await settleRows(k, OWNER, [id], await make(k, OWNER, { type: 'refund' }))
+          return id
+        },
+      ],
+      [
+        'covered count',
+        async () => {
+          const id = await make(k, OWNER, { type: 'refund' })
+          raw(k, 'UPDATE transactions SET report_count = 2 WHERE id = ?', id)
+          return id
+        },
+      ],
     ]
     for (const [reason, prepare] of reasons) {
       const id = await prepare()
-      expect(cellOf(k, id).map(([p]) => p), reason).toEqual([1])
+      expect(
+        cellOf(k, id).map(([p]) => p),
+        reason,
+      ).toEqual([1])
       for (const body of [{ amountCents: 4321 }, { cancelled: true }, { amountCents: 9876 }]) {
         expect(await edit(k, OWNER, id, body)).toBe(200)
         await assertRollup(k, `${reason}: ${JSON.stringify(body)}`)
@@ -192,7 +255,20 @@ const oldShapes: Scenario = {
     const [account, category] = [idsOf(k, 'accounts', OWNER)[0]!, idsOf(k, 'categories', OWNER)[0]!]
     await make(k, OWNER)
     const tables = emptyTables()
-    tables.transactions = [{ id: 9001, date: '2026-09-01', budgetMonth: '2026-09', description: 'Zero', accountId: account, categoryId: category, type: 'expense', amountCents: 0, cancelled: false, createdAt: '2026-09-01 10:00:00' }]
+    tables.transactions = [
+      {
+        id: 9001,
+        date: '2026-09-01',
+        budgetMonth: '2026-09',
+        description: 'Zero',
+        accountId: account,
+        categoryId: category,
+        type: 'expense',
+        amountCents: 0,
+        cancelled: false,
+        createdAt: '2026-09-01 10:00:00',
+      },
+    ]
     for (const statement of restoreStatements(OWNER, tables)) k.sqlite.exec(statement)
     const id = 9001
     await assertRollup(k, 'a zero amount')
@@ -208,6 +284,12 @@ const oldShapes: Scenario = {
   },
 }
 
-export const pinningScenarios: Scenario[] = [amountOfPinnedRow, oldShapes, 
-  paymentPinnedOnlyByPointer, rowMovesBetweenPinnedAndUnpinned, nullReportCount, editFormResendsValues, bothOwnersAreIndependent,
+export const pinningScenarios: Scenario[] = [
+  amountOfPinnedRow,
+  oldShapes,
+  paymentPinnedOnlyByPointer,
+  rowMovesBetweenPinnedAndUnpinned,
+  nullReportCount,
+  editFormResendsValues,
+  bothOwnersAreIndependent,
 ]

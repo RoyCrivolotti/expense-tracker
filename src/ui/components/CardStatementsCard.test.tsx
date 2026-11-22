@@ -36,7 +36,10 @@ function datasetWith(statements: AccountStatement[] = []) {
   })
 }
 
-async function openSheet(statements: AccountStatement[] = [], actions = makeActions()) {
+async function openSheet(
+  statements: AccountStatement[] = [],
+  actions = makeActions(),
+) {
   const user = userEvent.setup()
   render(<CardStatementsCard dataset={datasetWith(statements)} month="2026-06" actions={actions} />)
   await user.click(screen.getByRole('button', { name: /^Iberia Icon/ }))
@@ -78,9 +81,7 @@ describe('CardStatementsCard', () => {
       target: { value: '2026-06-18' },
     })
 
-    await waitFor(() =>
-      expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-18'),
-    )
+    await waitFor(() => expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-18'))
   })
 
   it('locks the row and the sheet until the save comes back', async () => {
@@ -116,13 +117,7 @@ describe('CardStatementsCard', () => {
   })
 
   it('offers no sheet for a statement with nothing to settle', () => {
-    render(
-      <CardStatementsCard
-        dataset={makeDataset({ accounts: ACCOUNTS })}
-        month="2026-06"
-        actions={makeActions()}
-      />,
-    )
+    render(<CardStatementsCard dataset={makeDataset({ accounts: ACCOUNTS })} month="2026-06" actions={makeActions()} />)
 
     expect(screen.getByText('Nothing to settle')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
@@ -146,12 +141,14 @@ describe('CardStatementsCard — mark as paid today', () => {
     vi.useRealTimers()
   })
 
-  function renderCard(options: {
-    statements?: AccountStatement[]
-    actions?: ReturnType<typeof makeActions> | undefined
-    withActions?: boolean
-    dataset?: ReturnType<typeof makeDataset>
-  } = {}) {
+  function renderCard(
+    options: {
+      statements?: AccountStatement[]
+      actions?: ReturnType<typeof makeActions> | undefined
+      withActions?: boolean
+      dataset?: ReturnType<typeof makeDataset>
+    } = {},
+  ) {
     const showToast = vi.fn()
     const actions = options.actions ?? makeActions()
     render(
@@ -166,8 +163,7 @@ describe('CardStatementsCard — mark as paid today', () => {
     return { actions, showToast }
   }
 
-  const button = (card = 'Iberia Icon') =>
-    screen.queryByRole('button', { name: `Mark as paid today for ${card}` })
+  const button = (card = 'Iberia Icon') => screen.queryByRole('button', { name: `Mark as paid today for ${card}` })
 
   it('marks a due statement paid on today with one tap, without opening the sheet', async () => {
     const { actions } = renderCard()
@@ -250,9 +246,7 @@ describe('CardStatementsCard — mark as paid today', () => {
 
     await userEvent.click(button()!)
 
-    await waitFor(() =>
-      expect(showToast).toHaveBeenCalledWith('Paid date is not a valid day.', 'error'),
-    )
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Paid date is not a valid day.', 'error'))
     expect(showToast).not.toHaveBeenCalledWith(expect.anything(), 'success')
     expect(button()).toBeEnabled()
   })

@@ -32,9 +32,7 @@ export function ReassignDeleteSheet({
   onCancel,
   onConfirm,
 }: ReassignDeleteSheetProps) {
-  const [selection, setSelection] = useState<string>(
-    options[0] ? String(options[0].id) : CREATE_NEW,
-  )
+  const [selection, setSelection] = useState<string>(options[0] ? String(options[0].id) : CREATE_NEW)
   const [newName, setNewName] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -46,9 +44,7 @@ export function ReassignDeleteSheet({
     setBusy(true)
     setErr(null)
     try {
-      await onConfirm(
-        creatingNew ? { createName: newName.trim() } : { reassignToId: Number(selection) },
-      )
+      await onConfirm(creatingNew ? { createName: newName.trim() } : { reassignToId: Number(selection) })
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not delete')
       setBusy(false)

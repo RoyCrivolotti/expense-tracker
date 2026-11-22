@@ -18,7 +18,12 @@ describe('DefaultAccountSetting', () => {
   it('saves the default account and the investments category as settings patches', () => {
     const onChange = vi.fn()
     render(
-      <DefaultAccountSetting accounts={accounts} categories={categories} settings={defaultExpenseSettings()} onChange={onChange} />,
+      <DefaultAccountSetting
+        accounts={accounts}
+        categories={categories}
+        settings={defaultExpenseSettings()}
+        onChange={onChange}
+      />,
     )
     fireEvent.change(screen.getByLabelText('Default account'), { target: { value: '2' } })
     expect(onChange).toHaveBeenLastCalledWith({ defaultAccountId: 2 })

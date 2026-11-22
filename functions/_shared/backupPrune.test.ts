@@ -64,14 +64,22 @@ describe('buildPrunePlan', () => {
 })
 
 describe('a chunked backup in the bucket', () => {
-  const folder = (owner: string, day: string, sizes: number[]) => [
+  const folder = (
+    owner: string,
+    day: string,
+    sizes: number[],
+  ) => [
     ...sizes.map((size, i): [string, number] => [`${owner}/${day}/part-00000${i + 1}.ndjson`, size]),
     [`${owner}/${day}/manifest.json`, 50] as [string, number],
   ]
 
   it('is dropped with every object it holds once it is older than the retention window', () => {
     const keys = keysOlderThan(
-      objs([...folder('a@b.com', '2026-06-01', [100, 100]), ...folder('a@b.com', '2026-06-18', [100]), ['a@b.com/2026-06-02.json', 10]]),
+      objs([
+        ...folder('a@b.com', '2026-06-01', [100, 100]),
+        ...folder('a@b.com', '2026-06-18', [100]),
+        ['a@b.com/2026-06-02.json', 10],
+      ]),
       7,
       '2026-06-18',
     )
@@ -85,7 +93,11 @@ describe('a chunked backup in the bucket', () => {
 
   it('goes whole when the bucket is over budget, never a part at a time', () => {
     const keys = keysOverSizeBudget(
-      objs([...folder('a@b.com', '2026-06-01', [400, 400]), ...folder('a@b.com', '2026-06-02', [300]), ['b@c.com/2026-06-03.json', 300]]),
+      objs([
+        ...folder('a@b.com', '2026-06-01', [400, 400]),
+        ...folder('a@b.com', '2026-06-02', [300]),
+        ['b@c.com/2026-06-03.json', 300],
+      ]),
       700,
     )
     expect(keys.sort()).toEqual([
@@ -96,7 +108,10 @@ describe('a chunked backup in the bucket', () => {
   })
 
   it('counts a folder and a single file of the same day as two backups', () => {
-    const keys = keysOverSizeBudget(objs([...folder('a@b.com', '2026-06-01', [500]), ['b@c.com/2026-06-01.json', 500]]), 600)
+    const keys = keysOverSizeBudget(
+      objs([...folder('a@b.com', '2026-06-01', [500]), ['b@c.com/2026-06-01.json', 500]]),
+      600,
+    )
     expect(keys).toHaveLength(2)
   })
 
@@ -124,7 +139,11 @@ describe('the newest complete backup of an owner who still has data', () => {
   const policy = { retentionDays: 7, maxBucketBytes: 100, maxSnapshotBytes: 9999, bucketAlertThresholdFraction: 0.8 }
   const roomy = { ...policy, maxBucketBytes: 10_000 }
   const current = new Set(['a@b.com', 'b@c.com'])
-  const folder = (owner: string, day: string, withManifest = true): [string, number][] => [
+  const folder = (
+    owner: string,
+    day: string,
+    withManifest = true,
+  ): [string, number][] => [
     [`${owner}/${day}/part-000001.ndjson`, 200],
     ...(withManifest ? [[`${owner}/${day}/manifest.json`, 50] as [string, number]] : []),
   ]
@@ -159,7 +178,10 @@ describe('the newest complete backup of an owner who still has data', () => {
     const all = objs([...folder('a@b.com', '2026-05-01'), ...folder('a@b.com', '2026-06-18', false)])
 
     expect(buildPrunePlan(all, roomy, '2026-06-18', current)).toEqual([])
-    expect(buildPrunePlan(all, roomy, '2026-06-18')).toEqual(['a@b.com/2026-05-01/part-000001.ndjson', 'a@b.com/2026-05-01/manifest.json'])
+    expect(buildPrunePlan(all, roomy, '2026-06-18')).toEqual([
+      'a@b.com/2026-05-01/part-000001.ndjson',
+      'a@b.com/2026-05-01/manifest.json',
+    ])
   })
 
   it('does not hold on to the backups of someone who no longer has data', () => {

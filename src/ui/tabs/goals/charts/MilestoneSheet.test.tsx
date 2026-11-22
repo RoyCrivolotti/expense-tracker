@@ -39,19 +39,31 @@ const EIGHT = amounts(100, 150, 200, 300, 400, 500, 750, 1000, 2000)
 
 /** A phone, on the card's page: `px` is the width of the card, which jsdom cannot measure. */
 function phone({ upright = false, width = 327 }: { upright?: boolean; width?: number } = {}) {
-  installFakeMatchMedia((query) => query === NARROW_MQ || query === '(hover: none)' || (query === SIDEWAYS_MQ && upright))
+  installFakeMatchMedia(
+    (query) => query === NARROW_MQ || query === '(hover: none)' || (query === SIDEWAYS_MQ && upright),
+  )
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(width)
 }
 
 function renderTable(milestones = EIGHT) {
   return render(
-    <MilestoneMatrix scenarios={[plan, slower]} draft={draft} milestones={milestones} reached={new Map()} includeDraft={false} />,
+    <MilestoneMatrix
+      scenarios={[plan, slower]}
+      draft={draft}
+      milestones={milestones}
+      reached={new Map()}
+      includeDraft={false}
+    />,
   )
 }
 
 const dialog = () => screen.getByRole('dialog', { name: 'Years to milestone, every milestone' })
 const open = () => userEvent.click(screen.getByRole('button', { name: 'All milestones' }))
-const heads = (root: HTMLElement) => within(root).getAllByRole('columnheader').slice(1).map((h) => h.textContent ?? '')
+const heads = (root: HTMLElement) =>
+  within(root)
+    .getAllByRole('columnheader')
+    .slice(1)
+    .map((h) => h.textContent ?? '')
 
 describe('the sheet with every milestone', () => {
   it('is offered where the table is paged, and not where it is not', () => {
@@ -167,7 +179,9 @@ describe('the sheet with every milestone', () => {
   })
 
   it('goes back to as it is when the phone is turned, with the sheet still open', async () => {
-    const media = installFakeMatchMedia((query) => query === NARROW_MQ || query === '(hover: none)' || query === SIDEWAYS_MQ)
+    const media = installFakeMatchMedia(
+      (query) => query === NARROW_MQ || query === '(hover: none)' || query === SIDEWAYS_MQ,
+    )
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(327)
     renderTable()
     await open()

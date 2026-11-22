@@ -11,7 +11,10 @@ import { todayIso } from '../../components/transactionFormState'
 import type { ExpenseActions } from '../../actions'
 import type { WealthAccount } from '../../../types'
 
-function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
+function makeAccount(
+  id: number,
+  kind: WealthAccount['kind'] = 'investment',
+): WealthAccount {
   return { id, name: `Account ${id}`, kind, sortOrder: id, archived: false }
 }
 
@@ -195,9 +198,7 @@ describe('CheckinFormSheet', () => {
   it('calls onDone when cancel is clicked', async () => {
     const onDone = vi.fn()
     const user = userEvent.setup()
-    render(
-      <CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} onDone={onDone} />,
-    )
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} onDone={onDone} />)
     await user.click(screen.getByRole('button', { name: /cancel/i }))
     expect(onDone).toHaveBeenCalled()
   })

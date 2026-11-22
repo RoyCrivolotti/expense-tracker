@@ -3,10 +3,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import { sumsOf } from '../modelSums'
 import type { ExpenseActions } from '../actions'
 import type { BudgetHealth } from '../../engine'
-import {
-  computeBudgetHealth,
-  computeMonthlyTotals,
-} from '../../engine'
+import { computeBudgetHealth, computeMonthlyTotals } from '../../engine'
 import { Card, EmptyState, Kpi, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { BudgetBar } from '../components/BudgetBar'
@@ -38,9 +35,15 @@ const BUDGET_SORTS: { value: BudgetSort; label: string }[] = [
   { value: 'overbudget', label: 'Most over' },
 ]
 
-function budgetComparator(sort: BudgetSort, order: Map<number, number>) {
+function budgetComparator(
+  sort: BudgetSort,
+  order: Map<number, number>,
+) {
   const ord = (b: BudgetHealth) => order.get(b.categoryId) ?? Number.MAX_SAFE_INTEGER
-  return (a: BudgetHealth, b: BudgetHealth): number => {
+  return (
+    a: BudgetHealth,
+    b: BudgetHealth,
+  ): number => {
     if (sort === 'order') return ord(a) - ord(b)
     if (sort === 'overbudget') return b.ratio - a.ratio || b.budgetCents - a.budgetCents
     return b.budgetCents - a.budgetCents || ord(a) - ord(b)
@@ -65,20 +68,12 @@ function BudgetsSection({
       <div className={styles.sectionHeader}>
         <SectionTitle>Budgets</SectionTitle>
         {budgets.length > 0 && (
-          <SegmentedControl
-            options={BUDGET_SORTS}
-            value={sort}
-            onChange={onSort}
-            ariaLabel="Sort budgets"
-          />
+          <SegmentedControl options={BUDGET_SORTS} value={sort} onChange={onSort} ariaLabel="Sort budgets" />
         )}
       </div>
       <Card>
         {budgets.length === 0 ? (
-          <EmptyState
-            actionLabel={onOpenSettings ? 'Set budgets in Settings' : undefined}
-            onAction={onOpenSettings}
-          >
+          <EmptyState actionLabel={onOpenSettings ? 'Set budgets in Settings' : undefined} onAction={onOpenSettings}>
             No budgeted categories yet.
           </EmptyState>
         ) : (
@@ -116,10 +111,7 @@ export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin, 
       .filter((b) => b.budgetCents > 0)
       .sort(budgetComparator(budgetSort, order))
   }, [dataset, sums, month, budgetSort])
-  const categoryIcons = useMemo(
-    () => new Map(dataset.categories.map((c) => [c.id, c.icon])),
-    [dataset.categories],
-  )
+  const categoryIcons = useMemo(() => new Map(dataset.categories.map((c) => [c.id, c.icon])), [dataset.categories])
 
   return (
     <div className={styles.stack}>

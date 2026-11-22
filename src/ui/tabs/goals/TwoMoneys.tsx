@@ -8,7 +8,11 @@ import styles from './goals.module.css'
  * The two moneys' names: by year ("2026 euros"), or by month where both starts are in one year and the
  * year alone would name two different moneys alike.
  */
-function moneyNames(chartStart: string, draftStart: string, format: MoneyFormat): { chart: string; own: string; when: string } {
+function moneyNames(
+  chartStart: string,
+  draftStart: string,
+  format: MoneyFormat,
+): { chart: string; own: string; when: string } {
   if (chartStart.slice(0, 4) !== draftStart.slice(0, 4)) {
     return { chart: planMoneyLabel(chartStart, format), own: planMoneyLabel(draftStart, format), when: 'the year' }
   }
@@ -22,7 +26,13 @@ function moneyNames(chartStart: string, draftStart: string, format: MoneyFormat)
  * scale, and the strip and the narrative in the scenario's own, as its editor is. One sentence says so,
  * since the same scenario's figure differs between the two by the inflation in between.
  */
-export function TwoMoneys({ chartStart, draftStart }: { chartStart: string | null; draftStart: string | null | undefined }) {
+export function TwoMoneys({
+  chartStart,
+  draftStart,
+}: {
+  chartStart: string | null
+  draftStart: string | null | undefined
+}) {
   const format = useMoneyFormat()
   if (!chartStart || !draftStart || (scenarioAxis([chartStart, draftStart]).offsets[1] ?? 0) <= 0) return null
   const { chart, own, when } = moneyNames(chartStart, draftStart, format)

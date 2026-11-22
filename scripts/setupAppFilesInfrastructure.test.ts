@@ -3,9 +3,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BINDING, BUCKET, cloudflareApi, main, parseArgs, planBinding } from './setup-app-files-infrastructure.mjs'
 
-const project = (production: object | undefined, preview: object | undefined) => ({
+const project = (
+  production: object | undefined,
+  preview: object | undefined,
+) => ({
   deployment_configs: {
-    production: production === undefined ? {} : { r2_buckets: production, env_vars: { A: 1 }, d1_databases: { DB: { id: 'x' } } },
+    production:
+      production === undefined ? {} : { r2_buckets: production, env_vars: { A: 1 }, d1_databases: { DB: { id: 'x' } } },
     preview: preview === undefined ? {} : { r2_buckets: preview },
   },
 })
@@ -63,7 +67,9 @@ describe('parseArgs', () => {
 
 describe('main', () => {
   const setup = () => {
-    const api = vi.fn((_path: string, _init?: object) => Promise.resolve(project({ RECEIPTS: { name: 'receipts' } }, {})))
+    const api = vi.fn((_path: string, _init?: object) =>
+      Promise.resolve(project({ RECEIPTS: { name: 'receipts' } }, {})),
+    )
     const createBucket = vi.fn(() => 'created')
     const log = vi.fn()
     return { api, createBucket, log, deps: { api, createBucket, log, accountId: 'acct', token: 't' } }
@@ -102,9 +108,13 @@ describe('main', () => {
 
 describe('cloudflareApi', () => {
   it('returns the result, and throws the API error text on failure', async () => {
-    const ok = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, result: { x: 1 } }) } as Response))
+    const ok = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve({ success: true, result: { x: 1 } }) } as Response),
+    )
     expect(await cloudflareApi('t', 'acct', ok)('/p')).toEqual({ x: 1 })
-    expect((ok.mock.calls as unknown as string[][])[0]?.[0]).toBe('https://api.cloudflare.com/client/v4/accounts/acct/p')
+    expect((ok.mock.calls as unknown as string[][])[0]?.[0]).toBe(
+      'https://api.cloudflare.com/client/v4/accounts/acct/p',
+    )
     const bad = vi.fn(() =>
       Promise.resolve({ json: () => Promise.resolve({ success: false, errors: [{ message: 'nope' }] }) } as Response),
     )

@@ -25,7 +25,11 @@ export type InputValue = string | boolean
 export type FieldValue = string | number | boolean
 
 /** Domain value -> form input representation. */
-export function toInput(kind: FieldKind, raw: unknown, format: MoneyFormat): InputValue {
+export function toInput(
+  kind: FieldKind,
+  raw: unknown,
+  format: MoneyFormat,
+): InputValue {
   if (kind === 'toggle') return Boolean(raw)
   if (raw == null) return ''
   if (kind === 'money') return formatMoneyInput(Number(raw), format)
@@ -35,7 +39,11 @@ export function toInput(kind: FieldKind, raw: unknown, format: MoneyFormat): Inp
 }
 
 /** Form input representation -> domain value. */
-export function fromInput(kind: FieldKind, value: InputValue, format: MoneyFormat): FieldValue {
+export function fromInput(
+  kind: FieldKind,
+  value: InputValue,
+  format: MoneyFormat,
+): FieldValue {
   if (kind === 'toggle') return Boolean(value)
   if (kind === 'money') return parseMoneyToCents(String(value), format)
   if (kind === 'percent') return parsePercentToFraction(String(value), format)
@@ -57,7 +65,5 @@ export function buildPatch(
   values: Record<string, InputValue>,
   format: MoneyFormat,
 ): Record<string, FieldValue> {
-  return Object.fromEntries(
-    fields.map((f) => [f.key, fromInput(f.kind, values[f.key] ?? '', format)]),
-  )
+  return Object.fromEntries(fields.map((f) => [f.key, fromInput(f.kind, values[f.key] ?? '', format)]))
 }

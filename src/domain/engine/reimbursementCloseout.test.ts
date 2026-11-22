@@ -18,12 +18,20 @@ const FLAG: Flag = {
   active: true,
 }
 
-function row(id: number, type: Transaction['type'], amountCents: number): Transaction {
+function row(
+  id: number,
+  type: Transaction['type'],
+  amountCents: number,
+): Transaction {
   return { ...unflagged(id, type, amountCents), flagId: 1 }
 }
 
 /** A row on no flag, which is how a recorded payment is stored. */
-function unflagged(id: number, type: Transaction['type'], amountCents: number): Transaction {
+function unflagged(
+  id: number,
+  type: Transaction['type'],
+  amountCents: number,
+): Transaction {
   return {
     id,
     date: `2026-09-0${id}`,
@@ -52,7 +60,11 @@ function draftFor(rows: Transaction[]) {
 }
 
 /** The rows as they stand once the payment's settle has landed. */
-function afterSettling(rows: Transaction[], ids: number[], paymentId: number): Transaction[] {
+function afterSettling(
+  rows: Transaction[],
+  ids: number[],
+  paymentId: number,
+): Transaction[] {
   const settled = new Set(ids)
   return rows.map((t) => (settled.has(t.id) ? { ...t, settledBy: paymentId } : t))
 }

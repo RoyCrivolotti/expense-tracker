@@ -40,9 +40,28 @@ function model() {
       ],
       labels: [makeLabel({ id: 1, name: 'Porto trip' })],
       transactions: [
-        txn({ date: '2026-02-05', budgetMonth: '2026-02', categoryId: 1, description: 'shop feb', amountCents: 30_000 }),
-        txn({ date: '2026-03-05', budgetMonth: '2026-03', categoryId: 1, description: 'big shop', amountCents: 25_000 }),
-        txn({ date: '2026-03-08', budgetMonth: '2026-03', categoryId: 2, description: 'dinner', amountCents: 8_000, labelIds: [1] }),
+        txn({
+          date: '2026-02-05',
+          budgetMonth: '2026-02',
+          categoryId: 1,
+          description: 'shop feb',
+          amountCents: 30_000,
+        }),
+        txn({
+          date: '2026-03-05',
+          budgetMonth: '2026-03',
+          categoryId: 1,
+          description: 'big shop',
+          amountCents: 25_000,
+        }),
+        txn({
+          date: '2026-03-08',
+          budgetMonth: '2026-03',
+          categoryId: 2,
+          description: 'dinner',
+          amountCents: 8_000,
+          labelIds: [1],
+        }),
       ],
     }),
   )
@@ -106,7 +125,13 @@ describe('SpendingView', () => {
         transactions: [
           txn({ date: '2026-03-01', budgetMonth: '2026-03', categoryId: 1, description: 'rent', amountCents: 120_000 }),
           ...[3, 4, 5].map((d) =>
-            txn({ date: `2026-03-0${d}`, budgetMonth: '2026-03', categoryId: 2, description: 'flat white', amountCents: 400 }),
+            txn({
+              date: `2026-03-0${d}`,
+              budgetMonth: '2026-03',
+              categoryId: 2,
+              description: 'flat white',
+              amountCents: 400,
+            }),
           ),
         ],
       }),
@@ -154,7 +179,17 @@ describe('SpendingView', () => {
 
 describe('presetFor', () => {
   it('maps groupings to filter presets, and none for fixed/flexible', () => {
-    const base = { key: '7', name: 'Market Hall', currentCents: 0, unpaidCents: 0, budgetCents: null, shouldBeTodayCents: null, spark: [], avg3Cents: null, txnCount: 0 }
+    const base = {
+      key: '7',
+      name: 'Market Hall',
+      currentCents: 0,
+      unpaidCents: 0,
+      budgetCents: null,
+      shouldBeTodayCents: null,
+      spark: [],
+      avg3Cents: null,
+      txnCount: 0,
+    }
     expect(presetFor('category', base, '2026-03', 'committed')).toEqual({ categoryId: 7, month: '2026-03' })
     expect(presetFor('label', base, '2026-03', 'committed')).toEqual({ labelIds: [7], month: '2026-03' })
     expect(presetFor('description', base, '2026-03', 'committed')).toEqual({ query: 'Market Hall', month: '2026-03' })
@@ -162,10 +197,28 @@ describe('presetFor', () => {
   })
 
   it('narrows every stored grouping to posted rows on the paid basis', () => {
-    const base = { key: '7', name: 'Market Hall', currentCents: 0, unpaidCents: 0, budgetCents: null, shouldBeTodayCents: null, spark: [], avg3Cents: null, txnCount: 0 }
-    expect(presetFor('category', base, '2026-03', 'paid')).toEqual({ categoryId: 7, month: '2026-03', status: 'posted' })
+    const base = {
+      key: '7',
+      name: 'Market Hall',
+      currentCents: 0,
+      unpaidCents: 0,
+      budgetCents: null,
+      shouldBeTodayCents: null,
+      spark: [],
+      avg3Cents: null,
+      txnCount: 0,
+    }
+    expect(presetFor('category', base, '2026-03', 'paid')).toEqual({
+      categoryId: 7,
+      month: '2026-03',
+      status: 'posted',
+    })
     expect(presetFor('label', base, '2026-03', 'paid')).toEqual({ labelIds: [7], month: '2026-03', status: 'posted' })
-    expect(presetFor('description', base, '2026-03', 'paid')).toEqual({ query: 'Market Hall', month: '2026-03', status: 'posted' })
+    expect(presetFor('description', base, '2026-03', 'paid')).toEqual({
+      query: 'Market Hall',
+      month: '2026-03',
+      status: 'posted',
+    })
     expect(presetFor('fixedFlexible', base, '2026-03', 'paid')).toBeNull()
   })
 })

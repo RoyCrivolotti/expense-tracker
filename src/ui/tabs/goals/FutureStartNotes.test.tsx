@@ -25,10 +25,19 @@ function planOn(date: string): number {
   return Math.round(valueOnAxisAt(points, 0, SAMPLE_INFLATION, years)! * (1 + SAMPLE_INFLATION) ** years)
 }
 
-function renderFields(draftOver: Parameters<typeof samplePlan>[0], otherPlan = fromToday, onChange = vi.fn()) {
+function renderFields(
+  draftOver: Parameters<typeof samplePlan>[0],
+  otherPlan = fromToday,
+  onChange = vi.fn(),
+) {
   render(
     <AssumedInflationContext.Provider value={SAMPLE_INFLATION}>
-      <TrackingFields draft={scenarioToDraft(samplePlan(draftOver))} latest={latest} otherPlan={otherPlan} onChange={onChange} />
+      <TrackingFields
+        draft={scenarioToDraft(samplePlan(draftOver))}
+        latest={latest}
+        otherPlan={otherPlan}
+        onChange={onChange}
+      />
     </AssumedInflationContext.Provider>,
   )
   return onChange
@@ -37,15 +46,27 @@ function renderFields(draftOver: Parameters<typeof samplePlan>[0], otherPlan = f
 describe('the plan start section', () => {
   it('always says that moving the date keeps the amounts, and where to go to restate them', () => {
     renderFields({ planStartDate: '2026-01-01' })
-    expect(screen.getByText(/Moving the date here keeps every amount as typed\. To start later with the amounts restated for inflation, use Start a\s+copy later\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Moving the date here keeps every amount as typed\. To start later with the amounts restated for inflation, use Start a\s+copy later\./,
+      ),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/The balance you expect/)).toBeNull()
   })
 
   it('says what a start after today’s balance is, how far it is from the plan, and offers the plan’s figure', () => {
-    const onChange = renderFields({ planStartDate: '2028-07-01', housePurchaseYear: null, startInvestedCents: 5_000_000 })
-    expect(screen.getByText(/The balance you expect to have invested on 1 Jul 2028, in 2028 euros\./)).toBeInTheDocument()
+    const onChange = renderFields({
+      planStartDate: '2028-07-01',
+      housePurchaseYear: null,
+      startInvestedCents: 5_000_000,
+    })
+    expect(
+      screen.getByText(/The balance you expect to have invested on 1 Jul 2028, in 2028 euros\./),
+    ).toBeInTheDocument()
     const figure = planOn('2028-07-01')
-    expect(screen.getByText(/Your plan, carried on from your latest check-in, has about/)).toHaveTextContent(/this starts from\s+50\.000 €, [\d.]+ € less\./)
+    expect(screen.getByText(/Your plan, carried on from your latest check-in, has about/)).toHaveTextContent(
+      /this starts from\s+50\.000 €, [\d.]+ € less\./,
+    )
     fireEvent.click(screen.getByRole('button', { name: /^Use / }))
     expect(onChange).toHaveBeenCalledWith({ startInvestedCents: figure })
   })
@@ -58,7 +79,11 @@ describe('the plan start section', () => {
 
   it('hides the comparison within 1% of the plan', () => {
     const figure = planOn('2028-07-01')
-    renderFields({ planStartDate: '2028-07-01', housePurchaseYear: null, startInvestedCents: Math.round(figure * 1.009) })
+    renderFields({
+      planStartDate: '2028-07-01',
+      housePurchaseYear: null,
+      startInvestedCents: Math.round(figure * 1.009),
+    })
     expect(screen.queryByText(/Your plan, carried on/)).toBeNull()
   })
 
@@ -70,7 +95,12 @@ describe('the plan start section', () => {
 
   it('offers nothing when the plan is the scenario being edited', () => {
     render(
-      <TrackingFields draft={scenarioToDraft(samplePlan({ planStartDate: '2028-07-01', housePurchaseYear: null }))} latest={latest} otherPlan={null} onChange={vi.fn()} />,
+      <TrackingFields
+        draft={scenarioToDraft(samplePlan({ planStartDate: '2028-07-01', housePurchaseYear: null }))}
+        latest={latest}
+        otherPlan={null}
+        onChange={vi.fn()}
+      />,
     )
     expect(screen.getByText(/The balance you expect/)).toBeInTheDocument()
     expect(screen.queryByText(/Your plan, carried on/)).toBeNull()
@@ -78,7 +108,11 @@ describe('the plan start section', () => {
 
   it('shows the comparison from just past 1% apart', () => {
     const figure = planOn('2028-07-01')
-    renderFields({ planStartDate: '2028-07-01', housePurchaseYear: null, startInvestedCents: Math.round(figure * 0.98) })
+    renderFields({
+      planStartDate: '2028-07-01',
+      housePurchaseYear: null,
+      startInvestedCents: Math.round(figure * 0.98),
+    })
     expect(screen.getByText(/Your plan, carried on/)).toBeInTheDocument()
   })
 

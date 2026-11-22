@@ -23,7 +23,10 @@ const BASE = '/api/expenses'
 const SERIES_ATTEMPTS = 4
 const SERIES_RETRY_MS = 1_100
 
-function unavailable(url: string, detail: string): PartsUnavailableError {
+function unavailable(
+  url: string,
+  detail: string,
+): PartsUnavailableError {
   return new PartsUnavailableError(`${url} is not served here (${detail})`)
 }
 
@@ -52,8 +55,10 @@ async function bodyOf(
   }
 }
 
-const fetchPart = (url: string, init?: RequestInit): Promise<Response> =>
-  fetch(url, { credentials: 'same-origin', headers: { accept: 'application/json' }, ...init })
+const fetchPart = (
+  url: string,
+  init?: RequestInit,
+): Promise<Response> => fetch(url, { credentials: 'same-origin', headers: { accept: 'application/json' }, ...init })
 
 /**
  * Parts carry `Cache-Control: private, no-cache` and an ETag, so the browser keeps the body and asks
@@ -63,7 +68,10 @@ const fetchPart = (url: string, init?: RequestInit): Promise<Response> =>
  * (something between the browser and the page answered a conditional request) has no body, so the part
  * is read again past every cache.
  */
-async function readPart<T>(url: string, check: (body: unknown) => body is T): Promise<T> {
+async function readPart<T>(
+  url: string,
+  check: (body: unknown) => body is T,
+): Promise<T> {
   let res = await fetchPart(url)
   if (res.status === 304) res = await fetchPart(url, { cache: 'reload' })
   const body = await bodyOf(url, res)
@@ -91,19 +99,28 @@ const query = (range: MonthRange): string => `from=${range.from}&to=${range.to}`
 const exportUrl = (after: string | undefined): string =>
   `${BASE}/export?${new URLSearchParams({ table: 'transactions', ...(after !== undefined ? { after } : {}) })}`
 
-const ndjson = (text: string): unknown[] => text.split('\n').filter((line) => line !== '').map((line) => JSON.parse(line) as unknown)
+const ndjson = (text: string): unknown[] =>
+  text
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => JSON.parse(line) as unknown)
 
 /**
  * One chunk of the export route: one transaction a line, the position to continue from in `X-Export-Next` (absent
  * at the end) and the revision it was read under in `X-Export-Revision`. A body that is not NDJSON, a row that does
  * not look like a transaction or a missing revision is a server that does not serve the export.
  */
-async function readExport(after: string | undefined, signal: AbortSignal | undefined): Promise<TransactionExportPart> {
+async function readExport(
+  after: string | undefined,
+  signal: AbortSignal | undefined,
+): Promise<TransactionExportPart> {
   const url = exportUrl(after)
   const res = await fetchPart(url, { cache: 'no-store', ...(signal ? { signal } : {}) })
-  if (!res.ok) throw res.status === 404 || res.status === 405 ? unavailable(url, `HTTP ${res.status}`) : await toApiError(res)
+  if (!res.ok)
+    throw res.status === 404 || res.status === 405 ? unavailable(url, `HTTP ${res.status}`) : await toApiError(res)
   const revision = res.headers.get('x-export-revision')
-  if (revision === null || !res.headers.get('content-type')?.startsWith('application/x-ndjson')) throw unavailable(url, 'not NDJSON')
+  if (revision === null || !res.headers.get('content-type')?.startsWith('application/x-ndjson'))
+    throw unavailable(url, 'not NDJSON')
   const rows = ndjson(await res.text())
   if (!rows.every(isExportedTransaction)) throw unavailable(url, 'unexpected shape')
   return { revision, rows, next: res.headers.get('x-export-next') }
@@ -114,7 +131,10 @@ async function readExport(after: string | undefined, signal: AbortSignal | undef
  * descriptions some rows still wait for theirs: the route answers 503 with a one second retry, and each try gets
  * further. A few tries are made at that pace before the 503 is given to the caller.
  */
-async function whileFilling<T>(read: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+async function whileFilling<T>(
+  read: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await read()
@@ -146,12 +166,29 @@ export const apiLedgerParts: LedgerPartsSource = {
   readSeriesPart: () => readSeries(),
   readUsagePart: () => readPart(`${BASE}/usage`, isUsagePart),
   readTransactionExport: ({ after, signal } = {}) => readExport(after, signal),
-  readRecentTransactions: ({ limit = 8, signal } = {}) => readFresh(`${BASE}/transactions/recent?limit=${limit}`, isRecentTransactions, signal),
-  readDescriptionSuggest: (request, options) => readSuggest(request, options?.signal),
+  readRecentTransactions: ({ limit = 8, signal } = {}) =>
+    readFresh(`${BASE}/transactions/recent?limit=${limit}`, isRecentTransactions, signal),
+  readDescriptionSuggest: (
+    request,
+    options,
+  ) => readSuggest(request, options?.signal),
   readReceiptsPart: (transactionId) =>
-    readPart(`${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`, isReceiptList),
-  readTransactionPage: (filter, request) =>
-    readFresh(`${BASE}/transactions/list?${transactionQueryString(filter, request)}`, isTransactionPage, request?.signal),
-  readTransactionSummary: (filter, request) =>
+    readPart(
+      `${BASE}/attachments${transactionId === undefined ? '' : `?transactionId=${transactionId}`}`,
+      isReceiptList,
+    ),
+  readTransactionPage: (
+    filter,
+    request,
+  ) =>
+    readFresh(
+      `${BASE}/transactions/list?${transactionQueryString(filter, request)}`,
+      isTransactionPage,
+      request?.signal,
+    ),
+  readTransactionSummary: (
+    filter,
+    request,
+  ) =>
     readFresh(`${BASE}/transactions/summary?${transactionQueryString(filter)}`, isTransactionSummary, request?.signal),
 }

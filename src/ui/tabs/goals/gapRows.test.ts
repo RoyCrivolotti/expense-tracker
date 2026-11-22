@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { GapSplit } from '../../../engine'
 import { behindFromTheMarket, gapRows } from './gapRows'
 
-const split = (parts: Partial<GapSplit['parts']>, over: Partial<GapSplit> = {}): GapSplit => {
+const split = (
+  parts: Partial<GapSplit['parts']>,
+  over: Partial<GapSplit> = {},
+): GapSplit => {
   const all = { timing: 0, start: 0, saving: 0, market: 0, ...parts }
   return {
     kind: 'split',
@@ -42,8 +45,12 @@ describe('gapRows', () => {
   })
 
   it('calls the start what happened before the first check-in when that came more than a month in', () => {
-    expect(labels(split({ start: 500_000 }, { beforeFirstCheckin: true }))).toEqual(['Ahead before your first check-in'])
-    expect(labels(split({ start: -500_000 }, { beforeFirstCheckin: true }))).toEqual(['Behind before your first check-in'])
+    expect(labels(split({ start: 500_000 }, { beforeFirstCheckin: true }))).toEqual([
+      'Ahead before your first check-in',
+    ])
+    expect(labels(split({ start: -500_000 }, { beforeFirstCheckin: true }))).toEqual([
+      'Behind before your first check-in',
+    ])
   })
 
   it('puts saving and the market in one row when they cannot be told apart', () => {
@@ -58,7 +65,12 @@ describe('gapRows', () => {
     const rows = gapRows(split({ start: 500_000, timing: -30_000 }))
     expect(rows).toEqual([
       { key: 'start', label: 'You started ahead of the plan', euros: 5000 },
-      { key: 'timing', label: "The plan's line moves a year at a time (not something you did)", euros: -300, muted: true },
+      {
+        key: 'timing',
+        label: "The plan's line moves a year at a time (not something you did)",
+        euros: -300,
+        muted: true,
+      },
     ])
   })
 

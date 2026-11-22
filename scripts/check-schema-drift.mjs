@@ -44,7 +44,7 @@ const MIGRATIONS = join(ROOT, 'migrations')
 export const SCHEMA_QUERY =
   "SELECT 'column' AS kind, m.name || '.' || p.name AS name FROM sqlite_master m, pragma_table_info(m.name) p " +
   "WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' AND m.name <> '_cf_KV' " +
-  "UNION ALL SELECT type AS kind, name FROM sqlite_master " +
+  'UNION ALL SELECT type AS kind, name FROM sqlite_master ' +
   "WHERE type IN ('index', 'trigger') AND substr(name, 1, 7) <> 'sqlite_' AND tbl_name <> '_cf_KV'"
 
 /**
@@ -80,7 +80,10 @@ export function schemaOf(db) {
  * @param {{ exec: (sql: string) => void }} db
  * @param {string} [dir]
  */
-export function applyMigrations(db, dir = MIGRATIONS) {
+export function applyMigrations(
+  db,
+  dir = MIGRATIONS,
+) {
   for (const file of migrationFiles(dir)) {
     for (const { sql } of splitStatements(readFileSync(join(dir, file), 'utf8'))) db.exec(sql)
   }
@@ -92,7 +95,10 @@ export function applyMigrations(db, dir = MIGRATIONS) {
  * @param {Iterable<string>} actual
  * @returns {{ missing: string[]; extra: string[] }}
  */
-export function diffNames(expected, actual) {
+export function diffNames(
+  expected,
+  actual,
+) {
   const want = new Set(expected)
   const have = new Set(actual)
   return {
@@ -136,7 +142,10 @@ function introducing(item) {
  * @param {{ name: string; sql: string }[]} files
  * @returns {string | null}
  */
-export function migrationAdding(item, files) {
+export function migrationAdding(
+  item,
+  files,
+) {
   const introduces = introducing(item)
   if (!introduces) return null
   return files.find((file) => splitStatements(file.sql).some(({ sql }) => introduces(sql)))?.name ?? null
@@ -148,12 +157,15 @@ export function migrationAdding(item, files) {
  * @param {typeof execFileSync} exec
  * @returns {Set<string>}
  */
-function remoteSchema(database, exec) {
-  const out = exec(
-    'npx',
-    ['wrangler', 'd1', 'execute', database, '--remote', '--json', '--command', SCHEMA_QUERY],
-    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
-  )
+function remoteSchema(
+  database,
+  exec,
+) {
+  const out = exec('npx', ['wrangler', 'd1', 'execute', database, '--remote', '--json', '--command', SCHEMA_QUERY], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   // wrangler can print a banner before the JSON.
   const parsed = JSON.parse(out.slice(out.indexOf('[')))
   const rows = Array.isArray(parsed) ? (parsed[0]?.results ?? []) : []
@@ -199,7 +211,10 @@ function counted(items) {
  * @param {{ exec?: typeof execFileSync; dir?: string }} [options]
  * @returns {Promise<{ code: 0 | 1 | 2; out: string[]; err: string[]; warn: string[] }>}
  */
-export async function checkSchema(database, { exec = execFileSync, dir = MIGRATIONS } = {}) {
+export async function checkSchema(
+  database,
+  { exec = execFileSync, dir = MIGRATIONS } = {},
+) {
   const { DatabaseSync } = await import('node:sqlite')
   const fresh = new DatabaseSync(':memory:')
   applyMigrations(fresh, dir)
@@ -223,10 +238,20 @@ export async function checkSchema(database, { exec = execFileSync, dir = MIGRATI
   const { missing, extra } = diffNames(expected, actual)
   const strayIndexes = extra.filter((item) => item.startsWith('index '))
   const extraFatal = extra.filter((item) => !item.startsWith('index '))
-  const warn = strayIndexes.map((item) => `WARNING ${item}  (in the database, in no migration; it costs a written row per insert and changes no data)`)
-  const out = [`${database}: ${counted(actual)}; the ${migrationFiles(dir).length} migrations produce ${counted(expected)}`]
+  const warn = strayIndexes.map(
+    (item) =>
+      `WARNING ${item}  (in the database, in no migration; it costs a written row per insert and changes no data)`,
+  )
+  const out = [
+    `${database}: ${counted(actual)}; the ${migrationFiles(dir).length} migrations produce ${counted(expected)}`,
+  ]
   if (missing.length === 0 && extraFatal.length === 0) {
-    return { code: 0, out: [...out, warn.length > 0 ? 'No drift, apart from the warnings.' : 'No drift.'], err: [], warn }
+    return {
+      code: 0,
+      out: [...out, warn.length > 0 ? 'No drift, apart from the warnings.' : 'No drift.'],
+      err: [],
+      warn,
+    }
   }
 
   const files = migrationFiles(dir).map((name) => ({ name, sql: readFileSync(join(dir, name), 'utf8') }))

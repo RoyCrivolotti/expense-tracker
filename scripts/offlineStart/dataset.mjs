@@ -17,7 +17,12 @@ const pad = (n) => String(n).padStart(2, '0')
 /** @param {Date} today */
 export function demoDataset(today = new Date()) {
   const month = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`
-  const row = (id, day, description, amountCents) => ({
+  const row = (
+    id,
+    day,
+    description,
+    amountCents,
+  ) => ({
     id,
     date: `${month}-${pad(day)}`,
     budgetMonth: month,

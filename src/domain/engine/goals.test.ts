@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { averageMonthlyCents, medianMonthlyCents, monthlyFlows, monthsSincePlanStart, paceMonths, type MonthlyFlow } from './goals'
+import {
+  averageMonthlyCents,
+  medianMonthlyCents,
+  monthlyFlows,
+  monthsSincePlanStart,
+  paceMonths,
+  type MonthlyFlow,
+} from './goals'
 import type { MonthlyTotals } from './monthlyTotals'
 
-function totals(month: string, netSavingCents: number, investmentsCents: number): MonthlyTotals {
+function totals(
+  month: string,
+  netSavingCents: number,
+  investmentsCents: number,
+): MonthlyTotals {
   return {
     month,
     incomeCents: 0,
@@ -15,7 +26,10 @@ function totals(month: string, netSavingCents: number, investmentsCents: number)
   }
 }
 
-const flow = (month: string, investedCents: number): MonthlyFlow => ({
+const flow = (
+  month: string,
+  investedCents: number,
+): MonthlyFlow => ({
   month,
   netSavingCents: investedCents * 3,
   investedCents,
@@ -67,10 +81,7 @@ describe('monthsSincePlanStart', () => {
   const flows = [flow('2026-01', 1), flow('2026-02', 2), flow('2026-03', 3)]
 
   it('starts at the plan start month, whatever the day', () => {
-    expect(monthsSincePlanStart(flows, '2026-02-17').map((f) => f.month)).toEqual([
-      '2026-02',
-      '2026-03',
-    ])
+    expect(monthsSincePlanStart(flows, '2026-02-17').map((f) => f.month)).toEqual(['2026-02', '2026-03'])
   })
 
   it('counts every month when the plan has no start date', () => {
@@ -110,7 +121,7 @@ describe('paceMonths', () => {
     expect(result.sincePlanStart).toBe(false)
   })
 
-  it('starts at the plan start month, whatever the day, and says they are the plan\'s own', () => {
+  it("starts at the plan start month, whatever the day, and says they are the plan's own", () => {
     const result = paceMonths(flows, '2026-02-17', '2026-04')
     expect(months(result)).toEqual(['2026-02', '2026-03'])
     expect(result.sincePlanStart).toBe(true)

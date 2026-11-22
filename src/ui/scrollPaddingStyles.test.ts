@@ -9,13 +9,19 @@ function stylesheet(file: string): string {
 }
 
 /** The declarations of the first rule with this selector, wherever it sits (a media query included). */
-function declarations(css: string, selector: string): string {
+function declarations(
+  css: string,
+  selector: string,
+): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return new RegExp(`(?:^|[{};\\s])${escaped}\\s*\\{([^{}]*)\\}`).exec(css)?.[1] ?? ''
 }
 
 /** Every rule with this selector, in file order: a base rule and the one a media query overrides it with. */
-function allDeclarations(css: string, selector: string): string[] {
+function allDeclarations(
+  css: string,
+  selector: string,
+): string[] {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return Array.from(css.matchAll(new RegExp(`(?:^|[{};\\s])${escaped}\\s*\\{([^{}]*)\\}`, 'g')), (m) => m[1] ?? '')
 }
@@ -27,7 +33,11 @@ const PX_PER_REM = 16
  * env(safe-area-inset-top) and the scroll padding as the numbers a page would have, and rem and
  * px lengths summed and subtracted. All the stylesheets here use is that much.
  */
-function lengthPx(expression: string, vars: Record<string, string>, page: { inset: number; pad: number }): number {
+function lengthPx(
+  expression: string,
+  vars: Record<string, string>,
+  page: { inset: number; pad: number },
+): number {
   let text = expression
     .replace(/env\(safe-area-inset-top, 0px\)/g, `${page.inset}px`)
     .replace(/var\(--scroll-pad-top, 0px\)/g, `${page.pad}px`)
@@ -122,9 +132,12 @@ describe('the page scroll padding', () => {
     ['tabs/tabs.module.css', '.resultBar'],
     ['tabs/goals/goals.module.css', '.contentAnchor'],
     ['tabs/goals/progress.module.css', '.landingTarget'],
-  ])('is taken out of the scroll margin of %s %s, which already counts the header, so it lands where it did', (file, selector) => {
-    expect(declarations(stylesheet(file), selector)).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
-  })
+  ])(
+    'is taken out of the scroll margin of %s %s, which already counts the header, so it lands where it did',
+    (file, selector) => {
+      expect(declarations(stylesheet(file), selector)).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
+    },
+  )
 
   it.each([
     ['tabs/tabs.module.css', '.resultBar *'],
@@ -142,10 +155,14 @@ describe('a jump to the content under a stuck row of tabs', () => {
   const vars = { ...customProperties(theme), ...customProperties(goals) }
   // The row's bottom edge once stuck, in px, as the sticky `top` and the height give it.
   const rowBottom = (inset: number) =>
-    lengthPx('calc(var(--exp-header) + var(--exp-subnav-h) - var(--exp-subnav-tuck) + env(safe-area-inset-top, 0px))', vars, {
-      inset,
-      pad: 0,
-    })
+    lengthPx(
+      'calc(var(--exp-header) + var(--exp-subnav-h) - var(--exp-subnav-tuck) + env(safe-area-inset-top, 0px))',
+      vars,
+      {
+        inset,
+        pad: 0,
+      },
+    )
 
   it('leaves the same air as the page scroll padding does for focus', () => {
     expect(vars['--exp-pinned-air']).toBe(`${PINNED_AIR_PX}px`)

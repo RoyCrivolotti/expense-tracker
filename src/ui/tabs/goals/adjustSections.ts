@@ -55,7 +55,11 @@ export function showAdjustSections(open: readonly AdjustSection[]): void {
  * reach that line, so scrolled to the end the answer is at least `endsIn`, the last section
  * whose controls are shown (-1 when not at the end, or when none is shown).
  */
-export function pickActiveSection(tops: readonly number[], line: number, endsIn: number): number {
+export function pickActiveSection(
+  tops: readonly number[],
+  line: number,
+  endsIn: number,
+): number {
   let active = Math.max(endsIn, 0)
   tops.forEach((top, i) => {
     if (top <= line && i > active) active = i

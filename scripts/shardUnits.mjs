@@ -31,7 +31,10 @@ export function parseShard(spec) {
  * @param {{ index: number, count: number }} shard
  * @returns {T[]}
  */
-export function pickShard(sections, { index, count }) {
+export function pickShard(
+  sections,
+  { index, count },
+) {
   const load = Array.from({ length: count }, () => 0)
   /** @type {Map<T, number>} */
   const owner = new Map()

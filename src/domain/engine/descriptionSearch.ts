@@ -30,7 +30,10 @@ export function localeIsSupported(locale: string): boolean {
  * that descriptions the collator calls equal ("cafe", "café") still have one order whatever order they
  * arrive in.
  */
-export function inSuggestionOrder<T extends { key: string }>(items: T[], collator: Intl.Collator): T[] {
+export function inSuggestionOrder<T extends { key: string }>(
+  items: T[],
+  collator: Intl.Collator,
+): T[] {
   return [...items].sort((a, b) => {
     const byLetters = collator.compare(a.key, b.key)
     if (byLetters !== 0) return byLetters

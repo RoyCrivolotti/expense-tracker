@@ -35,7 +35,11 @@ interface SegmentedControlProps<T extends string> {
 }
 
 /** What makes an option a radio, or a tab, and says whether it is the chosen one. */
-function optionAttributes(value: string, chosen: boolean, tabs: TabsProps | undefined) {
+function optionAttributes(
+  value: string,
+  chosen: boolean,
+  tabs: TabsProps | undefined,
+) {
   if (!tabs) return { role: 'radio', 'aria-checked': chosen }
   return {
     role: 'tab',
@@ -92,9 +96,7 @@ export function SegmentedControl<T extends string>({
           type="button"
           {...optionAttributes(opt.value, opt.value === value, tabs)}
           tabIndex={i === stop ? 0 : -1}
-          className={
-            opt.value === value ? `${styles.seg} tapActive ${styles.active}` : `${styles.seg} tapActive`
-          }
+          className={opt.value === value ? `${styles.seg} tapActive ${styles.active}` : `${styles.seg} tapActive`}
           disabled={disabled}
           onClick={() => onChange(opt.value)}
         >

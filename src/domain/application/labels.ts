@@ -7,7 +7,11 @@ import { ValidationError } from './validationError'
 const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/
 
 /** A short name the person gives a thing of theirs. Blank or missing becomes `fallback`. */
-export function validateLabel(label: unknown, fallback: string, maxLength: number): string {
+export function validateLabel(
+  label: unknown,
+  fallback: string,
+  maxLength: number,
+): string {
   if (label === undefined || label === null) return fallback
   if (typeof label !== 'string') throw new ValidationError('Label must be text')
   const trimmed = label.trim()

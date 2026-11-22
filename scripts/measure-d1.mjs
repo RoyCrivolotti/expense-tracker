@@ -28,7 +28,10 @@ const STOP_FILE = join(ROOT, '.tmp/scaling/stop')
 
 const files = {
   readJson: (path) => JSON.parse(readFileSync(join(ROOT, path), 'utf8')),
-  writeJson: (path, value) => {
+  writeJson: (
+    path,
+    value,
+  ) => {
     mkdirSync(dirname(join(ROOT, path)), { recursive: true })
     writeFileSync(join(ROOT, path), `${JSON.stringify(value, null, 2)}\n`)
   },
@@ -40,7 +43,9 @@ const deps = {
   now: () => new Date(),
   readDevConfig: () => {
     if (!existsSync(join(ROOT, 'config/dev.json'))) {
-      throw new Error('config/dev.json is missing: copy config/dev.example.json and fill in the development database id')
+      throw new Error(
+        'config/dev.json is missing: copy config/dev.example.json and fill in the development database id',
+      )
     }
     return JSON.parse(readFileSync(join(ROOT, 'config/dev.json'), 'utf8'))
   },

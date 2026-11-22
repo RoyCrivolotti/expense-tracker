@@ -28,12 +28,20 @@ const LAUNCH = { chromium, webkit }
 const failures = []
 
 /** `detail` is only read when the check fails, and says what was observed instead. */
-function check(where, what, ok, detail = '') {
+function check(
+  where,
+  what,
+  ok,
+  detail = '',
+) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
 }
 
-async function until(condition, ms = 20_000) {
+async function until(
+  condition,
+  ms = 20_000,
+) {
   const end = Date.now() + ms
   while (Date.now() < end) {
     if (await condition()) return true
@@ -58,10 +66,18 @@ const precached = (page) =>
     return paths
   })
 
-async function visit(page, origin, path) {
+async function visit(
+  page,
+  origin,
+  path,
+) {
   try {
     const response = await page.goto(`${origin}${path}`, { timeout: 10_000 })
-    await page.locator('#root > *').first().waitFor({ timeout: 5_000 }).catch(() => undefined)
+    await page
+      .locator('#root > *')
+      .first()
+      .waitFor({ timeout: 5_000 })
+      .catch(() => undefined)
     return {
       ok: true,
       status: response?.status(),
@@ -77,35 +93,66 @@ async function visit(page, origin, path) {
 const opens = (r) => r.ok && r.status === 200 && r.fromWorker === true && r.title === 'Expenses' && r.rendered > 0
 
 /** The device loses its network: the server refuses connections, and where the browser can say so, it is offline. */
-async function goOffline(site, context, engine) {
+async function goOffline(
+  site,
+  context,
+  engine,
+) {
   await site.takeDown()
   if (engine === 'chromium') await context.setOffline(true)
 }
 
-async function comeBack(site, context, engine) {
+async function comeBack(
+  site,
+  context,
+  engine,
+) {
   if (engine === 'chromium') await context.setOffline(false)
   await site.bringUp()
 }
 
-async function opensOffline(where, page, origin, paths) {
+async function opensOffline(
+  where,
+  page,
+  origin,
+  paths,
+) {
   const failed = []
   page.on('requestfailed', (request) => failed.push(new URL(request.url()).pathname))
   for (const path of paths) {
     const result = await visit(page, origin, path)
     check(where, `offline, ${path} opens the app from the worker`, opens(result), JSON.stringify(result))
   }
-  check(where, 'offline, no script or style of the app failed to load', !failed.some((path) => path.startsWith('/assets/')), failed.join(', '))
+  check(
+    where,
+    'offline, no script or style of the app failed to load',
+    !failed.some((path) => path.startsWith('/assets/')),
+    failed.join(', '),
+  )
 }
 
-async function launchNetworkFirst(where, page, site, path) {
+async function launchNetworkFirst(
+  where,
+  page,
+  site,
+  path,
+) {
   const mark = site.state.requests.length
   await visit(page, site.origin, path)
   const asked = site.state.requests.slice(mark).map((request) => request.path)
-  check(where, `online, ${path} reaches the server (the network answers first)`, asked.includes(path.split('?')[0]), asked.join(', '))
+  check(
+    where,
+    `online, ${path} reaches the server (the network answers first)`,
+    asked.includes(path.split('?')[0]),
+    asked.join(', '),
+  )
 }
 
 /** The app is visited once, so that its worker installs, and then there is no network. */
-async function firstVisitThenNoNetwork(browser, engine) {
+async function firstVisitThenNoNetwork(
+  browser,
+  engine,
+) {
   const where = `${engine}, first visit then no network`
   const site = await startSite({ root: DIST })
   const context = await browser.newContext()
@@ -113,7 +160,12 @@ async function firstVisitThenNoNetwork(browser, engine) {
   try {
     await page.goto(`${site.origin}/`)
     await controlled(page)
-    check(where, 'the shell is precached', (await precached(page)).includes('/index.html'), (await precached(page)).join(', '))
+    check(
+      where,
+      'the shell is precached',
+      (await precached(page)).includes('/index.html'),
+      (await precached(page)).join(', '),
+    )
     await launchNetworkFirst(where, page, site, '/')
     await launchNetworkFirst(where, page, site, '/settings?tab=data')
 
@@ -162,36 +214,91 @@ function serveApi(site) {
  * gone. The launch opens the app on the copy, for the person it names, and says that it is saved data that cannot be
  * changed. The access check cannot answer, which is what used to end the launch on the connection screen.
  */
-async function savedCopyWithNoNetwork(browser, engine, ledger) {
+async function savedCopyWithNoNetwork(
+  browser,
+  engine,
+  ledger,
+) {
   const where = `${engine}, ${ledger ? 'the ledger read in parts, ' : ''}a saved copy then no network`
   const site = await startSite({ root: DIST })
   serveApi(site)
   const context = await browser.newContext()
   const page = await context.newPage()
-  const shown = (text) => page.getByText(text).first().waitFor({ timeout: 10_000 }).then(() => true, () => false)
+  const shown = (text) =>
+    page
+      .getByText(text)
+      .first()
+      .waitFor({ timeout: 10_000 })
+      .then(
+        () => true,
+        () => false,
+      )
   try {
     // The ledger switch is kept in the browser, so the launch with no network is not given it again.
     await page.goto(`${site.origin}/?ledger=${ledger ? 'on' : 'off'}`)
     await controlled(page)
-    check(where, 'online, the app shows the data', await shown(NEWEST_DESCRIPTION), await page.locator('body').innerText())
+    check(
+      where,
+      'online, the app shows the data',
+      await shown(NEWEST_DESCRIPTION),
+      await page.locator('body').innerText(),
+    )
     check(where, 'online, there is no saved-data notice', (await page.getByText('Viewing saved data').count()) === 0)
     const kept = ledger ? `ledger:${OWNER}` : 'latest'
-    check(where, `online, the app keeps its copy (${kept})`, await until(async () => (await savedKeys(page)).includes(kept), 5_000), (await savedKeys(page)).join(', '))
+    check(
+      where,
+      `online, the app keeps its copy (${kept})`,
+      await until(async () => (await savedKeys(page)).includes(kept), 5_000),
+      (await savedKeys(page)).join(', '),
+    )
     const asked = site.state.requests.map((request) => request.path)
-    check(where, `online, it read the data ${ledger ? 'in parts' : 'whole'}`, asked.includes(ledger ? '/api/expenses/reference' : '/api/expenses') && asked.includes('/api/expenses/reference') === ledger, asked.filter((path) => path.startsWith('/api/')).join(', '))
+    check(
+      where,
+      `online, it read the data ${ledger ? 'in parts' : 'whole'}`,
+      asked.includes(ledger ? '/api/expenses/reference' : '/api/expenses') &&
+        asked.includes('/api/expenses/reference') === ledger,
+      asked.filter((path) => path.startsWith('/api/')).join(', '),
+    )
 
     await goOffline(site, context, engine)
     const result = await visit(page, site.origin, '/')
-    check(where, 'offline, the launch is answered by the worker', result.ok && result.fromWorker === true, JSON.stringify(result))
-    check(where, 'offline, the saved copy shows', await shown(NEWEST_DESCRIPTION), await page.locator('body').innerText())
+    check(
+      where,
+      'offline, the launch is answered by the worker',
+      result.ok && result.fromWorker === true,
+      JSON.stringify(result),
+    )
+    check(
+      where,
+      'offline, the saved copy shows',
+      await shown(NEWEST_DESCRIPTION),
+      await page.locator('body').innerText(),
+    )
     // WebKit is not set offline (see `goOffline`), so there the banner words the same fact for a server that does not answer.
-    check(where, 'and says it is saved data, with editing off until there is a connection', await shown(/Editing is disabled until/), await page.locator('body').innerText())
-    check(where, 'and it is not the connection screen', (await page.getByText('Can\u2019t reach the server').count()) === 0)
-    check(where, 'and nothing can be added', (await page.getByRole('button', { name: 'Add transaction' }).count()) === 0)
+    check(
+      where,
+      'and says it is saved data, with editing off until there is a connection',
+      await shown(/Editing is disabled until/),
+      await page.locator('body').innerText(),
+    )
+    check(
+      where,
+      'and it is not the connection screen',
+      (await page.getByText('Can\u2019t reach the server').count()) === 0,
+    )
+    check(
+      where,
+      'and nothing can be added',
+      (await page.getByRole('button', { name: 'Add transaction' }).count()) === 0,
+    )
 
     await comeBack(site, context, engine)
     await page.reload()
-    check(where, 'back online, the data is live again and editable', (await shown(NEWEST_DESCRIPTION)) && (await page.getByRole('button', { name: 'Add transaction' }).count()) > 0)
+    check(
+      where,
+      'back online, the data is live again and editable',
+      (await shown(NEWEST_DESCRIPTION)) && (await page.getByRole('button', { name: 'Add transaction' }).count()) > 0,
+    )
   } finally {
     await context.close()
     await site.close()
@@ -199,7 +306,11 @@ async function savedCopyWithNoNetwork(browser, engine, ledger) {
 }
 
 /** The worker that is deployed now, installed in a page that is then served the new build. */
-async function installPrevious(browser, site, dir) {
+async function installPrevious(
+  browser,
+  site,
+  dir,
+) {
   site.state.root = await buildPreviousSite(dir)
   const context = await browser.newContext()
   const page = await context.newPage()
@@ -244,7 +355,12 @@ function countLoads(page) {
  * reload can come before the marker is set on the document the visit loaded. The paths are read once, in the page the
  * reload made, so nothing reads a page that is about to go.
  */
-async function updateLanded(page, loads, from, documents) {
+async function updateLanded(
+  page,
+  loads,
+  from,
+  documents,
+) {
   const reloaded = await until(() => loads.count >= from + documents)
   let paths = []
   const replaced = await until(async () => {
@@ -255,18 +371,35 @@ async function updateLanded(page, loads, from, documents) {
 }
 
 /** The registered worker is asked to look for a new script, as the browser does on a navigation. */
-const checkForUpdate = (page) => page.evaluate(() => navigator.serviceWorker.getRegistration().then((registration) => registration?.update())).catch(() => undefined)
+const checkForUpdate = (page) =>
+  page
+    .evaluate(() => navigator.serviceWorker.getRegistration().then((registration) => registration?.update()))
+    .catch(() => undefined)
 
-async function updateFromDeployed(browser, engine, tmp) {
+async function updateFromDeployed(
+  browser,
+  engine,
+  tmp,
+) {
   const where = `${engine}, the update from the deployed worker`
   const site = await startSite({ root: DIST })
   const { context, page } = await installPrevious(browser, site, join(tmp, `previous-${engine}`))
   const loads = countLoads(page)
   try {
-    check(where, 'the deployed worker precaches no shell', !(await precached(page)).includes('/index.html'), (await precached(page)).join(', '))
+    check(
+      where,
+      'the deployed worker precaches no shell',
+      !(await precached(page)).includes('/index.html'),
+      (await precached(page)).join(', '),
+    )
     await goOffline(site, context, engine)
     const before = await visit(page, site.origin, '/')
-    check(where, 'and it cannot open the app offline (the defect the update is for)', !before.ok, JSON.stringify(before))
+    check(
+      where,
+      'and it cannot open the app offline (the defect the update is for)',
+      !before.ok,
+      JSON.stringify(before),
+    )
     await comeBack(site, context, engine)
 
     site.state.root = DIST
@@ -275,7 +408,12 @@ async function updateFromDeployed(browser, engine, tmp) {
     await checkForUpdate(page)
     const landed = await updateLanded(page, loads, from, 2)
     check(where, 'the page reloads into the new worker', landed.reloaded, `${loads.count - from} documents loaded`)
-    check(where, 'the new worker replaces it: shell precached, its own entries gone', landed.replaced, landed.paths.join(', '))
+    check(
+      where,
+      'the new worker replaces it: shell precached, its own entries gone',
+      landed.replaced,
+      landed.paths.join(', '),
+    )
     await controlled(page)
     await goOffline(site, context, engine)
     await opensOffline(where, page, site.origin, ['/', '/settings'])
@@ -291,7 +429,11 @@ async function updateFromDeployed(browser, engine, tmp) {
  * reload that hangs off Workbox's `activated` event never comes. `register()` is answered late here, in this page only,
  * to make that order certain instead of a race.
  */
-async function updateBeforeRegistration(browser, engine, tmp) {
+async function updateBeforeRegistration(
+  browser,
+  engine,
+  tmp,
+) {
   const where = `${engine}, an update found before the page registers`
   const site = await startSite({ root: DIST })
   const { context, page } = await installPrevious(browser, site, join(tmp, `previous-early-${engine}`))
@@ -300,7 +442,10 @@ async function updateBeforeRegistration(browser, engine, tmp) {
     await context.addInitScript((delay) => {
       const container = navigator.serviceWorker
       const register = container.register.bind(container)
-      container.register = (...args) => register(...args).then((registration) => new Promise((resolve) => setTimeout(() => resolve(registration), delay)))
+      container.register = (...args) =>
+        register(...args).then(
+          (registration) => new Promise((resolve) => setTimeout(() => resolve(registration), delay)),
+        )
     }, 1_500)
     site.state.root = DIST
     const from = loads.count
@@ -308,7 +453,12 @@ async function updateBeforeRegistration(browser, engine, tmp) {
     await checkForUpdate(page)
     const landed = await updateLanded(page, loads, from, 2)
     check(where, 'the page reloads into the new worker', landed.reloaded, `${loads.count - from} documents loaded`)
-    check(where, 'the new worker replaces it: shell precached, its own entries gone', landed.replaced, landed.paths.join(', '))
+    check(
+      where,
+      'the new worker replaces it: shell precached, its own entries gone',
+      landed.replaced,
+      landed.paths.join(', '),
+    )
   } finally {
     await context.close()
     await site.close()
@@ -316,7 +466,11 @@ async function updateBeforeRegistration(browser, engine, tmp) {
 }
 
 /** A deploy whose shell cannot be fetched leaves the worker that is installed in place, and the next deploy installs. */
-async function updateThatCannotInstall(browser, engine, tmp) {
+async function updateThatCannotInstall(
+  browser,
+  engine,
+  tmp,
+) {
   const where = `${engine}, an update that cannot install`
   const site = await startSite({ root: DIST })
   const { context, page } = await installPrevious(browser, site, join(tmp, `previous-fails-${engine}`))
@@ -328,11 +482,32 @@ async function updateThatCannotInstall(browser, engine, tmp) {
     await checkForUpdate(page)
     await new Promise((resolve) => setTimeout(resolve, 3_000))
     const paths = await precached(page)
-    check(where, 'the installed worker keeps its precache', paths.includes('/assets/app-previous.js') && !paths.includes('/index.html'), paths.join(', '))
-    const state = await page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => ({ active: r?.active?.state, waiting: Boolean(r?.waiting), controlled: Boolean(navigator.serviceWorker.controller) })))
-    check(where, 'and is still the active worker, with nothing waiting', state.active === 'activated' && !state.waiting && state.controlled, JSON.stringify(state))
+    check(
+      where,
+      'the installed worker keeps its precache',
+      paths.includes('/assets/app-previous.js') && !paths.includes('/index.html'),
+      paths.join(', '),
+    )
+    const state = await page.evaluate(() =>
+      navigator.serviceWorker.getRegistration().then((r) => ({
+        active: r?.active?.state,
+        waiting: Boolean(r?.waiting),
+        controlled: Boolean(navigator.serviceWorker.controller),
+      })),
+    )
+    check(
+      where,
+      'and is still the active worker, with nothing waiting',
+      state.active === 'activated' && !state.waiting && state.controlled,
+      JSON.stringify(state),
+    )
     const online = await visit(page, site.origin, '/settings')
-    check(where, 'the app still opens while the network works', online.ok && online.status === 200 && online.title === 'Expenses', JSON.stringify(online))
+    check(
+      where,
+      'the app still opens while the network works',
+      online.ok && online.status === 200 && online.title === 'Expenses',
+      JSON.stringify(online),
+    )
 
     site.state.failing.clear()
     const from = loads.count
@@ -350,7 +525,10 @@ async function updateThatCannotInstall(browser, engine, tmp) {
 }
 
 /** Behind Access, a session that has ended is a redirect to the sign-in page, and the worker must pass it on. */
-async function behindAccess(browser, engine) {
+async function behindAccess(
+  browser,
+  engine,
+) {
   const where = `${engine}, behind Access`
   const login = await startLogin()
   const site = await startSite({ root: DIST, access: login.origin })
@@ -364,15 +542,29 @@ async function behindAccess(browser, engine) {
 
     await context.clearCookies()
     await page.goto(`${site.origin}/`)
-    check(where, 'without one, a launch reaches Access, not the shell', page.url().startsWith(login.origin) && (await page.title()) === 'Sign in', `${page.url()} ${await page.title()}`)
+    check(
+      where,
+      'without one, a launch reaches Access, not the shell',
+      page.url().startsWith(login.origin) && (await page.title()) === 'Sign in',
+      `${page.url()} ${await page.title()}`,
+    )
     await page.goto(`${site.origin}/settings`)
     check(where, 'and so does a deep link', page.url().startsWith(login.origin), page.url())
 
     login.state.returnTo = site.origin
     await page.locator('#go').click()
     await page.waitForURL(`${site.origin}/`, { timeout: 10_000 }).catch(() => undefined)
-    await page.locator('#root > *').first().waitFor({ timeout: 5_000 }).catch(() => undefined)
-    check(where, 'signing in brings the person back to the app', page.url() === `${site.origin}/` && (await page.title()) === 'Expenses', `${page.url()} ${await page.title()}`)
+    await page
+      .locator('#root > *')
+      .first()
+      .waitFor({ timeout: 5_000 })
+      .catch(() => undefined)
+    check(
+      where,
+      'signing in brings the person back to the app',
+      page.url() === `${site.origin}/` && (await page.title()) === 'Expenses',
+      `${page.url()} ${await page.title()}`,
+    )
 
     await goOffline(site, context, engine)
     await login.close()

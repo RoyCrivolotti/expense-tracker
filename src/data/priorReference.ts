@@ -7,7 +7,10 @@ import type { ReferencePart } from '../domain/data/ledgerParts'
  * twice. Only that first read is answered: it is not kept past it, and a reference that has moved on since is found out
  * by the parts read under it, which carry their own revision (`readLedgerParts`).
  */
-export function startingFrom<S extends LedgerPartsSource>(source: S, reference: ReferencePart): S {
+export function startingFrom<S extends LedgerPartsSource>(
+  source: S,
+  reference: ReferencePart,
+): S {
   let unused = true
   return {
     ...source,

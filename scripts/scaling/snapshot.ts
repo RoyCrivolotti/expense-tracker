@@ -66,14 +66,20 @@ async function fingerprintTable(
   return { rows, sha256: hash.digest('hex') }
 }
 
-export async function fingerprintOthers(transport: Transport, ledger: SpendLedger): Promise<Fingerprint> {
+export async function fingerprintOthers(
+  transport: Transport,
+  ledger: SpendLedger,
+): Promise<Fingerprint> {
   const out: Fingerprint = {}
   for (const source of sources()) out[source.table] = await fingerprintTable(transport, ledger, source)
   return out
 }
 
 /** The tables whose rows differ between two fingerprints, with the row counts before and after. */
-export function differences(before: Fingerprint, after: Fingerprint): string[] {
+export function differences(
+  before: Fingerprint,
+  after: Fingerprint,
+): string[] {
   return Object.keys({ ...before, ...after }).flatMap((table) => {
     const a = before[table]
     const b = after[table]

@@ -42,7 +42,13 @@ function Bars({
         const dim = active != null && active !== i
         return (
           <g key={p.month} className={dim ? chartStyles.dimmed : undefined}>
-            <rect x={x} y={yAt(paid, maxVal, innerH)} width={barW} height={(paid / maxVal) * innerH} className={styles.trendSpend} />
+            <rect
+              x={x}
+              y={yAt(paid, maxVal, innerH)}
+              width={barW}
+              height={(paid / maxVal) * innerH}
+              className={styles.trendSpend}
+            />
             {p.unpaidCents > 0 && (
               <rect
                 x={x}
@@ -80,21 +86,14 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
   const barW = Math.min(18, groupW * 0.6)
   const xForIndex = useCallback((i: number) => PAD.left + i * groupW + groupW / 2, [groupW])
   const containerRef = useRef<HTMLElement>(null)
-  const {
-    active,
-    onKeyDown: focusKeyDown,
-    ...pointerHandlers
-  } = useChartFocus(points.length, xForIndex, containerRef)
+  const { active, onKeyDown: focusKeyDown, ...pointerHandlers } = useChartFocus(points.length, xForIndex, containerRef)
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? points[active] : null
   const anchor = useSvgAnchor(svgRef, focus ? xForIndex(active!) : null, focus ? PAD.top : null)
 
   const incomeLine = useMemo(
-    () =>
-      points
-        .map((p, i) => `${i === 0 ? 'M' : 'L'}${xForIndex(i)},${yAt(p.incomeCents, maxVal, innerH)}`)
-        .join(' '),
+    () => points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xForIndex(i)},${yAt(p.incomeCents, maxVal, innerH)}`).join(' '),
     [points, xForIndex, maxVal, innerH],
   )
 
@@ -160,10 +159,21 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
           <path d={incomeLine} className={styles.trendIncome} />
           {/* One point makes a path of a single "M", which draws nothing. */}
           {points.length === 1 && (
-            <circle cx={xForIndex(0)} cy={yAt(points[0]!.incomeCents, maxVal, innerH)} r={4} className={styles.trendIncomeDot} />
+            <circle
+              cx={xForIndex(0)}
+              cy={yAt(points[0]!.incomeCents, maxVal, innerH)}
+              r={4}
+              className={styles.trendIncomeDot}
+            />
           )}
           {focus && (
-            <line x1={xForIndex(active!)} x2={xForIndex(active!)} y1={PAD.top} y2={PAD.top + innerH} className={chartStyles.crosshair} />
+            <line
+              x1={xForIndex(active!)}
+              x2={xForIndex(active!)}
+              y1={PAD.top}
+              y2={PAD.top + innerH}
+              className={chartStyles.crosshair}
+            />
           )}
         </svg>
         {focus && (

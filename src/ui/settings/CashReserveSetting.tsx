@@ -91,9 +91,8 @@ export function CashReserveSetting({ settings, onChange }: Props) {
           </p>
         ) : null}
         <p className={styles.settingHint}>
-          Progress sets the cash accounts in your latest check-in against your average monthly
-          spending and says how many months they cover. With a target it says whether you are
-          there yet; 0 leaves the target off.
+          Progress sets the cash accounts in your latest check-in against your average monthly spending and says how
+          many months they cover. With a target it says whether you are there yet; 0 leaves the target off.
         </p>
       </div>
     </Card>

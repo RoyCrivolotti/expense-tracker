@@ -31,7 +31,10 @@ export function useExit(): { leaving: boolean; exitMs: number } {
  * Shared by `useHeldWhileLeaving` below and `PresenceValue` (Presence.tsx), which hold for
  * opposite reasons — leaving versus absent — but need exactly the same mechanism to do it.
  */
-export function useHeldWhen<T>(value: T, hold: boolean): T {
+export function useHeldWhen<T>(
+  value: T,
+  hold: boolean,
+): T {
   const [held, setHeld] = useState<[T]>([value])
   if (!hold && !Object.is(held[0], value)) setHeld([value])
   return hold ? held[0] : value

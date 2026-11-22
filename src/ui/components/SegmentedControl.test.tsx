@@ -25,9 +25,9 @@ describe('SegmentedControl', () => {
 
   it('is a tall bar only when the bar layout is asked for the tall size', () => {
     const tall = (props: { layout?: 'compact' | 'bar' | 'scroll'; size?: 'default' | 'tall' }) =>
-      render(
-        <SegmentedControl options={options} value="a" onChange={vi.fn()} ariaLabel="Test" {...props} />,
-      ).getByRole('radiogroup').className.includes('tall')
+      render(<SegmentedControl options={options} value="a" onChange={vi.fn()} ariaLabel="Test" {...props} />)
+        .getByRole('radiogroup')
+        .className.includes('tall')
 
     expect(tall({ layout: 'bar', size: 'tall' })).toBe(true)
     cleanup()
@@ -305,15 +305,7 @@ describe('SegmentedControl', () => {
 
   it('does not fire onChange while disabled', () => {
     const onChange = vi.fn()
-    render(
-      <SegmentedControl
-        options={options}
-        value="a"
-        onChange={onChange}
-        ariaLabel="Test"
-        disabled
-      />,
-    )
+    render(<SegmentedControl options={options} value="a" onChange={onChange} ariaLabel="Test" disabled />)
     fireEvent.click(screen.getByRole('radio', { name: 'B' }))
     expect(onChange).not.toHaveBeenCalled()
   })

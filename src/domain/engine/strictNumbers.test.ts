@@ -158,9 +158,12 @@ describe('tryParseDecimal: a plain number, or null', () => {
     expect(tryParseDecimal(typed)).toBe(value)
   })
 
-  it.each(['', ' ', 'about 4', '4k', '1e9', '0x10', 'Infinity', '1,2,3', '--2', '4%', '4 5'])('is null for %j', (typed) => {
-    expect(tryParseDecimal(typed)).toBeNull()
-  })
+  it.each(['', ' ', 'about 4', '4k', '1e9', '0x10', 'Infinity', '1,2,3', '--2', '4%', '4 5'])(
+    'is null for %j',
+    (typed) => {
+      expect(tryParseDecimal(typed)).toBeNull()
+    },
+  )
 })
 
 describe('tryParsePercentToFraction', () => {
@@ -173,9 +176,12 @@ describe('tryParsePercentToFraction', () => {
     expect(tryParsePercentToFraction(typed)).toBeCloseTo(fraction, 10)
   })
 
-  it.each(['about 4', '4k', '', '%', '1e1'])('is null for %j, so a withdrawal rate is not turned into its minimum', (typed) => {
-    expect(tryParsePercentToFraction(typed)).toBeNull()
-  })
+  it.each(['about 4', '4k', '', '%', '1e1'])(
+    'is null for %j, so a withdrawal rate is not turned into its minimum',
+    (typed) => {
+      expect(tryParsePercentToFraction(typed)).toBeNull()
+    },
+  )
 })
 
 describe('formatPercentInput shows the second decimal when the value has one', () => {

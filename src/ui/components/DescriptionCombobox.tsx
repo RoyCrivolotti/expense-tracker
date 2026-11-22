@@ -13,17 +13,14 @@ interface DescriptionComboboxProps {
 }
 
 /** What an index that holds every row suggests: its own matches. */
-function useOwnSuggestions(index: DescriptionIndex, value: string): DescriptionSuggestion[] {
+function useOwnSuggestions(
+  index: DescriptionIndex,
+  value: string,
+): DescriptionSuggestion[] {
   return useMemo(() => (value.trim() ? index.search(value) : []), [value, index])
 }
 
-export function DescriptionCombobox({
-  value,
-  index,
-  placeholder,
-  onChange,
-  onAccept,
-}: DescriptionComboboxProps) {
+export function DescriptionCombobox({ value, index, placeholder, onChange, onAccept }: DescriptionComboboxProps) {
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [focused, setFocused] = useState(false)
@@ -65,12 +62,7 @@ export function DescriptionCombobox({
         onPick={pick}
       />
       {open && (
-        <DescriptionSuggestionList
-          listId={listId}
-          suggestions={suggestions}
-          highlight={highlight}
-          onPick={pick}
-        />
+        <DescriptionSuggestionList listId={listId} suggestions={suggestions} highlight={highlight} onPick={pick} />
       )}
     </div>
   )

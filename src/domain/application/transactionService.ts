@@ -26,12 +26,18 @@ export const MAX_NOTES_LENGTH = 2_000
 /** Most rows one `POST /transactions/bulk` may create (a CSV import larger than this is split into files). */
 export const MAX_BULK_CREATE = 1_000
 
-function requirePositiveInt(value: unknown, label: string): number {
+function requirePositiveInt(
+  value: unknown,
+  label: string,
+): number {
   if (!Number.isInteger(value) || (value as number) <= 0) throw new ValidationError(`Invalid ${label}`)
   return value as number
 }
 
-function requireString(value: unknown, label: string): string {
+function requireString(
+  value: unknown,
+  label: string,
+): string {
   if (typeof value !== 'string') throw new ValidationError(`${label} must be text`)
   return value
 }
@@ -97,24 +103,71 @@ function requireAmountCents(value: unknown): number {
   return value as number
 }
 
-function assertAmountSign(amountCents: number, type: TxnType): void {
+function assertAmountSign(
+  amountCents: number,
+  type: TxnType,
+): void {
   if (!amountSignAllowed(amountCents, type)) throw new ValidationError(AMOUNT_SIGN_MESSAGE)
 }
 
-const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => void> = {
-  categoryId: (v, p) => { p.categoryId = requirePositiveInt(v, 'categoryId') },
-  accountId: (v, p) => { p.accountId = requirePositiveInt(v, 'accountId') },
-  type: (v, p) => {
+const FIELD_VALIDATORS: Record<
+  string,
+  (
+    v: unknown,
+    p: BulkTransactionPatch,
+  ) => void
+> = {
+  categoryId: (
+    v,
+    p,
+  ) => {
+    p.categoryId = requirePositiveInt(v, 'categoryId')
+  },
+  accountId: (
+    v,
+    p,
+  ) => {
+    p.accountId = requirePositiveInt(v, 'accountId')
+  },
+  type: (
+    v,
+    p,
+  ) => {
     if (!VALID_TXN_TYPES.has(v as string)) throw new ValidationError('Invalid transaction type')
     p.type = v as TxnType
   },
-  date: (v, p) => { p.date = requireDate(v) },
-  budgetMonth: (v, p) => { p.budgetMonth = requireBudgetMonth(v) },
+  date: (
+    v,
+    p,
+  ) => {
+    p.date = requireDate(v)
+  },
+  budgetMonth: (
+    v,
+    p,
+  ) => {
+    p.budgetMonth = requireBudgetMonth(v)
+  },
   // null is meaningful here: it is how a selection is unflagged.
-  flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
-  description: (v, p) => { p.description = requireDescription(v) },
+  flagId: (
+    v,
+    p,
+  ) => {
+    p.flagId = v === null ? null : requirePositiveInt(v, 'flagId')
+  },
+  description: (
+    v,
+    p,
+  ) => {
+    p.description = requireDescription(v)
+  },
   // Likewise: null is how deleting a reimbursement releases the rows it covered.
-  settledBy: (v, p) => { p.settledBy = v === null ? null : requirePositiveInt(v, 'settledBy') },
+  settledBy: (
+    v,
+    p,
+  ) => {
+    p.settledBy = v === null ? null : requirePositiveInt(v, 'settledBy')
+  },
 }
 
 export function validateBulkUpdatePatch(raw: unknown): BulkTransactionPatch {
@@ -154,7 +207,8 @@ export function validateBulkTransactions(raw: unknown): NewTransaction[] {
   }
   return raw.map((item, i) => {
     // A batch is refused whole, so the row has to be named or a long import is a hunt.
-    if (item === null || typeof item !== 'object') throw new ValidationError(`Row ${i + 1}: transaction must be an object`)
+    if (item === null || typeof item !== 'object')
+      throw new ValidationError(`Row ${i + 1}: transaction must be an object`)
     try {
       return validateNewTransaction(item as NewTransaction)
     } catch (e) {
@@ -238,27 +292,84 @@ const PATCH_KEYS = new Set<string>([
  */
 const PATCH_FIELD_VALIDATORS: Record<
   string,
-  (v: unknown, p: Record<string, unknown>) => void
+  (
+    v: unknown,
+    p: Record<string, unknown>,
+  ) => void
 > = {
-  date: (v, p) => { p.date = requireDate(v) },
-  budgetMonth: (v, p) => { p.budgetMonth = requireBudgetMonth(v) },
-  description: (v, p) => { p.description = requireBoundedDescription(v) },
-  accountId: (v, p) => { p.accountId = requirePositiveInt(v, 'accountId') },
-  categoryId: (v, p) => { p.categoryId = requirePositiveInt(v, 'categoryId') },
-  type: (v, p) => {
+  date: (
+    v,
+    p,
+  ) => {
+    p.date = requireDate(v)
+  },
+  budgetMonth: (
+    v,
+    p,
+  ) => {
+    p.budgetMonth = requireBudgetMonth(v)
+  },
+  description: (
+    v,
+    p,
+  ) => {
+    p.description = requireBoundedDescription(v)
+  },
+  accountId: (
+    v,
+    p,
+  ) => {
+    p.accountId = requirePositiveInt(v, 'accountId')
+  },
+  categoryId: (
+    v,
+    p,
+  ) => {
+    p.categoryId = requirePositiveInt(v, 'categoryId')
+  },
+  type: (
+    v,
+    p,
+  ) => {
     if (!VALID_TXN_TYPES.has(v as string)) throw new ValidationError('Invalid transaction type')
     p.type = v
   },
-  amountCents: (v, p) => { p.amountCents = requireAmountCents(v) },
-  cancelled: (v, p) => {
+  amountCents: (
+    v,
+    p,
+  ) => {
+    p.amountCents = requireAmountCents(v)
+  },
+  cancelled: (
+    v,
+    p,
+  ) => {
     if (typeof v !== 'boolean') throw new ValidationError('cancelled must be true or false')
     p.cancelled = v
   },
   // Absent leaves the note alone; null and '' both clear it.
-  notes: (v, p) => { p.notes = v == null ? null : requireBoundedNotes(v) },
-  flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
-  planId: (v, p) => { p.planId = v === null ? null : requirePositiveInt(v, 'planId') },
-  installmentIndex: (v, p) => {
+  notes: (
+    v,
+    p,
+  ) => {
+    p.notes = v == null ? null : requireBoundedNotes(v)
+  },
+  flagId: (
+    v,
+    p,
+  ) => {
+    p.flagId = v === null ? null : requirePositiveInt(v, 'flagId')
+  },
+  planId: (
+    v,
+    p,
+  ) => {
+    p.planId = v === null ? null : requirePositiveInt(v, 'planId')
+  },
+  installmentIndex: (
+    v,
+    p,
+  ) => {
     p.installmentIndex = v === null ? null : requirePositiveInt(v, 'installmentIndex')
   },
 }
@@ -290,6 +401,10 @@ export async function patchTransaction(
   return repo.updateTransaction(owner, id, validateTransactionPatch(patch))
 }
 
-export async function removeTransaction(repo: ExpenseRepository, owner: string, id: number) {
+export async function removeTransaction(
+  repo: ExpenseRepository,
+  owner: string,
+  id: number,
+) {
   return repo.deleteTransaction(owner, id)
 }

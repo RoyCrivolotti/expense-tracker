@@ -5,7 +5,9 @@ import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from '../capture/captureSugg
 import { toFacts, type FactsRow } from '../capture/captureLearningSql'
 import { rows } from './d1CaptureSupport'
 
-type EventRow = { rec_id: string; slots: string | null; known: string | null } & { [K in keyof FactsRow]: FactsRow[K] | null }
+type EventRow = { rec_id: string; slots: string | null; known: string | null } & {
+  [K in keyof FactsRow]: FactsRow[K] | null
+}
 
 interface StoredMerchantRow {
   key: string
@@ -17,11 +19,21 @@ interface StoredMerchantRow {
 }
 
 /** The person's rows for these merchant keys, grouped by key. One read, none when there are no keys. */
-export async function merchantRows(db: D1Database, owner: string, keys: readonly string[]): Promise<Map<string, MerchantRow[]>> {
+export async function merchantRows(
+  db: D1Database,
+  owner: string,
+  keys: readonly string[],
+): Promise<Map<string, MerchantRow[]>> {
   const byKey = new Map<string, MerchantRow[]>()
   if (keys.length === 0) return byKey
   for (const r of await rows<StoredMerchantRow>(db, MERCHANT_ROWS_SQL, owner, JSON.stringify([...new Set(keys)]))) {
-    const row = { amountCents: r.amount_cents, description: r.description, categoryId: r.category_id, votes: r.votes, lastSeen: r.last_seen }
+    const row = {
+      amountCents: r.amount_cents,
+      description: r.description,
+      categoryId: r.category_id,
+      votes: r.votes,
+      lastSeen: r.last_seen,
+    }
     byKey.set(r.key, [...(byKey.get(r.key) ?? []), row])
   }
   return byKey
@@ -31,7 +43,11 @@ export async function merchantRows(db: D1Database, owner: string, keys: readonly
  * Adds what each recommendation of a page should become (`suggestFor`), in two reads for the whole page, run together:
  * the pushes and their templates, and the merchants. A recommendation no push made gets null.
  */
-export async function withSuggestions(db: D1Database, owner: string, page: Recommendation[]): Promise<Recommendation[]> {
+export async function withSuggestions(
+  db: D1Database,
+  owner: string,
+  page: Recommendation[],
+): Promise<Recommendation[]> {
   if (page.length === 0) return page
   const keyOf = new Map(page.map((r) => [r.id, merchantKeyOf(r.merchantRaw)]))
   const keys = [...keyOf.values()].filter((k): k is string => k !== null)
@@ -45,7 +61,12 @@ export async function withSuggestions(db: D1Database, owner: string, page: Recom
     if (!event) return { ...r, suggestion: null }
     const template = event.known === null ? null : toFacts(event as FactsRow)
     const key = keyOf.get(r.id)
-    const input = { amountCents: r.amountCents, accountId: r.accountId, suggestedType: r.suggestedType, slots: storedSlots(event.slots) }
+    const input = {
+      amountCents: r.amountCents,
+      accountId: r.accountId,
+      suggestedType: r.suggestedType,
+      slots: storedSlots(event.slots),
+    }
     return { ...r, suggestion: suggestFor(input, template, key ? (merchants.get(key) ?? []) : []) }
   })
 }

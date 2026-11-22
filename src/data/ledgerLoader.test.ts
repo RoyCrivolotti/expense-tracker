@@ -26,7 +26,11 @@ function listsOf(ledger: Parameters<typeof assembleRows>[0]) {
 }
 
 /** The ledger read in parts holds what `ledgerFor` makes of the whole dataset. */
-async function expectSameAsWhole(dataset: ExpenseDataset, viewed: string, policy?: HydrationPolicy) {
+async function expectSameAsWhole(
+  dataset: ExpenseDataset,
+  viewed: string,
+  policy?: HydrationPolicy,
+) {
   const loaded = await loadLedger(memorySource(dataset), { viewed, ...(policy ? { policy } : {}) })
   const whole = ledgerFor(dataset, viewed, policy)
   expect(listsOf(loaded.ledger)).toEqual(listsOf(whole))
@@ -69,7 +73,11 @@ describe('loadLedger, compared with the whole dataset', () => {
     for (let seed = 1; seed <= 25; seed++) {
       const dataset = randomLedger(seed)
       const list = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
-      for (const viewed of [list[0] ?? '2026-01', list[Math.floor(list.length / 2)] ?? '2026-01', list.at(-1) ?? '2026-01']) {
+      for (const viewed of [
+        list[0] ?? '2026-01',
+        list[Math.floor(list.length / 2)] ?? '2026-01',
+        list.at(-1) ?? '2026-01',
+      ]) {
         await expectSameAsWhole(dataset, viewed)
         await expectSameAsWhole(dataset, viewed, WINDOWED)
         await expectSameAsWhole(dataset, viewed, { fullBelowRows: 0, dataMonths: 2 })
@@ -97,7 +105,10 @@ describe('loadLedger, compared with the whole dataset', () => {
         { id: 3, transactionId: 2, contentType: 'image/jpeg', byteSize: 1, createdAt: 'x', hasThumb: true },
       ],
     })
-    const loaded = await loadLedger(memorySource(dataset), { viewed: '2026-03', policy: { fullBelowRows: 0, dataMonths: 1 } })
+    const loaded = await loadLedger(memorySource(dataset), {
+      viewed: '2026-03',
+      policy: { fullBelowRows: 0, dataMonths: 1 },
+    })
     expect(loaded.attachmentCounts).toEqual({ 2: 2 })
     const full = await loadLedger(memorySource(dataset))
     expect(full.attachmentCounts).toEqual({ 1: 1, 2: 2 })
@@ -123,11 +134,16 @@ describe('loadLedger, requests', () => {
   })
 
   /** The calendar ranges of the calls that start with `prefix`. */
-  const rangesOf = (source: { calls: string[] }, prefix: string) =>
-    source.calls.filter((call) => call.startsWith(prefix)).map((call) => {
-      const [from = '', to = ''] = call.slice(prefix.length).split('..')
-      return { from, to }
-    })
+  const rangesOf = (
+    source: { calls: string[] },
+    prefix: string,
+  ) =>
+    source.calls
+      .filter((call) => call.startsWith(prefix))
+      .map((call) => {
+        const [from = '', to = ''] = call.slice(prefix.length).split('..')
+        return { from, to }
+      })
 
   it('asks for the sums of every month, those it reads as rows too, unless it is told this is the first read', async () => {
     const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
@@ -137,22 +153,31 @@ describe('loadLedger, requests', () => {
     expect(asSums).toEqual([{ from: months[0], to: months.at(-1) }])
   })
 
-  it.each([0, 20, 40, 55])('asks for the sums of exactly the months no rows request reads on a first read, with month %i shown', async (index) => {
-    const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
-    const source = memorySource(dataset)
-    await loadLedger(source, { policy: WINDOWED, viewed: months[index]!, omitHeldSums: true })
-    const asRows = rangesOf(source, 'months:')
-    const asSums = rangesOf(source, 'cube:')
-    const within = (month: string, list: { from: string; to: string }[]) => list.some((r) => month >= r.from && month <= r.to)
-    for (const month of months) {
-      expect(within(month, asRows) !== within(month, asSums), `${month} is read once, as rows or as sums`).toBe(true)
-    }
-  })
+  it.each([0, 20, 40, 55])(
+    'asks for the sums of exactly the months no rows request reads on a first read, with month %i shown',
+    async (index) => {
+      const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
+      const source = memorySource(dataset)
+      await loadLedger(source, { policy: WINDOWED, viewed: months[index]!, omitHeldSums: true })
+      const asRows = rangesOf(source, 'months:')
+      const asSums = rangesOf(source, 'cube:')
+      const within = (
+        month: string,
+        list: { from: string; to: string }[],
+      ) => list.some((r) => month >= r.from && month <= r.to)
+      for (const month of months) {
+        expect(within(month, asRows) !== within(month, asSums), `${month} is read once, as rows or as sums`).toBe(true)
+      }
+    },
+  )
 })
 
 describe('loadLedger, when the ledger moves while it is read', () => {
   const dataset = syntheticLedger({ months: 12, perMonth: 10, seed: 2 })
-  const calls = (source: { calls: string[] }, prefix: string) => source.calls.filter((c) => c.startsWith(prefix))
+  const calls = (
+    source: { calls: string[] },
+    prefix: string,
+  ) => source.calls.filter((c) => c.startsWith(prefix))
 
   it('reads the reference again and keeps the parts that already carry its revision', async () => {
     const source = memorySource(dataset)
@@ -223,7 +248,10 @@ describe('loadLedger, when the sums are too many for one request', () => {
     const source = memorySource(dataset)
     const read = source.readCubePart.bind(source)
     source.readCubePart = async (range) => {
-      const months = Number(range.to.slice(0, 4)) * 12 + Number(range.to.slice(5)) - (Number(range.from.slice(0, 4)) * 12 + Number(range.from.slice(5)))
+      const months =
+        Number(range.to.slice(0, 4)) * 12 +
+        Number(range.to.slice(5)) -
+        (Number(range.from.slice(0, 4)) * 12 + Number(range.from.slice(5)))
       if (months > 15) throw new PartTooLargeError('too many cells')
       return read(range)
     }

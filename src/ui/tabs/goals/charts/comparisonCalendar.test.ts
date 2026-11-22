@@ -20,28 +20,56 @@ const I = SAMPLE_INFLATION
 
 /** 100.000 € that neither grows nor gets added to: it is worth the same in every year of its own euros. */
 function flat(overrides: Partial<GoalScenario>): GoalScenario {
-  return makeScenario({ startInvestedCents: 100_000_00, monthlyContributionCents: 0, expectedRealReturn: 0, housePurchaseYear: null, horizonYears: 30, ...overrides })
+  return makeScenario({
+    startInvestedCents: 100_000_00,
+    monthlyContributionCents: 0,
+    expectedRealReturn: 0,
+    housePurchaseYear: null,
+    horizonYears: 30,
+    ...overrides,
+  })
 }
 
 /** A copy of the sample plan started on `date` from its own line, as "Start a copy later" will make it. */
-function laterCopy(source: GoalScenario, date: string): GoalScenario {
+function laterCopy(
+  source: GoalScenario,
+  date: string,
+): GoalScenario {
   const suggested = suggestedStart(source, null, date, I)!
-  return { ...source, id: 2, name: 'Later copy', isActive: false, ...startLater(source, { date, investedCents: suggested.cents }, I)!.patch }
+  return {
+    ...source,
+    id: 2,
+    name: 'Later copy',
+    isActive: false,
+    ...startLater(source, { date, investedCents: suggested.cents }, I)!.patch,
+  }
 }
 
 describe('comparisonOrigin', () => {
   it('is null while every scenario starts on one day, which keeps the table reading each at its own plan year', () => {
-    expect(comparisonOrigin([flat({ planStartDate: '2026-01-01' }), flat({ planStartDate: null })], flat({ planStartDate: '2026-01-01' }))).toBeNull()
+    expect(
+      comparisonOrigin(
+        [flat({ planStartDate: '2026-01-01' }), flat({ planStartDate: null })],
+        flat({ planStartDate: '2026-01-01' }),
+      ),
+    ).toBeNull()
   })
 
   it('is the earliest start once one differs, the draft included', () => {
-    expect(comparisonOrigin([flat({ planStartDate: '2026-01-01' })], flat({ planStartDate: '2027-07-01' }))).toBe('2026-01-01')
-    expect(comparisonOrigin([flat({ planStartDate: '2027-07-01' })], flat({ planStartDate: '2026-01-01' }))).toBe('2026-01-01')
+    expect(comparisonOrigin([flat({ planStartDate: '2026-01-01' })], flat({ planStartDate: '2027-07-01' }))).toBe(
+      '2026-01-01',
+    )
+    expect(comparisonOrigin([flat({ planStartDate: '2027-07-01' })], flat({ planStartDate: '2026-01-01' }))).toBe(
+      '2026-01-01',
+    )
   })
 })
 
 describe('restYear', () => {
-  const at = (offset: number, end: number) => ({ offset, end }) as Placed
+  const at = (
+    offset: number,
+    end: number,
+  ) => ({ offset, end }) as Placed
 
   it('keeps the year a row ends on when its end is a scrap of rounding under it', () => {
     expect(restYear([at(0, 30), at(1.5, 31.5)])).toEqual({ year: 30, everyReaches: true })
@@ -79,7 +107,12 @@ describe('comparisonRows on one calendar', () => {
 
   it('says when a path starts instead of a figure for a date before it', () => {
     const rows = comparisonRows([early, later], scenarioToDraft(early), EU_MONEY_FORMAT, I, false, 1)
-    expect(rows[1]).toMatchObject({ invested: 'starts Jul 2027', netWorth: 'starts Jul 2027', investedCents: null, ended: false })
+    expect(rows[1]).toMatchObject({
+      invested: 'starts Jul 2027',
+      netWorth: 'starts Jul 2027',
+      investedCents: null,
+      ended: false,
+    })
   })
 
   it('gives a path that has ended its last figure and the year it ended', () => {
@@ -107,7 +140,10 @@ describe('comparisonRows on one calendar', () => {
     for (const inflation of [I, 0, -0.01]) {
       it(`rests on 2042, the last year shown, with A's last figure and B's own, at ${inflation} inflation`, () => {
         const rows = comparisonRows([a, b], scenarioToDraft(a), EU_MONEY_FORMAT, inflation, false)
-        expect(rows.map((r) => [r.atYear, r.everyReaches])).toEqual([[16, false], [16, false]])
+        expect(rows.map((r) => [r.atYear, r.everyReaches])).toEqual([
+          [16, false],
+          [16, false],
+        ])
         const ownA = projectNetWorth(scenarioToParams(a, inflation))
         const ownB = projectNetWorth(scenarioToParams(b, inflation))
         for (const field of fields) {
@@ -124,7 +160,10 @@ describe('comparisonRows on one calendar', () => {
     it('rests on the earliest end when the later path starts on it, with a figure for both', () => {
       const onEnd = { ...b, planStartDate: '2031-01-01' }
       const rows = comparisonRows([a, onEnd], scenarioToDraft(a), EU_MONEY_FORMAT, I, false)
-      expect(rows.map((r) => [r.atYear, r.everyReaches, r.ended])).toEqual([[5, true, false], [5, true, false]])
+      expect(rows.map((r) => [r.atYear, r.everyReaches, r.ended])).toEqual([
+        [5, true, false],
+        [5, true, false],
+      ])
       const own = projectNetWorth(scenarioToParams(onEnd, I))
       for (const field of fields) expect(rows[1]![cents[field]]).toBe(valueOnAxisAt(own, 5, I, 5, field))
     })
@@ -133,17 +172,25 @@ describe('comparisonRows on one calendar', () => {
       const midYear = { ...b, planStartDate: '2031-07-01' }
       const rows = comparisonRows([a, midYear], scenarioToDraft(a), EU_MONEY_FORMAT, I, false)
       // B ends on 1 July 2041; the axis runs to 1 January 2042, the last year shown.
-      expect(rows.map((r) => [r.atYear, r.everyReaches])).toEqual([[16, false], [16, false]])
+      expect(rows.map((r) => [r.atYear, r.everyReaches])).toEqual([
+        [16, false],
+        [16, false],
+      ])
       expect(rows.map((r) => r.invested.replace(/^.* /, ''))).toEqual(['2031)', '2041)'])
       const offset = yearsBetween('2026-01-01', '2031-07-01')
-      expect(rows[1]!.investedCents).toBe(valueOnAxisAt(projectNetWorth(scenarioToParams(midYear, I)), offset, I, offset + 10, 'invested'))
+      expect(rows[1]!.investedCents).toBe(
+        valueOnAxisAt(projectNetWorth(scenarioToParams(midYear, I)), offset, I, offset + 10, 'invested'),
+      )
       expect(rows[1]!.investedCents).not.toBeNull()
     })
 
     it('rests on the earliest end when the later path starts part-way through the year before it', () => {
       const before = { ...b, planStartDate: '2030-07-01' }
       const rows = comparisonRows([a, before], scenarioToDraft(a), EU_MONEY_FORMAT, I, false)
-      expect(rows.map((r) => [r.atYear, r.everyReaches, r.ended])).toEqual([[5, true, false], [5, true, false]])
+      expect(rows.map((r) => [r.atYear, r.everyReaches, r.ended])).toEqual([
+        [5, true, false],
+        [5, true, false],
+      ])
     })
 
     it('keeps reading a chosen window, not the last year shown', () => {
@@ -154,18 +201,46 @@ describe('comparisonRows on one calendar', () => {
   })
 
   it('gives FI and the house purchase as the month they fall in', () => {
-    const buys = flat({ id: 3, name: 'Buys', planStartDate: '2027-07-01', housePurchaseYear: 4, housePriceCents: 10_000_00 })
-    const owns = flat({ id: 4, name: 'Owns', planStartDate: '2027-07-01', housePurchaseYear: 0, housePriceCents: 10_000_00 })
-    const fi = flat({ id: 5, name: 'FI', planStartDate: '2027-07-01', annualSpendCents: 3_000_00, monthlyContributionCents: 500_00 })
+    const buys = flat({
+      id: 3,
+      name: 'Buys',
+      planStartDate: '2027-07-01',
+      housePurchaseYear: 4,
+      housePriceCents: 10_000_00,
+    })
+    const owns = flat({
+      id: 4,
+      name: 'Owns',
+      planStartDate: '2027-07-01',
+      housePurchaseYear: 0,
+      housePriceCents: 10_000_00,
+    })
+    const fi = flat({
+      id: 5,
+      name: 'FI',
+      planStartDate: '2027-07-01',
+      annualSpendCents: 3_000_00,
+      monthlyContributionCents: 500_00,
+    })
     const rows = comparisonRows([early, buys, owns, fi], scenarioToDraft(early), EU_MONEY_FORMAT, I, false)
     expect(rows.map((r) => r.house)).toEqual(['never', 'Jul 2031', 'owned', 'never'])
     // 100.000 € pays 4.000 € a year at 4%, over the 3.000 € to live on from the first day: FI is the month it starts.
     expect(rows[3]!.fi).toBe('Jul 2027')
     expect(rows[0]!.fi).toBe('Jan 2026')
-    const slow = flat({ id: 6, name: 'Slow', planStartDate: '2027-07-01', annualSpendCents: 5_000_00, monthlyContributionCents: 500_00 })
-    expect(comparisonRows([early, slow], scenarioToDraft(early), EU_MONEY_FORMAT, I, false)[1]!.fi).toMatch(/^[A-Z][a-z]{2} 20\d\d$/)
+    const slow = flat({
+      id: 6,
+      name: 'Slow',
+      planStartDate: '2027-07-01',
+      annualSpendCents: 5_000_00,
+      monthlyContributionCents: 500_00,
+    })
+    expect(comparisonRows([early, slow], scenarioToDraft(early), EU_MONEY_FORMAT, I, false)[1]!.fi).toMatch(
+      /^[A-Z][a-z]{2} 20\d\d$/,
+    )
     const never = flat({ id: 7, name: 'Never', planStartDate: '2027-07-01', annualSpendCents: 900_000_00 })
-    expect(comparisonRows([early, never], scenarioToDraft(early), EU_MONEY_FORMAT, I, false)[1]!.fi).toBe('not in horizon')
+    expect(comparisonRows([early, never], scenarioToDraft(early), EU_MONEY_FORMAT, I, false)[1]!.fi).toBe(
+      'not in horizon',
+    )
   })
 
   it('puts a scenario with no start date at the earliest start, where the chart draws it', () => {

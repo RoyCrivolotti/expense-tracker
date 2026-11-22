@@ -92,7 +92,12 @@ export interface Plan {
 }
 
 /** The first position in [lo, hi) holding something above `value`. */
-function firstAbove(values: Float64Array, value: number, lo: number, hi: number): number {
+function firstAbove(
+  values: Float64Array,
+  value: number,
+  lo: number,
+  hi: number,
+): number {
   while (lo < hi) {
     const mid = (lo + hi) >>> 1
     if (values[mid]! > value) hi = mid
@@ -102,7 +107,12 @@ function firstAbove(values: Float64Array, value: number, lo: number, hi: number)
 }
 
 /** The first position in [lo, hi) holding `value` or more. */
-function firstAtLeast(values: Float64Array, value: number, lo: number, hi: number): number {
+function firstAtLeast(
+  values: Float64Array,
+  value: number,
+  lo: number,
+  hi: number,
+): number {
   while (lo < hi) {
     const mid = (lo + hi) >>> 1
     if (values[mid]! >= value) hi = mid
@@ -111,7 +121,12 @@ function firstAtLeast(values: Float64Array, value: number, lo: number, hi: numbe
   return lo
 }
 
-function sliceOf(layout: Layout, group: number, from: number, to: number): RowSlice {
+function sliceOf(
+  layout: Layout,
+  group: number,
+  from: number,
+  to: number,
+): RowSlice {
   const first = layout.firstRow[group]!
   const end = layout.firstRow[group + 1]!
   if (layout.collapsed[group] || first === end) return NO_ROWS
@@ -119,12 +134,17 @@ function sliceOf(layout: Layout, group: number, from: number, to: number): RowSl
   const a = firstAbove(layout.rowEnd, from, first, end)
   const b = Math.max(a, firstAtLeast(layout.rowTop, to, first, end))
   const before = (a < end ? layout.rowTop[a]! : layout.groupBottom[group]!) - start
-  const after = a === b ? layout.groupBottom[group]! - start - before : layout.groupBottom[group]! - layout.rowEnd[b - 1]!
+  const after =
+    a === b ? layout.groupBottom[group]! - start - before : layout.groupBottom[group]! - layout.rowEnd[b - 1]!
   return { from: a - first, to: b - first, before, after }
 }
 
 /** What to render for the stretch of the list from `from` to `to`. */
-export function planWindow(layout: Layout, from: number, to: number): Plan {
+export function planWindow(
+  layout: Layout,
+  from: number,
+  to: number,
+): Plan {
   const groups = layout.groupTop.length
   const first = firstAbove(layout.groupBottom, from, 0, groups)
   const last = firstAtLeast(layout.groupTop, to, 0, groups) - 1
@@ -157,7 +177,12 @@ function overscanFor(viewportHeight: number): number {
  * rather than on each one. An edge that already reaches the end of the list has nothing more to
  * bring in, so being close to it is no reason to start again.
  */
-export function nextBand(prev: Band | null, top: number, bottom: number, total: number): Band {
+export function nextBand(
+  prev: Band | null,
+  top: number,
+  bottom: number,
+  total: number,
+): Band {
   const overscan = overscanFor(bottom - top)
   const margin = overscan / 2
   if (prev) {

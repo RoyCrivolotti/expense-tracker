@@ -7,7 +7,11 @@ const R2_DELETE_LIMIT = 1000
 /** Cloudflare R2 adapter for {@link ReceiptStore}. */
 export function createR2ReceiptStore(bucket: R2Bucket): ReceiptStore {
   return {
-    put: async (key, body, contentType) => {
+    put: async (
+      key,
+      body,
+      contentType,
+    ) => {
       await bucket.put(key, body, { httpMetadata: { contentType } })
     },
     get: async (key) => {

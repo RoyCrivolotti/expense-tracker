@@ -25,8 +25,15 @@ import {
 } from './syntheticReference'
 
 type Rnd = () => number
-const pick = <T>(items: readonly T[], rnd: Rnd): T => items[Math.floor(rnd() * items.length)] as T
-const between = (lo: number, hi: number, rnd: Rnd): number => lo + Math.floor(rnd() * (hi - lo + 1))
+const pick = <T>(
+  items: readonly T[],
+  rnd: Rnd,
+): T => items[Math.floor(rnd() * items.length)] as T
+const between = (
+  lo: number,
+  hi: number,
+  rnd: Rnd,
+): number => lo + Math.floor(rnd() * (hi - lo + 1))
 const pad = (n: number): string => String(n).padStart(2, '0')
 
 const SERIES = [
@@ -39,7 +46,10 @@ interface Draft extends Omit<StoredTransaction, 'id' | 'budgetMonth'> {
   labelIds: number[]
 }
 
-function ordinary(date: string, rnd: Rnd): Draft {
+function ordinary(
+  date: string,
+  rnd: Rnd,
+): Draft {
   const roll = rnd()
   const type: TxnType = roll < 0.08 ? 'refund' : roll < 0.14 ? 'income' : roll < 0.2 ? 'investment' : 'expense'
   const cents = rnd() < 0.05 ? 0 : between(100, 40_000, rnd)
@@ -56,20 +66,46 @@ function ordinary(date: string, rnd: Rnd): Draft {
   }
 }
 
-function monthDrafts(month: string, rnd: Rnd, cancelledOnly: boolean): Draft[] {
+function monthDrafts(
+  month: string,
+  rnd: Rnd,
+  cancelledOnly: boolean,
+): Draft[] {
   const drafts: Draft[] = []
   const day = (n: number) => `${month}-${pad(Math.min(n, 28))}`
   for (const [description, categoryId, amountCents, d] of SERIES) {
-    if (rnd() < 0.85) drafts.push({ date: day(d), description, accountId: CHECKING, categoryId, type: 'expense', amountCents, cancelled: false, labelIds: [] })
+    if (rnd() < 0.85)
+      drafts.push({
+        date: day(d),
+        description,
+        accountId: CHECKING,
+        categoryId,
+        type: 'expense',
+        amountCents,
+        cancelled: false,
+        labelIds: [],
+      })
   }
   if (Number(month.slice(5)) % 3 === 1 && rnd() < 0.9) {
-    drafts.push({ date: day(14), description: 'Water bill', accountId: CHECKING, categoryId: CAT.utilities, type: 'expense', amountCents: 6_400, cancelled: false, labelIds: [] })
+    drafts.push({
+      date: day(14),
+      description: 'Water bill',
+      accountId: CHECKING,
+      categoryId: CAT.utilities,
+      type: 'expense',
+      amountCents: 6_400,
+      cancelled: false,
+      labelIds: [],
+    })
   }
   for (let i = between(0, 6, rnd); i > 0; i--) drafts.push(ordinary(day(between(1, 31, rnd)), rnd))
   return cancelledOnly ? drafts.map((d) => ({ ...d, cancelled: true })) : drafts
 }
 
-function statementsFor(months: string[], rnd: Rnd): AccountStatement[] {
+function statementsFor(
+  months: string[],
+  rnd: Rnd,
+): AccountStatement[] {
   return [VISA, TRAVEL_CARD].flatMap((accountId) =>
     months.flatMap((yearMonth) => {
       if (rnd() < 0.15) return []
@@ -84,7 +120,10 @@ function statementsFor(months: string[], rnd: Rnd): AccountStatement[] {
  * legacy (recorded before the covered count was kept, so nothing but the rows points at them) and some
  * are orphans (the rows were unsettled since, so only the covered count marks them).
  */
-function settle(stored: StoredTransaction[], rnd: Rnd): void {
+function settle(
+  stored: StoredTransaction[],
+  rnd: Rnd,
+): void {
   const candidates = stored.filter((t) => t.type === 'expense' && !t.cancelled && t.planId == null)
   if (candidates.length < 3) return
   const covered = [pick(candidates, rnd), pick(candidates, rnd)].filter((t, i, all) => all.indexOf(t) === i)
@@ -135,7 +174,10 @@ export function randomLedger(seed: number): ExpenseDataset {
   settle(stored, rnd)
   const accounts: Account[] = syntheticAccounts().filter((a) => a.id !== TRAVEL_CARD || rnd() < 0.5)
   const statements = statementsFor(withData, rnd)
-  const derived = deriveTransactions(stored, accounts, statements).map((t) => ({ ...t, labelIds: labelIds.get(t.id) ?? [] }))
+  const derived = deriveTransactions(stored, accounts, statements).map((t) => ({
+    ...t,
+    labelIds: labelIds.get(t.id) ?? [],
+  }))
   const transactions = derived.sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1))
   return makeDataset({
     categories: syntheticCategories(),

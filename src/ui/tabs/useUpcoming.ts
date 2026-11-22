@@ -47,16 +47,16 @@ export interface Upcoming {
  * looked back at. A series the owner stopped on this device is left out. Each charge carries the month it files
  * under (`filedUnder`), which does depend on the data: the owner's rollover day and whether the open month is settled.
  */
-export function useUpcoming(model: ExpenseModel, month: string): Upcoming {
+export function useUpcoming(
+  model: ExpenseModel,
+  month: string,
+): Upcoming {
   const today = todayLocalIso()
   const { transactions, settings } = model.dataset
   const { history } = model
   useHistoryWatch(model)
   const { stopped } = useStoppedSuggestions()
-  const due = useMemo(
-    () => upcomingOf(transactions, history, today, stopped),
-    [transactions, history, today, stopped],
-  )
+  const due = useMemo(() => upcomingOf(transactions, history, today, stopped), [transactions, history, today, stopped])
   const suggestions = useMemo(
     () => due.map((s) => ({ ...s, filedUnder: suggestBudgetMonth(model, s.predictedDate) })),
     [due, model],

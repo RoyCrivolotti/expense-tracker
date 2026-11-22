@@ -8,7 +8,10 @@ export function routeParam(value: string | string[] | undefined): string {
 }
 
 /** Parse a positive integer route id, throwing 400 on bad input. */
-export function parseNumericId(params: Record<string, string | string[]>, key = 'id'): number {
+export function parseNumericId(
+  params: Record<string, string | string[]>,
+  key = 'id',
+): number {
   const raw = routeParam(params[key])
   const id = Number(raw)
   if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, `Invalid ${key}`)

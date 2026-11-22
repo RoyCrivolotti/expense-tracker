@@ -36,9 +36,7 @@ export const onRequestGet: PagesFunction<Env, string, ExpensesData> = async (con
     if (!object) throw new HttpError(404, 'Attachment bytes are missing')
 
     // A thumbnail is always the JPEG we generated, whatever the original was.
-    const contentType = (
-      wantsThumb && source.thumbKey ? 'image/jpeg' : source.contentType
-    ) as ReceiptContentType
+    const contentType = (wantsThumb && source.thumbKey ? 'image/jpeg' : source.contentType) as ReceiptContentType
     const headers = serveHeaders(contentType, source.originalName, object.etag)
     if (context.request.headers.get('if-none-match') === object.etag) {
       return new Response(null, { status: 304, headers })

@@ -19,7 +19,10 @@ export interface Dimensions {
  * gain nothing. Rounds to whole pixels and never returns zero, which a very wide
  * or very tall source would otherwise produce.
  */
-export function fitWithin(dimensions: Dimensions, maxEdge: number): Dimensions {
+export function fitWithin(
+  dimensions: Dimensions,
+  maxEdge: number,
+): Dimensions {
   const { width, height } = dimensions
   const longest = Math.max(width, height)
   if (longest <= maxEdge) return { width, height }

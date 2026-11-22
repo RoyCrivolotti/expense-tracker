@@ -15,14 +15,21 @@ interface Props {
   onMarkPaidToday?: (() => void) | undefined
 }
 
-function statusText(paid: boolean, amountCents: number, paidOn?: string): string {
+function statusText(
+  paid: boolean,
+  amountCents: number,
+  paidOn?: string,
+): string {
   if (amountCents === 0) return 'Nothing to settle'
   if (!paid) return 'Due'
   return paidOn ? `Paid · ${shortDayLabel(paidOn)}` : 'Paid'
 }
 
 /** A statement with nothing to settle is neither due nor paid, so it keeps the muted meta colour. */
-function statusTone(paid: boolean, amountCents: number): string | undefined {
+function statusTone(
+  paid: boolean,
+  amountCents: number,
+): string | undefined {
   if (amountCents === 0) return undefined
   return paid ? styles.paid : styles.due
 }
@@ -51,11 +58,9 @@ export function StatementSummaryRow({
     <div className={styles.item}>
       <Tag
         type={tappable ? 'button' : undefined}
-        className={[
-          styles.row,
-          tappable ? styles.rowButton : '',
-          onMarkPaidToday ? styles.rowAboveAction : '',
-        ].join(' ')}
+        className={[styles.row, tappable ? styles.rowButton : '', onMarkPaidToday ? styles.rowAboveAction : ''].join(
+          ' ',
+        )}
         {...(tappable ? { onClick: onPress, disabled } : {})}
       >
         <span className={styles.iconWrap} aria-hidden>
@@ -83,12 +88,7 @@ export function StatementSummaryRow({
         ) : null}
       </Tag>
       {onMarkPaidToday ? (
-        <button
-          type="button"
-          className={`${styles.markPaid} tapActive`}
-          disabled={disabled}
-          onClick={onMarkPaidToday}
-        >
+        <button type="button" className={`${styles.markPaid} tapActive`} disabled={disabled} onClick={onMarkPaidToday}>
           Mark as paid today <span className={styles.srOnly}>for {name}</span>
         </button>
       ) : null}

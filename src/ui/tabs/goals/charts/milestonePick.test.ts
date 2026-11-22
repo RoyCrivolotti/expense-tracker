@@ -8,7 +8,14 @@ const START = '2026-01-01'
 const eur = resolveMoneyFormat('EUR', 'de-DE')
 const plan = samplePlan({ planStartDate: START, housePurchaseYear: null, lifeEvents: [] })
 const params = scenarioToParams(plan, I)
-const line = (over: Partial<PickLine> = {}): PickLine => ({ id: 'a', name: 'Plan A', color: '#123456', params, planStartDate: START, ...over })
+const line = (over: Partial<PickLine> = {}): PickLine => ({
+  id: 'a',
+  name: 'Plan A',
+  color: '#123456',
+  params,
+  planStartDate: START,
+  ...over,
+})
 const years = Array.from({ length: plan.horizonYears + 1 }, (_, i) => i)
 const AMOUNT = 20_000_000
 
@@ -72,8 +79,15 @@ describe('pickCrossings', () => {
   })
 
   it('gives one dot and one row for each path, in the order given', () => {
-    const richer = scenarioToParams(samplePlan({ planStartDate: START, housePurchaseYear: null, lifeEvents: [], startInvestedCents: 40_000_000 }), I)
-    const out = pickCrossings({ ...base, lines: [line({ id: 'a' }), line({ id: 'b', name: 'Richer', params: richer })], nominalMode: false })
+    const richer = scenarioToParams(
+      samplePlan({ planStartDate: START, housePurchaseYear: null, lifeEvents: [], startInvestedCents: 40_000_000 }),
+      I,
+    )
+    const out = pickCrossings({
+      ...base,
+      lines: [line({ id: 'a' }), line({ id: 'b', name: 'Richer', params: richer })],
+      nominalMode: false,
+    })
     expect(out.rows.map((r) => r.id)).toEqual(['a', 'b'])
     expect(out.dots).toHaveLength(2)
     expect(out.dots[1]!.index).toBeLessThan(out.dots[0]!.index)
@@ -83,7 +97,7 @@ describe('pickCrossings', () => {
 describe('endNoteFor', () => {
   const base = { amountCents: AMOUNT, inflationRate: I, years, planStartDate: START, format: eur }
 
-  it('says what the amount is worth at the end in the plan\'s money, in Purchasing power, at the height the line ends at', () => {
+  it("says what the amount is worth at the end in the plan's money, in Purchasing power, at the height the line ends at", () => {
     const note = endNoteFor({ ...base, nominalMode: false })!
     expect(note.index).toBe(years.length - 1)
     expect(note.value).toBeCloseTo(AMOUNT / Math.pow(1 + I, plan.horizonYears), 3)

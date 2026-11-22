@@ -29,7 +29,10 @@ export interface ReviewApi {
 }
 
 /** The payment with the account its card was just linked to, when it was. */
-function withLink(rec: RecommendationInfo, linked: ReadonlyMap<string, number>): RecommendationInfo {
+function withLink(
+  rec: RecommendationInfo,
+  linked: ReadonlyMap<string, number>,
+): RecommendationInfo {
   const account = rec.card ? linked.get(`${rec.card.source}:${rec.card.digits}`) : undefined
   return account === undefined ? rec : { ...rec, accountId: account }
 }
@@ -61,17 +64,23 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     decide(view.rec.id, message, `remove ${name(view)}`, () => dismissRecommendation(view.rec.id))
   }
   /** Links the card to the account the payment was saved with, and says why when it cannot. */
-  const remember = (source: string, digits: string) => async (accountId: number): Promise<string | null> => {
-    try {
-      await linkCard(source, digits, accountId)
-      setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))
-      announceRecommendationsChanged()
-      return null
-    } catch (e) {
-      return `The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`
+  const remember =
+    (
+      source: string,
+      digits: string,
+    ) =>
+    async (accountId: number): Promise<string | null> => {
+      try {
+        await linkCard(source, digits, accountId)
+        setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))
+        announceRecommendationsChanged()
+        return null
+      } catch (e) {
+        return `The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`
+      }
     }
-  }
-  const rememberFor = (v: ReviewView) => (accountId: number) => (v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve(null))
+  const rememberFor = (v: ReviewView) => (accountId: number) =>
+    v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve(null)
   return {
     views,
     count: core.count,
@@ -83,7 +92,8 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     canWrite: core.canWrite,
     add: (view) => {
       const input = transactionOf(view)
-      if (input && submit) decide(view.rec.id, toastText('Added', view, format), `add ${name(view)}`, () => submit(view.rec.id, input))
+      if (input && submit)
+        decide(view.rec.id, toastText('Added', view, format), `add ${name(view)}`, () => submit(view.rec.id, input))
     },
     dontAdd,
     link: (view) => {

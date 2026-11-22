@@ -30,7 +30,10 @@ interface Stored {
   description_norm: string | null
 }
 
-const stored = (kit: ReturnType<typeof queryDb>, owner?: string): Stored[] =>
+const stored = (
+  kit: ReturnType<typeof queryDb>,
+  owner?: string,
+): Stored[] =>
   kit.sqlite
     .prepare(
       `SELECT id, owner, description, description_norm FROM transactions ${owner ? 'WHERE owner = ?' : ''} ORDER BY id`,
@@ -55,13 +58,16 @@ describe('the filled value', () => {
 
     const after = stored(kit)
     expect(waiting(after)).toBe(0)
-    for (const row of after) expect(row.description_norm, JSON.stringify(row.description)).toBe(normalizeDesc(row.description))
+    for (const row of after)
+      expect(row.description_norm, JSON.stringify(row.description)).toBe(normalizeDesc(row.description))
   })
 
   it('differs from SQLite for the descriptions the migration comment names', async () => {
     const kit = waitingDb()
     await fillDescriptionNorm(kit.d1, OWNER, { passes: 1000 })
-    const sqlNorm = kit.sqlite.prepare('SELECT description, lower(trim(description)) AS sql_norm, description_norm FROM transactions').all() as unknown as Array<{
+    const sqlNorm = kit.sqlite
+      .prepare('SELECT description, lower(trim(description)) AS sql_norm, description_norm FROM transactions')
+      .all() as unknown as Array<{
       description: string
       sql_norm: string
       description_norm: string
@@ -88,15 +94,25 @@ describe('a pass', () => {
 
   it('takes the waiting rows in a stable order, oldest date first, so a resumed run continues where the last one stopped', async () => {
     const kit = waitingDb()
-    const byDate = (kit.sqlite.prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY date, id').all(OWNER) as unknown as Array<{ id: number }>).map((r) => r.id)
+    const byDate = (
+      kit.sqlite
+        .prepare('SELECT id FROM transactions WHERE owner = ? ORDER BY date, id')
+        .all(OWNER) as unknown as Array<{ id: number }>
+    ).map((r) => r.id)
     await fillDescriptionNorm(kit.d1, OWNER, { rows: 10, passes: 1 })
-    expect(stored(kit).filter((r) => r.description_norm !== null).map((r) => r.id).sort((a, b) => a - b)).toEqual(
-      byDate.slice(0, 10).sort((a, b) => a - b),
-    )
+    expect(
+      stored(kit)
+        .filter((r) => r.description_norm !== null)
+        .map((r) => r.id)
+        .sort((a, b) => a - b),
+    ).toEqual(byDate.slice(0, 10).sort((a, b) => a - b))
     await fillDescriptionNorm(kit.d1, OWNER, { rows: 10, passes: 1 })
-    expect(stored(kit).filter((r) => r.description_norm !== null).map((r) => r.id).sort((a, b) => a - b)).toEqual(
-      byDate.slice(0, 20).sort((a, b) => a - b),
-    )
+    expect(
+      stored(kit)
+        .filter((r) => r.description_norm !== null)
+        .map((r) => r.id)
+        .sort((a, b) => a - b),
+    ).toEqual(byDate.slice(0, 20).sort((a, b) => a - b))
   })
 
   it('finishes in as many calls as the chunk size needs, and then has nothing left to do', async () => {
@@ -137,7 +153,13 @@ describe('a pass', () => {
     kit.sqlite.prepare("UPDATE transactions SET description_norm = 'written by an edit' WHERE id = ?").run(first!.id)
     const result = await kit.d1
       .prepare(FILL_SQL)
-      .bind(OWNER, JSON.stringify([[first!.id, 'stale, from before the edit'], [second!.id, 'filled']]))
+      .bind(
+        OWNER,
+        JSON.stringify([
+          [first!.id, 'stale, from before the edit'],
+          [second!.id, 'filled'],
+        ]),
+      )
       .run()
     expect(result.meta.changes).toBe(1)
     const after = stored(kit)
@@ -158,7 +180,13 @@ describe('a pass', () => {
 
   it('writes 500 rows in one statement although D1 allows 100 bound values', async () => {
     const rows = Array.from({ length: 600 }, (_, i) =>
-      makeTransaction({ id: i + 1, description: `Shop ${i}`, date: '2026-02-01', budgetMonth: '2026-02', createdAt: CREATED }),
+      makeTransaction({
+        id: i + 1,
+        description: `Shop ${i}`,
+        date: '2026-02-01',
+        budgetMonth: '2026-02',
+        createdAt: CREATED,
+      }),
     )
     const kit = queryDb(makeDataset({ transactions: rows }), [], WAITING)
     const result = await fillDescriptionNorm(kit.d1, OWNER, { passes: 1 })
@@ -209,8 +237,18 @@ describe.each([false, true])('the check for rows still waiting, with table stati
         .prepare(`EXPLAIN QUERY PLAN ${sql}`)
         .all(...(sql === PENDING_ROWS_SQL ? [OWNER, 5] : [OWNER])) as unknown as Array<{ detail: string }>
       const details = plan.map((p) => p.detail)
-      expect(details.some((d) => /SEARCH transactions USING (COVERING )?INDEX idx_txn_owner_desc_norm \(owner=\? AND description_norm=\?\)/.test(d)), details.join('\n')).toBe(true)
-      expect(details.some((d) => /SCAN transactions/.test(d)), details.join('\n')).toBe(false)
+      expect(
+        details.some((d) =>
+          /SEARCH transactions USING (COVERING )?INDEX idx_txn_owner_desc_norm \(owner=\? AND description_norm=\?\)/.test(
+            d,
+          ),
+        ),
+        details.join('\n'),
+      ).toBe(true)
+      expect(
+        details.some((d) => /SCAN transactions/.test(d)),
+        details.join('\n'),
+      ).toBe(false)
     }
   })
 })
@@ -218,7 +256,11 @@ describe.each([false, true])('the check for rows still waiting, with table stati
 describe('the statement that writes the values', () => {
   it('loops over the JSON list and looks each row up by its id, so a pass reads a few rows per row filled', () => {
     const kit = waitingDb()
-    const plan = (kit.sqlite.prepare(`EXPLAIN QUERY PLAN ${FILL_SQL}`).all(OWNER, '[[1,"a"]]') as unknown as Array<{ detail: string }>).map((p) => p.detail)
+    const plan = (
+      kit.sqlite.prepare(`EXPLAIN QUERY PLAN ${FILL_SQL}`).all(OWNER, '[[1,"a"]]') as unknown as Array<{
+        detail: string
+      }>
+    ).map((p) => p.detail)
     expect(plan[0], plan.join('\n')).toMatch(/^SCAN json_each/)
     expect(plan[1], plan.join('\n')).toBe('SEARCH transactions USING INTEGER PRIMARY KEY (rowid=?)')
     expect(plan).toHaveLength(2)
@@ -227,7 +269,10 @@ describe('the statement that writes the values', () => {
   it('does not write over a row of another owner, even one named in the list', async () => {
     const kit = waitingDb(true)
     const theirs = stored(kit, OTHER_OWNER)[0]!
-    await kit.d1.prepare(FILL_SQL).bind(OWNER, JSON.stringify([[theirs.id, 'planted']])).run()
+    await kit.d1
+      .prepare(FILL_SQL)
+      .bind(OWNER, JSON.stringify([[theirs.id, 'planted']]))
+      .run()
     expect(stored(kit, OTHER_OWNER).find((r) => r.id === theirs.id)?.description_norm).toBeNull()
   })
 })

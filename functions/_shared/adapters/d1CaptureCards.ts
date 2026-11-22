@@ -14,7 +14,10 @@ export function cards(
   db: D1Database,
 ): Pick<CaptureRepository, 'saveCard' | 'listCards' | 'linkCard' | 'unlinkCard' | 'listWaitingCards'> {
   return {
-    linkCard: async (owner, c) => {
+    linkCard: async (
+      owner,
+      c,
+    ) => {
       const bound = [owner, c.source, c.digitsKind, c.digits]
       const [saved] = await db.batch([
         db.prepare(LINK_CARD_SQL).bind(...bound, c.accountId),
@@ -23,9 +26,17 @@ export function cards(
       if ((saved?.meta?.changes ?? 0) > 0) return 'linked'
       return (await db.prepare(ACCOUNT_EXISTS_SQL).bind(owner, c.accountId).first()) ? 'limit' : 'no-account'
     },
-    unlinkCard: async (owner, source, kind, digits) => {
+    unlinkCard: async (
+      owner,
+      source,
+      kind,
+      digits,
+    ) => {
       const bound = [owner, source, kind, digits]
-      const [removed] = await db.batch([db.prepare(UNLINK_CARD_SQL).bind(...bound), db.prepare(CLEAR_OPEN_OF_UNLINKED_SQL).bind(...bound)])
+      const [removed] = await db.batch([
+        db.prepare(UNLINK_CARD_SQL).bind(...bound),
+        db.prepare(CLEAR_OPEN_OF_UNLINKED_SQL).bind(...bound),
+      ])
       return (removed?.meta?.changes ?? 0) > 0
     },
     listWaitingCards: async (owner) =>
@@ -34,7 +45,10 @@ export function cards(
         digits: r.digits,
         count: r.n,
       })),
-    saveCard: async (owner, c) => {
+    saveCard: async (
+      owner,
+      c,
+    ) => {
       await changed(db, SAVE_CARD_SQL, owner, c.source, c.digitsKind, c.digits, c.accountId)
     },
     listCards: async (owner) =>

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createCaptureKey, fetchCaptureKeys, revokeCaptureKey } from './captureKeysApi'
 
-const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+const ok = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 
 afterEach(() => vi.unstubAllGlobals())
 

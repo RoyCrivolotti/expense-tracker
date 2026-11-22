@@ -23,7 +23,10 @@ interface Run {
   tail: SeriesTuple[]
 }
 
-const ascending = (a: number, b: number): number => a - b
+const ascending = (
+  a: number,
+  b: number,
+): number => a - b
 
 const MS_PER_DAY = 86_400_000
 
@@ -32,7 +35,10 @@ const dayNumber = (date: string): number =>
 
 const monthNumber = (yearMonth: string): number => Number(yearMonth.slice(0, 4)) * 12 + Number(yearMonth.slice(5, 7))
 
-function add(run: Run, row: SeriesTuple): void {
+function add(
+  run: Run,
+  row: SeriesTuple,
+): void {
   const date = row[4]
   const day = dayNumber(date)
   if (run.rows > 0) run.gaps.push(day - run.lastDay)
@@ -67,7 +73,10 @@ interface Found {
 }
 
 /** The API's order: the series whose newest row is newest first, ties by that row's id. */
-const newestFirst = (a: Found, b: Found): number => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
+const newestFirst = (
+  a: Found,
+  b: Found,
+): number => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
 
 export function foldSeries(rows: SeriesTuple[]): RecurringSeries[] {
   const found: Found[] = []

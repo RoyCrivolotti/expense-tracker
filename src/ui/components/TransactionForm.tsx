@@ -3,10 +3,7 @@ import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
 import { isWithdrawal } from './transactionTypes'
-import {
-  revokeStaged,
-  type PendingReceipt,
-} from '../../data/pendingReceipts'
+import { revokeStaged, type PendingReceipt } from '../../data/pendingReceipts'
 import { useToast } from '../hooks/useToast'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
@@ -17,11 +14,7 @@ import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
 import { acceptDescriptionSuggestion } from './transactionFormActions'
 import { InstallmentStep } from './InstallmentStep'
-import {
-  buildInstallmentIntent,
-  type InstallmentDraft,
-  type InstallmentIntent,
-} from './installmentIntent'
+import { buildInstallmentIntent, type InstallmentDraft, type InstallmentIntent } from './installmentIntent'
 import { CardPaymentIcon } from '../icons'
 import styles from './TransactionForm.module.css'
 
@@ -63,7 +56,11 @@ interface FormProps {
   onViewChange: (view: 'fields' | 'installment') => void
 }
 
-function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
+function toInput(
+  form: FormFields,
+  cents: number,
+  editing: Transaction | null,
+): NewTransaction {
   return {
     date: form.date,
     budgetMonth: form.budgetMonth,
@@ -106,27 +103,30 @@ function initialDraft(
  * long, so once there's real content it gets a full-width row to wrap in
  * rather than clipping inside a chip.
  */
-function hasInstallmentLink(draft: InstallmentDraft, editing: Transaction | null): boolean {
+function hasInstallmentLink(
+  draft: InstallmentDraft,
+  editing: Transaction | null,
+): boolean {
   return draft.mode !== 'none' || editing?.planId != null
 }
 
 /** Label for the installment toggle reflecting the pending draft, then current link. */
-function linkLabel(draft: InstallmentDraft, editing: Transaction | null, model: ExpenseModel): string {
+function linkLabel(
+  draft: InstallmentDraft,
+  editing: Transaction | null,
+  model: ExpenseModel,
+): string {
   if (draft.mode === 'new') {
     return `New plan - payment ${draft.installmentIndex || '?'}/${draft.totalCount || '?'}`
   }
   if (draft.mode === 'existing') {
     const plan = draft.planId != null ? model.lookup.installmentPlan(draft.planId) : undefined
-    return plan
-      ? `${plan.description} - payment ${draft.installmentIndex || '?'}/${plan.totalCount}`
-      : 'Existing plan'
+    return plan ? `${plan.description} - payment ${draft.installmentIndex || '?'}/${plan.totalCount}` : 'Existing plan'
   }
   if (draft.mode === 'unlink') return 'Will be removed from plan'
   if (editing?.planId != null) {
     const plan = model.lookup.installmentPlan(editing.planId)
-    return plan
-      ? `Installment ${editing.installmentIndex}/${plan.totalCount} - ${plan.description}`
-      : 'Part of a plan'
+    return plan ? `Installment ${editing.installmentIndex}/${plan.totalCount} - ${plan.description}` : 'Part of a plan'
   }
   return 'Not part of a plan'
 }
@@ -180,12 +180,18 @@ function installmentControl({
  * this one finished its receipts, so "Transaction added" would be a second,
  * confusing claim about a row already in the list.
  */
-function savedOrEditing(editing: Transaction | null, savedId: number | null): string {
+function savedOrEditing(
+  editing: Transaction | null,
+  savedId: number | null,
+): string {
   if (savedId != null) return 'Receipts uploaded'
   return editing ? 'Transaction updated' : 'Transaction added'
 }
 
-function uploadFailureMessage(count: number, reason: string | null): string {
+function uploadFailureMessage(
+  count: number,
+  reason: string | null,
+): string {
   const noun = count === 1 ? 'receipt' : 'receipts'
   const why = reason ? ` ${reason.replace(/\.$/, '')}.` : ''
   return `The transaction was saved, but ${count} ${noun} could not be uploaded.${why} Try again, or remove them and attach later.`
@@ -202,7 +208,10 @@ function initialLabelIds(editing: Transaction | null): number[] {
  * a column patch. Comparing against what the transaction already had avoids
  * firing it on every save of a transaction nobody has ever labelled.
  */
-function labelsChanged(next: number[], previous: number[] | undefined): boolean {
+function labelsChanged(
+  next: number[],
+  previous: number[] | undefined,
+): boolean {
   const prev = previous ?? []
   if (next.length !== prev.length) return true
   const prevSet = new Set(prev)
@@ -312,9 +321,17 @@ export function TransactionForm({
     return () => revokeStaged(stagedRef.current)
   }, [])
 
-  const set: Setter = (key, value) => setForm((f) => ({ ...f, [key]: value }))
-  const setDraftField: <K extends keyof InstallmentDraft>(key: K, value: InstallmentDraft[K]) => void =
-    (key, value) => setDraft((d) => ({ ...d, [key]: value }))
+  const set: Setter = (
+    key,
+    value,
+  ) => setForm((f) => ({ ...f, [key]: value }))
+  const setDraftField: <K extends keyof InstallmentDraft>(
+    key: K,
+    value: InstallmentDraft[K],
+  ) => void = (
+    key,
+    value,
+  ) => setDraft((d) => ({ ...d, [key]: value }))
 
   /**
    * Upload the staged receipts against a now-existing row, one at a time — the
@@ -482,16 +499,18 @@ export function TransactionForm({
           </button>
         )}
         {view === 'fields' && editing && onDuplicate && (
-          <button
-            type="button"
-            className={styles.secondary}
-            disabled={busy}
-            onClick={() => onDuplicate(editing)}
-          >
+          <button type="button" className={styles.secondary} disabled={busy} onClick={() => onDuplicate(editing)}>
             Duplicate
           </button>
         )}
-        <SaveButtons view={view} queue={queue} busy={busy} uploading={uploading} editing={editing} retrying={savedId != null} />
+        <SaveButtons
+          view={view}
+          queue={queue}
+          busy={busy}
+          uploading={uploading}
+          editing={editing}
+          retrying={savedId != null}
+        />
       </div>
     </form>
   )

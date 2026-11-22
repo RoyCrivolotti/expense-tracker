@@ -39,7 +39,10 @@ function setup() {
 describe('useScenarioEditor', () => {
   describe('when the saved scenario changes under it', () => {
     /** The data a refresh brings back after another device re-baselined the plan. */
-    function refreshWith(setupResult: ReturnType<typeof setup>, change: Partial<GoalScenario>) {
+    function refreshWith(
+      setupResult: ReturnType<typeof setup>,
+      change: Partial<GoalScenario>,
+    ) {
       const { rerender, setData, plan, other } = setupResult
       setData(makeDataset({ goalScenarios: [{ ...plan, ...change }, other] }))
       rerender()
@@ -115,8 +118,7 @@ describe('useScenarioEditor', () => {
 
   it('keeps what memoised charts and the editor lean on steady through an edit', () => {
     const { result } = setup()
-    const { patchDraft, selectScenario, onToggleVisible, onSelectEditing, hiddenIds, activeScenario } =
-      result.current
+    const { patchDraft, selectScenario, onToggleVisible, onSelectEditing, hiddenIds, activeScenario } = result.current
 
     act(() => patchDraft({ monthlyContributionCents: 1 }))
 
@@ -151,7 +153,10 @@ describe('useScenarioEditor', () => {
   })
   describe('creating a scenario', () => {
     /** A create that stays in flight until the test lets it land, with the row the data would get. */
-    function slowCreate(s: ReturnType<typeof setup>, created = makeScenario({ id: 9, name: 'Path A (copy)', sortOrder: 2 })) {
+    function slowCreate(
+      s: ReturnType<typeof setup>,
+      created = makeScenario({ id: 9, name: 'Path A (copy)', sortOrder: 2 }),
+    ) {
       let land!: () => void
       vi.mocked(s.actions.createScenario).mockImplementation(
         () =>
@@ -264,10 +269,9 @@ describe('useScenarioEditor', () => {
       return {
         plan,
         other,
-        ...renderHook(
-          ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0),
-          { initialProps: { scenarios: [plan, other] } },
-        ),
+        ...renderHook(({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0), {
+          initialProps: { scenarios: [plan, other] },
+        }),
       }
     }
 
@@ -396,10 +400,9 @@ describe('useScenarioEditor', () => {
       return {
         plan,
         other,
-        ...renderHook(
-          ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0),
-          { initialProps: { scenarios: [plan, other] } },
-        ),
+        ...renderHook(({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0), {
+          initialProps: { scenarios: [plan, other] },
+        }),
       }
     }
 
@@ -413,7 +416,7 @@ describe('useScenarioEditor', () => {
       expect(result.current.hiddenIds.size).toBe(0)
     })
 
-    it('keeps the loaded scenario\'s saved line hidden while it is edited, and forgets that once it is drawn as the editing line again', () => {
+    it("keeps the loaded scenario's saved line hidden while it is edited, and forgets that once it is drawn as the editing line again", () => {
       const { result, plan } = setupWithRerender()
       act(() => result.current.patchDraft({ monthlyContributionCents: 77_000 }))
       // While edited, the saved line is drawn beside the editing one, and can be hidden.

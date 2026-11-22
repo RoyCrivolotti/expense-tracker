@@ -36,10 +36,17 @@ const PERIODS: Array<[AnalyticsPeriod, CompareMode]> = [
 ]
 const CLOCKS = ['closed', 'open'] as const
 
-const clockFor = (mode: (typeof CLOCKS)[number], month: string) => (mode === 'closed' ? LATER : openAt(month))
+const clockFor = (
+  mode: (typeof CLOCKS)[number],
+  month: string,
+) => (mode === 'closed' ? LATER : openAt(month))
 
 /** Both models for a viewed month: every row, and a window with the whole history's series. */
-function modelsFor(dataset: ExpenseDataset, month: string, history = fixedHistoryOf(dataset.transactions)) {
+function modelsFor(
+  dataset: ExpenseDataset,
+  month: string,
+  history = fixedHistoryOf(dataset.transactions),
+) {
   return {
     whole: buildExpenseModel(dataset),
     windowed: buildLedgerModel(ledgerFor(dataset, month, WINDOWED), { history }),
@@ -47,7 +54,12 @@ function modelsFor(dataset: ExpenseDataset, month: string, history = fixedHistor
 }
 
 /** What the Overview and the Spending view show for one clock, basis and view of the data. */
-function screenReadings(model: ExpenseModel, month: string, mode: (typeof CLOCKS)[number], basis: AnalyticsBasis) {
+function screenReadings(
+  model: ExpenseModel,
+  month: string,
+  mode: (typeof CLOCKS)[number],
+  basis: AnalyticsBasis,
+) {
   const clock = clockFor(mode, month)
   const out: Record<string, string> = {}
   for (const [period, compare] of PERIODS) {
@@ -67,7 +79,10 @@ function screenReadings(model: ExpenseModel, month: string, mode: (typeof CLOCKS
 }
 
 /** The readings of every screen that has a viewed month, as strings that can be compared. */
-function readings(model: ExpenseModel, month: string): Record<string, string> {
+function readings(
+  model: ExpenseModel,
+  month: string,
+): Record<string, string> {
   const out: Record<string, string> = {}
   for (const mode of CLOCKS) for (const basis of BASES) Object.assign(out, screenReadings(model, month, mode, basis))
   for (const basis of BASES) out[`summary:${basis}`] = JSON.stringify(plain(monthlySummaryRows(model, month, basis)))
@@ -85,7 +100,10 @@ function tables(model: ExpenseModel): Record<string, string> {
   }
 }
 
-function differing(a: Record<string, string>, b: Record<string, string>): string[] {
+function differing(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): string[] {
   return Object.keys(a).filter((key) => a[key] !== b[key])
 }
 
@@ -138,7 +156,10 @@ describe('a closed month with only that month held as rows', () => {
   const ONE_MONTH: HydrationPolicy = { fullBelowRows: 0, dataMonths: 1 }
 
   /** What a closed month's screens read from sums alone (docs/ENGINE-HISTORY.md, "Engines"). */
-  function sumReadings(model: ExpenseModel, month: string): Record<string, string> {
+  function sumReadings(
+    model: ExpenseModel,
+    month: string,
+  ): Record<string, string> {
     const out: Record<string, string> = {}
     for (const basis of BASES) {
       for (const [period, compare] of PERIODS) {
@@ -173,7 +194,10 @@ describe('a month the window does not hold', () => {
   const windowed = buildLedgerModel(ledgerFor(dataset, months[months.length - 1]!, WINDOWED), { history })
 
   /** The biggest expenses of every group of one month, on a window and on every row. */
-  function biggest(month: string, groupBy: SpendingGroupBy) {
+  function biggest(
+    month: string,
+    groupBy: SpendingGroupBy,
+  ) {
     const query = { month, basis: 'committed' as const, groupBy, ...LATER }
     return spendingRows(whole, query).map((row) => {
       const detail = (model: ExpenseModel) => spendingDetail(model, { ...query, months: model.months, key: row.key })
@@ -188,7 +212,10 @@ describe('a month the window does not hold', () => {
       for (const { key, held, all } of groups) {
         candidates += all.length
         expect(held.filter(isCellRow), `${month} ${key}`).toEqual([])
-        expect(held.filter((t) => !realIds.has(t.id)), `${month} ${key}`).toEqual([])
+        expect(
+          held.filter((t) => !realIds.has(t.id)),
+          `${month} ${key}`,
+        ).toEqual([])
       }
     }
     expect(candidates).toBeGreaterThan(0)
@@ -201,7 +228,9 @@ describe('other ledgers, windowed', () => {
       const dataset = randomLedger(seed)
       const list = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
       const whole = buildExpenseModel(dataset)
-      for (const month of [list[0], list[Math.floor(list.length / 2)], list.at(-1), '2031-01'].filter((m): m is string => !!m)) {
+      for (const month of [list[0], list[Math.floor(list.length / 2)], list.at(-1), '2031-01'].filter(
+        (m): m is string => !!m,
+      )) {
         const { windowed } = modelsFor(dataset, month)
         expect(differing(readings(whole, month), readings(windowed, month)), `${seed} ${month}`).toEqual([])
         expect(differing(tables(whole), tables(windowed)), `${seed} ${month}`).toEqual([])

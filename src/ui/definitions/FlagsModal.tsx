@@ -21,7 +21,10 @@ type Editing = { flag: Flag } | { flag: null } | null
  * question: it counts cancelled rows and mis-typed income that `buildFlagGroup`
  * drops, so a flag carrying only those offered a button that opened nothing.
  */
-function hasReport(model: ExpenseModel, flag: Flag): boolean {
+function hasReport(
+  model: ExpenseModel,
+  flag: Flag,
+): boolean {
   if (!flag.reimbursable) return false
   return buildFlagGroup(flag.id, model.dataset.transactions, model.dataset.flags) != null
 }
@@ -61,9 +64,7 @@ export function FlagsModal({
   return (
     <Modal
       title={title}
-      {...(editing || configuringLabel
-        ? {}
-        : { subtitle: 'Reusable markers for transactions you need to track.' })}
+      {...(editing || configuringLabel ? {} : { subtitle: 'Reusable markers for transactions you need to track.' })}
       onClose={confirming ? () => setConfirming(false) : onClose}
       trapPaused={confirming}
     >
@@ -88,20 +89,12 @@ export function FlagsModal({
         <>
           {flags.length === 0 ? (
             <EmptyState>
-              No flags yet. Create one to group transactions you need to follow up on — expenses to
-              claim back, say.
+              No flags yet. Create one to group transactions you need to follow up on — expenses to claim back, say.
             </EmptyState>
           ) : (
             flags.map((flag) => (
-              <div
-                key={flag.id}
-                className={flag.active ? styles.row : `${styles.row} ${styles.inactive}`}
-              >
-                <button
-                  type="button"
-                  className={styles.rowMain}
-                  onClick={() => setConfiguringLabel(flag)}
-                >
+              <div key={flag.id} className={flag.active ? styles.row : `${styles.row} ${styles.inactive}`}>
+                <button type="button" className={styles.rowMain} onClick={() => setConfiguringLabel(flag)}>
                   <FlagGlyph flag={flag} className={styles.rowGlyph} />
                   <div className={styles.rowBody}>
                     <span className={styles.rowName}>
@@ -110,7 +103,9 @@ export function FlagsModal({
                     </span>
                     <span className={styles.rowMeta}>
                       {flag.description ? `${flag.description} · ` : ''}
-                      {usage.count('flag', flag.id) === null ? '—' : transactionCountLabel(usage.count('flag', flag.id))}
+                      {usage.count('flag', flag.id) === null
+                        ? '—'
+                        : transactionCountLabel(usage.count('flag', flag.id))}
                     </span>
                   </div>
                   <ChevronIcon className={styles.rowChevron} aria-hidden="true" />
@@ -127,22 +122,14 @@ export function FlagsModal({
                     Expense report
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  className={defStyles.editBtn}
-                  onClick={() => setEditing({ flag })}
-                >
+                <button type="button" className={defStyles.editBtn} onClick={() => setEditing({ flag })}>
                   Edit
                 </button>
               </div>
             ))
           )}
           {flags.length === 0 ? null : usage.notice}
-          <button
-            type="button"
-            className={defStyles.addBtn}
-            onClick={() => setEditing({ flag: null })}
-          >
+          <button type="button" className={defStyles.addBtn} onClick={() => setEditing({ flag: null })}>
             + Add flag
           </button>
         </>

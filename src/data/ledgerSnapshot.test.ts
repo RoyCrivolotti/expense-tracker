@@ -61,7 +61,11 @@ describe('saveLedgerSnapshot and loadLedgerSnapshot', () => {
   it('leaves the records of the older, whole-dataset snapshot alone', async () => {
     fake.stores.set('snapshots', new Map([['latest', { key: 'latest', version: SNAPSHOT_VERSION }]]))
     await saveLedgerSnapshot('alex@example.com', await held(), '2026-03')
-    expect(records().map((r) => r.key).sort()).toEqual(['latest', 'ledger:alex@example.com'])
+    expect(
+      records()
+        .map((r) => r.key)
+        .sort(),
+    ).toEqual(['latest', 'ledger:alex@example.com'])
   })
 
   it('discards a snapshot written by a build that read the dataset differently, and removes it', async () => {
@@ -113,6 +117,7 @@ describe('saveLedgerSnapshot and loadLedgerSnapshot', () => {
 
 describe('isUsableLedgerSnapshot', () => {
   it('rejects what is not an object, and a missing record', () => {
-    for (const value of [undefined, null, 'x', 3, []]) expect(isUsableLedgerSnapshot(value, 'alex@example.com')).toBe(false)
+    for (const value of [undefined, null, 'x', 3, []])
+      expect(isUsableLedgerSnapshot(value, 'alex@example.com')).toBe(false)
   })
 })

@@ -43,7 +43,10 @@ export function quickFlagDraft(
 }
 
 /** Case- and whitespace-insensitive, because "Work travel" twice helps nobody. */
-export function duplicateFlagName(name: string, existing: Flag[]): boolean {
+export function duplicateFlagName(
+  name: string,
+  existing: Flag[],
+): boolean {
   const trimmed = name.trim().toLocaleLowerCase()
   return existing.some((f) => f.name.trim().toLocaleLowerCase() === trimmed)
 }
@@ -59,8 +62,14 @@ export function duplicateFlagName(name: string, existing: Flag[]): boolean {
 export function createFlagInPlace(
   actions: ExpenseActions,
   flags: Flag[],
-): (name: string, reimbursable: boolean) => Promise<number> {
-  return async (name, reimbursable) => {
+): (
+  name: string,
+  reimbursable: boolean,
+) => Promise<number> {
+  return async (
+    name,
+    reimbursable,
+  ) => {
     const draft = quickFlagDraft(name, flags, reimbursable)
     if (!draft) throw new Error('Enter a name')
     const created = await actions.createFlag(draft)

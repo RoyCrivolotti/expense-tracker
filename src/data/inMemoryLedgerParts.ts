@@ -19,7 +19,11 @@ import type { TxnFilter } from '../domain/engine/transactions'
 import type { ExpenseDataset } from '../domain/types'
 
 /** The next chunk of the export, as the route cuts it: the rows after `after` in id order, and where the one after starts. */
-function exportChunkOf(dataset: ExpenseDataset, revision: string, after: string | undefined): TransactionExportPart {
+function exportChunkOf(
+  dataset: ExpenseDataset,
+  revision: string,
+  after: string | undefined,
+): TransactionExportPart {
   const rest = dataset.transactions.filter((t) => t.id > Number(after ?? 0)).sort((a, b) => a.id - b.id)
   const rows = rest.slice(0, EXPORT_CHUNK_ROWS.transactions)
   return { revision, rows, next: rest.length > rows.length ? String(rows[rows.length - 1]!.id) : null }
@@ -88,22 +92,37 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
       return { revision, ...usageFromDataset(dataset) }
     },
     ...readsOfEveryRow(current),
-    async readDescriptionSuggest(request, { signal } = {}) {
+    async readDescriptionSuggest(
+      request,
+      { signal } = {},
+    ) {
       const { dataset } = await current()
       signal?.throwIfAborted()
       return suggestDescriptionsOf(dataset.transactions, request)
     },
-    async readTransactionPage(filter, { limit, cursor, signal } = {}) {
+    async readTransactionPage(
+      filter,
+      { limit, cursor, signal } = {},
+    ) {
       const { dataset } = await current()
       signal?.throwIfAborted()
-      const queryTransactions = (_owner: string, f: TxnFilter, page: TransactionPageRequest) =>
-        Promise.resolve(pageOf(dataset.transactions, f, page))
+      const queryTransactions = (
+        _owner: string,
+        f: TxnFilter,
+        page: TransactionPageRequest,
+      ) => Promise.resolve(pageOf(dataset.transactions, f, page))
       return listTransactions({ queryTransactions }, '', { filter, limit, cursor })
     },
-    async readTransactionSummary(filter, { signal } = {}) {
+    async readTransactionSummary(
+      filter,
+      { signal } = {},
+    ) {
       const { dataset, revision } = await current()
       signal?.throwIfAborted()
-      const summarize = (_owner: string, f: TxnFilter) => Promise.resolve(summaryOf(dataset.transactions, f))
+      const summarize = (
+        _owner: string,
+        f: TxnFilter,
+      ) => Promise.resolve(summaryOf(dataset.transactions, f))
       return { revision, ...(await summarizeTransactions({ summarizeTransactions: summarize }, '', filter)) }
     },
   }

@@ -11,7 +11,12 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const keyId = routeParam(context.params.id)
   if (!CAPTURE_KEY_ID_PATTERN.test(keyId)) throw new HttpError(404, 'Key not found')
   try {
-    const revoked = await revokeCaptureKey(createD1CaptureRepository(context.env), context.data.owner, keyId, new Date())
+    const revoked = await revokeCaptureKey(
+      createD1CaptureRepository(context.env),
+      context.data.owner,
+      keyId,
+      new Date(),
+    )
     if (!revoked) throw new HttpError(404, 'Key not found')
     return json({ ok: true })
   } catch (error) {

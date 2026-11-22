@@ -33,7 +33,11 @@ function setup(overrides: Partial<Parameters<typeof ContributionStepsList>[0]> =
 }
 
 /** Picks a month in the open picker, by the year it shows and the month's button. */
-async function pickMonth(user: ReturnType<typeof userEvent.setup>, year: number, month: string) {
+async function pickMonth(
+  user: ReturnType<typeof userEvent.setup>,
+  year: number,
+  month: string,
+) {
   await user.click(screen.getByRole('button', { name: /Change starts in/ }))
   const dialog = screen.getByRole('dialog', { name: 'Choose a month' })
   // The picker opens on the year of the value it holds; step to the year asked for.
@@ -54,7 +58,10 @@ describe('ContributionStepsList', () => {
     const rows = screen.getAllByRole('listitem')
     expect(within(rows[0]!).getByText('from 25 Jun 2026')).toBeInTheDocument()
     expect(within(rows[0]!).getByText('1.500,00 €/mo')).toBeInTheDocument()
-    expect(rows.slice(1).map((row) => row.textContent)).toEqual(["from Mar '272.000,00 €/moEdit×", "from Jan '29pauseEdit×"])
+    expect(rows.slice(1).map((row) => row.textContent)).toEqual([
+      "from Mar '272.000,00 €/moEdit×",
+      "from Jan '29pauseEdit×",
+    ])
     expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: "Remove the change from Mar '27" }))
@@ -252,7 +259,10 @@ describe('ContributionStepsList', () => {
   })
 
   it('stops at the limit, and says why', () => {
-    const steps = Array.from({ length: CONTRIBUTION_STEP_MAX_COUNT }, (_, i) => ({ from: `${2027 + i}-01`, monthlyCents: 1_000_00 }))
+    const steps = Array.from({ length: CONTRIBUTION_STEP_MAX_COUNT }, (_, i) => ({
+      from: `${2027 + i}-01`,
+      monthlyCents: 1_000_00,
+    }))
     setup({ steps })
     expect(screen.getByRole('button', { name: '+ Add a change' })).toBeDisabled()
     expect(screen.getByText(new RegExp(`can have ${CONTRIBUTION_STEP_MAX_COUNT} changes`))).toBeInTheDocument()

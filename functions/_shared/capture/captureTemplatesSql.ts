@@ -25,7 +25,14 @@ export interface IgnoredRow {
 }
 
 export function toIgnored(r: IgnoredRow): IgnoredTemplate {
-  return { templateId: r.template_id, source: r.source, skeleton: r.skeleton, seen: r.seen, dismissals: r.dismissals, ignoredAt: r.ignored_at }
+  return {
+    templateId: r.template_id,
+    source: r.source,
+    skeleton: r.skeleton,
+    seen: r.seen,
+    dismissals: r.dismissals,
+    ignoredAt: r.ignored_at,
+  }
 }
 
 /** Changes a row whether or not it was ignored, so a template the person holds always answers true. */
@@ -90,7 +97,10 @@ export function templateStatements(
   const change: Array<[string, Array<string | number | null>]> = []
   if (decision.kind === 'new') {
     const { title, skeleton } = decision.template
-    change.push([EVICT_TEMPLATE_SQL, [eventId, cap]], [INSERT_TEMPLATE_SQL, [eventId, templateId, title, skeleton, cap]])
+    change.push(
+      [EVICT_TEMPLATE_SQL, [eventId, cap]],
+      [INSERT_TEMPLATE_SQL, [eventId, templateId, title, skeleton, cap]],
+    )
   } else if (decision.kind === 'existing' && decision.learnedRun) {
     const { skeleton, start, end } = decision.learnedRun
     change.push([LEARN_RUN_SQL, [eventId, templateId, skeleton, start, end]])

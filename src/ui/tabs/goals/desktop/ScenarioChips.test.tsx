@@ -12,7 +12,10 @@ const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1, color: '#f59e0
 const draftLine: ScenarioLegendItem = { label: 'Path A', color: '#10b981', dashed: true, valueCents: 820_000_000 }
 const lineOfB: ScenarioLegendItem = { label: 'Path B', color: '#f59e0b', valueCents: 440_000_000, scenarioId: 2 }
 
-function setup(overrides: Partial<Parameters<typeof ScenarioChips>[0]> = {}, items: ScenarioLegendItem[] = [draftLine, lineOfB]) {
+function setup(
+  overrides: Partial<Parameters<typeof ScenarioChips>[0]> = {},
+  items: ScenarioLegendItem[] = [draftLine, lineOfB],
+) {
   const legend: HeroLegendStore = createHeroLegendStore()
   legend.set(items)
   const props = {
@@ -34,7 +37,7 @@ function setup(overrides: Partial<Parameters<typeof ScenarioChips>[0]> = {}, ite
 const chipOf = (name: string | RegExp) => screen.getByRole('tab', { name }).parentElement as HTMLElement
 
 describe('ScenarioChips', () => {
-  it('gives each scenario the value its line has in the chart, and the open one the draft line\'s', () => {
+  it("gives each scenario the value its line has in the chart, and the open one the draft line's", () => {
     setup()
     expect(chipOf(/^Path A/)).toHaveTextContent('8.200.000')
     expect(chipOf('Path B')).toHaveTextContent('4.400.000')
@@ -93,22 +96,29 @@ describe('ScenarioChips', () => {
     expect(screen.getByRole('tab', { name: /^Path A! / })).toBeInTheDocument()
   })
 
-  it('shows the unsaved draft as a chip of its own, with the draft line\'s value, and opens it', async () => {
+  it("shows the unsaved draft as a chip of its own, with the draft line's value, and opens it", async () => {
     const { onSelectDraft } = setup({ scenarios: [], activeId: null, showDraft: true }, [draftLine])
     expect(chipOf('Unsaved draft')).toHaveTextContent('8.200.000')
     await userEvent.click(screen.getByRole('tab', { name: 'Unsaved draft' }))
     expect(onSelectDraft).toHaveBeenCalled()
   })
 
-  it('does not take the dotted plan-from-today line for the draft\'s', () => {
-    setup({}, [{ label: 'Path A, from today', color: '#10b981', dotted: true, valueCents: 999_000_000 }, draftLine, lineOfB])
+  it("does not take the dotted plan-from-today line for the draft's", () => {
+    setup({}, [
+      { label: 'Path A, from today', color: '#10b981', dotted: true, valueCents: 999_000_000 },
+      draftLine,
+      lineOfB,
+    ])
     expect(chipOf(/^Path A/)).toHaveTextContent('8.200.000')
   })
 })
 
 describe('ScenarioChips for a scenario that starts later', () => {
   it('says when it starts under its name, and in place of a figure for a year before it', () => {
-    setup({}, [draftLine, { ...lineOfB, valueCents: null, outOfRun: true, status: 'starts Jul 2027', note: 'from Jul 2027' }])
+    setup({}, [
+      draftLine,
+      { ...lineOfB, valueCents: null, outOfRun: true, status: 'starts Jul 2027', note: 'from Jul 2027' },
+    ])
     expect(within(chipOf(/^Path B/)).getByText('from Jul 2027')).toBeInTheDocument()
     expect(within(chipOf(/^Path B/)).getByText('starts Jul 2027')).toBeInTheDocument()
   })

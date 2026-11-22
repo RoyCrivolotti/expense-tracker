@@ -107,7 +107,11 @@ describe('the Analytics card', () => {
     await dashboardReady()
     goTo('Analytics')
     expect(await screen.findByRole('region', { name: 'Analytics' })).toBeInTheDocument()
-    expect(screen.getByText("Where the month's money went, by category, compared with last month, a three-month average or last year.")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Where the month's money went, by category, compared with last month, a three-month average or last year.",
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByText('It gets more useful after a couple of weeks of entries.')).toBeInTheDocument()
 
     got()
@@ -162,7 +166,10 @@ function modelOf(transactions: ReturnType<typeof makeTransaction>[]): ExpenseMod
   }
 }
 
-const ui = (model: ExpenseModel, phone = false) => (
+const ui = (
+  model: ExpenseModel,
+  phone = false,
+) => (
   <TipsProvider saved={[]} hasTransactions={model.months.length > 0} save={() => Promise.resolve()}>
     <TransactionsTips model={model} phone={phone} />
   </TipsProvider>
@@ -182,12 +189,20 @@ describe('the Transactions words and the Flagged line', () => {
     expect(screen.getByText('Click a payment to change it.')).toBeInTheDocument()
     expect(screen.getByText('Use Select to pick several and change them together.')).toBeInTheDocument()
     expect(screen.queryByText(/Swipe/)).toBeNull()
-    expect(screen.getByText('Use Filters to find payments by category, account, flag, label or amount.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Use Filters to find payments by category, account, flag, label or amount.'),
+    ).toBeInTheDocument()
   })
 
   const flagged = (model: ExpenseModel) => (
     <TipsProvider saved={[]} hasTransactions save={() => Promise.resolve()}>
-      <FlaggedCard model={model} onFilterByFlag={() => undefined} onOpenReport={() => undefined} onSettle={() => undefined} onManage={() => undefined} />
+      <FlaggedCard
+        model={model}
+        onFilterByFlag={() => undefined}
+        onOpenReport={() => undefined}
+        onSettle={() => undefined}
+        onManage={() => undefined}
+      />
     </TipsProvider>
   )
 
@@ -201,11 +216,15 @@ describe('the Transactions words and the Flagged line', () => {
 
     const card = screen.getByRole('region', { name: 'Flagged payments' })
     expect(card.closest('[class*="arriving"]')).not.toBeNull()
-    expect(screen.getByText('Flagged payments collect here. Use Expense report to turn them into a document you can send.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Flagged payments collect here. Use Expense report to turn them into a document you can send.'),
+    ).toBeInTheDocument()
     // Under the heading it describes, and above the card it is about.
     const heading = screen.getByText('Flagged')
     expect(heading.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(card.compareDocumentPosition(screen.getByText(/items? across/)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      card.compareDocumentPosition(screen.getByText(/items? across/)) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })
 

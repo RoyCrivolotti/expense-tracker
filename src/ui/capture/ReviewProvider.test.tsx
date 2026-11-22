@@ -15,12 +15,18 @@ import { useReviewApi } from './useReviewApi'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { UNDO_MS } from './usePendingAction'
 
-vi.mock('../../data/captureCardsApi', async (original) => ({ ...(await original<typeof cardsApi>()), linkCard: vi.fn() }))
+vi.mock('../../data/captureCardsApi', async (original) => ({
+  ...(await original<typeof cardsApi>()),
+  linkCard: vi.fn(),
+}))
 vi.mock('../../data/recommendationsApi', async (original) => ({
   ...(await original<typeof api>()),
   fetchRecommendations: vi.fn(),
 }))
-vi.mock('../../data/recommendationDecisionsApi', () => ({ dismissRecommendation: vi.fn(), linkRecommendation: vi.fn() }))
+vi.mock('../../data/recommendationDecisionsApi', () => ({
+  dismissRecommendation: vi.fn(),
+  linkRecommendation: vi.fn(),
+}))
 
 const A = '0b0c0d0e-1111-4222-8333-444455556661'
 const B = '0b0c0d0e-1111-4222-8333-444455556662'
@@ -43,7 +49,9 @@ function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> })
       {r.views.map((v) => (
         <div key={v.rec.id} data-testid={v.rec.id}>
           <span>{v.description}</span>
-          <span data-testid={`ready-${v.rec.id.slice(-1)}`}>{v.oneTap ? 'ready' : `review:${v.accountId ?? 'none'}`}</span>
+          <span data-testid={`ready-${v.rec.id.slice(-1)}`}>
+            {v.oneTap ? 'ready' : `review:${v.accountId ?? 'none'}`}
+          </span>
           <span>{r.failures.get(v.rec.id)}</span>
           <button onClick={() => r.add(v)}>add {v.rec.id.slice(-1)}</button>
           <button onClick={() => r.dontAdd(v)}>skip {v.rec.id.slice(-1)}</button>
@@ -55,11 +63,23 @@ function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> })
   )
 }
 
-const page = (...recs: api.RecommendationInfo[]): api.RecommendationPage => ({ recommendations: recs, next: null, openCount: recs.length })
-const known = (id: string, over: Partial<api.RecommendationInfo> = {}) => makeRecommendation({ id, ...over })
+const page = (...recs: api.RecommendationInfo[]): api.RecommendationPage => ({
+  recommendations: recs,
+  next: null,
+  openCount: recs.length,
+})
+const known = (
+  id: string,
+  over: Partial<api.RecommendationInfo> = {},
+) => makeRecommendation({ id, ...over })
 
-async function show(recs: api.RecommendationInfo[], readOnly = false) {
-  const actions: ExpenseActions | undefined = readOnly ? undefined : makeActions({ submitRecommendation: vi.fn().mockResolvedValue(makeTransaction({ id: 50 })) })
+async function show(
+  recs: api.RecommendationInfo[],
+  readOnly = false,
+) {
+  const actions: ExpenseActions | undefined = readOnly
+    ? undefined
+    : makeActions({ submitRecommendation: vi.fn().mockResolvedValue(makeTransaction({ id: 50 })) })
   vi.mocked(api.fetchRecommendations).mockResolvedValue(page(...recs))
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -98,7 +118,12 @@ describe('one tap', () => {
 
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
     expect(screen.getByTestId('count')).toHaveTextContent('1')
-    const [text, tone, action, options] = showToast.mock.calls[0] as [string, string, { label: string; shortcut: unknown }, object]
+    const [text, tone, action, options] = showToast.mock.calls[0] as [
+      string,
+      string,
+      { label: string; shortcut: unknown },
+      object,
+    ]
     expect(text.split('\n')[1]).toBe('Expense · Eating out · Main Debit · Tue 10 Nov · Nov budget')
     expect([tone, action.label, action.shortcut]).toEqual(['success', 'Undo', UNDO_SHORTCUT])
     expect(options).toEqual({ holdMs: UNDO_MS, key: `review:${A}`, keepOnTap: true })
@@ -173,7 +198,9 @@ describe('one tap', () => {
 
   it('says something plain when the failure is not an Error, and clears the reason on the next try', async () => {
     const actions = await show([known(A)])
-    vi.mocked(actions!.submitRecommendation!).mockRejectedValueOnce('boom').mockResolvedValue(makeTransaction({ id: 51 }))
+    vi.mocked(actions!.submitRecommendation!)
+      .mockRejectedValueOnce('boom')
+      .mockResolvedValue(makeTransaction({ id: 51 }))
     press('add 1')
     await tick(UNDO_MS)
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
@@ -289,7 +316,9 @@ describe('Link', () => {
 
   it('puts the row back when the server says another recommendation already answers for that row', async () => {
     await show([known(A, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })])
-    vi.mocked(decisions.linkRecommendation).mockRejectedValue(new Error('That transaction already answers for another recommendation'))
+    vi.mocked(decisions.linkRecommendation).mockRejectedValue(
+      new Error('That transaction already answers for another recommendation'),
+    )
 
     press('link 1')
     await tick(UNDO_MS)
@@ -301,7 +330,11 @@ describe('Link', () => {
 
 describe('review', () => {
   it('opens the add form for the payment with the others queued behind it, skipping any decided meanwhile', async () => {
-    const actions = await show([known(A), known(B, { merchantRaw: 'BRAND NEW PLACE' }), known(C, { merchantRaw: 'OTHER NEW PLACE' })])
+    const actions = await show([
+      known(A),
+      known(B, { merchantRaw: 'BRAND NEW PLACE' }),
+      known(C, { merchantRaw: 'OTHER NEW PLACE' }),
+    ])
 
     press('review 1')
 
@@ -337,7 +370,10 @@ describe('review', () => {
   })
 
   it('"Don\'t add" in the form hands over to the next payment, and the last one hands over nothing', async () => {
-    const actions = await show([known(A, { merchantRaw: 'BRAND NEW PLACE' }), known(B, { merchantRaw: 'OTHER NEW PLACE' })])
+    const actions = await show([
+      known(A, { merchantRaw: 'BRAND NEW PLACE' }),
+      known(B, { merchantRaw: 'OTHER NEW PLACE' }),
+    ])
     press('review 1')
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
 
@@ -349,7 +385,11 @@ describe('review', () => {
   })
 
   it('reads the clock of the payment, so the toast for a late push shows its own date', async () => {
-    const late = known(A, { localDate: '2026-12-01', occurredAt: pushAt(2026, 12, 1, 10, 41), createdAt: arrivedAt(2026, 12, 1, 10, 42) })
+    const late = known(A, {
+      localDate: '2026-12-01',
+      occurredAt: pushAt(2026, 12, 1, 10, 41),
+      createdAt: arrivedAt(2026, 12, 1, 10, 42),
+    })
     await show([late])
 
     press('add 1')
@@ -361,12 +401,20 @@ describe('review', () => {
 
 describe('a card linked from the form', () => {
   const card = { source: 'iberia' as const, digits: '4821' }
-  const three = () => [known(A, { accountId: null, card }), known(B, { accountId: null, card }), known(C, { accountId: null, card })]
+  const three = () => [
+    known(A, { accountId: null, card }),
+    known(B, { accountId: null, card }),
+    known(C, { accountId: null, card }),
+  ]
 
   it('asks about the card, then after it is linked all three payments from it are ready for one tap', async () => {
     vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
     const actions = await show(three())
-    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['review:none', 'review:none', 'review:none'])
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual([
+      'review:none',
+      'review:none',
+      'review:none',
+    ])
     press('review 1')
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
     expect(seed.card).toMatchObject({ ...card, answer: { accountId: null, remember: true } })
@@ -376,7 +424,11 @@ describe('a card linked from the form', () => {
     await act(async () => void (await seed.card!.remember(2)))
 
     expect(cardsApi.linkCard).toHaveBeenCalledWith('iberia', '4821', 2)
-    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['ready', 'ready', 'ready'])
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual([
+      'ready',
+      'ready',
+      'ready',
+    ])
   })
 
   it('keeps the account when the read that follows brings the server own rows', async () => {
@@ -389,11 +441,17 @@ describe('a card linked from the form', () => {
     await act(async () => void (await seed.card!.remember(2)))
     await tick(0)
 
-    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual(['ready', 'ready', 'ready'])
+    expect(['1', '2', '3'].map((n) => screen.getByTestId(`ready-${n}`).textContent)).toEqual([
+      'ready',
+      'ready',
+      'ready',
+    ])
   })
 
   it('says why, without showing a toast of its own, when the card cannot be remembered', async () => {
-    vi.mocked(cardsApi.linkCard).mockRejectedValue(new Error('You already have the most card links allowed. Remove one first.'))
+    vi.mocked(cardsApi.linkCard).mockRejectedValue(
+      new Error('You already have the most card links allowed. Remove one first.'),
+    )
     const actions = await show([known(A, { accountId: null, card })])
     press('review 1')
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
@@ -401,7 +459,9 @@ describe('a card linked from the form', () => {
     let why: string | null = null
     await act(async () => void (why = await seed.card!.remember(2)))
 
-    expect(why).toBe('The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.')
+    expect(why).toBe(
+      'The payment was added, but this card could not be remembered: You already have the most card links allowed. Remove one first.',
+    )
     expect(showToast).not.toHaveBeenCalled()
   })
 
@@ -426,4 +486,3 @@ describe('a card linked from the form', () => {
     for (const call of vi.mocked(actions!.onAdd).mock.calls) expect(call[0]!.card).toBeUndefined()
   })
 })
-

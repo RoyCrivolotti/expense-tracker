@@ -14,7 +14,10 @@ const reference = {
 const rows = { revision: 'abc', from: '2025-01', to: '2025-03', transactions: [], attachmentCounts: {} }
 const cube = { revision: 'abc', from: '2025-01', to: '2025-03', cells: [] }
 
-function json(body: unknown, init: ResponseInit = {}): Response {
+function json(
+  body: unknown,
+  init: ResponseInit = {},
+): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' }, ...init })
 }
 
@@ -29,7 +32,10 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function ndjson(rows: unknown[], headers: Record<string, string> = {}): Response {
+function ndjson(
+  rows: unknown[],
+  headers: Record<string, string> = {},
+): Response {
   const body = rows.map((row) => `${JSON.stringify(row)}\n`).join('')
   return new Response(body, {
     status: 200,
@@ -42,8 +48,16 @@ describe('apiLedgerParts, the export of every transaction', () => {
 
   it('reads a chunk of transactions with the revision and the position to continue from', async () => {
     const fetchMock = serve(ndjson([stored], { 'x-export-next': '7' }), ndjson([]))
-    await expect(apiLedgerParts.readTransactionExport()).resolves.toEqual({ revision: 'rev', rows: [stored], next: '7' })
-    await expect(apiLedgerParts.readTransactionExport({ after: '7' })).resolves.toEqual({ revision: 'rev', rows: [], next: null })
+    await expect(apiLedgerParts.readTransactionExport()).resolves.toEqual({
+      revision: 'rev',
+      rows: [stored],
+      next: '7',
+    })
+    await expect(apiLedgerParts.readTransactionExport({ after: '7' })).resolves.toEqual({
+      revision: 'rev',
+      rows: [],
+      next: null,
+    })
     expect(fetchMock.mock.calls.map((call: unknown[]) => call[0])).toEqual([
       '/api/expenses/export?table=transactions',
       '/api/expenses/export?table=transactions&after=7',
@@ -61,7 +75,12 @@ describe('apiLedgerParts, the export of every transaction', () => {
   it('takes a server without the route, an index page, a body that is not transactions or no revision for one that does not serve it', async () => {
     serve(new Response('', { status: 404 }))
     await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
-    serve(new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html', 'x-export-revision': 'rev' } }))
+    serve(
+      new Response('<!doctype html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html', 'x-export-revision': 'rev' },
+      }),
+    )
     await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
     serve(ndjson([{ id: 1 }]))
     await expect(apiLedgerParts.readTransactionExport()).rejects.toBeInstanceOf(PartsUnavailableError)
@@ -153,8 +172,12 @@ describe('apiLedgerParts', () => {
 
   it('reports a rows part and a cube part of the wrong shape as unavailable', async () => {
     serve(json({ ...rows, transactions: 'none' }), json({ ...cube, cells: undefined }))
-    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartsUnavailableError)
-    await expect(apiLedgerParts.readCubePart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(
+      PartsUnavailableError,
+    )
+    await expect(apiLedgerParts.readCubePart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(
+      PartsUnavailableError,
+    )
   })
 
   it('reports a range the server refuses for its size, with the server’s message', async () => {
@@ -250,7 +273,9 @@ describe('apiLedgerParts, transactions', () => {
 
   it('still reads a refused range of months as too large', async () => {
     serve(json({ error: 'The range holds more than 5000 rows' }, { status: 400 }))
-    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(PartTooLargeError)
+    await expect(apiLedgerParts.readMonthsPart({ from: '2025-01', to: '2025-03' })).rejects.toBeInstanceOf(
+      PartTooLargeError,
+    )
   })
 
   it('is served through apiDataSource', async () => {
@@ -387,7 +412,9 @@ describe('apiLedgerParts, description matches', () => {
 
   it('asks for the prefix with the budget month, limit and locale, as now and never from a cache', async () => {
     const fetchMock = serve(json({ items: [match], tooBroad: false }))
-    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'caf', before: '2025-10', limit: 8, locale: 'en' })).resolves.toEqual({
+    await expect(
+      apiLedgerParts.readDescriptionSuggest({ prefix: 'caf', before: '2025-10', limit: 8, locale: 'en' }),
+    ).resolves.toEqual({
       items: [match],
       tooBroad: false,
     })
@@ -417,12 +444,16 @@ describe('apiLedgerParts, description matches', () => {
     ['an item whose id is text', { items: [{ ...match, id: '7' }], tooBroad: false }],
   ])('reports %s as unavailable', async (_name, body) => {
     serve(json(body))
-    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 })).rejects.toBeInstanceOf(PartsUnavailableError)
+    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3 })).rejects.toBeInstanceOf(
+      PartsUnavailableError,
+    )
   })
 
   it('reads the server refusing the request as a validation error, and asks again a second later while descriptions are being prepared', async () => {
     serve(json({ error: 'locale must be a language tag' }, { status: 400 }))
-    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3, locale: 'xx' })).rejects.toBeInstanceOf(ValidationError)
+    await expect(apiLedgerParts.readDescriptionSuggest({ prefix: 'a', limit: 3, locale: 'xx' })).rejects.toBeInstanceOf(
+      ValidationError,
+    )
 
     vi.useFakeTimers()
     const preparing = () => json({ error: 'Descriptions are being prepared' }, { status: 503 })

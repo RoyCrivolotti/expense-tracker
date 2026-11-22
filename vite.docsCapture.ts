@@ -40,7 +40,10 @@ const MOCK_USERS = {
   ],
 }
 
-function jsonResponse(res: ServerResponse, body: unknown) {
+function jsonResponse(
+  res: ServerResponse,
+  body: unknown,
+) {
   res.writeHead(200, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify(body))
 }
@@ -48,7 +51,15 @@ function jsonResponse(res: ServerResponse, body: unknown) {
 // The notifications card, as a person with one other device sees it: this device off, the choice already made.
 const MOCK_PUSH_CONFIG = { publicKey: `B${'A'.repeat(86)}` }
 const MOCK_PUSH_DEVICES = {
-  devices: [{ id: '0b0c0d0e-1111-4222-8333-444455556661', label: 'iPhone', createdAt: '2026-11-10T09:00:00.000Z', lastSentAt: '2026-11-17T19:02:00.000Z', lastStatus: 201 }],
+  devices: [
+    {
+      id: '0b0c0d0e-1111-4222-8333-444455556661',
+      label: 'iPhone',
+      createdAt: '2026-11-10T09:00:00.000Z',
+      lastSentAt: '2026-11-17T19:02:00.000Z',
+      lastStatus: 201,
+    },
+  ],
   settings: { mode: 'daily', timeZone: 'Europe/Madrid' },
 }
 

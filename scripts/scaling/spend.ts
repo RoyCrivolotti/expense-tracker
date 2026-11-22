@@ -42,7 +42,10 @@ export interface Earlier {
 }
 
 /** Days kept in the spend file: today's totals are looked up by date, the rest add up to `Earlier`. */
-export function earlierThan(days: readonly SpendTotals[], day: string): Earlier {
+export function earlierThan(
+  days: readonly SpendTotals[],
+  day: string,
+): Earlier {
   const before = days.filter((d) => d.day !== day)
   return {
     read: before.reduce((sum, d) => sum + d.read, 0),
@@ -60,7 +63,10 @@ export function emptyTotals(day: string): SpendTotals {
 }
 
 /** Today's totals from the stored days, or a fresh day: yesterday's do not count against today's caps. */
-export function totalsFor(days: readonly SpendTotals[], day: string): SpendTotals {
+export function totalsFor(
+  days: readonly SpendTotals[],
+  day: string,
+): SpendTotals {
   const today = days.find((d) => d.day === day)
   return today ? { ...today } : emptyTotals(day)
 }
@@ -85,11 +91,18 @@ export class SpendLedger {
   }
 
   /** Throws when the totals are over a cap, or when `plannedWritten` more rows would put them over. */
-  assertWithin(plannedWritten = 0, plannedRead = 0): void {
+  assertWithin(
+    plannedWritten = 0,
+    plannedRead = 0,
+  ): void {
     const written = this.totals.written + plannedWritten
     const read = this.totals.read + plannedRead
     const { limits, earlier } = this
-    const over = (what: string, value: number, cap: number): never => {
+    const over = (
+      what: string,
+      value: number,
+      cap: number,
+    ): never => {
       throw new BudgetExceeded(`${what} would be ${value}, over this exercise's cap of ${cap}`)
     }
     if (written > limits.writtenPerDay) over('rows written today', written, limits.writtenPerDay)
@@ -115,8 +128,6 @@ export function assertAccountHasRoom(
     )
   }
   if (usage.rowsRead > CAPS.accountReadCeiling) {
-    throw new BudgetExceeded(
-      `the account has read ${usage.rowsRead} rows today, past ${CAPS.accountReadCeiling}`,
-    )
+    throw new BudgetExceeded(`the account has read ${usage.rowsRead} rows today, past ${CAPS.accountReadCeiling}`)
   }
 }

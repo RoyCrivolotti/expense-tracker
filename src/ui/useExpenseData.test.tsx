@@ -62,9 +62,7 @@ describe('useExpenseData', () => {
       ...d,
       settings: { ...d.settings, openingCashCents: 999 },
     }))
-    await waitFor(() =>
-      expect(result.current.model?.dataset.settings.openingCashCents).toBe(999),
-    )
+    await waitFor(() => expect(result.current.model?.dataset.settings.openingCashCents).toBe(999))
     expect(load).toHaveBeenCalledOnce()
   })
 })
@@ -151,7 +149,6 @@ describe('useExpenseData — a refresh must not revert a mutation', () => {
   })
 })
 
-
 describe('useExpenseData — offline and error paths', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -230,15 +227,24 @@ describe('useExpenseData — offline and error paths', () => {
     const load = vi
       .fn()
       .mockResolvedValueOnce(emptyDataset)
-      .mockImplementationOnce(() => new Promise<ExpenseDataset>((r) => { release = r }))
+      .mockImplementationOnce(
+        () =>
+          new Promise<ExpenseDataset>((r) => {
+            release = r
+          }),
+      )
     const source: ExpenseDataSource = { canWrite: false, load }
     const { result } = renderHook(() => useExpenseData(source))
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
-    act(() => { result.current.reload() })
+    act(() => {
+      result.current.reload()
+    })
     await waitFor(() => expect(result.current.refreshing).toBe(true))
     // The edit lands first; the in-flight response is stale from here on.
-    act(() => { result.current.applyPatch((d) => d) })
+    act(() => {
+      result.current.applyPatch((d) => d)
+    })
     await act(async () => {
       release(emptyDataset)
       await Promise.resolve()

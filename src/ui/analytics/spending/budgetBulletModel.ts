@@ -28,10 +28,7 @@ export function buildBulletModel(row: SpendingGroupRow): BulletModel | null {
     paidPct: pct(current - unpaid),
     unpaidPct: pct(unpaid),
     budgetTickPct: over ? pct(row.budgetCents) : null,
-    paceTickPct:
-      row.shouldBeTodayCents !== null && row.shouldBeTodayCents < scale
-        ? pct(row.shouldBeTodayCents)
-        : null,
+    paceTickPct: row.shouldBeTodayCents !== null && row.shouldBeTodayCents < scale ? pct(row.shouldBeTodayCents) : null,
     state: over ? 'over' : warn ? 'warn' : 'ok',
   }
 }

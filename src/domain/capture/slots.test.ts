@@ -36,12 +36,23 @@ describe('readNumber', () => {
     expect(readNumber('1,234,56')).toEqual([])
   })
 
-  it.each(['', 'abc', '1..2', '1.2.3', '12.34,56', '1.234,567', '1,234.5,6', '1.2345', '0.123', '12345.678', '0', '0,00', '1.234.5'])(
-    'finds no amount in %j',
-    (core) => {
-      expect(readNumber(core)).toEqual([])
-    },
-  )
+  it.each([
+    '',
+    'abc',
+    '1..2',
+    '1.2.3',
+    '12.34,56',
+    '1.234,567',
+    '1,234.5,6',
+    '1.2345',
+    '0.123',
+    '12345.678',
+    '0',
+    '0,00',
+    '1.234.5',
+  ])('finds no amount in %j', (core) => {
+    expect(readNumber(core)).toEqual([])
+  })
 
   it('keeps no candidate above the cap, or for a run too long to hold exactly', () => {
     expect(readNumber('1000000')).toEqual([{ cents: 100_000_000, mark: 'none' }])
@@ -52,9 +63,18 @@ describe('readNumber', () => {
 
 describe('readSlots, amounts', () => {
   it('reads a purchase with a comma amount and masked card digits', () => {
-    const slots = readSlots('Has hecho una compra de 12,34 EUR en EXAMPLE SHOP con tu tarjeta Example Card terminada *0000')
+    const slots = readSlots(
+      'Has hecho una compra de 12,34 EUR en EXAMPLE SHOP con tu tarjeta Example Card terminada *0000',
+    )
     expect(slots).toEqual([
-      { kind: 'number', index: 5, raw: '12,34', candidates: [{ cents: 1234, mark: 'comma' }], currency: 'EUR', negative: false },
+      {
+        kind: 'number',
+        index: 5,
+        raw: '12,34',
+        candidates: [{ cents: 1234, mark: 'comma' }],
+        currency: 'EUR',
+        negative: false,
+      },
       { kind: 'masked-digits', index: 16, digits: '0000' },
     ])
   })
@@ -62,7 +82,9 @@ describe('readSlots, amounts', () => {
   it('reads a dot amount and the two-star spelling of the card', () => {
     const slots = readSlots('Se ha realizado una retención de 4.54 EUR en EXAMPLE con tu tarjeta **0000.')
     expect(numbers(slots).map((s) => [cents(s), s.currency])).toEqual([[[454], 'EUR']])
-    expect(slots.filter((s) => s.kind === 'masked-digits')).toEqual([{ kind: 'masked-digits', index: 13, digits: '0000' }])
+    expect(slots.filter((s) => s.kind === 'masked-digits')).toEqual([
+      { kind: 'masked-digits', index: 13, digits: '0000' },
+    ])
   })
 
   it('takes a minus on the number as a cue and never as a sign on the amount', () => {
@@ -104,7 +126,10 @@ describe('readSlots, amounts', () => {
       ['12,50', 'EUR'],
       ['3', null],
     ])
-    expect(currencyAmount(readSlots('Compra 12,50 EUR 3 items'))).toMatchObject({ raw: '12,50', candidates: [{ cents: 1250 }] })
+    expect(currencyAmount(readSlots('Compra 12,50 EUR 3 items'))).toMatchObject({
+      raw: '12,50',
+      candidates: [{ cents: 1250 }],
+    })
     expect(numbers(readSlots('Total EUR 12,50 y 3 items')).map((s) => [s.raw, s.currency])).toEqual([
       ['12,50', 'EUR'],
       ['3', null],
@@ -163,12 +188,20 @@ describe('readSlots, amounts', () => {
 })
 
 describe('readSlots, masked digits', () => {
-  it.each(['card **1234', 'card *1234', 'card ····1234', 'card …1234', 'card ****1234.', 'card (*1234)', 'card ...1234', 'card •••• 1234', 'card ending 1234', 'card Ending 1234.'])(
-    'reads the card in %j',
-    (text) => {
-      expect(readSlots(text)).toEqual([{ kind: 'masked-digits', index: text.split(' ').length - 1, digits: '1234' }])
-    },
-  )
+  it.each([
+    'card **1234',
+    'card *1234',
+    'card ····1234',
+    'card …1234',
+    'card ****1234.',
+    'card (*1234)',
+    'card ...1234',
+    'card •••• 1234',
+    'card ending 1234',
+    'card Ending 1234.',
+  ])('reads the card in %j', (text) => {
+    expect(readSlots(text)).toEqual([{ kind: 'masked-digits', index: text.split(' ').length - 1, digits: '1234' }])
+  })
 
   it('does not take part of a longer number, or four digits with nothing before them', () => {
     expect(readSlots('ref *123456').filter((s) => s.kind === 'masked-digits')).toEqual([])
@@ -186,15 +219,21 @@ describe('readSlots, masked digits', () => {
 })
 
 describe('readSlots, dates', () => {
-  it.each(['2026-11-20', '20/11/2026', '20-11-2026', '20.11.2026', '20/11/2026.', '(20/11/2026)', '5/1/2026'])('reads %s as a date', (token) => {
-    const [slot] = readSlots(`el ${token}`)
-    expect(slot?.kind).toBe('date')
-    expect(slot).toMatchObject({ index: 1, iso: token.startsWith('5/') ? '2026-01-05' : '2026-11-20' })
-  })
+  it.each(['2026-11-20', '20/11/2026', '20-11-2026', '20.11.2026', '20/11/2026.', '(20/11/2026)', '5/1/2026'])(
+    'reads %s as a date',
+    (token) => {
+      const [slot] = readSlots(`el ${token}`)
+      expect(slot?.kind).toBe('date')
+      expect(slot).toMatchObject({ index: 1, iso: token.startsWith('5/') ? '2026-01-05' : '2026-11-20' })
+    },
+  )
 
-  it.each(['31/13/2026', '2026-13-01', '32/01/2026', '29/02/2027', '00/01/2026', '01/01/1800', '1/1/26'])('rejects %s', (token) => {
-    expect(readSlots(`el ${token}`).filter((s) => s.kind === 'date')).toEqual([])
-  })
+  it.each(['31/13/2026', '2026-13-01', '32/01/2026', '29/02/2027', '00/01/2026', '01/01/1800', '1/1/26'])(
+    'rejects %s',
+    (token) => {
+      expect(readSlots(`el ${token}`).filter((s) => s.kind === 'date')).toEqual([])
+    },
+  )
 
   it('flags a date whose day and month could be swapped, and no other', () => {
     expect(readSlots('03/04/2026')).toEqual([{ kind: 'date', index: 0, iso: '2026-04-03', ambiguous: true }])

@@ -13,17 +13,18 @@ describe('rentVsBuyMarkers', () => {
   })
 
   it('marks the year the loan is paid off, where it falls in the term, part way through a year too', () => {
-    expect(rentVsBuyMarkers({ ownCheaper: null, loanPaidOffYear: 25 }, 40)).toMatchObject([{ index: 25, label: 'Loan paid off' }])
+    expect(rentVsBuyMarkers({ ownCheaper: null, loanPaidOffYear: 25 }, 40)).toMatchObject([
+      { index: 25, label: 'Loan paid off' },
+    ])
     expect(rentVsBuyMarkers({ ownCheaper: null, loanPaidOffYear: 24 + 7 / 12 }, 40)).toMatchObject([
       { index: 24 + 7 / 12, label: 'Loan paid off' },
     ])
   })
 
   it('marks both, and neither when there is nothing to name', () => {
-    expect(rentVsBuyMarkers({ ownCheaper: { fromYear: 3, stays: true }, loanPaidOffYear: 25 }, 40).map((m) => m.label)).toEqual([
-      'Owning costs less a month',
-      'Loan paid off',
-    ])
+    expect(
+      rentVsBuyMarkers({ ownCheaper: { fromYear: 3, stays: true }, loanPaidOffYear: 25 }, 40).map((m) => m.label),
+    ).toEqual(['Owning costs less a month', 'Loan paid off'])
     expect(rentVsBuyMarkers({ ownCheaper: null, loanPaidOffYear: null }, 40)).toEqual([])
   })
 

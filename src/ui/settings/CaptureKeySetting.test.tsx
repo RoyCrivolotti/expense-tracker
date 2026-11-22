@@ -108,7 +108,9 @@ describe('making a key', () => {
 
   it('shows the limit message from the server and keeps no key on screen', async () => {
     listed(phone)
-    vi.mocked(api.createCaptureKey).mockRejectedValue(new ApiError('You already have the most keys allowed. Revoke one first.', 409))
+    vi.mocked(api.createCaptureKey).mockRejectedValue(
+      new ApiError('You already have the most keys allowed. Revoke one first.', 409),
+    )
     render(<CaptureKeySetting />)
     fireEvent.click(await screen.findByRole('button', { name: 'Make a key' }))
 

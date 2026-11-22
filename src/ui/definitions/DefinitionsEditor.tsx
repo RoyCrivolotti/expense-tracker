@@ -45,15 +45,7 @@ function DefRow({
   )
 }
 
-function ScalarCard({
-  rows,
-  onEdit,
-  label,
-}: {
-  rows: ReactNode
-  onEdit: () => void
-  label: string
-}) {
+function ScalarCard({ rows, onEdit, label }: { rows: ReactNode; onEdit: () => void; label: string }) {
   return (
     <Card>
       {rows}
@@ -89,11 +81,7 @@ function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }
         <span>Total monthly budget</span>
         <Money cents={total} />
       </div>
-      <button
-        type="button"
-        className={styles.addBtn}
-        onClick={() => onEdit({ kind: 'category', record: null })}
-      >
+      <button type="button" className={styles.addBtn} onClick={() => onEdit({ kind: 'category', record: null })}>
         + Add category
       </button>
     </Card>
@@ -117,11 +105,7 @@ function AccountList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit })
           onEdit={() => onEdit({ kind: 'account', record: a })}
         />
       ))}
-      <button
-        type="button"
-        className={styles.addBtn}
-        onClick={() => onEdit({ kind: 'account', record: null })}
-      >
+      <button type="button" className={styles.addBtn} onClick={() => onEdit({ kind: 'account', record: null })}>
         + Add account
       </button>
     </Card>
@@ -143,13 +127,7 @@ function BalanceRows({ s }: { s: ExpenseSettings }) {
   )
 }
 
-export function DefinitionsEditor({
-  model,
-  actions,
-}: {
-  model: ExpenseModel
-  actions: ExpenseActions
-}) {
+export function DefinitionsEditor({ model, actions }: { model: ExpenseModel; actions: ExpenseActions }) {
   const [target, setTarget] = useState<EditTarget | null>(null)
 
   return (
@@ -167,14 +145,7 @@ export function DefinitionsEditor({
         onEdit={() => setTarget({ kind: 'settings' })}
       />
       <PresenceValue value={target} exitMs={EXIT_MS.sheet}>
-        {(shown) => (
-          <ConfigModal
-            target={shown}
-            model={model}
-            actions={actions}
-            onClose={() => setTarget(null)}
-          />
-        )}
+        {(shown) => <ConfigModal target={shown} model={model} actions={actions} onClose={() => setTarget(null)} />}
       </PresenceValue>
     </>
   )

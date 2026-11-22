@@ -16,7 +16,10 @@ function makeDraft() {
   return rest
 }
 
-function makeStarred(keys: readonly LeverKey[] = DEFAULT_LEVERS, overrides: Partial<StarredLevers> = {}): StarredLevers {
+function makeStarred(
+  keys: readonly LeverKey[] = DEFAULT_LEVERS,
+  overrides: Partial<StarredLevers> = {},
+): StarredLevers {
   return {
     keys,
     canEdit: true,
@@ -28,7 +31,11 @@ function makeStarred(keys: readonly LeverKey[] = DEFAULT_LEVERS, overrides: Part
   }
 }
 
-function renderPanel(open: boolean, starred: StarredLevers = makeStarred(), draft = makeDraft()) {
+function renderPanel(
+  open: boolean,
+  starred: StarredLevers = makeStarred(),
+  draft = makeDraft(),
+) {
   const onChange = vi.fn()
   const ui = (isOpen: boolean) => (
     <AllInputsPanel id="panel" open={isOpen} draft={draft} latest={null} onChange={onChange} starred={starred} />
@@ -41,7 +48,13 @@ describe('AllInputsPanel', () => {
   it('lays the sections out in columns, without what is in the levers bar', () => {
     renderPanel(true)
     const panel = screen.getByRole('region', { name: 'All inputs' })
-    for (const title of ['Housing', 'Financial independence', 'Plan start', 'Monthly investing over time', 'Life events']) {
+    for (const title of [
+      'Housing',
+      'Financial independence',
+      'Plan start',
+      'Monthly investing over time',
+      'Life events',
+    ]) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
     // All four portfolio inputs are in the bar by default, so there is no column of them.
@@ -183,9 +196,7 @@ describe('AllInputsPanel stars', () => {
 
     view.unmount()
     const other = makeStarred(['rentMonthlyCents'])
-    render(
-      <AllInputsPanel id="panel" open draft={makeDraft()} latest={null} onChange={vi.fn()} starred={other} />,
-    )
+    render(<AllInputsPanel id="panel" open draft={makeDraft()} latest={null} onChange={vi.fn()} starred={other} />)
     await userEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }))
     expect(other.reset).toHaveBeenCalledTimes(1)
     void starred

@@ -24,22 +24,14 @@ export function ReimbursementLink({ editing, lookup, onOpen }: Props) {
 
   if (settlement) {
     return (
-      <button
-        type="button"
-        className={styles.linkButton}
-        onClick={() => onOpen(settlement)}
-      >
-        Reimbursed {formatDayLabel(settlement.date)} ·{' '}
-        {formatCents(settlement.amountCents, format)}
+      <button type="button" className={styles.linkButton} onClick={() => onOpen(settlement)}>
+        Reimbursed {formatDayLabel(settlement.date)} · {formatCents(settlement.amountCents, format)}
       </button>
     )
   }
 
   if (covered.length > 0) {
-    const total = covered.reduce(
-      (sum, t) => sum + (t.type === 'refund' ? -t.amountCents : t.amountCents),
-      0,
-    )
+    const total = covered.reduce((sum, t) => sum + (t.type === 'refund' ? -t.amountCents : t.amountCents), 0)
     return (
       <button
         type="button"
@@ -49,8 +41,7 @@ export function ReimbursementLink({ editing, lookup, onOpen }: Props) {
         // carries the count so the button does not claim to be only about one.
         aria-label={`Reimburses ${covered.length} transactions. Open the first.`}
       >
-        Reimburses {covered.length} transaction{covered.length === 1 ? '' : 's'} ·{' '}
-        {formatCents(total, format)}
+        Reimburses {covered.length} transaction{covered.length === 1 ? '' : 's'} · {formatCents(total, format)}
       </button>
     )
   }

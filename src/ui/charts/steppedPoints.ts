@@ -37,7 +37,10 @@ interface Placed {
 const ON_PLACE = 1e-9
 
 /** The x of each value in the chart's pixels: place i for a series on the axis' places, its own x where it has one. */
-export function placeX(series: { xs?: number[] | undefined }, xForIndex: (i: number) => number): (i: number) => number {
+export function placeX(
+  series: { xs?: number[] | undefined },
+  xForIndex: (i: number) => number,
+): (i: number) => number {
   const xs = series.xs
   return xs ? (i) => xForIndex(xs[i] ?? i) : xForIndex
 }
@@ -54,7 +57,10 @@ export function placesOf(series: { values: number[]; xs?: number[] | undefined }
  * before its step. Nothing before its first value or after its last. A series on the axis' places is
  * read at the place itself, as it always has been.
  */
-export function valueAtPlace(series: Placed, place: number): number | undefined {
+export function valueAtPlace(
+  series: Placed,
+  place: number,
+): number | undefined {
   const { values, preStep, xs } = series
   if (!xs) return values[place]
   const last = xs.length - 1

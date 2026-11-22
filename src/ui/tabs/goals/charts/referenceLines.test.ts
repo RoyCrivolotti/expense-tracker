@@ -25,7 +25,11 @@ describe('referenceLines in Purchasing power', () => {
   })
 
   it('leaves out a milestone whose curve ends far above the plan, and marks an FI target above the chart instead of drawing it', () => {
-    const far = { ...base, milestones: [...milestones, { amountCents: 900_000_000, label: '' }], fiTargetCents: 900_000_000 }
+    const far = {
+      ...base,
+      milestones: [...milestones, { amountCents: 900_000_000, label: '' }],
+      fiTargetCents: 900_000_000,
+    }
     const result = referenceLines({ ...far, nominalMode: false })
     expect(result.curves).toHaveLength(2)
     expect(result.lines).toEqual([])
@@ -34,7 +38,12 @@ describe('referenceLines in Purchasing power', () => {
 
   it('keeps a milestone whose curve starts above the plan but comes down to it', () => {
     // 250k on the account is 226k in the plan’s money by year 5: within reach of a plan that tops out at 240k.
-    const result = referenceLines({ ...base, milestones: [{ amountCents: 25_000_000, label: '' }], drawnMax: 24_000_000, nominalMode: false })
+    const result = referenceLines({
+      ...base,
+      milestones: [{ amountCents: 25_000_000, label: '' }],
+      drawnMax: 24_000_000,
+      nominalMode: false,
+    })
     expect(result.curves).toHaveLength(1)
   })
 })
@@ -52,7 +61,12 @@ describe('referenceLines in Nominal', () => {
   })
 
   it('leaves out a milestone above the chart, and marks an FI target above it', () => {
-    const result = referenceLines({ ...base, milestones: [...milestones, { amountCents: 900_000_000, label: '' }], fiTargetCents: 900_000_000, nominalMode: true })
+    const result = referenceLines({
+      ...base,
+      milestones: [...milestones, { amountCents: 900_000_000, label: '' }],
+      fiTargetCents: 900_000_000,
+      nominalMode: true,
+    })
     expect(result.lines).toEqual([10_000_000, 20_000_000])
     expect(result.curves).toEqual([])
     expect(result.fiAbove).toBe(900_000_000)
@@ -75,19 +89,30 @@ describe('referenceLines with nothing to go on', () => {
   })
 
   it('draws nothing for no milestones and no target', () => {
-    expect(referenceLines({ ...base, milestones: [], nominalMode: false })).toEqual({ lines: [], curves: [], fiAbove: null, highlight: null })
+    expect(referenceLines({ ...base, milestones: [], nominalMode: false })).toEqual({
+      lines: [],
+      curves: [],
+      fiAbove: null,
+      highlight: null,
+    })
   })
 })
 
 describe('referenceLines highlight', () => {
-  it('names the picked milestone\'s curve in Purchasing power and its flat line in Nominal', () => {
-    expect(referenceLines({ ...base, nominalMode: false, pickedCents: 20_000_000 }).highlight).toEqual({ curveId: 'milestone-20000000' })
-    expect(referenceLines({ ...base, nominalMode: true, pickedCents: 20_000_000 }).highlight).toEqual({ line: 20_000_000 })
+  it("names the picked milestone's curve in Purchasing power and its flat line in Nominal", () => {
+    expect(referenceLines({ ...base, nominalMode: false, pickedCents: 20_000_000 }).highlight).toEqual({
+      curveId: 'milestone-20000000',
+    })
+    expect(referenceLines({ ...base, nominalMode: true, pickedCents: 20_000_000 }).highlight).toEqual({
+      line: 20_000_000,
+    })
   })
 
   it('has none when nothing is picked or the picked one is not drawn', () => {
     expect(referenceLines({ ...base, nominalMode: false }).highlight).toBeNull()
     expect(referenceLines({ ...base, nominalMode: false, pickedCents: 99 }).highlight).toBeNull()
-    expect(referenceLines({ ...base, nominalMode: true, pickedCents: 50_000_000, drawnMax: 1_000_000 }).highlight).toBeNull()
+    expect(
+      referenceLines({ ...base, nominalMode: true, pickedCents: 50_000_000, drawnMax: 1_000_000 }).highlight,
+    ).toBeNull()
   })
 })

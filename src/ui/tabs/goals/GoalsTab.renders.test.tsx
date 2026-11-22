@@ -67,7 +67,9 @@ afterEach(() => {
 
 /** An edit to the draft from the levers bar: what the charts are drawn from. */
 function editDraft() {
-  fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), { target: { value: '0.05' } })
+  fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), {
+    target: { value: '0.05' },
+  })
 }
 
 function twoScenarios() {

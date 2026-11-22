@@ -193,11 +193,7 @@ export function DateField({ label, value, hint, onChange }: DateFieldProps) {
     <div className={styles.field}>
       <div className={styles.fieldRow}>
         <span className={styles.fieldLabel}>{label}</span>
-        <DateInput
-          value={value ?? ''}
-          ariaLabel={label}
-          onChange={(v) => onChange(v || null)}
-        />
+        <DateInput value={value ?? ''} ariaLabel={label} onChange={(v) => onChange(v || null)} />
       </div>
       {hint ? <p className={styles.fieldHint}>{hint}</p> : null}
     </div>

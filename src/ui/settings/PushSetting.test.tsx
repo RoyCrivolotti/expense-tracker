@@ -6,11 +6,26 @@ import { AccountOwnerContext } from '../hooks/accountOwner'
 import { PushSetting } from './PushSetting'
 
 vi.mock('../../data/pushApi')
-vi.mock('../../config/device', async (importOriginal) => ({ ...(await importOriginal<typeof device>()), devicePlatform: vi.fn(() => 'iphone' as const) }))
+vi.mock('../../config/device', async (importOriginal) => ({
+  ...(await importOriginal<typeof device>()),
+  devicePlatform: vi.fn(() => 'iphone' as const),
+}))
 
 const KEY = `B${'A'.repeat(86)}`
-const phone: api.PushDeviceInfo = { id: 'dev-1', label: 'iPhone', createdAt: '2026-11-18T20:00:00.000Z', lastSentAt: null, lastStatus: null }
-const laptop: api.PushDeviceInfo = { id: 'dev-2', label: 'Mac', createdAt: '2026-11-10T09:00:00.000Z', lastSentAt: '2026-11-17T19:00:00.000Z', lastStatus: 410 }
+const phone: api.PushDeviceInfo = {
+  id: 'dev-1',
+  label: 'iPhone',
+  createdAt: '2026-11-18T20:00:00.000Z',
+  lastSentAt: null,
+  lastStatus: null,
+}
+const laptop: api.PushDeviceInfo = {
+  id: 'dev-2',
+  label: 'Mac',
+  createdAt: '2026-11-10T09:00:00.000Z',
+  lastSentAt: '2026-11-17T19:00:00.000Z',
+  lastStatus: 410,
+}
 
 interface Browser {
   permission: NotificationPermission
@@ -35,16 +50,26 @@ const requestPermission = vi.fn()
 
 /** The browser the card runs in: its permission state, its registration's subscription, and whether it is installed. */
 function browser(b: Browser) {
-  vi.stubGlobal('Notification', { permission: b.permission, requestPermission: requestPermission.mockResolvedValue(b.granted ?? b.permission) })
+  vi.stubGlobal('Notification', {
+    permission: b.permission,
+    requestPermission: requestPermission.mockResolvedValue(b.granted ?? b.permission),
+  })
   vi.stubGlobal('PushManager', function PushManager() {})
-  const registration = { pushManager: { getSubscription: vi.fn(() => Promise.resolve(b.subscription ?? null)), subscribe } }
-  Object.defineProperty(navigator, 'serviceWorker', { value: { ready: Promise.resolve(registration) }, configurable: true })
+  const registration = {
+    pushManager: { getSubscription: vi.fn(() => Promise.resolve(b.subscription ?? null)), subscribe },
+  }
+  Object.defineProperty(navigator, 'serviceWorker', {
+    value: { ready: Promise.resolve(registration) },
+    configurable: true,
+  })
   Object.defineProperty(navigator, 'standalone', { value: b.standalone ?? true, configurable: true })
   return registration
 }
 
-const listed = (devices: api.PushDeviceInfo[] = [], settings: api.PushChoice | null = null) =>
-  vi.mocked(api.fetchPushDevices).mockResolvedValue({ devices, settings })
+const listed = (
+  devices: api.PushDeviceInfo[] = [],
+  settings: api.PushChoice | null = null,
+) => vi.mocked(api.fetchPushDevices).mockResolvedValue({ devices, settings })
 
 function show() {
   return render(
@@ -113,7 +138,10 @@ describe('what the card says before anything is on', () => {
   it('says this browser cannot receive notifications when no service worker becomes ready', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     browser({ permission: 'granted' })
-    Object.defineProperty(navigator, 'serviceWorker', { value: { ready: new Promise(() => undefined) }, configurable: true })
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: new Promise(() => undefined) },
+      configurable: true,
+    })
     show()
     await vi.advanceTimersByTimeAsync(5100)
     expect(await screen.findByText(/This browser cannot receive notifications/)).toBeInTheDocument()
@@ -132,9 +160,15 @@ describe('turning this device on', () => {
     const options = subscribe.mock.calls[0]?.[0] as PushSubscriptionOptionsInit
     expect(options.userVisibleOnly).toBe(true)
     expect(options.applicationServerKey).toBeInstanceOf(Uint8Array)
-    expect(api.savePushDevice).toHaveBeenCalledWith({ endpoint: 'https://web.push.apple.com/new', keys: { p256dh: KEY, auth: 'a'.repeat(22) } }, 'iPhone', expect.any(String))
+    expect(api.savePushDevice).toHaveBeenCalledWith(
+      { endpoint: 'https://web.push.apple.com/new', keys: { p256dh: KEY, auth: 'a'.repeat(22) } },
+      'iPhone',
+      expect.any(String),
+    )
     expect(localStorage.getItem('expense:push-device:alice@example.com')).toBe('dev-1')
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Turn on for this device' })).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Turn on for this device' })).not.toBeInTheDocument(),
+    )
   })
 
   it('says right after turning on that the person gets the daily summary, and where to ask for every payment', async () => {
@@ -143,7 +177,9 @@ describe('turning this device on', () => {
     show()
     fireEvent.click(await screen.findByRole('button', { name: 'Turn on for this device' }))
     listed([phone], { mode: 'daily', timeZone: 'Europe/Madrid' })
-    expect(await screen.findByText(/You get one summary a day, at 20:00\. Choose “For every payment”/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/You get one summary a day, at 20:00\. Choose “For every payment”/),
+    ).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'For every payment, as it arrives' })).not.toBeChecked()
   })
 
@@ -167,7 +203,10 @@ describe('turning this device on', () => {
     expect(await screen.findByRole('button', { name: 'Turn on for this device' })).toBeInTheDocument()
     expect(subscribe).not.toHaveBeenCalled()
     void b
-    vi.stubGlobal('Notification', { permission: 'denied', requestPermission: requestPermission.mockResolvedValue('denied') })
+    vi.stubGlobal('Notification', {
+      permission: 'denied',
+      requestPermission: requestPermission.mockResolvedValue('denied'),
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Turn on for this device' }))
     expect(await screen.findByText(/off for this app in your device/)).toBeInTheDocument()
   })
@@ -177,7 +216,9 @@ describe('turning this device on', () => {
     listed([laptop], { mode: 'daily', timeZone: 'Europe/Madrid' })
     show()
     await waitFor(() => expect(api.savePushDevice).toHaveBeenCalledTimes(1))
-    expect(vi.mocked(api.savePushDevice).mock.calls[0]?.[0]).toMatchObject({ endpoint: 'https://web.push.apple.com/held' })
+    expect(vi.mocked(api.savePushDevice).mock.calls[0]?.[0]).toMatchObject({
+      endpoint: 'https://web.push.apple.com/held',
+    })
     expect(localStorage.getItem('expense:push-device:alice@example.com')).toBe('dev-1')
   })
 

@@ -28,9 +28,7 @@ const cashRows: CashRow[] = [
 
 describe('buildStatementPayments', () => {
   it('builds a payment row when statement is paid with paidOn', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
-    ]
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }]
     const rows = buildStatementPayments(statements, cashRows, accounts, 1)
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
@@ -44,9 +42,7 @@ describe('buildStatementPayments', () => {
   })
 
   it('omits paid statements without stored paidOn', () => {
-    const statements: AccountStatement[] = [
-      { accountId: 2, yearMonth: '2026-06', paid: true },
-    ]
+    const statements: AccountStatement[] = [{ accountId: 2, yearMonth: '2026-06', paid: true }]
     expect(buildStatementPayments(statements, cashRows, accounts, 1)).toHaveLength(0)
   })
 

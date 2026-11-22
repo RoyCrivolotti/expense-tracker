@@ -50,9 +50,17 @@ function Harness({
   return <div data-testid="footer">{view.footer}</div>
 }
 
-function mount(source: TestSource, filter: TxnFilter = {}, options: { limit?: number; readOnly?: boolean; saved?: string[] } = {}) {
+function mount(
+  source: TestSource,
+  filter: TxnFilter = {},
+  options: { limit?: number; readOnly?: boolean; saved?: string[] } = {},
+) {
   const pager = new TransactionPager(source, { limit: options.limit ?? 25 })
-  const model = { ...buildExpenseModel(ledger), pagedList: pagedListOf(pager), ...(options.saved ? { savedMonths: new Set(options.saved) } : {}) }
+  const model = {
+    ...buildExpenseModel(ledger),
+    pagedList: pagedListOf(pager),
+    ...(options.saved ? { savedMonths: new Set(options.saved) } : {}),
+  }
   const views: ListView[] = []
   const tree = (f: TxnFilter) => (
     <ConnectivityContext.Provider value={{ online: !options.readOnly, readOnly: options.readOnly ?? false }}>
@@ -121,12 +129,24 @@ describe('the paged list the Transactions tab reads in ledger mode', () => {
     expect(last().count).toBe(reference.length)
   })
 
-  it('hands the screen\'s filter to the pager, and reads the rows of the new one when it changes', async () => {
+  it("hands the screen's filter to the pager, and reads the rows of the new one when it changes", async () => {
     const source = memorySource(ledger)
     const { last, rerender } = mount(source, { status: 'posted' })
-    await waitFor(() => expect(ids(last())).toEqual(filterTransactions(ledger.transactions, { status: 'posted' }).slice(0, 25).map((t) => t.id)))
+    await waitFor(() =>
+      expect(ids(last())).toEqual(
+        filterTransactions(ledger.transactions, { status: 'posted' })
+          .slice(0, 25)
+          .map((t) => t.id),
+      ),
+    )
     rerender({ status: 'forecast' })
-    await waitFor(() => expect(ids(last())).toEqual(filterTransactions(ledger.transactions, { status: 'forecast' }).slice(0, 25).map((t) => t.id)))
+    await waitFor(() =>
+      expect(ids(last())).toEqual(
+        filterTransactions(ledger.transactions, { status: 'forecast' })
+          .slice(0, 25)
+          .map((t) => t.id),
+      ),
+    )
   })
 
   it('has no rows, and is not loading, when the filter matches nothing', async () => {
@@ -161,7 +181,11 @@ describe('the paged list offline, over a window that has only some months saved'
     const month = mount(memorySource(ledger), { month: saved }, { readOnly: true, saved: [saved] })
     expect(ids(month.last()).length).toBeGreaterThan(0)
     expect(month.last().failed).toBeUndefined()
-    const dates = mount(memorySource(ledger), { month: other, dateFrom: '2001-01-01', dateTo: '2001-01-31' }, { readOnly: true, saved: [saved] })
+    const dates = mount(
+      memorySource(ledger),
+      { month: other, dateFrom: '2001-01-01', dateTo: '2001-01-31' },
+      { readOnly: true, saved: [saved] },
+    )
     expect(dates.last().failed).toBeUndefined()
     expect(screen.getAllByTestId('footer').at(-1)).toHaveTextContent('Showing the 1 month saved here.')
   })
@@ -187,7 +211,10 @@ describe('the footer under the paged list', () => {
     const source = memorySource(ledger)
     const read = source.readTransactionPage.bind(source)
     let failures = 1
-    source.readTransactionPage = (filter, request) => {
+    source.readTransactionPage = (
+      filter,
+      request,
+    ) => {
       if (request?.cursor && failures-- > 0) return Promise.reject(new Error('offline'))
       return read(filter, request)
     }

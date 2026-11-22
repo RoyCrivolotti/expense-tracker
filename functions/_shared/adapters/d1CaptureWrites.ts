@@ -19,7 +19,14 @@ import {
 } from '../capture/captureEventsSql'
 import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL } from '../capture/captureRecommendationsSql'
 import { SEEN_IGNORED_SQL, templateIdOf, templateStatements } from '../capture/captureTemplatesSql'
-import { EVICT_MERCHANTS_SQL, LEARN_DECISION_SQL, RECORD_OUTCOME_SQL, VOTE_MERCHANT_SQL, learnParams, voteParams } from '../capture/captureLearningSql'
+import {
+  EVICT_MERCHANTS_SQL,
+  LEARN_DECISION_SQL,
+  RECORD_OUTCOME_SQL,
+  VOTE_MERCHANT_SQL,
+  learnParams,
+  voteParams,
+} from '../capture/captureLearningSql'
 import { MAX_CAPTURE_MERCHANTS } from '../../../src/domain/capture'
 
 /*
@@ -72,7 +79,9 @@ export async function recordCapture(
         rec.suggestedType,
         rec.createdAt,
       ),
-    ...templateStatements(event.id, template, MAX_CAPTURE_TEMPLATES).map(([sql, params]) => db.prepare(sql).bind(...params)),
+    ...templateStatements(event.id, template, MAX_CAPTURE_TEMPLATES).map(([sql, params]) =>
+      db.prepare(sql).bind(...params),
+    ),
     ...(span === null ? [] : [db.prepare(JOIN_MERCHANT_SQL).bind(event.id, span)]),
     db.prepare(BLANK_OLD_TEXT_SQL).bind(event.keyId, keepTextSince(event.receivedAt)),
     db.prepare(EVENT_GROUPED_SQL).bind(event.id),
@@ -83,15 +92,29 @@ export async function recordCapture(
 }
 
 /** The template's facts and the merchant's votes first, each guarded by the empty outcome the last statement then fills. */
-export async function applyDecisionLearning(db: D1Database, owner: string, recId: string, learning: DecisionLearning): Promise<void> {
+export async function applyDecisionLearning(
+  db: D1Database,
+  owner: string,
+  recId: string,
+  learning: DecisionLearning,
+): Promise<void> {
   const { template, merchants, outcome, at } = learning
-  const learn = template ? [db.prepare(LEARN_DECISION_SQL).bind(...learnParams(owner, recId, template.templateId, template.facts))] : []
+  const learn = template
+    ? [db.prepare(LEARN_DECISION_SQL).bind(...learnParams(owner, recId, template.templateId, template.facts))]
+    : []
   const votes = merchants.map((v) => db.prepare(VOTE_MERCHANT_SQL).bind(...voteParams(owner, recId, v, at)))
   const evict = votes.length > 0 ? [db.prepare(EVICT_MERCHANTS_SQL).bind(owner, MAX_CAPTURE_MERCHANTS)] : []
   await db.batch([...learn, ...votes, ...evict, db.prepare(RECORD_OUTCOME_SQL).bind(owner, recId, outcome)])
 }
 
-export async function countIgnoredPush(db: D1Database, owner: string, source: string, day: string, templateId: string, at: string): Promise<void> {
+export async function countIgnoredPush(
+  db: D1Database,
+  owner: string,
+  source: string,
+  day: string,
+  templateId: string,
+  at: string,
+): Promise<void> {
   await db.batch([
     db.prepare(BUMP_COUNTER_SQL.unrecognised).bind(owner, source, day),
     db.prepare(SEEN_IGNORED_SQL).bind(owner, templateId, at),

@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { Money } from './Money'
 
-function renderMoney(cents: number, type: 'investment' | 'expense' | 'income' | 'refund') {
+function renderMoney(
+  cents: number,
+  type: 'investment' | 'expense' | 'income' | 'refund',
+) {
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <Money cents={cents} type={type} />

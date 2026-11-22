@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchCaptureKeys, onCaptureKeysChanged, type CaptureKeyInfo } from '../../data/captureKeysApi'
 import { fetchCaptureStatus, type CaptureStatus } from '../../data/captureStatusApi'
 import { useAccountOwner } from '../hooks/accountOwner'
-import { adoptUnownedSetup, pastedEndpoint, readSetupMemory, stepsOpen, writeSetupMemory, type SetupMemory } from './captureSetup'
+import {
+  adoptUnownedSetup,
+  pastedEndpoint,
+  readSetupMemory,
+  stepsOpen,
+  writeSetupMemory,
+  type SetupMemory,
+} from './captureSetup'
 
 function browserStorage(): Storage | null {
   try {
@@ -55,10 +62,13 @@ export function useCaptureSetup() {
     }
   }, [])
 
-  const remember = useCallback((next: SetupMemory) => {
-    setMemory(next)
-    writeSetupMemory(browserStorage(), next, owner)
-  }, [owner])
+  const remember = useCallback(
+    (next: SetupMemory) => {
+      setMemory(next)
+      writeSetupMemory(browserStorage(), next, owner)
+    },
+    [owner],
+  )
 
   return {
     status,
@@ -69,7 +79,10 @@ export function useCaptureSetup() {
     endpoint: status?.endpoint ?? pastedEndpoint(memory.endpoint),
     pasted: memory.endpoint,
     serverHasEndpoint: status ? status.endpoint !== null : true,
-    tick: (id: string, on: boolean) =>
+    tick: (
+      id: string,
+      on: boolean,
+    ) =>
       remember({ ...memory, ticks: on ? [...new Set([...memory.ticks, id])] : memory.ticks.filter((t) => t !== id) }),
     paste: (text: string) => remember({ ...memory, endpoint: text }),
     recheck: () => setVersion((v) => v + 1),

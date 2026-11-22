@@ -70,10 +70,7 @@ describe('latestTransactions', () => {
 
 describe('recentlyAdded', () => {
   it('ranks backdated rows by createdAt not transaction date', () => {
-    const rows = [
-      txn(1, '2026-06-20', '2026-06-01T10:00:00Z'),
-      txn(2, '2026-06-01', '2026-06-20T15:00:00Z'),
-    ]
+    const rows = [txn(1, '2026-06-20', '2026-06-01T10:00:00Z'), txn(2, '2026-06-01', '2026-06-20T15:00:00Z')]
     expect(recentlyAdded(rows, 1).map((t) => t.id)).toEqual([2])
     expect(latestTransactions(rows, 1).map((t) => t.id)).toEqual([1])
   })
@@ -85,11 +82,7 @@ describe('recentlyAdded', () => {
 })
 
 describe('filterTransactions — flagId', () => {
-  const rows = [
-    { ...txn(1, '2026-06-01'), flagId: 7 },
-    { ...txn(2, '2026-06-02'), flagId: 8 },
-    txn(3, '2026-06-03'),
-  ]
+  const rows = [{ ...txn(1, '2026-06-01'), flagId: 7 }, { ...txn(2, '2026-06-02'), flagId: 8 }, txn(3, '2026-06-03')]
 
   it('narrows to one flag', () => {
     expect(filterTransactions(rows, { flagId: 7 }).map((t) => t.id)).toEqual([1])
@@ -162,7 +155,11 @@ describe('filterTransactions — labelIds', () => {
 })
 
 describe('filterTransactions by amount', () => {
-  function priced(id: number, amountCents: number, extra: Partial<Transaction> = {}): Transaction {
+  function priced(
+    id: number,
+    amountCents: number,
+    extra: Partial<Transaction> = {},
+  ): Transaction {
     return { ...txn(id, '2026-03-01'), amountCents, ...extra }
   }
   const rows = [

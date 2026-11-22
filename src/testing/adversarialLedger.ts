@@ -19,7 +19,10 @@ const COUNT = 60
 export const adversarialMonths = (): string[] =>
   Array.from({ length: COUNT }, (_, i) => shiftBudgetMonth(END_MONTH, i - (COUNT - 1)))
 
-const byApiOrder = (a: Transaction, b: Transaction) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
+const byApiOrder = (
+  a: Transaction,
+  b: Transaction,
+) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1)
 
 export function adversarialLedger(): ExpenseDataset {
   const base = syntheticLedger({ months: COUNT, perMonth: 10, endMonth: END_MONTH, seed: 7 })
@@ -30,17 +33,37 @@ export function adversarialLedger(): ExpenseDataset {
   const stored: StoredTransaction[] = base.transactions
     .filter((t) => !gap.has(t.budgetMonth))
     .map(({ status: _status, labelIds: _labels, ...row }) => {
-      const budgetMonth =
-        row.planId == null ? defaultBudgetMonth(row.date, ADVERSARIAL_ROLLOVER_DAY) : row.budgetMonth
+      const budgetMonth = row.planId == null ? defaultBudgetMonth(row.date, ADVERSARIAL_ROLLOVER_DAY) : row.budgetMonth
       const stops = row.description === 'Car insurance' && budgetMonth > '2025-04'
       return { ...row, budgetMonth, cancelled: row.cancelled || stops || cancelledOnly.has(budgetMonth) }
     })
   const labels = new Map(base.transactions.map((t) => [t.id, t.labelIds ?? []]))
   const extra: StoredTransaction[] = [
     // Flagged years ago and never settled.
-    { id: 9_001, date: `${months[2]}-11`, budgetMonth: months[2]!, description: 'Old claim', accountId: CHECKING, categoryId: CAT.travel, type: 'expense', amountCents: 5_000, cancelled: false, flagId: 1 },
+    {
+      id: 9_001,
+      date: `${months[2]}-11`,
+      budgetMonth: months[2]!,
+      description: 'Old claim',
+      accountId: CHECKING,
+      categoryId: CAT.travel,
+      type: 'expense',
+      amountCents: 5_000,
+      cancelled: false,
+      flagId: 1,
+    },
     // The only row in its month, and it is for nothing.
-    { id: 9_002, date: `${zeroOnly}-10`, budgetMonth: zeroOnly, description: 'Free sample', accountId: CHECKING, categoryId: CAT.other, type: 'expense', amountCents: 0, cancelled: false },
+    {
+      id: 9_002,
+      date: `${zeroOnly}-10`,
+      budgetMonth: zeroOnly,
+      description: 'Free sample',
+      accountId: CHECKING,
+      categoryId: CAT.other,
+      type: 'expense',
+      amountCents: 0,
+      cancelled: false,
+    },
   ]
   const transactions = deriveTransactions([...stored, ...extra], base.accounts, base.accountStatements)
     .map((t) => ({ ...t, labelIds: labels.get(t.id) ?? [] }))

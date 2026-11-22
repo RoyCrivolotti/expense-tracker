@@ -26,7 +26,12 @@ const WARN_SHARE = 0.05
  * when the upper rank is among the runs that never get there within the plan, and "not within 30 years" when
  * even the lower one is.
  */
-export function rangeLabel(lo: number, hi: number, planStartDate: string | null, years: number): string {
+export function rangeLabel(
+  lo: number,
+  hi: number,
+  planStartDate: string | null,
+  years: number,
+): string {
   if (lo === Infinity) return `not within ${years} years`
   if (hi === Infinity) return `${yearLabel(lo, planStartDate)} to after ${yearLabel(years, planStartDate)}`
   if (lo === hi) return yearLabel(lo, planStartDate)
@@ -129,7 +134,13 @@ export function spreadSeries({
       width: 2.5,
     },
   ]
-  return nominal ? inflateSeries(series, series[0]!.values.map((_, i) => i), inflationRate) : series
+  return nominal
+    ? inflateSeries(
+        series,
+        series[0]!.values.map((_, i) => i),
+        inflationRate,
+      )
+    : series
 }
 
 /**
@@ -217,7 +228,12 @@ export type Replayed = Pick<
  * What the replay reads, as one string: a draft that differs only in its name or colour, or in the mortgage
  * the replay never looks at, is the same replay and is not made again.
  */
-export function spreadKey(draft: Replayed, inflationRate: number, volatility: number, runs: number): string {
+export function spreadKey(
+  draft: Replayed,
+  inflationRate: number,
+  volatility: number,
+  runs: number,
+): string {
   return JSON.stringify([
     draft.startInvestedCents,
     draft.monthlyContributionCents,

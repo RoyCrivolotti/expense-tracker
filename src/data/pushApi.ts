@@ -35,9 +35,19 @@ export interface SubscriptionJson {
   keys?: Record<string, string> | undefined
 }
 
-export async function savePushDevice(subscription: SubscriptionJson, label: string, timeZone: string): Promise<string> {
+export async function savePushDevice(
+  subscription: SubscriptionJson,
+  label: string,
+  timeZone: string,
+): Promise<string> {
   const json = { endpoint: subscription.endpoint, keys: subscription.keys, label, timeZone }
-  return (await req<{ id: string }>('/api/push-subscriptions', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(json) })).id
+  return (
+    await req<{ id: string }>('/api/push-subscriptions', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(json),
+    })
+  ).id
 }
 
 export async function removePushDevice(id: string): Promise<void> {
@@ -45,5 +55,9 @@ export async function removePushDevice(id: string): Promise<void> {
 }
 
 export async function savePushChoice(choice: PushChoice): Promise<void> {
-  await req<{ ok: true }>('/api/push-settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(choice) })
+  await req<{ ok: true }>('/api/push-settings', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(choice),
+  })
 }

@@ -35,7 +35,10 @@ describe('merchantVotes', () => {
   })
 
   it('votes at the price without its sign', () => {
-    expect(merchantVotes('Example Cafe', { ...saved, amountCents: -1250 }).map((v) => v.amountCents)).toEqual([ANY_AMOUNT, 1250])
+    expect(merchantVotes('Example Cafe', { ...saved, amountCents: -1250 }).map((v) => v.amountCents)).toEqual([
+      ANY_AMOUNT,
+      1250,
+    ])
   })
 
   it('votes only at any price for a row of no amount', () => {
@@ -45,7 +48,11 @@ describe('merchantVotes', () => {
   it('casts no vote for text that is not a merchant, or a description that is blank or too long to keep', () => {
     expect(merchantVotes('Has pagado 12,50 EUR en Example Cafe', saved)).toEqual([])
     expect(merchantVotes('Example Cafe', { ...saved, description: '   ' })).toEqual([])
-    expect(merchantVotes('Example Cafe', { ...saved, description: 'x'.repeat(MAX_MERCHANT_DESCRIPTION + 1) })).toEqual([])
-    expect(merchantVotes('Example Cafe', { ...saved, description: 'x'.repeat(MAX_MERCHANT_DESCRIPTION) })).toHaveLength(2)
+    expect(merchantVotes('Example Cafe', { ...saved, description: 'x'.repeat(MAX_MERCHANT_DESCRIPTION + 1) })).toEqual(
+      [],
+    )
+    expect(merchantVotes('Example Cafe', { ...saved, description: 'x'.repeat(MAX_MERCHANT_DESCRIPTION) })).toHaveLength(
+      2,
+    )
   })
 })

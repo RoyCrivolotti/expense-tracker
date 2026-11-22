@@ -44,9 +44,9 @@ describe('validateContributionSchedule', () => {
     expect(validateContributionSchedule([{ from: '2027-01', monthlyCents: -1 }])).toMatch(/monthlyCents/)
     expect(validateContributionSchedule([{ from: '2027-01', monthlyCents: 1.5 }])).toMatch(/monthlyCents/)
     expect(validateContributionSchedule([{ from: '2027-01', monthlyCents: '10' }])).toMatch(/monthlyCents/)
-    expect(
-      validateContributionSchedule([{ from: '2027-01', monthlyCents: CONTRIBUTION_STEP_MAX_CENTS + 1 }]),
-    ).toMatch(/monthlyCents/)
+    expect(validateContributionSchedule([{ from: '2027-01', monthlyCents: CONTRIBUTION_STEP_MAX_CENTS + 1 }])).toMatch(
+      /monthlyCents/,
+    )
   })
 
   it('refuses two steps in one month, and more than the limit', () => {
@@ -81,7 +81,9 @@ describe('normalizeContributionSchedule and parseContributionSchedule', () => {
     expect(parseContributionSchedule('[{"from":"2028-03","monthlyCents":250000}]')).toEqual([
       { from: '2028-03', monthlyCents: 250_000 },
     ])
-    expect(parseContributionSchedule('[{"from":"2028-03","monthlyCents":9},{"from":"2027-01","monthlyCents":8}]')).toEqual([
+    expect(
+      parseContributionSchedule('[{"from":"2028-03","monthlyCents":9},{"from":"2027-01","monthlyCents":8}]'),
+    ).toEqual([
       { from: '2027-01', monthlyCents: 8 },
       { from: '2028-03', monthlyCents: 9 },
     ])
@@ -219,7 +221,10 @@ describe('annualContributionCents', () => {
       const steps = scheduleSteps('2026-01-01', [{ from: '2027-03', monthlyCents: X }])
       const at = steps[0]!.offsetYears
       const k = Math.log(1 + pi)
-      const weight = (from: number, to: number) => ((1 + pi) ** -from - (1 + pi) ** -to) / k
+      const weight = (
+        from: number,
+        to: number,
+      ) => ((1 + pi) ** -from - (1 + pi) ** -to) / k
       expect(annualContributionCents(B, steps, 2, pi)).toBe(Math.round(12 * (B * weight(1, at) + X * weight(at, 2))))
     })
 
@@ -247,9 +252,9 @@ describe('projecting with a schedule', () => {
     const base = invested(plan)
     expect(invested({ ...plan, contributionSchedule: [] })).toEqual(base)
     // Without a start date there is no date for a plan year to start on.
-    expect(invested({ ...plan, planStartDate: null, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] })).toEqual(
-      invested({ ...plan, planStartDate: null }),
-    )
+    expect(
+      invested({ ...plan, planStartDate: null, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] }),
+    ).toEqual(invested({ ...plan, planStartDate: null }))
     // A scenario cached before the field was added has none at all.
     const { contributionSchedule: _omitted, ...stale } = plan
     void _omitted
@@ -374,7 +379,7 @@ describe('foldChangesAtOrBefore: moving the plan start past some changes', () =>
     expect(out.folded).toEqual([steps[0], steps[1]])
   })
 
-  it('reads a change in the start\'s own month as begun, as the engine does (it begins on the 1st)', () => {
+  it("reads a change in the start's own month as begun, as the engine does (it begins on the 1st)", () => {
     expect(foldChangesAtOrBefore(500_00, steps, '2026-03-15').monthlyContributionCents).toBe(800_00)
     expect(foldChangesAtOrBefore(500_00, steps, '2026-03-01').monthlyContributionCents).toBe(800_00)
     expect(foldChangesAtOrBefore(500_00, steps, '2026-02-28').monthlyContributionCents).toBe(500_00)
@@ -393,7 +398,9 @@ describe('foldChangesAtOrBefore: moving the plan start past some changes', () =>
 
   it('does the same whatever order the changes arrive in', () => {
     const shuffled = [steps[2]!, steps[0]!, steps[1]!]
-    expect(foldChangesAtOrBefore(500_00, shuffled, '2027-09-01')).toEqual(foldChangesAtOrBefore(500_00, steps, '2027-09-01'))
+    expect(foldChangesAtOrBefore(500_00, shuffled, '2027-09-01')).toEqual(
+      foldChangesAtOrBefore(500_00, steps, '2027-09-01'),
+    )
   })
 
   it('agrees with what the projection reads at the new start: the amount it folds to is the amount in force there', () => {
