@@ -32,6 +32,7 @@ import { useGoalsUnsavedWork } from './useGoalsUnsavedWork'
 import { useStarredLevers } from './useStarredLevers'
 import { GoalsTitleRow } from './GoalsTitleRow'
 import { PlanView } from './PlanView'
+import { GoalsTips } from './GoalsTips'
 import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
 import styles from './goals.module.css'
@@ -166,6 +167,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   return (
     <div className={styles.stack}>
       <GoalsTitleRow narrow={narrow} viewSwitch={viewSwitch} showActions={view === 'plan'} editor={editor} actions={actions} />
+
+      <GoalsTips view={view} narrow={narrow} half={mobilePlanView} editor={editor} noScenarios={dataset.goalScenarios.length === 0} />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}
