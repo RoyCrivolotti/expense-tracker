@@ -54,7 +54,9 @@
     "verify:goals-desktop": "node scripts/verify-goals-desktop.mjs",
     "verify:section-tabs": "node scripts/verify-section-tabs.mjs",
     "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs",
-    "verify:offline-start": "node scripts/verify-offline-start.mjs"
+    "verify:offline-start": "node scripts/verify-offline-start.mjs",
+    "format": "prettier --write \"{src,functions,scripts,workers}/**/*.{ts,tsx,js,mjs}\" \"*.{ts,js,mjs}\"",
+    "format:check": "prettier --check \"{src,functions,scripts,workers}/**/*.{ts,tsx,js,mjs}\" \"*.{ts,js,mjs}\""
   },
   "dependencies": {
     "fflate": "^0.8.3",
@@ -85,6 +87,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.52.0",
+    "prettier": "3.10.1",
     "sharp": "^0.35.1",
     "tsx": "4.23.15",
     "typescript": "~6.0.2",
