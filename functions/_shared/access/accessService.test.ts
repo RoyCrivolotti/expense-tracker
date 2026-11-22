@@ -3,13 +3,12 @@ import type { AccessRepository } from '../../domain/ports/accessRepository'
 import {
   approveAccessRequestById,
   getAccessStatus,
-  getGroupGrantsForUser,
   listActiveAccessUsers,
   rejectAccessRequestById,
   revokeAccessByEmail,
   submitAccessRequest,
-  updateUserGroupGrants,
 } from './accessService'
+import { getGroupGrantsForUser, updateUserGroupGrants } from './accessGroupService'
 import type { AccessServiceDeps } from './accessService'
 import { HttpError } from '../http'
 import type { AccessGroupId } from '../../../src/domain/accessGroups'
@@ -325,5 +324,43 @@ describe('accessService', () => {
     })
     const groups = await getGroupGrantsForUser(serviceDeps, 'guest@example.com')
     expect(groups).toEqual({ expenses: true, finance: false, legacy: true, oncall: false })
+  })
+})
+
+describe('group grants', () => {
+  const bootstrap = (allowed: string) => {
+    const serviceDeps = deps({ countActiveUsers: vi.fn().mockResolvedValue(0) })
+    serviceDeps.env = { ...serviceDeps.env, ALLOW_BOOTSTRAP: '1', ALLOWED_EMAILS: allowed }
+    return serviceDeps
+  }
+
+  it('grants every group to a bootstrap email while no user is active', async () => {
+    const groups = await getGroupGrantsForUser(bootstrap(' Guest@Example.com, other@example.com,'), 'guest@example.com')
+    expect(groups).toEqual({ expenses: true, finance: true, legacy: true, oncall: true })
+  })
+
+  it('reads the stored grants of an email the bootstrap list does not name', async () => {
+    const groups = await getGroupGrantsForUser(bootstrap('other@example.com'), 'guest@example.com')
+    expect(groups).toEqual({ expenses: true, finance: false, legacy: false, oncall: false })
+  })
+
+  it('reads the stored grants when the bootstrap list is empty', async () => {
+    const groups = await getGroupGrantsForUser(bootstrap('  '), 'guest@example.com')
+    expect(groups).toEqual({ expenses: true, finance: false, legacy: false, oncall: false })
+  })
+
+  it('refuses a blank email and the owner when changing groups', async () => {
+    const serviceDeps = deps()
+    await expect(updateUserGroupGrants(serviceDeps, '  ', 'owner@example.com', {})).rejects.toMatchObject({
+      status: 400,
+      message: 'Missing email',
+    })
+    await expect(
+      updateUserGroupGrants(serviceDeps, 'Owner@Example.com', 'owner@example.com', {}),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'Cannot change owner access groups',
+    })
+    expect(serviceDeps.mocks.grantGroup).not.toHaveBeenCalled()
   })
 })
