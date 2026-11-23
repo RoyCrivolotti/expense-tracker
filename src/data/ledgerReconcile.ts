@@ -9,7 +9,8 @@ import { referenceTablesOf } from '../domain/data/ledgerParts'
 import { sortedMonths } from '../domain/engine/dates'
 import { assembleRows, isPinned, ledgerDataset, settlementPaymentIds } from '../domain/ledger'
 import type { ExpenseDataset, Transaction, TransactionAttachment } from '../domain/types'
-import { type HeldLedger, ledgerOfHeld, wantedMonths } from './ledgerHold'
+import { type HeldLedger, ledgerOfHeld } from './ledgerHold'
+import { wantedMonths } from './ledgerWindows'
 import type { Resource } from './ledgerResources'
 
 export interface Reconciled {

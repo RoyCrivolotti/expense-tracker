@@ -11,14 +11,7 @@ import type {
   ReferenceTables,
 } from '../domain/data/ledgerParts'
 import { sortedMonths } from '../domain/engine/dates'
-import {
-  HYDRATED_DATA_MONTHS,
-  type HydrationPolicy,
-  type Ledger,
-  type LedgerParts,
-  type MonthCell,
-  chooseHydratedMonths,
-} from '../domain/ledger'
+import type { Ledger, LedgerParts, MonthCell } from '../domain/ledger'
 import type { Transaction, TransactionAttachment } from '../domain/types'
 
 export interface HeldLedger {
@@ -98,46 +91,6 @@ export function ledgerOfHeld(held: HeldLedger): Ledger {
     hydrated,
     cells: (held.cells ?? []).filter((cell) => !covered.has(cell.budgetMonth)),
   }
-}
-
-/**
- * The months to hold as rows for a screen showing `viewed`: the window around it, and the newest window,
- * which what reads the recent past (recent activity, the cash reserve, the pace) does not move away from.
- */
-function windows(
-  months: readonly string[],
-  viewed: string,
-  count: number,
-): string[] {
-  const newest = months[months.length - 1] ?? viewed
-  return sortedMonths([...chooseHydratedMonths(months, viewed, count), ...chooseHydratedMonths(months, newest, count)])
-}
-
-/** Every month for a ledger held in full, otherwise the windows. */
-export function wantedMonths(
-  held: HeldLedger,
-  viewed: string,
-  count: number = HYDRATED_DATA_MONTHS,
-): string[] {
-  return held.cells === null ? held.months : windows(held.months, viewed, count)
-}
-
-/** The months to read as rows for a reference: every month while the ledger is small, otherwise the windows. */
-export function monthsToHold(
-  reference: ReferencePart,
-  viewed: string,
-  policy: HydrationPolicy,
-): string[] {
-  return reference.rowCount <= policy.fullBelowRows
-    ? reference.months
-    : windows(reference.months, viewed, policy.dataMonths)
-}
-
-export function missingMonths(
-  held: HeldLedger,
-  wanted: readonly string[],
-): string[] {
-  return wanted.filter((month) => !held.rows.has(month))
 }
 
 /** Whether every row among `ids` is held as a row, so that a patch showed all of a write that named them. */
