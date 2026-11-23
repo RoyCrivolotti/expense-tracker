@@ -27,7 +27,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/dates.ts': 201,
   'src/domain/engine/gapSplit.ts': 225,
   'src/domain/engine/marketSpread.ts': 203,
-  'src/domain/engine/money.ts': 270,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rebaselinePatch.ts': 230,
   'src/domain/engine/rentVsBuy.ts': 206,
