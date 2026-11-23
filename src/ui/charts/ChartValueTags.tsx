@@ -1,4 +1,5 @@
-import { buildTags, DOT_ROOM, placeTags, TAG_HEIGHT, type ValueTag, type ValueTagSpec } from './valueTags'
+import { DOT_ROOM, placeTags, TAG_HEIGHT } from './valueTagLayout'
+import { buildTags, type ValueTag, type ValueTagSpec } from './valueTags'
 import styles from './charts.module.css'
 
 interface ChartValueTagsProps {
