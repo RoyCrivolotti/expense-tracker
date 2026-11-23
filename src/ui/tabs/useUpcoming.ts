@@ -4,7 +4,7 @@ import { defaultBudgetMonth, detectUpcoming } from '../../engine'
 import { todayLocalIso } from '../dates'
 import { suggestBudgetMonth } from '../components/transactionFormState'
 import { useStoppedSuggestions } from './stoppedSuggestions'
-import { useHistoryWatch } from '../useHistoryWatch'
+import { historyPending, useHistoryWatch } from '../useHistoryWatch'
 import type { ExpenseModel, FixedHistory } from '../useExpenseData'
 import type { Transaction } from '../../types'
 
@@ -64,7 +64,6 @@ export function useUpcoming(
   const currentMonth = defaultBudgetMonth(today, settings.budgetRolloverDay)
   const newestMonth = model.months[model.months.length - 1] ?? currentMonth
   const oldestShown = currentMonth < newestMonth ? currentMonth : newestMonth
-  // A model that holds only some of the rows has no series to go on until they arrive, and offers nothing.
-  const waiting = model.sums !== undefined && history === undefined
+  const waiting = historyPending(model)
   return { suggestions: month >= oldestShown && !waiting ? suggestions : NONE, today }
 }
