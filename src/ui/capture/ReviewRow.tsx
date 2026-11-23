@@ -1,5 +1,7 @@
 import { REVIEW_TEXT, type ReviewReason } from '../../domain/capture/review'
+import type { SeriesFit } from '../../domain/capture/seriesMatch'
 import { Money } from '../components/Money'
+import { shortDayLabel } from '../format'
 import type { ReviewApi } from './useReviewApi'
 import type { ReviewView } from './reviewFields'
 import { foreignAmount, monthWord, typeWord, weekdayDay } from './reviewFormat'
@@ -45,6 +47,73 @@ function Fields({ view }: { view: ReviewView }) {
         <span>{monthWord(view.budgetMonth)} budget</span>
       </div>
     </>
+  )
+}
+
+// A date is one word: "10 Nov" never breaks across lines.
+/** Opens the add form on a payment, filled from `series` when the person picked one of the series its hint offers. */
+export type OnReview = (
+  view: ReviewView,
+  series?: SeriesFit,
+) => void
+
+const due = (usualDate: string) => `due ${shortDayLabel(usualDate).replace(' ', '\u00a0')}`
+
+/**
+ * What the monthly series say the payment may be, always as a question for the person. Two series are offered side by
+ * side and neither is preferred: each opens review filled from that one.
+ */
+function SeriesLine({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: OnReview }) {
+  const { hint, hintAccount } = view
+  if (!hint) return null
+  if (hint.kind === 'choose') {
+    return (
+      <div className={styles.series}>
+        <p className={styles.seriesText}>Looks like one of your monthly payments. Which one?</p>
+        <div className={styles.seriesChoices}>
+          {hint.series.map((s) =>
+            review.canWrite ? (
+              <button
+                key={s.seriesKey}
+                type="button"
+                className={styles.link}
+                aria-label={`Review as ${s.description}, ${due(s.usualDate)}`}
+                onClick={() => onReview(view, s)}
+              >
+                {s.description}, {due(s.usualDate)}
+              </button>
+            ) : (
+              <span key={s.seriesKey}>
+                {s.description}, {due(s.usualDate)}
+              </span>
+            ),
+          )}
+        </div>
+      </div>
+    )
+  }
+  const name = <strong>{hint.series.description}</strong>
+  const text =
+    hint.kind === 'moved' ? (
+      <>
+        Looks like {name}, which you pay from {hintAccount ?? 'another account'}. Moved it?
+      </>
+    ) : (
+      <>
+        Looks like your monthly {name}, {due(hint.series.usualDate)}
+        {hintAccount ? `, paid from ${hintAccount}` : ''}.
+        {hint.kind === 'renamed' ? (
+          <>
+            {' '}
+            You added it as <strong>{hint.votedDescription}</strong> before. Renamed?
+          </>
+        ) : null}
+      </>
+    )
+  return (
+    <div className={styles.series}>
+      <p className={styles.seriesText}>{text}</p>
+    </div>
   )
 }
 
@@ -102,21 +171,14 @@ function Buttons({
 }
 
 /** One payment to review. Without write access (an offline copy) it is shown and nothing can be pressed. */
-export function ReviewRow({
-  view,
-  review,
-  onReview,
-}: {
-  view: ReviewView
-  review: ReviewApi
-  onReview: (view: ReviewView) => void
-}) {
+export function ReviewRow({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: OnReview }) {
   const failure = review.failures.get(view.rec.id)
   // A missing category, account or merchant is already marked in the fields themselves.
   const chips = view.reasons.filter((r) => !IN_FIELDS.has(r))
   return (
     <li className={styles.row}>
       <Fields view={view} />
+      <SeriesLine view={view} review={review} onReview={onReview} />
       {chips.length ? (
         <div className={styles.chips}>
           {chips.map((r) => (

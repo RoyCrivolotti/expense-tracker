@@ -4,10 +4,9 @@ import { Card } from '../components/primitives'
 import { EXIT_MS } from '../hooks/motion'
 import { useIsMobile } from '../hooks/useIsMobile'
 import type { ReviewCore } from './reviewContext'
-import type { ReviewView } from './reviewFields'
 import { SHOWN_PHONE, SHOWN_WIDE, rowsShown } from './reviewFormat'
 import { pendingReviewId, withoutReview } from './reviewLanding'
-import { ReviewRow } from './ReviewRow'
+import { ReviewRow, type OnReview } from './ReviewRow'
 import { ReviewSheet } from './ReviewSheet'
 import { useReviewApi, type ReviewApi } from './useReviewApi'
 import styles from './Review.module.css'
@@ -19,7 +18,7 @@ function CardBody({
 }: {
   review: ReviewApi
   onSheet: (open: boolean) => void
-  onReview: (view: ReviewView) => void
+  onReview: OnReview
 }) {
   const { views, count } = review
   // The shell's own breakpoint: below 768px it is a phone layout.
@@ -89,9 +88,14 @@ export default function ReviewCard({
 }) {
   const review = useReviewApi(core)
   useLanding(review, core.loads)
-  const open = (view: ReviewView) => {
+  // Every way into the form closes the sheet first, so saving lands back on the Dashboard.
+  const open: OnReview = (
+    view,
+    series,
+  ) => {
     onSheet(false)
-    review.review(view)
+    if (series) review.reviewAs(view, series)
+    else review.review(view)
   }
   return (
     <>

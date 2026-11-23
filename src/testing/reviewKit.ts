@@ -64,3 +64,48 @@ export function makeReviewModel(): ExpenseModel {
     }),
   )
 }
+
+/** Three monthly charges of one series, on the given day of Aug, Sep and Oct 2026, with ids from `firstId`. */
+function monthly(
+  firstId: number,
+  day: number,
+  over: Parameters<typeof makeTransaction>[0],
+) {
+  return ['08', '09', '10'].map((m, i) =>
+    makeTransaction({
+      id: firstId + i,
+      date: `2026-${m}-${pad(day)}`,
+      budgetMonth: `2026-${m}`,
+      ...over,
+    }),
+  )
+}
+
+/**
+ * `makeReviewModel` with monthly series waiting for their November charge: Video Stream (12,99 on the 10th, Main
+ * Debit, Groceries), Gym (25,00 on the 12th, Travel Credit, Eating out), and two at 9,99 due the same week (Music Plan
+ * on the 14th and Cloud Box on the 15th), and an investment, Index Plan (400,00 on the 20th, Main Debit). Invented data.
+ */
+export function makeSeriesModel(): ExpenseModel {
+  const base = makeReviewModel().dataset
+  return buildExpenseModel(
+    makeDataset({
+      categories: base.categories,
+      accounts: base.accounts,
+      transactions: [
+        ...base.transactions,
+        ...monthly(100, 10, { description: 'Video Stream', accountId: 1, categoryId: 2, amountCents: 1299 }),
+        ...monthly(110, 12, { description: 'Gym', accountId: 2, categoryId: 1, amountCents: 2500 }),
+        ...monthly(120, 14, { description: 'Music Plan', accountId: 1, categoryId: 2, amountCents: 999 }),
+        ...monthly(130, 15, { description: 'Cloud Box', accountId: 1, categoryId: 2, amountCents: 999 }),
+        ...monthly(140, 20, {
+          description: 'Index Plan',
+          accountId: 1,
+          categoryId: 2,
+          amountCents: 40000,
+          type: 'investment',
+        }),
+      ],
+    }),
+  )
+}

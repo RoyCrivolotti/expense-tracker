@@ -2,7 +2,7 @@ import { Modal } from '../components/Modal'
 import { shortDayLabel } from '../format'
 import type { ReviewApi } from './useReviewApi'
 import type { ReviewView } from './reviewFields'
-import { ReviewRow } from './ReviewRow'
+import { ReviewRow, type OnReview } from './ReviewRow'
 import styles from './Review.module.css'
 
 /** Runs of payments on one day, in the order given. */
@@ -24,7 +24,7 @@ export function ReviewSheet({
 }: {
   review: ReviewApi
   onClose: () => void
-  onReview: (view: ReviewView) => void
+  onReview: OnReview
 }) {
   return (
     <Modal title={`To review (${review.count})`} onClose={onClose}>

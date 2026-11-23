@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { makeTransaction } from '../../testing/factories'
-import { makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { makeRecommendation, makeReviewModel, makeSeriesModel } from '../../testing/reviewKit'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import ReviewCard from './ReviewCard'
@@ -434,5 +434,114 @@ describe('the payment a notification was tapped for', () => {
     show(core)
     expect(core.openForm).not.toHaveBeenCalled()
     expect(window.location.search).toBe('?review=' + id(1))
+  })
+})
+
+describe('a payment that looks like a monthly series', () => {
+  const seriesModel = makeSeriesModel()
+  const push = (over: Partial<RecommendationInfo> = {}) =>
+    rec(1, { merchantRaw: 'PAYPROC*XY 77', amountCents: 1299, localDate: '2026-11-11', ...over })
+  const hintText = () => screen.getByText(/Looks like/).textContent
+  const showPush = (
+    over: Partial<RecommendationInfo> = {},
+    core: Partial<ReviewCore> = {},
+  ) => {
+    const c = makeCore({ model: seriesModel, items: [push(over)], ...core })
+    show(c)
+    return c
+  }
+
+  it('says which series and when it is due, fills the row from it and offers no one-tap Add', () => {
+    showPush()
+
+    expect(hintText()).toBe('Looks like your monthly Video Stream, due 10\u00a0Nov.')
+    const row = screen.getByRole('listitem')
+    expect(within(row).getAllByText('Video Stream')).toHaveLength(2)
+    expect(within(row).getByText('Groceries')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Review' })).toBeInTheDocument()
+    expect(within(row).queryByText('New merchant')).not.toBeInTheDocument()
+  })
+
+  it('names the series’ account when the push named none, so a wrong one shows before adding', () => {
+    showPush({ accountId: null, card: { source: 'bank', digits: '0000' } })
+
+    expect(hintText()).toBe('Looks like your monthly Video Stream, due 10\u00a0Nov, paid from Main Debit.')
+  })
+
+  it('asks whether a series paid from another account moved', () => {
+    showPush({ accountId: 2 })
+
+    expect(hintText()).toBe('Looks like Video Stream, which you pay from Main Debit. Moved it?')
+    expect(within(screen.getByRole('listitem')).getByText('Travel Credit')).toBeInTheDocument()
+  })
+
+  it('asks about a rename and shows the series’ current name', () => {
+    showPush({
+      suggestion: {
+        description: 'Old Stream',
+        categoryId: 1,
+        type: 'expense',
+        accountId: 1,
+        amountCents: 1299,
+        sightings: 3,
+        settled: true,
+        reasons: [],
+      },
+    })
+
+    expect(hintText()).toBe(
+      'Looks like your monthly Video Stream, due 10\u00a0Nov. You added it as Old Stream before. Renamed?',
+    )
+  })
+
+  it('offers two series to pick from, and opens review filled from the one picked', () => {
+    const core = showPush({ amountCents: 999, localDate: '2026-11-14' })
+
+    expect(hintText()).toBe('Looks like one of your monthly payments. Which one?')
+    fireEvent.click(screen.getByRole('button', { name: 'Review as Cloud Box, due 15\u00a0Nov' }))
+
+    expect(core.openForm).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Cloud Box', categoryId: 2, type: 'expense', accountId: 1 }),
+    )
+    expect(screen.getByRole('button', { name: 'Review as Music Plan, due 14\u00a0Nov' })).toBeInTheDocument()
+  })
+
+  it('closes the sheet before opening the form for a series picked there, as Review does', () => {
+    const core = makeCore({ model: seriesModel, items: [push({ amountCents: 999, localDate: '2026-11-14' })] })
+    const onSheet = vi.fn()
+    render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ReviewCard core={core} sheet={true} onSheet={onSheet} />
+      </MoneyFormatProvider>,
+    )
+
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Review as Cloud Box/ }))
+
+    expect(onSheet).toHaveBeenCalledWith(false)
+    expect(core.openForm).toHaveBeenCalledWith(expect.objectContaining({ description: 'Cloud Box' }))
+  })
+
+  it('names the two series without buttons where the app cannot write', () => {
+    showPush({ amountCents: 999, localDate: '2026-11-14' }, { canWrite: false, submit: undefined })
+
+    expect(screen.getByText(/^Music Plan, due 14.Nov$/)).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('asks the model for the whole history while the card is shown', () => {
+    const gone = vi.fn()
+    const watchHistory = vi.fn(() => gone)
+    const { unmount } = render(wrap(makeCore({ model: { ...seriesModel, watchHistory } })))
+
+    expect(watchHistory).toHaveBeenCalledTimes(1)
+    unmount()
+    expect(gone).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows no hint for a payment no series fits', () => {
+    showPush({ amountCents: 1300 })
+
+    expect(screen.queryByText(/Looks like/)).not.toBeInTheDocument()
   })
 })
