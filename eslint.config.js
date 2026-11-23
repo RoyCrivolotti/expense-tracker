@@ -102,7 +102,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/components/ReceiptStrip.tsx': 87,
   'src/ui/components/StatementPaymentSheet.tsx': 84,
   'src/ui/components/StatementToggles.tsx': 85,
-  'src/ui/components/SwipeTransactionRow.tsx': 110,
   'src/ui/components/TransactionRow.tsx': 62,
   'src/ui/definitions/ConfigModal.tsx': 84,
   'src/ui/definitions/FlagAutoLabelEditor.tsx': 99,
