@@ -3,9 +3,14 @@ import { linkCard } from '../../data/captureCardsApi'
 import { dismissRecommendation, linkRecommendation } from '../../data/recommendationDecisionsApi'
 import { announceRecommendationsChanged, type RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
+import type { SeriesFit, SeriesHint } from '../../domain/capture/seriesMatch'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { useStoppedSuggestions } from '../tabs/stoppedSuggestions'
+import type { ExpenseModel } from '../useExpenseData'
+import { useHistoryWatch } from '../useHistoryWatch'
 import type { ReviewCore } from './reviewContext'
 import { describeRecommendation, transactionOf, type ReviewView } from './reviewFields'
+import { seriesHintsOf } from './reviewSeries'
 import { toastText } from './reviewFormat'
 import { queuedSeed } from './reviewQueue'
 
@@ -26,6 +31,11 @@ export interface ReviewApi {
   link: (view: ReviewView) => void
   /** Opens the add form on this payment, with the ones after it queued behind it. */
   review: (view: ReviewView) => void
+  /** Opens the add form on this payment filled from one of the series its hint offers, which the person picked. */
+  reviewAs: (
+    view: ReviewView,
+    series: SeriesFit,
+  ) => void
 }
 
 /** The payment with the account its card was just linked to, when it was. */
@@ -39,11 +49,38 @@ function withLink(
 
 const name = (view: ReviewView) => view.description || 'Payment'
 
+/**
+ * The payments as the seven fields, each with what the monthly series say it may be. The series are the recurring
+ * card's, so the card reads the whole history the way it does, and leaves out the series the person stopped there.
+ */
+function useViews(
+  items: readonly RecommendationInfo[],
+  model: ExpenseModel,
+) {
+  const merchants = useMemo(() => buildMerchantIndex(model.dataset.transactions), [model.dataset.transactions])
+  useHistoryWatch(model)
+  const { stopped } = useStoppedSuggestions()
+  const hints = useMemo(() => seriesHintsOf(items, model, merchants, stopped), [items, model, merchants, stopped])
+  const views = useMemo(
+    () => items.map((r) => describeRecommendation(r, model, merchants, hints.get(r.id))),
+    [items, model, merchants, hints],
+  )
+  // The queue reads the latest views when it moves on, not the ones it started with.
+  const latest = useRef(views)
+  useEffect(() => {
+    latest.current = views
+  }, [views])
+  const describe = (
+    rec: RecommendationInfo,
+    hint: SeriesHint,
+  ) => describeRecommendation(rec, model, merchants, hint)
+  return { views, latest, describe }
+}
+
 /** Works the payments out as the seven fields a person sees, and turns a press into a held decision. */
 export function useReviewApi(core: ReviewCore): ReviewApi {
   const { model, decide, submit, openForm } = core
   const format = useMoneyFormat()
-  const merchants = useMemo(() => buildMerchantIndex(model.dataset.transactions), [model.dataset.transactions])
   // Cards just linked, by `source:digits`, until the next read brings the server's own accounts.
   const [linked, setLinked] = useState<ReadonlyMap<string, number>>(new Map())
   const [seenLoads, setSeenLoads] = useState(core.loads)
@@ -52,12 +89,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     setLinked(new Map())
   }
   const items = useMemo(() => core.items.map((r) => withLink(r, linked)), [core.items, linked])
-  const views = useMemo(() => items.map((r) => describeRecommendation(r, model, merchants)), [items, model, merchants])
-  // The queue reads the latest views when it moves on, not the ones it started with.
-  const latest = useRef(views)
-  useEffect(() => {
-    latest.current = views
-  }, [views])
+  const { views, latest, describe } = useViews(items, model)
 
   const dontAdd = (view: ReviewView) => {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
@@ -81,6 +113,11 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     }
   const rememberFor = (v: ReviewView) => (accountId: number) =>
     v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve(null)
+  function review(view: ReviewView) {
+    const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
+    const after = latest.current.slice(at + 1).map((v) => v.rec.id)
+    openForm(queuedSeed(view, after, () => latest.current, dontAdd, rememberFor))
+  }
   return {
     views,
     count: core.count,
@@ -102,10 +139,10 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
       const message = `Linked \u00b7 ${name(view)}\nTo your typed row "${match.description}". Nothing new is added.`
       decide(view.rec.id, message, `link ${name(view)}`, () => linkRecommendation(view.rec.id, match.transactionId))
     },
-    review: (view) => {
-      const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
-      const after = latest.current.slice(at + 1).map((v) => v.rec.id)
-      openForm(queuedSeed(view, after, () => latest.current, dontAdd, rememberFor))
-    },
+    review,
+    reviewAs: (
+      view,
+      series,
+    ) => review(describe(view.rec, { kind: 'series', series })),
   }
 }

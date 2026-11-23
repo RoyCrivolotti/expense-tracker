@@ -105,6 +105,26 @@ push was first read. A recommendation no push made has `suggestion: null`, and t
 Two reads serve a whole page, together: the pushes with their templates, and the merchants of the page by key. Both run
 before the duplicate check below, which then looks for the amount and direction the person will see.
 
+## A payment that looks like a monthly charge
+
+The card compares each waiting payment with the monthly series the recurring card reminds about
+([`seriesMatch.ts`](../src/domain/capture/seriesMatch.ts)): the same series, read the same way (the whole history's when
+the model holds only some rows, none at all while that history is still on its way), less the ones stopped there. A
+payment fits a series when it moves money the same way, its amount equals the series' latest charge to the cent, and it
+falls within five days of a usual day whose charge is not logged yet. Nothing is stored: the match is worked out on
+every read ([`reviewSeries.ts`](../src/ui/capture/reviewSeries.ts)).
+
+| Match | The row says | The fields |
+| --- | --- | --- |
+| One series | "Looks like your monthly X, due D", and "paid from Y" when the push named no account | Description, category and type from the series; the account too when the push named none and showed no card to ask about |
+| Two or more | "Looks like one of your monthly payments. Which one?", each a button | Unchanged, and no one-tap Add even when the votes are settled. A button closes the list and opens review filled from that series; none is picked for the person |
+| One, on another account | "Looks like X, which you pay from Y. Moved it?" | From the series, keeping the push's account |
+| One, but the votes name it differently | "...You added it as V before. Renamed?" | From the series, with its current name |
+
+A filled payment always goes through review, so the first time a bank text is matched it is never added by one tap. Its "New merchant" reason is dropped, since the hint already says what the payment is.
+When the person's own settled name for the merchant already is the series' name, the row still says which series it
+looks like, but the fields stay as their history has them and one tap follows the usual rule.
+
 ## The typed row a payment may duplicate
 
 A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries

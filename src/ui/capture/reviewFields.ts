@@ -1,20 +1,16 @@
 import type { NewTransaction } from '../../data/dataSource'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
+import type { SeriesHint } from '../../domain/capture/seriesMatch'
 import { cleanText } from '../../domain/capture/text'
-import {
-  bankMerchantName,
-  merchantHistory,
-  reviewReasons,
-  type MerchantHistory,
-  type MerchantIndex,
-  type ReviewReason,
-} from '../../domain/capture/review'
+import { bankMerchantName, reviewReasons, type MerchantIndex, type ReviewReason } from '../../domain/capture/review'
 import { otherBudgetDays, paymentClock, type PaymentClock } from '../../domain/capture/reviewDates'
 import type { TxnType } from '../../types'
 import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
 import { monthEdgeNotice } from './reviewNotice'
 import type { ExpenseModel } from '../useExpenseData'
+import { historyOf, taught } from './reviewReading'
+import { NO_HINT, seriesReading } from './reviewSeries'
 
 /** The seven things a payment becomes, worked out from the push and the person's own history. Never stored. */
 export interface ReviewView {
@@ -45,74 +41,35 @@ export interface ReviewView {
   reasons: ReviewReason[]
   /** True only when nothing is in doubt, so one tap may add it. */
   oneTap: boolean
-}
-
-/** The category and account the person's own history and settings give a payment, each null unless still in use. */
-function knownReferences(
-  categoryIdFromHistory: number | null,
-  accountId: number | null,
-  model: ExpenseModel,
-) {
-  const category = categoryIdFromHistory === null ? undefined : model.lookup.category(categoryIdFromHistory)
-  const account = accountId === null ? undefined : model.lookup.account(accountId)
-  return {
-    categoryId: category?.active ? category.id : null,
-    categoryName: category?.active ? category.name : null,
-    accountId: account?.active ? account.id : null,
-    accountName: account?.active ? account.name : null,
-  }
+  /** The monthly series the payment may be, or null when none fits. A hint for the person, never a decision. */
+  hint: Exclude<SeriesHint, { kind: 'none' }> | null
+  /**
+   * The account the hinted series is paid from, named when the fields would not show it: a series on another account
+   * than the push's, or a push that named no account. Null otherwise.
+   */
+  hintAccount: string | null
 }
 
 /**
- * What the person's history says about the merchant. The server's suggestion when it names a description, since it
- * remembers what the person added this merchant with whatever they typed; else the rows the app holds, which match only
- * when a typed description equals the bank's text.
+ * Works out what a recommendation would become and whether one tap may add it. A `hint` naming a series fills the
+ * description, category and type from it, and the account too when the push named none and has no card to ask about.
+ * A filled payment always goes through review: the first time a bank text is matched, nothing is added by one tap.
  */
-function historyOf(
-  rec: RecommendationInfo,
-  merchants: MerchantIndex,
-  bankText: string | null,
-): MerchantHistory {
-  const s = rec.suggestion
-  if (s?.description != null)
-    return { sightings: s.sightings, label: s.description, categoryId: s.categoryId, settled: s.settled }
-  return merchantHistory(merchants, bankText)
-}
-
-/** The amount, type and account the push's wording taught, and its flags; without a suggestion, the push's first reading. */
-function taught(rec: RecommendationInfo) {
-  const s = rec.suggestion
-  if (!s)
-    return {
-      amountCents: rec.amountCents,
-      type: rec.suggestedType,
-      accountId: rec.accountId,
-      newShape: false,
-      amountRelearned: false,
-    }
-  return {
-    amountCents: s.amountCents,
-    type: s.type,
-    accountId: s.accountId,
-    newShape: s.reasons.includes('new-shape'),
-    amountRelearned: s.reasons.includes('amount-relearned'),
-  }
-}
-
-/** Works out what a recommendation would become and whether one tap may add it. */
 export function describeRecommendation(
   rec: RecommendationInfo,
   model: ExpenseModel,
   merchants: MerchantIndex,
+  hint: SeriesHint = NO_HINT,
 ): ReviewView {
   const bankText = rec.merchantRaw === null ? null : cleanText(rec.merchantRaw)
   const history = historyOf(rec, merchants, bankText)
-  const { amountCents, type, accountId, newShape, amountRelearned } = taught(rec)
-  const refs = knownReferences(history.categoryId, accountId, model)
+  const pushed = taught(rec)
+  const { amountCents, newShape, amountRelearned } = pushed
+  const { fill, type, refs, askCard, ...hinted } = seriesReading(hint, history, pushed, rec, model)
   const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
   const monthOf = (day: string) => suggestBudgetMonth(model, day)
   const edgeDays = otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
-  const reasons = reviewReasons({
+  const found = reviewReasons({
     amountCents,
     currency: rec.currency,
     hasMerchant: !!bankText,
@@ -126,13 +83,15 @@ export function describeRecommendation(
     newShape,
     amountRelearned,
   })
+  // A bank text seen for the first time is no news once a series has named the payment: the hint says what it is.
+  const reasons = fill ? found.filter((r) => r !== 'new-merchant') : found
   return {
     rec,
-    askCard: refs.accountId === null && rec.card ? rec.card : null,
+    askCard,
     type,
     amountCents,
-    description: history.label ?? (bankText ? bankMerchantName(bankText) : ''),
-    fromHistory: history.label !== null,
+    description: fill?.description ?? history.label ?? (bankText ? bankMerchantName(bankText) : ''),
+    fromHistory: !fill && history.label !== null,
     ...refs,
     date: rec.localDate,
     time: clock.time,
@@ -140,7 +99,9 @@ export function describeRecommendation(
     clock,
     edgeDays,
     reasons,
-    oneTap: reasons.length === 0,
+    // Two series are always the person's to choose between: votes never pick one by a tap.
+    oneTap: reasons.length === 0 && !fill && hint.kind !== 'choose',
+    ...hinted,
   }
 }
 

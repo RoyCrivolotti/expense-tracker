@@ -5,3 +5,12 @@ import type { ExpenseModel } from './useExpenseData'
 export function useHistoryWatch({ watchHistory }: ExpenseModel): void {
   useEffect(() => watchHistory?.(), [watchHistory])
 }
+
+/**
+ * True while a model that holds only some of the rows has no `history` yet. The monthly series need every row they
+ * are made of, so a screen that reads them offers nothing until the history arrives, rather than series built from
+ * the months that happen to be loaded.
+ */
+export function historyPending({ sums, history }: ExpenseModel): boolean {
+  return sums !== undefined && history === undefined
+}

@@ -98,6 +98,25 @@
   background: var(--color-surface-muted);
 }
 
+/* What the monthly series say the payment may be: a question, so a quiet note rather than a warning. */
+.series {
+  padding: 0.4rem 0.65rem;
+  border-left: 3px solid var(--color-accent);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  font-size: 0.82rem;
+}
+
+.seriesText {
+  margin: 0;
+}
+
+.seriesChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}
+
 .error {
   margin: 0;
   font-size: 0.85rem;
