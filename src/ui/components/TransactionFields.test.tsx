@@ -8,7 +8,7 @@ import type { FormFields } from './transactionFormState'
 import { defaultExpenseSettings } from '../../engine'
 import { makeActions } from '../../testing/makeActions'
 import type { ExpenseActions } from '../actions'
-import { Fields } from './TransactionFields'
+import { Fields } from './TransactionFieldsForm'
 
 function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseModel {
   return {
