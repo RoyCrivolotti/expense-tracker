@@ -79,7 +79,6 @@ const FILE_LINE_CAPS = {
 
 const FUNCTION_LINE_CAPS = {
   'src/data/inMemoryLedgerParts.ts': 68,
-  'src/domain/engine/rebaselinePatch.ts': 67,
   'src/testing/fakeIntersectionObserver.ts': 63,
   'src/testing/inMemoryExpenseRepository.ts': 1096,
   'src/testing/ledgerSource.ts': 72,

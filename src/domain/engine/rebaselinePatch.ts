@@ -134,6 +134,30 @@ function restartContribution(
   }
 }
 
+/** Spending, rent and fees in the euros of the new start, and what is said about them: null when nothing moved. */
+function restateAmounts(
+  scenario: Rebaselinable,
+  restate: (cents: number) => number,
+  moved: number,
+  factor: number,
+  inflationRate: number,
+): { spend: number; rent: number; fees: number; restated: Rebaseline['restated'] } {
+  const spend = restate(scenario.annualSpendCents)
+  const rent = restate(scenario.rentMonthlyCents)
+  const fees = restate(scenario.transactionCostsCents)
+  const restated =
+    moved > 0 && factor !== 1
+      ? {
+          years: moved,
+          inflationRate,
+          spend: [scenario.annualSpendCents, spend] as [number, number],
+          rent: [scenario.rentMonthlyCents, rent] as [number, number],
+          fees: [scenario.transactionCostsCents, fees] as [number, number],
+        }
+      : null
+  return { spend, rent, fees, restated }
+}
+
 /**
  * The scenario restarted on `at.date` from `at.investedCents`. The date is usually the latest check-in,
  * but nothing here needs it to be one, or in the past: a copy started at a later date is the same
@@ -172,9 +196,7 @@ export function rebaseline(
     priceMoved,
     owned,
   } = restartHouse(scenario, oldStart, at.date, inflationRate, costsEarly)
-  const spend = restate(scenario.annualSpendCents)
-  const rent = restate(scenario.rentMonthlyCents)
-  const fees = restate(scenario.transactionCostsCents)
+  const { spend, rent, fees, restated } = restateAmounts(scenario, restate, moved, factor, inflationRate)
   return {
     patch: {
       startInvestedCents: at.investedCents,
@@ -188,16 +210,7 @@ export function rebaseline(
       transactionCostsCents: fees,
       ...houseFields,
     },
-    restated:
-      moved > 0 && factor !== 1
-        ? {
-            years: moved,
-            inflationRate,
-            spend: [scenario.annualSpendCents, spend],
-            rent: [scenario.rentMonthlyCents, rent],
-            fees: [scenario.transactionCostsCents, fees],
-          }
-        : null,
+    restated,
     housePrice: priceMoved,
     ownedHouse: owned,
     droppedLifeEvents,
