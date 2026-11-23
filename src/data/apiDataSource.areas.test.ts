@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { apiDataSource } from './apiDataSource'
+import { attachmentRoutes, transactionRoutes } from './apiLedgerRoutes'
+import { planningRoutes, wealthRoutes } from './apiPlanningRoutes'
+import { flagsAndLabelsRoutes, referenceRoutes } from './apiReferenceRoutes'
 
 /**
  * Every key the live data source has. Screens feature-detect the optional ones, so a key that goes missing, or
@@ -64,5 +67,39 @@ describe('apiDataSource keys', () => {
     expect(Object.keys(apiDataSource).sort()).toEqual([...KEYS].sort())
     expect(apiDataSource).not.toHaveProperty('addLabelsToTransactions')
     expect(apiDataSource).not.toHaveProperty('updateMatchingTransactions')
+  })
+})
+
+/** The area objects `apiDataSource` spreads after its own keys and the lazy ledger parts. */
+const AREAS: Record<string, object> = {
+  transactionRoutes,
+  attachmentRoutes,
+  flagsAndLabelsRoutes,
+  referenceRoutes,
+  planningRoutes,
+  wealthRoutes,
+}
+
+describe('apiDataSource areas', () => {
+  it('gives no method to two areas', () => {
+    const owners = new Map<string, string[]>()
+    for (const [name, area] of Object.entries(AREAS)) {
+      for (const key of Object.keys(area)) owners.set(key, [...(owners.get(key) ?? []), name])
+    }
+    expect([...owners].filter(([, areas]) => areas.length > 1)).toEqual([])
+  })
+
+  it('has every method the source has beyond its own load and the lazy ledger parts', () => {
+    const areaKeys = Object.values(AREAS).flatMap((area) => Object.keys(area))
+    const own = ['canWrite', 'load', ...KEYS.filter((key) => key.startsWith('read'))]
+    expect([...areaKeys, ...own].sort()).toEqual([...KEYS].sort())
+  })
+
+  it('serves each method from the area that defines it', () => {
+    for (const area of Object.values(AREAS)) {
+      for (const [key, method] of Object.entries(area)) {
+        expect(apiDataSource[key as keyof typeof apiDataSource]).toBe(method)
+      }
+    }
   })
 })

@@ -18,7 +18,6 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 const FILE_LINE_CAPS = {
   'functions/_shared/restoreSql.ts': 299,
   'functions/_shared/testing/rollupMutants.ts': 253,
-  'src/data/apiDataSource.ts': 318,
   'src/data/docsCaptureDataSource.ts': 402,
   'src/data/ledgerHold.ts': 216,
   'src/data/ledgerSession.ts': 350,
