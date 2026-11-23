@@ -7,7 +7,9 @@ import { renderRoutes } from '../../../scripts/scaling/report'
 import { differences, fingerprintOthers } from '../../../scripts/scaling/snapshot'
 import { sqliteTransport } from '../../../scripts/scaling/sqliteTransport'
 import { MONTH, ledgerOf, seededDatabase } from '../../../scripts/scaling/testKit'
-import { measureRoutes, READ_CASES, WRITE_CASES } from './routeMatrix'
+import { READ_CASES } from './routeCases'
+import { measureRoutes } from './routeMatrix'
+import { WRITE_CASES } from './routeWriteCases'
 
 const SIZE = 600
 
