@@ -1,6 +1,6 @@
 import { currencyWord, scenarioAxis, type MoneyFormat } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
-import { monthYear } from './charts/heroSeries'
+import { monthYear } from './charts/heroAxisText'
 import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 

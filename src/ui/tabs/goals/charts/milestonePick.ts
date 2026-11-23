@@ -2,7 +2,7 @@ import type { AnnotationDot, ChartAnnotations } from '../../../charts/LinearChar
 import { crossingYears, currencyWord, dateAtYears, type MoneyFormat, type ProjectionParams } from '../../../../engine'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
-import { monthYear } from './heroSeries'
+import { monthYear } from './heroAxisText'
 
 /** A path of the chart, as far as this needs to know it. */
 export interface PickLine {
