@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
 import type { Env } from '../env'
-import { createD1ExpenseRepository } from './d1ExpenseRepository'
+import { attachments, ledgerReads, ledgerWrites } from './d1ExpenseLedger'
+import { flagsAndLabels, reference } from './d1ExpenseReference'
+import { planning, wealth } from './d1ExpensePlanning'
+import repositorySource from './d1ExpenseRepository.ts?raw'
 
 /**
  * Every method of the port, once. `satisfies` makes the type checker reject a name the port lacks and a method
@@ -69,10 +72,18 @@ const PORT_METHODS = {
 } satisfies Record<keyof ExpenseRepository, true>
 
 /**
- * The factories the adapter spreads together. A key two of them return is won silently by the later spread, and the
- * type checker accepts it, so these tests are what catches it.
+ * The factories `createD1ExpenseRepository` spreads together. A key two of them return is won silently by the later
+ * spread, and the type checker accepts it, so these tests are what catches it.
  */
-const AREAS: Record<string, (env: Env) => object> = { createD1ExpenseRepository }
+const AREAS: Record<string, (env: Env) => object> = {
+  ledgerReads,
+  ledgerWrites,
+  attachments,
+  flagsAndLabels,
+  reference,
+  planning,
+  wealth,
+}
 
 /** Each method name with the areas that return it. Building an area only captures `env`, so an empty one does. */
 function areasByMethod(): Map<string, string[]> {
@@ -83,7 +94,16 @@ function areasByMethod(): Map<string, string[]> {
   return byMethod
 }
 
+/** The factories the repository actually spreads, in order, read from its source. */
+function spreadAreas() {
+  return [...repositorySource.matchAll(/\.\.\.(\w+)\(/g)].map((match) => match[1])
+}
+
 describe('createD1ExpenseRepository areas', () => {
+  it('checks every factory the repository spreads, so a new one cannot skip the checks below', () => {
+    expect(spreadAreas()).toEqual(Object.keys(AREAS))
+  })
+
   it('gives no method to two areas', () => {
     const shared = [...areasByMethod()].filter(([, areas]) => areas.length > 1)
     expect(shared).toEqual([])

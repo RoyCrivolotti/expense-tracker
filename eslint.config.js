@@ -16,7 +16,6 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 // file may not grow past its entry and keeps the other limit. Do not add a file: split it. Lower an entry when its file
 // shrinks, and take the file off the list when it fits.
 const FILE_LINE_CAPS = {
-  'functions/_shared/adapters/d1ExpenseRepository.ts': 272,
   'functions/_shared/chunkedBackup.ts': 286,
   'functions/_shared/measure/routeMatrix.ts': 313,
   'functions/_shared/restoreSql.ts': 299,
@@ -94,7 +93,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'functions/_shared/adapters/d1ExpenseRepository.ts': 240,
   'scripts/scaling/seedSql.ts': 108,
   'src/data/inMemoryLedgerParts.ts': 68,
   'src/domain/engine/rebaselinePatch.ts': 67,
