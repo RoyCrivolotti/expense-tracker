@@ -5,23 +5,22 @@
  * reads as parts. An invocation does as much as its budget allows (D1 queries plus bucket calls, and rows),
  * saves where it got to, and the next one carries on from there. A backup exists once its manifest does.
  */
-import type { BackupStore } from '../domain/ports/backupStore'
-import type { BackupAlerts } from '../domain/ports/backupAlerts'
-import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { EXPORT_CHUNK_ROWS, EXPORT_FORMAT, EXPORT_TABLES, type ExportChunk } from '../domain/data/exportTables'
-import { manifestKey, partKey, stateKey } from './backupKeys'
-import {
-  BACKUP_FORMAT,
-  emptyCounts,
-  parseBackupState,
-  type BackupManifest,
-  type BackupState,
-  type PartLine,
-} from './backupFormat'
+import { manifestKey, stateKey } from './backupKeys'
+import { BACKUP_FORMAT, type BackupManifest, type PartLine } from './backupFormat'
 import { reportFailedBackups, type OwnerFailure } from './backupFailures'
 import { maybeAlertBucketUsage, pruneBackups } from './backupHousekeeping'
-import type { BackupPolicy } from './backupPolicy'
-import type { ChunkedBackupSettings } from './chunkedBackupSettings'
+import {
+  freshState,
+  revisionOf,
+  saveState,
+  spend,
+  startOrResume,
+  writePart,
+  type ChunkedDeps,
+  type Run,
+  type StepBudget,
+} from './chunkedBackupState'
 
 /**
  * Rows read in one chunk. Small, because the state is saved after every chunk that is big enough to matter and an
@@ -44,22 +43,6 @@ export const MAX_PASSES = 3
 /** A run that has fewer calls than this left would start and make no progress. */
 const MIN_TO_START = 6
 
-export interface ChunkedDeps {
-  repo: ExpenseRepository
-  store: BackupStore
-  alerts: BackupAlerts
-  policy: BackupPolicy
-  chunked: ChunkedBackupSettings
-  /** The owner's dataset revision. Optional: without it a backup cannot say whether the ledger moved. */
-  readRevision?: (owner: string) => Promise<string>
-}
-
-/** What is left of an invocation's allowance. Shared by every owner it backs up. */
-export interface StepBudget {
-  operations: number
-  rows: number
-}
-
 export type OwnerOutcome = 'complete' | 'already complete' | 'continues' | 'failed'
 
 export interface ChunkedRunResult {
@@ -73,95 +56,7 @@ export interface ChunkedRunResult {
   usedBytes: number
 }
 
-interface Run {
-  deps: ChunkedDeps
-  owner: string
-  dateKey: string
-  budget: StepBudget
-  state: BackupState
-  pending: string[]
-  pendingRows: number
-  now: () => Date
-}
-
 const readCost = (table: string): number => (table === 'wealthCheckins' ? 2 : 1)
-
-function spend(
-  budget: StepBudget,
-  operations: number,
-  rows = 0,
-): void {
-  budget.operations -= operations
-  budget.rows -= rows
-}
-
-async function revisionOf(
-  deps: ChunkedDeps,
-  owner: string,
-  budget: StepBudget,
-): Promise<string | null> {
-  if (!deps.readRevision) return null
-  spend(budget, 1)
-  return deps.readRevision(owner)
-}
-
-function freshState(
-  owner: string,
-  dateKey: string,
-  startedAt: Date,
-  revision: string | null,
-  attempt: number,
-): BackupState {
-  return {
-    format: BACKUP_FORMAT,
-    owner,
-    dateKey,
-    startedAt: startedAt.toISOString(),
-    revision,
-    attempt,
-    failed: false,
-    table: 0,
-    after: null,
-    nextPart: 1,
-    parts: [],
-    counts: emptyCounts(),
-  }
-}
-
-/** The saved state of a run in progress, or a new one. `resumed` says which. */
-async function startOrResume(
-  deps: ChunkedDeps,
-  owner: string,
-  dateKey: string,
-  budget: StepBudget,
-  existing: ReadonlySet<string>,
-  now: Date,
-): Promise<{ state: BackupState; resumed: boolean }> {
-  if (existing.has(stateKey(owner, dateKey))) {
-    spend(budget, 1)
-    const saved = parseBackupState(await deps.store.get(stateKey(owner, dateKey)), owner, dateKey)
-    if (saved) return { state: saved, resumed: true }
-  }
-  return { state: freshState(owner, dateKey, now, await revisionOf(deps, owner, budget), 1), resumed: false }
-}
-
-async function saveState(run: Run): Promise<void> {
-  spend(run.budget, 1)
-  await run.deps.store.put(stateKey(run.owner, run.dateKey), JSON.stringify(run.state), 'application/json')
-}
-
-/** Writes what has been read as the next part. The state is saved by the caller, once the cursor is settled. */
-async function writePart(run: Run): Promise<void> {
-  if (run.pending.length === 0) return
-  const key = partKey(run.owner, run.dateKey, run.state.nextPart)
-  const body = run.pending.join('')
-  spend(run.budget, 1)
-  await run.deps.store.put(key, body, 'application/x-ndjson')
-  run.state.parts.push({ key, rows: run.pendingRows, bytes: body.length })
-  run.state.nextPart += 1
-  run.pending = []
-  run.pendingRows = 0
-}
 
 function take(
   run: Run,
