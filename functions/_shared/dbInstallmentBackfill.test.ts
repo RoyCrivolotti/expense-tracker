@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { backfillInstallments } from './dbInstallmentBackfill'
 import type { Env } from './env'
-import type { InstallmentPlanRow, TxnRow } from './rows'
+import type { TxnRow } from './rows'
+import type { InstallmentPlanRow } from './planningRows'
 import { defaultBudgetMonth, shiftBudgetMonth } from '../domain/engine/dates'
 
 function currentBudgetMonth(): string {

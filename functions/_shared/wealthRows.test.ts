@@ -6,7 +6,7 @@ import {
   type WealthAccountRow,
   type WealthCheckinEntryRow,
   type WealthCheckinRow,
-} from './rows'
+} from './planningRows'
 
 describe('toWealthAccount', () => {
   it('maps all fields', () => {

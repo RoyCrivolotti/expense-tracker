@@ -2,7 +2,7 @@ import type { WealthAccount } from '../domain/types'
 import type { DeleteWealthAccountResult, NewWealthAccount } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
-import { toWealthAccount, type WealthAccountRow } from './rows'
+import { toWealthAccount, type WealthAccountRow } from './planningRows'
 
 export async function createWealthAccount(
   env: Env,

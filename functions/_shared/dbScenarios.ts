@@ -4,7 +4,7 @@ import type { NewGoalScenario } from '../domain/data/dataSource'
 import { buildUpdate, type ColumnMap, type Coerce } from './dbUpdate'
 import type { Env } from './env'
 import { HttpError } from './http'
-import { toGoalScenario, type GoalScenarioRow } from './rows'
+import { toGoalScenario, type GoalScenarioRow } from './planningRows'
 
 const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   name: 'name',

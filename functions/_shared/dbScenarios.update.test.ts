@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { updateScenario } from './dbScenarios'
 import type { Env } from './env'
-import type { GoalScenarioRow } from './rows'
+import type { GoalScenarioRow } from './planningRows'
 
 function makeRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
   return {

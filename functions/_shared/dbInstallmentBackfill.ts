@@ -18,7 +18,8 @@ import { maybeCompletePlan } from './dbPlanLink'
 import { bumpRevision, serverBudgetMonth } from './dbRevision'
 import { descriptionNorm } from './descriptionNorm'
 import { IN_ID_LIST, idList } from './sqlIdList'
-import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } from './rows'
+import { toStoredTxn, type TxnRow } from './rows'
+import { toInstallmentPlan, type InstallmentPlanRow } from './planningRows'
 
 /**
  * Insert one backfilled installment, atomically no-oping if it already exists.

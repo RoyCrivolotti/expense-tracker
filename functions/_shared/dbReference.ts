@@ -7,27 +7,29 @@ import {
   toCashActual,
   toCategory,
   toFlag,
-  toGoalScenario,
-  toInstallmentPlan,
   toLabel,
   toSettings,
   toStatement,
-  toWealthAccount,
-  toWealthCheckin,
-  toWealthCheckinEntry,
   type AccountRow,
   type CashActualRow,
   type CategoryRow,
   type FlagRow,
-  type GoalScenarioRow,
-  type InstallmentPlanRow,
   type LabelRow,
   type SettingsRow,
   type StatementRow,
+} from './rows'
+import {
+  toGoalScenario,
+  toInstallmentPlan,
+  toWealthAccount,
+  toWealthCheckin,
+  toWealthCheckinEntry,
+  type GoalScenarioRow,
+  type InstallmentPlanRow,
   type WealthAccountRow,
   type WealthCheckinEntryRow,
   type WealthCheckinRow,
-} from './rows'
+} from './planningRows'
 
 export async function rows<T>(
   db: D1Database,
