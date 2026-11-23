@@ -62,39 +62,70 @@ export function CashReserveSetting({ settings, onChange }: Props) {
       <div className={styles.settingGroup}>
         <label className={styles.defaultAccountField}>
           <span className={styles.defaultAccountLabel}>Months of spending to hold in cash</span>
-          <input
-            className={styles.defaultAccountSelect}
-            type="number"
-            min={0}
-            max={MAX_MONTHS}
-            step={1}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value)
+          <ReserveInput
+            draft={draft}
+            onDraftChange={(value) => {
+              setDraft(value)
               setError(null)
             }}
-            onBlur={() => void commit()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-              if (e.key === 'Escape') {
-                cancelled.current = true
-                setDraft(String(saved))
-                setError(null)
-                e.currentTarget.blur()
-              }
+            onCommit={() => void commit()}
+            onCancel={() => {
+              cancelled.current = true
+              setDraft(String(saved))
+              setError(null)
             }}
           />
         </label>
-        {error ? (
-          <p className={styles.settingError} role="alert">
-            {error}
-          </p>
-        ) : null}
-        <p className={styles.settingHint}>
-          Progress sets the cash accounts in your latest check-in against your average monthly spending and says how
-          many months they cover. With a target it says whether you are there yet; 0 leaves the target off.
-        </p>
+        <ReserveNotes error={error} />
       </div>
     </Card>
+  )
+}
+
+function ReserveInput({
+  draft,
+  onDraftChange,
+  onCommit,
+  onCancel,
+}: {
+  draft: string
+  onDraftChange: (draft: string) => void
+  onCommit: () => void
+  onCancel: () => void
+}) {
+  return (
+    <input
+      className={styles.defaultAccountSelect}
+      type="number"
+      min={0}
+      max={MAX_MONTHS}
+      step={1}
+      value={draft}
+      onChange={(e) => onDraftChange(e.target.value)}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          onCancel()
+          e.currentTarget.blur()
+        }
+      }}
+    />
+  )
+}
+
+function ReserveNotes({ error }: { error: string | null }) {
+  return (
+    <>
+      {error ? (
+        <p className={styles.settingError} role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p className={styles.settingHint}>
+        Progress sets the cash accounts in your latest check-in against your average monthly spending and says how many
+        months they cover. With a target it says whether you are there yet; 0 leaves the target off.
+      </p>
+    </>
   )
 }
