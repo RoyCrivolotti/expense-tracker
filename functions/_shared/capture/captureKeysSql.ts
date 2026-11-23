@@ -1,5 +1,5 @@
-import type { CaptureKey, CaptureKeySummary, NewCaptureKey } from '../../../src/domain/ports/captureRepository'
-import { MAX_ACTIVE_CAPTURE_KEYS } from '../../../src/domain/ports/captureRepository'
+import type { CaptureKey, CaptureKeySummary, NewCaptureKey } from '../../../src/domain/ports/captureKeys'
+import { MAX_ACTIVE_CAPTURE_KEYS } from '../../../src/domain/ports/captureKeys'
 
 /**
  * The cap is checked inside the insert, not read first, so two requests made at once cannot both pass it. The

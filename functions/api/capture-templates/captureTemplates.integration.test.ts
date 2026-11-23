@@ -10,7 +10,7 @@ import { OTHER, OWNER, createExpenseWorld, type Handler, type World } from '../.
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { createD1ExpenseRepository } from '../../_shared/adapters/d1ExpenseRepository'
 import { capturePhone } from '../../_shared/testing/capturePhone'
-import { MAX_IGNORED_LISTED } from '../../../src/domain/ports/captureRepository'
+import { MAX_IGNORED_LISTED } from '../../../src/domain/ports/captureTemplates'
 import { onRequestPost as createLabel } from '../expenses/labels/index'
 import { onRequestPost as dismiss } from '../recommendations/[id]/dismiss'
 import { onRequestGet as list } from './index'

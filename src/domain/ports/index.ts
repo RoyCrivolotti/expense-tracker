@@ -10,17 +10,14 @@ export type {
 } from './accessRepository'
 export type { BackupAlerts, BucketLimitDetails, LargeSnapshotDetails } from './backupAlerts'
 export type { EmailSender, OutboundEmail } from './emailSender'
-export { MAX_ACTIVE_CAPTURE_KEYS } from './captureRepository'
+export { MAX_ACTIVE_CAPTURE_KEYS } from './captureKeys'
+export type { CaptureCard } from './captureCards'
+export type { CaptureCounter, CaptureEvent } from './captureEvents'
+export type { CaptureKey, CaptureKeySummary, NewCaptureKey } from './captureKeys'
+export type { CaptureRepository } from './captureRepository'
 export type {
-  CaptureCard,
-  CaptureCounter,
-  CaptureEvent,
-  CaptureKey,
-  CaptureKeySummary,
-  CaptureRepository,
-  NewCaptureKey,
   NewRecommendation,
   Recommendation,
   RecommendationCursor,
   RecommendationState,
-} from './captureRepository'
+} from './captureRecommendations'

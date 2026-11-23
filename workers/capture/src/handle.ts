@@ -4,7 +4,7 @@ import type { CaptureRepository } from '../../../src/domain/ports/captureReposit
 import { authenticate, bearerKey } from './authenticate'
 import { readCappedText } from './body'
 import type { RawPush } from '../../../src/domain/capture'
-import type { CaptureKey } from '../../../src/domain/ports/captureRepository'
+import type { CaptureKey } from '../../../src/domain/ports/captureKeys'
 import type { CaptureEnv } from './env'
 import type { CreatedPayment } from './notify'
 import { consoleLogger } from './log'

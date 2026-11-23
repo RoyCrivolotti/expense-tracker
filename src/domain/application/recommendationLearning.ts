@@ -6,7 +6,9 @@ import { bankMerchantName } from '../capture/review'
 import type { Slot } from '../capture/slots'
 import { suggestFor, type MerchantRow } from '../capture/suggestion'
 import { cleanText } from '../capture/text'
-import type { CaptureRepository, Recommendation, RecommendationEvent } from '../ports/captureRepository'
+import type { CaptureRepository } from '../ports/captureRepository'
+import type { Recommendation } from '../ports/captureRecommendations'
+import type { RecommendationEvent } from '../ports/captureLearning'
 import type { Transaction } from '../types'
 
 /** What a decision learns from the row the person saved or linked. */

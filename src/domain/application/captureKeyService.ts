@@ -1,5 +1,6 @@
 import { mintCaptureKey } from '../capture/captureKey'
-import type { CaptureKeySummary, CaptureRepository } from '../ports/captureRepository'
+import type { CaptureKeySummary } from '../ports/captureKeys'
+import type { CaptureRepository } from '../ports/captureRepository'
 import { validateLabel } from './labels'
 
 export const MAX_CAPTURE_KEY_LABEL_LENGTH = 40

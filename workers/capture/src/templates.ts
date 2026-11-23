@@ -1,6 +1,6 @@
 import { WILDCARD, siblingSlot, withWildcard } from '../../../src/domain/capture'
 import type { PushReading, TokenRun } from '../../../src/domain/capture'
-import type { CaptureTemplate, TemplateDecision } from '../../../src/domain/ports/captureRepository'
+import type { CaptureTemplate, TemplateDecision } from '../../../src/domain/ports/captureTemplates'
 
 /** What the `capture_templates` columns hold at most. A push whose template would not fit gets none. */
 export const MAX_TEMPLATE_TEXT = 1000

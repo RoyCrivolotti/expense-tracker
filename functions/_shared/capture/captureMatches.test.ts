@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import type { CaptureRepository, Recommendation } from '../../../src/domain/ports/captureRepository'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { Recommendation } from '../../../src/domain/ports/captureRecommendations'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 import { MATCH_CANDIDATES_SQL } from './captureMatchesSql'
 

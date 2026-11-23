@@ -1,4 +1,4 @@
-import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureCardLinks } from '../../../src/domain/ports/captureCards'
 import {
   ACCOUNT_EXISTS_SQL,
   CLEAR_OPEN_OF_UNLINKED_SQL,
@@ -10,9 +10,7 @@ import {
 import { LIST_CARDS_SQL, SAVE_CARD_SQL } from '../capture/captureEventsSql'
 import { changed, rows } from './d1CaptureSupport'
 
-export function cards(
-  db: D1Database,
-): Pick<CaptureRepository, 'saveCard' | 'listCards' | 'linkCard' | 'unlinkCard' | 'listWaitingCards'> {
+export function cards(db: D1Database): CaptureCardLinks {
   return {
     linkCard: async (
       owner,

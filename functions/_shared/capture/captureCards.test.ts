@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import {
-  MAX_CAPTURE_CARDS,
-  type CaptureCard,
-  type CaptureRepository,
-} from '../../../src/domain/ports/captureRepository'
+import { MAX_CAPTURE_CARDS, type CaptureCard } from '../../../src/domain/ports/captureCards'
+import { type CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'

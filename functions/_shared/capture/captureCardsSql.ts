@@ -1,4 +1,4 @@
-import { MAX_CAPTURE_CARDS } from '../../../src/domain/ports/captureRepository'
+import { MAX_CAPTURE_CARDS } from '../../../src/domain/ports/captureCards'
 
 /**
  * The events of one card or account, as the recommendations they made: a recommendation's `id` is its event's

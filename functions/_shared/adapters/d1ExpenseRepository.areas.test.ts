@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import type { ExpenseAttachments, ExpenseLedgerReads, ExpenseLedgerWrites } from '../../domain/ports/expenseLedger'
+import type { ExpensePlanning, ExpenseWealth } from '../../domain/ports/expensePlanning'
+import type { ExpenseFlagsAndLabels, ExpenseReference } from '../../domain/ports/expenseReference'
 import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
 import type { Env } from '../env'
 import { attachments, ledgerReads, ledgerWrites } from './d1ExpenseLedger'
@@ -111,5 +114,15 @@ describe('createD1ExpenseRepository areas', () => {
 
   it('covers every method of the port between them', () => {
     expect([...areasByMethod().keys()].sort()).toEqual(Object.keys(PORT_METHODS).sort())
+  })
+
+  it('gives each factory exactly the methods of one role of the port', () => {
+    expectTypeOf<ReturnType<typeof ledgerReads>>().toEqualTypeOf<ExpenseLedgerReads>()
+    expectTypeOf<ReturnType<typeof ledgerWrites>>().toEqualTypeOf<ExpenseLedgerWrites>()
+    expectTypeOf<ReturnType<typeof attachments>>().toEqualTypeOf<ExpenseAttachments>()
+    expectTypeOf<ReturnType<typeof flagsAndLabels>>().toEqualTypeOf<ExpenseFlagsAndLabels>()
+    expectTypeOf<ReturnType<typeof reference>>().toEqualTypeOf<ExpenseReference>()
+    expectTypeOf<ReturnType<typeof planning>>().toEqualTypeOf<ExpensePlanning>()
+    expectTypeOf<ReturnType<typeof wealth>>().toEqualTypeOf<ExpenseWealth>()
   })
 })

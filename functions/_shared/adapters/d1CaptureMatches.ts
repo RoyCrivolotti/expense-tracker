@@ -1,4 +1,4 @@
-import type { Recommendation } from '../../../src/domain/ports/captureRepository'
+import type { Recommendation } from '../../../src/domain/ports/captureRecommendations'
 import {
   candidateSpan,
   possibleMatchesFor,

@@ -1,6 +1,7 @@
 import { shiftDay } from '../capture/reviewDates'
 import type { CaptureSource } from '../capture/types'
-import type { CaptureCounter, CaptureRepository } from '../ports/captureRepository'
+import type { CaptureCounter } from '../ports/captureEvents'
+import type { CaptureRepository } from '../ports/captureRepository'
 import type { MutedCount, SourceOutcomes } from '../ports/captureStatusReads'
 
 /** How far back the setup check's counts reach, in UTC days including today. */

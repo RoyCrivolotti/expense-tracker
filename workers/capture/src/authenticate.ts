@@ -1,7 +1,8 @@
 import { isEmailAllowed, requireExpensesGroupGrant } from '../../../functions/_shared/access/accessAuthorizer'
 import { HttpError } from '../../../functions/_shared/http'
 import type { AccessRepository } from '../../../src/domain/ports/accessRepository'
-import type { CaptureKey, CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureKey } from '../../../src/domain/ports/captureKeys'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { parseCaptureKey, secretMatches } from '../../../src/domain/capture'
 import type { CaptureEnv } from './env'
 

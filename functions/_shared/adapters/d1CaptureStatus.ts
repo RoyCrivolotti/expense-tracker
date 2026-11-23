@@ -1,4 +1,4 @@
-import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureStatusReads } from '../../../src/domain/ports/captureStatusReads'
 import { COUNTED_SOURCES_SQL, MUTED_TEMPLATES_SQL, SOURCE_OUTCOMES_SQL } from '../capture/captureStatusSql'
 import { rows } from './d1CaptureSupport'
 
@@ -13,9 +13,7 @@ interface OutcomeRow {
   open: number
 }
 
-export function status(
-  db: D1Database,
-): Pick<CaptureRepository, 'countedSources' | 'readSourceOutcomes' | 'countMutedTemplates'> {
+export function status(db: D1Database): CaptureStatusReads {
   return {
     countedSources: async (owner) =>
       (await rows<{ source: string }>(db, COUNTED_SOURCES_SQL, owner)).map((r) => r.source),

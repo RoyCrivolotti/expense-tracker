@@ -1,6 +1,6 @@
 import { merchantKeyOf, storedSlots, suggestFor } from '../../../src/domain/capture'
 import type { MerchantRow } from '../../../src/domain/capture'
-import type { Recommendation } from '../../../src/domain/ports/captureRepository'
+import type { Recommendation } from '../../../src/domain/ports/captureRecommendations'
 import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from '../capture/captureSuggestionsSql'
 import { toFacts, type FactsRow } from '../capture/captureLearningSql'
 import { rows } from './d1CaptureSupport'

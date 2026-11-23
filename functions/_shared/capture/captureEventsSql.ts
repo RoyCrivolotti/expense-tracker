@@ -1,6 +1,6 @@
 import { GROUP_WINDOW_MS } from '../../../src/domain/capture/grouping'
 import { MALFORMED_SOURCE } from '../../../src/domain/capture/source'
-import type { CaptureCaps, CaptureEvent } from '../../../src/domain/ports/captureRepository'
+import type { CaptureCaps, CaptureEvent } from '../../../src/domain/ports/captureEvents'
 
 /**
  * The open recommendation of the key's owner that a push joins, by the rule of `sameMovement`: the same amount and

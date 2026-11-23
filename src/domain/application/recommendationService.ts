@@ -1,6 +1,7 @@
 import type { NewTransaction } from '../data/dataSource'
 import { paymentOfRow, type PossibleMatch } from '../capture/duplicate'
-import type { CaptureRepository, Recommendation, RecommendationCursor } from '../ports/captureRepository'
+import type { CaptureRepository } from '../ports/captureRepository'
+import type { Recommendation, RecommendationCursor } from '../ports/captureRecommendations'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
 import { learnAfterDecision, savedRow } from './recommendationLearning'

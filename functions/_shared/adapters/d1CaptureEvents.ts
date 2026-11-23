@@ -1,4 +1,4 @@
-import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureCounters, CaptureEventLog } from '../../../src/domain/ports/captureEvents'
 import {
   eventParams,
   BUMP_COUNTER_SQL,
@@ -13,9 +13,7 @@ import {
 import { recordCapture } from './d1CaptureWrites'
 import { changed, rows } from './d1CaptureSupport'
 
-export function events(
-  db: D1Database,
-): Pick<CaptureRepository, 'recordEvent' | 'recordCapture' | 'hasEvent' | 'admit' | 'eventsSince' | 'lastCaptureAt'> {
+export function events(db: D1Database): CaptureEventLog {
   return {
     recordEvent: (
       event,
@@ -61,7 +59,7 @@ export function events(
 }
 
 /** Per owner, source and day: how many pushes arrived, and how many of those were unrecognised or malformed. */
-export function counters(db: D1Database): Pick<CaptureRepository, 'bumpCounter' | 'readCounters'> {
+export function counters(db: D1Database): CaptureCounters {
   return {
     bumpCounter: async (
       owner,
