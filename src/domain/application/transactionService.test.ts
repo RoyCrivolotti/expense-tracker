@@ -14,7 +14,7 @@ import {
   validateNewTransaction,
 } from './transactionValidation'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
-import type { ExpenseRepositorySeed } from '../../testing/inMemoryExpenseRepository'
+import type { ExpenseRepositorySeed } from '../../testing/inMemoryStore'
 
 const validTxn = {
   date: '2026-01-01',

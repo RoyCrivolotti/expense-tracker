@@ -28,7 +28,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/marketSpread.ts': 203,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
-  'src/testing/inMemoryExpenseRepository.ts': 1211,
   'src/testing/transactionQueryKit.ts': 276,
   'src/ui/ExpensesApp.tsx': 445,
   'src/ui/charts/LinearChart.tsx': 350,
@@ -78,7 +77,6 @@ const FILE_LINE_CAPS = {
 const FUNCTION_LINE_CAPS = {
   'src/data/inMemoryLedgerParts.ts': 68,
   'src/testing/fakeIntersectionObserver.ts': 63,
-  'src/testing/inMemoryExpenseRepository.ts': 1096,
   'src/testing/ledgerSource.ts': 72,
   'src/testing/seedSqlite.ts': 70,
   'src/testing/smallLedgerDb.ts': 68,
