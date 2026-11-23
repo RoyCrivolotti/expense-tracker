@@ -31,7 +31,6 @@ const FILE_LINE_CAPS = {
   'src/testing/inMemoryExpenseRepository.ts': 1211,
   'src/testing/transactionQueryKit.ts': 276,
   'src/ui/charts/LinearChart.tsx': 350,
-  'src/ui/charts/linearChartParts.tsx': 461,
   'src/ui/components/BatchTransactionForm.tsx': 329,
   'src/ui/components/InstallmentStep.tsx': 212,
   'src/ui/components/ReceiptStrip.tsx': 296,

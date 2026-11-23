@@ -4,23 +4,21 @@ import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { describedBy, tabIndexFor, tooltipShows } from './linearChartKeys'
 import { StepKeysHint } from './StepKeysHint'
 import { useElementSize } from '../hooks/useElementSize'
+import { ChartGrid, ChartXLabels, ChartBandLayer, ChartScatterLayer, ChartFocusIndicator } from './chartDataLayers'
 import {
-  ChartGrid,
-  ChartXLabels,
-  ChartBandLayer,
   ChartRefCurves,
   ChartRefLines,
   ChartAnnotationLayer,
   type AnnotationDot,
   type ChartAnnotations,
   type RefHighlight,
-  ChartScatterLayer,
+} from './chartReferenceLayers'
+import {
   ChartTodayMarker,
   ChartAboveMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
   ChartLabeledMarkers,
-  ChartFocusIndicator,
   type LabeledMarker,
   type LifeEventMarker,
 } from './linearChartParts'
