@@ -11,6 +11,7 @@ import { TransactionPager } from '../data/transactionPager'
 import { onWriteReceipt } from '../data/writeReceipts'
 import { buildLedgerModel, withHistory } from './buildLedgerModel'
 import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
+import { HISTORY_WORDS } from './historyWords'
 import { ledgerUsageHook } from './ledgerUsage'
 import { sessionWithCounts, useListFailure } from './ledgerWrites'
 import { pagedListOf } from './pagedTransactionList'
@@ -65,13 +66,6 @@ function keep(
   if (owner) void saveLedgerSnapshot(owner, held, viewed)
   settled?.(held)
 }
-
-const HISTORY_WORDS = {
-  loading:
-    'Reading the recurring charges. Until they arrive, the fixed and flexible figures use only the months loaded.',
-  failed: "Couldn't read the recurring charges, so the fixed and flexible figures use only the months loaded.",
-  offline: "You're offline, so the fixed and flexible figures use only the months saved on this device.",
-} as const
 
 /** What a windowed model says about having no history: it is being read, the read failed, or there is no one to ask. */
 function historyNoteOf(
