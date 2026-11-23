@@ -97,10 +97,14 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
   }
   const rememberFor = (v: ReviewView) =>
     rememberCardOf(v, (key, accountId) => setLinked((held) => new Map(held).set(key, accountId)))
+  const reviewAs = (
+    view: ReviewView,
+    series: SeriesFit,
+  ) => review(describe(view.rec, { kind: 'series', series }))
   function review(view: ReviewView) {
     const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
     const after = latest.current.slice(at + 1).map((v) => v.rec.id)
-    openForm(queuedSeed(view, after, () => latest.current, dontAdd, rememberFor))
+    openForm(queuedSeed(view, after, { latest: () => latest.current, dontAdd, rememberFor, choose: reviewAs }))
   }
   return {
     views,
@@ -124,9 +128,6 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
       decide(view.rec.id, message, `link ${name(view)}`, () => linkRecommendation(view.rec.id, match.transactionId))
     },
     review,
-    reviewAs: (
-      view,
-      series,
-    ) => review(describe(view.rec, { kind: 'series', series })),
+    reviewAs,
   }
 }

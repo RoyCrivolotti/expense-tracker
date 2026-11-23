@@ -52,6 +52,19 @@ export interface TransactionSeed {
   card?: SeedCard
   /** The typed row the list already offered for this payment, so the form does not ask about it a second time. */
   possibleMatch?: { transactionId: number; description: string; date: string }
+  /** The monthly series a captured payment may be, when more than one fits: the form asks which, and picking one opens it. */
+  seriesChoice?: SeedSeriesOption[]
+  /** The monthly series the fields were filled from, so picking another one opens a fresh form rather than keeping these. */
+  fromSeries?: string
+}
+
+/** One of the monthly series a captured payment may be. */
+export interface SeedSeriesOption {
+  seriesKey: string
+  /** "Music Plan, due 14 Nov". */
+  label: string
+  /** Opens the form on the payment filled from this series. */
+  pick: () => void
 }
 
 /** What the add form offers when the server says a typed row already looks like the payment being added. */

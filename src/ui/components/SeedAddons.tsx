@@ -8,6 +8,7 @@ import type { FormFields, Setter } from './transactionFormState'
 // The question about a card is only for captured payments, so it is not part of the form's own code.
 const CardQuestion = lazy(() => import('../capture/CardQuestion'))
 const DuplicateNotice = lazy(() => import('../capture/DuplicateNotice'))
+const SeriesChoice = lazy(() => import('../capture/SeriesChoice'))
 
 interface SeedAddonsProps {
   seed: TransactionSeed | undefined
@@ -18,11 +19,21 @@ interface SeedAddonsProps {
   duplicate?: DuplicateOffer | undefined
 }
 
-/** What a captured payment adds to the form: the note under the date, the question about its card, and the offer to link a typed row it may duplicate. */
+/**
+ * What a captured payment adds to the form: the note under the date, which of two monthly series it is, the question
+ * about its card, and the offer to link a typed row it may duplicate.
+ */
 export function SeedAddons({ seed, form, set, model, onDate, duplicate }: SeedAddonsProps) {
   return (
     <>
       {seed?.notice && <SeedNotice notice={seed.notice} date={form.date} onDate={onDate} />}
+      {seed?.seriesChoice && (
+        <ChunkBoundary fallback={null}>
+          <Suspense fallback={null}>
+            <SeriesChoice options={seed.seriesChoice} />
+          </Suspense>
+        </ChunkBoundary>
+      )}
       {seed?.card && (
         <ChunkBoundary fallback={null}>
           <Suspense fallback={null}>
