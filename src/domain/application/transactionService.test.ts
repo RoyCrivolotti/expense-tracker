@@ -3,14 +3,16 @@ import {
   bulkCreateTransactions,
   bulkDeleteTransactions,
   bulkUpdateTransactions,
+  patchTransaction,
+} from './transactionService'
+import { validateTransactionPatch } from './transactionPatchValidation'
+import {
   MAX_BULK_CREATE,
   MAX_NOTES_LENGTH,
-  patchTransaction,
   validateBulkTransactions,
   validateBulkUpdatePatch,
   validateNewTransaction,
-  validateTransactionPatch,
-} from './transactionService'
+} from './transactionValidation'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import type { ExpenseRepositorySeed } from '../../testing/inMemoryExpenseRepository'
 

@@ -7,7 +7,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../../src/testing/sqliteD1'
-import { MAX_BULK_CREATE, MAX_NOTES_LENGTH } from '../../../../src/domain/application/transactionService'
+import { MAX_BULK_CREATE, MAX_NOTES_LENGTH } from '../../../../src/domain/application/transactionValidation'
 import { createExpenseWorld, pinClock, type Handler, type World } from '../../../_shared/testing/expenseWorld'
 import { seedLedger, type SeededIds } from '../../../_shared/testing/seedLedger'
 import { onRequestGet as getSummary } from './summary'

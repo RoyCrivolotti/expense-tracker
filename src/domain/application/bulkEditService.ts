@@ -17,7 +17,7 @@ import type { BulkTransactionPatch } from '../data/dataSource'
 import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { validateTxnFilter } from './transactionQueryService'
-import { validateBulkUpdatePatch } from './transactionService'
+import { validateBulkUpdatePatch } from './transactionValidation'
 import { ValidationError } from './validationError'
 
 export interface BulkFilterRequest extends FilterTarget {

@@ -4,7 +4,8 @@ import type { CaptureRepository, Recommendation, RecommendationCursor } from '..
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { Transaction } from '../types'
 import { learnAfterDecision, savedRow } from './recommendationLearning'
-import { createTransaction, validateNewTransaction } from './transactionService'
+import { createTransaction } from './transactionService'
+import { validateNewTransaction } from './transactionValidation'
 import { ValidationError } from './validationError'
 
 /** The most rows one page of the open list returns. */
