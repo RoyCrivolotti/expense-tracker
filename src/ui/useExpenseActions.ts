@@ -1,42 +1,14 @@
 import { useMemo, useRef } from 'react'
 import type { ExpenseSettings } from '../types'
-import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
+import type { ExpenseDataSource } from '../data/dataSource'
+import { patchAfterSettings } from './datasetPatches'
 import type { ExpenseActions, ExpenseModalState } from './actions'
-import { type ApplyPatch, bulkWriteOf, unchanged } from './bulkWrite'
+import { type ApplyPatch, bulkWriteOf } from './bulkWrite'
 import { createWrites } from './createWrites'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
-import {
-  patchAfterAccount,
-  patchAfterAccountDelete,
-  patchAfterBulkDelete,
-  patchAfterBulkUpdate,
-  patchAfterCashActual,
-  patchAfterAttachmentAdd,
-  patchAfterAttachmentDelete,
-  patchAfterCategory,
-  patchAfterCategoryDelete,
-  patchAfterFlag,
-  patchAfterFlagDelete,
-  patchAfterLabel,
-  patchAfterLabelDelete,
-  patchAfterInstallmentPlanCreate,
-  patchAfterInstallmentPlanDelete,
-  patchAfterInstallmentPlanUpdate,
-  patchAfterScenarioActivate,
-  patchAfterScenarioCreate,
-  patchAfterScenarioDelete,
-  patchAfterScenarioUpdate,
-  patchAfterSettings,
-  patchAfterStatementPaid,
-  patchAfterTransactionDelete,
-  patchAfterTransactionUpdate,
-  patchAfterWealthAccountCreate,
-  patchAfterWealthAccountDelete,
-  patchAfterWealthAccountUpdate,
-  patchAfterWealthCheckinCreate,
-  patchAfterWealthCheckinDelete,
-  patchAfterWealthCheckinUpdate,
-} from './datasetPatches'
+import { planningWrites, wealthWrites } from './planningWrites'
+import { referenceWrites, tagWrites } from './referenceWrites'
+import { statementWrites, transactionWrites } from './transactionWrites'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
 /**
@@ -62,160 +34,10 @@ export function useExpenseActions(
       onDuplicate: (txn) => openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       ...createWrites(source, applyPatch, readAgain),
-      updateTransaction: async (
-        id: number,
-        patch: Partial<NewTransaction>,
-      ) => {
-        const txn = await source.updateTransaction!(id, patch)
-        applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [id], patch })
-      },
-      deleteTransaction: async (id) => {
-        await source.deleteTransaction!(id)
-        applyPatch((d) => patchAfterTransactionDelete(d, id), { ids: [id] })
-      },
-      deleteTransactions: (ids) =>
-        bulkWrite(
-          () => source.deleteTransactions!(ids),
-          // Still drop every requested id locally: one the server did not delete is one
-          // that was already gone, so the local copy is the stale side either way.
-          () => applyPatch((d) => patchAfterBulkDelete(d, ids), { ids }),
-          ({ deleted }) => deleted,
-        ),
-      updateTransactions: (
-        ids: number[],
-        patch: BulkTransactionPatch,
-      ) =>
-        bulkWrite(
-          () => source.updateTransactions!(ids, patch),
-          (result) => applyPatch((d) => patchAfterBulkUpdate(d, result.transactions), { ids, patch }),
-          ({ updated }) => updated,
-        ),
-      // The server answers with counts and not the rows, so a ledger that shows them reads them again.
-      addLabels: (
-        ids,
-        labelIds,
-      ) =>
-        bulkWrite(
-          () => source.addLabelsToTransactions!(ids, labelIds),
-          () => applyPatch(unchanged, { patch: {} }),
-          ({ matched }) => matched,
-        ),
-      updateMatching: (
-        target,
-        patch,
-        labelIds,
-      ) =>
-        bulkWrite(
-          () => source.updateMatchingTransactions!(target, patch, labelIds),
-          () => applyPatch(unchanged, { patch }),
-          ({ updated }) => updated,
-        ),
-      setStatementPaid: async (
-        accountId,
-        yearMonth,
-        paid,
-        paidOn,
-      ) => {
-        const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)
-        applyPatch((d) => patchAfterStatementPaid(d, stmt))
-      },
-      setCashActual: async (
-        yearMonth,
-        actualCashCents,
-      ) => {
-        const row = await source.setCashActual!(yearMonth, actualCashCents)
-        applyPatch((d) => patchAfterCashActual(d, row, yearMonth))
-      },
-      uploadAttachment: async (
-        transactionId,
-        file,
-      ) => {
-        const attachment = await source.uploadAttachment!(transactionId, file)
-        applyPatch((d) => patchAfterAttachmentAdd(d, attachment))
-      },
-      deleteAttachment: async (id) => {
-        await source.deleteAttachment!(id)
-        applyPatch((d) => patchAfterAttachmentDelete(d, id))
-      },
-      createFlag: async (input) => {
-        const flag = await source.createFlag!(input)
-        applyPatch((d) => patchAfterFlag(d, flag))
-        return flag
-      },
-      updateFlag: async (
-        id,
-        patch,
-      ) => {
-        const flag = await source.updateFlag!(id, patch)
-        applyPatch((d) => patchAfterFlag(d, flag))
-      },
-      deleteFlag: async (id) => {
-        const result = await source.deleteFlag!(id)
-        applyPatch((d) => patchAfterFlagDelete(d, id))
-        return result
-      },
-      createLabel: async (input) => {
-        const label = await source.createLabel!(input)
-        applyPatch((d) => patchAfterLabel(d, label))
-        return label
-      },
-      updateLabel: async (
-        id,
-        patch,
-      ) => {
-        const label = await source.updateLabel!(id, patch)
-        applyPatch((d) => patchAfterLabel(d, label))
-      },
-      deleteLabel: async (id) => {
-        const result = await source.deleteLabel!(id)
-        applyPatch((d) => patchAfterLabelDelete(d, id))
-        return result
-      },
-      setTransactionLabels: async (
-        transactionId,
-        labelIds,
-      ) => {
-        const txn = await source.setTransactionLabels!(transactionId, labelIds)
-        applyPatch((d) => patchAfterTransactionUpdate(d, txn), { ids: [transactionId], patch: {} })
-      },
-      createCategory: async (input) => {
-        const category = await source.createCategory!(input)
-        applyPatch((d) => patchAfterCategory(d, category))
-      },
-      updateCategory: async (
-        id,
-        patch,
-      ) => {
-        const category = await source.updateCategory!(id, patch)
-        applyPatch((d) => patchAfterCategory(d, category))
-      },
-      deleteCategory: async (
-        id,
-        options,
-      ) => {
-        const result = await source.deleteCategory!(id, options)
-        applyPatch((d) => patchAfterCategoryDelete(d, id, result))
-        return result
-      },
-      createAccount: async (input) => {
-        const account = await source.createAccount!(input)
-        applyPatch((d) => patchAfterAccount(d, account))
-      },
-      updateAccount: async (
-        id,
-        patch,
-      ) => {
-        const account = await source.updateAccount!(id, patch)
-        applyPatch((d) => patchAfterAccount(d, account))
-      },
-      deleteAccount: async (
-        id,
-        options,
-      ) => {
-        const result = await source.deleteAccount!(id, options)
-        applyPatch((d) => patchAfterAccountDelete(d, id, result))
-        return result
-      },
+      ...transactionWrites(source, applyPatch, bulkWrite),
+      ...statementWrites(source, applyPatch),
+      ...tagWrites(source, applyPatch),
+      ...referenceWrites(source, applyPatch),
       updateSettings: async (patch) => {
         const order = settingsOrder.current
         const turn = ++order.issued
@@ -227,75 +49,8 @@ export function useExpenseActions(
         for (const key of keys) order.applied.set(key, turn)
         applyPatch((d) => patchAfterSettings(d, settings, keys))
       },
-      createScenario: async (input) => {
-        const scenario = await source.createScenario!(input)
-        applyPatch((d) => patchAfterScenarioCreate(d, scenario))
-        return scenario
-      },
-      updateScenario: async (
-        id,
-        patch,
-      ) => {
-        const scenario = await source.updateScenario!(id, patch)
-        applyPatch((d) => patchAfterScenarioUpdate(d, scenario))
-      },
-      activateScenario: async (id) => {
-        const scenario = await source.activateScenario!(id)
-        applyPatch((d) => patchAfterScenarioActivate(d, scenario))
-      },
-      deleteScenario: async (id) => {
-        await source.deleteScenario!(id)
-        applyPatch((d) => patchAfterScenarioDelete(d, id))
-      },
-      createInstallmentPlan: async (input) => {
-        const plan = await source.createInstallmentPlan!(input)
-        applyPatch((d) => patchAfterInstallmentPlanCreate(d, plan))
-        return plan
-      },
-      updateInstallmentPlan: async (
-        id,
-        patch,
-      ) => {
-        const plan = await source.updateInstallmentPlan!(id, patch)
-        applyPatch((d) => patchAfterInstallmentPlanUpdate(d, plan))
-      },
-      deleteInstallmentPlan: async (id) => {
-        await source.deleteInstallmentPlan!(id)
-        applyPatch((d) => patchAfterInstallmentPlanDelete(d, id))
-      },
-      createWealthAccount: async (input) => {
-        const account = await source.createWealthAccount!(input)
-        applyPatch((d) => patchAfterWealthAccountCreate(d, account))
-        return account
-      },
-      updateWealthAccount: async (
-        id,
-        patch,
-      ) => {
-        const account = await source.updateWealthAccount!(id, patch)
-        applyPatch((d) => patchAfterWealthAccountUpdate(d, account))
-      },
-      deleteWealthAccount: async (id) => {
-        // The server archives an account that check-ins refer to and removes any other.
-        const { archived } = await source.deleteWealthAccount!(id)
-        applyPatch((d) => patchAfterWealthAccountDelete(d, id, archived))
-      },
-      createWealthCheckin: async (input) => {
-        const checkin = await source.createWealthCheckin!(input)
-        applyPatch((d) => patchAfterWealthCheckinCreate(d, checkin))
-        return checkin
-      },
-      updateWealthCheckin: async (
-        id,
-        patch,
-      ) => {
-        const checkin = await source.updateWealthCheckin!(id, patch)
-        applyPatch((d) => patchAfterWealthCheckinUpdate(d, checkin))
-      },
-      deleteWealthCheckin: async (id) => {
-        await source.deleteWealthCheckin!(id)
-        applyPatch((d) => patchAfterWealthCheckinDelete(d, id))
-      },
+      ...planningWrites(source, applyPatch),
+      ...wealthWrites(source, applyPatch),
     }
   }, [source, applyPatch, openModal, readOnly, readAgain])
 }
