@@ -51,51 +51,9 @@ export function FlagAutoLabelEditor({ flag, labels, actions, onDone }: Props) {
         ones flagged from now on.
       </p>
       <ul className={pickerStyles.list}>
-        <li>
-          <button
-            type="button"
-            className={pickerStyles.option}
-            onClick={() => setValue(null)}
-            aria-pressed={value === null}
-          >
-            <span className={`${pickerStyles.swatch} ${pickerStyles.swatchNone}`} aria-hidden />
-            <span className={pickerStyles.optionBody}>
-              <span className={pickerStyles.optionName}>No auto-label</span>
-            </span>
-            {value === null ? (
-              <span className={pickerStyles.tick} aria-hidden>
-                ✓
-              </span>
-            ) : null}
-          </button>
-        </li>
+        <NoLabelOption selected={value === null} onSelect={() => setValue(null)} />
         {options.map((label) => (
-          <li key={label.id}>
-            <button
-              type="button"
-              className={pickerStyles.option}
-              onClick={() => setValue(label.id)}
-              aria-pressed={value === label.id}
-            >
-              <span
-                className={pickerStyles.swatch}
-                style={{ background: label.color, borderRadius: '999px' }}
-                aria-hidden
-              />
-              <span className={pickerStyles.optionBody}>
-                <span className={pickerStyles.optionName}>
-                  {label.name}
-                  {!label.active ? <span className={pickerStyles.archived}> · archived</span> : null}
-                </span>
-                {label.description ? <span className={pickerStyles.optionDesc}>{label.description}</span> : null}
-              </span>
-              {value === label.id ? (
-                <span className={pickerStyles.tick} aria-hidden>
-                  ✓
-                </span>
-              ) : null}
-            </button>
-          </li>
+          <LabelOption key={label.id} label={label} selected={value === label.id} onSelect={() => setValue(label.id)} />
         ))}
       </ul>
       {creating ? (
@@ -123,5 +81,45 @@ export function FlagAutoLabelEditor({ flag, labels, actions, onDone }: Props) {
         </button>
       </div>
     </div>
+  )
+}
+
+function NoLabelOption({ selected, onSelect }: { selected: boolean; onSelect: () => void }) {
+  return (
+    <li>
+      <button type="button" className={pickerStyles.option} onClick={onSelect} aria-pressed={selected}>
+        <span className={`${pickerStyles.swatch} ${pickerStyles.swatchNone}`} aria-hidden />
+        <span className={pickerStyles.optionBody}>
+          <span className={pickerStyles.optionName}>No auto-label</span>
+        </span>
+        {selected ? (
+          <span className={pickerStyles.tick} aria-hidden>
+            ✓
+          </span>
+        ) : null}
+      </button>
+    </li>
+  )
+}
+
+function LabelOption({ label, selected, onSelect }: { label: Label; selected: boolean; onSelect: () => void }) {
+  return (
+    <li>
+      <button type="button" className={pickerStyles.option} onClick={onSelect} aria-pressed={selected}>
+        <span className={pickerStyles.swatch} style={{ background: label.color, borderRadius: '999px' }} aria-hidden />
+        <span className={pickerStyles.optionBody}>
+          <span className={pickerStyles.optionName}>
+            {label.name}
+            {!label.active ? <span className={pickerStyles.archived}> · archived</span> : null}
+          </span>
+          {label.description ? <span className={pickerStyles.optionDesc}>{label.description}</span> : null}
+        </span>
+        {selected ? (
+          <span className={pickerStyles.tick} aria-hidden>
+            ✓
+          </span>
+        ) : null}
+      </button>
+    </li>
   )
 }
