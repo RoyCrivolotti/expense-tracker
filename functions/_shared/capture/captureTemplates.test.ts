@@ -1,14 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import { MAX_CAPTURE_TEMPLATES, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
-import type {
-  CaptureEvent,
-  CaptureRecorded,
-  CaptureRepository,
-  NewRecommendation,
-  TemplateDecision,
-} from '../../../src/domain/ports/captureRepository'
+import { MAX_CAPTURE_TEMPLATES, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureTemplates'
+import type { CaptureEvent, CaptureRecorded } from '../../../src/domain/ports/captureEvents'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { NewRecommendation } from '../../../src/domain/ports/captureRecommendations'
+import type { TemplateDecision } from '../../../src/domain/ports/captureTemplates'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'

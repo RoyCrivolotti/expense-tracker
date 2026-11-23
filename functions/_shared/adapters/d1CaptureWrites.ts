@@ -1,13 +1,10 @@
-import { BODY_KEEP_DAYS, MAX_CAPTURE_TEMPLATES } from '../../../src/domain/ports/captureRepository'
-import type {
-  CaptureCaps,
-  CaptureEvent,
-  CaptureRecorded,
-  CaptureRepository,
-  DecisionLearning,
-  NewRecommendation,
-  TemplateDecision,
-} from '../../../src/domain/ports/captureRepository'
+import { BODY_KEEP_DAYS } from '../../../src/domain/ports/captureEvents'
+import { MAX_CAPTURE_TEMPLATES } from '../../../src/domain/ports/captureTemplates'
+import type { CaptureCaps, CaptureEvent, CaptureRecorded } from '../../../src/domain/ports/captureEvents'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { DecisionLearning } from '../../../src/domain/ports/captureLearning'
+import type { NewRecommendation } from '../../../src/domain/ports/captureRecommendations'
+import type { TemplateDecision } from '../../../src/domain/ports/captureTemplates'
 import {
   BLANK_OLD_TEXT_SQL,
   BUMP_COUNTER_SQL,

@@ -1,5 +1,9 @@
-import { MAX_IGNORED_LISTED, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureRepository'
-import type { CaptureRepository, Recommendation } from '../../../src/domain/ports/captureRepository'
+import { MAX_IGNORED_LISTED, TEMPLATE_LOOKUP_LIMIT } from '../../../src/domain/ports/captureTemplates'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureRecommendationStore, Recommendation } from '../../../src/domain/ports/captureRecommendations'
+import type { CaptureKeyStore } from '../../../src/domain/ports/captureKeys'
+import type { CaptureLearningStore } from '../../../src/domain/ports/captureLearning'
+import type { CaptureTemplateStore } from '../../../src/domain/ports/captureTemplates'
 import type { Env } from '../env'
 import { CARDS_OF_RECOMMENDATIONS_SQL } from '../capture/captureCardsSql'
 import { FIND_TEMPLATES_SQL, LIST_IGNORED_SQL, UNIGNORE_SQL, toIgnored } from '../capture/captureTemplatesSql'
@@ -38,9 +42,7 @@ import {
 } from '../capture/captureRecommendationsSql'
 import type { OpenSummaryRow, RecommendationRow } from '../capture/captureRecommendationsSql'
 
-type Statements = Pick<CaptureRepository, 'createKey' | 'findKey' | 'listKeys' | 'revokeKey' | 'touchKey'>
-
-function keys(db: D1Database): Statements {
+function keys(db: D1Database): CaptureKeyStore {
   return {
     createKey: (key) => changed(db, CREATE_KEY_SQL, ...keyParams(key)),
     findKey: async (keyId) => {
@@ -79,18 +81,7 @@ async function withCards(
   return page.map((r) => ({ ...r, card: byRec.get(r.id) ?? null }))
 }
 
-function recommendations(
-  db: D1Database,
-): Pick<
-  CaptureRepository,
-  | 'createRecommendation'
-  | 'getRecommendation'
-  | 'listOpenRecommendations'
-  | 'countOpenRecommendations'
-  | 'summarizeOpen'
-  | 'decideRecommendation'
-  | 'findPossibleMatch'
-> {
+function recommendations(db: D1Database): CaptureRecommendationStore {
   return {
     createRecommendation: async (rec) => {
       await changed(db, CREATE_RECOMMENDATION_SQL, ...createParams(rec))
@@ -131,9 +122,7 @@ function recommendations(
   }
 }
 
-function templates(
-  db: D1Database,
-): Pick<CaptureRepository, 'findTemplates' | 'countIgnoredPush' | 'listIgnoredTemplates' | 'unignoreTemplate'> {
+function templates(db: D1Database): CaptureTemplateStore {
   return {
     listIgnoredTemplates: async (owner) =>
       (await rows<IgnoredRow>(db, LIST_IGNORED_SQL, owner, MAX_IGNORED_LISTED)).map(toIgnored),
@@ -163,9 +152,7 @@ function templates(
   }
 }
 
-function learning(
-  db: D1Database,
-): Pick<CaptureRepository, 'eventOfRecommendation' | 'applyDecisionLearning' | 'merchantRows'> {
+function learning(db: D1Database): CaptureLearningStore {
   return {
     merchantRows: async (
       owner,

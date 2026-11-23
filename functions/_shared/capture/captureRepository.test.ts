@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MALFORMED_SOURCE } from '../../../src/domain/capture'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import type { CaptureEvent, CaptureRepository, NewRecommendation } from '../../../src/domain/ports/captureRepository'
+import type { CaptureEvent } from '../../../src/domain/ports/captureEvents'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { NewRecommendation } from '../../../src/domain/ports/captureRecommendations'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'

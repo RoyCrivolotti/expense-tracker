@@ -3,7 +3,7 @@ import type {
   OpenSummary,
   Recommendation,
   RecommendationState,
-} from '../../../src/domain/ports/captureRepository'
+} from '../../../src/domain/ports/captureRecommendations'
 import { EVENT_HAS_TEXT, EVENT_TEXT_SET } from './captureEventsSql'
 
 const COLUMNS = `id, owner, account_id, amount_cents, currency, occurred_at, local_date, merchant_raw,

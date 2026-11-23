@@ -1,4 +1,4 @@
-import type { IgnoredTemplate, TemplateDecision } from '../../../src/domain/ports/captureRepository'
+import type { IgnoredTemplate, TemplateDecision } from '../../../src/domain/ports/captureTemplates'
 
 export const FIND_TEMPLATES_SQL = `SELECT template_id, skeleton, merchant_start, merchant_end, ignored_at FROM capture_templates
 WHERE owner = ?1 AND source = ?2 AND title = ?3 ORDER BY last_seen DESC LIMIT ?4`

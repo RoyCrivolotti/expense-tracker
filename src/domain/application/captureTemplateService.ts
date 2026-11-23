@@ -1,4 +1,5 @@
-import type { CaptureRepository, IgnoredTemplate } from '../ports/captureRepository'
+import type { CaptureRepository } from '../ports/captureRepository'
+import type { IgnoredTemplate } from '../ports/captureTemplates'
 import { ValidationError } from './validationError'
 
 /** Template ids are UUIDs the Worker made. Anything else cannot be one. */

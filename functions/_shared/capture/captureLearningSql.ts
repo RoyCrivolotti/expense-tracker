@@ -1,5 +1,5 @@
 import type { Candidate, MerchantVote, TemplateFacts } from '../../../src/domain/capture'
-import type { RecommendationEvent } from '../../../src/domain/ports/captureRepository'
+import type { RecommendationEvent } from '../../../src/domain/ports/captureLearning'
 
 /*
  * What a decision on a recommendation teaches the template of the push behind it. Every statement is scoped by owner

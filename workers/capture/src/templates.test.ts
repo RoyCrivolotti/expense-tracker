@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_SIBLING_RUN, readPush, spanText } from '../../../src/domain/capture'
-import type { CaptureTemplate } from '../../../src/domain/ports/captureRepository'
+import type { CaptureTemplate } from '../../../src/domain/ports/captureTemplates'
 import { MAX_TEMPLATE_TEXT, decideTemplate, matchTemplate, mutes } from './templates'
 
 const TITLE = 'Card payment'

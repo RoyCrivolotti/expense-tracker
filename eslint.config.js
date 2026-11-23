@@ -28,7 +28,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/marketSpread.ts': 203,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
-  'src/domain/ports/captureRepository.ts': 277,
   'src/domain/ports/expenseRepository.ts': 282,
   'src/testing/inMemoryExpenseRepository.ts': 1211,
   'src/testing/transactionQueryKit.ts': 276,

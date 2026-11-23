@@ -9,7 +9,7 @@ import { OTHER, OWNER, createExpenseWorld, type Handler, type World } from '../.
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { createD1ExpenseRepository } from '../../_shared/adapters/d1ExpenseRepository'
 import { createD1CaptureRepository } from '../../_shared/adapters/d1CaptureRepository'
-import type { NewRecommendation } from '../../../src/domain/ports/captureRepository'
+import type { NewRecommendation } from '../../../src/domain/ports/captureRecommendations'
 import { onRequestPost as postAccount } from '../expenses/accounts/index'
 import { onRequestPost as postCategory } from '../expenses/categories/index'
 import { onRequestPost as postTransaction } from '../expenses/transactions/index'

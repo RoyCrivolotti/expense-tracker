@@ -1,11 +1,6 @@
 import { isSourceWord } from '../capture/source'
-import type {
-  CaptureCard,
-  CaptureRepository,
-  CardDigitsKind,
-  LinkCardResult,
-  WaitingCard,
-} from '../ports/captureRepository'
+import type { CaptureCard, CardDigitsKind, LinkCardResult, WaitingCard } from '../ports/captureCards'
+import type { CaptureRepository } from '../ports/captureRepository'
 import { ValidationError } from './validationError'
 
 const DIGIT_KINDS: readonly CardDigitsKind[] = ['card', 'account']

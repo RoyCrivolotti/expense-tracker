@@ -9,7 +9,7 @@ import { OTHER, OWNER, createExpenseWorld, type Handler, type World } from '../.
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { createD1ExpenseRepository } from '../../_shared/adapters/d1ExpenseRepository'
 import { createD1CaptureRepository } from '../../_shared/adapters/d1CaptureRepository'
-import { MAX_CAPTURE_CARDS } from '../../../src/domain/ports/captureRepository'
+import { MAX_CAPTURE_CARDS } from '../../../src/domain/ports/captureCards'
 import { onRequestDelete as remove, onRequestGet as list, onRequestPost as link } from './index'
 
 let world: World

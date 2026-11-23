@@ -1,4 +1,5 @@
-import type { CaptureRepository, OpenSummary } from '../../../src/domain/ports/captureRepository'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { OpenSummary } from '../../../src/domain/ports/captureRecommendations'
 import type { SummaryPerson } from '../../../src/domain/ports/pushRepository'
 import type { CaptureEnv } from './env'
 import { deliver, vapidKeysOf } from './notify'

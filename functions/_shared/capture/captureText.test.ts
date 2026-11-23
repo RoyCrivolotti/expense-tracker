@@ -2,7 +2,8 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migratedDatabase, sqliteD1 } from '../../../src/testing/sqliteD1'
-import type { CaptureEvent, CaptureRecorded, CaptureRepository } from '../../../src/domain/ports/captureRepository'
+import type { CaptureEvent, CaptureRecorded } from '../../../src/domain/ports/captureEvents'
+import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
 
 const ALICE = 'alice@example.com'

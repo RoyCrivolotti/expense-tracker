@@ -1,5 +1,5 @@
 import { MAX_SOURCES_PER_OWNER } from '../../../src/domain/capture'
-import type { CaptureCaps, DailyCaps } from '../../../src/domain/ports/captureRepository'
+import type { CaptureCaps, DailyCaps } from '../../../src/domain/ports/captureEvents'
 
 /** Largest request body the Worker reads. A real push is a few hundred bytes. */
 export const MAX_BODY_BYTES = 16 * 1024
