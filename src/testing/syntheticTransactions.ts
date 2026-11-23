@@ -59,7 +59,6 @@ function seriesRows(
   month: string,
   monthIndex: number,
 ): RowDraft[] {
-  const mm = Number(month.slice(5))
   const out: RowDraft[] = [
     row(month, 1, {
       description: 'Rent',
@@ -97,6 +96,17 @@ function seriesRows(
       amountCents: 80_000,
     }),
   ]
+  out.push(...occasionalRows(month, monthIndex))
+  return out
+}
+
+/** The rows that do not come every month: the quarterly bill, the yearly premium, now and then a withdrawal. */
+function occasionalRows(
+  month: string,
+  monthIndex: number,
+): RowDraft[] {
+  const mm = Number(month.slice(5))
+  const out: RowDraft[] = []
   if (mm % 3 === 1) {
     out.push(
       row(month, 14, {
