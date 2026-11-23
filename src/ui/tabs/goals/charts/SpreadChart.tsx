@@ -23,16 +23,8 @@ import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
 import { ScrollRegion } from './ScrollRegion'
 import { useReplayInputOrLive } from './useReplayInput'
-import {
-  SPREAD_RUNS,
-  fiRow,
-  milestoneRows,
-  spreadCaption,
-  spreadHeadline,
-  spreadKey,
-  spreadSeries,
-  spreadWarning,
-} from './spreadModel'
+import { SPREAD_RUNS, fiRow, milestoneRows, spreadKey, spreadSeries } from './spreadModel'
+import { spreadCaption, spreadHeadline, spreadWarning } from './spreadText'
 import styles from '../goals.module.css'
 
 export interface SpreadChartProps {
