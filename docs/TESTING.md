@@ -44,7 +44,7 @@ When adding a new protected route or group rule, extend that file first.
 
 ### Testing D1 batch atomicity
 
-`functions/_shared/dbConfig.deleteWithReassign.test.ts` stubs `env.DB.batch()` to assert both the
+`functions/_shared/dbDeleteWithReassign.test.ts` stubs `env.DB.batch()` to assert both the
 exact statements sent (so reassignment SQL stays owner-scoped) and that a rejected batch surfaces
 as an error with zero partial writes. Reuse that `stubEnv()` helper for any future D1 adapter
 change that must be all-or-nothing.

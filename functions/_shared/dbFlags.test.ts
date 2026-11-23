@@ -8,7 +8,7 @@ interface StatementStub {
 }
 
 /**
- * Same shape as the stub in dbConfig.deleteWithReassign.test.ts: mock `env.DB`
+ * Same shape as the stub in dbDeleteWithReassign.test.ts: mock `env.DB`
  * so we can assert the exact SQL and bound args, and in particular that the
  * delete really does go through a single `batch()`.
  */

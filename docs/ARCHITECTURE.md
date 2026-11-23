@@ -46,7 +46,7 @@ Wrangler `alias`. `npm run verify` recreates them (`scripts/ensure-function-syml
   outright. The reassign and the delete run as one `env.DB.batch(...)`, so a failure cannot leave rows pointing at a
   deleted id. An inline create runs first as its own statement, because D1 cannot use one statement's new id in a later
   statement of the same batch, and it is cleaned up on a best-effort basis if the batch then fails (`deleteCategory` and
-  `deleteAccount` in `dbConfig.ts`). Archiving (`active: false`) is unrelated and never blocked.
+  `deleteAccount` in `dbCategories.ts` and `dbAccounts.ts`). Archiving (`active: false`) is unrelated and never blocked.
 - **Pickers and reassign targets offer only active categories and accounts**, so nothing new is linked to something
   archived. The one exception is a form's own current value, so editing an unrelated field never breaks the form
   (`src/ui/components/pickerOptions.ts`).

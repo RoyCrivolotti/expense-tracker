@@ -19,19 +19,10 @@ import {
   setStatementPaid,
   updateTransaction,
 } from '../dbWrite'
-import {
-  activateScenario,
-  createAccount,
-  createCategory,
-  createScenario,
-  deleteAccount,
-  deleteCategory,
-  deleteScenario,
-  updateAccount,
-  updateCategory,
-  updateScenario,
-  updateSettings,
-} from '../dbConfig'
+import { createCategory, deleteCategory, updateCategory } from '../dbCategories'
+import { createAccount, deleteAccount, updateAccount } from '../dbAccounts'
+import { updateSettings } from '../dbSettings'
+import { activateScenario, createScenario, deleteScenario, updateScenario } from '../dbScenarios'
 import { createInstallmentPlan, deleteInstallmentPlan, updateInstallmentPlan } from '../dbInstallments'
 import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
 import { createLabel, deleteLabel, setTransactionLabels, updateLabel } from '../dbLabels'

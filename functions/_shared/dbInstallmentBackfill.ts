@@ -32,9 +32,9 @@ import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } 
  *
  * Skips re-validating account/category ownership: an installment plan's
  * account_id/category_id can never dangle or belong to another owner —
- * dbConfig.ts's deleteAccount/deleteCategory always either block the delete
- * while any installment_plans row references them, or reassign the plan's
- * column in the same batch.
+ * deleteAccount/deleteCategory (dbAccounts.ts, dbCategories.ts) always either
+ * block the delete while any installment_plans row references them, or
+ * reassign the plan's column in the same batch.
  */
 async function insertBackfillRow(
   env: Env,

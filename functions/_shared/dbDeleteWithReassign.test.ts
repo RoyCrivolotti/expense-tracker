@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { deleteAccount, deleteCategory } from './dbConfig'
+import { deleteAccount } from './dbAccounts'
+import { deleteCategory } from './dbCategories'
 import type { Env } from './env'
 
 interface StatementStub {

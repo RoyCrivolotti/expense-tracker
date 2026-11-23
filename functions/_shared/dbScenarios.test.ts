@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Env } from './env'
-import { activateScenario, createScenario } from './dbConfig'
+import { activateScenario, createScenario } from './dbScenarios'
 import type { GoalScenarioRow } from './rows'
 
 const OWNER = 'test@example.com'
