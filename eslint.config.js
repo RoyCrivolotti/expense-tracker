@@ -180,7 +180,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/useStarredLevers.ts': 103,
   'src/ui/tabs/useTransactionSelection.ts': 136,
   'src/ui/tabs/useTransactionsTabState.ts': 160,
-  'src/ui/useExpenseData.ts': 97,
   'src/ui/useLedgerData.ts': 119,
 }
 
