@@ -32,6 +32,8 @@ export {
   merchantVotes,
 } from './merchants'
 export type { MerchantVote, SavedForMerchant } from './merchants'
+export { SERIES_MATCH_DAYS, matchPushesToSeries } from './seriesMatch'
+export type { PushToMatch, SeriesFit, SeriesHint } from './seriesMatch'
 export { suggestFor } from './suggestion'
 export type { MerchantRow, Suggestion, SuggestionInput, SuggestionReason } from './suggestion'
 export { MALFORMED_SOURCE, MAX_APP_NAME_LENGTH, MAX_SOURCES_PER_OWNER, isSourceWord, sourceWordOf } from './source'
