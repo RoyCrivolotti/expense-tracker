@@ -97,7 +97,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/components/Modal.tsx': 68,
   'src/ui/components/PercentStepper.tsx': 64,
   'src/ui/components/QuickCreateLabel.tsx': 69,
-  'src/ui/components/ReassignDeleteSheet.tsx': 75,
   'src/ui/components/ReceiptStrip.tsx': 87,
   'src/ui/components/TransactionRow.tsx': 62,
   'src/ui/definitions/ConfigModal.tsx': 84,
