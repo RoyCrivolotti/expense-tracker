@@ -78,7 +78,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/access/RequestAccessScreen.tsx': 67,
   'src/ui/analytics/overview/OverviewView.tsx': 63,
   'src/ui/analytics/overview/overviewModel.ts': 63,
-  'src/ui/analytics/spending/SpendingView.tsx': 100,
   'src/ui/capture/CardQuestion.tsx': 68,
   'src/ui/capture/useRecommendationList.ts': 63,
   'src/ui/capture/useReviewApi.ts': 65,
