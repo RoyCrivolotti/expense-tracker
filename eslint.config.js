@@ -24,7 +24,6 @@ const FILE_LINE_CAPS = {
   'src/data/ledgerSession.ts': 376,
   'src/data/transactionPager.ts': 278,
   'src/domain/application/goalService.ts': 214,
-  'src/domain/application/recommendationService.ts': 227,
   'src/domain/application/transactionService.ts': 339,
   'src/domain/capture/review.ts': 230,
   'src/domain/capture/slots.ts': 206,
