@@ -4,12 +4,8 @@ import { groupTransactionsByFlag, summarizeFlagGroups, type FlagGroup } from '..
 import { Card, SectionTitle } from '../components/primitives'
 import { FlaggedTip } from '../tips/TransactionsTips'
 import { Money } from '../components/Money'
-import { TransactionList } from '../components/TransactionList'
-import { FlagGlyph } from '../components/FlagGlyph'
+import { FlagGroupSection } from './FlagGroupSection'
 import styles from './FlaggedCard.module.css'
-
-/** Enough to recognise the group; the full set lives one click away in the list. */
-const PREVIEW_LIMIT = 5
 
 interface Props {
   model: ExpenseModel
@@ -31,104 +27,6 @@ interface Props {
   onClearFlag?: ((txn: Transaction) => void) | undefined
   /** Clears every transaction in a group's flag at once, behind a confirmation. */
   onClearGroup?: ((group: FlagGroup) => void) | undefined
-}
-
-function FlagGroupSection({
-  group,
-  model,
-  onFilterByFlag,
-  filterLocked,
-  onLockedFilterPress,
-  onOpenReport,
-  onSettle,
-  onSelect,
-  onClearFlag,
-  onClearGroup,
-}: {
-  group: FlagGroup
-  model: ExpenseModel
-  onFilterByFlag: (flagId: number) => void
-  filterLocked: boolean
-  onLockedFilterPress?: (() => void) | undefined
-  onOpenReport: (flagId: number) => void
-  onSettle: (group: FlagGroup) => void
-  onSelect?: ((txn: Transaction) => void) | undefined
-  onClearFlag?: ((txn: Transaction) => void) | undefined
-  onClearGroup?: ((group: FlagGroup) => void) | undefined
-}) {
-  const preview = group.transactions.slice(0, PREVIEW_LIMIT)
-  return (
-    <details className={styles.group}>
-      <summary className={styles.summary}>
-        <FlagGlyph flag={group.flag} className={styles.summaryGlyph} decorative />
-        <span className={styles.summaryBody}>
-          <span className={styles.summaryName}>{group.flag.name}</span>
-          {group.flag.description ? <span className={styles.summaryDesc}>{group.flag.description}</span> : null}
-        </span>
-        <span className={styles.summaryStats}>
-          <span className={styles.count}>
-            {group.count} item{group.count === 1 ? '' : 's'}
-          </span>
-          <Money cents={group.totalCents} signed={group.totalCents < 0} className={styles.total} />
-        </span>
-      </summary>
-      <div className={styles.body}>
-        <TransactionList
-          rows={preview.map((txn) => ({ kind: 'transaction' as const, txn }))}
-          lookup={model.lookup}
-          flat
-          showDate
-          {...(onSelect ? { onSelect } : {})}
-          {...(onClearFlag ? { onClearFlag } : {})}
-        />
-        <div className={styles.groupActions}>
-          <div className={styles.actionsRow}>
-            <button
-              type="button"
-              className={styles.filterBtn}
-              onClick={filterLocked ? onLockedFilterPress : () => onFilterByFlag(group.flag.id)}
-              {...(filterLocked ? { 'aria-disabled': true } : {})}
-            >
-              Filter by flag
-            </button>
-            {/* Only where somebody owes the money back. On a flag you keep just
-                to find things later, an expense report is a document addressed to
-                nobody for money that is not coming. */}
-            {group.flag.reimbursable ? (
-              <button type="button" className={styles.packBtn} onClick={() => onOpenReport(group.flag.id)}>
-                Expense report
-              </button>
-            ) : null}
-          </div>
-          {/*
-            Hidden once nothing is outstanding: the amount would prefill 0,00 €
-            and the form rejects that, so the button would only ever fail. Its
-            own row, half width and right-aligned under Expense report — the
-            button it most often follows — rather than stretched or wrapped
-            wherever flex happens to leave room for it.
-          */}
-          {group.flag.reimbursable && group.totalCents > 0 ? (
-            <div className={styles.actionsRow}>
-              <button type="button" className={styles.settleBtn} onClick={() => onSettle(group)}>
-                Record reimbursement
-              </button>
-            </div>
-          ) : null}
-          {/* Every flag can be cleared this way, reimbursable or not — a flag is
-              "needs attention", and this is how you say a group of them no
-              longer does without reimbursing anything. Its own row: the two
-              rows above already fill 375px between them. */}
-          {onClearGroup ? (
-            <div className={styles.actionsRow}>
-              <button type="button" className={styles.clearAllBtn} onClick={() => onClearGroup(group)}>
-                Clear all in this group
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </details>
-  )
 }
 
 /**
@@ -176,18 +74,7 @@ export function FlaggedCard({
           costs one row and still answers the question the feature exists for.
         */}
         <details className={styles.card__root}>
-          <summary className={styles.rollup}>
-            <span className={styles.rollupBody}>
-              <span className={styles.rollupCount}>
-                {total.count} item{total.count === 1 ? '' : 's'} across {groups.length} flag
-                {groups.length === 1 ? '' : 's'}
-              </span>
-              {/* Every sibling card on this screen is month-scoped; this one is
-                  not, and nothing else on it would say so. */}
-              <span className={styles.rollupScope}>All months, not just this one</span>
-            </span>
-            <Money cents={total.totalCents} signed={total.totalCents < 0} className={styles.rollupTotal} />
-          </summary>
+          <FlaggedRollup total={total} flagCount={groups.length} />
           <div className={styles.groups}>
             {groups.map((group) => (
               <FlagGroupSection
@@ -204,19 +91,42 @@ export function FlaggedCard({
                 {...(onClearGroup ? { onClearGroup } : {})}
               />
             ))}
-            <div className={styles.cardActions}>
-              <button type="button" className={styles.manageBtn} onClick={onManage}>
-                Manage flags
-              </button>
-              {onViewPast ? (
-                <button type="button" className={styles.manageBtn} onClick={onViewPast}>
-                  Past reports
-                </button>
-              ) : null}
-            </div>
+            <FlaggedCardActions onManage={onManage} onViewPast={onViewPast} />
           </div>
         </details>
       </Card>
     </>
+  )
+}
+
+function FlaggedRollup({ total, flagCount }: { total: ReturnType<typeof summarizeFlagGroups>; flagCount: number }) {
+  return (
+    <summary className={styles.rollup}>
+      <span className={styles.rollupBody}>
+        <span className={styles.rollupCount}>
+          {total.count} item{total.count === 1 ? '' : 's'} across {flagCount} flag
+          {flagCount === 1 ? '' : 's'}
+        </span>
+        {/* Every sibling card on this screen is month-scoped; this one is
+                  not, and nothing else on it would say so. */}
+        <span className={styles.rollupScope}>All months, not just this one</span>
+      </span>
+      <Money cents={total.totalCents} signed={total.totalCents < 0} className={styles.rollupTotal} />
+    </summary>
+  )
+}
+
+function FlaggedCardActions({ onManage, onViewPast }: { onManage: () => void; onViewPast?: (() => void) | undefined }) {
+  return (
+    <div className={styles.cardActions}>
+      <button type="button" className={styles.manageBtn} onClick={onManage}>
+        Manage flags
+      </button>
+      {onViewPast ? (
+        <button type="button" className={styles.manageBtn} onClick={onViewPast}>
+          Past reports
+        </button>
+      ) : null}
+    </div>
   )
 }
