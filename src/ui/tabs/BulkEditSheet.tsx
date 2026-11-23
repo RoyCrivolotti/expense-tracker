@@ -1,19 +1,11 @@
 import { useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
-import { defaultBudgetMonth } from '../../domain/engine/dates'
-import { todayIso } from '../components/transactionFormState'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import { selectableOptions, optionLabel } from '../components/pickerOptions'
 import { offScreenNote } from './useTransactionSelection'
-import { TypeSelector } from '../components/TransactionFields'
-import { STORED_TYPES } from '../components/transactionTypes'
-import { FlagField } from '../components/FlagField'
-import { createFlagInPlace } from '../components/quickFlag'
-import { LabelField } from '../components/LabelField'
-import { createLabelInPlace } from '../components/quickLabel'
 import { Modal } from '../components/Modal'
-import { BulkDateField, BulkMonthField } from './BulkEditPickers'
+import { BulkFieldCards } from './BulkFieldCards'
+import { initialBulkFields } from './bulkEditInitial'
 import {
   buildBulkLabelAdditions,
   buildBulkPatch,
@@ -21,7 +13,6 @@ import {
   type BulkEditFieldState,
   type DescriptionCount,
 } from './bulkEditFields'
-import { DescriptionField } from './DescriptionField'
 import styles from './BulkEditSheet.module.css'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
@@ -66,26 +57,7 @@ export function BulkEditSheet({
   onCancel,
 }: BulkEditSheetProps) {
   const [popoverOpen, setPopoverOpen] = usePopoverTrapPause()
-  const [fields, setFields] = useState<BulkEditFieldState>({
-    categoryEnabled: false,
-    categoryId: model.dataset.categories[0]?.id ?? 0,
-    accountEnabled: false,
-    accountId: model.dataset.accounts[0]?.id ?? 0,
-    typeEnabled: false,
-    type: 'expense',
-    dateEnabled: false,
-    date: todayIso(),
-    budgetMonthEnabled: false,
-    // Not the calendar month: an owner whose budget rolls over mid-month would be
-    // handed a month a single edit would never produce.
-    budgetMonth: defaultBudgetMonth(todayIso(), model.dataset.settings.budgetRolloverDay),
-    flagEnabled: false,
-    flagId: model.dataset.flags.find((f) => f.active)?.id ?? null,
-    labelsEnabled: false,
-    labelIds: [],
-    descriptionEnabled: false,
-    description: '',
-  })
+  const [fields, setFields] = useState<BulkEditFieldState>(initialBulkFields(model))
 
   const set = <K extends keyof BulkEditFieldState>(
     key: K,
@@ -96,92 +68,20 @@ export function BulkEditSheet({
 
   const handleApply = () => onApply(buildBulkPatch(fields), buildBulkLabelAdditions(fields))
 
-  const categories = selectableOptions(model.dataset.categories, 0)
-  const accounts = selectableOptions(model.dataset.accounts, 0)
   const noun = count === 1 ? 'transaction' : 'transactions'
 
   return (
     <Modal title="Edit selected" subtitle={`${count} ${noun}`} onClose={onCancel} trapPaused={popoverOpen}>
       <OffScreenNote hiddenCount={hiddenCount} />
       <div className={styles.fields}>
-        <ToggleField
-          label="Description"
-          enabled={fields.descriptionEnabled}
-          onToggle={(v) => set('descriptionEnabled', v)}
-        >
-          <DescriptionField
-            value={fields.description}
-            index={model.descriptionIndex}
-            replaced={currentDescriptions}
-            onChange={(v) => set('description', v)}
-          />
-        </ToggleField>
-
-        <ToggleField label="Category" enabled={fields.categoryEnabled} onToggle={(v) => set('categoryEnabled', v)}>
-          <select value={fields.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {optionLabel(c)}
-              </option>
-            ))}
-          </select>
-        </ToggleField>
-
-        <ToggleField label="Account" enabled={fields.accountEnabled} onToggle={(v) => set('accountEnabled', v)}>
-          <select value={fields.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {optionLabel(a)}
-              </option>
-            ))}
-          </select>
-        </ToggleField>
-
-        <ToggleField label="Type" enabled={fields.typeEnabled} onToggle={(v) => set('typeEnabled', v)}>
-          <TypeSelector options={STORED_TYPES} value={fields.type} onChange={(t) => set('type', t)} />
-        </ToggleField>
-
-        <ToggleField label="Date" enabled={fields.dateEnabled} onToggle={(v) => set('dateEnabled', v)}>
-          <BulkDateField
-            value={fields.date}
-            onChange={(date) => set('date', date)}
-            onTrapPausedChange={setPopoverOpen}
-          />
-        </ToggleField>
-
-        <ToggleField
-          label="Budget month"
-          enabled={fields.budgetMonthEnabled}
-          onToggle={(v) => set('budgetMonthEnabled', v)}
-        >
-          <BulkMonthField
-            value={fields.budgetMonth}
-            onChange={(budgetMonth) => set('budgetMonth', budgetMonth)}
-            onTrapPausedChange={setPopoverOpen}
-          />
-        </ToggleField>
-        <ToggleField label="Flag" enabled={fields.flagEnabled} onToggle={(v) => set('flagEnabled', v)}>
-          <FlagField
-            compact
-            flags={model.dataset.flags}
-            value={fields.flagId}
-            onChange={(flagId) => set('flagId', flagId)}
-            onTrapPausedChange={setPopoverOpen}
-            {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
-          />
-        </ToggleField>
-        <ToggleField label="Labels" enabled={fields.labelsEnabled} onToggle={(v) => set('labelsEnabled', v)}>
-          <LabelField
-            labels={model.dataset.labels}
-            value={fields.labelIds}
-            onChange={(labelIds) => set('labelIds', labelIds)}
-            onTrapPausedChange={setPopoverOpen}
-            {...(actions ? { onCreate: createLabelInPlace(actions, model.dataset.labels) } : {})}
-          />
-          {/* Unlike every field above, this can't mean "replace": the rows in one
-              bulk edit can each already carry a different set of labels. */}
-          <p className={styles.fieldHint}>Added to whatever each transaction already has.</p>
-        </ToggleField>
+        <BulkFieldCards
+          fields={fields}
+          set={set}
+          model={model}
+          actions={actions}
+          currentDescriptions={currentDescriptions}
+          onTrapPausedChange={setPopoverOpen}
+        />
       </div>
 
       <div className={styles.actions}>
@@ -193,27 +93,5 @@ export function BulkEditSheet({
         </button>
       </div>
     </Modal>
-  )
-}
-
-function ToggleField({
-  label,
-  enabled,
-  onToggle,
-  children,
-}: {
-  label: string
-  enabled: boolean
-  onToggle: (enabled: boolean) => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className={`${styles.fieldCard} ${enabled ? styles.fieldCardActive : ''}`}>
-      <label className={styles.fieldHeader}>
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
-        <span className={styles.fieldLabel}>{label}</span>
-      </label>
-      {enabled && <div className={styles.fieldInput}>{children}</div>}
-    </div>
   )
 }
