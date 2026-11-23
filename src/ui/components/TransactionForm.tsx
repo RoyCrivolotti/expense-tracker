@@ -1,21 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
-import { isWithdrawal } from './transactionTypes'
-import { revokeStaged, type PendingReceipt } from '../../data/pendingReceipts'
 import { useToast } from '../hooks/useToast'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { DuplicateOffer, TransactionSeed } from '../actions'
-import { SaveButtons } from './TransactionSaveButtons'
-import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
-import { acceptDescriptionSuggestion } from './transactionFormActions'
-import { InstallmentStep } from './InstallmentStep'
-import { buildInstallmentIntent, type InstallmentDraft, type InstallmentIntent } from './installmentIntent'
-import { CardPaymentIcon } from '../icons'
+import { type InstallmentDraft, type InstallmentIntent } from './installmentIntent'
+import { initialDraft } from './transactionFormSupport'
+import { useDirtyReporting, useRevokeStagedOnUnmount, useTransactionSave } from './useTransactionSave'
+import { FormActions, FormBody } from './TransactionFormParts'
 import styles from './TransactionForm.module.css'
 
 interface FormProps {
@@ -56,270 +52,15 @@ interface FormProps {
   onViewChange: (view: 'fields' | 'installment') => void
 }
 
-function toInput(
-  form: FormFields,
-  cents: number,
-  editing: Transaction | null,
-): NewTransaction {
-  return {
-    date: form.date,
-    budgetMonth: form.budgetMonth,
-    description: form.description,
-    accountId: form.accountId,
-    categoryId: form.categoryId,
-    type: form.type,
-    // Money out of the portfolio is stored as a negative investment.
-    amountCents: form.type === 'investment' && form.outflow ? -cents : cents,
-    cancelled: editing?.cancelled ?? false,
-    ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
-    // Always sent, including as null — on edit that is how the flag is cleared,
-    // and an absent key would leave the old one in place.
-    flagId: form.flagId,
-  }
-}
-
-function initialDraft(
-  editing: Transaction | null,
-  model: ExpenseModel,
-  seed?: TransactionSeed,
-): InstallmentDraft {
-  if (!editing && seed?.planId != null) {
-    const plan = model.lookup.installmentPlan(seed.planId)
-    return {
-      mode: 'existing',
-      planId: seed.planId,
-      totalCount: plan ? String(plan.totalCount) : '',
-      installmentIndex: seed.installmentIndex != null ? String(seed.installmentIndex) : '',
-    }
-  }
-  return { mode: 'none', totalCount: '', installmentIndex: '', planId: null, splitTotal: false }
-}
-
-/**
- * Whether the installment link has anything to say ("New plan - payment 2/12",
- * "Kitchen renovation - payment 5/12") versus the default "Not part of a
- * plan" — which needs no row of its own and lives as a chip next to "Add
- * receipt" / "Add note" instead. A payment plan's own description can run
- * long, so once there's real content it gets a full-width row to wrap in
- * rather than clipping inside a chip.
- */
-function hasInstallmentLink(
-  draft: InstallmentDraft,
-  editing: Transaction | null,
-): boolean {
-  return draft.mode !== 'none' || editing?.planId != null
-}
-
-/** Label for the installment toggle reflecting the pending draft, then current link. */
-function linkLabel(
-  draft: InstallmentDraft,
-  editing: Transaction | null,
-  model: ExpenseModel,
-): string {
-  if (draft.mode === 'new') {
-    return `New plan - payment ${draft.installmentIndex || '?'}/${draft.totalCount || '?'}`
-  }
-  if (draft.mode === 'existing') {
-    const plan = draft.planId != null ? model.lookup.installmentPlan(draft.planId) : undefined
-    return plan ? `${plan.description} - payment ${draft.installmentIndex || '?'}/${plan.totalCount}` : 'Existing plan'
-  }
-  if (draft.mode === 'unlink') return 'Will be removed from plan'
-  if (editing?.planId != null) {
-    const plan = model.lookup.installmentPlan(editing.planId)
-    return plan ? `Installment ${editing.installmentIndex}/${plan.totalCount} - ${plan.description}` : 'Part of a plan'
-  }
-  return 'Not part of a plan'
-}
-
-/**
- * Splits the installment toggle into its two mutually-exclusive renderings —
- * a compact chip for the chip row, or the full-width bar for when there's a
- * label worth wrapping — so the branch on `hasInstallmentLink` lives here
- * rather than adding another one to TransactionForm's own complexity.
- */
-function installmentControl({
-  draft,
-  editing,
-  model,
-  onOpen,
-  withdrawal,
-}: {
-  draft: InstallmentDraft
-  editing: Transaction | null
-  model: ExpenseModel
-  onOpen: () => void
-  /** A withdrawal is money coming back; splitting it into payments makes no sense. */
-  withdrawal: boolean
-}): { chip: ReactNode; bar: ReactNode } {
-  if (withdrawal && !hasInstallmentLink(draft, editing)) return { chip: undefined, bar: undefined }
-  if (!hasInstallmentLink(draft, editing)) {
-    return {
-      chip: (
-        <button type="button" className={styles.chip} onClick={onOpen}>
-          <span className={styles.chipIcon} aria-hidden>
-            <CardPaymentIcon />
-          </span>
-          No plan
-        </button>
-      ),
-      bar: undefined,
-    }
-  }
-  return {
-    chip: undefined,
-    bar: (
-      <button type="button" className={styles.linkButton} onClick={onOpen}>
-        Installment plan: {linkLabel(draft, editing, model)}
-      </button>
-    ),
-  }
-}
-
-/**
- * A retry is neither an add nor an edit — the row landed on the first press and
- * this one finished its receipts, so "Transaction added" would be a second,
- * confusing claim about a row already in the list.
- */
-function savedOrEditing(
-  editing: Transaction | null,
-  savedId: number | null,
-): string {
-  if (savedId != null) return 'Receipts uploaded'
-  return editing ? 'Transaction updated' : 'Transaction added'
-}
-
-function uploadFailureMessage(
-  count: number,
-  reason: string | null,
-): string {
-  const noun = count === 1 ? 'receipt' : 'receipts'
-  const why = reason ? ` ${reason.replace(/\.$/, '')}.` : ''
-  return `The transaction was saved, but ${count} ${noun} could not be uploaded.${why} Try again, or remove them and attach later.`
-}
-
-/** A fresh transaction, and one nobody has labelled yet, both start from none. */
-function initialLabelIds(editing: Transaction | null): number[] {
-  return editing?.labelIds ?? []
-}
-
-/**
- * Labels are not part of NewTransaction — they go through their own PUT
- * endpoint (see setTransactionLabels), which is a replace-whole-set call, not
- * a column patch. Comparing against what the transaction already had avoids
- * firing it on every save of a transaction nobody has ever labelled.
- */
-function labelsChanged(
-  next: number[],
-  previous: number[] | undefined,
-): boolean {
-  const prev = previous ?? []
-  if (next.length !== prev.length) return true
-  const prevSet = new Set(prev)
-  return next.some((id) => !prevSet.has(id))
-}
-
-/**
- * Save the label set if it changed, returning an error message rather than
- * throwing: the transaction itself is already saved by the time this runs, so
- * a labels failure has to be reported without submit's own catch treating it
- * as "could not save" the transaction. `onSaved` fires only once the PUT has
- * actually landed — a rejection leaves the caller's known-good set alone,
- * since the server never moved off it.
- */
-async function saveLabelsIfChanged(
-  actions: ExpenseActions | undefined,
-  transactionId: number | null,
-  next: number[],
-  previous: number[] | undefined,
-  onSaved: (saved: number[]) => void,
-): Promise<string | null> {
-  if (transactionId == null || !actions || !labelsChanged(next, previous)) return null
-  try {
-    await actions.setTransactionLabels(transactionId, next)
-    onSaved(next)
-    return null
-  } catch (e) {
-    return e instanceof Error ? e.message : 'Could not update labels'
-  }
-}
-
-function FormError({ message }: { message: string | null }) {
-  return message ? (
-    <p className={styles.error} role="alert">
-      {message}
-    </p>
-  ) : null
-}
-
-export function TransactionForm({
-  model,
-  editing,
-  seed,
-  duplicate,
-  onSubmit,
-  onDelete,
-  onDuplicate,
-  onClose,
-  queue,
-  hidden,
-  onDirtyChange,
-  onPartialSaveChange,
-  onTrapPausedChange,
-  actions,
-  view,
-  onViewChange,
-}: FormProps) {
+export function TransactionForm(props: FormProps) {
+  const { model, editing, seed, view, onViewChange, hidden } = props
   const format = useMoneyFormat()
   const { showToast } = useToast()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
   const [draft, setDraft] = useState<InstallmentDraft>(() => initialDraft(editing, model, seed))
-  const [busy, setBusy] = useState(false)
-  // Owned here, not in ReceiptStrip: the id these upload against is only known
-  // in `submit` below, and there is no channel back up from the strip.
-  const [pendingFiles, setPendingFiles] = useState<PendingReceipt[]>([])
-  // Set once a create succeeds but its uploads did not, so the strip can switch
-  // to live mode and the user retries in place instead of hunting for the row.
-  const [savedId, setSavedId] = useState<number | null>(null)
-  const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-  // Ref, not state: only ever needs its first-render value, and re-rendering to
-  // update it would be pointless — nothing should ever change what "opening state" means.
-  const initialSnapshot = useRef({ form, draft })
-  /**
-   * The label set actually confirmed on the server for this session, advanced after
-   * each successful save rather than read from `editing?.labelIds` directly. `editing`
-   * itself never changes while the form is open (see ExpensesApp's `modal.txn`), so once
-   * a "Save and retry" round trips one save, comparing the next press against the
-   * original `editing.labelIds` compares against a value the server has already moved
-   * past — a second edit made only to the labels, right before that retry, then reads as
-   * "unchanged" and never reaches setTransactionLabels at all.
-   */
-  const lastSavedLabelIds = useRef(initialLabelIds(editing))
-  useEffect(() => {
-    const dirty =
-      JSON.stringify(form) !== JSON.stringify(initialSnapshot.current.form) ||
-      JSON.stringify(draft) !== JSON.stringify(initialSnapshot.current.draft)
-    // Staged receipts count as unsaved input. Without them, attaching three
-    // photos and changing nothing else left `dirty` false, so closing skipped
-    // the confirm sheet and dropped them silently.
-    onDirtyChange?.(dirty || pendingFiles.length > 0)
-    // Distinct from dirty: past a partial save the transaction is safe and only
-    // the receipts are at risk, which needs different words on the way out.
-    onPartialSaveChange?.(savedId != null ? pendingFiles.length : 0)
-    // onDirtyChange intentionally omitted: callers pass a state setter inline, which
-    // would otherwise re-run this on every parent render regardless of form/draft.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, draft, pendingFiles, savedId])
-  // Mirrored into a ref so the unmount cleanup can release the staged blobs
-  // without listing `pendingFiles` as a dependency — which would revoke them on
-  // every change instead of once at the end. Assigned in an effect, not render.
-  const stagedRef = useRef<PendingReceipt[]>([])
-  useEffect(() => {
-    stagedRef.current = pendingFiles
-  }, [pendingFiles])
-  useEffect(() => {
-    return () => revokeStaged(stagedRef.current)
-  }, [])
+  const save = useTransactionSave({ ...props, form, draft, format, showToast })
+  useDirtyReporting(form, draft, save.pendingFiles, save.savedId, props.onDirtyChange, props.onPartialSaveChange)
+  useRevokeStagedOnUnmount(save.pendingFiles)
 
   const set: Setter = (
     key,
@@ -333,185 +74,36 @@ export function TransactionForm({
     value,
   ) => setDraft((d) => ({ ...d, [key]: value }))
 
-  /**
-   * Upload the staged receipts against a now-existing row, one at a time — the
-   * server checks the per-transaction cap and the storage quota per request, so
-   * parallel uploads would race past both. Returns the files that did not make
-   * it, so they stay staged for a retry rather than vanishing.
-   */
-  const flushPending = async (
-    id: number,
-    staged: PendingReceipt[],
-  ): Promise<{ failed: PendingReceipt[]; reason: string | null }> => {
-    if (!actions || staged.length === 0) return { failed: [], reason: null }
-    const failed: PendingReceipt[] = []
-    let reason: string | null = null
-    for (const [index, item] of staged.entries()) {
-      setUploading({ done: index, total: staged.length })
-      try {
-        await actions.uploadAttachment(id, item.file)
-        // Uploaded: its blob is no longer previewing anything.
-        revokeStaged([item])
-      } catch (e) {
-        failed.push(item)
-        // Keep the first reason. "Receipt storage is full" and a dropped
-        // connection are the same sentence without it, and only one is worth
-        // pressing Retry for.
-        reason ??= e instanceof Error ? e.message : null
-      }
-    }
-    setUploading(null)
-    return { failed, reason }
-  }
-
-  /** Validate, or surface the first problem and say which view owns it. */
-  const validate = (): { cents: number; intent: InstallmentIntent | undefined } | null => {
-    const cents = Math.abs(parseMoneyToCents(form.amount, format))
-    if (cents <= 0) {
-      setErr('Enter an amount greater than zero')
-      return null
-    }
-    const intent = buildInstallmentIntent(draft)
-    if (!intent.ok) {
-      setErr(intent.error)
-      onViewChange('installment')
-      return null
-    }
-    // The chip is hidden for a withdrawal, but a plan set up before the switch is still here.
-    if (isWithdrawal(form) && (intent.intent.kind === 'new' || intent.intent.kind === 'link')) {
-      setErr('A withdrawal cannot be split into installments; remove the plan first')
-      onViewChange('installment')
-      return null
-    }
-    return { cents, intent: intent.intent }
-  }
-
-  /** Everything after the row itself is stored. Never re-creates the row. */
-  const afterSave = async (id: number | null) => {
-    const { failed, reason } =
-      id == null ? { failed: pendingFiles, reason: null } : await flushPending(id, pendingFiles)
-    setPendingFiles(failed)
-    if (failed.length === 0) {
-      showToast(savedOrEditing(editing, savedId), 'success')
-      onClose()
-      return
-    }
-    // The transaction is saved; only its receipts are not. Staying open with the
-    // strip pointed at the new id lets the user retry in place rather than
-    // hunting for the row — and a toast could not carry this, since the one
-    // toast slot holds a message for 2.5s and the next replaces it.
-    if (id != null) setSavedId(id)
-    setErr(uploadFailureMessage(failed.length, reason))
-    setBusy(false)
-  }
-
-  const submit = async () => {
-    const valid = validate()
-    if (!valid) return
-    setBusy(true)
-    setErr(null)
-    try {
-      // `savedId` means a previous press created the row and only its receipts
-      // failed. Send that id so this becomes an update: going through the create
-      // path again would make a second transaction, and skipping onSubmit
-      // entirely would silently discard any field the user corrected meanwhile.
-      const targetId = savedId ?? editing?.id
-      // The plan intent was already applied on the first press; re-sending it
-      // would create a second installment plan alongside the first.
-      const intent = savedId != null ? undefined : valid.intent
-      const saved = await onSubmit(toInput(form, valid.cents, editing), targetId, intent)
-      const savedTxnId = saved?.id ?? targetId ?? null
-      const labelsError = await saveLabelsIfChanged(
-        actions,
-        savedTxnId,
-        form.labelIds,
-        lastSavedLabelIds.current,
-        (saved) => {
-          lastSavedLabelIds.current = saved
-        },
-      )
-      await afterSave(savedTxnId)
-      // After afterSave's own toast, not before: the toast has one slot, and the
-      // transaction-saved message would otherwise overwrite this one immediately.
-      if (labelsError) showToast(`Transaction saved, but labels were not: ${labelsError}`, 'error')
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not save')
-      setBusy(false)
-    }
-  }
-
-  const installment = installmentControl({
-    draft,
-    editing,
-    model,
-    onOpen: () => onViewChange('installment'),
-    withdrawal: isWithdrawal(form),
-  })
-
   return (
     <form
       className={styles.form}
       hidden={hidden}
       onSubmit={(e) => {
         e.preventDefault()
-        void submit()
+        void save.submit()
       }}
     >
-      {view === 'installment' ? (
-        <InstallmentStep
-          model={model}
-          editing={editing}
-          draft={draft}
-          set={setDraftField}
-          error={err}
-          amountCents={Math.abs(parseMoneyToCents(form.amount, format) || 0)}
-        />
-      ) : (
-        <>
-          <Fields
-            form={form}
-            set={set}
-            model={model}
-            editing={editing}
-            onAcceptSuggestion={(s) => acceptDescriptionSuggestion(s, model, setForm)}
-            onTrapPausedChange={onTrapPausedChange}
-            actions={actions}
-            receiptTargetId={editing?.id ?? savedId}
-            pendingFiles={pendingFiles}
-            onPendingChange={setPendingFiles}
-            installmentChip={installment.chip}
-            seed={seed}
-            duplicate={duplicate}
-          />
-          {installment.bar}
-          <FormError message={err} />
-        </>
-      )}
-      <div className={styles.actions}>
-        {view === 'fields' && editing && onDelete && (
-          <button
-            type="button"
-            className={styles.delete}
-            disabled={busy}
-            onClick={() => void onDelete(editing.id).then(onClose)}
-          >
-            Delete
-          </button>
-        )}
-        {view === 'fields' && editing && onDuplicate && (
-          <button type="button" className={styles.secondary} disabled={busy} onClick={() => onDuplicate(editing)}>
-            Duplicate
-          </button>
-        )}
-        <SaveButtons
-          view={view}
-          queue={queue}
-          busy={busy}
-          uploading={uploading}
-          editing={editing}
-          retrying={savedId != null}
-        />
-      </div>
+      <FormBody
+        view={view}
+        model={model}
+        editing={editing}
+        form={form}
+        set={set}
+        setForm={setForm}
+        draft={draft}
+        setDraftField={setDraftField}
+        err={save.err}
+        amountCents={Math.abs(parseMoneyToCents(form.amount, format) || 0)}
+        onTrapPausedChange={props.onTrapPausedChange}
+        actions={props.actions}
+        onViewChange={onViewChange}
+        receiptTargetId={editing?.id ?? save.savedId}
+        pendingFiles={save.pendingFiles}
+        onPendingChange={save.setPendingFiles}
+        seed={seed}
+        duplicate={props.duplicate}
+      />
+      <FormActions {...props} busy={save.busy} uploading={save.uploading} retrying={save.savedId != null} />
     </form>
   )
 }
