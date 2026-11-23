@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { linkCard } from '../../data/captureCardsApi'
 import { dismissRecommendation, linkRecommendation } from '../../data/recommendationDecisionsApi'
-import { announceRecommendationsChanged, type RecommendationInfo } from '../../data/recommendationsApi'
+import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import type { SeriesFit, SeriesHint } from '../../domain/capture/seriesMatch'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useStoppedSuggestions } from '../tabs/stoppedSuggestions'
 import type { ExpenseModel } from '../useExpenseData'
 import { useHistoryWatch } from '../useHistoryWatch'
+import { rememberCardOf } from './cardLinks'
 import type { ReviewCore } from './reviewContext'
 import { describeRecommendation, transactionOf, type ReviewView } from './reviewFields'
 import { seriesHintsOf } from './reviewSeries'
@@ -95,24 +95,8 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
     decide(view.rec.id, message, `remove ${name(view)}`, () => dismissRecommendation(view.rec.id))
   }
-  /** Links the card to the account the payment was saved with, and says why when it cannot. */
-  const remember =
-    (
-      source: string,
-      digits: string,
-    ) =>
-    async (accountId: number): Promise<string | null> => {
-      try {
-        await linkCard(source, digits, accountId)
-        setLinked((held) => new Map(held).set(`${source}:${digits}`, accountId))
-        announceRecommendationsChanged()
-        return null
-      } catch (e) {
-        return `The payment was added, but this card could not be remembered: ${e instanceof Error ? e.message : 'something went wrong'}`
-      }
-    }
-  const rememberFor = (v: ReviewView) => (accountId: number) =>
-    v.askCard ? remember(v.askCard.source, v.askCard.digits)(accountId) : Promise.resolve(null)
+  const rememberFor = (v: ReviewView) =>
+    rememberCardOf(v, (key, accountId) => setLinked((held) => new Map(held).set(key, accountId)))
   function review(view: ReviewView) {
     const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
     const after = latest.current.slice(at + 1).map((v) => v.rec.id)
