@@ -16,7 +16,7 @@ import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqlit
 import { OWNER } from '../../_shared/testing/expenseWorld'
 import { call, countRollupWrites, idsOf, type Kit } from '../../_shared/testing/rollupKit'
 import { newKit } from '../../_shared/testing/rollupWorld'
-import { make } from '../../_shared/testing/rollupScenarios'
+import { make } from '../../_shared/testing/rollupScenarioKit'
 
 afterEach(() => vi.useRealTimers())
 
