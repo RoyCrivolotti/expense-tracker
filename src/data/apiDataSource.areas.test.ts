@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import { apiDataSource } from './apiDataSource'
+import type { ExpenseDataSource, LedgerPartsSource } from './dataSource'
 import { attachmentRoutes, transactionRoutes } from './apiLedgerRoutes'
 import { planningRoutes, wealthRoutes } from './apiPlanningRoutes'
 import { flagsAndLabelsRoutes, referenceRoutes } from './apiReferenceRoutes'
@@ -101,5 +102,19 @@ describe('apiDataSource areas', () => {
         expect(apiDataSource[key as keyof typeof apiDataSource]).toBe(method)
       }
     }
+  })
+
+  it('gives the areas, between them, every optional method of the port that the live source offers', () => {
+    type AreaKeys =
+      | keyof typeof transactionRoutes
+      | keyof typeof attachmentRoutes
+      | keyof typeof flagsAndLabelsRoutes
+      | keyof typeof referenceRoutes
+      | keyof typeof planningRoutes
+      | keyof typeof wealthRoutes
+    /** The two writes only a ledger read in pages carries, which `withLedgerWrites` adds. */
+    type AddedByLedgerWrites = 'addLabelsToTransactions' | 'updateMatchingTransactions'
+    type Offered = Exclude<keyof ExpenseDataSource, 'canWrite' | 'load' | keyof LedgerPartsSource | AddedByLedgerWrites>
+    expectTypeOf<AreaKeys>().toEqualTypeOf<Offered>()
   })
 })
