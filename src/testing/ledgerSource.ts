@@ -42,18 +42,9 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       step += 1
       source.revision = revision ?? `r${step}`
     },
-    readReferencePart() {
-      note('reference')
-      return served.readReferencePart()
-    },
-    readMonthsPart(range) {
-      note(`months:${range.from}..${range.to}`)
-      return served.readMonthsPart(range)
-    },
-    readCubePart(range) {
-      note(`cube:${range.from}..${range.to}`)
-      return served.readCubePart(range)
-    },
+    readReferencePart: () => through('reference', () => served.readReferencePart()),
+    readMonthsPart: (range) => through(`months:${range.from}..${range.to}`, () => served.readMonthsPart(range)),
+    readCubePart: (range) => through(`cube:${range.from}..${range.to}`, () => served.readCubePart(range)),
     readTransactionPage(
       filter,
       request,
@@ -68,14 +59,8 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note('summary')
       return served.readTransactionSummary(filter, request)
     },
-    readSeriesPart() {
-      note('series')
-      return served.readSeriesPart()
-    },
-    readUsagePart() {
-      note('usage')
-      return served.readUsagePart()
-    },
+    readSeriesPart: () => through('series', () => served.readSeriesPart()),
+    readUsagePart: () => through('usage', () => served.readUsagePart()),
     readRecentTransactions: (request) => through('recent', () => served.readRecentTransactions(request)),
     readTransactionExport: (request) => through('export', () => served.readTransactionExport(request)),
     readDescriptionSuggest(
@@ -85,10 +70,10 @@ export function memorySource(dataset: ExpenseDataset): TestSource {
       note(`suggest:${request.prefix}|${request.before ?? ''}`)
       return served.readDescriptionSuggest(request, options)
     },
-    readReceiptsPart(transactionId) {
-      note(transactionId === undefined ? 'receipts' : `receipts:${transactionId}`)
-      return served.readReceiptsPart(transactionId)
-    },
+    readReceiptsPart: (transactionId) =>
+      through(transactionId === undefined ? 'receipts' : `receipts:${transactionId}`, () =>
+        served.readReceiptsPart(transactionId),
+      ),
   }
   return source
 }
