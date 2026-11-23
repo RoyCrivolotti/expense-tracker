@@ -92,7 +92,28 @@ export function useChartFocus(
     dismiss()
   }
 
-  const onKeyDown = (e: React.KeyboardEvent<SVGSVGElement>) => {
+  const onKeyDown = keyStepper(length, active, setActive, dismiss)
+
+  return {
+    active,
+    onPointerMove,
+    onPointerDown,
+    onPointerUp,
+    onPointerCancel: onPointerUp,
+    onPointerLeave,
+    onKeyDown,
+    onBlur: dismiss,
+  }
+}
+
+/** Arrow keys step to the next index, Home and End to the ends, and Escape clears the focus. */
+function keyStepper(
+  length: number,
+  active: number | null,
+  setActive: (index: number) => void,
+  dismiss: () => void,
+) {
+  return (e: React.KeyboardEvent<SVGSVGElement>) => {
     if (length === 0) return
     const last = length - 1
     const step = (next: number) => {
@@ -118,17 +139,6 @@ export function useChartFocus(
       default:
         break
     }
-  }
-
-  return {
-    active,
-    onPointerMove,
-    onPointerDown,
-    onPointerUp,
-    onPointerCancel: onPointerUp,
-    onPointerLeave,
-    onKeyDown,
-    onBlur: dismiss,
   }
 }
 
