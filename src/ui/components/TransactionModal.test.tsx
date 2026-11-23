@@ -987,6 +987,44 @@ describe('TransactionModal, a queue of captured payments', () => {
     expect(last.onClose).toHaveBeenCalled()
   })
 
+  it('asks which of two monthly series a payment is, and opens the one picked', async () => {
+    const pick = vi.fn()
+    const seed: TransactionSeed = {
+      ...queued(),
+      seriesChoice: [
+        { seriesKey: 'a', label: 'Music Plan, due 14 Nov', pick: vi.fn() },
+        { seriesKey: 'b', label: 'Cloud Box, due 15 Nov', pick },
+      ],
+    }
+    renderModal({ seed })
+
+    expect(await screen.findByText('Looks like one of your monthly payments. Which one?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Fill in as Cloud Box, due 15 Nov' }))
+
+    expect(pick).toHaveBeenCalledOnce()
+  })
+
+  it('starts a fresh form when the same payment is opened filled from another series', () => {
+    const view = renderModal({ seed: { ...queued(), description: 'Music Plan', fromSeries: 'a' } })
+    const shows = (text: string) => singleForm(view.container).queryByDisplayValue(text)
+    expect(shows('Music Plan')).toBeInTheDocument()
+
+    view.rerender(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <TransactionModal
+          model={model()}
+          actions={view.actions}
+          editing={null}
+          seed={{ ...queued(), description: 'Cloud Box', fromSeries: 'b' }}
+          onClose={view.onClose}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    expect(shows('Cloud Box')).toBeInTheDocument()
+    expect(shows('Music Plan')).not.toBeInTheDocument()
+  })
+
   it("has no Don't add outside a queue", () => {
     const { container } = renderModal({ seed: { recommendationId: A, amountCents: 100, description: 'Cafe' } })
 

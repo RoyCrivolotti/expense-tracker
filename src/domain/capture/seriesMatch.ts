@@ -11,14 +11,10 @@ import {
 } from '../engine/recurringUpcoming'
 import type { Transaction, TxnType } from '../types'
 import { type PagePayment, canMatch, paymentDirection, rowDirection } from './duplicate'
+import { SERIES_MATCH_DAYS } from './seriesWindow'
 import { foldTitle } from './text'
 
-/**
- * How many days from a series' usual day a push may be and still be its charge. Charges land a few days either side
- * of their day (a bill due on a weekend, a card that books late), and five days took every exact-amount charge of a
- * real year's monthly series without pointing at a wrong one. Wider lets an ordinary payment of the same price in.
- */
-export const SERIES_MATCH_DAYS = 5
+export { SERIES_MATCH_DAYS }
 
 /** A waiting push, as the match needs it. */
 export interface PushToMatch extends PagePayment {

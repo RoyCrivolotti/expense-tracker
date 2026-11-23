@@ -1,4 +1,5 @@
 import type { SuggestedType } from './types'
+import { paymentDirection, rowDirection } from './direction'
 import { shiftDay } from './reviewDates'
 
 /**
@@ -37,23 +38,7 @@ export interface PossibleMatch {
   date: string
 }
 
-export type Direction = 'out' | 'in'
-
-/** Which way money moves for a suggested type. A payment whose type is not known has no direction and matches nothing. */
-export function paymentDirection(type: SuggestedType | null): Direction | null {
-  if (type === null) return null
-  return type === 'income' || type === 'refund' ? 'in' : 'out'
-}
-
-/** Which way money moved for a typed row. An investment is money out unless it is stored negative (taken back out). */
-export function rowDirection(
-  type: string,
-  amountCents: number,
-): Direction {
-  if (type === 'income' || type === 'refund') return 'in'
-  if (type === 'investment' && amountCents < 0) return 'in'
-  return 'out'
-}
+export { type Direction, paymentDirection, rowDirection } from './direction'
 
 /** Whether the app can look for a match at all: a known direction, an amount above zero, and euros. */
 export function canMatch(

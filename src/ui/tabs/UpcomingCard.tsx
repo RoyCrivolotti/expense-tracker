@@ -1,28 +1,24 @@
 import { useCallback, useId, useRef, useState } from 'react'
-import { shortMonthLabel } from '../../engine'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
-import { formatDayLabel } from '../format'
-import { formatCents } from '../../engine/money'
 import { Card, SectionTitle } from '../components/primitives'
-import { NoEntryIcon } from '../icons'
 import { UNDO_SHORTCUT } from '../components/toastShortcuts'
-import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
-import { dueLabel, daysUntilDue } from './dueLabel'
 import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 import { useStoppedSuggestions } from './stoppedSuggestions'
-import type { UpcomingSuggestion } from './useUpcoming'
+import { SuggestionRow } from './UpcomingRow'
+import type { MarkedSuggestion } from './useRecurringMarks'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
   /** The charges due today; the engine has already dropped the ones that are too early or too late. */
-  suggestions: UpcomingSuggestion[]
+  suggestions: MarkedSuggestion[]
   /** The budget month on screen; a suggestion that files under another one is marked with its own. */
   month: string
   /** The date the rows are said against: "Due tomorrow", "Due 2 days ago". */
   today: string
   lookup: Lookup
+  /** Opens the add form: on a new row, or on the waiting bank push a charge's mark names. */
   onAdd: (seed: TransactionSeed) => void
 }
 
@@ -46,16 +42,18 @@ function persistDismissed(
   localStorage.setItem(key, JSON.stringify([...set]))
 }
 
-function dismissKey(s: UpcomingSuggestion): string {
+function dismissKey(s: MarkedSuggestion): string {
   return `${s.description}|${s.accountId}|${s.categoryId}|${s.type}|${s.predictedBudgetMonth}`
 }
 
 /** The key as it was before it carried the category and type, so a dismissal saved then still applies. */
-function legacyDismissKey(s: UpcomingSuggestion): string {
+function legacyDismissKey(s: MarkedSuggestion): string {
   return `${s.description}|${s.accountId}|${s.predictedBudgetMonth}`
 }
 
-function toSeed(s: UpcomingSuggestion): TransactionSeed {
+/** What "+" opens: the charge's waiting bank push when one stands for it, so it is not added twice; else a new row. */
+function toSeed(s: MarkedSuggestion): TransactionSeed {
+  if (s.mark?.push) return s.mark.push
   return {
     description: s.description,
     type: s.type,
@@ -65,79 +63,6 @@ function toSeed(s: UpcomingSuggestion): TransactionSeed {
     date: s.predictedDate,
     budgetMonth: s.filedUnder,
   }
-}
-
-function SuggestionRow({
-  suggestion,
-  forMonth,
-  today,
-  last,
-  lookup,
-  onAdd,
-  onDismiss,
-  onStop,
-}: {
-  suggestion: UpcomingSuggestion
-  /** The budget month "+" files the charge under, when that is not the one on screen. */
-  forMonth: string | null
-  today: string
-  /** The last row of a card with nothing under it, so it has no line below. */
-  last: boolean
-  lookup: Lookup
-  onAdd: () => void
-  onDismiss: () => void
-  onStop: () => void
-}) {
-  const format = useMoneyFormat()
-  const categoryName = lookup.categoryName(suggestion.categoryId)
-  const daysUntil = daysUntilDue(suggestion.predictedDate, today)
-  return (
-    <div className={last ? `${styles.row} ${styles.rowLast}` : styles.row} data-row>
-      <div className={styles.info}>
-        <span className={styles.desc}>{suggestion.description}</span>
-        <span className={styles.meta}>
-          <span className={styles.what}>
-            {categoryName} · {formatCents(suggestion.amountCents, format)}
-          </span>
-          <span className={styles.when}>
-            <span className={daysUntil < 0 ? styles.late : daysUntil === 0 ? styles.today : undefined}>
-              {dueLabel(daysUntil)}
-            </span>
-            {' · '}
-            {formatDayLabel(suggestion.predictedDate)}
-            {forMonth && (
-              <>
-                {' · '}
-                <span className={styles.forMonth}>For {shortMonthLabel(forMonth)}</span>
-              </>
-            )}
-          </span>
-        </span>
-      </div>
-      <div className={styles.actions}>
-        <button type="button" className={styles.addBtn} onClick={onAdd} aria-label={`Add ${suggestion.description}`}>
-          +
-        </button>
-        <button
-          type="button"
-          className={styles.dismissBtn}
-          onClick={onDismiss}
-          aria-label={`Dismiss ${suggestion.description}`}
-        >
-          ×
-        </button>
-        <button
-          type="button"
-          className={styles.stopBtn}
-          onClick={onStop}
-          aria-label={`Stop suggesting ${suggestion.description}`}
-          title="Stop suggesting"
-        >
-          <NoEntryIcon className={styles.stopIcon} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  )
 }
 
 export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props) {
@@ -153,7 +78,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const visible = suggestions.filter((s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)))
 
   const setHidden = useCallback(
-    (s: UpcomingSuggestion, hidden: boolean) => {
+    (s: MarkedSuggestion, hidden: boolean) => {
       setDismissed((prev) => {
         const next = new Set(prev)
         if (hidden) next.add(dismissKey(s))
@@ -178,7 +103,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   }
 
   const handleDismiss = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
   ) => {
     setHidden(s, true)
@@ -191,7 +116,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   }
 
   const handleStop = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
   ) => {
     stop(s.seriesKey, { after: s.lastChargeDate, label: s.description })
@@ -211,7 +136,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const kept = folds ? visible.slice(0, ROWS_KEPT) : visible
   const folded = folds ? visible.slice(ROWS_KEPT) : []
   const renderRow = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
     last: boolean,
   ) => (

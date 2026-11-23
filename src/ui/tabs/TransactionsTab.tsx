@@ -11,7 +11,7 @@ import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { ListStats } from './ListStats'
 import { matchAnnouncement } from './matchAnnouncement'
 import { TxnFilters } from './TxnFilters'
-import { UpcomingCard } from './UpcomingCard'
+import { UpcomingSlot } from './UpcomingSlot'
 import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
 import { TransactionsTips } from '../tips/TransactionsTips'
@@ -27,7 +27,6 @@ import { useToast } from '../hooks/useToast'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
-import { useUpcoming } from './useUpcoming'
 import { dayHeaderSeed } from './dayHeaderSeed'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import { itemCountLabel, livePaidOn } from './transactionsTabHelpers'
@@ -67,7 +66,6 @@ export function TransactionsTab({
   const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const past = usePastReports(model.dataset.transactions)
   const announcement = useDebouncedAnnouncement(matchAnnouncement(state))
-  const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
@@ -101,15 +99,7 @@ export function TransactionsTab({
             onClearGroup={setClearingGroup}
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
-          {upcoming.suggestions.length > 0 && (
-            <UpcomingCard
-              suggestions={upcoming.suggestions}
-              month={month}
-              today={upcoming.today}
-              lookup={model.lookup}
-              onAdd={actions.onAdd}
-            />
-          )}
+          <UpcomingSlot model={model} month={month} onAdd={actions.onAdd} />
         </>
       )}
 

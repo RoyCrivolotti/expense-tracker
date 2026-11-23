@@ -117,13 +117,17 @@ every read ([`reviewSeries.ts`](../src/ui/capture/reviewSeries.ts)).
 | Match | The row says | The fields |
 | --- | --- | --- |
 | One series | "Looks like your monthly X, due D", and "paid from Y" when the push named no account | Description, category and type from the series; the account too when the push named none and showed no card to ask about |
-| Two or more | "Looks like one of your monthly payments. Which one?", each a button | Unchanged, and no one-tap Add even when the votes are settled. A button closes the list and opens review filled from that series; none is picked for the person |
+| Two or more | "Looks like one of your monthly payments. Which one?", each a button | Unchanged, and no one-tap Add even when the votes are settled. A button closes the list and opens review filled from that series; none is picked for the person. The add form asks the same question, so a payment reached with "Add and next" or Review still offers both |
 | One, on another account | "Looks like X, which you pay from Y. Moved it?" | From the series, keeping the push's account |
 | One, but the votes name it differently | "...You added it as V before. Renamed?" | From the series, with its current name |
 
 A filled payment always goes through review, so the first time a bank text is matched it is never added by one tap. Its "New merchant" reason is dropped, since the hint already says what the payment is.
 When the person's own settled name for the merchant already is the series' name, the row still says which series it
 looks like, but the fields stay as their history has them and one tap follows the usual rule.
+
+The recurring card reads the same hints the other way round: a charge a waiting payment stands for says "Captured from
+your bank, review", and its "+" opens that payment's review instead of a new row
+([BEHAVIOR.md](BEHAVIOR.md#recurring-suggestions-upcoming-card)).
 
 ## The typed row a payment may duplicate
 

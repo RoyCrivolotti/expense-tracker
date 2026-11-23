@@ -1,5 +1,6 @@
 import { formatCents, type MoneyFormat } from '../../engine/money'
 import type { TxnType } from '../../types'
+import { shortDayLabel } from '../format'
 import type { ReviewView } from './reviewFields'
 
 const TYPE_WORD: Record<TxnType, string> = {
@@ -17,6 +18,9 @@ const fromIso = (iso: string) => new Date(`${iso}T12:00:00`)
 export function weekdayDay(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(fromIso(iso))
 }
+
+/** "due 10 Nov", from a series' usual date. The date is one word: it never breaks across lines. */
+export const dueOn = (usualDate: string) => `due ${shortDayLabel(usualDate).replace(' ', '\u00a0')}`
 
 /** "Dec", from a `YYYY-MM` budget month. */
 export function monthWord(yearMonth: string): string {

@@ -66,8 +66,11 @@ export function useQueueAdvance(
       if (saved) next.current = queue?.next()
       return saved
     },
-    /** The form's identity: a new payment gets a fresh form, so its fields start from its own seed. */
-    formKey: editing?.id ?? seed?.recommendationId ?? 'new',
+    /**
+     * The form's identity: a new payment gets a fresh form, so its fields start from its own seed, and so does the same
+     * payment filled from another series.
+     */
+    formKey: editing?.id ?? (seed?.recommendationId ? `${seed.recommendationId}|${seed.fromSeries ?? ''}` : 'new'),
     finish,
     /** Set while the server says a typed row already looks like this payment: Link it, or add it anyway. */
     duplicate: dup.offer,

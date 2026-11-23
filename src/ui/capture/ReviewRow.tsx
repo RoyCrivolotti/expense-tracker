@@ -1,10 +1,9 @@
 import { REVIEW_TEXT, type ReviewReason } from '../../domain/capture/review'
 import type { SeriesFit } from '../../domain/capture/seriesMatch'
 import { Money } from '../components/Money'
-import { shortDayLabel } from '../format'
 import type { ReviewApi } from './useReviewApi'
 import type { ReviewView } from './reviewFields'
-import { foreignAmount, monthWord, typeWord, weekdayDay } from './reviewFormat'
+import { dueOn, foreignAmount, monthWord, typeWord, weekdayDay } from './reviewFormat'
 import styles from './Review.module.css'
 
 const IN_FIELDS: ReadonlySet<ReviewReason> = new Set(['no-category', 'no-account', 'no-merchant'])
@@ -50,14 +49,11 @@ function Fields({ view }: { view: ReviewView }) {
   )
 }
 
-// A date is one word: "10 Nov" never breaks across lines.
 /** Opens the add form on a payment, filled from `series` when the person picked one of the series its hint offers. */
 export type OnReview = (
   view: ReviewView,
   series?: SeriesFit,
 ) => void
-
-const due = (usualDate: string) => `due ${shortDayLabel(usualDate).replace(' ', '\u00a0')}`
 
 /**
  * What the monthly series say the payment may be, always as a question for the person. Two series are offered side by
@@ -77,14 +73,14 @@ function SeriesLine({ view, review, onReview }: { view: ReviewView; review: Revi
                 key={s.seriesKey}
                 type="button"
                 className={styles.link}
-                aria-label={`Review as ${s.description}, ${due(s.usualDate)}`}
+                aria-label={`Review as ${s.description}, ${dueOn(s.usualDate)}`}
                 onClick={() => onReview(view, s)}
               >
-                {s.description}, {due(s.usualDate)}
+                {s.description}, {dueOn(s.usualDate)}
               </button>
             ) : (
               <span key={s.seriesKey}>
-                {s.description}, {due(s.usualDate)}
+                {s.description}, {dueOn(s.usualDate)}
               </span>
             ),
           )}
@@ -100,7 +96,7 @@ function SeriesLine({ view, review, onReview }: { view: ReviewView; review: Revi
       </>
     ) : (
       <>
-        Looks like your monthly {name}, {due(hint.series.usualDate)}
+        Looks like your monthly {name}, {dueOn(hint.series.usualDate)}
         {hintAccount ? `, paid from ${hintAccount}` : ''}.
         {hint.kind === 'renamed' ? (
           <>

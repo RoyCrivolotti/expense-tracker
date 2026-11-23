@@ -110,6 +110,10 @@ const noticeOf = (view: ReviewView) => {
   return notice ? { notice } : {}
 }
 
+/** The one series the fields were filled from, if any. Two series fill nothing. */
+const seriesOf = (view: ReviewView) =>
+  view.hint && view.hint.kind !== 'choose' ? { fromSeries: view.hint.series.seriesKey } : {}
+
 /** What the add form opens with. Nothing the push could not say is filled in, and the form shows the rest. */
 export function seedOf(
   view: ReviewView,
@@ -132,6 +136,7 @@ export function seedOf(
     categoryId: view.categoryId ?? 0,
     ...noticeOf(view),
     ...(view.rec.possibleMatch ? { possibleMatch: view.rec.possibleMatch } : {}),
+    ...seriesOf(view),
     ...(view.askCard && remember
       ? {
           card: {

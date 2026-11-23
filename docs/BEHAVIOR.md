@@ -192,6 +192,20 @@ device with a "Suggest again" button, and leaves out a series that has come back
 (`stillStopped`). Stopping a series changes nothing in Analytics, where it still counts as a fixed cost. A series whose
 description changes is a new series. Like dismissals, the list is per device.
 
+**Bank pushes and rows under another name.** The card reads the payments waiting in To review
+([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md#a-payment-that-looks-like-a-monthly-charge)) and marks a charge a waiting push
+stands for: "Captured from your bank, review". It is the same hint the To review card shows, from the same match, so a
+push two series fit marks neither and a stopped series is never marked. Its "+" opens that push in the add form, filled
+from the series, rather than a new row, so the payment has one way in and saving it settles the push. A charge that may
+already be logged under another name (a push saved with the bank's text, say) says "Maybe already added on 23 Nov as
+X" and stays on the card: the row moves money the same way, its amount equals the charge's to the cent, it is within
+five days of the usual date, and it is not another monthly series' own charge (`lookalikesOf` in
+[`seriesLookalike.ts`](../src/domain/capture/seriesLookalike.ts)). Nothing is hidden on a guess; the person decides. The card
+waits for the first read of the pushes, and for the code that reads them, before it shows, so a mark does not appear
+late under a finger already on a "+". It waits at most three seconds (`MARKS_WAIT_MS`): a read slower than that shows the
+card without marks, and the line comes when the read lands, as it does for pushes read when the app comes back to the
+front. The "Captured from your bank, review" line is itself a button that opens the push, as "+" does.
+
 **What it does not cover.** The first three charges of a series, since nothing is detected before that. A series whose
 description changes, or that shares its text with another (two bills under one name). Charges with no regular rhythm. A
 billing day that has moved: until two charges land on the new day the card still expects the old one, so the first

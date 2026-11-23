@@ -507,6 +507,38 @@ describe('a payment that looks like a monthly series', () => {
     expect(screen.getByRole('button', { name: 'Review as Music Plan, due 14\u00a0Nov' })).toBeInTheDocument()
   })
 
+  it('opens a payment two series fit with both offered, when "Add and next" reaches it', () => {
+    const plain = rec(2, { merchantRaw: 'BRAND NEW PLACE', amountCents: 450, localDate: '2026-11-13' })
+    const core = makeCore({ model: seriesModel, items: [plain, push({ amountCents: 999, localDate: '2026-11-14' })] })
+    show(core)
+
+    fireEvent.click(within(screen.getAllByRole('listitem')[0]!).getByRole('button', { name: 'Review' }))
+    const first = vi.mocked(core.openForm).mock.calls[0]![0]
+    expect(first.seriesChoice).toBeUndefined()
+    const next = first.queue!.next()!
+
+    expect(next.recommendationId).toBe(id(1))
+    expect(next.seriesChoice?.map((o) => o.label)).toEqual([
+      'Music Plan, due 14\u00a0Nov',
+      'Cloud Box, due 15\u00a0Nov',
+    ])
+    next.seriesChoice![1]!.pick()
+    const picked = vi.mocked(core.openForm).mock.calls[1]![0]
+    expect(picked).toMatchObject({ recommendationId: id(1), description: 'Cloud Box', categoryId: 2 })
+    expect(picked.fromSeries).toBe(next.seriesChoice![1]!.seriesKey)
+    expect(picked.seriesChoice).toBeUndefined()
+  })
+
+  it('offers the two series in the form opened from Review too', () => {
+    const core = showPush({ amountCents: 999, localDate: '2026-11-14' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+
+    const seed = vi.mocked(core.openForm).mock.calls[0]![0]
+    expect(seed.seriesChoice).toHaveLength(2)
+    expect(seed.fromSeries).toBeUndefined()
+  })
+
   it('closes the sheet before opening the form for a series picked there, as Review does', () => {
     const core = makeCore({ model: seriesModel, items: [push({ amountCents: 999, localDate: '2026-11-14' })] })
     const onSheet = vi.fn()
