@@ -9,7 +9,8 @@ import {
   ownerAttachmentKeys,
   transactionExists,
 } from './dbAttachments'
-import { deleteTransaction, deleteTransactions } from './dbWrite'
+import { deleteTransaction } from './dbTransactionWrite'
+import { deleteTransactions } from './dbTransactionBulkWrite'
 import type { Env } from './env'
 
 /**

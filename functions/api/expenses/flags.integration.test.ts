@@ -173,7 +173,7 @@ describe('flags API (middleware + handlers + in-memory repo)', () => {
   })
 
   it('applies a flag through the transaction PATCH, not just silently accepting it', async () => {
-    // The COLUMN allowlist in dbWrite is easy to forget; a missing entry returns
+    // The COLUMN allowlist in dbTransactionPatch is easy to forget; a missing entry returns
     // 200 with the flag unchanged, so assert the returned row, not the status.
     const { store, repo } = seeded()
     const flag = await makeFlag(store, repo)

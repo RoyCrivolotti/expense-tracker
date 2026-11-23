@@ -4,7 +4,7 @@ import type { Env } from './env'
 import { HttpError } from './http'
 import { assertOwnedLabel, assertOwnedTransaction } from './ownership'
 import { toLabel, toStoredTxn, type LabelRow, type TxnRow } from './rows'
-import { deriveOne } from './dbWrite'
+import { deriveOne } from './dbTransactionWrite'
 
 type ColumnMap = Record<keyof NewLabel, string>
 

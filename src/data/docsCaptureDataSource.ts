@@ -289,7 +289,7 @@ function withLabelAdded(
 }
 
 /**
- * Forward half, mirrors dbWrite.ts's maybeApplyAutoLabelStatement: a transaction
+ * Forward half, mirrors dbTransactionWrite.ts's maybeApplyAutoLabelStatement: a transaction
  * carrying a flag that has an auto-label picks it up too. A flag with no
  * autoLabelId, or a transaction with no flagId, is left untouched.
  */

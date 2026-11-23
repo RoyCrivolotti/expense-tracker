@@ -16,7 +16,7 @@ import {
 } from '../domain/data/bulkEdit'
 import type { BulkTransactionPatch } from '../domain/data/dataSource'
 import type { Env } from './env'
-import { planBulkUpdate, runBulkBatch } from './dbWrite'
+import { planBulkUpdate, runBulkBatch } from './dbTransactionBulkWrite'
 import { HttpError } from './http'
 import { assertOwnedLabel } from './ownership'
 import { IN_ID_LIST, idList } from './sqlIdList'
