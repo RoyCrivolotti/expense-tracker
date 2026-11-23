@@ -18,7 +18,6 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 const FILE_LINE_CAPS = {
   'functions/_shared/restoreSql.ts': 299,
   'functions/_shared/testing/rollupMutants.ts': 253,
-  'scripts/scaling/seedSql.ts': 255,
   'src/data/apiDataSource.ts': 318,
   'src/data/docsCaptureDataSource.ts': 561,
   'src/data/ledgerHold.ts': 216,
@@ -87,7 +86,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'scripts/scaling/seedSql.ts': 108,
   'src/data/inMemoryLedgerParts.ts': 68,
   'src/domain/engine/rebaselinePatch.ts': 67,
   'src/testing/fakeIntersectionObserver.ts': 63,
