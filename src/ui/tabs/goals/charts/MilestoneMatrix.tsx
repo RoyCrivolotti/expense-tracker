@@ -16,17 +16,9 @@ import { MilestoneReadout } from './MilestoneReadout'
 import { MilestoneSheet } from './MilestoneSheet'
 import { MilestoneToolbar } from './MilestoneToolbar'
 import { MilestoneTimeline } from './MilestoneTimeline'
-import {
-  buildRows,
-  describeCell,
-  goalsPerPage,
-  longestHorizon,
-  pageLabel,
-  reachedByEveryRow,
-  sentenceAt,
-  splitPages,
-  type MilestoneRow,
-} from './milestoneModel'
+import { buildRows, longestHorizon, type MilestoneRow } from './milestoneModel'
+import { describeCell } from './milestoneGaps'
+import { goalsPerPage, pageLabel, reachedByEveryRow, sentenceAt, splitPages } from './milestoneTable'
 import { formatMoneyShort } from '../chartTheme'
 import { useElementWidth } from '../../../hooks/useElementWidth'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'

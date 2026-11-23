@@ -6,7 +6,9 @@ import { SegmentedControl } from '../../../components/SegmentedControl'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { scenarioInk } from '../scenarioInk'
-import { cellText, gapLabel, longestHorizon, soonestFirst, type MilestoneRow, type YearsUnit } from './milestoneModel'
+import { longestHorizon, type MilestoneRow } from './milestoneModel'
+import { cellText, soonestFirst, type YearsUnit } from './milestoneTable'
+import { gapLabel } from './milestoneGaps'
 import styles from '../goals.module.css'
 
 /**

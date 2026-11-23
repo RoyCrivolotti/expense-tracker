@@ -4,25 +4,22 @@ import { makeScenario } from '../../../../testing/factories'
 import {
   buildRows,
   calendarYear,
-  cellText,
-  describeCell,
-  gapIsSooner,
-  gapLabel,
-  gapShort,
-  gapVersus,
-  goalsPerPage,
   longestHorizon,
-  moveCell,
-  pageLabel,
-  reachedByEveryRow,
-  rowHasGaps,
-  soonestFirst,
-  splitPages,
   tintPercent,
   yearsBetween,
   cellFromOffset,
   type MilestoneRow,
 } from './milestoneModel'
+import {
+  cellText,
+  goalsPerPage,
+  moveCell,
+  pageLabel,
+  reachedByEveryRow,
+  soonestFirst,
+  splitPages,
+} from './milestoneTable'
+import { describeCell, gapIsSooner, gapLabel, gapShort, gapVersus, rowHasGaps } from './milestoneGaps'
 
 /** A row that starts today unless it says otherwise, so its cells are the same counted either way. */
 function row(overrides: Partial<MilestoneRow>): MilestoneRow {
