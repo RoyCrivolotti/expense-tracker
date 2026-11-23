@@ -47,6 +47,47 @@ function readsOfEveryRow(
   }
 }
 
+/** The reads that take a filter or a request: the suggestions, and the transaction pages and summaries. */
+function readsByQuery(
+  current: () => HeldDataset | Promise<HeldDataset>,
+): Pick<LedgerPartsSource, 'readDescriptionSuggest' | 'readTransactionPage' | 'readTransactionSummary'> {
+  return {
+    async readDescriptionSuggest(
+      request,
+      { signal } = {},
+    ) {
+      const { dataset } = await current()
+      signal?.throwIfAborted()
+      return suggestDescriptionsOf(dataset.transactions, request)
+    },
+    async readTransactionPage(
+      filter,
+      { limit, cursor, signal } = {},
+    ) {
+      const { dataset } = await current()
+      signal?.throwIfAborted()
+      const queryTransactions = (
+        _owner: string,
+        f: TxnFilter,
+        page: TransactionPageRequest,
+      ) => Promise.resolve(pageOf(dataset.transactions, f, page))
+      return listTransactions({ queryTransactions }, '', { filter, limit, cursor })
+    },
+    async readTransactionSummary(
+      filter,
+      { signal } = {},
+    ) {
+      const { dataset, revision } = await current()
+      signal?.throwIfAborted()
+      const summarize = (
+        _owner: string,
+        f: TxnFilter,
+      ) => Promise.resolve(summaryOf(dataset.transactions, f))
+      return { revision, ...(await summarizeTransactions({ summarizeTransactions: summarize }, '', filter)) }
+    },
+  }
+}
+
 /** A dataset held in memory and the revision it is at: it changes whenever the dataset does. */
 export interface HeldDataset {
   dataset: ExpenseDataset
@@ -92,38 +133,6 @@ export function inMemoryLedgerParts(current: () => HeldDataset | Promise<HeldDat
       return { revision, ...usageFromDataset(dataset) }
     },
     ...readsOfEveryRow(current),
-    async readDescriptionSuggest(
-      request,
-      { signal } = {},
-    ) {
-      const { dataset } = await current()
-      signal?.throwIfAborted()
-      return suggestDescriptionsOf(dataset.transactions, request)
-    },
-    async readTransactionPage(
-      filter,
-      { limit, cursor, signal } = {},
-    ) {
-      const { dataset } = await current()
-      signal?.throwIfAborted()
-      const queryTransactions = (
-        _owner: string,
-        f: TxnFilter,
-        page: TransactionPageRequest,
-      ) => Promise.resolve(pageOf(dataset.transactions, f, page))
-      return listTransactions({ queryTransactions }, '', { filter, limit, cursor })
-    },
-    async readTransactionSummary(
-      filter,
-      { signal } = {},
-    ) {
-      const { dataset, revision } = await current()
-      signal?.throwIfAborted()
-      const summarize = (
-        _owner: string,
-        f: TxnFilter,
-      ) => Promise.resolve(summaryOf(dataset.transactions, f))
-      return { revision, ...(await summarizeTransactions({ summarizeTransactions: summarize }, '', filter)) }
-    },
+    ...readsByQuery(current),
   }
 }

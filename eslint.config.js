@@ -72,7 +72,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'src/data/inMemoryLedgerParts.ts': 68,
   'src/ui/ExpensesApp.tsx': 139,
   'src/ui/access/ActiveUsersSection.tsx': 92,
   'src/ui/access/PendingRequestsSection.tsx': 67,
