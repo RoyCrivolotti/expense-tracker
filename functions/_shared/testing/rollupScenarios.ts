@@ -4,94 +4,13 @@
  * trigger cannot survive on luck. This file is about what pins a row; rollupScenariosShape.ts about the rest.
  */
 import { expect } from 'vitest'
-import { onRequestPost as postTransaction } from '../../api/expenses/transactions/index'
 import { onRequestDelete as deleteOne } from '../../api/expenses/transactions/[id]'
-import { onRequestDelete as deleteBulk, onRequestPatch as patchBulk } from '../../api/expenses/transactions/bulk'
-import { PINNED_SQL } from '../ledgerPartsSql'
-import { emptyTables, restoreStatements } from '../restoreSql'
 import { OTHER, OWNER } from './expenseWorld'
 import { CUBE_FROM_CELLS_SQL } from './rollupOracle'
-import { assertRollup, call, countRollupWrites, idsOf, rows, type Kit } from './rollupKit'
+import { assertRollup, call, countRollupWrites, idsOf, rows } from './rollupKit'
 import { newPlan } from './rollupLinkedSteps'
+import { cellOf, make, raw, settleRows, type Scenario } from './rollupScenarioKit'
 import { edit, formOf } from './rollupSteps'
-
-export interface Scenario {
-  name: string
-  run: (k: Kit) => Promise<void>
-}
-
-/** A row with every field fixed: September, the owner's first account and category, 10.00 spent. */
-export async function make(
-  k: Kit,
-  owner: string,
-  over: Record<string, unknown> = {},
-): Promise<number> {
-  const body = {
-    date: '2026-09-10',
-    budgetMonth: '2026-09',
-    description: 'Market',
-    accountId: idsOf(k, 'accounts', owner)[0],
-    categoryId: idsOf(k, 'categories', owner)[0],
-    type: 'expense',
-    amountCents: 1000,
-    cancelled: false,
-    ...over,
-  }
-  const reply = await call(k, owner, postTransaction, '/transactions', { method: 'POST', body })
-  expect(reply.status).toBe(201)
-  return Number(reply.body.id)
-}
-
-export async function settleRows(
-  k: Kit,
-  owner: string,
-  ids: number[],
-  settledBy: number | null,
-): Promise<void> {
-  const reply = await call(k, owner, patchBulk, '/transactions/bulk', {
-    method: 'PATCH',
-    body: { ids, patch: { settledBy } },
-  })
-  expect(reply.status).toBe(200)
-}
-
-/** The cell a row belongs to, as the rollup holds it: `[pinned, count]`, or nothing if the cell is missing. */
-export function cellOf(
-  k: Kit,
-  id: number,
-): Array<[number, number]> {
-  return rows(
-    k,
-    `SELECT c.pinned, c.n FROM transactions t JOIN ledger_cells c ON c.owner = t.owner AND c.budget_month = t.budget_month
-      AND c.account_id = t.account_id AND c.category_id = t.category_id AND c.type = t.type AND c.cancelled = t.cancelled
-      AND c.sign = CASE WHEN t.amount_cents > 0 THEN 1 WHEN t.amount_cents < 0 THEN -1 ELSE 0 END
-      AND c.pinned = CASE WHEN ${PINNED_SQL} THEN 1 ELSE 0 END
-      WHERE t.id = ?`,
-    id,
-  ).map((r) => [Number(r.pinned), Number(r.n)])
-}
-
-/** Deletes every row of the owner's smallest month, so that month has to leave the rollup. */
-export async function emptySmallestMonth(
-  k: Kit,
-  owner: string,
-): Promise<void> {
-  const [smallest] = rows(
-    k,
-    'SELECT budget_month AS m FROM transactions WHERE owner = ? GROUP BY 1 ORDER BY COUNT(*), 1 LIMIT 1',
-    owner,
-  )
-  if (!smallest) return
-  const ids = idsOf(k, 'transactions', owner, `budget_month = '${String(smallest.m)}'`)
-  const reply = await call(k, owner, deleteBulk, '/transactions/bulk', { method: 'DELETE', body: { ids } })
-  expect(reply.status).toBe(200)
-}
-
-const raw = (
-  k: Kit,
-  sql: string,
-  ...params: Array<string | number | null>
-) => k.sqlite.prepare(sql).run(...params)
 
 const paymentPinnedOnlyByPointer: Scenario = {
   name: 'a payment that is pinned only because a row points at it',
@@ -248,45 +167,8 @@ const amountOfPinnedRow: Scenario = {
   },
 }
 
-/** Rows the API cannot make now, and a change of owner it never makes: the triggers hold for them all the same. */
-const oldShapes: Scenario = {
-  name: 'a zero amount and a row handed to another owner',
-  run: async (k) => {
-    const [account, category] = [idsOf(k, 'accounts', OWNER)[0]!, idsOf(k, 'categories', OWNER)[0]!]
-    await make(k, OWNER)
-    const tables = emptyTables()
-    tables.transactions = [
-      {
-        id: 9001,
-        date: '2026-09-01',
-        budgetMonth: '2026-09',
-        description: 'Zero',
-        accountId: account,
-        categoryId: category,
-        type: 'expense',
-        amountCents: 0,
-        cancelled: false,
-        createdAt: '2026-09-01 10:00:00',
-      },
-    ]
-    for (const statement of restoreStatements(OWNER, tables)) k.sqlite.exec(statement)
-    const id = 9001
-    await assertRollup(k, 'a zero amount')
-    expect(await edit(k, OWNER, id, { amountCents: 500 })).toBe(200)
-    await assertRollup(k, 'zero to positive')
-    expect(await edit(k, OWNER, id, { amountCents: 500, type: 'investment' })).toBe(200)
-    raw(k, 'UPDATE transactions SET owner = ? WHERE id = ?', OTHER, id)
-    await assertRollup(k, 'handed to another owner')
-    raw(k, 'UPDATE transactions SET owner = ?, amount_cents = 0 WHERE id = ?', OWNER, id)
-    await assertRollup(k, 'handed back, and zero again')
-    await call(k, OWNER, deleteOne, `/transactions/${id}`, { method: 'DELETE', params: { id: String(id) } })
-    await assertRollup(k, 'the zero row deleted')
-  },
-}
-
 export const pinningScenarios: Scenario[] = [
   amountOfPinnedRow,
-  oldShapes,
   paymentPinnedOnlyByPointer,
   rowMovesBetweenPinnedAndUnpinned,
   nullReportCount,

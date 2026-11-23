@@ -1,18 +1,19 @@
 /**
  * The rest of the named hazards (rollupScenarios.ts has the ones about pinning): months that empty, cancelled
  * rows, a category deleted with its rows moved, an owner purged and restored, the instalment backfill that
- * inserts on a GET, a fill that touches no cell column, and the counts the API sends back from statements that
- * fire the triggers.
+ * inserts on a GET, a fill that touches no cell column, the counts the API sends back from statements that fire
+ * the triggers, and rows the API cannot make now.
  */
 import { expect } from 'vitest'
 import { onRequestDelete as deleteFlag } from '../../api/expenses/flags/[id]'
 import { onRequestDelete as deleteCategory } from '../../api/expenses/categories/[id]'
 import { onRequestDelete as deleteOne } from '../../api/expenses/transactions/[id]'
 import { onRequestDelete as deleteBulk } from '../../api/expenses/transactions/bulk'
+import { emptyTables, restoreStatements } from '../restoreSql'
 import { OTHER, OWNER } from './expenseWorld'
 import { assertRollup, call, countRollupWrites, idsOf, newCategory, rows, type Kit } from './rollupKit'
 import { newPlan, purgeAndRestore, refillNorm, readDataset } from './rollupLinkedSteps'
-import { cellOf, make, settleRows, type Scenario } from './rollupScenarios'
+import { cellOf, make, raw, settleRows, type Scenario } from './rollupScenarioKit'
 import { edit } from './rollupSteps'
 
 const months = (
@@ -160,6 +161,42 @@ const countsTheApiSends: Scenario = {
   },
 }
 
+/** Rows the API cannot make now, and a change of owner it never makes: the triggers hold for them all the same. */
+const oldShapes: Scenario = {
+  name: 'a zero amount and a row handed to another owner',
+  run: async (k) => {
+    const [account, category] = [idsOf(k, 'accounts', OWNER)[0]!, idsOf(k, 'categories', OWNER)[0]!]
+    await make(k, OWNER)
+    const tables = emptyTables()
+    tables.transactions = [
+      {
+        id: 9001,
+        date: '2026-09-01',
+        budgetMonth: '2026-09',
+        description: 'Zero',
+        accountId: account,
+        categoryId: category,
+        type: 'expense',
+        amountCents: 0,
+        cancelled: false,
+        createdAt: '2026-09-01 10:00:00',
+      },
+    ]
+    for (const statement of restoreStatements(OWNER, tables)) k.sqlite.exec(statement)
+    const id = 9001
+    await assertRollup(k, 'a zero amount')
+    expect(await edit(k, OWNER, id, { amountCents: 500 })).toBe(200)
+    await assertRollup(k, 'zero to positive')
+    expect(await edit(k, OWNER, id, { amountCents: 500, type: 'investment' })).toBe(200)
+    raw(k, 'UPDATE transactions SET owner = ? WHERE id = ?', OTHER, id)
+    await assertRollup(k, 'handed to another owner')
+    raw(k, 'UPDATE transactions SET owner = ?, amount_cents = 0 WHERE id = ?', OWNER, id)
+    await assertRollup(k, 'handed back, and zero again')
+    await call(k, OWNER, deleteOne, `/transactions/${id}`, { method: 'DELETE', params: { id: String(id) } })
+    await assertRollup(k, 'the zero row deleted')
+  },
+}
+
 export const shapeScenarios: Scenario[] = [
   monthLosesItsLastRow,
   cancelledRow,
@@ -168,4 +205,5 @@ export const shapeScenarios: Scenario[] = [
   backfillOnGet,
   fillTouchesNoCell,
   countsTheApiSends,
+  oldShapes,
 ]

@@ -33,7 +33,7 @@ import { createExpenseWorld, pinClock, OWNER as WORLD_OWNER } from './testing/ex
 import { seedLedger } from './testing/seedLedger'
 import { onRequestPut as putSettings } from '../api/expenses/settings/index'
 import { onRequestPost as postScenario } from '../api/expenses/scenarios/index'
-import { scenarioInput } from './testing/seedLedger'
+import { scenarioInput } from './testing/seedBodies'
 
 const SLOW = 120_000
 const DAY = '2026-10-15'

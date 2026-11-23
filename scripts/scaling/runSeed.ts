@@ -3,7 +3,7 @@
  * chunk of transactions is small on purpose: if D1 reports more rows written for it than the plan assumed,
  * the run stops there, having spent about a hundred and sixty rows, instead of finding out at the end.
  */
-import type { SeedStep } from './seedSql'
+import type { SeedStep } from './seedStatement'
 import type { SpendLedger } from './spend'
 import type { Transport } from './transport'
 

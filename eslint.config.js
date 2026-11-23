@@ -16,13 +16,8 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 // file may not grow past its entry and keeps the other limit. Do not add a file: split it. Lower an entry when its file
 // shrinks, and take the file off the list when it fits.
 const FILE_LINE_CAPS = {
-  'functions/_shared/measure/routeMatrix.ts': 313,
   'functions/_shared/restoreSql.ts': 299,
   'functions/_shared/testing/rollupMutants.ts': 253,
-  'functions/_shared/testing/rollupScenarios.ts': 272,
-  'functions/_shared/testing/rollupSteps.ts': 229,
-  'functions/_shared/testing/seedLedger.ts': 234,
-  'scripts/scaling/seedSql.ts': 255,
   'src/data/apiDataSource.ts': 318,
   'src/data/docsCaptureDataSource.ts': 561,
   'src/data/ledgerHold.ts': 216,
@@ -91,7 +86,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'scripts/scaling/seedSql.ts': 108,
   'src/data/inMemoryLedgerParts.ts': 68,
   'src/domain/engine/rebaselinePatch.ts': 67,
   'src/testing/fakeIntersectionObserver.ts': 63,

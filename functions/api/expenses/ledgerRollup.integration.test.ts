@@ -13,7 +13,8 @@ import { applyMigration, applyMigrationSql, migratedDatabase, newStats, sqliteD1
 import { assertRollup } from '../../_shared/testing/rollupKit'
 import { newKit } from '../../_shared/testing/rollupWorld'
 import { OWNER } from '../../_shared/testing/expenseWorld'
-import { emptySmallestMonth, make, pinningScenarios } from '../../_shared/testing/rollupScenarios'
+import { emptySmallestMonth, make } from '../../_shared/testing/rollupScenarioKit'
+import { pinningScenarios } from '../../_shared/testing/rollupScenarios'
 import { shapeScenarios } from '../../_shared/testing/rollupScenariosShape'
 import { seedRows, walk } from '../../_shared/testing/rollupWalk'
 

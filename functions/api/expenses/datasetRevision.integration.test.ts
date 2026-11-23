@@ -13,7 +13,8 @@ import { purgeOwnerData } from '../../_shared/ownerDataPurge'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { REVISION_AFTER_HEADER, REVISION_BEFORE_HEADER } from '../../domain/data/writeReceipt'
 import { OTHER, OWNER, createExpenseWorld, pinClock, type World } from '../../_shared/testing/expenseWorld'
-import { scenarioInput, seedLedger, uploadForm, type SeededIds } from '../../_shared/testing/seedLedger'
+import { scenarioInput, uploadForm } from '../../_shared/testing/seedBodies'
+import { seedLedger, type SeededIds } from '../../_shared/testing/seedLedger'
 import { onRequestGet } from './index'
 
 type Handler = PagesFunction<Env, string, ExpensesData>

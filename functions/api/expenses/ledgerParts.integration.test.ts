@@ -28,7 +28,8 @@ import {
   type Handler,
   type World,
 } from '../../_shared/testing/expenseWorld'
-import { expense, seedLedger, uploadForm, type SeededIds } from '../../_shared/testing/seedLedger'
+import { expense, uploadForm } from '../../_shared/testing/seedBodies'
+import { seedLedger, type SeededIds } from '../../_shared/testing/seedLedger'
 import { onRequestPost as postTransaction } from './transactions/index'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPost as postAttachment } from './attachments/index'
