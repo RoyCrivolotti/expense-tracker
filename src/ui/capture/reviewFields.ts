@@ -3,9 +3,7 @@ import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { cleanText } from '../../domain/capture/text'
 import {
   bankMerchantName,
-  merchantHistory,
   reviewReasons,
-  type MerchantHistory,
   type MerchantIndex,
   type ReviewReason,
 } from '../../domain/capture/review'
@@ -14,6 +12,7 @@ import type { TxnType } from '../../types'
 import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
 import { monthEdgeNotice } from './reviewNotice'
+import { historyOf, knownReferences, taught } from './reviewReading'
 import type { ExpenseModel } from '../useExpenseData'
 
 /** The seven things a payment becomes, worked out from the push and the person's own history. Never stored. */
@@ -45,58 +44,6 @@ export interface ReviewView {
   reasons: ReviewReason[]
   /** True only when nothing is in doubt, so one tap may add it. */
   oneTap: boolean
-}
-
-/** The category and account the person's own history and settings give a payment, each null unless still in use. */
-function knownReferences(
-  categoryIdFromHistory: number | null,
-  accountId: number | null,
-  model: ExpenseModel,
-) {
-  const category = categoryIdFromHistory === null ? undefined : model.lookup.category(categoryIdFromHistory)
-  const account = accountId === null ? undefined : model.lookup.account(accountId)
-  return {
-    categoryId: category?.active ? category.id : null,
-    categoryName: category?.active ? category.name : null,
-    accountId: account?.active ? account.id : null,
-    accountName: account?.active ? account.name : null,
-  }
-}
-
-/**
- * What the person's history says about the merchant. The server's suggestion when it names a description, since it
- * remembers what the person added this merchant with whatever they typed; else the rows the app holds, which match only
- * when a typed description equals the bank's text.
- */
-function historyOf(
-  rec: RecommendationInfo,
-  merchants: MerchantIndex,
-  bankText: string | null,
-): MerchantHistory {
-  const s = rec.suggestion
-  if (s?.description != null)
-    return { sightings: s.sightings, label: s.description, categoryId: s.categoryId, settled: s.settled }
-  return merchantHistory(merchants, bankText)
-}
-
-/** The amount, type and account the push's wording taught, and its flags; without a suggestion, the push's first reading. */
-function taught(rec: RecommendationInfo) {
-  const s = rec.suggestion
-  if (!s)
-    return {
-      amountCents: rec.amountCents,
-      type: rec.suggestedType,
-      accountId: rec.accountId,
-      newShape: false,
-      amountRelearned: false,
-    }
-  return {
-    amountCents: s.amountCents,
-    type: s.type,
-    accountId: s.accountId,
-    newShape: s.reasons.includes('new-shape'),
-    amountRelearned: s.reasons.includes('amount-relearned'),
-  }
 }
 
 /** Works out what a recommendation would become and whether one tap may add it. */
