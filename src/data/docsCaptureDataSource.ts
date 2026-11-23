@@ -32,6 +32,7 @@ import { parseDemoFixture } from './csvDataSource'
 import { byApiOrder } from '../domain/ledger'
 import { type HeldDataset, inMemoryLedgerParts } from './inMemoryLedgerParts'
 import { enrichDocsCaptureDataset } from './docsCaptureDemo'
+import { applyAutoLabelToFlagged, withAutoLabel } from './docsCaptureLabels'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
 
@@ -98,44 +99,6 @@ async function heldDataset(): Promise<HeldDataset> {
   }
 }
 
-/** Add `labelId` to `labelIds` if it is not already there, without mutating the input. */
-function withLabelAdded(
-  labelIds: number[] | undefined,
-  labelId: number,
-): number[] {
-  const current = labelIds ?? []
-  return current.includes(labelId) ? current : [...current, labelId]
-}
-
-/**
- * Forward half, mirrors dbTransactionWrite.ts's maybeApplyAutoLabelStatement: a transaction
- * carrying a flag that has an auto-label picks it up too. A flag with no
- * autoLabelId, or a transaction with no flagId, is left untouched.
- */
-function withAutoLabel(txn: Transaction): Transaction {
-  if (txn.flagId == null) return txn
-  const labelId = loadedFlags.find((f) => f.id === txn.flagId)?.autoLabelId
-  if (labelId == null) return txn
-  const labelIds = withLabelAdded(txn.labelIds, labelId)
-  return labelIds === txn.labelIds ? txn : { ...txn, labelIds }
-}
-
-/**
- * Retroactive half, mirrors dbFlags.ts's applyLabelToFlaggedTransactionsStatement:
- * configuring a flag's auto-label also labels every transaction already carrying
- * that flag, deduped against one it already has some other way.
- */
-function applyAutoLabelToFlagged(
-  flagId: number,
-  labelId: number,
-): void {
-  loaded = loaded.map((t) => {
-    if (t.flagId !== flagId) return t
-    const labelIds = withLabelAdded(t.labelIds, labelId)
-    return labelIds === t.labelIds ? t : { ...t, labelIds }
-  })
-}
-
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
   load(): Promise<ExpenseDataset> {
@@ -161,12 +124,12 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // found nothing here before this, and silently no-opped against a row `loaded`
   // had never heard of.
   createTransaction(input) {
-    const txn = withAutoLabel(stubTxn(input))
+    const txn = withAutoLabel(stubTxn(input), loadedFlags)
     loaded = [...loaded, txn]
     return Promise.resolve(txn)
   },
   createTransactions(inputs) {
-    const created = inputs.map((input) => withAutoLabel(stubTxn(input)))
+    const created = inputs.map((input) => withAutoLabel(stubTxn(input), loadedFlags))
     loaded = [...loaded, ...created]
     return Promise.resolve(created)
   },
@@ -182,7 +145,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     const merged = existing
       ? ({ ...existing, ...patch } as Transaction)
       : stubTxn({ ...patch, id } as NewTransaction & { id: number })
-    const withLabel = withAutoLabel(merged)
+    const withLabel = withAutoLabel(merged, loadedFlags)
     loaded = loaded.map((t) => (t.id === id ? withLabel : t))
     return Promise.resolve(withLabel)
   },
@@ -202,7 +165,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       const merged = existing
         ? ({ ...existing, ...patch } as Transaction)
         : stubTxn({ ...patch, id } as NewTransaction & { id: number })
-      return withAutoLabel(merged)
+      return withAutoLabel(merged, loadedFlags)
     })
     loaded = loaded.map((t) => transactions.find((u) => u.id === t.id) ?? t)
     return Promise.resolve({ updated: transactions.length, transactions })
@@ -268,7 +231,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     loadedFlags = loadedFlags.map((f) => (f.id === id ? merged : f))
     // Retroactive: mirrors dbFlags.ts's updateFlag applying the auto-label to
     // every transaction already carrying this flag, the moment it's configured.
-    if (autoLabelId != null) applyAutoLabelToFlagged(id, autoLabelId)
+    if (autoLabelId != null) loaded = applyAutoLabelToFlagged(loaded, id, autoLabelId)
     return Promise.resolve(merged)
   },
   deleteFlag() {
