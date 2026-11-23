@@ -76,15 +76,52 @@ function UserGroupToggles({
   )
 }
 
-export function ActiveUsersSection({
-  users,
-  onChange,
+function ActiveUserItem({
+  row,
+  groupMeta,
+  busy,
+  onGroupsChange,
+  onRevokeAll,
 }: {
-  users: ActiveAccessUser[]
-  onChange: (next: ActiveAccessUser[]) => void
+  row: ActiveAccessUser
+  groupMeta: AccessGroupMeta[]
+  busy: boolean
+  onGroupsChange: (
+    email: string,
+    groups: ActiveAccessUser['groups'],
+  ) => void
+  onRevokeAll: () => void
 }) {
-  const [busyEmail, setBusyEmail] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  return (
+    <li>
+      <Card className={styles.requestCard}>
+        <div className={styles.requestMeta}>
+          <span className={styles.email}>{row.email}</span>
+          <span className={styles.requestedAt} title={formatDateTime(row.grantedAt)}>
+            Granted {formatRelativeTime(row.grantedAt)}
+          </span>
+          <span className={styles.requestedAt} title={row.lastSeenAt ? formatDateTime(row.lastSeenAt) : undefined}>
+            {lastSeenLabel(row.lastSeenAt)}
+          </span>
+          {row.isOwner ? <Pill tone="success">Owner</Pill> : <Pill tone="neutral">Active</Pill>}
+        </div>
+        {!row.isOwner ? (
+          <>
+            <UserGroupToggles user={row} groupMeta={groupMeta} disabled={busy} onGroupsChange={onGroupsChange} />
+            <div className={styles.requestActions}>
+              <button type="button" className={styles.rejectBtn} disabled={busy} onClick={onRevokeAll}>
+                {busy ? 'Revoking…' : 'Revoke all'}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Card>
+    </li>
+  )
+}
+
+/** The access groups the server knows, or the three it ships with when it cannot be asked. */
+function useAccessGroupMeta() {
   const [groupMeta, setGroupMeta] = useState<AccessGroupMeta[]>([])
 
   useEffect(() => {
@@ -98,6 +135,20 @@ export function ActiveUsersSection({
         ])
       })
   }, [])
+
+  return groupMeta
+}
+
+export function ActiveUsersSection({
+  users,
+  onChange,
+}: {
+  users: ActiveAccessUser[]
+  onChange: (next: ActiveAccessUser[]) => void
+}) {
+  const [busyEmail, setBusyEmail] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const groupMeta = useAccessGroupMeta()
 
   function updateUserGroups(
     email: string,
@@ -130,43 +181,14 @@ export function ActiveUsersSection({
     <>
       <ul className={styles.requestList}>
         {users.map((row) => (
-          <li key={row.email}>
-            <Card className={styles.requestCard}>
-              <div className={styles.requestMeta}>
-                <span className={styles.email}>{row.email}</span>
-                <span className={styles.requestedAt} title={formatDateTime(row.grantedAt)}>
-                  Granted {formatRelativeTime(row.grantedAt)}
-                </span>
-                <span
-                  className={styles.requestedAt}
-                  title={row.lastSeenAt ? formatDateTime(row.lastSeenAt) : undefined}
-                >
-                  {lastSeenLabel(row.lastSeenAt)}
-                </span>
-                {row.isOwner ? <Pill tone="success">Owner</Pill> : <Pill tone="neutral">Active</Pill>}
-              </div>
-              {!row.isOwner ? (
-                <>
-                  <UserGroupToggles
-                    user={row}
-                    groupMeta={groupMeta}
-                    disabled={busyEmail === row.email}
-                    onGroupsChange={updateUserGroups}
-                  />
-                  <div className={styles.requestActions}>
-                    <button
-                      type="button"
-                      className={styles.rejectBtn}
-                      disabled={busyEmail === row.email}
-                      onClick={() => void onRevokeAll(row.email)}
-                    >
-                      {busyEmail === row.email ? 'Revoking…' : 'Revoke all'}
-                    </button>
-                  </div>
-                </>
-              ) : null}
-            </Card>
-          </li>
+          <ActiveUserItem
+            key={row.email}
+            row={row}
+            groupMeta={groupMeta}
+            busy={busyEmail === row.email}
+            onGroupsChange={updateUserGroups}
+            onRevokeAll={() => void onRevokeAll(row.email)}
+          />
         ))}
       </ul>
       {error ? <p className={styles.error}>{error}</p> : null}

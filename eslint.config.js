@@ -75,7 +75,6 @@ const FUNCTION_LINE_CAPS = {
   'src/testing/smallLedgerDb.ts': 68,
   'src/testing/syntheticTransactions.ts': 77,
   'src/ui/ExpensesApp.tsx': 139,
-  'src/ui/access/ActiveUsersSection.tsx': 92,
   'src/ui/access/PendingRequestsSection.tsx': 67,
   'src/ui/access/RequestAccessScreen.tsx': 67,
   'src/ui/analytics/overview/OverviewView.tsx': 63,
