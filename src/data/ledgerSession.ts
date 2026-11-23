@@ -1,10 +1,8 @@
 import type { LedgerPartsSource } from './dataSource'
-import { shiftBudgetMonth } from '../domain/engine/dates'
 import type { RecurringSeries } from '../domain/engine/recurringSeries'
-import type { MonthRange } from '../domain/data/ledgerParts'
 import { DEFAULT_HYDRATION_POLICY, type HydrationPolicy } from '../domain/ledger'
 import { planRowRanges } from '../domain/ledger/partsPlan'
-import type { ExpenseDataset, TransactionAttachment } from '../domain/types'
+import type { ExpenseDataset } from '../domain/types'
 import {
   type HeldLedger,
   evictMonths,
@@ -21,6 +19,7 @@ import {
 } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
 import { type Cascade, cascadeOf } from './ledgerCascade'
+import { rangesOfMonths, receiptsByTransaction, seriesAreCurrent, showsRowsChanged } from './ledgerSessionHelpers'
 import { type Reconciled, datasetOfHeld, reconcileHeld, resourcesTouched } from './ledgerReconcile'
 import { reshapesSeries, touchesSeries } from './touchesSeries'
 import { type Epochs, NO_EPOCHS, bump, mergeRead, stillCurrent } from './ledgerResources'
@@ -81,32 +80,6 @@ export interface WriteReach {
   ids?: readonly number[]
   /** The fields it wrote, if it edited; absent when it added or removed rows, which could be any series' rows. */
   patch?: object
-}
-
-/**
- * Whether a write changed rows, those held and those it did not show: a cascade does (the server moved, unlinked or
- * inserted rows) and so does marking a card statement paid or unpaid (it decides whether the rows it covers are posted),
- * so a list read from the server is read again.
- */
-function showsRowsChanged(
-  done: Reconciled,
-  cascade: Cascade | null,
-  before: ExpenseDataset,
-  after: ExpenseDataset,
-): boolean {
-  const statements = JSON.stringify(before.accountStatements) !== JSON.stringify(after.accountStatements)
-  return done.changed.rows || cascade !== null || statements
-}
-
-/** Consecutive months as ranges, so that reading a few months again does not read the span between them. */
-export function rangesOfMonths(months: readonly string[]): MonthRange[] {
-  const ranges: MonthRange[] = []
-  for (const month of [...months].sort()) {
-    const last = ranges[ranges.length - 1]
-    if (last && shiftBudgetMonth(last.to, 1) === month) last.to = month
-    else if (!last || last.to !== month) ranges.push({ from: month, to: month })
-  }
-  return ranges
 }
 
 /**
@@ -392,9 +365,7 @@ export class LedgerSession {
 
   /** The series held were read after the last write that touched them, under the revision the rows were read under. */
   private seriesCurrent(): boolean {
-    const read = this.seriesRead
-    const revision = this.state.held?.revision ?? null
-    return read !== null && read.writes === this.seriesWrites && (revision === null || revision === read.revision)
+    return seriesAreCurrent(this.seriesRead, this.seriesWrites, this.state.held?.revision ?? null)
   }
 
   /** Says why the series are not what they should be, and holds off reading them again for a while. */
@@ -473,12 +444,7 @@ export class LedgerSession {
     const all = await this.source.readReceiptsPart()
     const now = this.state.held
     if (!now) return
-    const byTransaction = new Map<number, TransactionAttachment[]>()
-    for (const receipt of all) {
-      const list = byTransaction.get(receipt.transactionId)
-      if (list) list.push(receipt)
-      else byTransaction.set(receipt.transactionId, [receipt])
-    }
+    const byTransaction = receiptsByTransaction(all)
     this.set({
       held: holdReceiptLists(
         now,
