@@ -4,14 +4,12 @@ import { cleanText } from '../../domain/capture/text'
 import {
   bankMerchantName,
   merchantHistory,
-  otherBudgetDays,
-  paymentClock,
   reviewReasons,
   type MerchantHistory,
   type MerchantIndex,
-  type PaymentClock,
   type ReviewReason,
 } from '../../domain/capture/review'
+import { otherBudgetDays, paymentClock, type PaymentClock } from '../../domain/capture/reviewDates'
 import type { TxnType } from '../../types'
 import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'

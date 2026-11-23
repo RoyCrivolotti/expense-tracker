@@ -1,5 +1,5 @@
 import type { SuggestedType } from './types'
-import { shiftDay } from './review'
+import { shiftDay } from './reviewDates'
 
 /**
  * How far from a payment's local date a typed row may be and still look like the same payment.
