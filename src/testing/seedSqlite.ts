@@ -58,6 +58,14 @@ function seedReference(
       f.autoLabelId ?? null,
     ],
   )
+  seedStatementsAndPlans(db, owner, d)
+}
+
+function seedStatementsAndPlans(
+  db: DatabaseSync,
+  owner: string,
+  d: ExpenseDataset,
+): void {
   insertAll(
     db.prepare('INSERT INTO account_statements (owner,account_id,year_month,paid,paid_on) VALUES (?,?,?,?,?)'),
     d.accountStatements,
