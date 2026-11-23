@@ -22,7 +22,7 @@ const FILE_LINE_CAPS = {
   'src/data/docsCaptureDataSource.ts': 561,
   'src/data/ledgerHold.ts': 216,
   'src/data/ledgerSession.ts': 350,
-  'src/data/transactionPager.ts': 278,
+  'src/data/transactionPager.ts': 275,
   'src/domain/data/dataSource.ts': 224,
   'src/domain/engine/dates.ts': 201,
   'src/domain/engine/marketSpread.ts': 203,
