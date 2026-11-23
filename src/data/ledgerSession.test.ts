@@ -6,19 +6,23 @@ import { withoutFlag } from '../domain/engine/flagGroups'
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import {
   patchAfterAccountDelete,
-  patchAfterAttachmentAdd,
-  patchAfterBulkUpdate,
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
-  patchAfterInstallmentPlanCreate,
-  patchAfterInstallmentPlanDelete,
-  patchAfterInstallmentPlanUpdate,
   patchAfterLabelDelete,
+} from '../ui/referencePatches'
+import {
+  patchAfterAttachmentAdd,
+  patchAfterBulkUpdate,
   patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
+import {
+  patchAfterInstallmentPlanCreate,
+  patchAfterInstallmentPlanDelete,
+  patchAfterInstallmentPlanUpdate,
+} from '../ui/planningPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeAttachment, makeTransaction } from '../testing/factories'
 import { comparable, memorySource, type TestSource } from '../testing/ledgerSource'

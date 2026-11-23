@@ -7,7 +7,7 @@ import {
   patchAfterCategory,
   patchAfterCategoryDelete,
   patchAfterSettings,
-} from '../datasetPatches'
+} from '../referencePatches'
 
 export interface OnboardingSetupInput {
   categories: CategoryPreset[]

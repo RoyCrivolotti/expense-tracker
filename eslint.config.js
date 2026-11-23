@@ -39,7 +39,6 @@ const FILE_LINE_CAPS = {
   'src/ui/components/TransactionFields.tsx': 342,
   'src/ui/components/TransactionForm.tsx': 392,
   'src/ui/components/TransactionModal.tsx': 219,
-  'src/ui/datasetPatches.ts': 383,
   'src/ui/definitions/ConfigModal.tsx': 295,
   'src/ui/definitions/InstallmentPlanForm.tsx': 202,
   'src/ui/onboarding/OnboardingWizard.tsx': 209,

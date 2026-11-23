@@ -15,7 +15,7 @@ import {
   patchAfterWealthCheckinCreate,
   patchAfterWealthCheckinDelete,
   patchAfterWealthCheckinUpdate,
-} from './datasetPatches'
+} from './planningPatches'
 
 type PlanningWrites =
   | 'createScenario'
