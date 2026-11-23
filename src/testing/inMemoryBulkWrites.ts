@@ -17,7 +17,7 @@ import {
 import { deriveOne, derivedTransactions, type InMemoryState, type Op, type OwnerStore } from './inMemoryStore'
 
 /**
- * Mirrors recordReportSnapshot in dbTransactionWrite.ts: a settle stamps the payment with what
+ * Mirrors reportSnapshotStatement in dbTransactionWrite.ts: a settle stamps the payment with what
  * it covered. Without it a test would show a past report that can never drift, and
  * the drift warning would be provably untested.
  */
