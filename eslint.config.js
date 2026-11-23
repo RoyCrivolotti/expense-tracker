@@ -75,7 +75,6 @@ const FILE_LINE_CAPS = {
 
 const FUNCTION_LINE_CAPS = {
   'src/data/inMemoryLedgerParts.ts': 68,
-  'src/testing/fakeIntersectionObserver.ts': 63,
   'src/testing/ledgerSource.ts': 72,
   'src/testing/seedSqlite.ts': 70,
   'src/testing/smallLedgerDb.ts': 68,

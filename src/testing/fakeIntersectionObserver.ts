@@ -12,6 +12,13 @@ export interface FakeObserver {
   disconnected: boolean
 }
 
+function entryOf(
+  ratio: number,
+  target: Element | undefined,
+): IntersectionObserverEntry {
+  return { intersectionRatio: ratio, isIntersecting: ratio > 0, target } as unknown as IntersectionObserverEntry
+}
+
 export function installFakeIntersectionObserver() {
   const observers: FakeObserver[] = []
   class Fake {
@@ -44,14 +51,7 @@ export function installFakeIntersectionObserver() {
     emitBatch(ratios: number[]) {
       for (const o of live()) {
         o.callback(
-          ratios.map(
-            (ratio) =>
-              ({
-                intersectionRatio: ratio,
-                isIntersecting: ratio > 0,
-                target: o.targets[0],
-              }) as unknown as IntersectionObserverEntry,
-          ),
+          ratios.map((ratio) => entryOf(ratio, o.targets[0])),
           {} as IntersectionObserver,
         )
       }
@@ -62,16 +62,7 @@ export function installFakeIntersectionObserver() {
     ) {
       const targets = index === undefined ? live() : [live()[index]!]
       for (const o of targets) {
-        o.callback(
-          [
-            {
-              intersectionRatio: ratio,
-              isIntersecting: ratio > 0,
-              target: o.targets[0],
-            } as unknown as IntersectionObserverEntry,
-          ],
-          {} as IntersectionObserver,
-        )
+        o.callback([entryOf(ratio, o.targets[0])], {} as IntersectionObserver)
       }
     },
   }
