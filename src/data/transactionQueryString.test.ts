@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { parseTransactionQuery } from '../../functions/_shared/transactionQueryParams'
 import { validateTxnFilter } from '../domain/application/transactionQueryService'
 import type { TxnFilter } from '../domain/engine/transactions'
-import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
+import { awkwardLedger } from '../testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../testing/randomTransactionFilters'
 import { transactionQueryString } from './transactionQueryString'
 
 /** What the route makes of a query string: the filter it will run, checked and written one way. */

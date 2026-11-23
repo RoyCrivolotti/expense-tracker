@@ -2,16 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { D1_MAX_BOUND_PARAMETERS } from './sqliteD1'
 import { syntheticLedger } from './syntheticLedger'
-import {
-  OTHER_OWNER,
-  OWNER,
-  allPages,
-  awkwardLedger,
-  filterStream,
-  planOf,
-  queryDb,
-  vocabularyOf,
-} from './transactionQueryKit'
+import { OTHER_OWNER, OWNER, allPages, awkwardLedger, planOf, queryDb } from './transactionQueryKit'
+import { filterStream, vocabularyOf } from './randomTransactionFilters'
 
 const small = () => syntheticLedger({ months: 2, perMonth: 5, seed: 4 })
 

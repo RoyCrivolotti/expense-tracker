@@ -12,15 +12,8 @@ import { filterTransactions, type TxnFilter } from '../domain/engine/transaction
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { inMemoryExpenseRepository } from '../../src/testing/inMemoryExpenseRepository'
-import {
-  OWNER,
-  allPages,
-  awkwardLedger,
-  filterStream,
-  queryDb,
-  vocabularyOf,
-  type QueryDb,
-} from '../../src/testing/transactionQueryKit'
+import { OWNER, allPages, awkwardLedger, queryDb, type QueryDb } from '../../src/testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../../src/testing/randomTransactionFilters'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { loadDataset } from './db'
 import type { Env } from './env'

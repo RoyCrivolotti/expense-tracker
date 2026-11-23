@@ -108,7 +108,7 @@ Each of these has a pure reference, and a parity test holds the SQL to it.
   `src/domain/engine/transactions.ts` is the specification, `transactionQuerySql.ts` is the only place a `TxnFilter`
   becomes SQL, and `dbTransactionQuery.parity.test.ts` compares the pages with the engine over random filters and
   awkward rows. A new filter field needs five things: the engine, its SQL clause, the generator in
-  `src/testing/transactionQueryKit.ts`, a validator in `transactionQueryService.ts` and its name in
+  `src/testing/randomTransactionFilters.ts`, a validator in `transactionQueryService.ts` and its name in
   `transactionQueryParams.ts`.
 - **Every value in SQL is bound, and the number bound per statement is fixed by the statement's shape.** D1 allows 100.
   A list of ids travels as one JSON string read with `json_each` (`functions/_shared/sqlIdList.ts`).

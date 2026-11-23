@@ -7,7 +7,8 @@ import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import { filterTransactions, netSpendCents } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
 import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
-import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
+import { awkwardLedger } from '../testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../testing/randomTransactionFilters'
 import { inMemoryLedgerParts } from './inMemoryLedgerParts'
 
 const row = (

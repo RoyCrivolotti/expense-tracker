@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { randomLedger } from '../../testing/randomLedger'
-import { awkwardLedger, filterStream, vocabularyOf } from '../../testing/transactionQueryKit'
+import { awkwardLedger } from '../../testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../../testing/randomTransactionFilters'
 import type { ExpenseDataset } from '../types'
 import { computeCashReconciliation } from './cashReconciliation'
 import { filteredStatementPayments, pagedListRows } from './pagedListRows'

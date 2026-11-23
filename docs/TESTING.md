@@ -61,7 +61,8 @@ change that must be all-or-nothing.
 - `src/domain/ledger/partsOfDataset.ts`: the ledger parts computed from a whole dataset, which the SQL is held to
   (`dbLedgerParts.parity.test.ts`).
 - `src/testing/transactionQueryKit.ts`: the awkward ledger (accents, `%` and `_`, ties on a date, withdrawals, a missing
-  account), a stand-in that records every statement it ran, and a seeded generator of filters, for the paged-read tests.
+  account) and a stand-in that records every statement it ran, for the paged-read tests.
+  `src/testing/randomTransactionFilters.ts` is their seeded generator of filters.
 - `*.scaling.test.ts` print what a route costs by ledger size when run with `SCALING_MEASURE=1` and `--reporter=verbose`
   (the command for the load path is in [SCALING.md](./SCALING.md)). The query-plan tests (`*Plans.test.ts`) run each statement through `EXPLAIN QUERY PLAN` and fail on a full scan of `transactions`.
 
