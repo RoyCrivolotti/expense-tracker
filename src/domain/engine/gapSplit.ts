@@ -23,7 +23,8 @@
  * with no matching withdrawal, a return no market gives) the two are said together.
  */
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../types'
-import { eventHappened, planEvents, planOwnPath, type PlanEvent } from './gapPaths'
+import { planEvents, planOwnPath, type PlanEvent } from './gapPaths'
+import { eventCounted, isRecorded, recordedFlows, type Window } from './gapFlows'
 import { plannedMonthlyAt } from './contributionSchedule'
 import { DAY_MS, utcDateMs } from './dates'
 import { isFlow, portfolioReturn, SUSPECT_YEARLY_RETURN } from './portfolioReturn'
@@ -66,92 +67,12 @@ export type GapReading = GapSplit | { kind: 'unavailable'; reason: GapUnavailabl
 
 /** Check-ins closer than this are too close to say anything about saving or the market. */
 const MIN_DAYS = 30
-/** A recorded withdrawal this close to a plan event's anniversary is that event. */
-const EVENT_MATCH_DAYS = 45
-/** Recorded against planned: at least this share of it counts as the same thing. */
-const MATCH_SHARE = 0.5
 
 const unavailable = (reason: GapUnavailable): GapReading => ({ kind: 'unavailable', reason })
 const daysBetween = (
   from: string,
   to: string,
 ) => (utcDateMs(to) - utcDateMs(from)) / DAY_MS
-
-interface Window {
-  start: string
-  first: WealthCheckin
-  last: WealthCheckin
-  /** Every check-in from the first to the last, one for each day. */
-  between: WealthCheckin[]
-  ta: number
-  tb: number
-  rate: number
-  inflation: number
-}
-
-/** The recorded investments in the window, each in the plan's money and grown to the latest check-in, and how many. */
-function recordedFlows(
-  w: Window,
-  flows: readonly Transaction[],
-): { grown: number; count: number } {
-  let grown = 0
-  let count = 0
-  for (const t of flows) {
-    // A check-in is the balance at the end of its day: a flow on the first is inside it already, one on the last counts with no time to grow.
-    if (t.date <= w.first.checkinDate || t.date > w.last.checkinDate) continue
-    const at = yearOffsetFromDate(w.start, t.date)
-    if (at === null) continue
-    grown += (t.amountCents / Math.pow(1 + w.inflation, at)) * Math.pow(1 + w.rate, w.tb - at)
-    count += 1
-  }
-  return { grown, count }
-}
-
-/** The recorded flow that is this event, if any: the same direction, on its anniversary give or take a month and a half, and at least half its size. */
-function matchingFlow(
-  event: PlanEvent,
-  w: Window,
-  flows: readonly Transaction[],
-): Transaction | undefined {
-  const expected = event.cents * Math.pow(1 + w.inflation, event.year)
-  const anniversary = utcDateMs(dateAtAnniversary(w.start, event.year))
-  return flows.find(
-    (t) =>
-      Math.sign(t.amountCents) === Math.sign(expected) &&
-      Math.abs(utcDateMs(t.date) - anniversary) <= EVENT_MATCH_DAYS * DAY_MS &&
-      Math.abs(t.amountCents) >= MATCH_SHARE * Math.abs(expected),
-  )
-}
-
-const isRecorded = (
-  event: PlanEvent,
-  w: Window,
-  flows: readonly Transaction[],
-) => matchingFlow(event, w, flows) !== undefined
-
-/**
- * Whether an event is in the balance of a check-in. A payment that was recorded is in it from the day it was made,
- * whatever the anniversary says, so one made a month early is not under-saving and one a month late is not
- * over-saving; with nothing recorded it is the plan's own reading (`eventHappened`).
- */
-function eventCounted(
-  event: PlanEvent,
-  at: number,
-  checkinDate: string,
-  nearStep: TrackStatus['nearStep'],
-  w: Window,
-  flows: readonly Transaction[],
-): boolean {
-  const flow = matchingFlow(event, w, flows)
-  return flow !== undefined ? flow.date <= checkinDate : eventHappened(event, at, w.start, nearStep)
-}
-
-function dateAtAnniversary(
-  start: string,
-  year: number,
-): string {
-  return `${Number(start.slice(0, 4)) + year}${start.slice(4)}`
-}
 
 /** Whether an investment account was opened or emptied between the two check-ins. */
 function accountsChanged(
