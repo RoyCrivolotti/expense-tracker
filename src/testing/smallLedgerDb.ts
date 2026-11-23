@@ -50,11 +50,10 @@ export interface SmallLedger {
   d1: D1Database
 }
 
-function seedOwner(
+function seedReferenceRows(
   db: DatabaseSync,
   owner: string,
   ids: SmallIds,
-  rows: number,
 ): void {
   db.prepare(
     "INSERT INTO accounts (owner,id,name,kind,settlement,active) VALUES (?,?,'Checking','debit','immediate',1)",
@@ -73,6 +72,15 @@ function seedOwner(
   db.prepare(
     "INSERT INTO flags (owner,id,name,color,sort_order,active,reimbursable,auto_label_id) VALUES (?,?,'Work','#6366f1',0,1,1,?)",
   ).run(owner, ids.flag, ids.autoLabel)
+}
+
+function seedOwner(
+  db: DatabaseSync,
+  owner: string,
+  ids: SmallIds,
+  rows: number,
+): void {
+  seedReferenceRows(db, owner, ids)
   const insert = db.prepare(
     `INSERT INTO transactions (owner,id,date,budget_month,description,description_norm,account_id,category_id,type,amount_cents,cancelled)
      VALUES (?,?,?,?,?,?,?,?,?,?,0)`,
