@@ -40,8 +40,10 @@ export { MALFORMED_SOURCE, MAX_APP_NAME_LENGTH, MAX_SOURCES_PER_OWNER, isSourceW
 export { readPush, spanText } from './readPush'
 export type { PushReading } from './readPush'
 export { replayKey } from './replayKey'
-export { currencyAmount, readNumber, readPushSlots, readSlots } from './slots'
-export type { Candidate, CodeSlot, DateSlot, MaskedDigitsSlot, NumberSlot, Slot } from './slots'
+export { readNumber } from './readNumber'
+export type { Candidate } from './readNumber'
+export { currencyAmount, readPushSlots, readSlots } from './slots'
+export type { CodeSlot, DateSlot, MaskedDigitsSlot, NumberSlot, Slot } from './slots'
 export {
   MAX_SIBLING_RUN,
   MIN_SHARED_WORDS,
