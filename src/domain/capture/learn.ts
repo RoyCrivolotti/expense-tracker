@@ -1,5 +1,6 @@
 import type { SavedForMerchant } from './merchants'
-import type { Candidate, NumberSlot, Slot } from './slots'
+import type { Candidate } from './readNumber'
+import type { NumberSlot, Slot } from './slots'
 
 /**
  * What a person's decisions on a template's pushes have taught it, one row of `capture_templates`. Everything here is

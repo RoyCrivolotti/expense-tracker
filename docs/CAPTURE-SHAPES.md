@@ -125,5 +125,5 @@ When a bank's pushes are read wrong, the fix is on the phone, not in the code:
   looks the same.
 
 If a bank writes amounts in a way the reader cannot read at all, the change belongs in the reader (`slots.ts`,
-`currency.ts`), tested with an **invented** push in the same form. Never put a real amount, merchant, name, or card or
-account digits in the code, a test or a pull request, and never a bank's or a language's word.
+`readNumber.ts`, `currency.ts`), tested with an **invented** push in the same form. Never put a real amount, merchant,
+name, or card or account digits in the code, a test or a pull request, and never a bank's or a language's word.

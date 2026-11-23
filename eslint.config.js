@@ -23,7 +23,6 @@ const FILE_LINE_CAPS = {
   'src/data/ledgerHold.ts': 216,
   'src/data/ledgerSession.ts': 376,
   'src/data/transactionPager.ts': 278,
-  'src/domain/capture/slots.ts': 206,
   'src/domain/data/dataSource.ts': 224,
   'src/domain/engine/dates.ts': 201,
   'src/domain/engine/gapSplit.ts': 225,
