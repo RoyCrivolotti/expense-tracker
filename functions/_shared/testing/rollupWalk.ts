@@ -19,19 +19,8 @@ import {
   unsettle,
   zeroCount,
 } from './rollupLinkedSteps'
-import {
-  create,
-  createMany,
-  editByFilter,
-  editFormChanged,
-  editFormUnchanged,
-  editPartial,
-  editMany,
-  remove,
-  removeMany,
-  setFlag,
-  type Step,
-} from './rollupSteps'
+import { createMany, editByFilter, editMany, removeMany } from './rollupBulkSteps'
+import { create, editFormChanged, editFormUnchanged, editPartial, remove, setFlag, type Step } from './rollupSteps'
 
 /** How often each step is taken, in thousandths; the writes that move rows between cells are the common ones. */
 export const WEIGHTS: Array<[number, Step]> = [
