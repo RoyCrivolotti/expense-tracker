@@ -117,7 +117,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/InstallmentsCard.tsx': 95,
   'src/ui/tabs/RecordReimbursementSheet.tsx': 144,
   'src/ui/tabs/TransactionsFlagOverlays.tsx': 69,
-  'src/ui/tabs/TxnFilters.tsx': 77,
   'src/ui/tabs/UpcomingCard.tsx': 105,
   'src/ui/tabs/goals/ActiveScenarioHeader.tsx': 98,
   'src/ui/tabs/goals/AdjustSectionNav.tsx': 79,
