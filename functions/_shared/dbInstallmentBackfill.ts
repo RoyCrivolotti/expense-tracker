@@ -14,7 +14,7 @@ import type { Env } from './env'
 import type { InstallmentPlan, StoredTransaction } from '../domain/types'
 import { nextInstallmentSuggestion, type InstallmentSuggestion } from '../domain/engine/installments'
 import { monthsBetweenBudget } from '../domain/engine/dates'
-import { maybeCompletePlan } from './dbWrite'
+import { maybeCompletePlan } from './dbPlanLink'
 import { bumpRevision, serverBudgetMonth } from './dbRevision'
 import { descriptionNorm } from './descriptionNorm'
 import { IN_ID_LIST, idList } from './sqlIdList'
@@ -23,7 +23,7 @@ import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } 
 /**
  * Insert one backfilled installment, atomically no-oping if it already exists.
  *
- * Deliberately not `insertTransaction` from dbWrite.ts: that path's duplicate
+ * Deliberately not `insertTransaction` from dbTransactionWrite.ts: that path's duplicate
  * pre-check is check-then-throw, not atomic with the insert, and it must keep
  * throwing a real 400 for a genuine accidental duplicate from the manual "+"
  * flow — weakening that for a backfill race isn't worth the risk. `ON CONFLICT

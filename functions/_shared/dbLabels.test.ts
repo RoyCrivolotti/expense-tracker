@@ -66,7 +66,7 @@ const TXN_ROW = {
 }
 
 /**
- * `setTransactionLabels` re-derives its return value through dbWrite's `deriveOne`,
+ * `setTransactionLabels` re-derives its return value through dbTransactionWrite's `deriveOne`,
  * which separately queries accounts and account_statements. Returning null for both
  * takes its safe "no account found" branch (status: 'posted') without needing a
  * realistic account row just to exercise the labels logic under test here.

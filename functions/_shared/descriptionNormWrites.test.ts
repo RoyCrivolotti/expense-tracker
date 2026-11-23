@@ -89,7 +89,7 @@ describe('the statements that write a transaction description', () => {
     const files = new Set(inserts().map((s) => s.file))
     expect(files).toEqual(
       new Set([
-        '/functions/_shared/dbWrite.ts',
+        '/functions/_shared/dbTransactionWrite.ts',
         '/functions/_shared/dbInstallmentBackfill.ts',
         '/scripts/gen-seed-sql.ts',
         '/scripts/gen-demo-seed-sql.ts',

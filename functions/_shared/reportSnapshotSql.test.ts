@@ -4,7 +4,7 @@
 // statement was sent but nothing at all about whether it computes the right answer.
 import { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { REPORT_SNAPSHOT_SQL } from './dbWrite'
+import { REPORT_SNAPSHOT_SQL } from './dbTransactionWrite'
 
 /** The settle, as bulkUpdateTransactions builds it for a `settledBy` patch. */
 const SETTLE = `UPDATE transactions SET settled_by = ?, updated_at = datetime('now')

@@ -371,7 +371,7 @@ describe('a claim entered through bulk add', () => {
  * The ownership and conflict guards on settledBy, exercised against the
  * in-memory double directly (this is the only suite that runs against it).
  * Mirrors the D1 adapter's assertOwnedTransaction + settled-elsewhere checks
- * in functions/_shared/dbWrite.ts.
+ * in functions/_shared/dbWriteGuards.ts.
  */
 describe('settledBy ownership and conflict guards', () => {
   it('rejects a settledBy that does not belong to this owner', async () => {

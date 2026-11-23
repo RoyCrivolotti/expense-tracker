@@ -21,7 +21,7 @@ import {
 } from '../../src/testing/smallLedgerDb'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { guardSql } from './batchGuard'
-import { bulkUpdateTransactions } from './dbWrite'
+import { bulkUpdateTransactions } from './dbTransactionBulkWrite'
 import type { TxnFilter } from '../domain/engine/transactions'
 
 /**

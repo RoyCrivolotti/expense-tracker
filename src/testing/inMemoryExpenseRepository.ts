@@ -275,7 +275,7 @@ export function inMemoryExpenseRepository(
   }
 
   /**
-   * Mirrors recordReportSnapshot in dbWrite.ts: a settle stamps the payment with what
+   * Mirrors recordReportSnapshot in dbTransactionWrite.ts: a settle stamps the payment with what
    * it covered. Without it a test would show a past report that can never drift, and
    * the drift warning would be provably untested.
    */
@@ -330,7 +330,7 @@ export function inMemoryExpenseRepository(
     }
   }
 
-  /** Mirrors dbWrite.ts's maybeApplyAutoLabelStatement: the forward half. */
+  /** Mirrors dbTransactionWrite.ts's maybeApplyAutoLabelStatement: the forward half. */
   function maybeApplyAutoLabel(
     store: OwnerStore,
     transactionId: number,

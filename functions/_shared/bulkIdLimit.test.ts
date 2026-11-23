@@ -4,7 +4,7 @@ import { migratedDatabase, sqliteD1 } from '../../src/testing/sqliteD1'
 import { AMOUNT_SIGN_MESSAGE } from '../domain/data/amountSign'
 import { attachmentKeysForTransactions } from './dbAttachments'
 import { backfillInstallments } from './dbInstallmentBackfill'
-import { bulkUpdateTransactions, deleteTransactions } from './dbWrite'
+import { bulkUpdateTransactions, deleteTransactions } from './dbTransactionBulkWrite'
 import type { Env } from './env'
 
 /**

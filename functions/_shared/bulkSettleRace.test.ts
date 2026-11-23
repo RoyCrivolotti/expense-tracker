@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import { migratedDatabase, sqliteD1 } from '../../src/testing/sqliteD1'
 import { BULK_CHANGED_MESSAGE } from '../domain/data/bulkEdit'
-import { bulkUpdateTransactions } from './dbWrite'
+import { bulkUpdateTransactions } from './dbTransactionBulkWrite'
 import type { Env } from './env'
 
 /**
