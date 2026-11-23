@@ -44,6 +44,34 @@
   font-weight: 600;
   color: var(--exp-warning-text);
 }
+/* What the bank pushes say about the charge. A waiting push is the way in, so its line is a button that opens it as
+   "+" does; a row that may already be the charge is only a "maybe" for the person to check. */
+.captured,
+.maybe {
+  flex-basis: 100%;
+}
+.captured {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.captured:hover {
+  text-decoration: underline;
+}
+.captured:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 0.2rem;
+}
+.maybe {
+  color: var(--exp-warning-text);
+}
 .forMonth {
   font-weight: 600;
   text-transform: uppercase;

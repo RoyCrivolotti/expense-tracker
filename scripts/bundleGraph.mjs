@@ -86,7 +86,8 @@ export function ledgerOnlyChunks(build) {
 /**
  * The chunks only the capture screens load, on demand: the Settings capture and notification cards (fetched when
  * Settings, Capture opens), the Dashboard's review card with its queue sheet (fetched when a payment is waiting), the
- * add form's three lazy parts for a captured payment, and what only they import.
+ * add form's three lazy parts for a captured payment, the recurring card's reading of waiting payments (fetched when one
+ * is waiting), and what only they import.
  * A chunk the rest of the app can load is not capture's, so the default path is walked first, through everything the
  * entry loads at once or later but not through the two cards, and what it reaches is taken out.
  * @param {{ files: string[], read: (file: string) => string, indexHtml: string }} build
@@ -104,6 +105,7 @@ export function captureOnlyChunks(build) {
     'CardQuestion',
     'DuplicateNotice',
     'SeriesChoice',
+    'recurringMarks',
     'CaptureSetupSetting',
   )
   const defaultPath = reach([...eager], allEdges, new Set(roots))

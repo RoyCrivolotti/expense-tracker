@@ -125,6 +125,10 @@ A filled payment always goes through review, so the first time a bank text is ma
 When the person's own settled name for the merchant already is the series' name, the row still says which series it
 looks like, but the fields stay as their history has them and one tap follows the usual rule.
 
+The recurring card reads the same hints the other way round: a charge a waiting payment stands for says "Captured from
+your bank, review", and its "+" opens that payment's review instead of a new row
+([BEHAVIOR.md](BEHAVIOR.md#recurring-suggestions-upcoming-card)).
+
 ## The typed row a payment may duplicate
 
 A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries

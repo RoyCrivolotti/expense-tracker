@@ -7,17 +7,18 @@ import { useToast } from '../hooks/useToast'
 import { OWNER_KEYS, ownerKey, useAccountOwner } from '../hooks/accountOwner'
 import { useStoppedSuggestions } from './stoppedSuggestions'
 import { SuggestionRow } from './UpcomingRow'
-import type { UpcomingSuggestion } from './useUpcoming'
+import type { MarkedSuggestion } from './useRecurringMarks'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
   /** The charges due today; the engine has already dropped the ones that are too early or too late. */
-  suggestions: UpcomingSuggestion[]
+  suggestions: MarkedSuggestion[]
   /** The budget month on screen; a suggestion that files under another one is marked with its own. */
   month: string
   /** The date the rows are said against: "Due tomorrow", "Due 2 days ago". */
   today: string
   lookup: Lookup
+  /** Opens the add form: on a new row, or on the waiting bank push a charge's mark names. */
   onAdd: (seed: TransactionSeed) => void
 }
 
@@ -41,16 +42,18 @@ function persistDismissed(
   localStorage.setItem(key, JSON.stringify([...set]))
 }
 
-function dismissKey(s: UpcomingSuggestion): string {
+function dismissKey(s: MarkedSuggestion): string {
   return `${s.description}|${s.accountId}|${s.categoryId}|${s.type}|${s.predictedBudgetMonth}`
 }
 
 /** The key as it was before it carried the category and type, so a dismissal saved then still applies. */
-function legacyDismissKey(s: UpcomingSuggestion): string {
+function legacyDismissKey(s: MarkedSuggestion): string {
   return `${s.description}|${s.accountId}|${s.predictedBudgetMonth}`
 }
 
-function toSeed(s: UpcomingSuggestion): TransactionSeed {
+/** What "+" opens: the charge's waiting bank push when one stands for it, so it is not added twice; else a new row. */
+function toSeed(s: MarkedSuggestion): TransactionSeed {
+  if (s.mark?.push) return s.mark.push
   return {
     description: s.description,
     type: s.type,
@@ -75,7 +78,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const visible = suggestions.filter((s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)))
 
   const setHidden = useCallback(
-    (s: UpcomingSuggestion, hidden: boolean) => {
+    (s: MarkedSuggestion, hidden: boolean) => {
       setDismissed((prev) => {
         const next = new Set(prev)
         if (hidden) next.add(dismissKey(s))
@@ -100,7 +103,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   }
 
   const handleDismiss = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
   ) => {
     setHidden(s, true)
@@ -113,7 +116,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   }
 
   const handleStop = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
   ) => {
     stop(s.seriesKey, { after: s.lastChargeDate, label: s.description })
@@ -133,7 +136,7 @@ export function UpcomingCard({ suggestions, month, today, lookup, onAdd }: Props
   const kept = folds ? visible.slice(0, ROWS_KEPT) : visible
   const folded = folds ? visible.slice(ROWS_KEPT) : []
   const renderRow = (
-    s: UpcomingSuggestion,
+    s: MarkedSuggestion,
     index: number,
     last: boolean,
   ) => (
