@@ -25,11 +25,8 @@ const FILE_LINE_CAPS = {
   'src/data/transactionPager.ts': 278,
   'src/domain/data/dataSource.ts': 224,
   'src/domain/engine/dates.ts': 201,
-  'src/domain/engine/gapSplit.ts': 225,
   'src/domain/engine/marketSpread.ts': 203,
-  'src/domain/engine/money.ts': 270,
   'src/domain/engine/projection.ts': 213,
-  'src/domain/engine/rebaselinePatch.ts': 230,
   'src/domain/engine/rentVsBuy.ts': 206,
   'src/domain/ports/captureRepository.ts': 277,
   'src/domain/ports/expenseRepository.ts': 282,
@@ -82,7 +79,6 @@ const FILE_LINE_CAPS = {
 
 const FUNCTION_LINE_CAPS = {
   'src/data/inMemoryLedgerParts.ts': 68,
-  'src/domain/engine/rebaselinePatch.ts': 67,
   'src/testing/fakeIntersectionObserver.ts': 63,
   'src/testing/inMemoryExpenseRepository.ts': 1096,
   'src/testing/ledgerSource.ts': 72,
