@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseTheme } from '../hooks/useExpenseTheme'
 import type { ExpenseModel } from '../useExpenseData'
-import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { needsOnboarding } from '../../domain/onboarding/needsOnboarding'
 import type { ExpenseActions } from '../actions'
-import { Money } from '../components/Money'
 import type { ExpenseSettings } from '../../types'
-import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
+import { Card, EmptyState, SectionTitle } from '../components/primitives'
 import { SectionTabs } from '../components/SectionTabs'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
@@ -21,8 +19,7 @@ import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountView } from '../settings/AccountView'
 import { CaptureView } from '../settings/CaptureView'
-import styles from './tabs.module.css'
-import defStyles from '../definitions/definitions.module.css'
+import { Definitions } from './ReadOnlyDefinitions'
 
 export type SettingsView = 'preferences' | 'setup' | 'account' | 'capture' | 'data'
 
@@ -45,71 +42,6 @@ interface SettingsTabProps {
   onRunSetup?: (() => void) | undefined
   /** The section to open on, when something sent the person here for it. */
   entry?: SettingsView | null | undefined
-}
-
-/** The same muted line the editable lists show when empty, so the section looks alike for every reader. */
-function EmptyLine({ children }: { children: string }) {
-  return <p className={`${defStyles.deleteNote} ${defStyles.emptyNote}`}>{children}</p>
-}
-
-function Definitions({ model }: { model: ExpenseModel }) {
-  const { dataset } = model
-  const budgetTotal = dataset.categories.reduce((s, c) => s + c.monthlyBudgetCents, 0)
-  const budgeted = dataset.categories.filter((c) => c.monthlyBudgetCents > 0)
-  return (
-    <>
-      <SectionTitle>Categories</SectionTitle>
-      <Card>
-        {budgeted.length === 0 && <EmptyLine>No categories yet.</EmptyLine>}
-        {budgeted.map((c) => (
-          <div key={c.id} className={styles.defRow}>
-            <span>{c.name}</span>
-            <Money cents={c.monthlyBudgetCents} />
-          </div>
-        ))}
-        <div className={`${styles.defRow} ${styles.defTotal}`}>
-          <span>Total monthly budget</span>
-          <Money cents={budgetTotal} />
-        </div>
-      </Card>
-
-      <SectionTitle>Accounts</SectionTitle>
-      <Card>
-        {dataset.accounts.length === 0 && <EmptyLine>No accounts yet.</EmptyLine>}
-        {dataset.accounts.map((a) => (
-          <div key={a.id} className={styles.defRow}>
-            <span>{a.name}</span>
-            <Pill tone={a.settlement === 'immediate' ? 'success' : 'neutral'}>
-              {a.settlement === 'immediate' ? 'Debit · posts instantly' : 'Card · posts when paid'}
-            </Pill>
-          </div>
-        ))}
-      </Card>
-
-      <SectionTitle>New transactions</SectionTitle>
-      <Card>
-        <div className={styles.defRow}>
-          <span>Default account</span>
-          <span>
-            {dataset.accounts.find((a) => a.id === resolveDefaultAccountId(dataset.accounts, dataset.settings))?.name ??
-              '—'}
-          </span>
-        </div>
-      </Card>
-
-      <SectionTitle>Opening balances</SectionTitle>
-      <Card>
-        <div className={styles.defRow}>
-          <span>Cash (1 Jan)</span>
-          <Money cents={dataset.settings.openingCashCents} />
-        </div>
-        <div className={styles.defRow}>
-          <span>Investments (1 Jan)</span>
-          <Money cents={dataset.settings.openingInvestmentCents} />
-        </div>
-      </Card>
-    </>
-  )
 }
 
 function OwnerPreferences({
