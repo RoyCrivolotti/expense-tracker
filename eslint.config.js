@@ -69,7 +69,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/startLaterModel.ts': 214,
   'src/ui/tabs/useTransactionSelection.ts': 212,
   'src/ui/tabs/useTransactionsTabState.ts': 260,
-  'src/ui/useLedgerData.ts': 201,
 }
 
 const FUNCTION_LINE_CAPS = {
@@ -180,7 +179,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/useStarredLevers.ts': 103,
   'src/ui/tabs/useTransactionSelection.ts': 136,
   'src/ui/tabs/useTransactionsTabState.ts': 160,
-  'src/ui/useLedgerData.ts': 119,
 }
 
 export default defineConfig([
