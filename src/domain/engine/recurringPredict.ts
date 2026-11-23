@@ -127,18 +127,34 @@ export function usualDate(
   return addDaysIso(anchorDate(yearMonth, usual.anchor), usual.shift)
 }
 
+/**
+ * The usual date nearest to `iso`, looking at its own month and the months either side, so a date on the 1st finds
+ * the usual date on the 30th before it. Of two equally near, the earlier.
+ */
+export function nearestUsualDate(
+  iso: string,
+  usual: UsualDay,
+): string {
+  const month = iso.slice(0, 7)
+  let nearest = ''
+  let gap = Infinity
+  for (const delta of [-1, 0, 1]) {
+    const date = usualDate(shiftBudgetMonth(month, delta), usual)
+    const offset = Math.abs(daysBetween(date, iso))
+    if (offset < gap) {
+      nearest = date
+      gap = offset
+    }
+  }
+  return nearest
+}
+
 /** Signed days from the usual date nearest to `iso` to `iso`; negative when it came early. */
-function daysFromUsual(
+export function daysFromUsual(
   iso: string,
   usual: UsualDay,
 ): number {
-  const month = iso.slice(0, 7)
-  let nearest = Infinity
-  for (const delta of [-1, 0, 1]) {
-    const offset = daysBetween(usualDate(shiftBudgetMonth(month, delta), usual), iso)
-    if (Math.abs(offset) < Math.abs(nearest)) nearest = offset
-  }
-  return nearest
+  return daysBetween(nearestUsualDate(iso, usual), iso)
 }
 
 /**

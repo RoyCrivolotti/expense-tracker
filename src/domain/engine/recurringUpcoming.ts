@@ -37,7 +37,9 @@ const EXPECTED_CHARGES = 2
  */
 const LOGGED_EARLY_WITHIN_DAYS = 14
 
-interface Series {
+/** A series the card reminds about: monthly and regular, with where in the month it lands. */
+export interface MonthlySeries {
+  group: OccurrenceGroup
   /** The dates of the series' charges, oldest first. */
   dates: string[]
   usual: UsualDay
@@ -45,31 +47,64 @@ interface Series {
   lead: number
 }
 
+/** The series as the card reads it, or null when its charges are not monthly or not regular enough to remind about. */
+export function monthlySeriesOf(group: OccurrenceGroup): MonthlySeries | null {
+  const dates = group.dates
+  const gaps = dates.slice(1).map((date, i) => daysBetween(dates[i]!, date))
+  if (classifyFrequency(median(gaps)) !== 'monthly') return null
+  if (regularityScore(gaps) < MIN_REGULARITY) return null
+  const usual = usualDay(dates)
+  return { group, dates, usual, lead: leadFromHistory(dates, usual) }
+}
+
 /**
- * The date of the charge a series is waiting for: the first of its usual dates that no logged
- * charge covers. A charge covers a date when it was logged from the start of the date's reminder
- * window on, or up to `LOGGED_EARLY_WITHIN_DAYS` before it, so a charge logged ahead of time, or
- * booked to another budget month, counts as the one it was for. A date more than a week past is
- * given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
+ * Whether a logged charge answers for the usual date `date`: one logged from the start of the date's reminder window
+ * on, or up to `LOGGED_EARLY_WITHIN_DAYS` before it, so a charge logged ahead of time, or booked to another budget
+ * month, counts as the one it was for. `dates` are the series' charges, oldest first.
  */
-function pendingDate(
-  { dates, usual, lead }: Series,
-  today: string,
-): string | null {
+export function chargeLoggedFor(
+  { dates, lead }: Pick<MonthlySeries, 'dates' | 'lead'>,
+  date: string,
+): boolean {
   const newest = dates[dates.length - 1]!
+  return addDaysIso(date, -lead) <= newest || dates.some((d) => daysBetween(d, date) <= LOGGED_EARLY_WITHIN_DAYS)
+}
+
+/**
+ * The usual dates a series is still waiting for a charge on: the first `EXPECTED_CHARGES` after its newest charge that
+ * no logged charge answers for. Past those the series has stopped and waits for nothing.
+ */
+export function awaitedDates(series: Pick<MonthlySeries, 'dates' | 'usual' | 'lead'>): string[] {
+  const newest = series.dates[series.dates.length - 1]!
   // Start a month early: a usual date a few days past the month's end belongs to the month before.
   let month = shiftBudgetMonth(newest.slice(0, 7), -1)
-  let waitedFor = 0
-  while (waitedFor < EXPECTED_CHARGES) {
-    const date = usualDate(month, usual)
+  const awaited: string[] = []
+  while (awaited.length < EXPECTED_CHARGES) {
+    const date = usualDate(month, series.usual)
     month = shiftBudgetMonth(month, 1)
-    const covered =
-      addDaysIso(date, -lead) <= newest || dates.some((d) => daysBetween(d, date) <= LOGGED_EARLY_WITHIN_DAYS)
-    if (covered) continue
-    waitedFor++
-    if (daysBetween(date, today) <= OVERDUE_EXPIRY_DAYS) return date
+    if (!chargeLoggedFor(series, date)) awaited.push(date)
   }
-  return null
+  return awaited
+}
+
+/**
+ * The date of the charge a series is waiting for on `today`: the first of its awaited dates that is not more than a
+ * week past, so a date long gone is given up on and the next one is looked at.
+ */
+function pendingDate(
+  series: MonthlySeries,
+  today: string,
+): string | null {
+  return awaitedDates(series).find((date) => daysBetween(date, today) <= OVERDUE_EXPIRY_DAYS) ?? null
+}
+
+/** Whether the owner stopped this series at a charge that is still its newest. */
+export function isStopped(
+  group: OccurrenceGroup,
+  stopped: StoppedSeries,
+): boolean {
+  const stop = stopped[groupKeyString(group.key)]
+  return stop !== undefined && group.dates[group.dates.length - 1]! <= stop.after
 }
 
 const NO_STOPPED: StoppedSeries = {}
@@ -102,26 +137,18 @@ function suggestionFor(
   today: string,
   stopped: StoppedSeries,
 ): RecurringSuggestion | null {
-  const dates = group.dates
-  const seriesKey = groupKeyString(group.key)
-  const lastChargeDate = dates[dates.length - 1]!
-  const stop = stopped[seriesKey]
-  if (stop && lastChargeDate <= stop.after) return null
-  const gaps = dates.slice(1).map((date, i) => daysBetween(dates[i]!, date))
-  if (classifyFrequency(median(gaps)) !== 'monthly') return null
-  if (regularityScore(gaps) < MIN_REGULARITY) return null
-
-  const usual = usualDay(dates)
-  const lead = leadFromHistory(dates, usual)
+  if (isStopped(group, stopped)) return null
+  const series = monthlySeriesOf(group)
+  if (!series) return null
   // The budget month is the series' own habit (the date's month, or the next one), not a
   // property of the date, so a pay date that rolls into the next month is filed there.
   const offset = Math.round(median(group.budgetOffsets.slice(-PREDICT_HISTORY)))
-  const predictedDate = pendingDate({ dates, usual, lead }, today)
-  if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
+  const predictedDate = pendingDate(series, today)
+  if (!predictedDate || !isDueSoon(predictedDate, today, series.lead)) return null
 
   return {
-    seriesKey,
-    lastChargeDate,
+    seriesKey: groupKeyString(group.key),
+    lastChargeDate: series.dates[series.dates.length - 1]!,
     description: group.label,
     type: group.key.type,
     accountId: group.key.accountId,
@@ -129,7 +156,7 @@ function suggestionFor(
     amountCents: group.amountCents,
     predictedDate,
     predictedBudgetMonth: shiftBudgetMonth(predictedDate.slice(0, 7), offset),
-    leadDays: lead,
+    leadDays: series.lead,
   }
 }
 

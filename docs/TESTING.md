@@ -127,3 +127,9 @@ change (code, docs, config) must go through a pull request with the `verify` che
 ## Local parity tests
 
 `src/domain/data/parseWorkbookCsv.parity.test.ts` compares the CSV importer with a spreadsheet export that is not in this repo. It runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at that export. CI sets neither, so it is skipped there.
+
+`scripts/replay-series-match.ts` measures the match between captured pushes and monthly series (`src/domain/capture/seriesMatch.ts`) on a real ledger. It treats every row since a start date as a push carrying only its amount, date and account, and counts how often the match names the right series, offers a choice, names a wrong one, misses, or hints on a row that belongs to no series. It reads `transactions.json` from the folder in `SERIES_MATCH_REPLAY_DIR`, refuses a folder inside the repo, and writes its report there. Run it before and after changing a threshold in the match:
+
+```bash
+SERIES_MATCH_REPLAY_DIR=/path/outside/the/repo node_modules/.bin/tsx scripts/replay-series-match.ts 2026-01-01
+```
