@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createScenario, patchScenario, validateScenarioNumbers } from './goalService'
+import { validateScenarioNumbers } from './goalScenarioValidation'
+import { createScenario, patchScenario } from './goalService'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import { makeScenario } from '../../testing/factories'
 import type { NewGoalScenario } from '../data/dataSource'

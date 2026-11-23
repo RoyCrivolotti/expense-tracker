@@ -8,7 +8,7 @@ import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqlit
 import { OWNER, createExpenseWorld, type Handler, type World } from '../../_shared/testing/expenseWorld'
 import { createD1CaptureRepository } from '../../_shared/adapters/d1CaptureRepository'
 import { EVENT_OF_RECOMMENDATION_SQL } from '../../_shared/capture/captureLearningSql'
-import { learnAfterDecision } from '../../../src/domain/application/recommendationService'
+import { learnAfterDecision } from '../../../src/domain/application/recommendationLearning'
 import { capturePhone } from '../../_shared/testing/capturePhone'
 import { onRequestPost as postAccount } from '../expenses/accounts/index'
 import { onRequestPost as postCategory } from '../expenses/categories/index'
