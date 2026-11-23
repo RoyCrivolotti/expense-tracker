@@ -3,7 +3,12 @@ import type { NewWealthCheckin } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
 import { addDaysIso } from '../domain/engine/dates'
-import { toWealthCheckin, toWealthCheckinEntry, type WealthCheckinEntryRow, type WealthCheckinRow } from './rows'
+import {
+  toWealthCheckin,
+  toWealthCheckinEntry,
+  type WealthCheckinEntryRow,
+  type WealthCheckinRow,
+} from './planningRows'
 
 async function loadCheckinWithEntries(
   env: Env,

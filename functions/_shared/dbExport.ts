@@ -15,26 +15,28 @@ import {
   toCashActual,
   toCategory,
   toFlag,
-  toGoalScenario,
-  toInstallmentPlan,
   toLabel,
   toSettings,
   toStatement,
-  toWealthAccount,
   type AccountRow,
   type AttachmentRow,
   type CashActualRow,
   type CategoryRow,
   type FlagRow,
-  type GoalScenarioRow,
-  type InstallmentPlanRow,
   type LabelRow,
   type SettingsRow,
   type StatementRow,
+} from './rows'
+import {
+  toGoalScenario,
+  toInstallmentPlan,
+  toWealthAccount,
+  type GoalScenarioRow,
+  type InstallmentPlanRow,
   type WealthAccountRow,
   type WealthCheckinEntryRow,
   type WealthCheckinRow,
-} from './rows'
+} from './planningRows'
 
 type Mapper = (row: never) => object
 

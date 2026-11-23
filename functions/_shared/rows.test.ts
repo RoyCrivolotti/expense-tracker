@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toGoalScenario, toSettings, toStoredTxn, type GoalScenarioRow, type SettingsRow, type TxnRow } from './rows'
+import { toSettings, toStoredTxn, type SettingsRow, type TxnRow } from './rows'
+import { toGoalScenario, type GoalScenarioRow } from './planningRows'
 import { defaultMilestones } from '../../src/domain/engine'
 
 function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {

@@ -3,7 +3,7 @@ import type { InstallmentPlan } from '../domain/types'
 import type { Env } from './env'
 import { HttpError } from './http'
 import { assertOwnedAccount, assertOwnedCategory } from './ownership'
-import { toInstallmentPlan, type InstallmentPlanRow } from './rows'
+import { toInstallmentPlan, type InstallmentPlanRow } from './planningRows'
 
 type ColumnMap = Record<keyof NewInstallmentPlan, string>
 

@@ -19,7 +19,6 @@ const FILE_LINE_CAPS = {
   'functions/_shared/chunkedBackup.ts': 286,
   'functions/_shared/measure/routeMatrix.ts': 313,
   'functions/_shared/restoreSql.ts': 299,
-  'functions/_shared/rows.ts': 308,
   'functions/_shared/testing/rollupMutants.ts': 253,
   'functions/_shared/testing/rollupScenarios.ts': 272,
   'functions/_shared/testing/rollupSteps.ts': 229,
