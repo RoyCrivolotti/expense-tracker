@@ -55,7 +55,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/UpcomingCard.tsx': 231,
   'src/ui/tabs/goals/ContributionSteps.tsx': 208,
   'src/ui/tabs/goals/SecondaryCharts.tsx': 231,
-  'src/ui/tabs/goals/StartLaterSheet.tsx': 219,
   'src/ui/tabs/goals/WealthSummaryCard.tsx': 423,
   'src/ui/tabs/goals/charts/MilestoneGrid.tsx': 262,
   'src/ui/tabs/goals/charts/MilestoneMatrix.tsx': 339,
