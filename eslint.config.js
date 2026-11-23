@@ -95,7 +95,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/components/CardStatementsCard.tsx': 99,
   'src/ui/components/FlagField.tsx': 69,
   'src/ui/components/GoalsCard.tsx': 88,
-  'src/ui/components/LabelPickerPopover.tsx': 85,
   'src/ui/components/Modal.tsx': 68,
   'src/ui/components/PercentStepper.tsx': 64,
   'src/ui/components/QuickCreateLabel.tsx': 69,
