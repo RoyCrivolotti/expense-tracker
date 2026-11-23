@@ -3,7 +3,7 @@
  * on whole plan years of the new start, and what is on or before it is behind it.
  */
 import type { LifeEvent } from '../types'
-import { utcDateMs } from './dates'
+import { utcDateMs, yearsBetween } from './dates'
 import type { CarriedEvent, Rebaseline } from './rebaselinePatch'
 
 /** The same day of the year, `years` on, by the calendar rather than in days. */
@@ -91,4 +91,14 @@ export function carryPurchase(
         }
       : null
   return { housePurchaseYear, house }
+}
+
+/** The years the start moves forward by, to the day; 0 for no old start, a date that is not one, or a move that is not forward. */
+export function yearsMoved(
+  oldStart: string | null,
+  newDate: string,
+): number {
+  if (!oldStart) return 0
+  const years = yearsBetween(oldStart, newDate)
+  return Number.isFinite(years) && years > 0 ? years : 0
 }
