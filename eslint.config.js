@@ -67,7 +67,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/desktop/Lever.tsx': 219,
   'src/ui/tabs/goals/desktop/ScenarioChips.tsx': 212,
   'src/ui/tabs/goals/goalControlFields.tsx': 207,
-  'src/ui/tabs/goals/goalControlSections.tsx': 414,
   'src/ui/tabs/goals/startLaterModel.ts': 214,
   'src/ui/tabs/useTransactionSelection.ts': 212,
   'src/ui/tabs/useTransactionsTabState.ts': 260,
