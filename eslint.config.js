@@ -153,7 +153,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/charts/CheckinHistoryChart.tsx': 93,
   'src/ui/tabs/goals/charts/CompositionChart.tsx': 96,
   'src/ui/tabs/goals/charts/FireChart.tsx': 90,
-  'src/ui/tabs/goals/charts/MilestoneByGoal.tsx': 104,
   'src/ui/tabs/goals/charts/MilestoneGrid.tsx': 64,
   'src/ui/tabs/goals/charts/MilestoneMatrix.tsx': 61,
   'src/ui/tabs/goals/charts/MilestonePicker.tsx': 67,
