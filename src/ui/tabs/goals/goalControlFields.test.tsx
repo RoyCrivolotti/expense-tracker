@@ -7,7 +7,8 @@ import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
-import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
+import { DateField, MoneyField, NumberField } from './goalControlFields'
+import { PercentField, PurchaseYearField } from './goalSliderFields'
 
 describe('MoneyField', () => {
   it('is a plain input with no slider, and takes any amount typed', async () => {

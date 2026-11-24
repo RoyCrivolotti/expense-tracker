@@ -59,7 +59,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/charts/heroSeries.ts': 244,
   'src/ui/tabs/goals/charts/milestoneModel.ts': 332,
   'src/ui/tabs/goals/charts/spreadModel.ts': 208,
-  'src/ui/tabs/goals/goalControlFields.tsx': 207,
   'src/ui/tabs/goals/startLaterModel.ts': 214,
   'src/ui/tabs/useTransactionSelection.ts': 212,
   'src/ui/tabs/useTransactionsTabState.ts': 260,
