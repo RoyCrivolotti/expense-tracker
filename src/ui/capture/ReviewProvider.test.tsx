@@ -486,3 +486,75 @@ describe('a card linked from the form', () => {
     for (const call of vi.mocked(actions!.onAdd).mock.calls) expect(call[0]!.card).toBeUndefined()
   })
 })
+
+describe('the Home Screen icon', () => {
+  const nav = navigator
+  let setAppBadge: ReturnType<typeof vi.fn>
+  let clearAppBadge: ReturnType<typeof vi.fn>
+  beforeEach(() => {
+    setAppBadge = vi.fn().mockResolvedValue(undefined)
+    clearAppBadge = vi.fn().mockResolvedValue(undefined)
+    Object.assign(nav, { setAppBadge, clearAppBadge })
+  })
+  afterEach(() => {
+    Reflect.deleteProperty(nav, 'setAppBadge')
+    Reflect.deleteProperty(nav, 'clearAppBadge')
+  })
+
+  it('shows the count the app shows, and follows it as payments are decided and undone', async () => {
+    await show([known(A), known(B), known(C)])
+    expect(setAppBadge).toHaveBeenLastCalledWith(3)
+
+    press('skip 1')
+    expect(screen.getByTestId('count')).toHaveTextContent('2')
+    expect(setAppBadge).toHaveBeenLastCalledWith(2)
+  })
+
+  it('writes the number once per change, not on a render that changes nothing', async () => {
+    await show([known(A), known(B), known(C)])
+    expect(setAppBadge).toHaveBeenCalledOnce()
+
+    // Opening a row re-renders the provider with the same count.
+    press('review 1')
+    await tick(0)
+    expect(setAppBadge).toHaveBeenCalledOnce()
+
+    press('skip 2')
+    expect(setAppBadge).toHaveBeenCalledTimes(2)
+    expect(setAppBadge).toHaveBeenLastCalledWith(2)
+  })
+
+  it('writes the number again once for each read that lands, even with the count the same', async () => {
+    await show([known(A), known(B), known(C)])
+    expect(setAppBadge).toHaveBeenCalledOnce()
+
+    // Say a push set the icon from the server's count in between: the next read puts the app's number back.
+    setAppBadge.mockClear()
+    act(() => api.reloadRecommendations())
+    await tick(0)
+
+    expect(setAppBadge).toHaveBeenCalledExactlyOnceWith(3)
+  })
+
+  it('clears the icon when nothing is left to review', async () => {
+    await show([known(A)])
+    press('skip 1')
+    expect(clearAppBadge).toHaveBeenCalled()
+  })
+
+  it('leaves the icon alone until the list has been read', async () => {
+    vi.mocked(api.fetchRecommendations).mockReturnValue(new Promise(() => {}))
+    render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ToastContext.Provider value={{ showToast, dismissToast }}>
+          <ReviewProvider model={model} actions={undefined}>
+            <Probe />
+          </ReviewProvider>
+        </ToastContext.Provider>
+      </MoneyFormatProvider>,
+    )
+    await tick(0)
+    expect(setAppBadge).not.toHaveBeenCalled()
+    expect(clearAppBadge).not.toHaveBeenCalled()
+  })
+})

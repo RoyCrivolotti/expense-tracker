@@ -86,6 +86,14 @@ unsupported.
   open payment is in one currency, the total; a payload that cannot be read says "Tap to see it". The tag is the
   recommendation id (or `review-summary`), so a device that was off gets one notification per payment, not one per
   retry. `open` goes on the app icon's badge where the device has one.
+- **The icon's number is the app's count.** It shows the payments waiting for review, the same number as the
+  Dashboard tab, whatever the push setting (each payment, daily, weekly, or off with permission kept). A push sets it
+  from `open`, and the app sets it again whenever its own count changes (a payment added, dismissed or linked, an undo)
+  and each time a read of the list lands, and clears it at zero. Signing out clears it too. It can still be stale while
+  the app is closed and no push comes: a payment decided on another device, or one that expired, leaves the old number
+  until the next push or the next time the app is opened. A browser without the Badging API (Firefox, or any browser
+  tab that is not an installed app) shows no number, and one that refuses the call leaves the icon as it was. On an
+  iPhone the number shows only once notifications are allowed for the app; until then the call still stores it.
 - **Open windows are told.** After the notification is shown, every open window of the app gets one message,
   `{ type: "review-changed" }`, and the app reads the payments to review again ([CAPTURE-REVIEW.md](CAPTURE-REVIEW.md),
   "Keeping the list current"). The message carries no data and is sent for a push that could not be read too. It is

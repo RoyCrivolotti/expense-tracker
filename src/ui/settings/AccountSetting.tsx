@@ -1,4 +1,5 @@
 import { cloudflareAccessLogoutUrl } from 'folio-shell'
+import { showOnAppBadge } from '../capture/useAppBadge'
 import { Card, SectionTitle } from '../components/primitives'
 import styles from './AccountSetting.module.css'
 
@@ -6,13 +7,14 @@ import styles from './AccountSetting.module.css'
 const FORGET_WAIT_MS = 1000
 
 /**
- * Takes this device's saved copies with the session: after signing out, a launch with no network would otherwise open
- * on them, for the person who just left. Then goes where the link goes, whatever became of the clean-up.
+ * Takes this device's saved copies and the Home Screen icon's number with the session: after signing out, a launch
+ * with no network would otherwise open on the copies, and the icon would go on counting payments, for the person who
+ * just left. Then goes where the link goes, whatever became of the clean-up.
  */
 async function signOut(href: string): Promise<void> {
   const forget = import('../../data/savedCopy').then((copy) => copy.forgetSavedCopies())
   const wait = new Promise((resolve) => setTimeout(resolve, FORGET_WAIT_MS))
-  await Promise.race([forget.catch(() => undefined), wait])
+  await Promise.race([Promise.all([forget.catch(() => undefined), showOnAppBadge(globalThis.navigator, 0)]), wait])
   window.location.assign(href)
 }
 
