@@ -54,7 +54,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/TxnFilterRows.tsx': 403,
   'src/ui/tabs/UpcomingCard.tsx': 231,
   'src/ui/tabs/goals/ContributionSteps.tsx': 208,
-  'src/ui/tabs/goals/SecondaryCharts.tsx': 231,
   'src/ui/tabs/goals/StartLaterSheet.tsx': 218,
   'src/ui/tabs/goals/charts/MilestoneTimeline.tsx': 392,
   'src/ui/tabs/goals/charts/NetWorthChart.tsx': 834,
