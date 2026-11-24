@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
 import { DateInput } from '../../components/DateInput'
 import { todayIso } from '../../components/transactionFormState'
-import { formatMoneyInput, tryParseMoneyToCents } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { useHoldUpdateReload } from '../../hooks/updateReloadHold'
+import { BalanceRow, CheckinActions, NoteField } from './CheckinFields'
+import { useCheckinDraft } from './useCheckinDraft'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -21,8 +22,6 @@ interface Props {
   actions: ExpenseActions
   onDone?: () => void
 }
-
-type EntryDraft = { accountId: number; valueCents: number }
 
 /** Inline rather than a dialog, so no focus trap marks it as open: it holds an app update back itself. */
 export function CheckinFormSheet(props: Props) {
@@ -41,71 +40,8 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
   const [note, setNote] = useState('')
   const active = accounts.filter((a) => !a.archived)
 
-  const [entries, setEntries] = useState<EntryDraft[]>(() =>
-    active.map((a) => ({
-      accountId: a.id,
-      valueCents: previous?.entries.find((e) => e.accountId === a.id)?.valueCents ?? 0,
-    })),
-  )
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  // Which fields the user has been in. A zero the user typed, or one carried over from
-  // the previous check-in, is a balance; a zero left on an account they never touched
-  // is not. The form only creates, so a field never starts from this check-in's own row.
-  const [touched, setTouched] = useState<ReadonlySet<number>>(() => new Set())
-
-  const setEntry = (
-    accountId: number,
-    valueCents: number,
-  ) => {
-    setEntries((prev) => prev.map((e) => (e.accountId === accountId ? { ...e, valueCents } : e)))
-    setTouched((prev) => (prev.has(accountId) ? prev : new Set(prev).add(accountId)))
-  }
-  // What each box held when it was entered. Typing "1e9" passes through "1", which is an amount, so the last amount
-  // seen while typing is a keystroke's, not the one the person had; text that ends up not an amount goes back to this.
-  const heldOnEntry = useRef(new Map<number, number>())
-  // An empty box is a balance of nothing, which a check-in may say. Text that is not an amount is none at all.
-  const readBalance = (raw: string): number | null => (raw.trim() === '' ? 0 : tryParseMoneyToCents(raw, format))
-  // Leaving the box (or Enter): the amount it holds, written back as the form will use it. Text that is not an
-  // amount puts back what the box held when it was entered, and a zero is an empty box with the zero as its placeholder.
-  const commitBalance = (
-    input: HTMLInputElement,
-    entry: EntryDraft,
-  ) => {
-    const cents = readBalance(input.value) ?? heldOnEntry.current.get(entry.accountId) ?? entry.valueCents
-    setEntry(entry.accountId, cents)
-    input.value = cents === 0 ? '' : formatMoneyInput(cents, format)
-  }
-  const recorded = (e: EntryDraft) =>
-    e.valueCents !== 0 ||
-    touched.has(e.accountId) ||
-    previous?.entries.some((p) => p.accountId === e.accountId) === true
-
-  // A check-in with every balance at zero says nothing, yet it would silence the
-  // dashboard's nudge for a month and read as being behind by the whole plan.
-  const empty = entries.every((e) => e.valueCents === 0)
-
-  const handleSubmit = async () => {
-    if (!date || empty) return
-    setSubmitting(true)
-    setError(null)
-    try {
-      const trimmedNote = note.trim()
-      await actions.createWealthCheckin({
-        checkinDate: date,
-        ...(trimmedNote ? { note: trimmedNote } : {}),
-        entries: entries.filter(recorded),
-      })
-      onDone?.()
-    } catch (e) {
-      // Without this the save fails in silence: the button simply re-enables and
-      // nothing on screen says why. The server refuses a future-dated check-in, and
-      // a clock a day ahead of the server's slack is enough to reach that.
-      setError(e instanceof Error ? e.message : 'Could not save the check-in')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  const { entries, submitting, error, empty, handleSubmit, readBalance, setEntry, commitBalance, holdOnEntry } =
+    useCheckinDraft({ active, previous, actions, format, date, note, onDone })
 
   const accountById = (id: number) => active.find((a) => a.id === id)
 
@@ -134,83 +70,30 @@ function CheckinForm({ accounts, previous = null, actions, onDone }: Props) {
             if (!acc) return null
             return (
               <div key={entry.accountId} className={styles.accountValueRow}>
-                <span className={styles.accountValueLabel}>{acc.name}</span>
-                <input
-                  key={entry.accountId}
-                  className={[styles.formInput, styles.formInputNarrow].join(' ')}
-                  type="text"
-                  inputMode="decimal"
-                  aria-label={`Value for ${acc.name}`}
-                  // A zero starts empty, not as "0,00": typing into a prefilled zero appends
-                  // ("0,005000"), and an empty field says plainly that nothing is entered yet.
-                  defaultValue={entry.valueCents === 0 ? '' : formatMoneyInput(entry.valueCents, format)}
-                  placeholder={formatMoneyInput(0, format)}
-                  onFocus={(e) => {
-                    heldOnEntry.current.set(entry.accountId, entry.valueCents)
-                    e.currentTarget.select()
-                  }}
-                  // On every keystroke too, so Save wakes up as the first balance is typed
-                  // rather than only once the field is left. Text that is not an amount ("250k") is no
-                  // keystroke's amount: leaving the field puts back what the box held when it was entered.
-                  onChange={(e) => {
-                    const cents = readBalance(e.target.value)
-                    if (cents !== null) setEntry(entry.accountId, cents)
-                  }}
-                  onBlur={(e) => commitBalance(e.currentTarget, entry)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitBalance(e.currentTarget, entry)
-                  }}
+                <BalanceRow
+                  acc={acc}
+                  entry={entry}
+                  format={format}
+                  holdOnEntry={holdOnEntry}
+                  readBalance={readBalance}
+                  setEntry={setEntry}
+                  commitBalance={commitBalance}
                 />
               </div>
             )
           })}
         </div>
 
-        <div className={styles.formField}>
-          <label className={styles.formLabel} htmlFor="checkin-note">
-            Note <span style={{ fontWeight: 400 }}>(optional)</span>
-          </label>
-          <input
-            id="checkin-note"
-            className={styles.formInput}
-            type="text"
-            placeholder="e.g. market correction, bonus received…"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </div>
+        <NoteField note={note} setNote={setNote} />
 
-        {error ? (
-          <p className={styles.formError} role="alert">
-            {error}
-          </p>
-        ) : null}
-        {empty ? (
-          <p className={styles.formHint} role="status">
-            Enter at least one balance to save.
-          </p>
-        ) : null}
-
-        <div className={styles.formActions}>
-          <button
-            className={goalStyles.btn}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            disabled={submitting || !date || empty}
-          >
-            {submitting ? 'Saving…' : 'Save check-in'}
-          </button>
-          {onDone ? (
-            <button
-              className={goalStyles.btn}
-              style={{ background: 'none', color: 'var(--color-text-muted)' }}
-              onClick={onDone}
-            >
-              Cancel
-            </button>
-          ) : null}
-        </div>
+        <CheckinActions
+          error={error}
+          empty={empty}
+          submitting={submitting}
+          date={date}
+          handleSubmit={handleSubmit}
+          onDone={onDone}
+        />
       </div>
     </Card>
   )

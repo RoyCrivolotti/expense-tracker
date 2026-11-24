@@ -140,7 +140,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/UpcomingCard.tsx': 105,
   'src/ui/tabs/goals/ActiveScenarioHeader.tsx': 98,
   'src/ui/tabs/goals/AdjustSectionNav.tsx': 79,
-  'src/ui/tabs/goals/CheckinFormSheet.tsx': 152,
   'src/ui/tabs/goals/CheckinList.tsx': 95,
   'src/ui/tabs/goals/GoalsExplainer.tsx': 69,
   'src/ui/tabs/goals/GoalsTab.tsx': 154,
