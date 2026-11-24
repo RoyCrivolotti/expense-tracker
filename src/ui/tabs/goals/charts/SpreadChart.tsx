@@ -4,32 +4,23 @@ import { useMarketVolatility } from '../../../hooks/marketVolatilityContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
-import {
-  fireNumber,
-  formatCentsCompact,
-  projectNetWorth,
-  replayMarket,
-  scenarioToParams,
-  currencyWord,
-} from '../../../../engine'
-import { ChartLegend } from '../../../charts/ChartLegend'
-import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { formatCentsCompact, currencyWord } from '../../../../engine'
 import { LinearChart } from '../../../charts/LinearChart'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
 import { Disclosure } from '../Disclosure'
-import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
-import { ScrollRegion } from './ScrollRegion'
+import { SpreadLegend, SpreadTable } from './SpreadParts'
+import { spreadTooltip } from './spreadTooltip'
 import { useReplayInputOrLive } from './useReplayInput'
+import { useSpreadReplay } from './useSpreadReplay'
 import {
   SPREAD_RUNS,
   fiRow,
   milestoneRows,
   spreadCaption,
   spreadHeadline,
-  spreadKey,
   spreadSeries,
   spreadWarning,
 } from './spreadModel'
@@ -63,28 +54,9 @@ function SpreadChartImpl({
   const inflationRate = useAssumedInflation()
   const volatility = useMarketVolatility()
   const format = useMoneyFormat()
-  // The replay is the costly part, so it runs when something it reads changes, not when the draft's name does.
-  const key = `${spreadKey(draft, inflationRate, volatility, runs)}|${milestones.map((m) => m.amountCents).join(',')}`
-  const { plan, result, targetCents } = useMemo(() => {
-    const p = scenarioToParams({ ...draft, id: 0 }, inflationRate)
-    const target =
-      draft.annualSpendCents > 0 && draft.safeWithdrawalRate > 0
-        ? fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-        : null
-    return {
-      plan: projectNetWorth(p),
-      targetCents: target,
-      result: replayMarket({
-        params: p,
-        volatility,
-        runs,
-        milestonesCents: milestones.map((m) => m.amountCents),
-        fiTargetCents: target,
-      }),
-    }
-    // The key is what the replay reads of the draft, the milestones and the settings.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
+  // The replay waits until the edits have stopped for a moment, and until the card is near the screen.
+  // The inputs are painted first and the replay follows, so typing is not held up by it.
+  const { plan, result, targetCents } = useSpreadReplay(draft, milestones, { inflationRate, volatility, runs })
 
   const money = (cents: number) => formatCentsCompact(cents, format)
   const short = (cents: number) => formatMoneyShort(cents, format)
@@ -103,26 +75,7 @@ function SpreadChartImpl({
       ),
     [plan],
   )
-  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
-    const line = (
-      label: string,
-      id: string,
-    ): TooltipLine => ({
-      label,
-      value: short(series.find((s) => s.id === id)?.values[i] ?? 0),
-      color: series.find((s) => s.id === id)?.color,
-      tone: 'neutral',
-    })
-    return {
-      title: `Year ${i} (${yearLabel(i, draft.planStartDate)})`,
-      lines: [
-        line('Luckiest tenth above', 'p90'),
-        line('Middle run', 'median'),
-        line('The plan', 'plan'),
-        line('Unluckiest tenth below', 'p10'),
-      ],
-    }
-  }
+  const tooltip = (i: number) => spreadTooltip(i, { series, short, planStartDate: draft.planStartDate })
 
   const fi =
     targetCents === null
@@ -149,42 +102,9 @@ function SpreadChartImpl({
         ariaLabel="The plan against a spread of random market years"
         tooltip={tooltip}
       />
-      <ChartLegend
-        items={[
-          { label: 'The plan', color: series.find((s) => s.id === 'plan')!.color },
-          {
-            label: 'Middle run, middle half shaded, 8 in 10 between the dashed lines',
-            color: series.find((s) => s.id === 'median')!.color,
-          },
-        ]}
-      />
+      <SpreadLegend series={series} />
       {warning ? <p className={`${styles.chartHint} ${styles.chartCaption}`}>{warning}</p> : null}
-      {rows.length > 0 ? (
-        <ScrollRegion label="When the runs first reach each amount, scrolls sideways when the text is large">
-          <table className={styles.spreadTable}>
-            <caption className={styles.spreadTableCaption}>When the runs first reach each amount</caption>
-            <thead>
-              <tr>
-                <th scope="col">Amount</th>
-                <th scope="col">Half of the runs</th>
-                <th scope="col">8 in 10</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.label}>
-                  <th scope="row">
-                    {row.label}
-                    <span className={styles.spreadTableNote}>{row.gets} runs get there</span>
-                  </th>
-                  <td>{row.middle}</td>
-                  <td>{row.wide}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollRegion>
-      ) : null}
+      {rows.length > 0 ? <SpreadTable rows={rows} /> : null}
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>{caption.lead}</p>
       <Disclosure title="How to read it">
         {caption.details.map((sentence) => (
