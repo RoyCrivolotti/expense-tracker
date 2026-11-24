@@ -3,7 +3,16 @@ import { EU_MONEY_FORMAT } from '../../engine/money'
 import { pushAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { describeRecommendation } from './reviewFields'
-import { detailLine, foreignAmount, monthWord, signedAmount, toastText, typeWord, weekdayDay } from './reviewFormat'
+import {
+  detailLine,
+  foreignAmount,
+  monthWord,
+  rowDay,
+  signedAmount,
+  toastText,
+  typeWord,
+  weekdayDay,
+} from './reviewFormat'
 
 const model = makeReviewModel()
 const merchants = buildMerchantIndex(model.dataset.transactions)
@@ -19,6 +28,24 @@ describe('reviewFormat', () => {
     expect(weekdayDay('2026-12-01')).toBe('Tue 1 Dec')
     expect(weekdayDay('2026-11-10')).toBe('Tue 10 Nov')
     expect(monthWord('2026-12')).toBe('Dec')
+  })
+
+  it('writes the row day with the time, and says which day the bank wrote when its message dated it', () => {
+    expect(rowDay(view())).toBe('Tue 10 Nov, 09:41')
+    expect(rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32) }))).toBe(
+      'Charges Wed 11 Nov',
+    )
+    expect(
+      rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32), suggestedType: 'income' })),
+    ).toBe('Arrives Wed 11 Nov')
+    expect(
+      rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32), suggestedType: 'refund' })),
+    ).toBe('Arrives Wed 11 Nov')
+    expect(rowDay(view({ localDate: '2026-11-06', occurredAt: pushAt(2026, 11, 10, 21, 32) }))).toBe(
+      'Fri 6 Nov, from the message',
+    )
+    // A row with no phone clock cannot tell, and shows its day alone.
+    expect(rowDay(view({ localDate: '2026-11-11', occurredAt: '2026-11-10T20:32:07Z' }))).toBe('Wed 11 Nov')
   })
 
   it('signs the amount by type, and writes nothing for an unknown amount', () => {

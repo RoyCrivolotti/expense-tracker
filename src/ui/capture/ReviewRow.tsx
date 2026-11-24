@@ -3,7 +3,7 @@ import type { SeriesFit } from '../../domain/capture/seriesMatch'
 import { Money } from '../components/Money'
 import type { ReviewApi } from './useReviewApi'
 import type { ReviewView } from './reviewFields'
-import { dueOn, foreignAmount, monthWord, typeWord, weekdayDay } from './reviewFormat'
+import { dueOn, foreignAmount, monthWord, rowDay, typeWord } from './reviewFormat'
 import styles from './Review.module.css'
 
 const IN_FIELDS: ReadonlySet<ReviewReason> = new Set(['no-category', 'no-account', 'no-merchant'])
@@ -41,7 +41,7 @@ function Fields({ view }: { view: ReviewView }) {
         {view.accountName ? <span>{view.accountName}</span> : <Missing text="Account: not set" />}
       </div>
       <div className={styles.meta}>
-        <span>{[weekdayDay(view.date), view.time].filter(Boolean).join(', ')}</span>
+        <span>{rowDay(view)}</span>
         <span aria-hidden="true">·</span>
         <span>{monthWord(view.budgetMonth)} budget</span>
       </div>

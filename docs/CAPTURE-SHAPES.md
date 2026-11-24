@@ -27,7 +27,7 @@ positions line up with `skeletonOf`.
   word `ending`.
 - **date**: `2026-11-20`, `20/11/2026`, `20-11-2026` or `20.11.2026`, the last three day first. A date that does not
   exist (`31/13/2026`) is not a date. When day and month are both 12 or less and differ (`03/04/2026`) the slot is
-  read day first and carries `ambiguous: true`, since month first was possible. There are no month names.
+  read day first and carries `ambiguous: true`, since month first was possible. There are no month names here; the date a recommendation takes is read apart ("At receipt").
 - **code**: a bare run of 4 to 8 digits with no marker and no sign. A one-time code looks like this, and so does a
   year, so it is never taken for an amount.
 
@@ -65,10 +65,23 @@ Every push is read the same way, whatever its source word. [`readPush(title, bod
 a position means the same token in all three. A push becomes a recommendation only when `currencyAmount` finds its one
 amount with a currency marker ([`store.ts`](../workers/capture/src/store.ts)): the amount is that number's first reading,
 the currency its marker's ISO code, the type `expense`, the card digits the one masked-digits slot when the push shows
-exactly one, and the date the push's own. Anything else is counted as unread and nothing of it is kept
+exactly one, and the date the one its words name or else the day the push arrived (below). Anything else is counted as unread and nothing of it is kept
 ([CAPTURE-WORKER.md](CAPTURE-WORKER.md) has the reasons). The skeleton is not one token per word (a glued `50,00EUR` gives `<N>
 <C>`), so `readPush` also keeps which word each skeleton token came from, and `spanText` turns a run back into the words
 as the bank wrote them.
+
+The date a recommendation takes is read apart from the slots, by [`messageDate`](../src/domain/capture/messageDate.ts),
+so reading more kinds of date never changes a skeleton or what a template has learned. It reads `2026-11-24`,
+`2026/11/24`, `24/11/2026`, `24-11-26`, `24.11.2026`, `24/11`, and a day with a Spanish or English month name (`24 de
+noviembre`, `24 nov.`, `Nov 24, 2026`, `24-Nov`). A date with no year takes the year nearest the arrival. A day and month
+with no year are read day first only, since month first would read a card's expiry (`11/26`) as a day. The date is used
+only when it is the one date the words name, from 7 days before the push's arrival to 10 after (the oldest push the
+Worker takes is a week old, and a bank announces a direct debit a day or a few ahead), and only when it reads one way:
+`03/12/2026` counts when only one order of day and month lands in that window. A date up to three words after a limit
+word (`until`, `before`, `valid`, `expires`, `hasta`, `antes`, `válido`, `caduca`, `vence`, `vencimiento`, `límite`)
+keeps the arrival day, so `hasta el día 30/11` and a due date do too. A range (`entre el 24 y el 28 de noviembre`, `del
+24 al 28`, `from 24 to 28 November`) names two days and keeps the arrival. A day and month with no year that counts
+something (`Cuota 2/12`, `Plazo 1/3`, `24/7`) is not a date. Times, amounts and runs of digits are not dates. The event keeps the arrival, so grouping, replay and the 30-day expiry do not move.
 
 Then it finds the person's template ([`templates.ts`](../workers/capture/src/templates.ts)):
 

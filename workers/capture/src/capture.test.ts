@@ -129,6 +129,20 @@ describe('a valid push', () => {
     ).toBe(NOW.toISOString())
   })
 
+  it('dates the recommendation by the day the words name, and keeps the arrival on the push and its clock', async () => {
+    const announced = {
+      ...PURCHASE,
+      title: 'A bill is coming',
+      body: 'On 2026-11-04 the bill of 47,15 EUR from Example Utility will be charged to your account **1234',
+      date: '2026-11-03T09:30:00+01:00',
+    }
+    await send(request({ body: announced }))
+    expect(rows('SELECT local_date, occurred_at FROM recommendations')).toEqual([
+      { local_date: '2026-11-04', occurred_at: '2026-11-03T09:30:00+01:00' },
+    ])
+    expect(rows('SELECT local_date FROM capture_events')).toEqual([{ local_date: '2026-11-03' }])
+  })
+
   it('points the recommendation at the account its card is mapped to', async () => {
     await repos().captures.saveCard(ALICE, { source: 'iberia', digitsKind: 'card', digits: '4321', accountId: 7 })
     await send(request())

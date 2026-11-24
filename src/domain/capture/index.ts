@@ -11,6 +11,7 @@ export { currencyMarker } from './currency'
 export { MAX_CLOCK_SKEW_MS, MAX_PUSH_AGE_MS, isoWithOffset, parsePushDate, pushTimeVerdict } from './date'
 export type { PushInstant } from './date'
 export { GROUP_WINDOW_MS, sameMovement } from './grouping'
+export { MESSAGE_DATE_WINDOW, messageDate } from './messageDate'
 export type { GroupablePush } from './grouping'
 export {
   IGNORE_AFTER_DISMISSALS,

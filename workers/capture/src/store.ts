@@ -1,4 +1,12 @@
-import { cleanText, isoWithOffset, readPush, replayKey, shapeId, spanText } from '../../../src/domain/capture'
+import {
+  cleanText,
+  isoWithOffset,
+  messageDate,
+  readPush,
+  replayKey,
+  shapeId,
+  spanText,
+} from '../../../src/domain/capture'
 import type { PushInstant } from '../../../src/domain/capture'
 import type { PushReading, RawPush, Slot } from '../../../src/domain/capture'
 import type { CaptureCaps, CaptureEvent, CaptureRecorded } from '../../../src/domain/ports/captureEvents'
@@ -97,10 +105,14 @@ async function readForStore(
   }
 }
 
-/** The recommendation a stored push becomes: an expense of its amount, on the card's account when the card is linked. */
+/**
+ * The recommendation a stored push becomes: an expense of its amount, on the card's account when the card is linked,
+ * dated by the date its words name (`messageDate`) or else the day it arrived.
+ */
 function newRecommendation(
   amount: { cents: number; currency: string },
   date: PushInstant,
+  paidOn: string,
   read: Reading,
   accountId: number | null,
   receivedAt: string,
@@ -111,8 +123,9 @@ function newRecommendation(
     amountCents: amount.cents,
     currency: amount.currency,
     // The recommendation keeps the phone's own clock, so the app can tell the time of day the payment was made.
+    // It stays the arrival when the words name another day, so the app can tell the date came from the message.
     occurredAt: isoWithOffset(date.instantMs, date.offsetMinutes),
-    localDate: date.localDate,
+    localDate: paidOn,
     merchantRaw: read.merchantRaw,
     descriptionSuggested: null,
     suggestedType: 'expense',
@@ -204,7 +217,8 @@ export async function storePush(
     slots: read.slots,
     body: read.body,
   }
-  const recommendation = newRecommendation(amount, date, read, card?.accountId ?? null, receivedAt)
+  const paidOn = messageDate(reading.tokens, date.localDate) ?? date.localDate
+  const recommendation = newRecommendation(amount, date, paidOn, read, card?.accountId ?? null, receivedAt)
   const recorded = await captures.recordCapture(event, recommendation, caps, read.decision)
   const payment = createdPayment(key.owner, recommendation.id, amount, read)
   return (

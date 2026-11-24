@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultBudgetMonth } from '../engine/dates'
 import { recommendedBudgetMonth } from '../engine/status'
-import { bookingDates, otherBudgetDays, paymentClock, shiftDay } from './reviewDates'
+import { bookingDates, messageDating, otherBudgetDays, paymentClock, shiftDay } from './reviewDates'
 
 const monthWith = (rolloverDay: number) => (day: string) => defaultBudgetMonth(day, rolloverDay)
 const edge = (
@@ -14,6 +14,20 @@ const at = (
   h: number,
   m = 0,
 ) => h * 60 + m
+
+describe('messageDating', () => {
+  it('is the arrival on the phone clock when the payment is dated another day', () => {
+    expect(messageDating('2026-11-23T21:32:07+01:00', '2026-11-24')).toEqual({
+      arrivedDate: '2026-11-23',
+      arrivedTime: '21:32',
+    })
+  })
+
+  it('is null when the payment is dated the arrival day, or the row has no phone clock', () => {
+    expect(messageDating('2026-11-23T21:32:07+01:00', '2026-11-23')).toBeNull()
+    expect(messageDating('2026-11-23T20:32:07Z', '2026-11-24')).toBeNull()
+  })
+})
 
 describe('shiftDay', () => {
   it('moves across months, years and a leap day', () => {

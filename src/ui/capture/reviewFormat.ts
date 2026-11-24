@@ -1,3 +1,4 @@
+import { paymentDirection } from '../../domain/capture/direction'
 import { formatCents, type MoneyFormat } from '../../engine/money'
 import type { TxnType } from '../../types'
 import { shortDayLabel } from '../format'
@@ -17,6 +18,18 @@ const fromIso = (iso: string) => new Date(`${iso}T12:00:00`)
 /** "Tue 1 Dec", from a `YYYY-MM-DD` date. */
 export function weekdayDay(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(fromIso(iso))
+}
+
+/**
+ * The row's day: the day and time the push says, or for a payment its bank's words dated, "Charges Tue 24 Nov" when
+ * the bank announced a charge still to come ("Arrives Fri 4 Dec" for money coming in) and "Fri 20 Nov, from the
+ * message" when it reported one late.
+ */
+export function rowDay(view: Pick<ReviewView, 'date' | 'time' | 'fromMessage' | 'type'>): string {
+  const day = weekdayDay(view.date)
+  if (!view.fromMessage) return [day, view.time].filter(Boolean).join(', ')
+  if (view.date < view.fromMessage.arrivedDate) return `${day}, from the message`
+  return `${paymentDirection(view.type) === 'in' ? 'Arrives' : 'Charges'} ${day}`
 }
 
 /** "due 10 Nov", from a series' usual date. The date is one word: it never breaks across lines. */
