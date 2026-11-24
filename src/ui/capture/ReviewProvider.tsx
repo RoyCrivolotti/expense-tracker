@@ -3,6 +3,7 @@ import type { PossibleMatch } from '../../data/recommendationsApi'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { ReviewContext, type ReviewCore } from './reviewContext'
+import { useAppBadge } from './useAppBadge'
 import { useRecommendationList } from './useRecommendationList'
 import { useHoldReloads, useReloadOnReturn } from './useReloadOnReturn'
 import { useReloadOnWorkerMessage } from './useReloadOnWorkerMessage'
@@ -48,11 +49,13 @@ export function ReviewProvider({
       }),
     [list.items, found],
   )
+  const count = Math.max(0, list.openCount - decisions.hidden.size)
+  useAppBadge(list.items === null ? null : count, list.loads)
   const core: ReviewCore = {
     model,
     items: items.filter((r) => !decisions.hidden.has(r.id)),
     loads: list.loads,
-    count: Math.max(0, list.openCount - decisions.hidden.size),
+    count,
     hasMore: list.hasMore,
     more: () => void list.more(),
     error: list.error,

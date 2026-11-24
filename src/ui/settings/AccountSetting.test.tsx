@@ -54,6 +54,19 @@ describe('Sign out', () => {
     expect(keptWhenLeaving).toEqual([])
   })
 
+  it('clears the Home Screen icon’s number before leaving', async () => {
+    let clearedWhenLeaving = false
+    const clearAppBadge = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clearAppBadge })
+    assign.mockImplementation(() => void (clearedWhenLeaving = clearAppBadge.mock.calls.length > 0))
+    render(<AccountSetting email="a@example.com" />)
+
+    signOut()
+
+    await waitFor(() => expect(assign).toHaveBeenCalledOnce())
+    expect(clearedWhenLeaving).toBe(true)
+  })
+
   it('goes to the sign-out address after a second when the store never answers', async () => {
     idb.hangOpen()
     render(<AccountSetting email="a@example.com" />)
