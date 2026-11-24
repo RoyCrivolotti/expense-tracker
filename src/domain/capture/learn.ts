@@ -1,3 +1,4 @@
+import { signedDirection } from './sign'
 import type { SavedForMerchant } from './merchants'
 import type { Candidate } from './readNumber'
 import type { NumberSlot, Slot } from './slots'
@@ -15,7 +16,7 @@ export interface TemplateFacts {
   amountSlot: number | null
   /** The decimal mark that reading assumed. */
   amountMark: Candidate['mark'] | null
-  /** The type of the last row the person saved from this template. */
+  /** The type of the last row the person saved from a push of this template whose amount had no sign. */
   type: string | null
   /** The account of the last row saved from a push that showed no card digits. */
   accountId: number | null
@@ -58,7 +59,7 @@ export function chooseAmountSlot(
 
 /**
  * An accept: the person saved the push as a row, or pointed it at one they typed. The template learns the slot that
- * held the amount when one answers it alone, the type (the last accept wins), and the account when the push showed no
+ * held the amount when one answers it alone, the type when the amount had no sign (the last accept wins), and the account when the push showed no
  * card digits. A push with digits gets its account from the card link instead, so learning it here would only teach
  * the template one card's account. An accept also ends a dismissal streak and brings an ignored template back.
  */
@@ -75,7 +76,9 @@ export function learnFromAccept(
     dismissStreak: 0,
     amountSlot: amount ? amount.index : facts.amountSlot,
     amountMark: amount ? amount.mark : facts.amountMark,
-    type: saved.type,
+    // A signed push's direction is its sign's, not the wording's: learning its type would set the type of the
+    // wording's unsigned pushes, which a bank may use for the other direction.
+    type: signedDirection(slots, amount ? amount.index : facts.amountSlot) === null ? saved.type : facts.type,
     accountId: hadDigits ? facts.accountId : saved.accountId,
     ignoredAt: null,
   }

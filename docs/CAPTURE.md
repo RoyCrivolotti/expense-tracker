@@ -152,7 +152,7 @@ a submit or a link, read from the row saved or linked:
 
 - **Amount slot and mark**: the number in the push that holds the saved amount, and the decimal mark that reading
   assumed, learned from an accept whose amount matches exactly one reading. A tie or no match teaches nothing.
-- **Type**: the saved row's type. The last accept wins.
+- **Type**: the saved row's type from a push with no sign on its amount ([CAPTURE-SHAPES.md](CAPTURE-SHAPES.md), "A sign beats the wording"). The last such accept wins. A push with a signed amount never teaches its wording a type, so if a bank signs every movement, an investment or a refund is picked by hand each time unless a monthly series fills it in.
 - **Account**: the saved row's account, only when the push showed no card digits. A card's account is its link.
 - **Merchant**: the saved row's description, as typed and trimmed, with its category, type and account, one vote at any
   price and one at the saved price ([`merchants.ts`](../src/domain/capture/merchants.ts)). Only when the recommendation's

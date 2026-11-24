@@ -108,6 +108,16 @@ unreadable requests are counted ([CAPTURE-WORKER.md](CAPTURE-WORKER.md)). A
 person may have at most 8 different words. A ninth is a 429 with no `Retry-After`, because the cap is permanent until the
 person's `capture_counters` rows are cleared. A word already counted is always admitted.
 
+## A sign beats the wording
+
+One bank may use a wording for money both ways ("a movement of -47,15 EUR", "a movement of 64,20 EUR"), and both
+give one skeleton. So a minus or a plus glued to the amount (`-47,15`, `−47,15`, `€-47,15`, `+47,15`) is a fact about
+that push: the list suggests an expense for a minus and income for a plus, unless the type the wording learned already
+goes that way (an investment out, a refund in). A dash or a plus standing apart from the number (`Bizum recibido de Ana -
+20,00 EUR`) is read as a separator, so the learned type stays and a correction still teaches. The amount is the number
+at the learned slot, else the one currency-marked number. A push with a sign teaches the wording no type, so its
+unsigned pushes keep what they taught. A sign after the amount (`47,15-`) is not read, and such a push shows no amount.
+
 ## How a bank is learned
 
 There is nothing to add for a new bank. Its first push with an amount and a currency marker makes a template and a
