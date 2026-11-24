@@ -1,3 +1,5 @@
+import { paymentDirection, type Direction } from './direction'
+import { signedDirection } from './sign'
 import type { TemplateFacts } from './learn'
 import { ANY_AMOUNT } from './merchants'
 import { MIN_SIGHTINGS } from './review'
@@ -102,7 +104,8 @@ function vote(
  * What a push should become. The amount is the one the template learned to read when it reads one, else the first
  * reading. The description and category come from the merchant's rows at the payment's price when it has any, since one
  * merchant name can stand for several fixed prices, else from its rows at any price, else none, and the app falls back
- * to the phone's own history and then the bank's text. The type is the template's, else the first guess. The account
+ * to the phone's own history and then the bank's text. The type is the template's, else the first guess, unless the
+ * amount's own sign says otherwise (`typeOf`). The account
  * is the card's link, else the template's.
  *
  * `template` is null when the push has no template; that counts as one the person never accepted, so one tap never
@@ -117,7 +120,11 @@ export function suggestFor(
   const amountCents = learned ?? rec.amountCents
   return {
     ...merchantDescription(merchantRows, amountCents),
-    type: typeOf(template, rec.suggestedType),
+    type: typeOf(
+      template,
+      rec.suggestedType,
+      signedDirection(rec.slots, learned === null ? null : (template?.amountSlot ?? null)),
+    ),
     accountId: rec.accountId ?? template?.accountId ?? null,
     amountCents,
     reasons: reasonsOf(template, learned, rec.amountCents),
@@ -146,12 +153,19 @@ function merchantDescription(
   return anyPrice ?? atPrice ?? NO_DESCRIPTION
 }
 
+/**
+ * The template's type, else the first guess, unless the push's own sign says the money went the other way: then an
+ * expense for a minus and income for a plus. A learned type that agrees with the sign stays (an investment is money out).
+ */
 function typeOf(
   template: TemplateFacts | null,
   firstGuess: SuggestedType | null,
+  sign: Direction | null,
 ): SuggestedType | null {
   const learned = template?.type
-  return learned != null && SUGGESTED_TYPES.has(learned) ? (learned as SuggestedType) : firstGuess
+  const type = learned != null && SUGGESTED_TYPES.has(learned) ? (learned as SuggestedType) : firstGuess
+  if (sign === null || paymentDirection(type) === sign) return type
+  return sign === 'out' ? 'expense' : 'income'
 }
 
 function reasonsOf(

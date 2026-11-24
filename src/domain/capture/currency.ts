@@ -66,6 +66,8 @@ const SHARED_SYMBOLS: ReadonlySet<string> = new Set(['$', '¥', 'kr'])
 /** A token split around the number in it, `-€12,50` giving sign, prefix `€`, core `12,50` and no suffix. */
 export interface NumberToken {
   negative: boolean
+  /** A plus written before the number: `+12,50`, `€+12,50`. */
+  positive: boolean
   prefix: string
   /** Digits with their separators, starting and ending on a digit. */
   core: string
@@ -81,6 +83,7 @@ export function splitNumberToken(token: string): NumberToken | null {
   const minus = (sign: string | undefined) => sign === '-' || sign === '−'
   return {
     negative: minus(match[1]) || minus(match[3]),
+    positive: match[1] === '+' || match[3] === '+',
     prefix: match[2] ?? '',
     core: match[4] ?? '',
     suffix: match[5] ?? '',
