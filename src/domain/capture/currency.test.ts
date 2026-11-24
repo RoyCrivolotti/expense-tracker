@@ -95,10 +95,22 @@ describe('isMarkerToken', () => {
 
 describe('splitNumberToken', () => {
   it('splits sign, prefix, number and suffix', () => {
-    expect(splitNumberToken('-50.0')).toEqual({ negative: true, prefix: '', core: '50.0', suffix: '' })
-    expect(splitNumberToken('−€1.234,56')).toEqual({ negative: true, prefix: '€', core: '1.234,56', suffix: '' })
-    expect(splitNumberToken('12,34€.')).toEqual({ negative: false, prefix: '', core: '12,34', suffix: '€' })
-    expect(splitNumberToken('+7')).toEqual({ negative: false, prefix: '', core: '7', suffix: '' })
+    expect(splitNumberToken('-50.0')).toEqual({ negative: true, positive: false, prefix: '', core: '50.0', suffix: '' })
+    expect(splitNumberToken('−€1.234,56')).toEqual({
+      negative: true,
+      positive: false,
+      prefix: '€',
+      core: '1.234,56',
+      suffix: '',
+    })
+    expect(splitNumberToken('12,34€.')).toEqual({
+      negative: false,
+      positive: false,
+      prefix: '',
+      core: '12,34',
+      suffix: '€',
+    })
+    expect(splitNumberToken('+7')).toEqual({ negative: false, positive: true, prefix: '', core: '7', suffix: '' })
   })
   it('is null with no digits or with two runs of them', () => {
     expect(splitNumberToken('EUR')).toBeNull()
