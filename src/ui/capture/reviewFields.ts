@@ -3,11 +3,17 @@ import type { RecommendationInfo } from '../../data/recommendationsApi'
 import type { SeriesHint } from '../../domain/capture/seriesMatch'
 import { cleanText } from '../../domain/capture/text'
 import { bankMerchantName, reviewReasons, type MerchantIndex, type ReviewReason } from '../../domain/capture/review'
-import { otherBudgetDays, paymentClock, type PaymentClock } from '../../domain/capture/reviewDates'
+import {
+  messageDating,
+  otherBudgetDays,
+  paymentClock,
+  type MessageDating,
+  type PaymentClock,
+} from '../../domain/capture/reviewDates'
 import type { TxnType } from '../../types'
 import type { SeedCard, TransactionSeed } from '../actions'
 import { suggestBudgetMonth } from '../components/transactionFormState'
-import { monthEdgeNotice } from './reviewNotice'
+import { messageDateNotice, monthEdgeNotice } from './reviewNotice'
 import type { ExpenseModel } from '../useExpenseData'
 import { historyOf, taught } from './reviewReading'
 import { NO_HINT, seriesReading } from './reviewSeries'
@@ -36,6 +42,8 @@ export interface ReviewView {
   budgetMonth: string
   /** The phone's own clock for the payment and its push. */
   clock: PaymentClock
+  /** When the push arrived, if its words dated the payment another day. Null when the date is the arrival's. */
+  fromMessage: MessageDating | null
   /** Days the bank might book it on that would be another budget month. Empty unless near an edge. */
   edgeDays: string[]
   reasons: ReviewReason[]
@@ -68,7 +76,9 @@ export function describeRecommendation(
   const { fill, type, refs, askCard, ...hinted } = seriesReading(hint, history, pushed, rec, model)
   const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
   const monthOf = (day: string) => suggestBudgetMonth(model, day)
-  const edgeDays = otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
+  const fromMessage = messageDating(rec.occurredAt, rec.localDate)
+  // A day the bank wrote is the day it books: no day either side of it is in question.
+  const edgeDays = fromMessage ? [] : otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
   const found = reviewReasons({
     amountCents,
     currency: rec.currency,
@@ -97,6 +107,7 @@ export function describeRecommendation(
     time: clock.time,
     budgetMonth: monthOf(rec.localDate),
     clock,
+    fromMessage,
     edgeDays,
     reasons,
     // Two series are always the person's to choose between: votes never pick one by a tap.
@@ -106,7 +117,7 @@ export function describeRecommendation(
 }
 
 const noticeOf = (view: ReviewView) => {
-  const notice = monthEdgeNotice(view)
+  const notice = monthEdgeNotice(view) ?? messageDateNotice(view)
   return notice ? { notice } : {}
 }
 

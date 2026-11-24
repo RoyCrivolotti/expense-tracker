@@ -41,6 +41,12 @@ budget month the payment is reviewed, and the add form shows a note under the da
 between them. The payment's time of day is the phone's own, read from `occurredAt` (the endpoint in [CAPTURE-WORKER.md](CAPTURE-WORKER.md)), so
 the device's zone does not matter; a row without it counts as next to an edge on the days either side of midnight.
 
+A payment dated by its bank's words (its `localDate` is another day than `occurredAt`'s) shows that day on the row:
+"Charges Tue 24 Nov" for a charge the bank announced ahead of time ("Arrives Fri 4 Dec" for money coming in), "Fri 20
+Nov, from the message" for one it reported late. No day either side of it is in question, so it raises no budget month edge. The add form opens on that day with a
+note saying the date came from the bank's message and when the push arrived, and a button that moves the date to the
+arrival day.
+
 A notification tapped on the phone opens the app at `/?review=<id>` and the card opens that payment's form as Review would ([PUSH.md](PUSH.md)). One tap, "Don't add" and Link are held for five seconds, and nothing is sent until then. Undo covers the last one only:
 a new decision sends the held one at once, and so does the app going out of sight. A send that fails puts the payment
 back with the reason. The add form saves at once, since it needs the new row's id for receipts, so it has no undo.

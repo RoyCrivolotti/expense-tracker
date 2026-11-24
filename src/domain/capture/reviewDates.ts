@@ -37,6 +37,25 @@ export function paymentClock(
   }
 }
 
+/** When a push arrived, on the phone's clock, for a payment its words dated another day. */
+export interface MessageDating {
+  arrivedDate: string
+  arrivedTime: string
+}
+
+/**
+ * The phone's day and time the push arrived, when the payment's `localDate` is another day: the Worker dates a payment
+ * by the date its words name (`messageDate`) and keeps the arrival in `occurredAt`. Null when the date is the arrival's,
+ * or the row has no phone clock to tell.
+ */
+export function messageDating(
+  occurredAt: string,
+  localDate: string,
+): MessageDating | null {
+  const m = WITH_OFFSET.exec(occurredAt)
+  return m && m[1] !== localDate ? { arrivedDate: m[1]!, arrivedTime: `${m[2]}:${m[3]}` } : null
+}
+
 /** How far either side of a payment's own time a bank may book it, in minutes. Pushes ran up to half an hour late. */
 export const EDGE_MINUTES = 60
 
