@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultBudgetMonth } from '../engine/dates'
 import { recommendedBudgetMonth } from '../engine/status'
-import { bookingDates, messageDating, otherBudgetDays, paymentClock, shiftDay } from './reviewDates'
+import { bookingDates, isAnnounced, messageDating, otherBudgetDays, paymentClock, shiftDay } from './reviewDates'
 
 const monthWith = (rolloverDay: number) => (day: string) => defaultBudgetMonth(day, rolloverDay)
 const edge = (
@@ -26,6 +26,23 @@ describe('messageDating', () => {
   it('is null when the payment is dated the arrival day, or the row has no phone clock', () => {
     expect(messageDating('2026-11-23T21:32:07+01:00', '2026-11-23')).toBeNull()
     expect(messageDating('2026-11-23T20:32:07Z', '2026-11-24')).toBeNull()
+  })
+})
+
+describe('isAnnounced', () => {
+  it('is true when the push named a later day than the phone day it arrived on', () => {
+    expect(isAnnounced('2026-11-23T21:32:07+01:00', '2026-11-24')).toBe(true)
+    expect(isAnnounced('2026-12-31T19:00:00-05:00', '2027-01-03')).toBe(true)
+  })
+
+  it('is false for a push dated the day it arrived, or an earlier day it reported late', () => {
+    expect(isAnnounced('2026-11-23T21:32:07+01:00', '2026-11-23')).toBe(false)
+    expect(isAnnounced('2026-11-25T08:00:00+01:00', '2026-11-22')).toBe(false)
+  })
+
+  it('is false for a row in UTC, whose phone day is unknown, even past midnight there', () => {
+    expect(isAnnounced('2026-11-23T23:30:00Z', '2026-11-24')).toBe(false)
+    expect(isAnnounced('2026-11-23T23:30:00.000Z', '2026-11-24')).toBe(false)
   })
 })
 

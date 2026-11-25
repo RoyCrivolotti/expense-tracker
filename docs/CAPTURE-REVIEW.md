@@ -144,6 +144,8 @@ that row. Submit looks again, because a row can be typed between the list read a
 submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
 and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`
 skips the check. A row typed between that one read and the insert is not caught, which is a deliberate advisory race.
+The add form shows the list's match, with Link and Add anyway, as soon as it opens, so a payment reached through Add and
+next is told too; its Add then sends `allowDuplicate: true`, since the person has seen the row.
 The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
 `DUPLICATE_WINDOW`, shared by both reads:
 
@@ -155,12 +157,20 @@ The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its w
   (the 12,50 cafe) would match an old row every time and never allow one tap; forward 3, because a row may be dated by the
   day the bank books it;
 - not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
-  so a payment that was captured and added does not match the next push of the same price;
+  so a payment that was captured and added does not match the next push of the same price. The one exception is a bill
+  a bank announces and then reports. A recommendation whose words named a later day than its push arrived on
+  (`isAnnounced`, from `localDate` and the phone's day in `occurredAt`) has not moved money yet. A row that answers for
+  it is offered to a push that reports a movement, and the other way round, when the announcement arrived first and the
+  report is dated on the day it named or up to seven days later (`ANNOUNCED_CHARGE_DAYS`). Two
+  reports of one price, two announcements, an announcement after a report, and a payment before the named day stay two
+  payments. Linking moves the row to the new recommendation in one batch: the other one stays submitted and stops
+  answering for it. The row keeps its own date;
 - the closest by date, and the highest id (entered last) on a tie. A row goes to one payment of the page only, the
   one it is closest to (the newer payment first on a tie), and a payment that loses its row falls to its next best or to
   none, so two payments of one price never offer the same row.
 
 The candidates of a whole page come from one query, over the date span of the page widened by the window and only the
 prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
-whatever the page size. The check at submit is the same statement for one amount and one date, so it reads at most the
-rows of one 18-day window and needs no new index.
+whatever the page size. Each candidate looks up the recommendation that answers for it through the unique index on
+owner and transaction, which reads a row only when there is one. The check at submit is the same statement for one
+amount and one date, so it reads at most the rows of one 18-day window and needs no new index.

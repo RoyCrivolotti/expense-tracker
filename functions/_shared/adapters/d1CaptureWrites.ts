@@ -14,7 +14,7 @@ import {
   RECORD_RECOMMENDATION_SQL,
   eventParams,
 } from '../capture/captureEventsSql'
-import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL } from '../capture/captureRecommendationsSql'
+import { BLANK_DECIDED_TEXT_SQL, DECIDE_SQL, RELEASE_ANSWER_SQL } from '../capture/captureRecommendationsSql'
 import { SEEN_IGNORED_SQL, templateIdOf, templateStatements } from '../capture/captureTemplatesSql'
 import {
   EVICT_MERCHANTS_SQL,
@@ -43,11 +43,16 @@ export async function decide(
   id: string,
   d: Parameters<CaptureRepository['decideRecommendation']>[2],
 ): Promise<boolean> {
-  const [decided] = await db.batch([
+  const release =
+    d.state === 'submitted' && d.takeFrom !== undefined
+      ? [db.prepare(RELEASE_ANSWER_SQL).bind(owner, d.takeFrom, d.txnId, id)]
+      : []
+  const results = await db.batch([
+    ...release,
     db.prepare(DECIDE_SQL).bind(owner, id, d.state, d.state === 'submitted' ? d.txnId : null, d.at),
     db.prepare(BLANK_DECIDED_TEXT_SQL).bind(owner, id),
   ])
-  return (decided?.meta?.changes ?? 0) > 0
+  return (results[release.length]?.meta?.changes ?? 0) > 0
 }
 
 export async function recordCapture(

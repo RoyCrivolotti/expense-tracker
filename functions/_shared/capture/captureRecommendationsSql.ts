@@ -16,6 +16,9 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
 
 export const GET_RECOMMENDATION_SQL = `SELECT ${COLUMNS} FROM recommendations WHERE owner = ?1 AND id = ?2`
 
+/** Read from `idx_recommendations_txn`: one row at most. */
+export const ANSWERING_SQL = `SELECT ${COLUMNS} FROM recommendations WHERE owner = ?1 AND txn_id = ?2`
+
 /** Newest day first. The index ends in the id, so a page is read in this order with no sort. */
 export const LIST_OPEN_FIRST_SQL = `SELECT ${COLUMNS} FROM recommendations
 WHERE owner = ?1 AND state = 'open' ORDER BY local_date DESC, id DESC LIMIT ?2`
@@ -34,6 +37,15 @@ FROM recommendations WHERE owner = ?1 AND state = 'open'`
 /** Only an open row moves, so a second tap or a retry finds nothing to change. */
 export const DECIDE_SQL = `UPDATE recommendations SET state = ?3, txn_id = ?4, decided_at = ?5
 WHERE owner = ?1 AND id = ?2 AND state = 'open'`
+
+/**
+ * Run before `DECIDE_SQL` when a link takes a transaction over from the recommendation that answers for it, so the
+ * unique index lets the decide through. It acts only while the recommendation taking over is still open; when it is not,
+ * neither statement changes anything.
+ */
+export const RELEASE_ANSWER_SQL = `UPDATE recommendations SET txn_id = NULL
+WHERE owner = ?1 AND id = ?2 AND txn_id = ?3
+AND EXISTS (SELECT 1 FROM recommendations o WHERE o.owner = ?1 AND o.id = ?4 AND o.state = 'open')`
 
 /**
  * Run with `DECIDE_SQL`: once the person has decided, the push's text has done its job. Harmless when the decide

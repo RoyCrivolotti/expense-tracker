@@ -8,9 +8,10 @@ import type { DuplicateOffer, TransactionSeed } from '../actions'
 import { useToast } from '../hooks/useToast'
 
 /**
- * What the add form does when the server refuses a captured payment because a typed row already looks like it: it keeps
- * the row it was told about and offers Link or Add anyway. `moveOn` is called once a link has settled the payment, as a
- * save would, so the queue goes on to the next one.
+ * What the add form does when a typed row already looks like a captured payment: it offers Link or Add anyway, for the
+ * row the list found (the seed's) from the start, or for the one the server names when it refuses the save. The list's
+ * row is shown too, since a payment opened from a queue was never shown its card. `moveOn` is called once a link has
+ * settled the payment, as a save would, so the queue goes on to the next one.
  */
 export function useDuplicateOffer(
   seed: TransactionSeed | undefined,
@@ -24,16 +25,17 @@ export function useDuplicateOffer(
 
   const onLinked = (row: PossibleMatch) => {
     announceRecommendationsChanged()
-    showToast(`Linked \u00b7 to your typed row "${row.description}". Nothing new was added.`, 'success')
+    showToast(`Linked \u00b7 to the row "${row.description}". Nothing new was added.`, 'success')
     moveOn()
   }
 
+  const match = found && found.id === id ? found.match : seed?.possibleMatch
   const offer: DuplicateOffer | undefined =
-    found && id && found.id === id
+    match && id
       ? {
-          match: found.match,
+          match,
           recommendationId: id,
-          onLinked: () => onLinked(found.match),
+          onLinked: () => onLinked(match),
           addAnyway: () => {
             anyway.current = true
             // The button submits the form, which reads this at once. If the form refuses (a field is invalid) nothing
@@ -46,8 +48,8 @@ export function useDuplicateOffer(
   return {
     offer,
     /**
-     * Whether the next save goes ahead whatever it matches: the person pressed Add anyway, or the list already showed
-     * them this payment's match, so they are not asked twice. Read once per save.
+     * Whether the next save goes ahead whatever it matches: the person pressed Add anyway, or the form already shows
+     * them this payment's match from the list, so they are not asked twice. Read once per save.
      */
     takeAllow: () => {
       const allow = anyway.current || seed?.possibleMatch !== undefined

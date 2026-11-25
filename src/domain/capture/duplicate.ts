@@ -1,6 +1,6 @@
 import type { SuggestedType } from './types'
 import { paymentDirection, rowDirection } from './direction'
-import { shiftDay } from './reviewDates'
+import { isAnnounced, shiftDay } from './reviewDates'
 
 /**
  * How far from a payment's local date a typed row may be and still look like the same payment.
@@ -19,6 +19,14 @@ export interface PaymentToMatch {
   amountCents: number | null
   currency: string | null
   suggestedType: SuggestedType | null
+  /** The push itself, when the payment came from one: what `mayAnswerBoth` reads. */
+  push?: PushDates
+}
+
+/** A push's two dates as a recommendation keeps them: its arrival on the phone's clock and the day it is dated by. */
+export interface PushDates {
+  occurredAt: string
+  localDate: string
 }
 
 /** What the check needs of a typed row. */
@@ -29,6 +37,8 @@ export interface TypedRow {
   type: string
   /** As stored: positive for every type, except an investment taken back out, which is negative. */
   amountCents: number
+  /** The push of the recommendation the row answers for, when one does. Absent or null for a row none answers for. */
+  answers?: PushDates | null
 }
 
 /** A typed row that looks like the same payment. */
@@ -74,12 +84,38 @@ export function candidateSpan(payments: readonly PaymentToMatch[]): { from: stri
   return { from: shiftDay(first, -DUPLICATE_WINDOW.daysBack), to: shiftDay(last, DUPLICATE_WINDOW.daysForward) }
 }
 
+/** How many days after the day an announcement names a bank may still report the charge: a week. */
+export const ANNOUNCED_CHARGE_DAYS = 7
+
+/**
+ * Whether a row that answers for one push may still be the same payment as another push. Two pushes that both report a
+ * movement are two payments (two coffees of one price), so a row added from one is never offered to the other. A bank
+ * that announces a bill and then reports the charge sends two pushes for one payment, so a row added from either is
+ * offered to the other, but only when the announcement arrived first and the charge is dated on the day it named or
+ * up to `ANNOUNCED_CHARGE_DAYS` later. An announcement after a charge, or a payment before the named day, is another
+ * payment. Two announcements of one price stay apart: they may be two bills.
+ */
+export function mayAnswerBoth(
+  payment: PushDates | undefined,
+  answers: TypedRow['answers'],
+): boolean {
+  if (answers == null) return true
+  if (!payment) return false
+  const paymentAnnounced = isAnnounced(payment.occurredAt, payment.localDate)
+  if (paymentAnnounced === isAnnounced(answers.occurredAt, answers.localDate)) return false
+  const [announcement, report] = paymentAnnounced ? [payment, answers] : [answers, payment]
+  if (Date.parse(announcement.occurredAt) >= Date.parse(report.occurredAt)) return false
+  const late = dayGap(report.localDate, announcement.localDate)
+  return late >= 0 && late <= ANNOUNCED_CHARGE_DAYS
+}
+
 /** Whether a row looks like the same payment: the same direction, the amount to the cent, and a date inside the window. */
 function isMatch(
   payment: PaymentToMatch,
   row: TypedRow,
 ): boolean {
   if (!canMatch(payment)) return false
+  if (!mayAnswerBoth(payment.push, row.answers)) return false
   // The amount first: it rules out almost every candidate, and the date arithmetic is the dearer test.
   if (Math.abs(row.amountCents) !== payment.amountCents) return false
   const signed = dayGap(row.date, payment.localDate)
@@ -104,8 +140,8 @@ export function paymentOfRow(row: { date: string; type: string; amountCents: num
 /**
  * The typed row that looks most like this payment among `rows`: the same direction, the same amount to the cent, and a
  * date inside the window. Several give the closest by date, and a tie goes to the highest id (the row entered last).
- * The caller has already left out rows that are cancelled, belong to another person or already answer for a
- * recommendation.
+ * The caller has already left out rows that are cancelled or belong to another person, and says of each row whether a
+ * recommendation answers for it (`mayAnswerBoth`).
  */
 export function possibleMatchFor(
   payment: PaymentToMatch,

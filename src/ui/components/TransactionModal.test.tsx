@@ -1317,14 +1317,26 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('does not ask twice: a payment whose list row already showed the match is sent with the override at once', async () => {
+  it('shows the match the list found as soon as the form opens, and does not ask twice on Add', async () => {
     const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
     const { container } = renderModal({ seed: { ...seed, possibleMatch: MATCH }, actions: { submitRecommendation } })
 
+    expect(screen.getByRole('alert')).toHaveTextContent('Already entered as Cafe at the till on Mon 9 Nov?')
+    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
     press(container)
 
     await waitFor(() => expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), true))
-    expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument()
+    expect(submitRecommendation).toHaveBeenCalledTimes(1)
+  })
+
+  it('links a payment to the match the list found, with the toast naming the row', async () => {
+    vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    renderModal({ seed: { ...seed, possibleMatch: MATCH }, onClose, actions: { submitRecommendation: vi.fn() } })
+    fireEvent.click(screen.getByRole('button', { name: 'Link' }))
+
+    await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(REC, 41))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
   it('links the payment to the row, creates nothing and closes', async () => {

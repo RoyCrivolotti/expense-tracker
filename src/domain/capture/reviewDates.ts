@@ -56,6 +56,19 @@ export function messageDating(
   return m && m[1] !== localDate ? { arrivedDate: m[1]!, arrivedTime: `${m[2]}:${m[3]}` } : null
 }
 
+/**
+ * Whether the push named a later day than the one it arrived on, as a bank does when it announces a bill the evening
+ * before: the money has not moved yet. A payment pushed as it happens is dated by its arrival, or earlier when the push
+ * came late. A row in UTC has no phone day to compare with and counts as not announced.
+ */
+export function isAnnounced(
+  occurredAt: string,
+  localDate: string,
+): boolean {
+  const m = WITH_OFFSET.exec(occurredAt)
+  return m !== null && m[1]! < localDate
+}
+
 /** How far either side of a payment's own time a bank may book it, in minutes. Pushes ran up to half an hour late. */
 export const EDGE_MINUTES = 60
 

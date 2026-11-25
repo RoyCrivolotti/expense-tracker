@@ -52,6 +52,7 @@ export const PORT_METHODS = {
   countMutedTemplates: true,
   createRecommendation: true,
   getRecommendation: true,
+  recommendationAnswering: true,
   listOpenRecommendations: true,
   findPossibleMatch: true,
   countOpenRecommendations: true,
