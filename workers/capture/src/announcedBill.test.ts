@@ -227,6 +227,42 @@ describe('a bill announced, then charged', () => {
     )
   })
 
+  it.each([
+    ['on the day it named', '2026-11-25T06:10', true],
+    ['three days after it', '2026-11-28T06:10', true],
+    ['four days after it', '2026-11-29T06:10', true],
+    ['five days after it', '2026-11-30T06:10', true],
+    ['six days after it', '2026-12-01T06:10', true],
+    ['seven days after it', '2026-12-02T06:10', true],
+    ['eight days after it', '2026-12-03T06:10', false],
+    ['the day before it', '2026-11-24T23:10', false],
+  ])('pairs the announcement with a charge saved first, reported %s: %s, offered %s', async (_when, at, offered) => {
+    const announced = await announce('47,15', '25/11/2026', '2026-11-24T21:32')
+    const charged = await charge('-47,15', at)
+    const row = await save(charged, entry(at.slice(0, 10), 4715))
+
+    expect(await offerOf(announced)).toEqual(offered ? expect.objectContaining({ transactionId: row }) : null)
+    expect(await linkRecommendation(captures(), expenses(), ALICE, announced, row, NOW)).toEqual(
+      offered ? { ok: true } : { ok: false, reason: 'taken' },
+    )
+    expect(recRow(announced)).toEqual(offered ? { state: 'submitted', txn_id: row } : { state: 'open', txn_id: null })
+    expect(rowCount()).toBe(1)
+  })
+
+  it('refuses the Add of the announcement when its charge, saved first, was booked seven days late', async () => {
+    const announced = await announce('47,15', '25/11/2026', '2026-11-24T21:32')
+    const row = await save(await charge('-47,15', '2026-12-02T06:10'), entry('2026-12-02', 4715))
+
+    expect(
+      await submitRecommendation(captures(), expenses(), ALICE, announced, entry('2026-11-25', 4715), NOW),
+    ).toEqual({
+      ok: false,
+      reason: 'possible-duplicate',
+      possibleMatch: { transactionId: row, description: 'Water bill', date: '2026-12-02' },
+    })
+    expect(rowCount()).toBe(1)
+  })
+
   it('refuses the Add of the charge as a possible duplicate, as the card does, and adds it when told to', async () => {
     const announced = await announce('47,15', '25/11/2026', '2026-11-24T21:32')
     const row = await save(announced, entry('2026-11-25', 4715))
@@ -331,6 +367,29 @@ describe('pushes that are two payments', () => {
 
     expect(await offerOf(week2)).toBeNull()
     expect(await offerOf(await charge('-9,99', '2026-11-25T06:10'))).toBeNull()
+  })
+
+  it('never offer an announcement a row of its price that is not its charge, past the usual window', async () => {
+    // A charge that arrived before the announcement, and a row typed by hand, each four days after the named day.
+    const early = await charge('-47,15', '2026-11-24T08:00')
+    const reported = await save(early, entry('2026-11-29', 4715, 'expense', 'Shoes'))
+    await typed(entry('2026-11-29', 4715, 'expense', 'Chair'))
+    const announced = await announce('47,15', '25/11/2026', '2026-11-24T21:32')
+
+    expect(await offerOf(announced)).toBeNull()
+    expect(await linkRecommendation(captures(), expenses(), ALICE, announced, reported, NOW)).toEqual({
+      ok: false,
+      reason: 'taken',
+    })
+    const added = await submitRecommendation(captures(), expenses(), ALICE, announced, entry('2026-11-25', 4715), NOW)
+    expect(added.ok).toBe(true)
+  })
+
+  it('never offer a second announcement’s row to an announcement, four days apart', async () => {
+    const later = await announce('9,99', '29/11/2026', '2026-11-24T20:05', 'Video Example')
+    await save(later, entry('2026-11-29', 999, 'expense', 'Video'))
+
+    expect(await offerOf(await announce('9,99', '25/11/2026', '2026-11-24T20:10', 'Music Example'))).toBeNull()
   })
 
   it('never offer a saved bill to a payment of its price made before the day it named', async () => {
