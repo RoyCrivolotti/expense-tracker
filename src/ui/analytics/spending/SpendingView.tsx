@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
-import type { AnalyticsBasis, SpendingGroupBy, SpendingGroupRow, SpendingSort } from '../../../engine'
-import { sortSpendingRows } from '../../../engine'
+import { useMemo, type ComponentProps } from 'react'
+import type { AnalyticsBasis, SpendingGroupBy, SpendingGroupRow } from '../../../engine'
 import { downloadCsv, monthlySummaryCsv } from '../../../data/exportCsv'
 import { fullMonthLabel } from '../../../engine'
 import { monthlySummaryRows } from '../monthlySummaryRows'
@@ -15,11 +14,11 @@ import { EXIT_MS } from '../../hooks/motion'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MonthlySummaryGrid } from '../MonthlySummaryGrid'
 import { SpendingControls } from './SpendingControls'
-import type { SpendingMode } from './spendingMode'
 import { presetFor } from './presetFor'
 import { SpendingRow } from './SpendingRow'
 import { SpendingDetailBody } from './SpendingDetailBody'
-import { spendingDetail, spendingRows } from './spendingModel'
+import { spendingDetail } from './spendingModel'
+import { useSpendingSelection } from './useSpendingSelection'
 import styles from './spending.module.css'
 
 function Detail({
@@ -71,28 +70,8 @@ interface Props {
 export function SpendingView({ model, month, basis, today, openMonth, onOpenTransactions }: Props) {
   useHistoryWatch(model)
   const isMobile = useIsMobile()
-  const [groupBy, setGroupBy] = useState<SpendingGroupBy>('category')
-  const [mode, setMode] = useState<SpendingMode>('list')
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  // A row open for one month would reappear on another month that happens to have it, so a
-  // month change closes the detail (render-phase, pre-paint, as CashView does).
-  const [selectedFor, setSelectedFor] = useState(month)
-  if (selectedFor !== month) {
-    setSelectedFor(month)
-    setSelectedKey(null)
-  }
-
-  const rows = useMemo(
-    () => spendingRows(model, { month, basis, today, openMonth, groupBy }),
-    [model, month, basis, today, openMonth, groupBy],
-  )
-  const [sortBy, setSortBy] = useState<SpendingSort>('amount')
-  const ordered = useMemo(() => sortSpendingRows(rows, sortBy), [rows, sortBy])
-  const selected = rows.find((r) => r.key === selectedKey) ?? null
-  const changeGroupBy = (next: SpendingGroupBy) => {
-    setGroupBy(next)
-    setSelectedKey(null)
-  }
+  const sel = useSpendingSelection(model, month, basis, today, openMonth)
+  const { groupBy, selected, selectedKey } = sel
   const exportGrid = () => {
     downloadCsv(
       `monthly-summary-${month}.csv`,
@@ -100,53 +79,37 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
     )
   }
 
+  const detailShared = { model, months: model.months, month, basis, groupBy, today, openMonth, onOpenTransactions }
+
   return (
     <div className={styles.stack}>
       <HistoryNote model={model} />
       <SpendingControls
-        mode={mode}
-        onMode={setMode}
+        mode={sel.mode}
+        onMode={sel.setMode}
         groupBy={groupBy}
-        onGroupBy={changeGroupBy}
+        onGroupBy={sel.changeGroupBy}
         hasLabels={model.dataset.labels.length > 0}
-        sortBy={sortBy}
-        onSort={setSortBy}
+        sortBy={sel.sortBy}
+        onSort={sel.setSortBy}
         onExport={exportGrid}
       />
 
-      {mode === 'grid' ? (
+      {sel.mode === 'grid' ? (
         <MonthlySummaryGrid model={model} month={month} basis={basis} />
       ) : (
         <div className={isMobile || !selected ? undefined : styles.split}>
-          <Card className={styles.listCard}>
-            <p className={styles.listHint}>{fullMonthLabel(month)} — tap a row for its story.</p>
-            {rows.length === 0 ? (
-              <EmptyState>No spending recorded for this month and grouping.</EmptyState>
-            ) : (
-              ordered.map((row) => (
-                <SpendingRow
-                  key={row.key}
-                  row={row}
-                  selected={row.key === selectedKey}
-                  onSelect={(key) => setSelectedKey(key === selectedKey ? null : key)}
-                />
-              ))
-            )}
-          </Card>
+          <SpendingList
+            month={month}
+            rows={sel.rows}
+            ordered={sel.ordered}
+            selectedKey={selectedKey}
+            onSelect={sel.setSelectedKey}
+          />
           {!isMobile && selected && (
             <Card className={styles.detailCard}>
               <h3 className={styles.detailTitle}>{selected.name}</h3>
-              <Detail
-                model={model}
-                months={model.months}
-                month={month}
-                basis={basis}
-                groupBy={groupBy}
-                row={selected}
-                today={today}
-                openMonth={openMonth}
-                onOpenTransactions={onOpenTransactions}
-              />
+              <Detail {...detailShared} row={selected} />
             </Card>
           )}
         </div>
@@ -155,22 +118,60 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
       {isMobile && (
         <PresenceValue value={selected} exitMs={EXIT_MS.sheet}>
           {(row) => (
-            <Modal title={row.name} subtitle={fullMonthLabel(month)} onClose={() => setSelectedKey(null)}>
-              <Detail
-                model={model}
-                months={model.months}
-                month={month}
-                basis={basis}
-                groupBy={groupBy}
-                row={row}
-                today={today}
-                openMonth={openMonth}
-                onOpenTransactions={onOpenTransactions}
-              />
-            </Modal>
+            <MobileDetail month={month} onClose={() => sel.setSelectedKey(null)} shared={detailShared} row={row} />
           )}
         </PresenceValue>
       )}
     </div>
+  )
+}
+
+function MobileDetail({
+  month,
+  onClose,
+  shared,
+  row,
+}: {
+  month: string
+  onClose: () => void
+  shared: Omit<ComponentProps<typeof Detail>, 'row'>
+  row: SpendingGroupRow
+}) {
+  return (
+    <Modal title={row.name} subtitle={fullMonthLabel(month)} onClose={onClose}>
+      <Detail {...shared} row={row} />
+    </Modal>
+  )
+}
+
+function SpendingList({
+  month,
+  rows,
+  ordered,
+  selectedKey,
+  onSelect,
+}: {
+  month: string
+  rows: SpendingGroupRow[]
+  ordered: SpendingGroupRow[]
+  selectedKey: string | null
+  onSelect: (key: string | null) => void
+}) {
+  return (
+    <Card className={styles.listCard}>
+      <p className={styles.listHint}>{fullMonthLabel(month)} — tap a row for its story.</p>
+      {rows.length === 0 ? (
+        <EmptyState>No spending recorded for this month and grouping.</EmptyState>
+      ) : (
+        ordered.map((row) => (
+          <SpendingRow
+            key={row.key}
+            row={row}
+            selected={row.key === selectedKey}
+            onSelect={(key) => onSelect(key === selectedKey ? null : key)}
+          />
+        ))
+      )}
+    </Card>
   )
 }
