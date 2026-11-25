@@ -1,5 +1,5 @@
 import { ConfirmSheet } from '../components/ConfirmSheet'
-import { batchDeleteMessage } from './useTransactionSelection'
+import { batchDeleteMessage } from './selectionCopy'
 
 interface BatchDeleteConfirmProps {
   count: number

@@ -1,7 +1,8 @@
 import { renderHook, act } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { batchDeleteMessage, bulkOutcomeCopy, useTransactionSelection } from './useTransactionSelection'
+import { batchDeleteMessage, bulkOutcomeCopy } from './selectionCopy'
+import { useTransactionSelection } from './useTransactionSelection'
 import type { ExpenseActions } from '../actions'
 import { ToastContext } from '../hooks/useToast'
 
