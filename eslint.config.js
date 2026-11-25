@@ -99,7 +99,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/settings/ImportDataSection.tsx': 75,
   'src/ui/settings/MilestonesSetting.tsx': 114,
   'src/ui/settings/useCaptureSetup.ts': 63,
-  'src/ui/tabs/BulkEditSheet.tsx': 127,
   'src/ui/tabs/ExpenseReportSheet.tsx': 87,
   'src/ui/tabs/ExpenseReportView.tsx': 117,
   'src/ui/tabs/FlaggedCard.tsx': 89,
