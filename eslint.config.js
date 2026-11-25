@@ -80,7 +80,7 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/desktop/PlanDesktop.tsx': 72,
   'src/ui/tabs/goals/desktop/ScenarioMenu.tsx': 92,
   'src/ui/tabs/goals/goalControlFields.tsx': 61,
-  'src/ui/tabs/goals/useScenarioEditor.ts': 148,
+  'src/ui/tabs/goals/useScenarioEditor.ts': 85,
   'src/ui/tabs/goals/useStarredLevers.ts': 103,
 }
 
