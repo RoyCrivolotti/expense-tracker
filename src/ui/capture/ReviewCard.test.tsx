@@ -187,7 +187,7 @@ describe('a payment in doubt', () => {
 
     const [recId, message, failure] = vi.mocked(core.decide).mock.calls[0]!
     expect([recId, failure]).toEqual([id(1), 'link Cafe Example'])
-    expect(message).toContain('To your typed row "Cafe". Nothing new is added.')
+    expect(message).toContain('To the row "Cafe". Nothing new is added.')
   })
 
   it('cuts a long description of the typed row on the button, starts the name with the words shown and keeps the whole of it after them', () => {

@@ -124,7 +124,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     link: (view) => {
       const match = view.rec.possibleMatch
       if (!match) return
-      const message = `Linked \u00b7 ${name(view)}\nTo your typed row "${match.description}". Nothing new is added.`
+      const message = `Linked \u00b7 ${name(view)}\nTo the row "${match.description}". Nothing new is added.`
       decide(view.rec.id, message, `link ${name(view)}`, () => linkRecommendation(view.rec.id, match.transactionId))
     },
     review,

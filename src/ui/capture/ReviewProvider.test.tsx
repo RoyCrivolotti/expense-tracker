@@ -299,7 +299,7 @@ describe('Link', () => {
 
     press('link 1')
 
-    expect(showToast.mock.calls[0]![0]).toContain('To your typed row "Cafe". Nothing new is added.')
+    expect(showToast.mock.calls[0]![0]).toContain('To the row "Cafe". Nothing new is added.')
     await tick(UNDO_MS)
     expect(decisions.linkRecommendation).toHaveBeenCalledExactlyOnceWith(A, 9)
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
