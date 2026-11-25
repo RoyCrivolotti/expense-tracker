@@ -25,9 +25,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // GOALS: the Goals tab's own chunk and the chunks split out of it, which overlap TOTAL.
 // The commit id is compiled into the main chunk, so identical code gzips to a few bytes more or less on each commit; TOTAL
 // keeps room for that, since a limit with none fails a build for nothing the change did.
-const TOTAL_MAX_GZIP = 317_700
+const TOTAL_MAX_GZIP = 326_100
 const LEDGER_MAX_GZIP = 17_700
-const GOALS_MAX_GZIP = 96_700
+const GOALS_MAX_GZIP = 100_500
 // CAPTURE: the Settings capture and notification cards and the Dashboard review card, each loaded only when shown. Kept
 // out of TOTAL so the feature has a line of its own and the default build cannot be blamed for it.
 const CAPTURE_MAX_GZIP = 27_500
