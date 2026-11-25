@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
-import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { ChangesFields, EventsFields, PortfolioFields } from './goalControlSections'
+import { FireFields } from './goalFireSections'
+import { HousingFields } from './goalHousingSections'
 import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
 
 function makeDraft() {

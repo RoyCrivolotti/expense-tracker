@@ -8,14 +8,9 @@ import { EXIT_MS, exitVars } from '../../../hooks/motion'
 import { useExit } from '../../../hooks/usePresence'
 import type { InvestedSnapshot } from '../checkinDate'
 import { ADJUST_LABELS } from '../adjustSections'
-import {
-  ChangesFields,
-  EventsFields,
-  FireFields,
-  HousingFields,
-  PortfolioFields,
-  ReturnNote,
-} from '../goalControlSections'
+import { ChangesFields, EventsFields, PortfolioFields, ReturnNote } from '../goalControlSections'
+import { FireFields } from '../goalFireSections'
+import { HousingFields } from '../goalHousingSections'
 import { TrackingFields } from '../TrackingFields'
 import { SECTION_KEYS } from '../leverFields'
 import type { StarredLevers } from '../useStarredLevers'
