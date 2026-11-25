@@ -81,7 +81,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/charts/LinearChart.tsx': 206,
   'src/ui/charts/useChartFocus.ts': 79,
   'src/ui/charts/valueTags.ts': 64,
-  'src/ui/components/CardStatementsCard.tsx': 99,
   'src/ui/components/FlagField.tsx': 69,
   'src/ui/components/GoalsCard.tsx': 88,
   'src/ui/components/Modal.tsx': 68,
