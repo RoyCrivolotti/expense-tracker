@@ -30,7 +30,6 @@ const FILE_LINE_CAPS = {
   'src/ui/charts/LinearChart.tsx': 350,
   'src/ui/charts/linearChartParts.tsx': 461,
   'src/ui/charts/valueTags.ts': 203,
-  'src/ui/components/InstallmentStep.tsx': 212,
   'src/ui/components/ReceiptStrip.tsx': 296,
   'src/ui/datasetPatches.ts': 383,
   'src/ui/definitions/ConfigModal.tsx': 295,
