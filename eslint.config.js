@@ -61,7 +61,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/ProgressView.tsx': 68,
   'src/ui/tabs/goals/StartLaterSheet.tsx': 67,
   'src/ui/tabs/goals/UnsavedGroup.tsx': 62,
-  'src/ui/tabs/goals/WealthAccountsManager.tsx': 133,
   'src/ui/tabs/goals/charts/CheckinHistoryChart.tsx': 93,
   'src/ui/tabs/goals/charts/CompositionChart.tsx': 96,
   'src/ui/tabs/goals/charts/FireChart.tsx': 90,
