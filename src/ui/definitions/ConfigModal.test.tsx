@@ -8,7 +8,8 @@ import { defaultExpenseSettings } from '../../engine'
 import { PresenceValue } from '../components/Presence'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
-import { ConfigModal, type EditTarget } from './ConfigModal'
+import { ConfigModal } from './ConfigModal'
+import type { EditTarget } from './configModalConfig'
 
 const DINING: Category = { id: 1, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 0, active: true }
 const GROCERIES: Category = {
