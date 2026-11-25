@@ -46,7 +46,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'src/ui/access/ActiveUsersSection.tsx': 92,
   'src/ui/access/PendingRequestsSection.tsx': 67,
   'src/ui/access/RequestAccessScreen.tsx': 67,
   'src/ui/analytics/overview/OverviewView.tsx': 63,
