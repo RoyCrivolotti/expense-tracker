@@ -2,17 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { projectNetWorth, replayMarket, scenarioToParams } from '../../../../engine'
 import { samplePlan, SAMPLE_INFLATION } from '../../../../testing/samplePlan'
-import {
-  type Replayed,
-  fiRow,
-  milestoneRows,
-  rangeLabel,
-  spreadCaption,
-  spreadHeadline,
-  spreadKey,
-  spreadSeries,
-  spreadWarning,
-} from './spreadModel'
+import { type Replayed, fiRow, milestoneRows, rangeLabel, spreadKey, spreadSeries } from './spreadModel'
+import { spreadCaption, spreadHeadline, spreadWarning } from './spreadText'
 
 const I = SAMPLE_INFLATION
 const plan = samplePlan()
