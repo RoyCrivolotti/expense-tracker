@@ -1,13 +1,10 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { Milestone } from '../../../../types'
-import { milestoneName, shortMonthYearLabel } from '../../../../engine'
-import { formatMoneyShort } from '../chartTheme'
-import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
-import { scenarioInk } from '../scenarioInk'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import { longestHorizon, tintPercent, type MilestoneRow } from './milestoneModel'
-import { CELL_MOVES, cellText, moveCell, type CellMove, type CellRef, type YearsUnit } from './milestoneTable'
-import { gapLabel, rowHasGaps, type GapText } from './milestoneGaps'
+import { CELL_MOVES, moveCell, type CellMove, type CellRef, type YearsUnit } from './milestoneTable'
+import { longestHorizon, type MilestoneRow } from './milestoneModel'
+import { rowHasGaps } from './milestoneGaps'
+import { Cell, GridHead, RowHead } from './MilestoneGridCells'
 import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 
@@ -15,55 +12,6 @@ export type { CellRef, YearsUnit }
 
 /** On a phone, more columns than this leave no room for the currency sign in a head. */
 const MAX_WITH_SIGN = 5
-
-function MilestoneHead({
-  milestone,
-  reachedOn,
-  marked,
-  bare,
-}: {
-  milestone: Milestone
-  reachedOn: string | undefined
-  /** The column the reader is on. */
-  marked: boolean
-  /** The amount without its currency sign, where seven columns have to fit a phone. */
-  bare: boolean
-}) {
-  const format = useMoneyFormat()
-  const amount = formatMoneyShort(milestone.amountCents, format)
-  const shown = bare ? formatMoneyShort(milestone.amountCents, { ...format, symbol: '' }).trim() : amount
-  const name = milestoneName(milestone)
-  // "by", not "on": the crossing happened somewhere between two check-ins.
-  const tooltip = [name, amount, reachedOn ? `reached by ${reachedOn}` : null]
-    .filter((part) => part !== null)
-    .join(' · ')
-  const classes = [styles.milestoneHead, styles.matrixHead]
-  if (reachedOn !== undefined) classes.push(styles.milestoneHeadReached)
-  if (marked) classes.push(styles.matrixMarked)
-
-  return (
-    <th className={classes.join(' ')} scope="col" title={tooltip}>
-      {name ? <span className={styles.milestoneHeadName}>{name}</span> : null}
-      <span
-        className={name ? `${styles.milestoneHeadAmount} ${styles.milestoneHeadAmountSub}` : styles.milestoneHeadAmount}
-      >
-        {shown}
-      </span>
-      {reachedOn ? (
-        <span className={styles.milestoneReachedOn}>
-          <span aria-hidden="true">✓ </span>
-          {shortMonthYearLabel(reachedOn)}
-        </span>
-      ) : null}
-    </th>
-  )
-}
-
-function boxClass(years: number | null): string {
-  if (years === 0) return `${styles.matrixBox} ${styles.matrixDone}`
-  if (years === null) return `${styles.matrixBox} ${styles.matrixBeyond}`
-  return `${styles.matrixBox} ${styles.matrixTint}`
-}
 
 function crosshairClass(
   onRow: boolean,
@@ -74,111 +22,32 @@ function crosshairClass(
   return ''
 }
 
-/** A blank line holds its height with a no-break space, so the cells of a row stay level. */
-function GapLine({ label }: { label: GapText | null }) {
-  return (
-    <span
-      className={label?.sooner ? `${styles.matrixGap} ${styles.matrixSooner}` : styles.matrixGap}
-      aria-hidden="true"
-    >
-      {label?.text ?? ' '}
-    </span>
-  )
-}
-
-interface CellProps {
-  row: MilestoneRow
-  rowIndex: number
-  colIndex: number
-  longest: number
-  unit: YearsUnit
-  /** The plan, while the table is comparing with it. */
-  plan: MilestoneRow | null
-  /** Whether the row keeps a line under its cells for the gap. */
-  gaps: boolean
-  sentence: string
-  tabStop: boolean
-  crosshair: string
-  onPoint: () => void
-}
-
-function Cell({
-  row,
-  rowIndex,
-  colIndex,
-  longest,
-  unit,
-  plan,
-  gaps,
-  sentence,
-  tabStop,
-  crosshair,
-  onPoint,
-}: CellProps) {
-  const years = row.cells[colIndex] ?? null
-  const tint = tintPercent(years, longest)
-  const style = tint === null ? undefined : ({ '--tint': `${tint}%` } as CSSProperties)
-  return (
-    <td
-      role="gridcell"
-      className={`${styles.milestoneCell} ${styles.matrixCell} ${crosshair}`}
-      tabIndex={tabStop ? 0 : -1}
-      aria-label={sentence}
-      data-row={rowIndex}
-      data-col={colIndex}
-      onFocus={onPoint}
-      onMouseEnter={onPoint}
-      onClick={onPoint}
-    >
-      <span className={boxClass(years)} style={style} aria-hidden="true">
-        {cellText(row, colIndex, unit)}
-      </span>
-      {gaps ? <GapLine label={gapLabel(row, plan, colIndex)} /> : null}
-    </td>
-  )
-}
-
-function RowHead({ row, isPlanShown, marked }: { row: MilestoneRow; isPlanShown: boolean; marked: boolean }) {
-  const classes = [styles.milestoneScenarioCell]
-  if (row.kind === 'fromToday') classes.push(styles.matrixFromToday)
-  if (marked) classes.push(styles.matrixMarked)
-  return (
-    <th scope="row" className={classes.join(' ')} title={row.name}>
-      <span className={styles.milestoneScenarioNameRow}>
-        <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} />
-        <span className={styles.milestoneScenarioName}>{row.name}</span>
-        {isPlanShown ? <span className={styles.matrixPlanTag}>plan</span> : null}
-      </span>
-    </th>
-  )
-}
-
 function stepOf(event: KeyboardEvent<HTMLTableElement>): { row: number; col: number } | null {
   const cell = (event.target as HTMLElement).closest<HTMLElement>('td[data-row]')
   if (!cell) return null
   return { row: Number(cell.dataset.row), col: Number(cell.dataset.col) }
 }
 
-/**
- * The grid itself: a row per path, a column per milestone, one tab stop that the arrow keys, Home
- * and End move between cells. Pointing at, focusing or tapping a cell reports it through
- * `onPoint`, which the card turns into the sentence under the table.
- */
-export function MilestoneGrid({
-  rows,
-  milestones,
-  columns,
-  reached,
-  unit,
-  plan,
-  sentences,
-  point,
-  live,
-  onPoint,
-  onLeave,
-  className,
-  keepSign = false,
-}: {
+/** Moves the focus to the cell an arrow key, Home or End leads to, among the columns shown. */
+function moveFocus(
+  event: KeyboardEvent<HTMLTableElement>,
+  shown: number[],
+  rowCount: number,
+  table: HTMLTableElement | null,
+) {
+  if (!CELL_MOVES.includes(event.key)) return
+  const from = stepOf(event)
+  if (!from) return
+  event.preventDefault()
+  const to = moveCell({ row: from.row, col: shown.indexOf(from.col) }, event.key as CellMove, {
+    rows: rowCount,
+    cols: shown.length,
+  })
+  const col = shown[to.col] ?? from.col
+  table?.querySelector<HTMLElement>(`td[data-row="${to.row}"][data-col="${col}"]`)?.focus()
+}
+
+interface GridProps {
   rows: MilestoneRow[]
   milestones: Milestone[]
   /** The milestones to show, by index, in order; all of them when left out. */
@@ -197,7 +66,16 @@ export function MilestoneGrid({
   className?: string | undefined
   /** Keeps the currency sign in the heads however many columns there are, for a table with the room. */
   keepSign?: boolean
-}) {
+}
+
+/**
+ * The grid itself: a row per path, a column per milestone, one tab stop that the arrow keys, Home
+ * and End move between cells. Pointing at, focusing or tapping a cell reports it through
+ * `onPoint`, which the card turns into the sentence under the table.
+ */
+export function MilestoneGrid(props: GridProps) {
+  const { rows, milestones, columns, reached, unit, plan, sentences, point, live, onPoint, onLeave, className } = props
+  const keepSign = props.keepSign ?? false
   const table = useRef<HTMLTableElement>(null)
   const narrow = useGoalsNarrow()
   const [stop, setStop] = useState({ row: 0, col: 0 })
@@ -210,19 +88,6 @@ export function MilestoneGrid({
   const markedRow = live && point ? point.rowId : null
   const markedCol = live && point ? point.index : null
 
-  function onKeyDown(event: KeyboardEvent<HTMLTableElement>) {
-    if (!CELL_MOVES.includes(event.key)) return
-    const from = stepOf(event)
-    if (!from) return
-    event.preventDefault()
-    const to = moveCell({ row: from.row, col: shown.indexOf(from.col) }, event.key as CellMove, {
-      rows: rows.length,
-      cols: shown.length,
-    })
-    const col = shown[to.col] ?? from.col
-    table.current?.querySelector<HTMLElement>(`td[data-row="${to.row}"][data-col="${col}"]`)?.focus()
-  }
-
   return (
     <ScrollRegion label="Years to milestone" focusable={false}>
       <table
@@ -231,26 +96,19 @@ export function MilestoneGrid({
         style={{ '--cols': shown.length } as CSSProperties}
         role="grid"
         aria-label="Years to milestone, one row per path"
-        onKeyDown={onKeyDown}
+        onKeyDown={(event) => moveFocus(event, shown, rows.length, table.current)}
         onMouseLeave={onLeave}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) onLeave()
         }}
       >
-        <thead>
-          <tr>
-            <th className={styles.milestoneScenarioHead}>Scenario</th>
-            {shown.map((i) => (
-              <MilestoneHead
-                key={milestones[i]?.amountCents ?? i}
-                milestone={milestones[i] as Milestone}
-                reachedOn={reached.get(milestones[i]?.amountCents ?? -1)}
-                marked={markedCol === i}
-                bare={narrow && !keepSign && shown.length > MAX_WITH_SIGN}
-              />
-            ))}
-          </tr>
-        </thead>
+        <GridHead
+          shown={shown}
+          milestones={milestones}
+          reached={reached}
+          markedCol={markedCol}
+          bare={narrow && !keepSign && shown.length > MAX_WITH_SIGN}
+        />
         <tbody>
           {rows.map((row, r) => (
             <tr key={row.id}>
