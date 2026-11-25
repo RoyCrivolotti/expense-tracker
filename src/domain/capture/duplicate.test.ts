@@ -247,6 +247,15 @@ describe('a row a recommendation already answers for', () => {
     expect(['2026-11-09', '2026-11-10', '2026-11-17', '2026-11-18'].map(at)).toEqual([false, true, true, false])
   })
 
+  it('refuses arrivals at the same instant, and compares instants whatever offset each is written with', () => {
+    // A report in UTC counts as reported on any day, so these reach the arrival comparison.
+    const at = (occurredAt: string) => mayAnswerBoth({ occurredAt, localDate: '2026-11-10' }, announcement())
+    // The announcement arrived at 20:30 UTC: the same instant, then half an hour later though its text sorts first.
+    expect([at('2026-11-09T20:30:00.000Z'), at('2026-11-09T21:00:00.000Z')]).toEqual([false, true])
+    // An earlier instant whose text sorts after the announcement's.
+    expect(mayAnswerBoth(report('2026-11-10', '2026-11-10T02:00:00+09:00'), announcement())).toBe(false)
+  })
+
   it('reaches seven days forward from an announcement for the row of its charge, and three for any other', () => {
     const announced = payment({ push: announcement() })
     // The row of a charge added first, dated the day the bank booked it.

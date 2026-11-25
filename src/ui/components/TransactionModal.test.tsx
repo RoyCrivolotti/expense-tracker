@@ -1331,12 +1331,16 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
 
   it('links a payment to the match the list found, with the toast naming the row', async () => {
     vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
-    const onClose = vi.fn()
-    renderModal({ seed: { ...seed, possibleMatch: MATCH }, onClose, actions: { submitRecommendation: vi.fn() } })
+    const shown: string[] = []
+    const { onClose } = renderModalWithToasts(
+      { seed: { ...seed, possibleMatch: MATCH }, actions: { submitRecommendation: vi.fn() } },
+      (m) => shown.push(m),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Link' }))
 
     await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(REC, 41))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(shown).toEqual(['Linked \u00b7 to the row "Cafe at the till". Nothing new was added.'])
   })
 
   it('links the payment to the row, creates nothing and closes', async () => {
