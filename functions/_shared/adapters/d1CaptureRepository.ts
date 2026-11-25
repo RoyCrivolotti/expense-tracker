@@ -34,6 +34,7 @@ import {
   SUMMARIZE_OPEN_SQL,
   toOpenSummary,
   CREATE_RECOMMENDATION_SQL,
+  ANSWERING_SQL,
   GET_RECOMMENDATION_SQL,
   LIST_OPEN_AFTER_SQL,
   LIST_OPEN_FIRST_SQL,
@@ -91,6 +92,13 @@ function recommendations(db: D1Database): CaptureRecommendationStore {
       id,
     ) => {
       const row = await db.prepare(GET_RECOMMENDATION_SQL).bind(owner, id).first<RecommendationRow>()
+      return row ? toRecommendation(row) : null
+    },
+    recommendationAnswering: async (
+      owner,
+      txnId,
+    ) => {
+      const row = await db.prepare(ANSWERING_SQL).bind(owner, txnId).first<RecommendationRow>()
       return row ? toRecommendation(row) : null
     },
     listOpenRecommendations: async (

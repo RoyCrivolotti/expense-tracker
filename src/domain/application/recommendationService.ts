@@ -1,5 +1,5 @@
 import type { NewTransaction } from '../data/dataSource'
-import { paymentOfRow, type PossibleMatch } from '../capture/duplicate'
+import { mayAnswerBoth, paymentOfRow, type PossibleMatch } from '../capture/duplicate'
 import type { CaptureRepository } from '../ports/captureRepository'
 import type { Recommendation, RecommendationCursor } from '../ports/captureRecommendations'
 import type { ExpenseRepository } from '../ports/expenseRepository'
@@ -106,7 +106,10 @@ export async function submitRecommendation(
     // leaves nothing behind. The row looked for is the one being submitted, which is the payment unless the person
     // changed it. A row typed after the list was read is caught here; one typed between this read and the insert is not.
     const valid = validateNewTransaction(input)
-    const possibleMatch = await captures.findPossibleMatch(owner, paymentOfRow(valid))
+    const possibleMatch = await captures.findPossibleMatch(owner, {
+      ...paymentOfRow(valid),
+      push: pushOf(open.rec),
+    })
     if (possibleMatch) return { ok: false, reason: 'possible-duplicate', possibleMatch }
   }
   const transaction = await createTransaction(expenses, owner, input)
@@ -129,6 +132,22 @@ export async function submitRecommendation(
   return { ok: true, transaction }
 }
 
+const pushOf = (r: Recommendation) => ({ occurredAt: r.occurredAt, localDate: r.localDate })
+
+/**
+ * The recommendation a link may take the row over from: the one answering for it now, when it and this one are two
+ * pushes of one payment by `mayAnswerBoth` (a bill announced, then charged). Any other holder keeps the row.
+ */
+async function holderToTakeFrom(
+  captures: CaptureRepository,
+  owner: string,
+  rec: Recommendation,
+  txnId: number,
+): Promise<string | undefined> {
+  const holder = await captures.recommendationAnswering(owner, txnId)
+  return holder && mayAnswerBoth(pushOf(rec), pushOf(holder)) ? holder.id : undefined
+}
+
 async function removeQuietly(
   expenses: ExpenseRepository,
   owner: string,
@@ -141,7 +160,11 @@ async function removeQuietly(
   }
 }
 
-/** Marks the recommendation as already entered by hand. The row must be the person's own and not answer for another. */
+/**
+ * Marks the recommendation as already entered. The row must be the person's own and not answer for another, except
+ * that a row added from a bill's announcement moves to the push that reports the charge, or the other way round, when
+ * `mayAnswerBoth` pairs the two: the other recommendation stays submitted and stops answering for it.
+ */
 export async function linkRecommendation(
   captures: CaptureRepository,
   expenses: ExpenseRepository,
@@ -158,9 +181,15 @@ export async function linkRecommendation(
   if (!open.ok) return open
   const linked = await expenses.getTransaction(owner, txnId)
   if (!linked) return { ok: false, reason: 'no-transaction' }
+  const takeFrom = await holderToTakeFrom(captures, owner, open.rec, txnId)
   let marked: boolean
   try {
-    marked = await captures.decideRecommendation(owner, id, { state: 'submitted', txnId, at: now.toISOString() })
+    marked = await captures.decideRecommendation(owner, id, {
+      state: 'submitted',
+      txnId,
+      at: now.toISOString(),
+      ...(takeFrom === undefined ? {} : { takeFrom }),
+    })
   } catch (error) {
     // The unique index: another recommendation already answers for this transaction. D1 reports it only as message
     // text, so that is what is matched; any other failure is real and is thrown.

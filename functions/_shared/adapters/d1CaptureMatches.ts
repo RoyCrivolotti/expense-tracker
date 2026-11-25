@@ -16,10 +16,16 @@ interface CandidateRow {
   description: string
   type: string
   amount_cents: number
+  answers_occurred_at: string | null
+  answers_local_date: string | null
 }
 
 function toTypedRow(r: CandidateRow): TypedRow {
-  return { id: r.id, date: r.date, description: r.description, type: r.type, amountCents: r.amount_cents }
+  const answers =
+    r.answers_occurred_at === null || r.answers_local_date === null
+      ? null
+      : { occurredAt: r.answers_occurred_at, localDate: r.answers_local_date }
+  return { id: r.id, date: r.date, description: r.description, type: r.type, amountCents: r.amount_cents, answers }
 }
 
 /**
@@ -41,8 +47,11 @@ export async function findMatch(
 }
 
 /** A payment as the person will see it: the suggested amount and type when there is a suggestion. */
-const asShown = (r: Recommendation): Recommendation =>
-  r.suggestion ? { ...r, amountCents: r.suggestion.amountCents, suggestedType: r.suggestion.type } : r
+const asShown = (r: Recommendation): Recommendation & PaymentToMatch => ({
+  ...r,
+  ...(r.suggestion ? { amountCents: r.suggestion.amountCents, suggestedType: r.suggestion.type } : {}),
+  push: { occurredAt: r.occurredAt, localDate: r.localDate },
+})
 
 /**
  * Adds the typed row each recommendation of a page may duplicate. One read for the whole page, however many payments

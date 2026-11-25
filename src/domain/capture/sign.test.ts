@@ -175,8 +175,7 @@ describe('what a decision on a signed push teaches the wording', () => {
 describe('a bill announced the day before, then charged', () => {
   // The person typed the bill by hand as an expense on the day the announcement names (24 Nov). The real charge
   // arrives the next morning in the movement wording, which an earlier unsigned push taught as income. A row saved
-  // from the announcement's own card answers that recommendation, and the list offers no row that already answers
-  // one, so the offer below holds only for a row typed by hand.
+  // from the announcement's own card is offered too, through the list: `workers/capture/src/announcedBill.test.ts`.
   const saved = { id: 41, date: '2026-11-24', description: 'Example Utility', type: 'expense', amountCents: 4715 }
 
   const chargeAs = (template: TemplateFacts) => {

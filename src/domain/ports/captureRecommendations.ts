@@ -69,6 +69,11 @@ export interface CaptureRecommendationStore {
     owner: string,
     id: string,
   ): Promise<Recommendation | null>
+  /** The one that answers for this transaction of the owner, linked or made by submitting it, or null. */
+  recommendationAnswering(
+    owner: string,
+    txnId: number,
+  ): Promise<Recommendation | null>
   /** Open ones, newest day first, `limit` of them from after the cursor. */
   listOpenRecommendations(
     owner: string,
@@ -86,11 +91,12 @@ export interface CaptureRecommendationStore {
   summarizeOpen(owner: string): Promise<OpenSummary>
   /**
    * Moves an open recommendation to submitted or dismissed, and blanks the text of the push it came from in the same
-   * batch. False when it is not open, so a double tap acts once.
+   * batch. False when it is not open, so a double tap acts once. `takeFrom` names the recommendation that answers for
+   * the transaction now: it stays submitted but stops answering for it, in the same batch and only if this one moves.
    */
   decideRecommendation(
     owner: string,
     id: string,
-    decision: { state: 'submitted'; txnId: number; at: string } | { state: 'dismissed'; at: string },
+    decision: { state: 'submitted'; txnId: number; at: string; takeFrom?: string } | { state: 'dismissed'; at: string },
   ): Promise<boolean>
 }
