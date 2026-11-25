@@ -268,6 +268,13 @@ describe('a row a recommendation already answers for', () => {
     ).toBeNull()
   })
 
+  it('knows an announcement by the date of its push, not the date the form was moved to', () => {
+    // Saving with the date moved back to the day the push arrived.
+    const moved = payment({ localDate: '2026-11-09', push: announcement() })
+    const charged = row({ date: '2026-11-14', answers: report('2026-11-14') })
+    expect(possibleMatchFor(moved, [charged])?.transactionId).toBe(1)
+  })
+
   it('reads far enough forward for an announcement, wherever it sits on the page', () => {
     const announced = payment({ localDate: '2026-11-10', push: announcement() })
     const later = payment({ localDate: '2026-11-12', push: report('2026-11-12') })
