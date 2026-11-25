@@ -69,7 +69,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/onboarding/OnboardingCategoriesStep.tsx': 65,
   'src/ui/onboarding/OnboardingWizard.tsx': 145,
   'src/ui/settings/CaptureCardsSetting.tsx': 66,
-  'src/ui/settings/ImportDataSection.tsx': 75,
   'src/ui/settings/useCaptureSetup.ts': 63,
   'src/ui/tabs/TransactionsFlagOverlays.tsx': 69,
   'src/ui/tabs/goals/ActiveScenarioHeader.tsx': 98,

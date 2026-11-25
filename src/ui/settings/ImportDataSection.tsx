@@ -52,6 +52,47 @@ function downloadTemplateCsv(): void {
   URL.revokeObjectURL(url)
 }
 
+function ImportResult({
+  result,
+  busy,
+  progress,
+  stopped,
+  onConfirm,
+}: {
+  result: ParseExportResult
+  busy: boolean
+  progress: number
+  stopped: string | null
+  onConfirm: () => void
+}) {
+  return (
+    <>
+      <p className={importStyles.summary}>
+        {result.rows.length} rows ready
+        {result.errors.length > 0 ? ` · ${result.errors.length} skipped` : ''}
+      </p>
+      {stopped && (
+        <p className={importStyles.stopped} role="alert">
+          {stopped}
+        </p>
+      )}
+      {result.errors.length > 0 && (
+        <ul className={importStyles.errors}>
+          {result.errors.slice(0, 4).map((err) => (
+            <li key={err.line}>
+              Line {err.line}: {err.message}
+            </li>
+          ))}
+        </ul>
+      )}
+      <PreviewTable result={result} />
+      <button type="button" className={styles.addBtn} disabled={busy || result.rows.length === 0} onClick={onConfirm}>
+        {busy ? `Importing… ${progress} of ${result.rows.length}` : 'Confirm import'}
+      </button>
+    </>
+  )
+}
+
 export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [result, setResult] = useState<ParseExportResult | null>(null)
@@ -96,35 +137,13 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
         }}
       />
       {result && (
-        <>
-          <p className={importStyles.summary}>
-            {result.rows.length} rows ready
-            {result.errors.length > 0 ? ` · ${result.errors.length} skipped` : ''}
-          </p>
-          {stopped && (
-            <p className={importStyles.stopped} role="alert">
-              {stopped}
-            </p>
-          )}
-          {result.errors.length > 0 && (
-            <ul className={importStyles.errors}>
-              {result.errors.slice(0, 4).map((err) => (
-                <li key={err.line}>
-                  Line {err.line}: {err.message}
-                </li>
-              ))}
-            </ul>
-          )}
-          <PreviewTable result={result} />
-          <button
-            type="button"
-            className={styles.addBtn}
-            disabled={busy || result.rows.length === 0}
-            onClick={() => void confirm()}
-          >
-            {busy ? `Importing… ${progress} of ${result.rows.length}` : 'Confirm import'}
-          </button>
-        </>
+        <ImportResult
+          result={result}
+          busy={busy}
+          progress={progress}
+          stopped={stopped}
+          onConfirm={() => void confirm()}
+        />
       )}
 
       {done && <p className={importStyles.done}>{done}</p>}
