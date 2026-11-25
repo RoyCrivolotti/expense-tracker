@@ -1,35 +1,16 @@
-import { useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import type { FlagGroup } from '../../domain/engine/flagGroups'
-import type { StatementPaymentRow } from '../../engine'
-import { TransactionList } from '../components/TransactionList'
 import { StaleList } from '../StaleList'
-import { ConfirmSheet } from '../components/ConfirmSheet'
-import { PresenceValue } from '../components/Presence'
-import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
-import { ListStats } from './ListStats'
 import { matchAnnouncement } from './matchAnnouncement'
-import { TxnFilters } from './TxnFilters'
-import { UpcomingSlot } from './UpcomingSlot'
-import { InstallmentsCard } from './InstallmentsCard'
-import { FlaggedCard } from './FlaggedCard'
-import { TransactionsTips } from '../tips/TransactionsTips'
-import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
-import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import type { TransactionsEntry } from './transactionsEntry'
-import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
-import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
-import { useReimbursement } from './useReimbursement'
-import { usePastReports } from './usePastReports'
-import { dayHeaderSeed } from './dayHeaderSeed'
-import { RecordReimbursementSheet } from './RecordReimbursementSheet'
-import { itemCountLabel, livePaidOn } from './transactionsTabHelpers'
+import { FiltersBar, ResultsList, TransactionsCards } from './TransactionsTabParts'
+import { TabSheets } from './TransactionsTabSheets'
+import { useTabOverlays } from './useTabOverlays'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -58,13 +39,7 @@ export function TransactionsTab({
     entry,
   })
   useTransactionsScrollPadding(state.listRows.length > 0, state.selectMode)
-  const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
-  const [statementPending, setStatementPending] = useState(false)
-  const [managingFlags, setManagingFlags] = useState(false)
-  const [clearingGroup, setClearingGroup] = useState<FlagGroup | null>(null)
-  const reimbursement = useReimbursement(actions)
-  const [reportFlagId, setReportFlagId] = useState<number | null>(null)
-  const past = usePastReports(model.dataset.transactions)
+  const overlays = useTabOverlays(model, actions)
   const announcement = useDebouncedAnnouncement(matchAnnouncement(state))
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
@@ -72,85 +47,10 @@ export function TransactionsTab({
   return (
     <div className={`${styles.stack} ${styles.txnStack}`}>
       {actions && (
-        <>
-          <TransactionsTips model={model} phone={state.isMobile} />
-          <FlaggedCard
-            model={model}
-            onFilterByFlag={(flagId) => {
-              // Jumping from the (all-time) card into the (month-scoped) list
-              // has to widen the date scope too, or the rows you just clicked
-              // through mostly vanish.
-              state.setFlagId(flagId)
-              state.setDateScope('allDates')
-              scrollToResults()
-            }}
-            filterLocked={state.selectMode}
-            onLockedFilterPress={explainFilterLock}
-            onOpenReport={setReportFlagId}
-            onSettle={reimbursement.open}
-            onManage={() => setManagingFlags(true)}
-            onViewPast={past.entry}
-            onSelect={actions.onEdit}
-            onClearFlag={(txn) => {
-              void actions.updateTransaction(txn.id, { flagId: null }).catch((error: unknown) => {
-                showToast(error instanceof Error ? error.message : 'Could not clear the flag', 'error')
-              })
-            }}
-            onClearGroup={setClearingGroup}
-          />
-          <InstallmentsCard model={model} actions={actions} month={month} />
-          <UpcomingSlot model={model} month={month} onAdd={actions.onAdd} />
-        </>
+        <TransactionsCards {...{ model, month, actions, state, overlays }} onLockedFilterPress={explainFilterLock} />
       )}
 
-      <TxnFilters
-        categories={model.dataset.categories}
-        accounts={model.dataset.accounts}
-        flags={model.dataset.flags}
-        labels={model.dataset.labels}
-        query={state.query}
-        status={state.status}
-        categoryId={state.categoryId}
-        accountId={state.accountId}
-        flagId={state.flagId}
-        labelIds={state.labelIds}
-        txnType={state.txnType}
-        amountMin={state.amountMin}
-        amountMax={state.amountMax}
-        amountMinCents={state.amountMinCents}
-        amountMaxCents={state.amountMaxCents}
-        dateScope={state.dateScope}
-        customDateFrom={state.customDateFrom}
-        customDateTo={state.customDateTo}
-        selectMode={state.selectMode}
-        selectBusy={state.busy}
-        canSelect={state.canDelete}
-        secondaryFilterCount={state.secondaryFilterCount}
-        hasActiveFilters={state.hasActiveFilters}
-        summary={
-          <ListStats
-            count={state.count}
-            capped={state.capped}
-            totalCents={state.totalCents}
-            stale={state.totalsStale}
-          />
-        }
-        onClearFilters={state.clearFilters}
-        onQuery={state.setQuery}
-        onCategory={state.setCategoryId}
-        onAccount={state.setAccountId}
-        onFlag={state.setFlagId}
-        onLabelIds={state.setLabelIds}
-        onStatus={state.setStatus}
-        onTxnType={state.setTxnType}
-        onAmountMin={state.setAmountMin}
-        onAmountMax={state.setAmountMax}
-        onDateScope={state.setDateScope}
-        onCustomDateFrom={state.setCustomDateFrom}
-        onCustomDateTo={state.setCustomDateTo}
-        onToggleSelectMode={state.toggleSelectMode}
-        onLockedPress={explainFilterLock}
-      />
+      <FiltersBar model={model} state={state} onLockedPress={explainFilterLock} />
 
       {/*
         The announcement is a separate, debounced node rather than role=status on
@@ -161,117 +61,17 @@ export function TransactionsTab({
         {announcement}
       </p>
       <StaleList stale={state.stale}>
-        <TransactionList
-          rows={state.listRows}
-          loading={state.loading}
-          emptyState={state.failed}
-          accountEmpty={model.months.length === 0}
-          canAdd={Boolean(actions)}
-          lookup={model.lookup}
-          selectMode={state.selectMode}
-          selectedIds={state.selected}
-          swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
-          {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
-          {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
-          onToggleSelect={state.toggleSelected}
-          onToggleDate={state.toggleDate}
-          {...(actions
-            ? {
-                onAddForDate: (date) => actions.onAdd(dayHeaderSeed(model, month, state.dateScope, date)),
-                onDelete: actions.deleteTransaction,
-                onLongPressSelect: state.enterAndSelect,
-                onEditStatementPayment: setEditingStatement,
-              }
-            : {})}
+        <ResultsList
+          model={model}
+          month={month}
+          actions={actions}
+          state={state}
+          onEditStatement={overlays.setEditingStatement}
         />
       </StaleList>
       {state.footer}
 
-      <PresenceValue value={actions ? editingStatement : null} exitMs={EXIT_MS.sheet}>
-        {(statement) =>
-          actions && (
-            <StatementPaymentSheet
-              cardName={statement.cardName}
-              yearMonth={statement.budgetMonth}
-              amountCents={statement.amountCents}
-              paid
-              paidOn={livePaidOn(model, statement)}
-              disabled={statementPending}
-              onClose={() => setEditingStatement(null)}
-              onSave={async (paid, paidOn) => {
-                setStatementPending(true)
-                try {
-                  await actions.setStatementPaid(statement.cardAccountId, statement.budgetMonth, paid, paidOn)
-                } finally {
-                  setStatementPending(false)
-                }
-              }}
-            />
-          )
-        }
-      </PresenceValue>
-
-      <PresenceValue value={actions ? reimbursement.group : null} exitMs={EXIT_MS.sheet}>
-        {(group) => (
-          <RecordReimbursementSheet
-            group={group}
-            model={model}
-            busy={reimbursement.busy}
-            error={reimbursement.error}
-            onCancel={reimbursement.cancel}
-            onRecord={reimbursement.record}
-          />
-        )}
-      </PresenceValue>
-
-      <PresenceValue value={actions ? clearingGroup : null} exitMs={EXIT_MS.sheet}>
-        {(group) =>
-          actions && (
-            <ConfirmSheet
-              title={`Clear ${group.flag.name}?`}
-              message={`${itemCountLabel(group.count)} will lose this flag. You can re-flag them individually afterwards.`}
-              confirmLabel="Clear all"
-              onConfirm={() => {
-                setClearingGroup(null)
-                void actions
-                  .updateTransactions(
-                    group.transactions.map((t) => t.id),
-                    { flagId: null },
-                  )
-                  .catch((error: unknown) => {
-                    showToast(error instanceof Error ? error.message : 'Could not clear the flag', 'error')
-                  })
-              }}
-              onCancel={() => setClearingGroup(null)}
-            />
-          )
-        }
-      </PresenceValue>
-
-      <TransactionsFlagOverlays
-        model={model}
-        actions={actions}
-        reportFlagId={reportFlagId}
-        onCloseReport={() => setReportFlagId(null)}
-        onOpenReport={setReportFlagId}
-        pastPaymentId={past.paymentId}
-        onClosePast={past.closeReport}
-        managingFlags={managingFlags}
-        onCloseManage={() => setManagingFlags(false)}
-        viewingPast={past.listing}
-        onCloseViewPast={past.closeList}
-        onOpenPastReport={past.openReport}
-      />
-
-      <TransactionsSelectFooter
-        actionsEnabled={Boolean(actions)}
-        actions={actions}
-        selection={state}
-        visibleIds={state.visibleIds}
-        rows={state.results}
-        model={model}
-        partial={state.partial}
-      />
+      <TabSheets model={model} actions={actions} state={state} overlays={overlays} />
     </div>
   )
 }
