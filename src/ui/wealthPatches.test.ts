@@ -8,7 +8,7 @@ import {
   patchAfterWealthCheckinCreate,
   patchAfterWealthCheckinDelete,
   patchAfterWealthCheckinUpdate,
-} from './datasetPatches'
+} from './planningPatches'
 
 function makeAccount(
   id: number,

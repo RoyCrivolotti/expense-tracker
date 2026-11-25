@@ -10,8 +10,8 @@ import {
   patchAfterFlagDelete,
   patchAfterLabel,
   patchAfterLabelDelete,
-  patchAfterTransactionUpdate,
-} from './datasetPatches'
+} from './referencePatches'
+import { patchAfterTransactionUpdate } from './datasetPatches'
 
 type TagWrites =
   'createFlag' | 'updateFlag' | 'deleteFlag' | 'createLabel' | 'updateLabel' | 'deleteLabel' | 'setTransactionLabels'

@@ -22,14 +22,9 @@ import { seedDataset } from '../../../src/testing/seedSqlite'
 import { migratedDatabase, newStats, sqliteD1 } from '../../../src/testing/sqliteD1'
 import { syntheticLedger } from '../../../src/testing/syntheticLedger'
 import { CAT, VISA } from '../../../src/testing/syntheticReference'
-import {
-  patchAfterCategoryDelete,
-  patchAfterFlag,
-  patchAfterInstallmentPlanCreate,
-  patchAfterInstallmentPlanDelete,
-  patchAfterLabelDelete,
-  patchAfterStatementPaid,
-} from '../../../src/ui/datasetPatches'
+import { patchAfterCategoryDelete, patchAfterFlag, patchAfterLabelDelete } from '../../../src/ui/referencePatches'
+import { patchAfterInstallmentPlanCreate, patchAfterInstallmentPlanDelete } from '../../../src/ui/planningPatches'
+import { patchAfterStatementPaid } from '../../../src/ui/datasetPatches'
 import { OWNER, createExpenseWorld, pinClock, type Handler, type World } from '../../_shared/testing/expenseWorld'
 import { onRequestGet as getCube } from './cube'
 import { onRequestPatch as patchFlag } from './flags/[id]'

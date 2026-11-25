@@ -3,12 +3,9 @@ import { HYDRATED_DATA_MONTHS, type HydrationPolicy } from '../domain/ledger'
 import { sortedMonths } from '../domain/engine/dates'
 import { seriesFromTransactions } from '../domain/engine/recurringSeries'
 import type { ExpenseDataset, Transaction } from '../domain/types'
-import {
-  patchAfterCategory,
-  patchAfterInstallmentPlanDelete,
-  patchAfterTransactionCreate,
-  patchAfterTransactionUpdate,
-} from '../ui/datasetPatches'
+import { patchAfterCategory } from '../ui/referencePatches'
+import { patchAfterInstallmentPlanDelete } from '../ui/planningPatches'
+import { patchAfterTransactionCreate, patchAfterTransactionUpdate } from '../ui/datasetPatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeTransaction } from '../testing/factories'
 import { memorySource, type TestSource } from '../testing/ledgerSource'

@@ -29,7 +29,6 @@ const FILE_LINE_CAPS = {
   'src/ui/ExpensesApp.tsx': 445,
   'src/ui/charts/LinearChart.tsx': 350,
   'src/ui/charts/linearChartParts.tsx': 461,
-  'src/ui/datasetPatches.ts': 383,
   'src/ui/definitions/ConfigModal.tsx': 295,
   'src/ui/definitions/InstallmentPlanForm.tsx': 202,
   'src/ui/onboarding/OnboardingWizard.tsx': 209,

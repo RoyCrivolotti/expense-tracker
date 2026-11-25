@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { ExpenseSettings } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
-import { patchAfterSettings } from './datasetPatches'
+import { patchAfterSettings } from './referencePatches'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { type ApplyPatch, bulkWriteOf } from './bulkWrite'
 import { createWrites } from './createWrites'
