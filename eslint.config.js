@@ -54,7 +54,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/AdjustSectionNav.tsx': 79,
   'src/ui/tabs/goals/CheckinList.tsx': 95,
   'src/ui/tabs/goals/GoalsExplainer.tsx': 69,
-  'src/ui/tabs/goals/GoalsTab.tsx': 154,
   'src/ui/tabs/goals/LifeEvents.tsx': 78,
   'src/ui/tabs/goals/PlanHero.tsx': 99,
   'src/ui/tabs/goals/ProgressView.tsx': 68,
