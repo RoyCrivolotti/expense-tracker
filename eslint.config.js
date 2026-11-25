@@ -63,7 +63,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/components/PercentStepper.tsx': 64,
   'src/ui/components/QuickCreateLabel.tsx': 69,
   'src/ui/components/TransactionRow.tsx': 62,
-  'src/ui/definitions/FlagsModal.tsx': 99,
   'src/ui/definitions/InstallmentPlanForm.tsx': 135,
   'src/ui/definitions/LabelsModal.tsx': 69,
   'src/ui/hooks/rowHeights.ts': 64,
