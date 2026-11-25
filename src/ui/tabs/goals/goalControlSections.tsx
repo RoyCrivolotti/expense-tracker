@@ -1,6 +1,7 @@
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
-import { MoneyField, NumberField, PercentField } from './goalControlFields'
+import { MoneyField, NumberField } from './goalControlFields'
+import { PercentField } from './goalSliderFields'
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { monthlyAmountMoneyHint } from './moneyHints'

@@ -26,7 +26,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/marketSpread.ts': 203,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
-  'src/ui/tabs/goals/goalControlFields.tsx': 207,
 }
 
 const FUNCTION_LINE_CAPS = {

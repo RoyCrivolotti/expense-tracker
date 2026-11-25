@@ -1,6 +1,7 @@
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
-import { MoneyField, PercentField } from './goalControlFields'
+import { MoneyField } from './goalControlFields'
+import { PercentField } from './goalSliderFields'
 import { Disclosure } from './Disclosure'
 import { spendMoneyHint } from './moneyHints'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
