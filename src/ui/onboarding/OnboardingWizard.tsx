@@ -1,85 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExpenseDataSource } from '../../data/dataSource'
-import type { ExpenseDataset, ExpenseSettings } from '../../types'
-import { formatMoneyInput, parseMoneyToCents, resolveMoneyFormat } from '../../engine/money'
+import type { ExpenseDataset } from '../../types'
 import { Modal } from '../components/Modal'
-import { ConfirmSheet } from '../components/ConfirmSheet'
-import { Presence } from '../components/Presence'
-import { EXIT_MS } from '../hooks/motion'
-import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
-import { OnboardingMoneyStep, type MoneyDraft } from './OnboardingMoneyStep'
-import { OnboardingCategoriesStep } from './OnboardingCategoriesStep'
-import { OnboardingAccountsStep } from './OnboardingAccountsStep'
-import { buildSelectedPresets, useAccountsDraft, useCategoryDrafts } from './onboardingDrafts'
+import { OnboardingProgress } from './OnboardingSteps'
+import { OnboardingApplyConfirm, OnboardingFooter, OnboardingStepBody } from './OnboardingWizardParts'
+import { dismissHandler, LAST_STEP, RERUN_FIRST_TITLE, TITLES } from './onboardingRules'
 import { runOnboardingSetup } from './runOnboardingSetup'
-import { buildOnboardingConfirmSummary, ONBOARDING_CONFIRM_FOOTNOTE } from './onboardingConfirmSummary'
+import { useOnboardingState } from './useOnboardingState'
 import styles from './OnboardingWizard.module.css'
-
-const TITLES = ['Welcome', 'What do you spend on?', 'Where do you pay from?'] as const
-/** A re-run is not a welcome, and has no first payment coming. */
-const RERUN_FIRST_TITLE = 'Setup'
-
-const LAST_STEP = TITLES.length - 1
-
-function initialMoneyDraft(settings: ExpenseSettings): MoneyDraft {
-  return {
-    currencyCode: settings.currencyCode,
-    numberLocale: settings.numberLocale,
-    budgetRolloverDay: settings.budgetRolloverDay,
-  }
-}
-
-/**
- * Re-entry with existing accounts and the opt-in debit checkbox off never
- * needs a name; every other case (first run, or opted-in re-entry) does.
- * Checking "add a credit card" likewise requires a name — otherwise Finish
- * silently drops it (`runOnboardingSetup` skips creation when the name is
- * blank), with no feedback that nothing happened.
- */
-function canFinishAccountsStep(
-  hasExistingAccounts: boolean,
-  addDebit: boolean,
-  debitName: string,
-  addCredit: boolean,
-  creditName: string,
-): boolean {
-  if (addCredit && creditName.trim().length === 0) return false
-  if (hasExistingAccounts && !addDebit) return true
-  return debitName.trim().length > 0
-}
-
-/**
- * First run must produce at least one category; re-entry may legitimately pass
- * through with none selected (e.g. just revisiting currency or accounts).
- */
-function canNextCategoriesStep(
-  selectedCount: number,
-  hasExistingCategories: boolean,
-): boolean {
-  return selectedCount > 0 || hasExistingCategories
-}
-
-/**
- * `accounts.addDebit` only tracks the opt-in checkbox, which is hidden once the tenant
- * has accounts. If accounts get deleted elsewhere while this wizard is open (another
- * tab, or via Settings), `hasExistingAccounts` goes stale — but a debit is still
- * mandatory whenever there are zero accounts, regardless of that checkbox's last value.
- */
-function effectiveAddDebit(
-  hasExistingAccounts: boolean,
-  addDebit: boolean,
-): boolean {
-  return hasExistingAccounts ? addDebit : true
-}
-
-/** While the confirm popup is open, dismissing the wizard chrome (Escape / backdrop) should close just the popup, not skip the whole wizard. */
-function dismissHandler(
-  showConfirm: boolean,
-  closeConfirm: () => void,
-  onSkip: () => void,
-): () => void {
-  return showConfirm ? closeConfirm : onSkip
-}
 
 interface OnboardingWizardProps {
   source: ExpenseDataSource
@@ -95,158 +22,57 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ source, dataset, applyPatch, firstRun, onDone, onSkip }: OnboardingWizardProps) {
-  const [step, setStep] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [money, setMoney] = useState<MoneyDraft>(() => initialMoneyDraft(dataset.settings))
-  const format = useMemo(
-    () => resolveMoneyFormat(money.currencyCode, money.numberLocale),
-    [money.currencyCode, money.numberLocale],
-  )
-  const hasExistingCategories = dataset.categories.length > 0
-  const [drafts, setDrafts] = useCategoryDrafts(format, hasExistingCategories)
-  const hasExistingAccounts = dataset.accounts.length > 0
-  const accounts = useAccountsDraft(hasExistingAccounts)
-
-  // Category budgets are stored as display strings, so when the chosen format
-  // changes we re-render each amount from the value it held under the old
-  // format. Without this a comma-decimal budget would be misread after a
-  // switch to a dot-decimal currency.
-  const prevFormat = useRef(format)
-  useEffect(() => {
-    if (prevFormat.current === format) return
-    const previous = prevFormat.current
-    setDrafts((rows) =>
-      rows.map((d) => ({
-        ...d,
-        budgetEuros: formatMoneyInput(parseMoneyToCents(d.budgetEuros, previous), format),
-      })),
-    )
-    prevFormat.current = format
-  }, [format, setDrafts])
-
-  const selectedPresets = buildSelectedPresets(drafts, format)
-  const canNextCategories = canNextCategoriesStep(selectedPresets.length, hasExistingCategories)
-  const addDebit = effectiveAddDebit(hasExistingAccounts, accounts.addDebit)
-  const canFinish = canFinishAccountsStep(
-    hasExistingAccounts,
-    addDebit,
-    accounts.debitName,
-    accounts.addCredit,
-    accounts.creditName,
-  )
+  const s = useOnboardingState(dataset)
+  const { step, busy, showConfirm } = s
 
   async function finish() {
     if (busy) return
-    setBusy(true)
-    setError(null)
+    s.setBusy(true)
+    s.setError(null)
     try {
       await runOnboardingSetup(source, applyPatch, {
-        categories: selectedPresets,
-        addDebit,
-        debitName: accounts.debitName,
-        creditName: accounts.addCredit ? accounts.creditName : null,
-        money,
+        categories: s.selectedPresets,
+        addDebit: s.addDebit,
+        debitName: s.accounts.debitName,
+        creditName: s.accounts.addCredit ? s.accounts.creditName : null,
+        money: s.money,
         currentSettings: dataset.settings,
         existingCategories: dataset.categories,
         firstRun,
       })
       onDone()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      s.setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setBusy(false)
+      s.setBusy(false)
     }
   }
 
   function handleNext() {
     if (step < LAST_STEP) {
-      setStep((s) => s + 1)
+      s.setStep((n) => n + 1)
       return
     }
     if (firstRun) void finish()
-    else setShowConfirm(true)
+    else s.setShowConfirm(true)
   }
 
   function handleConfirm() {
-    setShowConfirm(false)
+    s.setShowConfirm(false)
     void finish()
   }
-
-  const nextDisabled = step === 1 ? !canNextCategories : step === LAST_STEP ? !canFinish : false
 
   return (
     <Modal
       title={step === 0 && !firstRun ? RERUN_FIRST_TITLE : (TITLES[step] ?? 'Setup')}
-      onClose={dismissHandler(showConfirm, () => setShowConfirm(false), onSkip)}
+      onClose={dismissHandler(showConfirm, () => s.setShowConfirm(false), onSkip)}
       trapPaused={showConfirm}
     >
       <OnboardingProgress step={step} />
-      {step === 0 ? (
-        <OnboardingMoneyStep
-          firstRun={firstRun}
-          money={money}
-          onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))}
-        />
-      ) : null}
-      {step === 1 ? (
-        <OnboardingCategoriesStep
-          drafts={drafts}
-          onChange={setDrafts}
-          currencySymbol={format.symbol}
-          hasExistingCategories={hasExistingCategories}
-        />
-      ) : null}
-      {step === 2 ? (
-        <OnboardingAccountsStep
-          hasExistingAccounts={hasExistingAccounts}
-          addDebit={accounts.addDebit}
-          debitName={accounts.debitName}
-          creditName={accounts.creditName}
-          addCredit={accounts.addCredit}
-          onAddDebit={accounts.setAddDebit}
-          onDebitName={accounts.setDebitName}
-          onCreditName={accounts.setCreditName}
-          onAddCredit={accounts.setAddCredit}
-        />
-      ) : null}
-      {error ? <p className={styles.error}>{error}</p> : null}
-      <OnboardingNav
-        {...(step > 0
-          ? {
-              onBack: () => {
-                setShowConfirm(false)
-                setStep((s) => s - 1)
-              },
-            }
-          : {})}
-        onNext={handleNext}
-        nextLabel={step === LAST_STEP ? 'Finish setup' : 'Continue'}
-        nextDisabled={nextDisabled}
-        busy={busy}
-      />
-      <button type="button" className={styles.skipLink} onClick={onSkip} disabled={busy}>
-        Skip for now
-      </button>
-      <Presence show={showConfirm} exitMs={EXIT_MS.sheet}>
-        <ConfirmSheet
-          title="Apply these changes?"
-          message={buildOnboardingConfirmSummary({
-            categories: selectedPresets,
-            addDebit,
-            debitName: accounts.debitName,
-            addCredit: accounts.addCredit,
-            creditName: accounts.creditName,
-            money,
-            format,
-          })}
-          footnote={ONBOARDING_CONFIRM_FOOTNOTE}
-          confirmLabel="Apply"
-          onConfirm={handleConfirm}
-          onCancel={() => setShowConfirm(false)}
-        />
-      </Presence>
+      <OnboardingStepBody s={s} firstRun={firstRun} />
+      {s.error ? <p className={styles.error}>{s.error}</p> : null}
+      <OnboardingFooter s={s} onNext={handleNext} onSkip={onSkip} />
+      <OnboardingApplyConfirm s={s} onConfirm={handleConfirm} />
     </Modal>
   )
 }
