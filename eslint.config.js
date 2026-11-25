@@ -55,7 +55,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/goalControlFields.tsx': 207,
   'src/ui/tabs/goals/goalControlSections.tsx': 414,
   'src/ui/tabs/goals/startLaterModel.ts': 214,
-  'src/ui/useLedgerData.ts': 201,
 }
 
 const FUNCTION_LINE_CAPS = {
@@ -136,7 +135,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/goalControlFields.tsx': 61,
   'src/ui/tabs/goals/useScenarioEditor.ts': 148,
   'src/ui/tabs/goals/useStarredLevers.ts': 103,
-  'src/ui/useLedgerData.ts': 119,
 }
 
 export default defineConfig([
