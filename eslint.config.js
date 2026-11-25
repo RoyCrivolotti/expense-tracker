@@ -26,7 +26,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/marketSpread.ts': 203,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
-  'src/ui/tabs/goals/ContributionSteps.tsx': 208,
   'src/ui/tabs/goals/goalControlFields.tsx': 207,
 }
 
@@ -56,7 +55,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/AdjustSectionNav.tsx': 79,
   'src/ui/tabs/goals/CheckinFormSheet.tsx': 152,
   'src/ui/tabs/goals/CheckinList.tsx': 95,
-  'src/ui/tabs/goals/ContributionSteps.tsx': 113,
   'src/ui/tabs/goals/GoalsExplainer.tsx': 69,
   'src/ui/tabs/goals/GoalsTab.tsx': 154,
   'src/ui/tabs/goals/LifeEvents.tsx': 78,
