@@ -1,47 +1,13 @@
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import { Modal } from '../components/Modal'
-import { AmountRangeRow, DateScopeRow, FilterFields, LockShield } from './TxnFilterRows'
+import { FilterFields } from './TxnFilterFields'
+import { DateScopeRow, LockShield } from './TxnFilterRows'
+import { AmountRangeRow } from './TxnAmountRange'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
 
-/**
- * The filter fields and date scope in a sheet, so adjusting a filter does not push the
- * transaction list down by the ~170px they take up inline.
- */
-export function TxnFiltersSheet({
-  categories,
-  accounts,
-  flags,
-  labels,
-  status,
-  categoryId,
-  accountId,
-  flagId,
-  labelIds,
-  txnType,
-  amountMin,
-  amountMax,
-  amountMinCents,
-  amountMaxCents,
-  dateScope,
-  customDateFrom,
-  customDateTo,
-  selectMode,
-  onClose,
-  onCategory,
-  onAccount,
-  onFlag,
-  onLabelIds,
-  onStatus,
-  onTxnType,
-  onAmountMin,
-  onAmountMax,
-  onDateScope,
-  onCustomDateFrom,
-  onCustomDateTo,
-  onLockedPress,
-}: {
+interface TxnFiltersSheetProps {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
@@ -73,52 +39,26 @@ export function TxnFiltersSheet({
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
   onLockedPress?: (() => void) | undefined
-}) {
+}
+
+/**
+ * The filter fields and date scope in a sheet, so adjusting a filter does not push the
+ * transaction list down by the ~170px they take up inline.
+ */
+export function TxnFiltersSheet(p: TxnFiltersSheetProps) {
   return (
-    <Modal title="Filters" onClose={onClose}>
+    <Modal title="Filters" onClose={p.onClose}>
       <div className={styles.filterSecondary}>
-        <FilterFields
-          categories={categories}
-          accounts={accounts}
-          flags={flags}
-          labels={labels}
-          categoryId={categoryId}
-          accountId={accountId}
-          txnType={txnType}
-          status={status}
-          flagId={flagId}
-          labelIds={labelIds}
-          selectMode={selectMode}
-          onCategory={onCategory}
-          onAccount={onAccount}
-          onTxnType={onTxnType}
-          onStatus={onStatus}
-          onFlag={onFlag}
-          onLabelIds={onLabelIds}
-        />
-        <AmountRangeRow
-          amountMin={amountMin}
-          amountMax={amountMax}
-          amountMinCents={amountMinCents}
-          amountMaxCents={amountMaxCents}
-          selectMode={selectMode}
-          onAmountMin={onAmountMin}
-          onAmountMax={onAmountMax}
-        />
-        <DateScopeRow
-          dateScope={dateScope}
-          customDateFrom={customDateFrom}
-          customDateTo={customDateTo}
-          selectMode={selectMode}
-          onDateScope={onDateScope}
-          onCustomDateFrom={onCustomDateFrom}
-          onCustomDateTo={onCustomDateTo}
-        />
+        <FilterFields {...p} />
+        <AmountRangeRow {...p} />
+        <DateScopeRow {...p} />
         {/* Unreachable in practice — selectMode can only start from the Select button
             in SearchRow, which the sheet's own focus trap makes unreachable while this
             is open — but kept so a locked field still explains itself if that ever
             changes, exactly as it did inline. */}
-        {selectMode ? <LockShield label="Filters are locked while rows are selected" onPress={onLockedPress} /> : null}
+        {p.selectMode ? (
+          <LockShield label="Filters are locked while rows are selected" onPress={p.onLockedPress} />
+        ) : null}
       </div>
     </Modal>
   )

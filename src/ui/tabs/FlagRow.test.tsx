@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Flag } from '../../types'
 import { makeFlag, makeLabel } from '../../testing/factories'
 import type { Label } from '../../types'
-import { FilterFields } from './TxnFilterRows'
+import { FilterFields } from './TxnFilterFields'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
