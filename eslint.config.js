@@ -30,7 +30,6 @@ const FILE_LINE_CAPS = {
   'src/ui/definitions/InstallmentPlanForm.tsx': 202,
   'src/ui/onboarding/OnboardingWizard.tsx': 209,
   'src/ui/settings/MilestonesSetting.tsx': 247,
-  'src/ui/tabs/SettingsTab.tsx': 248,
   'src/ui/tabs/goals/ContributionSteps.tsx': 208,
   'src/ui/tabs/goals/SecondaryCharts.tsx': 231,
   'src/ui/tabs/goals/StartLaterSheet.tsx': 218,
