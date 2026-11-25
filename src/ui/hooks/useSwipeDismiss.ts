@@ -77,6 +77,7 @@ export function useSwipeDismiss(
   useEffect(() => {
     const sheet = sheetRef.current
     if (!enabled || !sheet) return
+    const gesture: Gesture = { armed, committed, startY, peak, height, samples, offsetRef }
 
     const apply = (next: number) => {
       offsetRef.current = next
@@ -91,77 +92,9 @@ export function useSwipeDismiss(
       apply(0)
     }
 
-    const onTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      if (!touch) return
-      const target = e.target instanceof Element ? e.target : null
-      const onGrab = target?.closest(`[${SHEET_GRAB_ATTR}]`) != null
-      const inField = target?.closest(EDITABLE) != null
-      armed.current = !inField && (onGrab || sheet.scrollTop <= 0)
-      if (!armed.current) return
-      committed.current = false
-      startY.current = touch.clientY
-      peak.current = 0
-      // Measured once per gesture: the sheet's height cannot change mid-drag, and
-      // reading it on every move would mean a layout flush per frame.
-      height.current = sheet.offsetHeight
-      samples.current = [{ y: touch.clientY, t: performance.now() }]
-    }
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!armed.current) return
-      const touch = e.touches[0]
-      if (!touch) return
-      samples.current.push({ y: touch.clientY, t: performance.now() })
-      if (samples.current.length > MAX_SAMPLES) samples.current.shift()
-
-      const dy = touch.clientY - startY.current
-      // Downward only. An upward drag is left to the browser so the body keeps
-      // scrolling normally, which is also why this cannot be a passive listener:
-      // without preventDefault the sheet translates while the page rubber-bands
-      // underneath it.
-      if (dy <= 0) {
-        if (offsetRef.current !== 0) apply(0)
-        return
-      }
-      // Dead zone: a tap with a few pixels of finger wobble must not start the
-      // gesture. Only commit once the drag clearly exceeds the threshold — until
-      // then, no preventDefault (so the browser can still scroll or handle the
-      // tap), no offset, no isDragging.
-      if (!committed.current) {
-        if (dy <= SWIPE_DRAG_THRESHOLD_PX) return
-        committed.current = true
-        setIsDragging(true)
-      }
-      e.preventDefault()
-      peak.current = Math.max(peak.current, dy)
-      apply(dy)
-    }
-
-    const onTouchEnd = () => {
-      if (!armed.current) return
-      if (!committed.current) {
-        stop()
-        return
-      }
-      const verdict = resolveDismissSnap({
-        offsetY: offsetRef.current,
-        peakOffsetY: peak.current,
-        sheetHeight: height.current,
-        velocityY: recentVelocity(samples.current),
-      })
-      if (verdict === 'settle') {
-        stop()
-        return
-      }
-      // The caller is told where the finger left the sheet before the offset is
-      // cleared, so its exit can continue from there. Both land in one render: if the
-      // owner closes, the exit animation takes over the transform at that same offset,
-      // and if it refuses, the sheet settles home instead of staying parked.
-      const from = offsetRef.current
-      dismissRef.current(from)
-      stop()
-    }
+    const onTouchStart = touchStartOf(sheet, gesture)
+    const onTouchMove = touchMoveOf(gesture, apply, setIsDragging)
+    const onTouchEnd = touchEndOf(gesture, stop, dismissRef)
 
     sheet.addEventListener('touchstart', onTouchStart, { passive: true })
     sheet.addEventListener('touchmove', onTouchMove, { passive: false })
@@ -176,4 +109,110 @@ export function useSwipeDismiss(
   }, [enabled, sheetRef])
 
   return { offset, isDragging, progress }
+}
+
+/** The refs one gesture is read and written through, from touchstart to touchend. */
+interface Gesture {
+  armed: RefObject<boolean>
+  committed: RefObject<boolean>
+  startY: RefObject<number>
+  peak: RefObject<number>
+  height: RefObject<number>
+  samples: RefObject<DragSample[]>
+  offsetRef: RefObject<number>
+}
+
+/** Decides at touchstart whether the gesture can be a dismissal, and latches it. */
+function touchStartOf(
+  sheet: HTMLElement,
+  gesture: Gesture,
+) {
+  const { armed, committed, startY, peak, height, samples } = gesture
+  return (e: TouchEvent) => {
+    const touch = e.touches[0]
+    if (!touch) return
+    const target = e.target instanceof Element ? e.target : null
+    const onGrab = target?.closest(`[${SHEET_GRAB_ATTR}]`) != null
+    const inField = target?.closest(EDITABLE) != null
+    armed.current = !inField && (onGrab || sheet.scrollTop <= 0)
+    if (!armed.current) return
+    committed.current = false
+    startY.current = touch.clientY
+    peak.current = 0
+    // Measured once per gesture: the sheet's height cannot change mid-drag, and
+    // reading it on every move would mean a layout flush per frame.
+    height.current = sheet.offsetHeight
+    samples.current = [{ y: touch.clientY, t: performance.now() }]
+  }
+}
+
+/** Moves the sheet with the finger once the drag is clearly a downward one. */
+function touchMoveOf(
+  gesture: Gesture,
+  apply: (next: number) => void,
+  setIsDragging: (dragging: boolean) => void,
+) {
+  const { armed, committed, startY, peak, samples, offsetRef } = gesture
+  return (e: TouchEvent) => {
+    if (!armed.current) return
+    const touch = e.touches[0]
+    if (!touch) return
+    samples.current.push({ y: touch.clientY, t: performance.now() })
+    if (samples.current.length > MAX_SAMPLES) samples.current.shift()
+
+    const dy = touch.clientY - startY.current
+    // Downward only. An upward drag is left to the browser so the body keeps
+    // scrolling normally, which is also why this cannot be a passive listener:
+    // without preventDefault the sheet translates while the page rubber-bands
+    // underneath it.
+    if (dy <= 0) {
+      if (offsetRef.current !== 0) apply(0)
+      return
+    }
+    // Dead zone: a tap with a few pixels of finger wobble must not start the
+    // gesture. Only commit once the drag clearly exceeds the threshold — until
+    // then, no preventDefault (so the browser can still scroll or handle the
+    // tap), no offset, no isDragging.
+    if (!committed.current) {
+      if (dy <= SWIPE_DRAG_THRESHOLD_PX) return
+      committed.current = true
+      setIsDragging(true)
+    }
+    e.preventDefault()
+    peak.current = Math.max(peak.current, dy)
+    apply(dy)
+  }
+}
+
+/** Settles the sheet back, or dismisses it from the offset it was let go at. */
+function touchEndOf(
+  gesture: Gesture,
+  stop: () => void,
+  dismissRef: RefObject<(fromOffsetPx: number) => void>,
+) {
+  const { armed, committed, peak, height, samples, offsetRef } = gesture
+  return () => {
+    if (!armed.current) return
+    if (!committed.current) {
+      stop()
+      return
+    }
+    const verdict = resolveDismissSnap({
+      offsetY: offsetRef.current,
+      peakOffsetY: peak.current,
+      sheetHeight: height.current,
+      velocityY: recentVelocity(samples.current),
+    })
+    if (verdict === 'settle') {
+      stop()
+      return
+    }
+    // The caller is told where the finger left the sheet before the offset is
+    // cleared, so its exit can continue from there. Both land in one render: if the
+    // owner closes, the exit animation takes over the transform at that same offset,
+    // and if it refuses, the sheet settles home instead of staying parked.
+    const from = offsetRef.current
+    dismissRef.current(from)
+    stop()
+  }
 }

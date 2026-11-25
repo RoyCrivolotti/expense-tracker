@@ -85,7 +85,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/definitions/LabelsModal.tsx': 69,
   'src/ui/hooks/rowHeights.ts': 64,
   'src/ui/hooks/usePullToRefresh.ts': 63,
-  'src/ui/hooks/useSwipeDismiss.ts': 100,
   'src/ui/hooks/useSwipeReveal.ts': 69,
   'src/ui/onboarding/OnboardingAccountsStep.tsx': 65,
   'src/ui/onboarding/OnboardingCategoriesStep.tsx': 65,

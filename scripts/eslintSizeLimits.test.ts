@@ -13,8 +13,8 @@ const eslint = new ESLint({ cwd: ROOT })
 /** A file on the list of files over 200 lines. */
 const LONG_FILE = 'functions/_shared/restoreSql.ts'
 /** A file on the list of files with a function over 60 lines, whose longest function is a `function` declaration. */
-const LONG_FUNCTION_FILE = 'src/ui/hooks/useSwipeDismiss.ts'
-const LONG_FUNCTION = 'useSwipeDismiss'
+const LONG_FUNCTION_FILE = 'src/ui/hooks/useSwipeReveal.ts'
+const LONG_FUNCTION = 'useSwipeReveal'
 
 async function ruleIdsOf(
   file: string,
