@@ -144,6 +144,8 @@ that row. Submit looks again, because a row can be typed between the list read a
 submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
 and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`
 skips the check. A row typed between that one read and the insert is not caught, which is a deliberate advisory race.
+The add form shows the list's match, with Link and Add anyway, as soon as it opens, so a payment reached through Add and
+next is told too; its Add then sends `allowDuplicate: true`, since the person has seen the row.
 The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its window in one constant,
 `DUPLICATE_WINDOW`, shared by both reads:
 
