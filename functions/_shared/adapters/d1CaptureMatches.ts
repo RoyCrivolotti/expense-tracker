@@ -30,8 +30,8 @@ function toTypedRow(r: CandidateRow): TypedRow {
 
 /**
  * The typed row one payment may duplicate, for the submit-time check: the same read as `withMatches` with one amount
- * and one date, so it walks `idx_txn_owner_date` over at most the match window, and the same `possibleMatchFor`
- * chooses the row. Null without a read when the payment cannot be matched.
+ * and one date, so it walks `idx_txn_owner_date` over at most the match window (longer for an announced bill), and the
+ * same `possibleMatchFor` chooses the row. Null without a read when the payment cannot be matched.
  */
 export async function findMatch(
   db: D1Database,

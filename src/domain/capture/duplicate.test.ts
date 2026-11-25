@@ -247,6 +247,41 @@ describe('a row a recommendation already answers for', () => {
     expect(['2026-11-09', '2026-11-10', '2026-11-17', '2026-11-18'].map(at)).toEqual([false, true, true, false])
   })
 
+  it('refuses arrivals at the same instant, and compares instants whatever offset each is written with', () => {
+    // A report in UTC counts as reported on any day, so these reach the arrival comparison.
+    const at = (occurredAt: string) => mayAnswerBoth({ occurredAt, localDate: '2026-11-10' }, announcement())
+    // The announcement arrived at 20:30 UTC: the same instant, then half an hour later though its text sorts first.
+    expect([at('2026-11-09T20:30:00.000Z'), at('2026-11-09T21:00:00.000Z')]).toEqual([false, true])
+    // An earlier instant whose text sorts after the announcement's.
+    expect(mayAnswerBoth(report('2026-11-10', '2026-11-10T02:00:00+09:00'), announcement())).toBe(false)
+  })
+
+  it('reaches seven days forward from an announcement for the row of its charge, and three for any other', () => {
+    const announced = payment({ push: announcement() })
+    // The row of a charge added first, dated the day the bank booked it.
+    const charged = (date: string) => row({ date, answers: report(date) })
+    const offered = (date: string) => possibleMatchFor(announced, [charged(date)]) !== null
+    expect(['2026-11-14', '2026-11-17', '2026-11-18'].map(offered)).toEqual([true, true, false])
+    expect(possibleMatchFor(announced, [row({ date: '2026-11-14' })])).toBeNull()
+    expect(
+      possibleMatchFor(payment({ push: report() }), [row({ date: '2026-11-14', answers: announcement() })]),
+    ).toBeNull()
+  })
+
+  it('knows an announcement by the date of its push, not the date the form was moved to', () => {
+    // Saving with the date moved back to the day the push arrived.
+    const moved = payment({ localDate: '2026-11-09', push: announcement() })
+    const charged = row({ date: '2026-11-14', answers: report('2026-11-14') })
+    expect(possibleMatchFor(moved, [charged])?.transactionId).toBe(1)
+  })
+
+  it('reads far enough forward for an announcement, wherever it sits on the page', () => {
+    const announced = payment({ localDate: '2026-11-10', push: announcement() })
+    const later = payment({ localDate: '2026-11-12', push: report('2026-11-12') })
+    expect(candidateSpan([announced, later])).toEqual({ from: '2026-10-27', to: '2026-11-17' })
+    expect(candidateSpan([later])).toEqual({ from: '2026-10-29', to: '2026-11-15' })
+  })
+
   it('is matched by that rule and the usual ones: amount, window and direction', () => {
     const announcedRow = row({ answers: announcement() })
     const charge = payment({ push: report() })

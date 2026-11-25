@@ -8,6 +8,7 @@ import { isAnnounced, shiftDay } from './reviewDates'
  * Back 14 days: the real case is a payment typed at the till with the push minutes later, but a person also enters
  * things days afterwards. With no limit a regular price (the 12,50 cafe) would match an old row every time and never
  * allow one tap. Forward 3 days: a person may date the row by the day the bank books it, a little after the push.
+ * An announced bill reaches `ANNOUNCED_CHARGE_DAYS` forward for the row that answers for its charge.
  * The submit-time check reuses this constant, so the two never disagree.
  */
 export const DUPLICATE_WINDOW = { daysBack: 14, daysForward: 3 } as const
@@ -72,20 +73,22 @@ export function dayGap(
   return Math.round(dayNumber(rowDate) - dayNumber(paymentDate))
 }
 
-/** The dates a row may carry to be a candidate for these payments: the earliest and latest across them, widened by the window. */
-export function candidateSpan(payments: readonly PaymentToMatch[]): { from: string; to: string } | null {
-  const dates = payments
-    .filter(canMatch)
-    .map((p) => p.localDate)
-    .sort()
-  const first = dates[0]
-  const last = dates[dates.length - 1]
-  if (first === undefined || last === undefined) return null
-  return { from: shiftDay(first, -DUPLICATE_WINDOW.daysBack), to: shiftDay(last, DUPLICATE_WINDOW.daysForward) }
-}
-
 /** How many days after the day an announcement names a bank may still report the charge: a week. */
 export const ANNOUNCED_CHARGE_DAYS = 7
+
+/** Whether the payment is a bill the bank announced, whose charge may be booked days after the day it names. */
+const isAnnouncement = ({ push }: PaymentToMatch) => push !== undefined && isAnnounced(push.occurredAt, push.localDate)
+
+/** The dates a row may carry to be a candidate for these payments: the earliest and latest across them, widened by the window. */
+export function candidateSpan(payments: readonly PaymentToMatch[]): { from: string; to: string } | null {
+  const matchable = payments.filter(canMatch)
+  const first = matchable.map((p) => p.localDate).sort()[0]
+  if (first === undefined) return null
+  const to = matchable
+    .map((p) => shiftDay(p.localDate, isAnnouncement(p) ? ANNOUNCED_CHARGE_DAYS : DUPLICATE_WINDOW.daysForward))
+    .sort()
+  return { from: shiftDay(first, -DUPLICATE_WINDOW.daysBack), to: to[to.length - 1]! }
+}
 
 /**
  * Whether a row that answers for one push may still be the same payment as another push. Two pushes that both report a
@@ -119,7 +122,10 @@ function isMatch(
   // The amount first: it rules out almost every candidate, and the date arithmetic is the dearer test.
   if (Math.abs(row.amountCents) !== payment.amountCents) return false
   const signed = dayGap(row.date, payment.localDate)
-  if (signed < -DUPLICATE_WINDOW.daysBack || signed > DUPLICATE_WINDOW.daysForward) return false
+  // An announcement that `mayAnswerBoth` let through to an answered row is looking at the row of its charge, which is
+  // dated when the bank booked it. A row no recommendation answers for keeps the usual reach.
+  const forward = row.answers && isAnnouncement(payment) ? ANNOUNCED_CHARGE_DAYS : DUPLICATE_WINDOW.daysForward
+  if (signed < -DUPLICATE_WINDOW.daysBack || signed > forward) return false
   return rowDirection(row.type, row.amountCents) === paymentDirection(payment.suggestedType)
 }
 

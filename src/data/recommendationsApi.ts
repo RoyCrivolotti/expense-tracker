@@ -21,8 +21,9 @@ export interface RecommendationInfo {
   /** The card the push showed: the bank app and the last four digits. Null for a push with no digits. */
   card?: { source: string; digits: string } | null
   /**
-   * A row the person typed that looks like this payment: the same direction and price, from 14 days before to 3 days
-   * after. A reason to look before adding, and the row Link points the payment at.
+   * A row that looks like this payment: the same direction and price, from 14 days before to 3 days after, or to 7
+   * days after for an announced bill and the row that answers for its charge. A reason to look before adding, and the
+   * row Link points the payment at.
    */
   possibleMatch?: { transactionId: number; description: string; date: string } | null
   /**
