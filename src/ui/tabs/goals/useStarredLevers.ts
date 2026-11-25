@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFAULT_LEVERS, MAX_LEVERS, type LeverKey } from '../../../engine'
-import type { ExpenseSettings } from '../../../types'
-import { failureMessage } from '../../hooks/useFailureToast'
 import { UNDO_SHORTCUT } from '../../components/toastShortcuts'
 import { useToast } from '../../hooks/useToast'
 import { LEVER_SPECS } from './leverFields'
-
-type Save = (patch: Partial<ExpenseSettings>) => Promise<void>
+import { sameList, writeLevers, type Save } from './leverSaveQueue'
 
 /** What the Goals page's bar holds, and what can be done to it. */
 export interface StarredLevers {
@@ -22,14 +19,6 @@ export interface StarredLevers {
   /** Puts back the five the bar has until someone chooses. */
   reset: () => void
 }
-
-/** The session can no longer write (it went read-only) with a choice still waiting to be sent. */
-class WriterGone extends Error {}
-
-const sameList = (
-  a: readonly LeverKey[],
-  b: readonly LeverKey[],
-) => a.length === b.length && a.every((key, i) => key === b[i])
 
 /**
  * The inputs the owner keeps in the Goals page's bar, for every control that changes them: the
@@ -73,37 +62,10 @@ export function useStarredLevers(
   const inFlight = useRef(false)
   const queued = useRef<readonly LeverKey[] | null>(null)
 
-  // Sends `first`, then whatever was chosen while it was in flight, until nothing newer is left.
+  // One save at a time, with what is chosen meanwhile sent after it (see writeLevers).
   const write = useCallback(
-    async (first: readonly LeverKey[]) => {
-      inFlight.current = true
-      setBusy(true)
-      let next: readonly LeverKey[] | null = first
-      try {
-        while (next !== null) {
-          // A writer that is gone sent nothing: that is not a save, and must not be recorded as one.
-          if (!send.current) throw new WriterGone()
-          await send.current({ goalLevers: [...next] })
-          savedRef.current = next
-          const newest: readonly LeverKey[] | null = queued.current
-          queued.current = null
-          next = newest !== null && !sameList(newest, savedRef.current) ? newest : null
-        }
-      } catch (e) {
-        queued.current = null
-        current.current = savedRef.current
-        setDraft(savedRef.current)
-        showToast(
-          e instanceof WriterGone
-            ? "This session can no longer save changes, so the last choice wasn't saved."
-            : failureMessage(e),
-          'error',
-        )
-      } finally {
-        inFlight.current = false
-        setBusy(false)
-      }
-    },
+    (first: readonly LeverKey[]) =>
+      writeLevers(first, { inFlight, queued, send, savedRef, current, setBusy, setDraft, showToast }),
     [showToast],
   )
 
