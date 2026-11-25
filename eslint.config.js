@@ -26,7 +26,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/marketSpread.ts': 203,
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
-  'src/ui/ExpensesApp.tsx': 445,
   'src/ui/charts/LinearChart.tsx': 350,
   'src/ui/charts/linearChartParts.tsx': 461,
   'src/ui/definitions/ConfigModal.tsx': 295,
@@ -58,7 +57,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'src/ui/ExpensesApp.tsx': 139,
   'src/ui/access/ActiveUsersSection.tsx': 92,
   'src/ui/access/PendingRequestsSection.tsx': 67,
   'src/ui/access/RequestAccessScreen.tsx': 67,
