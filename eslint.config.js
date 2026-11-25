@@ -27,7 +27,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
   'src/ui/tabs/goals/ContributionSteps.tsx': 208,
-  'src/ui/tabs/goals/desktop/Lever.tsx': 219,
   'src/ui/tabs/goals/desktop/ScenarioChips.tsx': 212,
   'src/ui/tabs/goals/goalControlFields.tsx': 207,
 }
@@ -82,7 +81,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/charts/SpreadChart.tsx': 138,
   'src/ui/tabs/goals/charts/heroSheet/HeroChartSheet.tsx': 68,
   'src/ui/tabs/goals/charts/heroSheet/HeroFloatingReadout.tsx': 70,
-  'src/ui/tabs/goals/desktop/Lever.tsx': 115,
   'src/ui/tabs/goals/desktop/PlanDesktop.tsx': 72,
   'src/ui/tabs/goals/desktop/ScenarioMenu.tsx': 92,
   'src/ui/tabs/goals/goalControlFields.tsx': 61,
