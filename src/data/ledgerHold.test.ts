@@ -15,12 +15,11 @@ import {
   holdReference,
   holdRows,
   ledgerOfHeld,
-  missingMonths,
   receiptsPending,
   receiptsToRead,
   touchMonths,
-  wantedMonths,
 } from './ledgerHold'
+import { missingMonths, wantedMonths } from './ledgerWindows'
 import { readLedgerParts } from './ledgerLoader'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }

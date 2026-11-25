@@ -18,10 +18,8 @@ const NOT_IN_TESTS_PROJECT = JSON.parse(
 const FILE_LINE_CAPS = {
   'functions/_shared/restoreSql.ts': 299,
   'functions/_shared/testing/rollupMutants.ts': 253,
-  'src/data/apiDataSource.ts': 318,
-  'src/data/docsCaptureDataSource.ts': 561,
-  'src/data/ledgerHold.ts': 216,
-  'src/data/ledgerSession.ts': 350,
+  'src/data/docsCaptureDataSource.ts': 402,
+  'src/data/ledgerSession.ts': 348,
   'src/data/transactionPager.ts': 275,
   'src/domain/data/dataSource.ts': 224,
   'src/domain/engine/dates.ts': 201,
@@ -74,7 +72,6 @@ const FILE_LINE_CAPS = {
 }
 
 const FUNCTION_LINE_CAPS = {
-  'src/data/inMemoryLedgerParts.ts': 68,
   'src/ui/ExpensesApp.tsx': 139,
   'src/ui/access/ActiveUsersSection.tsx': 92,
   'src/ui/access/PendingRequestsSection.tsx': 67,

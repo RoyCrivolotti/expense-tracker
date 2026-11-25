@@ -11,12 +11,10 @@ import {
   holdReceiptLists,
   holdsEvery,
   holdRows,
-  missingMonths,
-  monthsToHold,
   receiptsToRead,
   touchMonths,
-  wantedMonths,
 } from './ledgerHold'
+import { missingMonths, monthsToHold, wantedMonths } from './ledgerWindows'
 import { readLedgerParts } from './ledgerLoader'
 import { type Cascade, cascadeOf } from './ledgerCascade'
 import { rangesOfMonths, receiptsByTransaction, seriesAreCurrent, showsRowsChanged } from './ledgerSessionHelpers'
