@@ -27,7 +27,6 @@ const FILE_LINE_CAPS = {
   'src/domain/engine/projection.ts': 213,
   'src/domain/engine/rentVsBuy.ts': 206,
   'src/ui/tabs/goals/ContributionSteps.tsx': 208,
-  'src/ui/tabs/goals/desktop/ScenarioChips.tsx': 212,
   'src/ui/tabs/goals/goalControlFields.tsx': 207,
 }
 
