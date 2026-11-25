@@ -33,7 +33,6 @@ const FILE_LINE_CAPS = {
   'src/ui/tabs/goals/charts/MilestoneGrid.tsx': 262,
   'src/ui/tabs/goals/charts/MilestoneMatrix.tsx': 339,
   'src/ui/tabs/goals/charts/MilestoneTimeline.tsx': 393,
-  'src/ui/tabs/goals/charts/heroSeries.ts': 244,
   'src/ui/tabs/goals/charts/spreadModel.ts': 208,
   'src/ui/tabs/goals/desktop/Lever.tsx': 219,
   'src/ui/tabs/goals/desktop/ScenarioChips.tsx': 212,

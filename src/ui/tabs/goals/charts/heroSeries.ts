@@ -12,11 +12,9 @@ import {
   type YearPoint,
 } from '../../../../engine'
 import { planMoneyLabel } from '../planMoneyLabel'
-import { yearLabel } from '../yearLabel'
-import { sparseLabels } from '../../../charts/linearScale'
 import type { ChartSeries } from '../../../charts/LinearChart'
-import type { StartMark } from '../../../charts/ChartStartMarks'
 import { scenarioInk } from '../scenarioInk'
+import { monthYear } from './heroAxisText'
 import { NO_HIDDEN, type LineReading, type ScenarioLine } from './heroLegendState'
 
 /**
@@ -40,25 +38,6 @@ export function heroAxis(
   const { origin, offsets } = scenarioAxis(starts)
   const offsetOf = (start: string | null | undefined) => scenarioAxis([origin, start]).offsets[1] ?? 0
   return { origin, calendar: offsets.some((o) => o > 0), offsetOf }
-}
-
-const MONTH_YEAR = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-
-/** "Jul 2027": the month a scenario starts in, in the app's English (the money's locale is for figures, not words). */
-export function monthYear(date: string): string {
-  return MONTH_YEAR.format(new Date(`${date}T00:00:00Z`))
-}
-
-const DAY_MONTH_YEAR = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-/** "11 Sept 2026": a day, in the app's English whatever the browser's language. */
-export function dayMonthYear(date: string): string {
-  return DAY_MONTH_YEAR.format(new Date(`${date}T00:00:00Z`))
 }
 
 /** The calendar year a scenario's last year ends in: its start's year (the axis' if it has none) and its horizon. */
@@ -217,26 +196,6 @@ export function bandSeries(
   }
 }
 
-/** Where each line buys a house, on the axis. */
-export function purchaseMarkerIndices(
-  lines: ScenarioLine[],
-  years: number[],
-): { yearIndex: number }[] {
-  const indices = new Set<number>()
-  for (const line of lines) {
-    const purchaseYear = line.params.housePurchaseYear
-    if (purchaseYear == null) continue
-    const place = line.offsetYears + purchaseYear
-    if (line.offsetYears === 0) {
-      const idx = years.indexOf(purchaseYear)
-      if (idx >= 0) indices.add(idx)
-    } else if (place <= (years[years.length - 1] ?? 0)) {
-      indices.add(place)
-    }
-  }
-  return [...indices].sort((a, b) => a - b).map((yearIndex) => ({ yearIndex }))
-}
-
 /**
  * What each line is worth at each of the axis' whole years, in the money the chart is drawn in: the
  * figure the legend, the chips, the tooltip and the full-screen readout all show. A line that starts
@@ -271,39 +230,5 @@ export function lineReadings(
       values: years.map(read),
       last: read(line.offsetYears + lastYear),
     }
-  })
-}
-
-/** Where each line that starts after the axis' origin begins, as drawn: its first point, and when. */
-export function startMarksOf(
-  lines: ScenarioLine[],
-  drawn: ChartSeries[],
-): StartMark[] {
-  return drawn.flatMap((s, i) => {
-    const line = lines[i]
-    const index = s.xs?.[0]
-    const value = s.values[0]
-    if (!line?.startsIn || index === undefined || value === undefined) return []
-    return [{ index, value, color: s.color, label: `starts ${line.startsIn}` }]
-  })
-}
-
-/**
- * The bottom axis' labels. Plan years read 0, 5, 10 as they always have. On a calendar a year takes four
- * digits, so a phone labels every tenth year, and the last year drawn is labelled only when it is far
- * enough past the last label (three fifths of a step) not to run into it.
- */
-export function axisLabels(
-  years: number[],
-  calendarOrigin: string | null,
-  narrow: boolean,
-): string[] {
-  if (!calendarOrigin) return sparseLabels(years, 5)
-  const step = narrow ? 10 : 5
-  const last = years.length - 1
-  const lastLabelled = last - (last % step)
-  return years.map((y, i) => {
-    const labelled = i % step === 0 || (i === last && last - lastLabelled >= step * 0.6)
-    return labelled ? yearLabel(y, calendarOrigin) : ''
   })
 }

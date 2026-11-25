@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
-import { axisLabels, buildSeries, heroAxis, purchaseMarkerIndices, scenarioLines } from './heroSeries'
+import { buildSeries, heroAxis, scenarioLines } from './heroSeries'
+import { axisLabels } from './heroAxisText'
+import { purchaseMarkerIndices } from './heroMarks'
 import { axisSpans } from './heroRestYear'
 import { computeChartDisplayData } from './nominalTransform'
 import type { ChartEnv } from './netWorthChartTypes'
