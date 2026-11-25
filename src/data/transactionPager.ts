@@ -2,8 +2,7 @@ import type { LedgerPartsSource, MatchingTarget } from '../domain/data/dataSourc
 import type { TransactionSummaryPart } from '../domain/data/ledgerParts'
 import type { TxnFilter } from '../domain/engine/transactions'
 import type { Transaction } from '../domain/types'
-import { MAX_PAGE_LIMIT } from '../domain/data/transactionQuery'
-import { frozen, START } from './pagerParts'
+import { frozen, pageLimit, START, withoutRowsOf } from './pagerParts'
 import { patchedRows, type RowChanges } from './pagerPatch'
 import { transactionQueryString } from './transactionQueryString'
 import { reason } from './reason'
@@ -334,15 +333,14 @@ export class TransactionPager {
     let cursor: string | undefined
     try {
       do {
-        const limit = depth > 0 ? Math.min(MAX_PAGE_LIMIT, depth - rows.length) : this.limit
+        const limit = pageLimit(depth, rows.length, this.limit)
         const page = await this.source.readTransactionPage(filter, {
           limit,
           signal,
           ...(cursor !== undefined ? { cursor } : {}),
         })
         if (generation !== this.generation) return
-        const fresh = new Set(page.items.map((row) => row.id))
-        rows = [...rows.filter((row) => !fresh.has(row.id)), ...page.items]
+        rows = [...withoutRowsOf(rows, page.items), ...page.items]
         cursor = page.nextCursor ?? undefined
       } while (cursor !== undefined && rows.length < depth)
     } catch (error) {
@@ -374,8 +372,7 @@ export class TransactionPager {
       })
       if (generation !== this.generation) return
       this.cursor = page.nextCursor ?? undefined
-      const fresh = new Set(page.items.map((row) => row.id))
-      const held = this.state.stale ? [] : this.state.rows.filter((row) => !fresh.has(row.id))
+      const held = this.state.stale ? [] : withoutRowsOf(this.state.rows, page.items)
       this.set({ rows: [...held, ...page.items], complete: page.nextCursor === null, loading: false, stale: false })
     } catch (error) {
       if (generation === this.generation) this.set({ loading: false, error: reason(error) })

@@ -4,7 +4,8 @@ import { filterTransactions, type TxnFilter } from '../domain/engine/transaction
 import type { ExpenseDataset, Transaction } from '../domain/types'
 import { makeTransaction } from '../testing/factories'
 import { memorySource, type TestSource } from '../testing/ledgerSource'
-import { awkwardLedger, filterStream, vocabularyOf } from '../testing/transactionQueryKit'
+import { awkwardLedger } from '../testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../testing/randomTransactionFilters'
 import { TransactionPager, type PagerState } from './transactionPager'
 
 /** A pager with a screen attached to it, as the Transactions tab is while it is open. */

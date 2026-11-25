@@ -25,7 +25,8 @@ import { comparable, memorySource, type TestSource } from '../testing/ledgerSour
 import { syntheticLedger } from '../testing/syntheticLedger'
 import { holdParts, ledgerOfHeld } from './ledgerHold'
 import { readLedgerParts } from './ledgerLoader'
-import { LedgerSession, rangesOfMonths } from './ledgerSession'
+import { LedgerSession } from './ledgerSession'
+import { rangesOfMonths } from './ledgerSessionHelpers'
 
 const WINDOWED: HydrationPolicy = { fullBelowRows: 0, dataMonths: HYDRATED_DATA_MONTHS }
 const FULL: HydrationPolicy = { fullBelowRows: 1_000_000, dataMonths: HYDRATED_DATA_MONTHS }

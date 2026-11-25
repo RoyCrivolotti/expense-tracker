@@ -15,12 +15,11 @@ import {
   OWNER,
   allPages,
   awkwardLedger,
-  filterStream,
   queryDb,
-  vocabularyOf,
   withSortedLabels,
   type QueryDb,
 } from '../../src/testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../../src/testing/randomTransactionFilters'
 import { loadDataset } from './db'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import type { Env } from './env'

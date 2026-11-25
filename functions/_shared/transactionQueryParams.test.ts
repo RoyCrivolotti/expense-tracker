@@ -3,7 +3,7 @@ import { ValidationError } from '../domain/application/validationError'
 import { validateTxnFilter } from '../domain/application/transactionQueryService'
 import type { TxnFilter } from '../domain/engine/transactions'
 import { syntheticLedger } from '../../src/testing/syntheticLedger'
-import { filterStream, vocabularyOf } from '../../src/testing/transactionQueryKit'
+import { filterStream, vocabularyOf } from '../../src/testing/randomTransactionFilters'
 import { parseTransactionQuery } from './transactionQueryParams'
 
 const parse = (query: string) => parseTransactionQuery(new URL(`https://expenses.test/api?${query}`))
