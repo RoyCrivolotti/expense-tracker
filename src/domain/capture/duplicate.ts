@@ -8,7 +8,7 @@ import { isAnnounced, shiftDay } from './reviewDates'
  * Back 14 days: the real case is a payment typed at the till with the push minutes later, but a person also enters
  * things days afterwards. With no limit a regular price (the 12,50 cafe) would match an old row every time and never
  * allow one tap. Forward 3 days: a person may date the row by the day the bank books it, a little after the push.
- * An announced bill reaches `ANNOUNCED_CHARGE_DAYS` forward for the row added from its charge.
+ * An announced bill reaches `ANNOUNCED_CHARGE_DAYS` forward for the row that answers for its charge.
  * The submit-time check reuses this constant, so the two never disagree.
  */
 export const DUPLICATE_WINDOW = { daysBack: 14, daysForward: 3 } as const
@@ -123,7 +123,7 @@ function isMatch(
   if (Math.abs(row.amountCents) !== payment.amountCents) return false
   const signed = dayGap(row.date, payment.localDate)
   // An announcement that `mayAnswerBoth` let through to an answered row is looking at the row of its charge, which is
-  // dated when the bank booked it. A row typed by hand keeps the usual reach.
+  // dated when the bank booked it. A row no recommendation answers for keeps the usual reach.
   const forward = row.answers && isAnnouncement(payment) ? ANNOUNCED_CHARGE_DAYS : DUPLICATE_WINDOW.daysForward
   if (signed < -DUPLICATE_WINDOW.daysBack || signed > forward) return false
   return rowDirection(row.type, row.amountCents) === paymentDirection(payment.suggestedType)

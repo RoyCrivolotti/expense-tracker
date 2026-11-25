@@ -1,8 +1,8 @@
 /**
  * The typed rows that could be the same payment as any of a page of recommendations, in one read. The date range is
- * the span of the page widened by the match window, and the amounts are the page's own, so only rows of a price that
- * is waiting come back. The rest of the rule (direction, the window per payment, the closest) is
- * `possibleMatchFor`, which also decides for the submit-time check.
+ * the span of the page widened by the match window (further forward for an announced bill), and the amounts are the
+ * page's own, so only rows of a price that is waiting come back. The rest of the rule (direction, the window per
+ * payment, the closest) is `possibleMatchFor`, which also decides for the submit-time check.
  *
  * A row is left out here when it is cancelled. A row a recommendation of the person already answers for (linked, or
  * made by submitting one) comes back with that recommendation's two dates, so `mayAnswerBoth` can keep a payment that

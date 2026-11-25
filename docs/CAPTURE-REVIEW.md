@@ -155,7 +155,8 @@ The rule is [`possibleMatchFor`](../src/domain/capture/duplicate.ts), with its w
 - the same amount to the cent, in euros (a payment in another currency or with no amount matches nothing);
 - a date from 14 days before the payment's local date to 3 days after it. Back 14, because with no limit a regular price
   (the 12,50 cafe) would match an old row every time and never allow one tap; forward 3, because a row may be dated by the
-  day the bank books it. An announced bill (below) also reaches the row added from its charge up to seven days after it;
+  day the bank books it. An announced bill (below) also reaches the row that answers for its charge up to seven days
+  after it;
 - not a cancelled row, and not a row some recommendation already answers for (linked by hand, or made by submitting one),
   so a payment that was captured and added does not match the next push of the same price. The one exception is a bill
   a bank announces and then reports. A recommendation whose words named a later day than its push arrived on
@@ -173,4 +174,5 @@ The candidates of a whole page come from one query, over the date span of the pa
 prices on the page, using the existing index on owner and date. The cost is the rows of that span, once per list call,
 whatever the page size. Each candidate looks up the recommendation that answers for it through the unique index on
 owner and transaction, which reads a row only when there is one. The check at submit is the same statement for one
-amount and one date, so it reads at most the rows of one 18-day window and needs no new index.
+amount and one date, so it reads at most the rows of one 18-day window (22 days for an announced bill) and needs no new
+index.
