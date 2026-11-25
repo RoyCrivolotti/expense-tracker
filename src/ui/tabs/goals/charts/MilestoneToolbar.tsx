@@ -1,5 +1,5 @@
 import { SegmentedControl } from '../../../components/SegmentedControl'
-import type { YearsUnit } from './milestoneModel'
+import type { YearsUnit } from './milestoneTable'
 import styles from '../goals.module.css'
 
 const UNITS = [

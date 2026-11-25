@@ -5,20 +5,9 @@ import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { scenarioInk } from '../scenarioInk'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import {
-  CELL_MOVES,
-  cellText,
-  gapLabel,
-  longestHorizon,
-  moveCell,
-  rowHasGaps,
-  tintPercent,
-  type CellMove,
-  type CellRef,
-  type GapText,
-  type MilestoneRow,
-  type YearsUnit,
-} from './milestoneModel'
+import { longestHorizon, tintPercent, type MilestoneRow } from './milestoneModel'
+import { CELL_MOVES, cellText, moveCell, type CellMove, type CellRef, type YearsUnit } from './milestoneTable'
+import { gapLabel, rowHasGaps, type GapText } from './milestoneGaps'
 import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 

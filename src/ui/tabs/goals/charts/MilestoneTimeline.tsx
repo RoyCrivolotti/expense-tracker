@@ -7,7 +7,8 @@ import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../chartTheme'
 import { scenarioInk } from '../scenarioInk'
 import { MilestoneReadout } from './MilestoneReadout'
-import { describeCell, type MilestoneRow } from './milestoneModel'
+import type { MilestoneRow } from './milestoneModel'
+import { describeCell } from './milestoneGaps'
 import {
   DOT_Y,
   GUTTER,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../../../testing/factories'
-import { buildRows, describeCell, type MilestoneRow } from './milestoneModel'
+import { buildRows, type MilestoneRow } from './milestoneModel'
+import { describeCell } from './milestoneGaps'
 import {
   axisSpan,
   axisStartYear,

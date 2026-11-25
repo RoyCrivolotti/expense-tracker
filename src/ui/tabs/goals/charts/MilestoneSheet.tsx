@@ -4,7 +4,8 @@ import { MilestoneGrid, type CellRef } from './MilestoneGrid'
 import { MilestoneReadout } from './MilestoneReadout'
 import { MilestoneToolbar } from './MilestoneToolbar'
 import { SheetFrame } from './SheetFrame'
-import { sentenceAt, type MilestoneRow, type YearsUnit } from './milestoneModel'
+import type { MilestoneRow } from './milestoneModel'
+import { sentenceAt, type YearsUnit } from './milestoneTable'
 import styles from '../goals.module.css'
 
 /**
