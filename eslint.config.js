@@ -73,7 +73,6 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/capture/useRecommendationList.ts': 63,
   'src/ui/capture/useReviewApi.ts': 65,
   'src/ui/charts/LinearChart.tsx': 206,
-  'src/ui/charts/useChartFocus.ts': 79,
   'src/ui/components/FlagField.tsx': 69,
   'src/ui/components/Modal.tsx': 68,
   'src/ui/components/PercentStepper.tsx': 64,
