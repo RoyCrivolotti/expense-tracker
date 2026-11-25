@@ -1,42 +1,19 @@
-import { useEffect, useId, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useId, useRef, type RefObject } from 'react'
 import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { describedBy, tabIndexFor, tooltipShows } from './linearChartKeys'
 import { StepKeysHint } from './StepKeysHint'
-import { useElementSize } from '../hooks/useElementSize'
-import { ChartGrid, ChartXLabels, ChartBandLayer, ChartScatterLayer, ChartFocusIndicator } from './chartDataLayers'
-import {
-  ChartRefCurves,
-  ChartRefLines,
-  ChartAnnotationLayer,
-  type AnnotationDot,
-  type ChartAnnotations,
-  type RefHighlight,
-} from './chartReferenceLayers'
-import {
-  ChartTodayMarker,
-  ChartAboveMarker,
-  ChartPurchaseMarkers,
-  ChartLifeEventMarkers,
-  ChartLabeledMarkers,
-  type LabeledMarker,
-  type LifeEventMarker,
-} from './linearChartParts'
-import { ChartValueTags } from './ChartValueTags'
-import { ChartStartMarks, type StartMark } from './ChartStartMarks'
-import { drawnValuesOf, placeX, placesOf, steppedPoints } from './steppedPoints'
+import type { AnnotationDot, ChartAnnotations, RefHighlight } from './chartReferenceLayers'
+import type { LabeledMarker, LifeEventMarker } from './linearChartParts'
+import type { StartMark } from './ChartStartMarks'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
-import { collectDomain, linePath, makeScale, niceScale, stackAreas, type ScatterPoint } from './linearScale'
+import type { ScatterPoint } from './linearScale'
 import type { ValueTagSpec } from './valueTags'
+import { useChartBox, useGeometry, type ChartGeometry } from './linearChartGeometry'
+import { ChartFocusLayers, ChartLineLayers, ChartPlotLayers } from './linearChartLayers'
+import { ChartMarkLayers } from './linearChartMarkLayers'
 import styles from './charts.module.css'
-
-const FALLBACK_W = 360
-/** The least a chart that fills its box is drawn at: below it there is no plot, only its margins. */
-const MIN_FILL_H = 120
-const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
-/** Reference lines closer than this run together into one dashed smear, so the nearer one is left out. */
-const REF_LINE_MIN_GAP = 8
 
 export type { ScatterPoint, AnnotationDot, ChartAnnotations }
 
@@ -90,7 +67,7 @@ export interface ChartSeries {
   tagged?: boolean
 }
 
-interface Props {
+export interface LinearChartProps {
   height: number
   /**
    * Room above the plot, for the top axis label to sit in. A chart with little height to spare
@@ -141,129 +118,25 @@ interface Props {
   valueTags?: ValueTagSpec | undefined
 }
 
-function envelopeOf(s: ChartSeries): number[] {
-  return s.band ? [...s.band.lo, ...s.band.hi, ...(s.band.loPre ?? []), ...(s.band.hiPre ?? [])] : []
-}
-
-function useGeometry(
-  series: ChartSeries[],
-  width: number,
-  height: number,
-  refLines: number[],
-  yDomainMax: number | undefined,
-  fitDomain: boolean | undefined,
-  padTopProp: number | undefined,
-  places = 0,
-) {
-  return useMemo(() => {
-    // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
-    // path a negative height and draw nothing, and a negative one pushes the plot off the top.
-    const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
-    const n = Math.max(places, ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map(placesOf))
-    const innerH = height - padTop - PAD.bottom
-    const innerW = width - PAD.left - PAD.right
-    const areaSeries = series.filter((s) => s.kind === 'area')
-    const stackedBands = stackAreas(areaSeries.map((a) => a.values))
-    const stackedValues = stackedBands.flatMap((b) => [...b.lo, ...b.hi])
-    const envelopeValues = series.filter((s) => s.kind === 'band').flatMap(envelopeOf)
-    const scatterValues = series.filter((s) => s.kind === 'scatter').flatMap((s) => s.points?.map((p) => p.value) ?? [])
-    const lineValues = series
-      .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
-      .flatMap(drawnValuesOf)
-    // A band is the spread around a line, not the thing being read: a wide one would set
-    // the axis and leave the lines squeezed under it. It is held to the height of what it
-    // surrounds and clipped there, so the axis fits the lines.
-    const solidMax = Math.max(...[...lineValues, ...stackedValues, ...scatterValues].filter(Number.isFinite))
-    const bandCap = solidMax > 0 ? solidMax : Infinity
-    const domain = collectDomain(
-      [lineValues, stackedValues, envelopeValues.map((v) => Math.min(v, bandCap)), scatterValues],
-      refLines,
-      fitDomain !== true,
-    )
-    // yDomainMax raises the floor rather than overriding outright, so a caller
-    // holding the scale still (the Nominal view while a rate is previewed) can never
-    // clip a line or check-in that legitimately extends past it.
-    const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
-    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }), 5, maxTicksFor(innerH))
-    const scaleY = makeScale(nice.min, nice.max, padTop + innerH, padTop)
-    const xForIndex = (i: number) => (n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW)
-    return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp, places])
-}
-
-/**
- * The size the chart is drawn at: its wrapper's width, and its height prop, or the wrapper's own
- * once it has been measured when the chart fills its box (never so little that the plot is gone).
- */
-function useChartBox(
-  ref: RefObject<HTMLElement | null>,
-  height: number,
-  fillHeight: boolean | undefined,
-) {
-  const size = useElementSize(ref, { width: FALLBACK_W, height }, fillHeight)
-  const measured = fillHeight && size.height > 0
-  return { width: size.width, height: measured ? Math.max(MIN_FILL_H, size.height) : height }
-}
-
 function wrapClass(fillHeight: boolean | undefined): string | undefined {
   return fillHeight ? `${styles.chartWrap} ${styles.chartWrapFill}` : styles.chartWrap
 }
 
-/** One axis label per 26px of plot: closer than that, labels at 11px start to touch. */
-function maxTicksFor(innerH: number): number {
-  return Math.max(2, Math.floor(innerH / 26) + 1)
-}
-
-function domainTuple(d: { min: number; max: number }): [number, number] {
-  return [d.min, d.max]
-}
-
-export function LinearChart({
-  height,
-  padTop,
-  series,
-  xLabels,
-  formatValue,
-  ariaLabel,
-  tooltip,
-  refLines = [],
-  refCurves,
-  refHighlight,
-  annotations,
-  startMarks,
-  places,
-  markerYears = [],
-  lifeEventMarkers = [],
-  labeledMarkers,
-  todayIndex,
-  tooltipMode = 'full',
-  dockBelow,
-  aboveTop,
-  onActiveIndexChange,
-  yDomainMax,
-  fitDomain,
-  focus,
-  fillHeight,
-  valueTags,
-}: Props) {
-  const svgRef = useRef<SVGSVGElement>(null)
-  // useId can return characters (colons, in older React) that a url(#...) reference does not take.
-  const uid = useId().replace(/:/g, '')
-  const plotClipId = `plot-${uid}`
-  const keysId = `keys-${uid}`
-  const containerRef = useRef<HTMLDivElement>(null)
-  // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
-  // render at their own size instead of being scaled up with the chart.
-  const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
-  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop, places)
+/**
+ * The focused year, from hover, touch or keys, and its tooltip: told to the caller as it changes, and the one tooltip
+ * open on the page while it shows.
+ */
+function useFocusedTooltip(
+  geo: ChartGeometry,
+  svgRef: RefObject<SVGSVGElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
+  { focus, tooltip, tooltipMode = 'full', onActiveIndexChange }: LinearChartProps,
+) {
   const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
   const tip = active != null ? tooltip(active) : null
   const showsTooltip = tooltipShows(tip, tooltipMode)
-  const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
-  // A chart that takes focus can be stepped through with the keyboard, which nothing on it says.
-  const steppable = tabIndexFor(tooltipMode, onActiveIndexChange) === 0
 
   useEffect(() => {
     onActiveIndexChange?.(active)
@@ -277,6 +150,26 @@ export function LinearChart({
     else releaseActiveTooltip(handlers.onBlur)
     return () => releaseActiveTooltip(handlers.onBlur)
   }, [showsTooltip, handlers.onBlur])
+  return { active, handlers, focusX, anchor, tip, showsTooltip }
+}
+
+export function LinearChart(props: LinearChartProps) {
+  const { height, padTop, series, formatValue, ariaLabel, refLines = [], places, yDomainMax, fitDomain } = props
+  const { tooltipMode = 'full', dockBelow, onActiveIndexChange, fillHeight } = props
+  const svgRef = useRef<SVGSVGElement>(null)
+  // useId can return characters (colons, in older React) that a url(#...) reference does not take.
+  const uid = useId().replace(/:/g, '')
+  const plotClipId = `plot-${uid}`
+  const keysId = `keys-${uid}`
+  const containerRef = useRef<HTMLDivElement>(null)
+  // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
+  // render at their own size instead of being scaled up with the chart.
+  const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
+  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop, places)
+  const { active, handlers, focusX, anchor, tip, showsTooltip } = useFocusedTooltip(geo, svgRef, containerRef, props)
+  const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
+  // A chart that takes focus can be stepped through with the keyboard, which nothing on it says.
+  const steppable = tabIndexFor(tooltipMode, onActiveIndexChange) === 0
 
   return (
     <div ref={containerRef} className={wrapClass(fillHeight)}>
@@ -291,140 +184,25 @@ export function LinearChart({
         onContextMenu={(e) => e.preventDefault()}
         {...handlers}
       >
-        <ChartGrid
-          ticks={geo.ticks}
-          scaleY={geo.scaleY}
-          x0={PAD.left}
-          x1={width - PAD.right}
-          formatValue={formatValue}
-        />
-        {geo.areaSeries.map((s, ai) => {
-          const band = geo.stackedBands[ai]
-          if (!band) return null
-          return (
-            <ChartBandLayer
-              key={s.id}
-              color={s.color}
-              lo={band.lo}
-              hi={band.hi}
-              xForIndex={geo.xForIndex}
-              scaleY={geo.scaleY}
-              fillOpacity={0.4}
-            />
-          )
-        })}
-        <clipPath id={plotClipId}>
-          <rect x={PAD.left - 1} y={geo.padTop} width={geo.innerW + 2} height={geo.innerH + 1} />
-        </clipPath>
-        <g clipPath={`url(#${plotClipId})`}>
-          {series
-            .filter((s) => s.kind === 'band')
-            .map((s) =>
-              s.band ? (
-                <ChartBandLayer
-                  key={s.id}
-                  color={s.color}
-                  lo={s.band.lo}
-                  hi={s.band.hi}
-                  loPre={s.band.loPre}
-                  hiPre={s.band.hiPre}
-                  xForIndex={placeX(s, geo.xForIndex)}
-                  scaleY={geo.scaleY}
-                  fillOpacity={0.18}
-                />
-              ) : null,
-            )}
-          <ChartRefCurves curves={refCurves} xForIndex={geo.xForIndex} scaleY={geo.scaleY} highlight={refHighlight} />
-        </g>
-        {lineSeries.map((s) => (
-          <path
-            key={s.id}
-            d={linePath(steppedPoints(s.values, s.preStep, placeX(s, geo.xForIndex), geo.scaleY))}
-            style={{ stroke: s.color }}
-            fill="none"
-            strokeWidth={s.width ?? 2}
-            strokeDasharray={s.dashed ? '6 4' : undefined}
-          />
-        ))}
-        {series
-          .filter((s) => s.kind === 'scatter')
-          .map((s) => (
-            <ChartScatterLayer
-              key={s.id}
-              color={s.color}
-              points={s.points ?? []}
-              xForIndex={geo.xForIndex}
-              scaleY={geo.scaleY}
-              connect={s.connect ?? false}
-              dashed={s.dashed ?? false}
-              dots={s.dots ?? true}
-            />
-          ))}
-        <ChartRefLines
-          values={refLines}
-          scaleY={geo.scaleY}
-          x1={PAD.left}
-          x2={width - PAD.right}
-          minGap={REF_LINE_MIN_GAP}
-          highlight={refHighlight}
-        />
-        <ChartStartMarks
-          marks={startMarks}
+        <ChartPlotLayers
+          series={series}
           geo={geo}
-          left={PAD.left}
-          right={width - PAD.right}
-          active={active}
-          annotations={annotations}
-        />
-        <ChartAnnotationLayer
-          annotations={annotations}
-          xForIndex={geo.xForIndex}
-          scaleY={geo.scaleY}
-          top={geo.padTop}
-          right={width - PAD.right}
-        />
-        {todayIndex !== undefined && (
-          <ChartTodayMarker x={geo.xForIndex(todayIndex)} yTop={geo.padTop} yBottom={geo.padTop + geo.innerH} />
-        )}
-        <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={drawnHeight - 8} />
-        <ChartPurchaseMarkers
-          markerYears={markerYears}
-          xForIndex={geo.xForIndex}
-          yTop={geo.padTop}
-          innerH={geo.innerH}
-        />
-        <ChartLifeEventMarkers markers={lifeEventMarkers} xForIndex={geo.xForIndex} yTop={geo.padTop} />
-        <ChartLabeledMarkers
-          markers={labeledMarkers}
-          xForIndex={geo.xForIndex}
-          yTop={geo.padTop}
-          innerH={geo.innerH}
-          left={PAD.left}
-          right={width - PAD.right}
-        />
-        {/* Above the year marks, or a dashed vertical mark runs through its text. */}
-        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={geo.padTop} />
-        <ChartFocusIndicator
-          active={active}
-          focusX={focusX}
-          yTop={geo.padTop}
-          innerH={geo.innerH}
-          scaleY={geo.scaleY}
-          lineSeries={lineSeries}
-        />
-        <ChartValueTags
-          spec={valueTags}
-          active={active}
-          focusX={focusX}
           width={width}
-          yTop={geo.padTop}
-          yBottom={geo.padTop + geo.innerH}
-          scaleY={geo.scaleY}
-          lines={lineSeries}
-          bands={series.filter((s) => s.kind === 'band')}
-          pointLines={series.flatMap((s) =>
-            s.tagged && s.points ? [{ id: s.id, color: s.color, points: s.points }] : [],
-          )}
+          formatValue={formatValue}
+          plotClipId={plotClipId}
+          refCurves={props.refCurves}
+          refHighlight={props.refHighlight}
+        />
+        <ChartLineLayers series={series} lineSeries={lineSeries} geo={geo} />
+        <ChartMarkLayers {...props} geo={geo} width={width} drawnHeight={drawnHeight} active={active} />
+        <ChartFocusLayers
+          series={series}
+          lineSeries={lineSeries}
+          valueTags={props.valueTags}
+          geo={geo}
+          width={width}
+          active={active}
+          focusX={focusX}
         />
       </svg>
       <StepKeysHint id={keysId} show={steppable} />
