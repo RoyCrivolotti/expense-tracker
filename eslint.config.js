@@ -73,7 +73,7 @@ const FUNCTION_LINE_CAPS = {
   'src/ui/tabs/goals/charts/RentVsOwnChart.tsx': 84,
   'src/ui/tabs/goals/charts/SavingsRateChart.tsx': 83,
   'src/ui/tabs/goals/charts/ScenarioComparison.tsx': 78,
-  'src/ui/tabs/goals/charts/SpreadChart.tsx': 138,
+  'src/ui/tabs/goals/charts/SpreadChart.tsx': 68,
   'src/ui/tabs/goals/charts/heroSheet/HeroChartSheet.tsx': 68,
   'src/ui/tabs/goals/charts/heroSheet/HeroFloatingReadout.tsx': 70,
   'src/ui/tabs/goals/desktop/PlanDesktop.tsx': 72,
