@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
@@ -45,6 +45,50 @@ function bandPosition(viewport: { top: number; height: number } | null): CSSProp
   return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
+/** The sheet's classes: whether a finger or an exit is moving it. */
+function sheetClassName(
+  dragging: boolean,
+  leaving: boolean,
+): string {
+  const classes = [styles.sheet]
+  if (dragging) classes.push(styles.sheetDragging)
+  if (leaving) classes.push(styles.sheetClosing)
+  return classes.join(' ')
+}
+
+function SheetHeader({
+  title,
+  subtitle,
+  onBack,
+  onClose,
+  headingRef,
+}: {
+  title: string
+  subtitle?: string | undefined
+  onBack?: (() => void) | undefined
+  onClose: () => void
+  headingRef: RefObject<HTMLHeadingElement | null>
+}) {
+  return (
+    <header className={styles.header} {...sheetGrabProps}>
+      {onBack && (
+        <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+          <BackIcon />
+        </button>
+      )}
+      <div className={styles.titleBlock}>
+        <h2 ref={headingRef} tabIndex={-1}>
+          {title}
+        </h2>
+        {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+      </div>
+      <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
+        <CloseIcon />
+      </button>
+    </header>
+  )
+}
+
 export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
@@ -78,10 +122,6 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
     headingRef.current?.focus()
   }, [title])
 
-  const sheetClasses = [styles.sheet, isDragging && styles.sheetDragging, leaving && styles.sheetClosing]
-    .filter(Boolean)
-    .join(' ')
-
   return (
     <div
       className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
@@ -97,7 +137,7 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
       <div className={styles.band} style={bandPosition(viewport)}>
         <div
           ref={sheetRef}
-          className={sheetClasses}
+          className={sheetClassName(isDragging, leaving)}
           style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
           role="dialog"
           aria-modal="true"
@@ -105,27 +145,13 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
           onClick={(e) => e.stopPropagation()}
         >
           <div className={styles.handle} aria-hidden {...sheetGrabProps} />
-          <header className={styles.header} {...sheetGrabProps}>
-            {onBack && (
-              <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
-                <BackIcon />
-              </button>
-            )}
-            <div className={styles.titleBlock}>
-              <h2 ref={headingRef} tabIndex={-1}>
-                {title}
-              </h2>
-              {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => requestClose()}
-              aria-label="Close"
-              className={`${styles.close} tapActive`}
-            >
-              <CloseIcon />
-            </button>
-          </header>
+          <SheetHeader
+            title={title}
+            subtitle={subtitle}
+            onBack={onBack}
+            onClose={() => requestClose()}
+            headingRef={headingRef}
+          />
           <div className={styles.body}>{children}</div>
         </div>
       </div>
