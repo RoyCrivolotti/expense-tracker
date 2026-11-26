@@ -99,6 +99,24 @@
   transition: transform var(--motion-enter-sheet) var(--motion-ease-out);
 }
 
+/*
+ * A sheet that keeps the field being typed in at its top (useFieldReveal) takes the whole visible slice while a phone
+ * keyboard is up (useKeyboardOpen): the keyboard has the lower half of the screen, and on the shortest phone the
+ * strip of scrim above the sheet was the room a third suggestion under the field needed. It grows and shrinks back
+ * with the keyboard. Only where the sheet is a phone's (PHONE_LAYOUT in useFieldReveal): an iPad's docked keyboard
+ * leaves a dialog plenty of room.
+ */
+.sheetTall {
+  transition:
+    transform var(--motion-enter-sheet) var(--motion-ease-out),
+    max-height var(--motion-enter-sheet) var(--motion-ease-out);
+}
+@media (max-width: 559px), (max-height: 559px) {
+  :global(html[data-keyboard-open]) .sheetTall {
+    max-height: 100%;
+  }
+}
+
 .sheetDragging {
   transition: none;
   /* Also cancels a still-running `sheet-in`: animations outrank inline styles, so

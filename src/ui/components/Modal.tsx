@@ -6,6 +6,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useExit } from '../hooks/usePresence'
 import { EASE_THROWN, useSheetExit, type SheetRelease } from '../hooks/useSheetExit'
 import { sheetGrabProps, useSwipeDismiss } from '../hooks/useSwipeDismiss'
+import { useFieldReveal } from '../hooks/useFieldReveal'
 import styles from './Modal.module.css'
 
 /** The scrim at rest. Thins towards nothing as the sheet is dragged away. */
@@ -19,6 +20,8 @@ interface ModalProps {
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
+  /** With a phone keyboard up, keep the field being typed in at the top of the sheet (see `useFieldReveal`). */
+  revealFields?: boolean
 }
 
 /**
@@ -45,12 +48,14 @@ function bandPosition(viewport: { top: number; height: number } | null): CSSProp
   return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
-/** The sheet's classes: whether a finger or an exit is moving it. */
+/** The sheet's classes: its size while a keyboard is up, and whether a finger or an exit is moving it. */
 function sheetClassName(
+  revealFields: boolean,
   dragging: boolean,
   leaving: boolean,
 ): string {
   const classes = [styles.sheet]
+  if (revealFields) classes.push(styles.sheetTall)
   if (dragging) classes.push(styles.sheetDragging)
   if (leaving) classes.push(styles.sheetClosing)
   return classes.join(' ')
@@ -89,7 +94,15 @@ function SheetHeader({
   )
 }
 
-export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
+export function Modal({
+  title,
+  subtitle,
+  onClose,
+  onBack,
+  children,
+  trapPaused = false,
+  revealFields = false,
+}: ModalProps) {
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
   const { leaving, exitMs } = useExit()
@@ -106,6 +119,7 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
   const { release, requestClose } = useSheetExit(sheetRef, onClose, leaving)
   useFocusTrap(sheetRef, requestClose, trapPaused || leaving)
   const { offset, isDragging, progress } = useSwipeDismiss(sheetRef, requestClose, !trapPaused && !leaving)
+  useFieldReveal(sheetRef, revealFields && !leaving)
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   // Skip the first run: useFocusTrap already sends initial focus to the first
@@ -137,7 +151,7 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
       <div className={styles.band} style={bandPosition(viewport)}>
         <div
           ref={sheetRef}
-          className={sheetClassName(isDragging, leaving)}
+          className={sheetClassName(revealFields, isDragging, leaving)}
           style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
           role="dialog"
           aria-modal="true"
