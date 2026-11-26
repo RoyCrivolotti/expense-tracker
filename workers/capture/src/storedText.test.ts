@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readPushSlots } from '../../../src/domain/capture'
 import type { Slot } from '../../../src/domain/capture'
-import { slotsJson } from './store'
+import { slotsJson } from './storedText'
 
 const code = (index: number): Slot => ({ kind: 'code', index })
 

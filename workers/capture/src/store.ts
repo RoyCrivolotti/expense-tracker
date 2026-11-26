@@ -16,11 +16,8 @@ import type { NewRecommendation } from '../../../src/domain/ports/captureRecomme
 import type { TemplateDecision } from '../../../src/domain/ports/captureTemplates'
 import { hmacHex } from './hmac'
 import type { CreatedPayment } from './notify'
+import { MAX_BODY, MAX_MERCHANT, slotsJson } from './storedText'
 import { decideTemplate, mutes } from './templates'
-
-const MAX_MERCHANT = 200
-const MAX_BODY = 500
-const MAX_SLOTS_JSON = 2000
 
 /**
  * What became of a push. `grouped`: it was stored as another push of an open recommendation of the same movement
@@ -29,23 +26,6 @@ const MAX_SLOTS_JSON = 2000
  * caller counts it as unread; `code-like` when all it holds is a code.
  */
 export type StoreResult = 'stored' | 'grouped' | 'replay' | 'limited' | 'ignored' | 'no-amount' | 'code-like'
-
-/**
- * The slots as JSON, keeping the longest run from the start that fits the column. Each slot is written once and the
- * lengths added up, so a body full of numbers costs one pass rather than one stringify per slot dropped.
- */
-export function slotsJson(slots: readonly Slot[]): string {
-  const parts: string[] = []
-  let length = 2
-  for (const slot of slots) {
-    const part = JSON.stringify(slot)
-    const next = length + part.length + (parts.length > 0 ? 1 : 0)
-    if (next > MAX_SLOTS_JSON) break
-    parts.push(part)
-    length = next
-  }
-  return `[${parts.join(',')}]`
-}
 
 /** The amount a push makes a recommendation of: the first reading of its one currency-marked number, or null. */
 function amountOf(reading: PushReading): { cents: number; currency: string } | null {
