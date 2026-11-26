@@ -96,6 +96,30 @@ describe('submitting when a typed row looks the same', () => {
     expect((error as PossibleDuplicateError).possibleMatch).toEqual(match)
   })
 
+  it('keeps the amount, type and account of the row when the server sends them, and only well-formed ones', async () => {
+    const full = {
+      transactionId: 41,
+      description: 'Cafe',
+      date: '2026-11-09',
+      amountCents: 1250,
+      type: 'expense',
+      accountId: 2,
+    }
+    refuse({ code: 'possible-duplicate', possibleMatch: full })
+    expect(
+      ((await submitRecommendation(ID, input).catch((e: unknown) => e)) as PossibleDuplicateError).possibleMatch,
+    ).toEqual(full)
+
+    refuse({ code: 'possible-duplicate', possibleMatch: { ...full, amountCents: '12', type: 7, accountId: null } })
+    expect(
+      ((await submitRecommendation(ID, input).catch((e: unknown) => e)) as PossibleDuplicateError).possibleMatch,
+    ).toEqual({
+      transactionId: 41,
+      description: 'Cafe',
+      date: '2026-11-09',
+    })
+  })
+
   it('leaves any other 409 as the plain error it is', async () => {
     refuse({ error: 'This recommendation was already decided' })
 

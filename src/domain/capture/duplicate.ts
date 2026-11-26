@@ -38,16 +38,31 @@ export interface TypedRow {
   type: string
   /** As stored: positive for every type, except an investment taken back out, which is negative. */
   amountCents: number
+  /** The account the row is on, for showing the row in full. Absent where the caller did not read it. */
+  accountId?: number
   /** The push of the recommendation the row answers for, when one does. Absent or null for a row none answers for. */
   answers?: PushDates | null
 }
 
-/** A typed row that looks like the same payment. */
+/** A typed row that looks like the same payment, with enough of it to show the row in full. */
 export interface PossibleMatch {
   transactionId: number
   description: string
   date: string
+  /** As stored (see `TypedRow.amountCents`), with the row's type and account: absent from a reader that predates them. */
+  amountCents?: number
+  type?: string
+  accountId?: number
 }
+
+const toMatch = (row: TypedRow): PossibleMatch => ({
+  transactionId: row.id,
+  description: row.description,
+  date: row.date,
+  amountCents: row.amountCents,
+  type: row.type,
+  ...(row.accountId === undefined ? {} : { accountId: row.accountId }),
+})
 
 export { type Direction, paymentDirection, rowDirection } from './direction'
 
@@ -159,7 +174,7 @@ export function possibleMatchFor(
     const gap = Math.abs(dayGap(row.date, payment.localDate))
     if (!best || gap < best.gap || (gap === best.gap && row.id > best.row.id)) best = { row, gap }
   }
-  return best ? { transactionId: best.row.id, description: best.row.description, date: best.row.date } : null
+  return best ? toMatch(best.row) : null
 }
 
 /** A payment of a page, with what orders it among payments of the same day. */
@@ -196,7 +211,7 @@ export function possibleMatchesFor(
   for (const { payment, row } of pairs) {
     if (result.get(payment.id) !== null || taken.has(row.id)) continue
     taken.add(row.id)
-    result.set(payment.id, { transactionId: row.id, description: row.description, date: row.date })
+    result.set(payment.id, toMatch(row))
   }
   return result
 }

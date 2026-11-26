@@ -16,6 +16,7 @@ interface CandidateRow {
   description: string
   type: string
   amount_cents: number
+  account_id: number
   answers_occurred_at: string | null
   answers_local_date: string | null
 }
@@ -25,7 +26,15 @@ function toTypedRow(r: CandidateRow): TypedRow {
     r.answers_occurred_at === null || r.answers_local_date === null
       ? null
       : { occurredAt: r.answers_occurred_at, localDate: r.answers_local_date }
-  return { id: r.id, date: r.date, description: r.description, type: r.type, amountCents: r.amount_cents, answers }
+  return {
+    id: r.id,
+    date: r.date,
+    description: r.description,
+    type: r.type,
+    amountCents: r.amount_cents,
+    accountId: r.account_id,
+    answers,
+  }
 }
 
 /**

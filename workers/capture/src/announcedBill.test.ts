@@ -104,6 +104,12 @@ const card = (
   shop = 'Cafe Example',
 ) => send('Card payment', `${shop} *4321 ${amount} EUR`, at)
 
+/** The whole of what the list and a refused save say of the 47,15 water bill already entered. */
+const matchOf = (
+  transactionId: number,
+  date: string,
+) => ({ transactionId, description: 'Water bill', date, amountCents: 4715, type: 'expense', accountId: 1 })
+
 const entry = (
   date: string,
   amountCents: number,
@@ -141,7 +147,7 @@ describe('a bill announced, then charged', () => {
     const row = await save(announced, entry('2026-11-25', 4715))
     const charged = await charge('-47,15', '2026-11-25T06:10')
 
-    expect(await offerOf(charged)).toEqual({ transactionId: row, description: 'Water bill', date: '2026-11-25' })
+    expect(await offerOf(charged)).toEqual(matchOf(row, '2026-11-25'))
     expect(await linkRecommendation(captures(), expenses(), ALICE, charged, row, NOW)).toEqual({ ok: true })
     expect(recRow(charged)).toEqual({ state: 'submitted', txn_id: row })
     expect(recRow(announced)).toEqual({ state: 'submitted', txn_id: null })
@@ -258,7 +264,7 @@ describe('a bill announced, then charged', () => {
     ).toEqual({
       ok: false,
       reason: 'possible-duplicate',
-      possibleMatch: { transactionId: row, description: 'Water bill', date: '2026-12-02' },
+      possibleMatch: matchOf(row, '2026-12-02'),
     })
     expect(rowCount()).toBe(1)
   })
@@ -271,7 +277,7 @@ describe('a bill announced, then charged', () => {
     expect(await submitRecommendation(captures(), expenses(), ALICE, charged, entry('2026-11-25', 4715), NOW)).toEqual({
       ok: false,
       reason: 'possible-duplicate',
-      possibleMatch: { transactionId: row, description: 'Water bill', date: '2026-11-25' },
+      possibleMatch: matchOf(row, '2026-11-25'),
     })
     expect(rowCount()).toBe(1)
     const added = await submitRecommendation(

@@ -51,6 +51,16 @@ export interface Recommendation extends NewRecommendation {
    * in on a list read, not on a single read.
    */
   suggestion?: Suggestion | null
+  /**
+   * The stored text of the push that made it, for the person to read beside the fields. Null for one no push made and
+   * once the text is blanked. Filled in on a list read, not on a single read.
+   */
+  message?: string | null
+  /**
+   * Whether `merchantRaw` is a merchant, by `merchantKeyOf`: false for a whole message and for no text, which are never
+   * shown as a name. Filled in on a list read, not on a single read.
+   */
+  named?: boolean
   state: RecommendationState
   txnId: number | null
   decidedAt: string | null

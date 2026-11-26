@@ -14,7 +14,7 @@
  *
  * The amounts travel as one JSON value, since a statement binds at most 100 values.
  */
-export const MATCH_CANDIDATES_SQL = `SELECT t.id, t.date, t.description, t.type, t.amount_cents,
+export const MATCH_CANDIDATES_SQL = `SELECT t.id, t.date, t.description, t.type, t.amount_cents, t.account_id,
 r.occurred_at AS answers_occurred_at, r.local_date AS answers_local_date
 FROM transactions t
 LEFT JOIN recommendations r ON r.owner = ?1 AND r.txn_id = t.id

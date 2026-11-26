@@ -3,6 +3,7 @@ import { migratedDatabase, newStats, sqliteD1, type SqliteD1Stats } from '../../
 import type { CaptureRepository } from '../../../src/domain/ports/captureRepository'
 import type { Slot } from '../../../src/domain/capture'
 import { createD1CaptureRepository } from '../adapters/d1CaptureRepository'
+import { withSuggestions } from '../adapters/d1CaptureSuggestions'
 
 const ALICE = 'alice@example.com'
 const BOB = 'bob@example.com'
@@ -38,6 +39,7 @@ interface Push {
   template?: string
   slots?: Slot[]
   localDate?: string
+  body?: string | null
 }
 
 /** One stored push and its recommendation. Invented data. */
@@ -67,7 +69,7 @@ async function push(o: Push = {}): Promise<string> {
       localDate,
       offsetMinutes: 60,
       receivedAt: T0,
-      body: null,
+      body: o.body ?? null,
       slots: JSON.stringify(o.slots ?? SLOTS),
     },
     {
@@ -113,6 +115,13 @@ const suggestionOf = async (
   id: string,
   owner = ALICE,
 ) => (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.suggestion
+
+const namedOf = async (id: string) => (await repo.listOpenRecommendations(ALICE, 50)).find((r) => r.id === id)?.named
+
+const messageOf = async (
+  id: string,
+  owner = ALICE,
+) => (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.message
 
 describe('the suggestion on the list', () => {
   it('carries the person’s description and category for the merchant and the template’s type and account', async () => {
@@ -170,7 +179,42 @@ describe('the suggestion on the list', () => {
     })
 
     expect(await suggestionOf('rec-alone')).toBeNull()
+    expect(await messageOf('rec-alone')).toBeNull()
+    expect(await namedOf('rec-alone')).toBe(true)
   })
+
+  it('carries the text of the push that made it, to its owner only, and null once the text is blanked', async () => {
+    const body = 'Card used: 12,50 EUR, CAFE EXAMPLE'
+    const id = await push({ body })
+    const blanked = await push({ body: null })
+
+    expect(await messageOf(id)).toBe(body)
+    expect(await messageOf(blanked)).toBeNull()
+    expect(await messageOf(id, BOB)).toBeUndefined()
+    // The read itself is the person's own: asked for another person's payment by its id, it finds no push at all.
+    const db = sqliteD1(sqlite, stats)
+    const page = (await repo.listOpenRecommendations(ALICE, 50)).filter((r) => r.id === id)
+    expect((await withSuggestions(db, ALICE, page))[0]!.message).toBe(body)
+    expect((await withSuggestions(db, BOB, page))[0]).toMatchObject({ message: null, suggestion: null })
+  })
+
+  it.each([
+    'Example Bank alert: 43,80 EUR today',
+    'A shop took 12,50€ just now',
+    'You paid $18.20 at a shop',
+    'Approved, 1.250,00 EUR in all',
+    'EUR 9,99 booked this morning',
+    'Your operation went through without any problem and you can now look it up in the list of the app',
+  ])('says a whole message is not a name, whatever its wording: %s', async (merchant) => {
+    expect(await namedOf(await push({ merchant }))).toBe(false)
+  })
+
+  it.each(['CAFE EXAMPLE 0042', 'MERCADO EJEMPLO', 'BAR 33 EJEMPLO'])(
+    'says a merchant is a name: %s',
+    async (merchant) => {
+      expect(await namedOf(await push({ merchant }))).toBe(true)
+    },
+  )
 
   it('suggests nothing from a whole push, which is not a merchant', async () => {
     const id = await push({ merchant: 'Has pagado 12,50 EUR en CAFE EXAMPLE' })

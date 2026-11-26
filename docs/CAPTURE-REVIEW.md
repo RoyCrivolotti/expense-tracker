@@ -138,8 +138,8 @@ your bank, review", and its "+" opens that payment's review instead of a new row
 ## The typed row a payment may duplicate
 
 A person often types a payment at the till, and the push arrives minutes later. Each recommendation in the list carries
-`possibleMatch: { transactionId, description, date }`, or null: a row the person already typed that looks like the same
-payment. The list never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
+`possibleMatch: { transactionId, description, date, amountCents, type, accountId }`, or null: a row the person already
+typed that looks like the same payment, with enough of it to show the row in full (the amount is as stored). The list never blocks anything, since a wrong match costs one tap: the payment goes to Review, where Link points it at
 that row. Submit looks again, because a row can be typed between the list read and the press: it checks the row being
 submitted (its date, amount and type, so a payment the person changed is judged as changed) with the same rule and window,
 and answers 409 `possible-duplicate` with the match when one exists, creating nothing. Sending `allowDuplicate: true`

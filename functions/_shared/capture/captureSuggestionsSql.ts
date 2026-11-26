@@ -6,10 +6,10 @@
 /**
  * The slots of the push behind each recommendation of a page, and what its template has learned. A recommendation
  * with several pushes is read through the one that made it, the push learning teaches. `known` is null when the push has
- * no template or it was evicted. A recommendation no push made has no row. The page's ids drive the read (`CROSS JOIN`
+ * no template or it was evicted. `body` is that push's stored text, null once it is blanked. A recommendation no push made has no row. The page's ids drive the read (`CROSS JOIN`
  * keeps that order), so it never walks the person's other events.
  */
-export const SUGGESTION_EVENTS_SQL = `SELECT j.value AS rec_id, e.slots, t.template_id AS known, t.accepts, t.dismissals,
+export const SUGGESTION_EVENTS_SQL = `SELECT j.value AS rec_id, e.slots, e.body, t.template_id AS known, t.accepts, t.dismissals,
 t.dismiss_streak, t.amount_slot, t.amount_mark, t.type, t.account_id, t.ignored_at
 FROM json_each(?2) j
 CROSS JOIN capture_events e
