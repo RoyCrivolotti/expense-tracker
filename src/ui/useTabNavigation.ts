@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { scrollBehavior } from './hooks/scrollTiming'
 import type { TabId } from './nav/navItems'
 import type { GoalsEntry } from './tabs/goals/GoalsTab'
 import type { SettingsView } from './tabs/SettingsTab'
@@ -8,6 +9,9 @@ import type { TransactionsEntry } from './tabs/transactionsEntry'
  * Which tab is open, and what a tab was sent to do when something opened it for one thing: Goals on a check-in, Transactions
  * with a filter, Settings on a section. Every route out of a tab goes through `guardLeave`, which asks first if the tab holds
  * unsaved edits. Pressing the tab already open leaves nothing, so it never asks.
+ *
+ * Every tab opens at its top. The page is one window scroll shared by all of them, so a tab would otherwise open at whatever
+ * offset the last one was left at. Pressing the tab already open goes back to its top too.
  */
 export function useTabNavigation(
   guardLeave: (go: () => void) => void,
@@ -28,7 +32,10 @@ export function useTabNavigation(
     setGoalsEntry(entries.goals ?? null)
     setTxnEntry(entries.txn ?? null)
     setSettingsEntry(entries.settings ?? null)
+    if (next === tab) return
     setTab(next)
+    // At once rather than after the render, so a tab that scrolls itself into place as it opens has the last word.
+    window.scrollTo({ top: 0, behavior: 'auto' })
   }
   const goTo = (
     next: TabId,
@@ -42,7 +49,10 @@ export function useTabNavigation(
     goalsEntry,
     txnEntry,
     settingsEntry,
-    selectTab: (next: TabId) => goTo(next, null),
+    selectTab: (next: TabId) => {
+      goTo(next, null)
+      if (next === tab) window.scrollTo({ top: 0, behavior: scrollBehavior('smooth') })
+    },
     logCheckin: () => goTo('goals', 'checkin'),
     openImport: () => guardLeave(() => open('settings', { settings: 'data' })),
     // The Analytics drill-down: land on Transactions with the row's filters applied, on the month the row described.
