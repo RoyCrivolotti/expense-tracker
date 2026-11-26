@@ -106,6 +106,7 @@ export function Fields(props: FieldsProps) {
       <FirstPaymentLine model={model} editing={editing !== null} />
       <TypeChips form={form} set={set} investmentCategoryId={investmentCategoryId} />
       <Field label={`Amount (${format.symbol})`}>
+        {/* Not focused on opening: the sheet first shows the whole payment, and a keyboard comes up for a tap. */}
         <input
           className={styles.amount}
           type="text"
@@ -113,7 +114,6 @@ export function Fields(props: FieldsProps) {
           autoComplete="off"
           value={form.amount}
           onChange={(e) => set('amount', e.target.value)}
-          autoFocus
           required
         />
       </Field>

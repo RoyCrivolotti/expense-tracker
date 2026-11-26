@@ -123,6 +123,34 @@ function singleForm(container: HTMLElement) {
   return within(container.querySelector('form')!)
 }
 
+describe('TransactionModal, opening', () => {
+  /** Every element that took focus while the sheet opened, however briefly. */
+  async function focusedWhileOpening(open: () => void): Promise<Element[]> {
+    const seen: Element[] = []
+    const record = (event: FocusEvent) => seen.push(event.target as Element)
+    document.addEventListener('focusin', record)
+    try {
+      open()
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus())
+    } finally {
+      document.removeEventListener('focusin', record)
+    }
+    return seen
+  }
+  const fields = (seen: Element[]) => seen.filter((el) => el.matches('input, textarea, select'))
+
+  // On a phone a field taking focus as the sheet opens can bring the keyboard up over the payment the person has not
+  // read yet. The sheet lands on its Close button and a field waits for a tap.
+  it('focuses no field when adding a transaction', async () => {
+    expect(fields(await focusedWhileOpening(() => renderModal()))).toEqual([])
+  })
+
+  it('focuses no field when reviewing a captured payment', async () => {
+    const seed: TransactionSeed = { recommendationId: '0b0c0d0e-1111-4222-8333-444455556699', amountCents: 4380 }
+    expect(fields(await focusedWhileOpening(() => renderModal({ seed })))).toEqual([])
+  })
+})
+
 describe('TransactionModal — batch mode toggle', () => {
   it('shows the Add one / Add multiple toggle for a from-scratch add', () => {
     renderModal()
