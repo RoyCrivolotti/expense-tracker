@@ -28,6 +28,9 @@ describe('messageDate: the formats it reads', () => {
     ['a month name in one word', 'Charge 47.15 EUR on 24-Nov-2026', '2026-11-24'],
     ['a month name in one word with no year', 'Charge 47.15 EUR on 24-nov', '2026-11-24'],
     ['an accented capitalised month', 'Cargo 47,15 EUR el 2 de DICIEMBRE', '2026-12-02'],
+    ['a two-digit year with dashes', 'Cargo de 47,15 EUR el 24-11-26', '2026-11-24'],
+    ['a Spanish month with a one-digit day', 'Se cargará 47,15 EUR el 1 de diciembre', '2026-12-01'],
+    ['the amount after an English date', 'On 25 Nov 2026 we will charge 47.15 EUR', '2026-11-25'],
   ])('%s', (_name, text, date) => {
     expect(dateIn(text)).toBe(date)
   })
@@ -57,6 +60,9 @@ describe('messageDate: the window around the arrival', () => {
     expect(dateIn('Cargo 5,00 EUR el 2/1', '2026-12-30')).toBe('2027-01-02')
     expect(dateIn('Paid 5,00 EUR on 30 Dec', '2027-01-02')).toBe('2026-12-30')
     expect(dateIn('Cargo 5,00 EUR el 31/12/2026', '2027-01-03')).toBe('2026-12-31')
+    expect(dateIn('Se cargará 5,00 EUR el 1 de julio', '2027-06-30')).toBe('2027-07-01')
+    expect(dateIn('Cargo 5,00 EUR el 2/1', '2027-12-31')).toBe('2028-01-02')
+    expect(dateIn('Paid 5,00 EUR on 30/12', '2027-12-31')).toBe('2027-12-30')
   })
 
   it('reads 29 February only in a year that has one', () => {
@@ -75,6 +81,12 @@ describe('messageDate: the window around the arrival', () => {
   it('puts the right day on a payment whose phone clock is a day out', () => {
     expect(dateIn('Paid 5,00 EUR on 23/11/2026', '2026-11-24')).toBe('2026-11-23')
     expect(dateIn('Paid 5,00 EUR on 23/11/2026', '2026-11-22')).toBe('2026-11-23')
+  })
+})
+
+describe('messageDate: a payment announced for the day it arrives', () => {
+  it('gives the arrival day itself, which the Worker stores as it would with no date', () => {
+    expect(dateIn('El 23/11/2026 se cargará 47,15 EUR')).toBe(ARRIVAL)
   })
 })
 
