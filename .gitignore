@@ -13,6 +13,8 @@ config/access.json
 config/goal-scenarios.seed.json
 workers/**/.wrangler/
 .wrangler/
+# Written by scripts/deploy-capture.mjs for one deploy, with the account and database ids filled in.
+workers/capture/wrangler.filled.toml
 config/backup-alerts.json
 config/dev.json
 .tmp/
