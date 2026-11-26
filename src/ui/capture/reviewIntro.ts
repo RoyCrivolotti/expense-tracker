@@ -2,6 +2,7 @@ import { cleanText } from '../../domain/capture/text'
 import type { MoneyFormat } from '../../engine/money'
 import type { SeedIntro } from '../actions'
 import type { ReviewView } from './reviewFields'
+import { signedAmount } from './reviewFormat'
 import { introNotes } from './reviewNotes'
 import { arrivedLabel, pairSentence, whyReasons, type PairSide } from './reviewWhy'
 
@@ -19,6 +20,7 @@ export function introOf(
   const message = view.rec.message ?? view.rec.merchantRaw
   return {
     arrived: arrivedLabel(view),
+    amount: signedAmount(view, format) || 'No amount',
     message: message ? cleanText(message) : null,
     reasons: whyReasons(view, pair, today),
     notes: introNotes(view),
