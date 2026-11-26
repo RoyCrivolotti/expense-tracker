@@ -10,10 +10,15 @@ interface SaveButtonsProps {
   uploading: { done: number; total: number } | null
   editing: Transaction | null
   retrying: boolean
+  /** Set once the server has refused a save for an entry that looks like this payment: the button then adds it anyway. */
+  anyway?: (() => void) | undefined
 }
 
-/** The form's save button, and "Don't add" beside it when the payment came from a queue of captured ones. */
-export function SaveButtons({ view, queue, busy, uploading, editing, retrying }: SaveButtonsProps) {
+/**
+ * The form's save button, and "Don't add" beside it when the payment came from a queue of captured ones. After a save
+ * refused for a possible duplicate it reads "Add anyway", and pressing it tells the save to go ahead whatever it matches.
+ */
+export function SaveButtons({ view, queue, busy, uploading, editing, retrying, anyway }: SaveButtonsProps) {
   return (
     <>
       {view === 'fields' && queue && (
@@ -21,8 +26,8 @@ export function SaveButtons({ view, queue, busy, uploading, editing, retrying }:
           Don&apos;t add
         </button>
       )}
-      <button type="submit" className={`${styles.save} tapActive`} disabled={busy}>
-        {saveLabel({ busy, uploading, editing, retrying, queueLeft: queue?.left })}
+      <button type="submit" className={`${styles.save} tapActive`} disabled={busy} onClick={anyway}>
+        {anyway && !busy ? 'Add anyway' : saveLabel({ busy, uploading, editing, retrying, queueLeft: queue?.left })}
       </button>
     </>
   )

@@ -1,5 +1,6 @@
 import { paymentDirection } from '../../domain/capture/direction'
-import { formatCents, type MoneyFormat } from '../../engine/money'
+import { wholeEuros, type WaitingTotals } from '../../domain/capture/totals'
+import { formatCents, formatCentsCompact, type MoneyFormat } from '../../engine/money'
 import type { TxnType } from '../../types'
 import { shortDayLabel } from '../format'
 import type { ReviewView } from './reviewFields'
@@ -20,18 +21,6 @@ export function weekdayDay(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(fromIso(iso))
 }
 
-/**
- * The row's day: the day and time the push says, or for a payment its bank's words dated, "Charges Tue 24 Nov" when
- * the bank announced a charge still to come ("Arrives Fri 4 Dec" for money coming in) and "Fri 20 Nov, from the
- * message" when it reported one late.
- */
-export function rowDay(view: Pick<ReviewView, 'date' | 'time' | 'fromMessage' | 'type'>): string {
-  const day = weekdayDay(view.date)
-  if (!view.fromMessage) return [day, view.time].filter(Boolean).join(', ')
-  if (view.date < view.fromMessage.arrivedDate) return `${day}, from the message`
-  return `${paymentDirection(view.type) === 'in' ? 'Arrives' : 'Charges'} ${day}`
-}
-
 /** "due 10 Nov", from a series' usual date. The date is one word: it never breaks across lines. */
 export const dueOn = (usualDate: string) => `due ${shortDayLabel(usualDate).replace(' ', '\u00a0')}`
 
@@ -40,14 +29,44 @@ export function monthWord(yearMonth: string): string {
   return new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(fromIso(`${yearMonth}-01`))
 }
 
-/** The amount with its sign, as the row and the toast show it. An unknown amount is blank. */
+const SIGN = { in: '+', out: '\u2212' } as const
+
+/**
+ * The amount with its sign, as the row and the toast show it: a plus for money in, a minus for money out, and no sign
+ * where the direction is not known or the amount is zero. Not in euros, it is written in its own currency. An unknown
+ * amount is blank.
+ */
 export function signedAmount(
-  view: ReviewView,
+  view: Pick<ReviewView, 'amountCents' | 'type' | 'reasons' | 'rec'>,
   format: MoneyFormat,
 ): string {
   if (view.amountCents === null) return ''
-  const sign = view.type === 'income' || view.type === 'refund' ? '+' : view.type === 'expense' ? '−' : ''
-  return `${sign}${formatCents(view.amountCents, format)}`
+  const direction = view.amountCents === 0 ? null : paymentDirection(view.type)
+  const amount = view.reasons.includes('foreign') ? foreignAmount(view) : formatCents(view.amountCents, format)
+  return `${direction ? SIGN[direction] : ''}${amount}`
+}
+
+/** One of the header's totals. */
+export interface TotalChip {
+  way: 'in' | 'out'
+  /** "+1.850 €": whole euros, since the cents are on the rows. */
+  text: string
+  /** What a screen reader adds after it. */
+  spoken: string
+}
+
+/** The header's totals, money in first. A side whose total is zero in whole euros has no chip. */
+export function totalChips(
+  totals: WaitingTotals,
+  format: MoneyFormat,
+): TotalChip[] {
+  const sides = [
+    { way: 'in', cents: totals.inCents, spoken: 'coming in' },
+    { way: 'out', cents: totals.outCents, spoken: 'going out' },
+  ] as const
+  return sides
+    .filter((side) => wholeEuros(side.cents) !== 0)
+    .map(({ way, cents, spoken }) => ({ way, text: `${SIGN[way]}${formatCentsCompact(cents, format)}`, spoken }))
 }
 
 /** The seven fields as one line: type, category, account, date, budget month. Amount and description sit on the first. */
@@ -67,14 +86,14 @@ export function toastText(
   view: ReviewView,
   format: MoneyFormat,
 ): string {
-  return `${verb} · ${view.description || 'Payment'} ${signedAmount(view, format)}\n${detailLine(view)}`.replace(
+  return `${verb} · ${view.description || 'Unnamed payment'} ${signedAmount(view, format)}\n${detailLine(view)}`.replace(
     / \n/,
     '\n',
   )
 }
 
 /** An amount in a currency other than euros, written with its own code. Never read as euros. */
-export function foreignAmount(view: ReviewView): string {
+export function foreignAmount(view: Pick<ReviewView, 'amountCents' | 'rec'>): string {
   const major = (view.amountCents ?? 0) / 100
   const code = view.rec.currency ?? ''
   try {

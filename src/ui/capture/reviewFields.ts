@@ -27,9 +27,14 @@ export interface ReviewView {
   amountCents: number | null
   /**
    * The person's own description for the merchant, from the server's memory of what they added it with, else from the
-   * rows the app holds; else the bank's text cleaned, else empty.
+   * rows the app holds; else the merchant in the bank's text. Empty when nothing names the payment.
    */
   description: string
+  /**
+   * True when nothing names the payment: no history, no series, and the bank's text is not a merchant but a whole
+   * message (`merchantKeyOf`), which is never shown as a name.
+   */
+  unnamed: boolean
   /** True when the description is how the person named this merchant before, not the bank's own text. */
   fromHistory: boolean
   categoryId: number | null
@@ -46,9 +51,13 @@ export interface ReviewView {
   fromMessage: MessageDating | null
   /** Days the bank might book it on that would be another budget month. Empty unless near an edge. */
   edgeDays: string[]
+  /** The budget month the first of those days falls in, or null without one. */
+  edgeMonth: string | null
   reasons: ReviewReason[]
   /** True only when nothing is in doubt, so one tap may add it. */
   oneTap: boolean
+  /** True when a monthly series named the payment and filled its fields. */
+  filled: boolean
   /** The monthly series the payment may be, or null when none fits. A hint for the person, never a decision. */
   hint: Exclude<SeriesHint, { kind: 'none' }> | null
   /**
@@ -56,6 +65,37 @@ export interface ReviewView {
    * than the push's, or a push that named no account. Null otherwise.
    */
   hintAccount: string | null
+}
+
+/**
+ * The merchant in the bank's text, less its store numbers, or null when the text is not a merchant. The server says
+ * which it is (`named`), by the one rule that also keeps a whole message out of the merchant memory (`merchantKeyOf`):
+ * text that shows an amount with its currency is a message, whatever the bank's wording, and is never a name. Reading
+ * the text here would bring the message parser into the app for one answer the list already has.
+ */
+function merchantIn(rec: RecommendationInfo): string | null {
+  return rec.merchantRaw === null || rec.named === false ? null : bankMerchantName(cleanText(rec.merchantRaw))
+}
+
+/** When the payment happened and which budget month that is, with the days that could move it to another. */
+function datingOf(
+  rec: RecommendationInfo,
+  model: ExpenseModel,
+) {
+  const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
+  const monthOf = (day: string) => suggestBudgetMonth(model, day)
+  const fromMessage = messageDating(rec.occurredAt, rec.localDate)
+  // A day the bank wrote is the day it books: no day either side of it is in question.
+  const edgeDays = fromMessage ? [] : otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
+  return {
+    date: rec.localDate,
+    time: clock.time,
+    budgetMonth: monthOf(rec.localDate),
+    clock,
+    fromMessage,
+    edgeDays,
+    edgeMonth: edgeDays[0] === undefined ? null : monthOf(edgeDays[0]),
+  }
 }
 
 /**
@@ -70,48 +110,44 @@ export function describeRecommendation(
   hint: SeriesHint = NO_HINT,
 ): ReviewView {
   const bankText = rec.merchantRaw === null ? null : cleanText(rec.merchantRaw)
+  const merchant = merchantIn(rec)
   const history = historyOf(rec, merchants, bankText)
   const pushed = taught(rec)
   const { amountCents, newShape, amountRelearned } = pushed
   const { fill, type, refs, askCard, ...hinted } = seriesReading(hint, history, pushed, rec, model)
-  const clock = paymentClock(rec.occurredAt, rec.localDate, rec.createdAt)
-  const monthOf = (day: string) => suggestBudgetMonth(model, day)
-  const fromMessage = messageDating(rec.occurredAt, rec.localDate)
-  // A day the bank wrote is the day it books: no day either side of it is in question.
-  const edgeDays = fromMessage ? [] : otherBudgetDays(monthOf, rec.localDate, clock.minuteOfDay, clock.arrivedDate)
+  const dated = datingOf(rec, model)
   const found = reviewReasons({
     amountCents,
     currency: rec.currency,
-    hasMerchant: !!bankText,
+    hasMerchant: merchant !== null,
     categoryId: refs.categoryId,
     accountId: refs.accountId,
     suggestedType: type,
     sightings: history.sightings,
     settled: history.settled,
-    monthEdge: edgeDays.length > 0,
+    monthEdge: dated.edgeDays.length > 0,
     possibleMatch: rec.possibleMatch != null,
     newShape,
     amountRelearned,
   })
   // A bank text seen for the first time is no news once a series has named the payment: the hint says what it is.
-  const reasons = fill ? found.filter((r) => r !== 'new-merchant') : found
+  const reasons = fill ? found.filter((r) => r !== 'new-merchant' && r !== 'no-merchant') : found
+  const description = fill?.description ?? history.label ?? merchant ?? ''
   return {
     rec,
     askCard,
     type,
     amountCents,
-    description: fill?.description ?? history.label ?? (bankText ? bankMerchantName(bankText) : ''),
+    description,
+    unnamed: description === '',
+    filled: !!fill,
     fromHistory: !fill && history.label !== null,
     ...refs,
-    date: rec.localDate,
-    time: clock.time,
-    budgetMonth: monthOf(rec.localDate),
-    clock,
-    fromMessage,
-    edgeDays,
+    ...dated,
     reasons,
-    // Two series are always the person's to choose between: votes never pick one by a tap.
-    oneTap: reasons.length === 0 && !fill && hint.kind !== 'choose',
+    // Two series are always the person's to choose between: votes never pick one by a tap. Nor is a payment added by a
+    // tap from another account than its series is paid from: the person is asked whether it moved.
+    oneTap: reasons.length === 0 && !fill && hint.kind !== 'choose' && hint.kind !== 'moved',
     ...hinted,
   }
 }

@@ -1,4 +1,5 @@
 import type { RecommendationInfo } from '../data/recommendationsApi'
+import { merchantKeyOf } from '../domain/capture/merchants'
 import type { ExpenseModel } from '../ui/useExpenseData'
 import { buildExpenseModel } from '../ui/buildExpenseModel'
 import { makeDataset, makeTransaction } from './factories'
@@ -25,7 +26,7 @@ export const arrivedAt = (
 
 /** A recommendation for a known merchant on an ordinary mid-month morning, with anything overridden. Invented data. */
 export function makeRecommendation(over: Partial<RecommendationInfo> = {}): RecommendationInfo {
-  return {
+  const rec = {
     id: '0b0c0d0e-1111-4222-8333-444455556661',
     accountId: 1,
     amountCents: 1250,
@@ -35,9 +36,11 @@ export function makeRecommendation(over: Partial<RecommendationInfo> = {}): Reco
     createdAt: arrivedAt(2026, 11, 10, 9, 42),
     merchantRaw: 'CAFE EXAMPLE 0042',
     descriptionSuggested: null,
-    suggestedType: 'expense',
+    suggestedType: 'expense' as const,
     ...over,
   }
+  // What the list says of the text, worked out as the server does, so a test that gives a whole message gets its flag.
+  return { named: merchantKeyOf(rec.merchantRaw) !== null, ...rec }
 }
 
 /** A model with one debit account, one card, two categories and two typed rows for "Cafe Example". */

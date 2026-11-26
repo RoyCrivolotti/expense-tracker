@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Presence } from '../components/Presence'
 import { Card } from '../components/primitives'
 import { EXIT_MS } from '../hooks/motion'
@@ -6,10 +6,13 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import type { ReviewCore } from './reviewContext'
 import { SHOWN_PHONE, SHOWN_WIDE, rowsShown } from './reviewFormat'
 import { pendingReviewId, withoutReview } from './reviewLanding'
-import { ReviewRow, type OnReview } from './ReviewRow'
+import { ReviewHeader } from './ReviewHeader'
+import { ReviewRows, type OnReview } from './ReviewRow'
+import { localToday } from './reviewToday'
 import { ReviewSheet } from './ReviewSheet'
+import { useCardFold } from './useCardFold'
 import { useReviewApi, type ReviewApi } from './useReviewApi'
-import styles from './Review.module.css'
+import styles from './ReviewList.module.css'
 
 function CardBody({
   review,
@@ -21,35 +24,42 @@ function CardBody({
   onReview: OnReview
 }) {
   const { views, count } = review
+  const [open, setOpen] = useCardFold()
+  const body = useId()
   // The shell's own breakpoint: below 768px it is a phone layout.
   const shown = rowsShown(views.length, useIsMobile() ? SHOWN_PHONE : SHOWN_WIDE)
   return (
-    <Card className={styles.card}>
-      <div className={styles.head}>
-        <h2 className={styles.title}>{count === 1 ? '1 payment to review' : `${count} payments to review`}</h2>
-        {views.length > shown || review.hasMore ? (
-          <button type="button" className={styles.link} onClick={() => onSheet(true)}>
-            See all {count}
-          </button>
-        ) : null}
+    <Card className={`${styles.card} ${open ? styles.open : ''}`}>
+      <ReviewHeader count={count} totals={review.totals} open={open} controls={body} onOpen={setOpen} />
+      <div id={body} className={styles.body} inert={!open}>
+        <div className={styles.inner}>
+          {review.canWrite ? null : (
+            <p className={styles.readOnly}>Saved copy. You can add these when you are back online.</p>
+          )}
+          {review.error ? (
+            <p role="alert" className={styles.error}>
+              {review.error}{' '}
+              <button type="button" className={styles.link} onClick={review.retry}>
+                Try again
+              </button>
+            </p>
+          ) : null}
+          <ReviewRows
+            views={views.slice(0, shown)}
+            place="card"
+            today={localToday()}
+            review={review}
+            onReview={onReview}
+          />
+          {views.length > shown || review.hasMore ? (
+            <div className={styles.foot}>
+              <button type="button" className={styles.link} onClick={() => onSheet(true)}>
+                See all {count}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
-      <p className={styles.hint}>
-        From your bank pushes. Nothing is added until you add it. &ldquo;Don&apos;t add&rdquo; only removes that one
-        suggestion.
-      </p>
-      {review.error ? (
-        <p role="alert" className={styles.error}>
-          {review.error}{' '}
-          <button type="button" className={styles.link} onClick={review.retry}>
-            Try again
-          </button>
-        </p>
-      ) : null}
-      <ul className={styles.rows}>
-        {views.slice(0, shown).map((view) => (
-          <ReviewRow key={view.rec.id} view={view} review={review} onReview={onReview} />
-        ))}
-      </ul>
     </Card>
   )
 }
@@ -76,7 +86,10 @@ function useLanding(
   }, [loads, review])
 }
 
-/** The card at the top of the Dashboard: the payments waiting for a look, the newest few, each with its buttons. */
+/**
+ * The card at the top of the Dashboard: one line saying how many payments wait and what they add up to, which opens
+ * to the newest few. It stays the way it was left.
+ */
 export default function ReviewCard({
   core,
   sheet,

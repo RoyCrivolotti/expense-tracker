@@ -1,53 +1,13 @@
-import { REVIEW_TEXT, type ReviewReason } from '../../domain/capture/review'
+import { useId, useRef } from 'react'
+import { paymentDirection } from '../../domain/capture/direction'
 import type { SeriesFit } from '../../domain/capture/seriesMatch'
-import { Money } from '../components/Money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { PairTie } from './PairTie'
 import type { ReviewApi } from './useReviewApi'
 import type { ReviewView } from './reviewFields'
-import { dueOn, foreignAmount, monthWord, rowDay, typeWord } from './reviewFormat'
-import styles from './Review.module.css'
-
-const IN_FIELDS: ReadonlySet<ReviewReason> = new Set(['no-category', 'no-account', 'no-merchant'])
-
-function Amount({ view }: { view: ReviewView }) {
-  if (view.amountCents === null) return null
-  if (view.reasons.includes('foreign')) return <span className={styles.amount}>{foreignAmount(view)}</span>
-  return <Money cents={view.amountCents} type={view.type ?? undefined} className={styles.amount} />
-}
-
-/** A long description is cut for the button, so it does not push the button off the row; the full text is its name and title. */
-function shortened(text: string): string {
-  return text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN - 1).trimEnd()}\u2026` : text
-}
-
-const MAX_SHOWN = 36
-
-function Missing({ text }: { text: string }) {
-  return <span className={styles.missing}>{text}</span>
-}
-
-/** The seven fields a payment would become: type, amount, description, category, account, date and budget month. */
-function Fields({ view }: { view: ReviewView }) {
-  return (
-    <>
-      <div className={styles.top}>
-        <span className={styles.name}>{view.description || <Missing text="No merchant" />}</span>
-        <Amount view={view} />
-      </div>
-      <div className={styles.meta}>
-        <span>{typeWord(view.type)}</span>
-        <span aria-hidden="true">·</span>
-        {view.categoryName ? <span>{view.categoryName}</span> : <Missing text="Category: not set" />}
-        <span aria-hidden="true">·</span>
-        {view.accountName ? <span>{view.accountName}</span> : <Missing text="Account: not set" />}
-      </div>
-      <div className={styles.meta}>
-        <span>{rowDay(view)}</span>
-        <span aria-hidden="true">·</span>
-        <span>{monthWord(view.budgetMonth)} budget</span>
-      </div>
-    </>
-  )
-}
+import { signedAmount } from './reviewFormat'
+import { rowButton, rowNote, rowTitle, rowWhen, type RowNote, type RowPlace } from './reviewRowText'
+import styles from './ReviewList.module.css'
 
 /** Opens the add form on a payment, filled from `series` when the person picked one of the series its hint offers. */
 export type OnReview = (
@@ -55,141 +15,127 @@ export type OnReview = (
   series?: SeriesFit,
 ) => void
 
-/**
- * What the monthly series say the payment may be, always as a question for the person. Two series are offered side by
- * side and neither is preferred: each opens review filled from that one.
- */
-function SeriesLine({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: OnReview }) {
-  const { hint, hintAccount } = view
-  if (!hint) return null
-  if (hint.kind === 'choose') {
+/** Where a row sits in a same-bill pair: the first of the two carries the heading. */
+export type Tie = 'top' | 'bottom' | null
+
+const TIE_CLASS = { top: styles.tieTop, bottom: styles.tieBottom } as const
+
+function Amount({ view, text }: { view: ReviewView; text: string }) {
+  if (view.amountCents === null) return <span className={styles.noAmount}>No amount</span>
+  const direction = paymentDirection(view.type)
+  return (
+    <span className={`${styles.amount} ${direction === 'in' ? styles.in : ''}`}>
+      {text}
+      {direction ? <span className={styles.srOnly}>{direction === 'in' ? ' money in' : ' money out'}</span> : null}
+    </span>
+  )
+}
+
+function Note({ note, failure }: { note: RowNote; failure: string | undefined }) {
+  if (note.tone === 'plain') return <>{note.text}</>
+  if (note.tone === 'bad')
     return (
-      <div className={styles.series}>
-        <p className={styles.seriesText}>Looks like one of your monthly payments. Which one?</p>
-        <div className={styles.seriesChoices}>
-          {hint.series.map((s) =>
-            review.canWrite ? (
+      <span role="alert" className={styles.bad}>
+        {note.text}
+        <span className={styles.srOnly}>: {failure}</span>
+      </span>
+    )
+  return <span className={styles[note.tone]}>{note.text}</span>
+}
+
+/** The row's one button. On a Review row it does what the row does, so only the row is announced and reached by Tab. */
+function Pill({ add, spoken, onPress }: { add: boolean; spoken: string; onPress: () => void }) {
+  return (
+    <button
+      type="button"
+      className={styles.pill}
+      {...(add ? { 'aria-label': `Add ${spoken}` } : { tabIndex: -1, 'aria-hidden': true })}
+      onClick={onPress}
+    >
+      <span className={`${styles.face} ${add ? styles.add : styles.review}`}>{add ? 'Add' : 'Review'}</span>
+    </button>
+  )
+}
+
+interface RowProps {
+  view: ReviewView
+  place: RowPlace
+  tie: Tie
+  today: string
+  review: ReviewApi
+  onReview: OnReview
+}
+
+/**
+ * One payment to review, on one line: the amount with its day, the name with one note, and one button. Tapping
+ * anywhere else on the row opens the review view, which is where a payment is changed or not added. Without write
+ * access (an offline copy) it is shown and nothing can be pressed.
+ */
+export function ReviewRow({ view, place, tie, today, review, onReview }: RowProps) {
+  const format = useMoneyFormat()
+  const failure = review.failures.get(view.rec.id)
+  const title = rowTitle(view)
+  const when = rowWhen(view, place, today)
+  const amount = signedAmount(view, format)
+  const spoken = `${title.long}, ${amount || 'no amount'}`
+  const add = rowButton(view) === 'add'
+  const note = useId()
+  const tap = useRef<HTMLButtonElement>(null)
+  // The Review pill is not a stop of its own, so a press on it is the row's press: the focus goes to the row's
+  // button, which is where it comes back to when the form closes.
+  const fromPill = () => {
+    tap.current?.focus({ preventScroll: true })
+    onReview(view)
+  }
+  return (
+    <li className={`${styles.row} ${tie ? TIE_CLASS[tie] : ''}`}>
+      {tie === 'top' ? (
+        <PairTie amount={amount} onDismiss={review.canWrite ? () => review.dismissDuplicate(view) : undefined} />
+      ) : null}
+      <div className={`${styles.line} ${review.canWrite ? '' : styles.plain}`}>
+        <div className={styles.lead}>
+          <Amount view={view} text={amount} />
+          <span className={styles.when}>{when}</span>
+        </div>
+        <div className={styles.mid}>
+          <div className={`${styles.title} ${view.unnamed ? styles.unnamed : ''}`}>
+            {review.canWrite ? (
               <button
-                key={s.seriesKey}
+                ref={tap}
                 type="button"
-                className={styles.link}
-                aria-label={`Review as ${s.description}, ${dueOn(s.usualDate)}`}
-                onClick={() => onReview(view, s)}
+                className={styles.tap}
+                aria-label={`Review ${spoken}, ${when}`}
+                aria-describedby={note}
+                onClick={() => onReview(view)}
               >
-                {s.description}, {dueOn(s.usualDate)}
+                <span className={styles.text}>{title.text}</span>
               </button>
             ) : (
-              <span key={s.seriesKey}>
-                {s.description}, {dueOn(s.usualDate)}
-              </span>
-            ),
-          )}
+              title.text
+            )}
+          </div>
+          <p id={note} className={styles.meta}>
+            <Note note={rowNote(view, place, today, failure !== undefined)} failure={failure} />
+          </p>
         </div>
+        {review.canWrite ? <Pill add={add} spoken={spoken} onPress={add ? () => review.add(view) : fromPill} /> : null}
       </div>
-    )
-  }
-  const name = <strong>{hint.series.description}</strong>
-  const text =
-    hint.kind === 'moved' ? (
-      <>
-        Looks like {name}, which you pay from {hintAccount ?? 'another account'}. Moved it?
-      </>
-    ) : (
-      <>
-        Looks like your monthly {name}, {dueOn(hint.series.usualDate)}
-        {hintAccount ? `, paid from ${hintAccount}` : ''}.
-        {hint.kind === 'renamed' ? (
-          <>
-            {' '}
-            You added it as <strong>{hint.votedDescription}</strong> before. Renamed?
-          </>
-        ) : null}
-      </>
-    )
-  return (
-    <div className={styles.series}>
-      <p className={styles.seriesText}>{text}</p>
-    </div>
-  )
-}
-
-function Buttons({
-  view,
-  review,
-  onReview,
-}: {
-  view: ReviewView
-  review: ReviewApi
-  onReview: (view: ReviewView) => void
-}) {
-  const match = view.rec.possibleMatch
-  const label = view.description || 'payment'
-  return (
-    <div className={styles.actions}>
-      {view.oneTap ? (
-        <button
-          type="button"
-          className={`${styles.pill} ${styles.primary}`}
-          aria-label={`Add ${label}`}
-          onClick={() => review.add(view)}
-        >
-          Add
-        </button>
-      ) : null}
-      <button
-        type="button"
-        className={`${styles.pill} ${view.oneTap ? '' : styles.primary}`}
-        onClick={() => onReview(view)}
-      >
-        {view.oneTap ? 'Change' : 'Review'}
-      </button>
-      {match ? (
-        <button
-          type="button"
-          className={styles.link}
-          aria-label={`Already entered as ${shortened(match.description)}? Link${shortened(match.description) === match.description ? '' : `, ${match.description}`}`}
-          title={match.description}
-          onClick={() => review.link(view)}
-        >
-          Already entered as {shortened(match.description)}? Link
-        </button>
-      ) : null}
-      <button
-        type="button"
-        className={`${styles.pill} ${styles.quiet}`}
-        aria-label={`Don't add ${label}`}
-        onClick={() => review.dontAdd(view)}
-      >
-        Don&apos;t add
-      </button>
-    </div>
-  )
-}
-
-/** One payment to review. Without write access (an offline copy) it is shown and nothing can be pressed. */
-export function ReviewRow({ view, review, onReview }: { view: ReviewView; review: ReviewApi; onReview: OnReview }) {
-  const failure = review.failures.get(view.rec.id)
-  // A missing category, account or merchant is already marked in the fields themselves.
-  const chips = view.reasons.filter((r) => !IN_FIELDS.has(r))
-  return (
-    <li className={styles.row}>
-      <Fields view={view} />
-      <SeriesLine view={view} review={review} onReview={onReview} />
-      {chips.length ? (
-        <div className={styles.chips}>
-          {chips.map((r) => (
-            <span key={r} className={styles.chip}>
-              {REVIEW_TEXT[r]}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {failure ? (
-        <p role="alert" className={styles.error}>
-          Not sent: {failure}
-        </p>
-      ) : null}
-      {review.canWrite ? <Buttons view={view} review={review} onReview={onReview} /> : null}
     </li>
+  )
+}
+
+/** Rows in the order given, with the two of a same-bill pair tied when they sit one under the other. */
+export function ReviewRows({ views, ...row }: Omit<RowProps, 'view' | 'tie'> & { views: readonly ReviewView[] }) {
+  const tieOf = (i: number): Tie => {
+    const other = row.review.pairs.get(views[i]!.rec.id)?.other.rec.id
+    if (other === undefined) return null
+    return views[i + 1]?.rec.id === other ? 'top' : views[i - 1]?.rec.id === other ? 'bottom' : null
+  }
+  return (
+    <ul className={styles.rows}>
+      {views.map((view, i) => (
+        <ReviewRow key={view.rec.id} view={view} tie={tieOf(i)} {...row} />
+      ))}
+    </ul>
   )
 }

@@ -103,7 +103,13 @@ export function TransactionForm(props: FormProps) {
         seed={seed}
         duplicate={props.duplicate}
       />
-      <FormActions {...props} busy={save.busy} uploading={save.uploading} retrying={save.savedId != null} />
+      <FormActions
+        {...props}
+        err={save.err}
+        busy={save.busy}
+        uploading={save.uploading}
+        retrying={save.savedId != null}
+      />
     </form>
   )
 }

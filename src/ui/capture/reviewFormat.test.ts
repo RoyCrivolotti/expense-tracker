@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from '../../engine/money'
-import { pushAt, makeRecommendation, makeReviewModel } from '../../testing/reviewKit'
+import { makeRecommendation, makeReviewModel, pushAt } from '../../testing/reviewKit'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import { describeRecommendation } from './reviewFields'
 import {
   detailLine,
   foreignAmount,
   monthWord,
-  rowDay,
   signedAmount,
   toastText,
+  totalChips,
   typeWord,
   weekdayDay,
 } from './reviewFormat'
@@ -30,30 +30,28 @@ describe('reviewFormat', () => {
     expect(monthWord('2026-12')).toBe('Dec')
   })
 
-  it('writes the row day with the time, and says which day the bank wrote when its message dated it', () => {
-    expect(rowDay(view())).toBe('Tue 10 Nov, 09:41')
-    expect(rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32) }))).toBe(
-      'Charges Wed 11 Nov',
-    )
-    expect(
-      rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32), suggestedType: 'income' })),
-    ).toBe('Arrives Wed 11 Nov')
-    expect(
-      rowDay(view({ localDate: '2026-11-11', occurredAt: pushAt(2026, 11, 10, 21, 32), suggestedType: 'refund' })),
-    ).toBe('Arrives Wed 11 Nov')
-    expect(rowDay(view({ localDate: '2026-11-06', occurredAt: pushAt(2026, 11, 10, 21, 32) }))).toBe(
-      'Fri 6 Nov, from the message',
-    )
-    // A row with no phone clock cannot tell, and shows its day alone.
-    expect(rowDay(view({ localDate: '2026-11-11', occurredAt: '2026-11-10T20:32:07Z' }))).toBe('Wed 11 Nov')
+  it('signs the amount by the way the money moves, and writes nothing for an unknown amount', () => {
+    expect(signedAmount(view(), EU_MONEY_FORMAT)).toBe('−12,50 €')
+    expect(signedAmount(view({ suggestedType: 'investment' }), EU_MONEY_FORMAT)).toBe('−12,50 €')
+    expect(signedAmount(view({ suggestedType: 'income' }), EU_MONEY_FORMAT)).toBe('+12,50 €')
+    expect(signedAmount(view({ suggestedType: 'refund' }), EU_MONEY_FORMAT)).toBe('+12,50 €')
+    expect(signedAmount(view({ suggestedType: null }), EU_MONEY_FORMAT)).toBe('12,50 €')
+    expect(signedAmount(view({ amountCents: 0 }), EU_MONEY_FORMAT)).toBe('0,00 €')
+    expect(signedAmount(view({ amountCents: null }), EU_MONEY_FORMAT)).toBe('')
   })
 
-  it('signs the amount by type, and writes nothing for an unknown amount', () => {
-    expect(signedAmount(view(), EU_MONEY_FORMAT)).toMatch(/^−/)
-    expect(signedAmount(view({ suggestedType: 'income' }), EU_MONEY_FORMAT)).toMatch(/^\+/)
-    expect(signedAmount(view({ suggestedType: 'refund' }), EU_MONEY_FORMAT)).toMatch(/^\+/)
-    expect(signedAmount(view({ suggestedType: null }), EU_MONEY_FORMAT)).not.toMatch(/^[+−]/)
-    expect(signedAmount(view({ amountCents: null }), EU_MONEY_FORMAT)).toBe('')
+  it('writes an amount not in euros in its own currency, with its sign', () => {
+    expect(signedAmount(view({ currency: 'USD', amountCents: 1820 }), EU_MONEY_FORMAT)).toBe('−US$18.20')
+    expect(signedAmount(view({ currency: 'GBP', amountCents: 500, suggestedType: 'income' }), EU_MONEY_FORMAT)).toBe(
+      '+£5.00',
+    )
+  })
+
+  it('writes six and eight digits in full, grouped', () => {
+    expect(signedAmount(view({ amountCents: 12345678, suggestedType: 'income' }), EU_MONEY_FORMAT)).toBe(
+      '+123.456,78 €',
+    )
+    expect(signedAmount(view({ amountCents: 25000000 }), EU_MONEY_FORMAT)).toBe('−250.000,00 €')
   })
 
   it('writes an amount in another currency with its own code', () => {
@@ -85,10 +83,51 @@ describe('reviewFormat', () => {
   it('does not leave a trailing space when the amount is unknown', () => {
     const text = toastText('Added', view({ amountCents: null, merchantRaw: null }), EU_MONEY_FORMAT)
 
-    expect(text.split('\n')[0]).toBe('Added · Payment')
+    expect(text.split('\n')[0]).toBe('Added · Unnamed payment')
   })
 
   it('uses a mid-month push in the same way whatever the time of day', () => {
     expect(weekdayDay(view({ occurredAt: pushAt(2026, 11, 10, 3) }).date)).toBe('Tue 10 Nov')
+  })
+})
+
+describe('the totals on the card’s one line', () => {
+  const texts = (
+    inCents: number,
+    outCents: number,
+  ) => totalChips({ inCents, outCents }, EU_MONEY_FORMAT).map((chip) => `${chip.way} ${chip.text}`)
+
+  it('shows money in, then money out, in whole euros with their signs', () => {
+    expect(texts(185000, 17364)).toEqual(['in +1.850 €', 'out −174 €'])
+  })
+
+  it('has no chip for a side where nothing moves', () => {
+    expect(texts(0, 17300)).toEqual(['out −173 €'])
+    expect(texts(185000, 0)).toEqual(['in +1.850 €'])
+    expect(texts(0, 0)).toEqual([])
+  })
+
+  it('rounds at the half euro, upwards', () => {
+    expect(texts(149, 150)).toEqual(['in +1 €', 'out −2 €'])
+    expect(texts(17349, 17350)).toEqual(['in +173 €', 'out −174 €'])
+  })
+
+  it('has no chip for a sum under half a euro, which would read as zero', () => {
+    expect(texts(49, 50)).toEqual(['out −1 €'])
+    expect(texts(1, 49)).toEqual([])
+  })
+
+  it('writes six digits and more in full', () => {
+    expect(texts(12345678, 25000000)).toEqual(['in +123.457 €', 'out −250.000 €'])
+    expect(texts(99999950, 123456789012)).toEqual(['in +1.000.000 €', 'out −1.234.567.890 €'])
+  })
+
+  it('says which way each goes to a screen reader, and follows the person’s number format', () => {
+    expect(totalChips({ inCents: 100, outCents: 100 }, EU_MONEY_FORMAT).map((chip) => chip.spoken)).toEqual([
+      'coming in',
+      'going out',
+    ])
+    const dollars = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' } as const
+    expect(totalChips({ inCents: 185000, outCents: 0 }, dollars)[0]!.text).toBe('+$1,850')
   })
 })

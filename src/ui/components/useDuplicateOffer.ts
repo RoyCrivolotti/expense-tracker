@@ -29,11 +29,13 @@ export function useDuplicateOffer(
     moveOn()
   }
 
-  const match = found && found.id === id ? found.match : seed?.possibleMatch
+  const refusal = found && found.id === id ? found.match : undefined
+  const match = refusal ?? seed?.possibleMatch
   const offer: DuplicateOffer | undefined =
     match && id
       ? {
           match,
+          refused: refusal !== undefined,
           recommendationId: id,
           onLinked: () => onLinked(match),
           addAnyway: () => {

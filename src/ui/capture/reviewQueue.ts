@@ -1,5 +1,5 @@
 import type { SeriesFit } from '../../domain/capture/seriesMatch'
-import type { SeedCard, TransactionSeed } from '../actions'
+import type { SeedCard, SeedIntro, TransactionSeed } from '../actions'
 import type { ReviewView } from './reviewFields'
 import { seedOf } from './reviewFields'
 import { dueOn } from './reviewFormat'
@@ -14,6 +14,8 @@ export interface QueueSteps {
     view: ReviewView,
     series: SeriesFit,
   ) => void
+  /** What the form says above its fields for this payment: the bank's message and why it needs a look. */
+  intro: (view: ReviewView) => SeedIntro
 }
 
 /** The series a payment may be, when more than one fits, as the form offers them: the person picks, never the app. */
@@ -54,6 +56,7 @@ export function queuedSeed(
   return {
     ...seedOf(view, rememberFor(view)),
     ...choiceOf(view, steps.choose),
+    intro: steps.intro(view),
     queue: {
       left: after.filter(stillOpen).length,
       next,

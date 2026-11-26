@@ -21,6 +21,11 @@ export function FormError({ message }: { message: string | null }) {
   ) : null
 }
 
+/**
+ * The form's buttons. For a captured payment (`queue`) they are a bar that stays in view while the form scrolls under
+ * it, since the blocks above its fields push the end of the form off the screen, and "Don't add" is nowhere else. The
+ * form's error is said in that bar too, where it is seen. The ordinary add and edit forms end with their buttons.
+ */
 export function FormActions({
   view,
   editing,
@@ -28,6 +33,8 @@ export function FormActions({
   uploading,
   retrying,
   queue,
+  duplicate,
+  err,
   onDelete,
   onDuplicate,
   onClose,
@@ -38,12 +45,15 @@ export function FormActions({
   uploading: { done: number; total: number } | null
   retrying: boolean
   queue?: { left: number; onSkip: () => void } | undefined
+  duplicate?: DuplicateOffer | undefined
+  err: string | null
   onDelete?: ((id: number) => Promise<void>) | undefined
   onDuplicate?: ((txn: Transaction) => void) | undefined
   onClose: () => void
 }) {
   return (
-    <div className={styles.actions}>
+    <div className={queue ? `${styles.actions} ${styles.pinned}` : styles.actions}>
+      {queue && view === 'fields' ? <FormError message={err} /> : null}
       {view === 'fields' && editing && onDelete && (
         <button
           type="button"
@@ -59,7 +69,15 @@ export function FormActions({
           Duplicate
         </button>
       )}
-      <SaveButtons view={view} queue={queue} busy={busy} uploading={uploading} editing={editing} retrying={retrying} />
+      <SaveButtons
+        view={view}
+        queue={queue}
+        busy={busy}
+        uploading={uploading}
+        editing={editing}
+        retrying={retrying}
+        anyway={duplicate?.refused ? duplicate.addAnyway : undefined}
+      />
     </div>
   )
 }
@@ -127,7 +145,8 @@ export function FormBody(p: FormBodyProps) {
         duplicate={p.duplicate}
       />
       {installment.bar}
-      <FormError message={p.err} />
+      {/* A captured payment's form says its error in the bar that stays in view. */}
+      {p.seed?.queue ? null : <FormError message={p.err} />}
     </>
   )
 }

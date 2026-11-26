@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { dismissRecommendation, linkRecommendation } from '../../data/recommendationDecisionsApi'
+import { dismissRecommendation } from '../../data/recommendationDecisionsApi'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
 import type { SeriesFit, SeriesHint } from '../../domain/capture/seriesMatch'
+import type { WaitingTotals } from '../../domain/capture/totals'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useStoppedSuggestions } from '../tabs/stoppedSuggestions'
 import type { ExpenseModel } from '../useExpenseData'
@@ -12,11 +13,21 @@ import type { ReviewCore } from './reviewContext'
 import { describeRecommendation, transactionOf, type ReviewView } from './reviewFields'
 import { seriesHintsOf } from './reviewSeries'
 import { toastText } from './reviewFormat'
+import { introOf } from './reviewIntro'
+import { billPairs, pairSides, tiedOrder, totalsOf } from './reviewPairs'
 import { queuedSeed } from './reviewQueue'
+import { rowTitle } from './reviewRowText'
+import { localToday } from './reviewToday'
+import type { PairSide } from './reviewWhy'
 
 /** What the card, the sheet and the rows work with: the payments as the seven fields, and what a person can do with each. */
 export interface ReviewApi {
+  /** Newest day first, with the announcement of a same-bill pair right under its charge. */
   views: ReviewView[]
+  /** The two halves of each bill that may be waiting twice, by payment id. */
+  pairs: ReadonlyMap<string, PairSide>
+  /** Money in and out across the payments. Null while more wait than are loaded, when a sum would be short. */
+  totals: WaitingTotals | null
   count: number
   hasMore: boolean
   more: () => void
@@ -27,8 +38,8 @@ export interface ReviewApi {
   /** One tap. Only does anything for a payment `oneTap` allows. */
   add: (view: ReviewView) => void
   dontAdd: (view: ReviewView) => void
-  /** Links the payment to the typed row the server says looks the same. Only for a payment with `possibleMatch`. */
-  link: (view: ReviewView) => void
+  /** Removes the announcement of the pair this payment is in, and nothing else. The charge stays to be reviewed. */
+  dismissDuplicate: (view: ReviewView) => void
   /** Opens the add form on this payment, with the ones after it queued behind it. */
   review: (view: ReviewView) => void
   /** Opens the add form on this payment filled from one of the series its hint offers, which the person picked. */
@@ -47,7 +58,7 @@ function withLink(
   return account === undefined ? rec : { ...rec, accountId: account }
 }
 
-const name = (view: ReviewView) => view.description || 'Payment'
+const name = (view: ReviewView) => rowTitle(view).long
 
 /**
  * The payments as the seven fields, each with what the monthly series say it may be. The series are the recurring
@@ -61,10 +72,11 @@ function useViews(
   useHistoryWatch(model)
   const { stopped } = useStoppedSuggestions()
   const hints = useMemo(() => seriesHintsOf(items, model, merchants, stopped), [items, model, merchants, stopped])
-  const views = useMemo(
-    () => items.map((r) => describeRecommendation(r, model, merchants, hints.get(r.id))),
-    [items, model, merchants, hints],
-  )
+  const { views, pairs, totals } = useMemo(() => {
+    const listed = items.map((r) => describeRecommendation(r, model, merchants, hints.get(r.id)))
+    const bills = billPairs(listed)
+    return { views: tiedOrder(listed, bills), pairs: pairSides(listed, bills), totals: totalsOf(listed, bills) }
+  }, [items, model, merchants, hints])
   // The queue reads the latest views when it moves on, not the ones it started with.
   const latest = useRef(views)
   useEffect(() => {
@@ -74,7 +86,7 @@ function useViews(
     rec: RecommendationInfo,
     hint: SeriesHint,
   ) => describeRecommendation(rec, model, merchants, hint)
-  return { views, latest, describe }
+  return { views, pairs, totals, latest, describe }
 }
 
 /** Works the payments out as the seven fields a person sees, and turns a press into a held decision. */
@@ -89,7 +101,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     setLinked(new Map())
   }
   const items = useMemo(() => core.items.map((r) => withLink(r, linked)), [core.items, linked])
-  const { views, latest, describe } = useViews(items, model)
+  const { views, pairs, totals, latest, describe } = useViews(items, model)
 
   const dontAdd = (view: ReviewView) => {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
@@ -104,10 +116,13 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
   function review(view: ReviewView) {
     const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
     const after = latest.current.slice(at + 1).map((v) => v.rec.id)
-    openForm(queuedSeed(view, after, { latest: () => latest.current, dontAdd, rememberFor, choose: reviewAs }))
+    const intro = (v: ReviewView) => introOf(v, pairs.get(v.rec.id), format, localToday())
+    openForm(queuedSeed(view, after, { latest: () => latest.current, dontAdd, rememberFor, choose: reviewAs, intro }))
   }
   return {
     views,
+    pairs,
+    totals: core.hasMore ? null : totals,
     count: core.count,
     hasMore: core.hasMore,
     more: core.more,
@@ -121,11 +136,9 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
         decide(view.rec.id, toastText('Added', view, format), `add ${name(view)}`, () => submit(view.rec.id, input))
     },
     dontAdd,
-    link: (view) => {
-      const match = view.rec.possibleMatch
-      if (!match) return
-      const message = `Linked \u00b7 ${name(view)}\nTo the row "${match.description}". Nothing new is added.`
-      decide(view.rec.id, message, `link ${name(view)}`, () => linkRecommendation(view.rec.id, match.transactionId))
+    dismissDuplicate: (view) => {
+      const side = pairs.get(view.rec.id)
+      if (side) dontAdd(side.role === 'announcement' ? view : side.other)
     },
     review,
     reviewAs,
