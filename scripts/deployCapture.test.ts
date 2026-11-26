@@ -12,10 +12,10 @@ import {
   filledConfig,
   findDatabaseId,
   main,
-  publicOutput,
   shippedCommit,
   TEMPLATE_CONFIG,
 } from './deploy-capture.mjs'
+import { publicOutput } from './public-output.mjs'
 
 const SHIPPED = 'a'.repeat(40)
 const HEAD = 'c'.repeat(40)
