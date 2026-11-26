@@ -24,6 +24,8 @@ const ENGINES = (process.env.ENGINES ?? 'chromium,webkit').split(',')
 const PHONE = { name: '375x812', width: 375, height: 812 }
 const SHORT = { name: '375x667', width: 375, height: 667 }
 const WIDE = { name: '1280x800', width: 1280, height: 800 }
+/** An iPad mini upright, where a sheet is already a dialog. */
+const TABLET = { name: '744x1133', width: 744, height: 1133 }
 /** The narrowest phone: where the heading beside "Dismiss duplicate" has to wrap. */
 const NARROW = { name: '320x700', width: 320, height: 700 }
 
@@ -455,6 +457,210 @@ async function checkBar(
   await context.close()
 }
 
+/**
+ * What the review view does while a phone keyboard is up. A headless browser draws no keyboard, so the window is cut
+ * to what one leaves and the page is marked the way `useKeyboardOpen` marks it on a phone, and what the stylesheets and
+ * `useFieldReveal` do with that mark is measured: the bar out of the way, the bank's box down to one line held at the
+ * top, the field being typed in just under it with the middle of the field above still in sight, and all of it back
+ * once the mark goes.
+ */
+async function checkKeyboard(
+  browser,
+  viewport,
+) {
+  const where = `${viewport.name} review view, keyboard up`
+  const { page, context } = await openCard(browser, viewport, 'seven')
+  await card(page)
+    .getByRole('button', { name: /^Review Unnamed payment/ })
+    .click()
+  const sheet = dialog(page)
+  await sheet.getByText(/^From your bank/).waitFor()
+  await page.waitForTimeout(300)
+  const description = sheet.getByLabel('Description', { exact: true })
+  const amount = sheet.getByLabel(/^Amount/)
+  // The window is cut to the room the sheet has on a phone with the keyboard up, so it is as short as there and has to
+  // scroll. That room is what the keyboard leaves less the status bar, which the sheet stays below and a headless
+  // browser does not have; measured in the iOS 27 simulator it is 339 - 20 of the iPhone SE's 667pt and 478 - 62 of
+  // the iPhone 17's 874, both about 48%.
+  const mark = async (on) => {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: on ? Math.round(viewport.height * 0.48) : viewport.height,
+    })
+    // On a phone the sheet has already shrunk to the visible area when the mark appears: both come from the same
+    // resize, and the mark is set after the render that moved the sheet.
+    await page.waitForTimeout(150)
+    await page.evaluate((on) => document.documentElement.toggleAttribute('data-keyboard-open', on), on)
+  }
+
+  // Focus alone is a hardware keyboard or a desktop: nothing changes.
+  await description.focus()
+  await page.waitForTimeout(150)
+  let seen = await inView(sheet.getByRole('button', { name: "Don't add" }))
+  check(where, 'a focused field without a phone keyboard leaves the bar in place', seen.ok, seen.at)
+
+  await mark(true)
+  await page.waitForTimeout(400)
+  const measure = () =>
+    sheet.evaluate((el) => {
+      const rect = (node) => node.getBoundingClientRect()
+      const from = el.querySelector('[data-reveal-cover]')
+      const bar = [...el.querySelectorAll('button')].find((b) => b.textContent === "Don't add").parentElement
+      const message = [...from.querySelectorAll('p')].find((p) => p.textContent.startsWith('Example Bank'))
+      const focused = document.activeElement
+      const label = focused.closest('label')
+      const amountField = el.querySelector('input[inputmode="decimal"]')
+      const barRect = rect(bar)
+      const hit = document.elementFromPoint(barRect.x + barRect.width / 2, barRect.y + barRect.height / 2)
+      return {
+        barShown: getComputedStyle(bar).visibility !== 'hidden' && bar.contains(hit),
+        position: getComputedStyle(from).position,
+        fromHeight: rect(from).height,
+        messageHeight: message ? rect(message.parentElement.parentElement).height : -1,
+        amountShown: getComputedStyle(from.querySelector('b')).opacity,
+        coverBottom: rect(from).bottom,
+        sheetTop: rect(el).top,
+        captionTop: label ? rect(label).top : NaN,
+        amountMiddle: rect(amountField).top + rect(amountField).height / 2,
+        atEnd: el.scrollTop >= el.scrollHeight - el.clientHeight - 1,
+      }
+    })
+  let m = await measure()
+  check(where, 'the bar is out of the way', !m.barShown)
+  // Scrolled back to the top, the line sits under the header, and the sheet's colour it carries above it must stop
+  // short of the header.
+  await sheet.evaluate((el) => el.scrollTo(0, 0))
+  await page.waitForTimeout(100)
+  const clear = await sheet.evaluate((el) => {
+    const line = el.querySelector('[data-reveal-cover]')
+    const reach = getComputedStyle(line)
+      .boxShadow.split(/,(?![^(]*\))/)
+      .map((shadow) => shadow.match(/-?[\d.]+px/g).map(parseFloat))
+      .map(([, y, , spread]) => spread - y)
+    const header = el.querySelector('header').getBoundingClientRect().bottom
+    return { gap: line.getBoundingClientRect().top - Math.max(...reach) - header }
+  })
+  check(where, "the line's edge leaves the header unpainted", clear.gap >= 0, `${px(clear.gap)} to spare`)
+  // Back to Description by way of Amount, as the keyboard's arrows would go, which brings it under the line again.
+  await amount.focus()
+  await description.focus()
+  await page.waitForTimeout(400)
+  m = await measure()
+  check(
+    where,
+    "the bank's box is one line",
+    m.fromHeight < 48 && m.messageHeight < 1,
+    `box ${px(m.fromHeight)}, message ${px(m.messageHeight)}`,
+  )
+  check(where, 'the amount shows beside the day', m.amountShown === '1', `opacity ${m.amountShown}`)
+  check(where, 'the line sticks while the keyboard is up', m.position === 'sticky', m.position)
+  check(
+    where,
+    'Description is just under the line',
+    m.captionTop >= m.coverBottom - 0.5 && (m.captionTop - m.coverBottom < 60 || m.atEnd),
+    `caption at ${px(m.captionTop)}, line ends at ${px(m.coverBottom)}`,
+  )
+  check(
+    where,
+    "the middle of Amount above it stays in sight, for the keyboard's up arrow",
+    m.amountMiddle > m.coverBottom,
+    `middle at ${px(m.amountMiddle)}, line ends at ${px(m.coverBottom)}`,
+  )
+
+  await description.fill('din')
+  await page.waitForTimeout(200)
+  const options = await sheet.getByRole('listbox').getByRole('option').all()
+  let shown = 0
+  for (const option of options) if ((await inView(option)).ok) shown++
+  check(
+    where,
+    'every suggestion under Description is in view',
+    options.length > 1 && shown === options.length,
+    `${shown} of ${options.length}`,
+  )
+
+  await amount.focus()
+  await page.waitForTimeout(200)
+  m = await measure()
+  check(
+    where,
+    'moving to Amount brings it under the line',
+    m.captionTop >= m.coverBottom - 0.5 && (m.captionTop - m.coverBottom < 30 || m.atEnd),
+    `caption at ${px(m.captionTop)}, line ends at ${px(m.coverBottom)}`,
+  )
+
+  await sheet.evaluate((el) => el.scrollTo(0, el.scrollHeight))
+  await page.waitForTimeout(150)
+  const held = await sheet.evaluate((el) => {
+    const line = el.querySelector('[data-reveal-cover]')
+    const r = line.getBoundingClientRect()
+    const on = document.elementFromPoint(r.x + r.width - 8, r.y + r.height / 2)
+    return { gap: r.top - el.getBoundingClientRect().top, onTop: line.contains(on) }
+  })
+  check(
+    where,
+    'the line stays at the top of the sheet, over the fields, as it scrolls',
+    held.gap < 40 && held.onTop,
+    `${px(held.gap)} below the sheet top, on top ${held.onTop}`,
+  )
+
+  await mark(false)
+  await page.waitForTimeout(400)
+  m = await measure()
+  check(where, 'the bar is back once the keyboard goes', m.barShown)
+  check(
+    where,
+    "the bank's whole message is back",
+    m.position !== 'sticky' && m.messageHeight > 15,
+    `${m.position}, message ${px(m.messageHeight)}`,
+  )
+
+  // A save sent from the keyboard (Return) that fails keeps the bar, so its reason is on screen. This payment has no
+  // category, and saving it is refused for that.
+  await amount.focus()
+  await mark(true)
+  await page.waitForTimeout(400)
+  await amount.press('Enter')
+  const error = sheet.getByText('Choose a category')
+  await error.waitFor({ state: 'attached' })
+  await page.waitForTimeout(300)
+  m = await measure()
+  seen = await inView(error)
+  check(where, 'a refused save keeps the bar and its reason in view', m.barShown && seen.ok, seen.at)
+  await context.close()
+}
+
+/**
+ * An iPad's docked keyboard sets the same mark, but there the sheet is a dialog in the middle of the screen with room
+ * to spare, so nothing changes: the bar stays, the bank's message stays whole, and the sheet does not scroll. Its
+ * layout viewport keeps its height under the keyboard, so the window is not cut.
+ */
+async function checkKeyboardOnDialog(
+  browser,
+  viewport,
+) {
+  const where = `${viewport.name} review view, docked keyboard`
+  const { page, context } = await openCard(browser, viewport, 'seven')
+  await card(page)
+    .getByRole('button', { name: /^Review Unnamed payment/ })
+    .click()
+  const sheet = dialog(page)
+  await sheet.getByText(/^From your bank/).waitFor()
+  await page.waitForTimeout(300)
+  await sheet.getByLabel('Description', { exact: true }).focus()
+  await page.evaluate(() => document.documentElement.toggleAttribute('data-keyboard-open', true))
+  await page.waitForTimeout(400)
+  const seen = await inView(sheet.getByRole('button', { name: "Don't add", includeHidden: true }))
+  check(where, 'the bar stays', seen.ok, seen.at)
+  const state = await sheet.evaluate((el) => ({
+    position: getComputedStyle(el.querySelector('[data-reveal-cover]')).position,
+    scrolled: el.scrollTop,
+  }))
+  check(where, "the bank's box stays as it is", state.position !== 'sticky', state.position)
+  check(where, 'the sheet does not scroll', state.scrolled === 0, px(state.scrolled))
+  await context.close()
+}
+
 /** The contrast of an element's text against what is painted behind it, tints mixed down to the first solid colour. */
 function contrastOf(target) {
   return target.evaluate((el) => {
@@ -522,6 +728,8 @@ async function main() {
         }
         for (const viewport of [NARROW, PHONE, WIDE]) await checkPair(browser, viewport)
         for (const viewport of [SHORT, PHONE, WIDE]) await checkBar(browser, viewport)
+        for (const viewport of [SHORT, PHONE]) await checkKeyboard(browser, viewport)
+        await checkKeyboardOnDialog(browser, TABLET)
         for (const theme of ['light', 'dark']) await checkColours(browser, theme)
       } finally {
         await browser.close()
