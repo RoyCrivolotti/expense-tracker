@@ -172,21 +172,12 @@ staging private key then cannot sign for production.
    node scripts/vapid-keys.mjs
    ```
 
-2. Deploy the capture Worker version that sends. CI deploys the Pages app but never this Worker, so a merge to `main`
-   does not put the sender live: someone deploys it from `main` (or from a merged commit), by hand. The deploy needs
-   `account_id` and `database_id` filled into `workers/capture/wrangler.toml` on your machine; restore the file
-   afterwards (`git checkout workers/capture/wrangler.toml`) and never commit them. From `workers/capture`:
+2. Deploy the capture Worker version that sends. A merge to `main` deploys it to staging and production
+   ([CAPTURE-WORKER.md](CAPTURE-WORKER.md), "Deploying it", which also has the commands to run it by hand). The secrets
+   in the next step are set for each environment, staging first, each with its own key pair.
 
-   ```bash
-   npx wrangler deploy --name <staging-worker>
-   ```
-
-   This step, and the secrets in the next one, are repeated for each environment, staging first, and each time with that
-   environment's own key pair, its own Worker name and its own database name and id filled into `wrangler.toml`.
-   Deploying production with staging's values in the file would point the production Worker at the staging database.
-
-   A deploy made from a feature branch only makes a preview of the app's pages, so the live staging site shows a change
-   once its branch is merged into `main` and deployed from there.
+   A deploy of the app made from a feature branch only makes a preview of its pages, so the live staging site shows a
+   change once its branch is merged into `main` and deployed from there.
 3. On the capture Worker (`<staging-worker>`, then the production one), set three secrets. The private key is the
    `VAPID_PRIVATE_KEY` line and only ever goes here. `VAPID_SUBJECT` is the app's own https origin, such as
    `https://<staging-app-host>`, with no email address in it, so no token carries one:

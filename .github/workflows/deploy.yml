@@ -134,10 +134,30 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run deploy:backup-cron
 
+      # The Worker that receives bank pushes. It bundles code from src/domain and functions/_shared, so it deploys on
+      # every merge rather than when its own folder changes. Staging goes first, so a deploy that fails there leaves
+      # production as it was.
+      - name: Deploy capture worker (staging)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:capture -- staging
+
+      - name: Deploy capture worker (production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:capture -- prod
+
+      - name: Check both capture workers run this commit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run check:capture
+
       # Asks each project's bare pages.dev host, which no Access application covers, whether it believes an unsigned
       # email header. Only a 401 passes. The host comes from the project, and scripts/probe-access.sh throws the
-      # response body away. It runs last, so a failure here cannot skip the cron deploy.
+      # response body away. It runs last, so a failure here cannot skip a worker deploy, and it runs even when one of
+      # those failed.
       - name: Check both projects refuse an unsigned identity
+        if: ${{ !cancelled() }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
