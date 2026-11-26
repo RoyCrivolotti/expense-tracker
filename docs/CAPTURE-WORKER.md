@@ -65,14 +65,51 @@ Nothing from the push goes in: no title, body, merchant, amount, digits or email
 only. A phone
 whose request never shows up here never reached the Worker, which points at the Shortcut rather than the app.
 
-## Deploying it (not done by any script here)
+## Deploying it
 
-Everything below changes Cloudflare and needs the account owner's say-so, staging first.
+A merge to `main` deploys both Workers, staging and then production, from the merged commit: the `ship` job in
+`.github/workflows/deploy.yml`, after the migrations ([DEPLOYMENT.md](DEPLOYMENT.md), "CI"). It does so on every merge,
+because the bundle reaches into `src/domain` and `functions/_shared`.
+[`deploy-capture.mjs`](../scripts/deploy-capture.mjs) gives wrangler a git-ignored copy of `wrangler.toml` with the
+Worker's name, the account and the database filled in, and names the version after the commit. Secrets and variables set
+on the Worker survive a deploy. The Worker's address is private and the Actions log is public, so the script takes
+addresses, and the account details wrangler adds to a refused token, out of wrangler's output.
+[`check-capture-deployed.mjs`](../scripts/check-capture-deployed.mjs) then asks Cloudflare what each Worker is running,
+and fails the job unless it is one version, taking all the traffic, named after that commit, with its environment's
+database and `CAPTURE_REPLAY_SECRET` bound. A token that lacks a permission fails the job too.
 
-1. Create the Worker `expense-capture` from `workers/capture` with `account_id` and `database_id` filled in locally
-   (they are not committed).
-2. Bind the staging D1 database as `DB`.
-3. `wrangler secret put CAPTURE_REPLAY_SECRET` with 32 random bytes of hex, one per environment.
+### When the deploy or its check fails
+
+The job's log names the Worker, the reason and what had already shipped. Both Pages projects deploy before the capture
+steps, so they are on the new commit by then. Staging goes first, so a deploy that fails there leaves production on the
+version it had. An earlier step of `ship` that fails, the backup cron's included, skips all three capture steps.
+
+Re-run only the newest Deploy run. A re-run deploys that run's own commit, so re-running an older one puts the app and
+both capture Workers back on old code, and its check passes because it compares with that commit. If newer commits have
+reached `main`, or you are unsure, use **Run workflow** on `main` instead.
+
+If CI cannot deploy, run these from a clean checkout of `main` with `CLOUDFLARE_API_TOKEN` set, after
+`npm run migrate -- <database>` shows nothing pending, since the Worker writes columns that migrations add:
+
+```bash
+npm run deploy:capture -- staging
+npm run deploy:capture -- prod
+npm run check:capture
+```
+
+To put back the version that ran before, use Deployments in the Worker's dashboard page, or
+`npx wrangler rollback <version id> --name expense-capture` (`expense-capture-stg` for staging). It lasts until the next
+merge deploys `main` again, so revert the commit as well. A version made by hand, such as by changing a secret, may name
+no commit; the next deploy replaces it.
+
+### A new environment
+
+CI keeps existing Workers current. Setting one up changes Cloudflare and needs the account owner's say-so, staging first.
+
+1. Create its D1 database and apply the migrations. The Worker and database names are in `deploy-capture.mjs`.
+2. `npm run deploy:capture -- staging` creates the Worker and binds the database as `DB`.
+3. `npx wrangler secret put CAPTURE_REPLAY_SECRET --name <worker>` with 32 random bytes of hex, one per environment.
+   Until it is set the Worker answers 503.
 4. Set `OWNER_EMAIL` to the same value the app uses, as a secret or variable and never committed. The owner reaches
    the app without an Expenses grant only through it, so without it the owner's own key is refused. Anyone else
    needs a grant either way.
@@ -80,6 +117,5 @@ Everything below changes Cloudflare and needs the account owner's say-so, stagin
    the Worker works and tells nobody.
 6. Send a staging key's POST from a shell and check: valid key 200, wrong key 401, the same key to the app's
    `/api/expenses` 401.
-7. Repeat for production, after migration 0040 is on that database.
-8. Redeploy the Worker for a database only after migrations 0041 and 0043 are on it, since this Worker writes the
-   columns they add, and only after 0044, which it reads to send. A Worker deployed before either keeps working after it, because both only add.
+7. Deploy once more, so the version running names its commit.
+8. Repeat for production.

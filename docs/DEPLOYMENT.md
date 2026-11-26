@@ -15,7 +15,7 @@ before its first deploy:
   `config/backup-alerts.example.json` hold example values for your gitignored copies.
 - `package.json`: `migrate:dev` defaults to a dev database name (the `DEV_D1_NAME` environment variable overrides it).
 - `scripts/`: the account id as a default in several (`CLOUDFLARE_ACCOUNT_ID` overrides it where a script reads it), and
-  database, bucket, project and domain names in the `setup-*`, `deploy*`, `seed-*`, `bootstrap-allowed-users` and
+  database, bucket, project, Worker and domain names in the `setup-*`, `deploy*`, `seed-*`, `bootstrap-allowed-users` and
   `gen-seed-sql` scripts. `scripts/deploy.sh` writes a `_redirects` file that names a hostname.
 - `src/config/staging.ts`: the staging hostnames.
 
@@ -75,8 +75,9 @@ A push to `main` runs the **Deploy** workflow (`.github/workflows/deploy.yml`). 
 together. `migrate-dev` waits only for `schema`, so a pending dev migration applies even if `ci` fails. `migrate-prod`
 waits for `ci`, `schema` and `migrate-dev`, runs only when production has something pending, and then waits for your
 approval (see Migrations). The `ship` job runs when `ci` and `schema` succeeded and no migration job failed. It syncs
-the access env, deploys the production and staging Pages projects, and then runs `npm run deploy:backup-cron`, so the
-backup cron worker is redeployed on every merge to `main`. The migration and `ship` jobs run for `main` only. A pull
+the access env, deploys the production and staging Pages projects, then the backup cron worker
+(`npm run deploy:backup-cron`) and both capture Workers, and fails unless the capture Workers then run the merged commit
+([CAPTURE-WORKER.md](./CAPTURE-WORKER.md), "Deploying it"). The migration and `ship` jobs run for `main` only. A pull
 request runs verify and deploys a staging preview only (`.github/workflows/deploy-dev.yml`, see [OPS.md](./OPS.md)).
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_API_TOKEN_PREVIEW` and `OWNER_EMAIL`. CI uses two Cloudflare tokens (dashboard
@@ -89,9 +90,8 @@ token that can write Access stays on the maintainer's machine only.
 | `CLOUDFLARE_API_TOKEN` | Cloudflare Pages, D1, Workers Scripts: Edit | `deploy.yml`, `restore-database.yml` |
 
 If the token lacks Workers Scripts Edit, `scripts/deploy-backup-cron.mjs` prints "expense-backup-cron: skipped in CI"
-and exits 0. The `ship` job still passes and the worker keeps running its old code. To notice, look for that line in the
-job's log, or check the worker's last deployment in the dashboard (Workers & Pages → expense-backup-cron → Deployments).
-Add the scope to the token, or run `npm run deploy:backup-cron` locally with `wrangler login`.
+and exits 0, so that worker keeps running its old code (the capture steps fail the job instead). Look for that line in
+the job's log, then add the scope to the token, or run `npm run deploy:backup-cron` locally with `wrangler login`.
 
 ## Migrations
 
@@ -128,7 +128,7 @@ apply its migration to dev by hand, but only when its merge is near, and remove 
 | What happened | What to do | What it costs |
 | ------------- | ---------- | ------------- |
 | The migration job failed, so nothing shipped | Read the log: the restore point and `npm run check:schema -- <database>` say what state it is in. Fix the migration in a new PR, or finish it by hand. The queued deploy then ships. | Nothing is lost. The database may be partly changed until you do. |
-| The migration applied and the new code is broken | Roll the code back: Cloudflare dashboard, Workers & Pages, `expense-tracker`, Deployments, pick the last good one, Rollback. The schema stays as it is. | Nothing is lost, provided the migration only added things. |
+| The migration applied and the new code is broken | Roll the code back: Cloudflare dashboard, Workers & Pages, `expense-tracker`, Deployments, pick the last good one, Rollback (the capture Workers have [their own](./CAPTURE-WORKER.md)). The schema stays as it is. | Nothing is lost, provided the migration only added things. |
 | The migration damaged or lost data | Run the **Restore database** workflow (Actions, Run workflow) with the database, the bookmark from the deploy run's summary, and the database name again to confirm. It waits for your approval. | **Every write since the bookmark is lost, user data included.** The workflow records the database's state just before, so running it again with that bookmark undoes the restore. |
 
 The bookmark is on the summary page of the deploy run that applied the migration, under "Restore point", and in the log.
@@ -199,8 +199,8 @@ have stopped `--file`. It can stop half-applied, so compare the result with `npm
 | `0038_description_norm` | See below. |
 | `0039_ledger_rollup` | Two tables kept by triggers on `transactions`, filled by one statement each. From then on every insert, delete and edit of a key or amount column writes more rows against the written-row allowance ([decision](./decisions/ledger-rollup.md)). `npm run check:schema` expects the tables and triggers on every database. |
 | `0040_capture` | Five tables for bank-push capture: keys (hashed), card map, recognised events, per-day counters of what was dropped, and recommendations. Nothing reads or writes them yet, so applying it changes no response. `npm run check:schema` expects them on every database. |
-| `0041_capture_shapes` | New columns on `capture_events` (shape, template, slots, the cleaned `body`, an `outcome`), a `malformed` counter, and the `capture_templates` table. Additive: `body_excerpt` stays, so the capture Worker that is running keeps working until it is redeployed, which should happen once this is on that database. `npm run check:schema` expects them on every database. |
-| `0042_capture_merchants`, `0043_capture_grouping`, `0044_push_subscriptions`, `0045_tips_seen` | The `capture_merchants` table (what a person calls each merchant their bank pushes name, learned from the payments they add), a `grouped` column on `capture_events` and an index on `recommendations` for joining the pushes of one movement, then `push_subscriptions` (one row per device that allowed notifications: the push service's URL and the two keys a message is encrypted to) and `push_settings` (how each person wants to be told). All additive; redeploy the capture Worker once 0043 is on that database, since it writes the column, and nothing sends until a Worker that reads 0044's tables is deployed. `npm run check:schema` expects them on every database. Then `0045_tips_seen`, one nullable `settings.tips_seen` column for the first-visit tips a person has put away, kept on the account so a dismissal holds on every device: additive, no backfill, and apply it before the code that saves a dismissal. |
+| `0041_capture_shapes` | New columns on `capture_events` (shape, template, slots, the cleaned `body`, an `outcome`), a `malformed` counter, and the `capture_templates` table. Additive: `body_excerpt` stays, so the capture Worker that is running keeps working until the Deploy workflow replaces it, after the migration. `npm run check:schema` expects them on every database. |
+| `0042_capture_merchants`, `0043_capture_grouping`, `0044_push_subscriptions`, `0045_tips_seen` | The `capture_merchants` table (what a person calls each merchant their bank pushes name, learned from the payments they add), a `grouped` column on `capture_events` and an index on `recommendations` for joining the pushes of one movement, then `push_subscriptions` (one row per device that allowed notifications: the push service's URL and the two keys a message is encrypted to) and `push_settings` (how each person wants to be told). All additive. The capture Worker writes 0043's column and reads 0044's tables, and the Deploy workflow ships it after the migrations. `npm run check:schema` expects them on every database. Then `0045_tips_seen`, one nullable `settings.tips_seen` column for the first-visit tips a person has put away, kept on the account so a dismissal holds on every device: additive, no backfill, and apply it before the code that saves a dismissal. |
 
 Every other migration needs nothing beyond the deploy. Each file's header comment says what it adds.
 
