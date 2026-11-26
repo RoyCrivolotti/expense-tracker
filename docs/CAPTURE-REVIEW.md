@@ -80,7 +80,7 @@ suggestion a merchant typed only earlier counts as new.
 ## One bill waiting twice
 
 A bank that announces a bill and then reports its charge leaves two payments waiting for one bill when neither was
-decided. The card ties the two with an amber rule under "Might be one bill, twice", the announcement right under its
+decided. The card ties the two with an amber rule under "Is this a duplicate?", the announcement right under its
 charge, and offers "Dismiss duplicate", which removes the announcement and leaves the charge to be reviewed. Both rows
 keep Review, and the review view of each says what the other is. It is a guess, so it only warns.
 

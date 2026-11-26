@@ -415,12 +415,19 @@ section.card {
 }
 
 .tieHead p {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* The height of the button's face, so a heading of one or two lines sits level with the button. */
+  min-height: 2rem;
   margin: 0;
   min-width: 0;
 }
 
 /* The button's face sits at the foot of its tap area: the room to press is above it, not over the row below. */
 .tieHead .pill {
+  /* A squeezed button would let its face spill past its own tap area; the heading wraps instead. */
+  flex-shrink: 0;
   align-items: flex-end;
   margin: 0 3px 0 0;
 }

@@ -24,6 +24,8 @@ const ENGINES = (process.env.ENGINES ?? 'chromium,webkit').split(',')
 const PHONE = { name: '375x812', width: 375, height: 812 }
 const SHORT = { name: '375x667', width: 375, height: 667 }
 const WIDE = { name: '1280x800', width: 1280, height: 800 }
+/** The narrowest phone: where the heading beside "Dismiss duplicate" has to wrap. */
+const NARROW = { name: '320x700', width: 320, height: 700 }
 
 /** A row is one line: 58px at the app's type size. */
 const ROW_HEIGHT = 58
@@ -292,7 +294,7 @@ async function checkPair(
 ) {
   const where = `${viewport.name} same-bill pair`
   const { page, context } = await openCard(browser, viewport, 'pair')
-  const tied = card(page).getByRole('listitem').filter({ hasText: 'Might be one bill, twice' })
+  const tied = card(page).getByRole('listitem').filter({ hasText: 'Is this a duplicate?' })
   const dismiss = await tied.getByRole('button', { name: /^Dismiss duplicate/ }).boundingBox()
   const rowTap = await tied.getByRole('button', { name: /^Review / }).evaluate((el) => {
     const r = el.closest('div[class*="_line_"]').getBoundingClientRect()
@@ -302,6 +304,28 @@ async function checkPair(
     const r = el.closest('button').getBoundingClientRect()
     return { x: r.x, y: r.y, width: r.width, height: r.height }
   })
+  const heading = await tied.getByText('Is this a duplicate?').boundingBox()
+  const face = await tied.getByText('Dismiss duplicate', { exact: true }).boundingBox()
+  const off = heading.y + heading.height / 2 - (face.y + face.height / 2)
+  check(where, 'the heading is level with "Dismiss duplicate"', Math.abs(off) <= 1, `${px(off)} off its middle`)
+  check(
+    where,
+    'the heading ends before the button',
+    heading.x + heading.width <= face.x,
+    `${box(heading)}, ${box(face)}`,
+  )
+  check(
+    where,
+    'the whole of "Dismiss duplicate" is inside its tap area',
+    face.x >= dismiss.x - 0.5 && face.x + face.width <= dismiss.x + dismiss.width + 0.5,
+    `button ${box(dismiss)}, face ${box(face)}`,
+  )
+  check(
+    where,
+    'no second line sits under the heading',
+    (await tied.getByText(/If it's duplicated/).count()) === 0,
+    'the line is still there',
+  )
   check(where, `"Dismiss duplicate" has a ${TAP}px tap area`, dismiss.height >= TAP - 0.5, box(dismiss))
   check(
     where,
@@ -495,8 +519,8 @@ async function main() {
         for (const viewport of [PHONE, WIDE]) {
           await checkRowTap(browser, viewport)
           await checkLongContent(browser, viewport)
-          await checkPair(browser, viewport)
         }
+        for (const viewport of [NARROW, PHONE, WIDE]) await checkPair(browser, viewport)
         for (const viewport of [SHORT, PHONE, WIDE]) await checkBar(browser, viewport)
         for (const theme of ['light', 'dark']) await checkColours(browser, theme)
       } finally {

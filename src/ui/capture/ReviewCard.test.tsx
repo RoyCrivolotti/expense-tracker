@@ -357,11 +357,12 @@ describe('a bill that waits twice', () => {
 
     expect(top).toHaveClass(styles.tieTop!)
     expect(bottom).toHaveClass(styles.tieBottom!)
-    expect(top).toHaveTextContent("Might be one bill, twiceIf it's duplicated:Dismiss duplicate−62,15 €")
+    expect(top).toHaveTextContent('Is this a duplicate?Dismiss duplicate−62,15 €')
+    expect(screen.queryByText(/If it's duplicated/)).not.toBeInTheDocument()
     expect(within(top!).getByText('EXAMPLE UTILITY')).toBeInTheDocument()
     expect(within(bottom!).getByText('Unnamed')).toBeInTheDocument()
     expect(within(bottom!).getByText('Notice, 6 Nov')).toBeInTheDocument()
-    expect(screen.getAllByText('Might be one bill, twice')).toHaveLength(1)
+    expect(screen.getAllByText('Is this a duplicate?')).toHaveLength(1)
   })
 
   it('keeps Review on both rows', () => {
@@ -405,8 +406,8 @@ describe('a bill that waits twice', () => {
   it('only warns where the app cannot write: the heading, what to do, and no button', () => {
     show(makeCore({ items: [charge, notice], canWrite: false, submit: undefined }))
 
-    expect(screen.getByText('Might be one bill, twice').parentElement).toHaveTextContent(
-      "Might be one bill, twiceIf it's duplicated, add only one.",
+    expect(screen.getByText('Is this a duplicate?').parentElement).toHaveTextContent(
+      "Is this a duplicate?If it's duplicated, add only one.",
     )
     expect(within(screen.getByRole('list')).queryByRole('button')).not.toBeInTheDocument()
   })
@@ -414,7 +415,7 @@ describe('a bill that waits twice', () => {
   it('draws no tie on the card when its limit shows only one of the two, and draws it in the sheet', () => {
     show(makeCore({ items: [rec(3), rec(4), charge, notice, rec(5)] }))
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
+    expect(screen.queryByText('Is this a duplicate?')).not.toBeInTheDocument()
     // The half that is shown is an ordinary row: no amber line down its side with nothing to tie it to.
     for (const row of screen.getAllByRole('listitem')) {
       expect(row).not.toHaveClass(styles.tieTop!)
@@ -423,7 +424,7 @@ describe('a bill that waits twice', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
 
-    expect(within(screen.getByRole('dialog')).getByText('Might be one bill, twice')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByText('Is this a duplicate?')).toBeInTheDocument()
   })
 
   it('keeps the announcement under its charge in the sheet when the charge came days after the day named', () => {
@@ -437,14 +438,14 @@ describe('a bill that waits twice', () => {
     const sheet = screen.getByRole('dialog')
 
     // One run of rows under the charge's day holds both, so the tie is drawn and the notice gets no day of its own.
-    const tied = within(sheet).getByText('Might be one bill, twice').closest('ul')!
+    const tied = within(sheet).getByText('Is this a duplicate?').closest('ul')!
     expect(within(tied).getByText('Notice, 6 Nov')).toBeInTheDocument()
     expect(within(sheet).queryByRole('heading', { name: 'Sun 8 Nov' })).not.toBeInTheDocument()
   })
 
   it('ties nothing when the two are not one bill: another amount, or a charge before the day named', () => {
     const { unmount } = show(makeCore({ items: [rec(2, { ...charge, amountCents: 6216 }), notice] }))
-    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
+    expect(screen.queryByText('Is this a duplicate?')).not.toBeInTheDocument()
     unmount()
 
     show(
@@ -452,7 +453,7 @@ describe('a bill that waits twice', () => {
         items: [rec(2, { ...bill, localDate: '2026-11-09', occurredAt: pushAt(2026, 11, 9, 8, 10) }), notice],
       }),
     )
-    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
+    expect(screen.queryByText('Is this a duplicate?')).not.toBeInTheDocument()
   })
 })
 
