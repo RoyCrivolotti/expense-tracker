@@ -6,8 +6,96 @@ import { SegmentedControl } from '../../../components/SegmentedControl'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { scenarioInk } from '../scenarioInk'
-import { cellText, gapLabel, longestHorizon, soonestFirst, type MilestoneRow, type YearsUnit } from './milestoneModel'
+import { longestHorizon, type MilestoneRow } from './milestoneModel'
+import { cellText, soonestFirst, type YearsUnit } from './milestoneTable'
+import { gapLabel } from './milestoneGaps'
 import styles from '../goals.module.css'
+
+/** The milestone in hand, with the arrows to the one before and after it. */
+function GoalStepper({
+  label,
+  name,
+  position,
+  count,
+  step,
+}: {
+  label: string
+  name: string | null
+  position: number
+  count: number
+  step: (by: number) => void
+}) {
+  return (
+    <div className={styles.byGoalStep}>
+      <button
+        type="button"
+        className={`${styles.byGoalArrow} tapActive`}
+        aria-label="Previous milestone"
+        disabled={position === 0}
+        onClick={() => step(-1)}
+      >
+        <BackIcon aria-hidden="true" />
+      </button>
+      <div className={styles.byGoalTitle} aria-live="polite">
+        <span className={styles.byGoalAmount}>{label}</span>
+        <span className={styles.byGoalSub}>
+          {name ? `${name} · ` : ''}
+          {position + 1} of {count}
+        </span>
+      </div>
+      <button
+        type="button"
+        className={`${styles.byGoalArrow} tapActive`}
+        aria-label="Next milestone"
+        disabled={position === count - 1}
+        onClick={() => step(1)}
+      >
+        <ChevronIcon aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
+/** One path: its name, the years it takes to the milestone, how that compares with the plan, and a bar for it. */
+function ByGoalRow({
+  row,
+  index,
+  unit,
+  plan,
+  longest,
+}: {
+  row: MilestoneRow
+  index: number
+  unit: YearsUnit
+  plan: MilestoneRow | null
+  longest: number
+}) {
+  const years = row.cells[index] ?? null
+  const gap = gapLabel(row, plan, index)
+  const share = years === null ? null : Math.max(0.04, Math.min(1, years / longest))
+  return (
+    <li className={styles.byGoalRow}>
+      <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} aria-hidden="true" />
+      <span className={styles.byGoalName}>
+        {row.name}
+        {plan !== null && row.id === plan.id ? <span className={styles.matrixPlanTag}> plan</span> : null}
+      </span>
+      <span className={styles.byGoalValue}>
+        {cellText(row, index, unit)}
+        {gap ? (
+          <span className={gap.sooner ? `${styles.byGoalGap} ${styles.matrixSooner}` : styles.byGoalGap}>
+            {gap.text === '=' ? 'same as plan' : `${gap.text} vs plan`}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={years === null ? `${styles.byGoalMeter} ${styles.matrixBeyond}` : styles.byGoalMeter}
+        style={share === null || years === 0 ? undefined : ({ '--share': share } as CSSProperties)}
+        aria-hidden="true"
+      />
+    </li>
+  )
+}
 
 /**
  * The table turned the other way for a phone: one milestone at a time, and under it every path in
@@ -64,62 +152,12 @@ export function MilestoneByGoal({
           options={indices.map((i) => ({ value: String(i), label: amount(milestones[i] as Milestone) }))}
         />
       </div>
-      <div className={styles.byGoalStep}>
-        <button
-          type="button"
-          className={`${styles.byGoalArrow} tapActive`}
-          aria-label="Previous milestone"
-          disabled={position === 0}
-          onClick={() => step(-1)}
-        >
-          <BackIcon aria-hidden="true" />
-        </button>
-        <div className={styles.byGoalTitle} aria-live="polite">
-          <span className={styles.byGoalAmount}>{amount(milestone)}</span>
-          <span className={styles.byGoalSub}>
-            {name ? `${name} · ` : ''}
-            {position + 1} of {indices.length}
-          </span>
-        </div>
-        <button
-          type="button"
-          className={`${styles.byGoalArrow} tapActive`}
-          aria-label="Next milestone"
-          disabled={position === indices.length - 1}
-          onClick={() => step(1)}
-        >
-          <ChevronIcon aria-hidden="true" />
-        </button>
-      </div>
+      <GoalStepper label={amount(milestone)} name={name} position={position} count={indices.length} step={step} />
       <p className={styles.byGoalOrder}>Soonest first</p>
       <ol className={styles.byGoalList} aria-label={`Paths in the order they reach ${amount(milestone)}`}>
-        {soonestFirst(rows, index).map((row) => {
-          const years = row.cells[index] ?? null
-          const gap = gapLabel(row, plan, index)
-          const share = years === null ? null : Math.max(0.04, Math.min(1, years / longest))
-          return (
-            <li key={row.id} className={styles.byGoalRow}>
-              <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} aria-hidden="true" />
-              <span className={styles.byGoalName}>
-                {row.name}
-                {plan !== null && row.id === plan.id ? <span className={styles.matrixPlanTag}> plan</span> : null}
-              </span>
-              <span className={styles.byGoalValue}>
-                {cellText(row, index, unit)}
-                {gap ? (
-                  <span className={gap.sooner ? `${styles.byGoalGap} ${styles.matrixSooner}` : styles.byGoalGap}>
-                    {gap.text === '=' ? 'same as plan' : `${gap.text} vs plan`}
-                  </span>
-                ) : null}
-              </span>
-              <span
-                className={years === null ? `${styles.byGoalMeter} ${styles.matrixBeyond}` : styles.byGoalMeter}
-                style={share === null || years === 0 ? undefined : ({ '--share': share } as CSSProperties)}
-                aria-hidden="true"
-              />
-            </li>
-          )
-        })}
+        {soonestFirst(rows, index).map((row) => (
+          <ByGoalRow key={row.id} row={row} index={index} unit={unit} plan={plan} longest={longest} />
+        ))}
       </ol>
     </div>
   )

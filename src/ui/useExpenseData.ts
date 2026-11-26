@@ -3,8 +3,6 @@ import type { AttachmentCounts } from '../domain/data/ledgerParts'
 import type { OccurrenceGroup } from '../domain/engine'
 import type { ExpenseDataset, Transaction } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
-import { isAccessDenied } from '../data/apiClient'
-import { forgetOfflineSnapshot, loadOfflineSnapshot, saveOfflineSnapshot } from '../data/offlineCache'
 import type { DescriptionIndex } from '../data/descriptionIndex'
 import type { RecentActivity } from '../data/recentActivity'
 import type { WriteReach } from '../data/ledgerSession'
@@ -12,6 +10,7 @@ import type { Lookup } from './format'
 import type { UsageView } from './definitions/recordUsage'
 import type { PagedList } from './transactionListView'
 import { buildExpenseModel } from './buildExpenseModel'
+import { loaderOf, settlersOf, type LoadRun } from './expenseDataLoad'
 
 /**
  * The recurring series of the whole history. The engines that decide what is fixed spend build their own
@@ -90,7 +89,7 @@ export interface ExpenseModel {
   savedMonths?: ReadonlySet<string>
 }
 
-interface LoadState {
+export interface LoadState {
   status: 'loading' | 'ready' | 'error'
   model?: ExpenseModel
   error?: string
@@ -123,12 +122,6 @@ export interface ExpenseData extends LoadState {
    */
   backgroundError?: string | null
 }
-
-function isOnline(): boolean {
-  return typeof navigator === 'undefined' ? true : navigator.onLine
-}
-
-const MIN_REFRESH_MS = 700
 
 /**
  * The dataset of a source. `owner` is who is signed in: the copy kept for when the network does not answer is
@@ -180,80 +173,19 @@ export function useExpenseData(
      */
     const isStale = () => patchCount.current !== patchesAtStart
 
-    const finish = async (outcome: RefreshOutcome) => {
-      const isUserRefresh = version > 0
-      if (isUserRefresh && refreshStartedAt.current > 0) {
-        const wait = MIN_REFRESH_MS - (Date.now() - refreshStartedAt.current)
-        if (wait > 0) await new Promise((r) => setTimeout(r, wait))
-      }
-      if (!active) return
-      setRefreshing(false)
-      if (isUserRefresh) setRefreshOutcome(outcome)
+    const run: LoadRun = {
+      source,
+      version,
+      owner,
+      isActive: () => active,
+      isStale,
+      refreshStartedAt,
+      modelRef,
+      setState,
+      setRefreshing,
+      setRefreshOutcome,
     }
-
-    /**
-     * Show the offline snapshot. Returns false only when there is none, so the caller
-     * can fall through to an error state.
-     */
-    const applyCached = async (outcome: RefreshOutcome): Promise<boolean> => {
-      const cached = owner ? await loadOfflineSnapshot(owner) : null
-      if (!active) return true
-      if (isStale()) {
-        void finish(outcome)
-        return true
-      }
-      if (!cached) return false
-      const model = buildExpenseModel(cached.dataset)
-      modelRef.current = model
-      setState({ status: 'ready', model, fromCache: true, snapshotAt: cached.savedAt })
-      void finish(outcome)
-      return true
-    }
-
-    const loadOffline = async () => {
-      if (await applyCached(version === 0 ? null : 'fail')) return
-      setState({ status: 'error', error: 'You are offline and no saved data is available.' })
-      void finish('fail')
-    }
-
-    const loadOnline = async () => {
-      const refreshOk: RefreshOutcome = version === 0 ? null : 'ok'
-      const dataset = await source.load()
-      if (!active) return
-      // Stale, not failed — the request succeeded, its payload is just superseded.
-      // Still settle the refresh UI, or the spinner never stops. But report no
-      // outcome: nothing on screen changed, and "Updated" for a response we threw
-      // away is a plainer lie than the stale data this discarding exists to avoid.
-      if (isStale()) return void finish(null)
-      if (owner) await saveOfflineSnapshot(owner, dataset)
-      if (!active) return
-      if (isStale()) return void finish(null)
-      const model = buildExpenseModel(dataset)
-      modelRef.current = model
-      setState({ status: 'ready', model, fromCache: false })
-      void finish(refreshOk)
-    }
-
-    const handleLoadError = async (err: unknown) => {
-      if (!active) return
-      // The server answered and said no, so what this device kept is not for anyone to see in its place. That
-      // holds for a refresh as well: the model already on screen stays, but the copy is not left on disk.
-      const denied = isAccessDenied(err)
-      if (denied) await forgetOfflineSnapshot()
-      if (modelRef.current) return void finish('fail')
-      if (!denied && (await applyCached('fail'))) return
-      setState({ status: 'error', error: err instanceof Error ? err.message : String(err) })
-      void finish('fail')
-    }
-
-    const load = async () => {
-      if (!isOnline()) return loadOffline()
-      try {
-        await loadOnline()
-      } catch (err: unknown) {
-        await handleLoadError(err)
-      }
-    }
+    const load = loaderOf(run, settlersOf(run))
 
     void load()
     return () => {

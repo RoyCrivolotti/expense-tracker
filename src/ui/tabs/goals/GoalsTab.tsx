@@ -1,34 +1,19 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import { sumsOf } from '../../modelSums'
 import type { ExpenseActions } from '../../actions'
-import {
-  averageMonthlyCents,
-  checkinInvestedCents,
-  computeMonthlyTotals,
-  latestCheckin,
-  milestonesReached,
-  monthlyFlows,
-  planFromToday,
-} from '../../../engine'
-import type { InvestedSnapshot } from './checkinDate'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
-import { entryDraftPatch, mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
+import { GoalsViews } from './GoalsViews'
 import { useBaselineToast } from './useBaselineToast'
-import { useGoalsNarrow } from './useGoalsNarrow'
-import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
-import { ProgressPane } from './ProgressPane'
-import { AssumptionsView } from './AssumptionsView'
-import { useScenarioEditor } from './useScenarioEditor'
 import { useGoalsUnsavedWork } from './useGoalsUnsavedWork'
 import { useStarredLevers } from './useStarredLevers'
 import { GoalsTitleRow } from './GoalsTitleRow'
-import { PlanView } from './PlanView'
 import { GoalsTips } from './GoalsTips'
-import type { DisplayMode } from './PlanHero'
-import { activePlan } from './scenarioSelection'
+import { useGoalsNavigation } from './useGoalsNavigation'
+import { useGoalsReadings } from './useGoalsReadings'
+import { useScenarioEditor } from './useScenarioEditor'
+import { entryDraftPatch } from './goalsView'
 import styles from './goals.module.css'
 
 /**
@@ -45,87 +30,12 @@ interface GoalsTabProps {
   entry?: GoalsEntry
 }
 
-function initialView(entry: GoalsEntry | undefined): TabView {
-  return entry === 'checkin' ? 'progress' : 'plan'
-}
-
 export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const { dataset } = model
-  const [view, setView] = useState<TabView>(() => initialView(entry))
-  // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
-  // within the tab must not open it again.
-  const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
-  // The Nominal note links to the assumed inflation in Assumptions, and the empty Progress view
-  // to the accounts; Assumptions then scrolls to that card. Any other way of getting to the
-  // view must not.
-  const [assumptionsFocus, setAssumptionsFocus] = useState<AssumptionsFocus | null>(null)
-  // The rate the Nominal view is being tried at, if not the saved one. It lives only as long
-  // as the chart it was tried on: leaving the view or the Nominal mode drops it.
-  const [previewInflation, setPreviewInflation] = useState<number | null>(null)
-  // Mobile-only: swaps the chart block for the controls form in place, in lieu
-  // of a separate route. Ignored on desktop, where both are always visible.
-  const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
-  // Leaving a view by any route, the row or a link, notes where it was for coming back.
-  const memory = useGoalsScrollMemory()
-  const narrow = useGoalsNarrow()
-  const current = mobileViewOf(view, mobilePlanView)
-  const changeView = useCallback(
-    (next: TabView) => {
-      memory.leave(current)
-      setCheckinEntry(false)
-      setAssumptionsFocus(null)
-      setPreviewInflation(null)
-      setView(next)
-    },
-    [memory, current],
-  )
-  const changePlanHalf = useCallback(
-    (next: MobilePlanView) => {
-      memory.leave(current)
-      setMobilePlanView(next)
-    },
-    [memory, current],
-  )
-  const openAssumptions = useCallback(
-    (focus: AssumptionsFocus) => {
-      changeView('assumptions')
-      setAssumptionsFocus(focus)
-    },
-    [changeView],
-  )
-  const openInflationSetting = useCallback(() => openAssumptions('inflation'), [openAssumptions])
-  const openAccountsSetup = useCallback(() => openAssumptions('accounts'), [openAssumptions])
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
-  const changeDisplayMode = useCallback((next: DisplayMode) => {
-    setPreviewInflation(null)
-    setDisplayMode(next)
-  }, [])
-  const milestones = dataset.settings.milestones
-  const reachedMilestones = useMemo(
-    () => milestonesReached(milestones, dataset.wealthCheckins, dataset.wealthAccounts),
-    [milestones, dataset.wealthCheckins, dataset.wealthAccounts],
-  )
-  const latestSnapshot = useMemo<InvestedSnapshot | null>(() => {
-    const latest = latestCheckin(dataset.wealthCheckins)
-    if (!latest) return null
-    return {
-      investedCents: checkinInvestedCents(latest, dataset.wealthAccounts),
-      date: latest.checkinDate,
-    }
-  }, [dataset.wealthCheckins, dataset.wealthAccounts])
-  const sums = sumsOf(model)
-  const monthly = useMemo(() => monthlyFlows(computeMonthlyTotals(sums.transactions)), [sums.transactions])
-  const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
-  // The plan as it stands from the latest check-in: derived, never saved, and null until
-  // there is a dated plan and a check-in to restart it from.
-  const savedInflation = dataset.settings.assumedInflation
-  const fromToday = useMemo(
-    () => planFromToday(plan, latestSnapshot, savedInflation),
-    [plan, latestSnapshot, savedInflation],
-  )
-  // Seeds a new draft's monthly contribution: what has actually gone into the
-  // portfolio, not what was left over after expenses.
-  const avgSaving = useMemo(() => averageMonthlyCents(monthly.map((m) => m.investedCents)), [monthly])
+  const nav = useGoalsNavigation(entry)
+  const { view, mobilePlanView, memory, narrow, changeView, changePlanHalf } = nav
+  const readings = useGoalsReadings(model)
+  const { avgSaving } = readings
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
   // The Analytics baseline lands as a draft edit, once per arrival (the tab remounts on
@@ -173,55 +83,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}
         <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
-
-        {view === 'assumptions' ? (
-          <AssumptionsView
-            accounts={dataset.wealthAccounts}
-            checkins={dataset.wealthCheckins}
-            settings={dataset.settings}
-            actions={actions}
-            onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
-            focus={assumptionsFocus}
-          />
-        ) : null}
-        {view === 'progress' ? (
-          <ProgressPane
-            dataset={dataset}
-            sums={sums}
-            actions={actions}
-            plan={plan}
-            latestSnapshot={latestSnapshot}
-            fromToday={fromToday}
-            reached={reachedMilestones}
-            openCheckinForm={checkinEntry}
-            onOpenAccountsSetup={openAccountsSetup}
-            editor={editor}
-          />
-        ) : null}
-        {view === 'plan' ? (
-          <PlanView
-            half={mobilePlanView}
-            scenarios={dataset.goalScenarios}
-            editor={editor}
-            actions={actions}
-            latest={latestSnapshot}
-            milestones={milestones}
-            reached={reachedMilestones}
-            monthly={monthly}
-            checkins={dataset.wealthCheckins}
-            accounts={dataset.wealthAccounts}
-            fromToday={fromToday}
-            levers={levers}
-            display={{
-              mode: displayMode,
-              onModeChange: changeDisplayMode,
-              assumedInflation: dataset.settings.assumedInflation,
-              preview: previewInflation,
-              onPreview: setPreviewInflation,
-              onOpenSetting: actions ? openInflationSetting : undefined,
-            }}
-          />
-        ) : null}
+        <GoalsViews nav={nav} readings={readings} dataset={dataset} actions={actions} editor={editor} levers={levers} />
       </GoalsPanel>
     </div>
   )

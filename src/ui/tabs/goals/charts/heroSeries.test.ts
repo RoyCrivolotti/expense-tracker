@@ -17,16 +17,9 @@ import { axisSpans, restYear } from './heroRestYear'
 import { endedReading } from './heroLegendState'
 import { place, restYear as tableRestYear } from './comparisonCalendar'
 import { yearLabel } from '../yearLabel'
-import {
-  axisLabels,
-  bandSeries,
-  buildSeries,
-  heroAxis,
-  lineReadings,
-  purchaseMarkerIndices,
-  scenarioLines,
-  startMarksOf,
-} from './heroSeries'
+import { bandSeries, buildSeries, heroAxis, lineReadings, scenarioLines } from './heroSeries'
+import { axisLabels } from './heroAxisText'
+import { purchaseMarkerIndices, startMarksOf } from './heroMarks'
 
 const RATE = 0.02
 const plan = samplePlan({ id: 1, name: 'Plan', planStartDate: '2026-01-01' })

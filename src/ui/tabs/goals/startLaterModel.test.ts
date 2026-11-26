@@ -6,16 +6,8 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import { scenarioToDraft } from './scenarioDraft'
 import { startLater } from '../../../engine'
 import { comparisonRows } from './charts/comparisonRows'
-import {
-  checkinOnOrBefore,
-  copyName,
-  defaultStartDate,
-  outcomeOnTable,
-  ownsHouseBy,
-  startLaterView,
-  startRefusal,
-  type StartLaterInputs,
-} from './startLaterModel'
+import { outcomeOnTable, startLaterView, type StartLaterInputs } from './startLaterModel'
+import { checkinOnOrBefore, copyName, defaultStartDate, ownsHouseBy, startRefusal } from './startLaterRules'
 
 const iso = (d: string) => d
 

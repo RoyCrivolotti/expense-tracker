@@ -1,29 +1,13 @@
-import { useMemo } from 'react'
 import type { ExpenseDataset } from '../../types'
-import {
-  averageMonthlyCents,
-  computeMonthlyTotals,
-  defaultBudgetMonth,
-  latestCheckin,
-  checkinInvestedCents,
-  planFromToday,
-  monthlyFlows,
-  paceMonths,
-  plannedMonthlyAverage,
-  trackStatus,
-  trackVerdict,
-  type TrackStatus,
-} from '../../engine'
+import { trackVerdict, type TrackStatus } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
-import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
-import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useAssumedInflation } from '../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import { planGapLabel } from '../tabs/goals/planGap'
 import { planMoneyLabel } from '../tabs/goals/planMoneyLabel'
 import { daysSinceCheckin } from './checkinAge'
-import { todayIso } from './transactionFormState'
+import { useGoalsCardFigures } from './useGoalsCardFigures'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
@@ -83,69 +67,28 @@ function TrackBadge({ status, format, planMoney }: TrackBadgeProps) {
   )
 }
 
+function GoalsEmpty({ dataset, onOpenGoals }: { dataset: ExpenseDataset; onOpenGoals: (() => void) | undefined }) {
+  return (
+    <>
+      <SectionTitle>Goals</SectionTitle>
+      <Card>
+        <EmptyState actionLabel={onOpenGoals ? 'Open Goals' : undefined} onAction={onOpenGoals}>
+          {dataset.goalScenarios.length > 0
+            ? 'Pick one of your scenarios as your plan under Goals, and this card will track it.'
+            : 'A long-range plan: what you invest each month and where that leads in 10, 20 or 30 years.'}
+        </EmptyState>
+      </Card>
+    </>
+  )
+}
+
 export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
-  const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
-  // The pace kept since the plan began: investment transactions per month, which is
-  // what the plan's monthly figure promises, rather than net saving.
-  const { avgInvesting, plannedAverage } = useMemo(() => {
-    const flows = monthlyFlows(computeMonthlyTotals(dataset.transactions))
-    const { months } = paceMonths(
-      flows,
-      scenario?.planStartDate ?? null,
-      defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay),
-    )
-    return {
-      avgInvesting: averageMonthlyCents(months.map((m) => m.investedCents)),
-      // What the plan averages over those same months, which is what the pace is set against.
-      plannedAverage: scenario
-        ? plannedMonthlyAverage(
-            scenario,
-            months.map((m) => m.month),
-          )
-        : 0,
-    }
-  }, [dataset.transactions, dataset.settings.budgetRolloverDay, scenario])
-  const fromToday = useMemo(() => {
-    const latest = latestCheckin(dataset.wealthCheckins)
-    return planFromToday(
-      scenario,
-      latest ? { investedCents: checkinInvestedCents(latest, dataset.wealthAccounts), date: latest.checkinDate } : null,
-      inflationRate,
-    )
-  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts, inflationRate])
-  const headline = useMemo(
-    () =>
-      scenario
-        ? scenarioHeadline(scenario, inflationRate, avgInvesting, format, fromToday, {
-            today: todayIso(),
-            plannedAverageCents: plannedAverage,
-          })
-        : null,
-    [scenario, inflationRate, avgInvesting, plannedAverage, format, fromToday],
-  )
-
-  const track = useMemo(() => {
-    if (!scenario) return null
-    const latest = latestCheckin(dataset.wealthCheckins)
-    if (!latest) return null
-    return trackStatus(latest, scenario, dataset.wealthAccounts, inflationRate)
-  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts, inflationRate])
+  const { scenario, headline, track } = useGoalsCardFigures(dataset, format, inflationRate)
 
   if (!scenario || !headline) {
-    return (
-      <>
-        <SectionTitle>Goals</SectionTitle>
-        <Card>
-          <EmptyState actionLabel={onOpenGoals ? 'Open Goals' : undefined} onAction={onOpenGoals}>
-            {dataset.goalScenarios.length > 0
-              ? 'Pick one of your scenarios as your plan under Goals, and this card will track it.'
-              : 'A long-range plan: what you invest each month and where that leads in 10, 20 or 30 years.'}
-          </EmptyState>
-        </Card>
-      </>
-    )
+    return <GoalsEmpty dataset={dataset} onOpenGoals={onOpenGoals} />
   }
 
   return (

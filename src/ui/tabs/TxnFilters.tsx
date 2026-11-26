@@ -104,39 +104,7 @@ export function TxnFilters(props: TxnFiltersProps) {
         onClear={props.hasActiveFilters && !props.selectMode ? props.onClearFilters : undefined}
       />
       <Presence show={expanded} exitMs={EXIT_MS.sheet}>
-        <TxnFiltersSheet
-          categories={props.categories}
-          accounts={props.accounts}
-          flags={props.flags}
-          labels={props.labels}
-          status={props.status}
-          categoryId={props.categoryId}
-          accountId={props.accountId}
-          flagId={props.flagId}
-          labelIds={props.labelIds}
-          txnType={props.txnType}
-          amountMin={props.amountMin}
-          amountMax={props.amountMax}
-          amountMinCents={props.amountMinCents}
-          amountMaxCents={props.amountMaxCents}
-          dateScope={props.dateScope}
-          customDateFrom={props.customDateFrom}
-          customDateTo={props.customDateTo}
-          selectMode={props.selectMode}
-          onClose={() => setExpanded(false)}
-          onCategory={props.onCategory}
-          onAccount={props.onAccount}
-          onFlag={props.onFlag}
-          onLabelIds={props.onLabelIds}
-          onStatus={props.onStatus}
-          onTxnType={props.onTxnType}
-          onAmountMin={props.onAmountMin}
-          onAmountMax={props.onAmountMax}
-          onDateScope={props.onDateScope}
-          onCustomDateFrom={props.onCustomDateFrom}
-          onCustomDateTo={props.onCustomDateTo}
-          onLockedPress={props.onLockedPress}
-        />
+        <TxnFiltersSheet {...props} onClose={() => setExpanded(false)} />
       </Presence>
     </>
   )

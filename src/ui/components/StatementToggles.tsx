@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
-import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
 import { EXIT_MS } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
-import { sumsOf } from '../modelSums'
 import type { Account } from '../../types'
+import { AccountStatements } from './AccountStatements'
+import { findPaidOn } from './statementPaidOn'
+import { useStatementCharges } from './useStatementCharges'
 import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
-import { StatementSummaryRow } from './StatementSummaryRow'
 import styles from './StatementToggles.module.css'
 
 interface Props {
@@ -34,48 +34,34 @@ interface EditingSheet {
   paidOn: string | undefined
 }
 
-function findPaidOn(
-  model: ExpenseModel,
+async function saveStatement(
+  onToggle: Props['onToggle'],
+  setPending: (key: string | null) => void,
   accountId: number,
   yearMonth: string,
-): string | undefined {
-  return model.dataset.accountStatements.find((s) => s.accountId === accountId && s.yearMonth === yearMonth)?.paidOn
+  paid: boolean,
+  paidOn: string | undefined,
+) {
+  const key = `${accountId}:${yearMonth}`
+  setPending(key)
+  try {
+    await onToggle(accountId, yearMonth, paid, paid ? (paidOn ?? todayLocalIso()) : undefined)
+  } finally {
+    setPending(null)
+  }
 }
 
 export function StatementToggles({ model, onToggle }: Props) {
   const [pending, setPending] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditingKey | null>(null)
-  const deferred = useMemo(
-    () => model.dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active),
-    [model.dataset],
-  )
-  const months = [...model.months].reverse()
+  const { deferred, months, reconciliation, chargeCents } = useStatementCharges(model)
 
-  const sums = sumsOf(model)
-  const reconciliation = useMemo(
-    () => computeCashReconciliation(sums.transactions, sums.accounts, sums.settings, sums.cashActuals),
-    [sums],
-  )
-
-  const chargeCents = (
-    accountId: number,
-    yearMonth: string,
-  ): number => reconciliation.find((r) => r.month === yearMonth)?.cardCharges.get(accountId)?.chargeCents ?? 0
-
-  const save = async (
+  const save = (
     accountId: number,
     yearMonth: string,
     paid: boolean,
     paidOn?: string,
-  ) => {
-    const key = `${accountId}:${yearMonth}`
-    setPending(key)
-    try {
-      await onToggle(accountId, yearMonth, paid, paid ? (paidOn ?? todayLocalIso()) : undefined)
-    } finally {
-      setPending(null)
-    }
-  }
+  ) => saveStatement(onToggle, setPending, accountId, yearMonth, paid, paidOn)
 
   // The whole displayed record, not just the key — otherwise a live change to `model`
   // during the sheet's exit would reword the closing sheet's amount or paid state, and a
@@ -99,27 +85,15 @@ export function StatementToggles({ model, onToggle }: Props) {
   return (
     <div className={styles.wrap}>
       {deferred.map((account) => (
-        <div key={account.id} className={styles.account}>
-          <div className={styles.accountName}>{account.name}</div>
-          <div className={styles.months}>
-            {months.map((m) => {
-              const paid = isStatementPaid(model.dataset.accountStatements, account.id, m)
-              const amountCents = chargeCents(account.id, m)
-              const key = `${account.id}:${m}`
-              return (
-                <StatementSummaryRow
-                  key={m}
-                  name={fullMonthLabel(m)}
-                  amountCents={amountCents}
-                  paid={paid}
-                  paidOn={findPaidOn(model, account.id, m)}
-                  disabled={pending === key}
-                  {...(amountCents !== 0 ? { onPress: () => setEditing({ accountId: account.id, yearMonth: m }) } : {})}
-                />
-              )
-            })}
-          </div>
-        </div>
+        <AccountStatements
+          key={account.id}
+          account={account}
+          months={months}
+          model={model}
+          pending={pending}
+          chargeCents={chargeCents}
+          onOpen={(accountId, yearMonth) => setEditing({ accountId, yearMonth })}
+        />
       ))}
 
       <PresenceValue value={sheet} exitMs={EXIT_MS.sheet}>

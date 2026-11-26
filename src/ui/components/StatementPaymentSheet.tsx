@@ -25,6 +25,58 @@ interface Props {
   onClose: () => void
 }
 
+type Persist = (
+  nextPaid: boolean,
+  nextPaidOn: string | undefined,
+  closeAfter: boolean,
+) => Promise<void>
+
+/** The save error, and the one button that flips the statement between due and paid. */
+function SheetFooter({
+  error,
+  paid,
+  disabled,
+  draftDate,
+  persist,
+}: {
+  error: string | null
+  paid: boolean
+  disabled: boolean
+  draftDate: string
+  persist: Persist
+}) {
+  return (
+    <>
+      {error ? (
+        <p className={formStyles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className={formStyles.actions}>
+        {paid ? (
+          <button
+            type="button"
+            className={`${styles.secondary} tapActive`}
+            disabled={disabled}
+            onClick={() => void persist(false, undefined, true)}
+          >
+            Mark as due
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`${styles.primary} tapActive`}
+            disabled={disabled}
+            onClick={() => void persist(true, draftDate, true)}
+          >
+            Mark as paid
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
 export function StatementPaymentSheet({
   cardName,
   yearMonth,
@@ -89,32 +141,7 @@ export function StatementPaymentSheet({
         />
       </Field>
       <p className={styles.hint}>Paid date controls where this debit appears in Transactions.</p>
-      {error ? (
-        <p className={formStyles.error} role="alert">
-          {error}
-        </p>
-      ) : null}
-      <div className={formStyles.actions}>
-        {paid ? (
-          <button
-            type="button"
-            className={`${styles.secondary} tapActive`}
-            disabled={disabled}
-            onClick={() => void persist(false, undefined, true)}
-          >
-            Mark as due
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={`${styles.primary} tapActive`}
-            disabled={disabled}
-            onClick={() => void persist(true, draftDate, true)}
-          >
-            Mark as paid
-          </button>
-        )}
-      </div>
+      <SheetFooter error={error} paid={paid} disabled={disabled} draftDate={draftDate} persist={persist} />
     </Modal>
   )
 }

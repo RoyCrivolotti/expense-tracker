@@ -14,7 +14,7 @@ import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate } from './checkinDate'
 import { planMoneyLabel } from './planMoneyLabel'
-import { ownsHouseBy } from './startLaterModel'
+import { ownsHouseBy } from './startLaterRules'
 import styles from './goals.module.css'
 
 /** Within this share of each other, the plan's figure and the typed one are the same for this purpose. */

@@ -1,19 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import type { ExpenseSettings, Milestone } from '../../types'
 import {
   defaultMilestones,
   formatCents,
-  formatMoneyInput,
-  MILESTONE_LABEL_MAX_LENGTH,
   MILESTONE_MAX_CENTS,
   MILESTONE_MAX_COUNT,
-  tryParseMoneyToCents,
   resolveMoneyFormat,
   currencyWord,
   type MoneyFormat,
 } from '../../engine'
 import { Card } from '../components/primitives'
-import { DateInput } from '../components/DateInput'
+import { MilestoneRow } from './MilestoneRow'
+import { useMilestoneSave } from './useMilestoneSave'
 import styles from '../tabs/tabs.module.css'
 import goalStyles from '../tabs/goals/goals.module.css'
 
@@ -29,199 +27,15 @@ function suggestedAmountCents(milestones: Milestone[]): number {
   return Math.min(MILESTONE_MAX_CENTS, top + 10_000_000)
 }
 
-function MilestoneRow({
-  milestone,
-  format,
-  formatted,
-  isAmountTaken,
-  onCommit,
-  onRemove,
-  failed,
-}: {
-  milestone: Milestone
-  format: MoneyFormat
-  formatted: string
-  isAmountTaken: (amountCents: number) => boolean
-  onCommit: (
-    amountCents: number,
-    next: Milestone,
-  ) => void
-  onRemove: () => void
-  /** The row whose save last failed, and a count so the same row can fail twice. */
-  failed: { amountCents: number; n: number } | null
-}) {
-  const [label, setLabel] = useState(milestone.label)
-  const [amount, setAmount] = useState(formatMoneyInput(milestone.amountCents, format))
-  // The row is addressed by amount. After the amount itself is edited the working list
-  // already holds the new one while the prop still has the old, so a date picked in that
-  // gap must address the new amount or it would match nothing and be lost.
-  const keyRef = useRef(milestone.amountCents)
-  const targetDate = milestone.targetDate ?? ''
-  // The date the row last committed, for the same reason: a rename right after a date
-  // pick must carry the date even though the prop has not caught up with it yet.
-  const targetRef = useRef(targetDate)
-  useEffect(() => {
-    targetRef.current = targetDate
-  }, [targetDate])
-
-  // Read through a ref so the reset below runs only when a save failed, not on every
-  // change to the prop, which would wipe what is being typed in another row's wake.
-  const savedRef = useRef(milestone)
-  const formatRef = useRef(format)
-  useEffect(() => {
-    savedRef.current = milestone
-    formatRef.current = format
-  })
-  useEffect(() => {
-    // Only the row whose edit was refused goes back; another row's typing is untouched.
-    const saved = savedRef.current
-    if (failed === null || failed.amountCents !== saved.amountCents) return
-    setLabel(saved.label)
-    setAmount(formatMoneyInput(saved.amountCents, formatRef.current))
-    keyRef.current = saved.amountCents
-    targetRef.current = saved.targetDate ?? ''
-  }, [failed])
-
-  function resolveAmountCents(): number {
-    // Read the way the rest of the app reads an amount, by the currency's format: "150.000" is a
-    // hundred and fifty thousand where the group mark is the point, and "1,5" is one and a half
-    // where it is not. A plain Number() read the first as 150 and dropped the second.
-    const cents = tryParseMoneyToCents(amount, format)
-    if (cents === null || cents <= 0) return milestone.amountCents
-    const next = Math.min(MILESTONE_MAX_CENTS, cents)
-    // Saving a duplicate would let the server's de-duplication drop this row and
-    // its label without the edit ever being visible, so collisions revert. The row's
-    // own last commit is not a collision, even while it is still in flight.
-    return next !== keyRef.current && isAmountTaken(next) ? keyRef.current : next
-  }
-
-  function commit(nextTarget = targetRef.current) {
-    const amountCents = resolveAmountCents()
-    setAmount(formatMoneyInput(amountCents, format))
-    onCommit(keyRef.current, { amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
-    keyRef.current = amountCents
-    targetRef.current = nextTarget
-  }
-
-  return (
-    <li className={styles.milestoneRow}>
-      <input
-        className={styles.milestoneLabelInput}
-        type="text"
-        aria-label="Milestone name"
-        placeholder="Unnamed"
-        value={label}
-        maxLength={MILESTONE_LABEL_MAX_LENGTH}
-        onChange={(e) => setLabel(e.target.value)}
-        onBlur={() => commit()}
-      />
-      <input
-        className={styles.milestoneAmountInput}
-        type="text"
-        inputMode="decimal"
-        aria-label={`Milestone amount in ${format.symbol}`}
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        onBlur={() => commit()}
-      />
-      <span className={styles.milestoneFormatted}>{formatted}</span>
-      {/* Optional: with a date, Progress can say on track or late instead of only reached. */}
-      <span className={styles.milestoneTarget}>
-        <DateInput
-          value={targetDate}
-          placeholder="Target date"
-          ariaLabel={`Target date for milestone ${milestone.label || formatted}`}
-          onChange={(iso) => commit(iso)}
-        />
-        {targetDate ? (
-          <button
-            type="button"
-            className={styles.milestoneRemove}
-            aria-label={`Clear target date for milestone ${milestone.label || formatted}`}
-            onClick={() => commit('')}
-          >
-            ×
-          </button>
-        ) : null}
-      </span>
-      <button
-        type="button"
-        className={styles.milestoneRemove}
-        aria-label={`Remove milestone ${milestone.label || formatted}`}
-        onClick={onRemove}
-      >
-        ×
-      </button>
-    </li>
-  )
-}
-
 /** Owner-wide net-worth milestones shown on the Goals charts and matrix. */
 export function MilestonesSetting({ settings, onChange }: Props) {
   const format = resolveMoneyFormat(settings.currencyCode, settings.numberLocale)
   const milestones = settings.milestones
 
-  // Each save sends the whole list, so building one from the last render would
-  // let a second edit overwrite a first that is still in flight. This holds the
-  // working list and updates synchronously, ahead of the server round-trip.
-  const workingRef = useRef(milestones)
-  const inFlight = useRef(0)
-  const latestSave = useRef(0)
-  // A save that fails would otherwise fail in silence: the input keeps the edit while
-  // the server never got it.
-  const [error, setError] = useState<string | null>(null)
-  const [failed, setFailed] = useState<{ amountCents: number; n: number } | null>(null)
-  const errorRef = useRef<HTMLParagraphElement>(null)
-  useEffect(() => {
-    // On a phone the list runs under the fold; an alert nobody sees is no alert.
-    if (error) errorRef.current?.scrollIntoView?.({ block: 'nearest' })
-  }, [error])
-
-  useEffect(() => {
-    if (inFlight.current === 0) workingRef.current = milestones
-  }, [milestones])
-
-  const save = async (
-    next: Milestone[],
-    origin: number | null = null,
-  ) => {
-    const previous = workingRef.current
-    workingRef.current = next
-    inFlight.current += 1
-    const seq = ++latestSave.current
-    setError(null)
-    try {
-      await onChange({ milestones: next })
-    } catch (e) {
-      // A later save was built on this list and carried this edit with it; if that one
-      // landed, rolling back here would discard what the server already holds.
-      if (seq === latestSave.current) {
-        workingRef.current = previous
-        setError(e instanceof Error ? e.message : 'Could not save the milestones')
-        if (origin !== null) setFailed((f) => ({ amountCents: origin, n: (f?.n ?? 0) + 1 }))
-      }
-    } finally {
-      inFlight.current -= 1
-    }
-  }
-
-  // Addressed by amount rather than index: the working list can already differ
-  // from the rendered one while a save is in flight. A row addresses itself by the
-  // amount it last committed; after a failed save that amount is gone from the working
-  // list again, so the row falls back to its saved one and the retry carries the edit.
-  const replaceAmount = (
-    key: number,
-    savedAmountCents: number,
-    next: Milestone,
-  ) => {
-    const known = workingRef.current.some((m) => m.amountCents === key) ? key : savedAmountCents
-    void save(
-      workingRef.current.map((m) => (m.amountCents === known ? next : m)),
-      savedAmountCents,
-    )
-  }
-  const removeAmount = (amountCents: number) =>
-    void save(workingRef.current.filter((m) => m.amountCents !== amountCents))
+  const { workingRef, error, errorRef, failed, save, replaceAmount, removeAmount } = useMilestoneSave(
+    milestones,
+    onChange,
+  )
 
   return (
     <>
@@ -242,28 +56,14 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             </p>
           ) : null}
 
-          {milestones.length > 0 ? (
-            <ul className={styles.milestoneList}>
-              {milestones.map((m) => (
-                <MilestoneRow
-                  key={m.amountCents}
-                  milestone={m}
-                  format={format}
-                  formatted={formatCents(m.amountCents, format)}
-                  isAmountTaken={(cents) =>
-                    cents !== m.amountCents && workingRef.current.some((other) => other.amountCents === cents)
-                  }
-                  onCommit={(key, next) => replaceAmount(key, m.amountCents, next)}
-                  failed={failed}
-                  onRemove={() => removeAmount(m.amountCents)}
-                />
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.settingHint}>
-              No milestones. The Goals matrix and chart reference lines stay empty until you add one.
-            </p>
-          )}
+          <MilestoneList
+            milestones={milestones}
+            format={format}
+            workingRef={workingRef}
+            failed={failed}
+            onReplace={replaceAmount}
+            onRemove={removeAmount}
+          />
 
           <div className={styles.milestoneActions}>
             <button
@@ -287,6 +87,53 @@ export function MilestonesSetting({ settings, onChange }: Props) {
           ) : null}
         </div>
       </Card>
+    </>
+  )
+}
+
+function MilestoneList({
+  milestones,
+  format,
+  workingRef,
+  failed,
+  onReplace,
+  onRemove,
+}: {
+  milestones: Milestone[]
+  format: MoneyFormat
+  workingRef: RefObject<Milestone[]>
+  failed: { amountCents: number; n: number } | null
+  onReplace: (
+    key: number,
+    savedAmountCents: number,
+    next: Milestone,
+  ) => void
+  onRemove: (amountCents: number) => void
+}) {
+  return (
+    <>
+      {milestones.length > 0 ? (
+        <ul className={styles.milestoneList}>
+          {milestones.map((m) => (
+            <MilestoneRow
+              key={m.amountCents}
+              milestone={m}
+              format={format}
+              formatted={formatCents(m.amountCents, format)}
+              isAmountTaken={(cents) =>
+                cents !== m.amountCents && workingRef.current.some((other) => other.amountCents === cents)
+              }
+              onCommit={(key, next) => onReplace(key, m.amountCents, next)}
+              failed={failed}
+              onRemove={() => onRemove(m.amountCents)}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.settingHint}>
+          No milestones. The Goals matrix and chart reference lines stay empty until you add one.
+        </p>
+      )}
     </>
   )
 }

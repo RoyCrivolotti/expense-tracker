@@ -23,6 +23,58 @@ interface ReassignDeleteSheetProps {
   onConfirm: (target: ReassignTarget) => Promise<void>
 }
 
+interface FieldsProps {
+  options: ReassignOption[]
+  createLabel: string
+  selection: string
+  setSelection: (selection: string) => void
+  creatingNew: boolean
+  newName: string
+  setNewName: (name: string) => void
+  err: string | null
+}
+
+function ReassignFields({
+  options,
+  createLabel,
+  selection,
+  setSelection,
+  creatingNew,
+  newName,
+  setNewName,
+  err,
+}: FieldsProps) {
+  return (
+    <div className={styles.fields}>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Move to</span>
+        <select value={selection} onChange={(e) => setSelection(e.target.value)}>
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+          <option value={CREATE_NEW}>+ Create new {createLabel}</option>
+        </select>
+      </label>
+      {creatingNew ? (
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>New {createLabel} name</span>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={`e.g. Corrected ${createLabel} name`}
+            autoComplete="off"
+            autoFocus
+          />
+        </label>
+      ) : null}
+      {err && <p className={formStyles.error}>{err}</p>}
+    </div>
+  )
+}
+
 /** Destructive delete flow for a record in use: reassign to an existing one, or create a new one in place. */
 export function ReassignDeleteSheet({
   title,
@@ -59,33 +111,16 @@ export function ReassignDeleteSheet({
       <p id="reassign-message" className={styles.message}>
         {message}
       </p>
-      <div className={styles.fields}>
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Move to</span>
-          <select value={selection} onChange={(e) => setSelection(e.target.value)}>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-            <option value={CREATE_NEW}>+ Create new {createLabel}</option>
-          </select>
-        </label>
-        {creatingNew ? (
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>New {createLabel} name</span>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={`e.g. Corrected ${createLabel} name`}
-              autoComplete="off"
-              autoFocus
-            />
-          </label>
-        ) : null}
-        {err && <p className={formStyles.error}>{err}</p>}
-      </div>
+      <ReassignFields
+        options={options}
+        createLabel={createLabel}
+        selection={selection}
+        setSelection={setSelection}
+        creatingNew={creatingNew}
+        newName={newName}
+        setNewName={setNewName}
+        err={err}
+      />
       <div className={styles.actions}>
         <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy}>
           Cancel

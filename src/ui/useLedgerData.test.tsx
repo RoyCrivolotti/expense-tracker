@@ -18,14 +18,11 @@ import {
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
-  patchAfterInstallmentPlanCreate,
-  patchAfterInstallmentPlanDelete,
   patchAfterLabelDelete,
   patchAfterSettings,
-  patchAfterStatementPaid,
-  patchAfterTransactionCreate,
-  patchAfterTransactionUpdate,
-} from './datasetPatches'
+} from './referencePatches'
+import { patchAfterInstallmentPlanCreate, patchAfterInstallmentPlanDelete } from './planningPatches'
+import { patchAfterStatementPaid, patchAfterTransactionCreate, patchAfterTransactionUpdate } from './datasetPatches'
 import { buildExpenseModel } from './buildExpenseModel'
 import { fixedHistoryOf } from './buildLedgerModel'
 import { useLedgerData } from './useLedgerData'

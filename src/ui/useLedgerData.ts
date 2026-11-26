@@ -1,29 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { LedgerPartsSource } from '../data/dataSource'
-import { exportAllTransactions } from '../data/exportAllTransactions'
-import { recentActivityOf } from '../data/recentActivity'
-import { newestChargesOfSeries } from '../domain/engine/recurringSeries'
-import { type HeldLedger, ledgerOfHeld, receiptsPending } from '../data/ledgerHold'
-import type { LedgerSession, SessionOptions, SessionState } from '../data/ledgerSession'
-import { isAccessDenied } from '../data/apiClient'
-import { forgetLedgerSnapshot, loadLedgerSnapshot, saveLedgerSnapshot } from '../data/ledgerSnapshot'
+import type { HeldLedger } from '../data/ledgerHold'
+import type { SessionOptions } from '../data/ledgerSession'
 import { TransactionPager } from '../data/transactionPager'
 import { onWriteReceipt } from '../data/writeReceipts'
-import { buildLedgerModel, withHistory } from './buildLedgerModel'
-import { BROWSER_LOCALE, olderThan, withOlderDescriptions } from './ledgerDescriptions'
-import { HISTORY_WORDS } from './historyWords'
-import { ledgerUsageHook } from './ledgerUsage'
+import { historyNoteOf, ledgerModelOf } from './ledgerDataModel'
 import { sessionWithCounts, useListFailure } from './ledgerWrites'
 import { pagedListOf } from './pagedTransactionList'
+import { openLedger, reloadLedger, type Phase } from './useLedgerLoad'
 import type { ExpenseData, ExpenseModel, RefreshOutcome } from './useExpenseData'
 
-const MIN_REFRESH_MS = 700
 /** A search box sets the filter at every key; the list is read once the text has held still this long. */
 const LIST_SETTLE_MS = 250
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
-
-const isOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
 
 export interface LedgerDataOptions extends SessionOptions {
   /**
@@ -33,47 +21,6 @@ export interface LedgerDataOptions extends SessionOptions {
   owner?: string | undefined
   /** Told what was held after a read that worked, a first load or a refresh; not for a snapshot or a write. */
   onSettled?: ((held: HeldLedger) => void) | undefined
-}
-
-type Phase = 'loading' | 'ready' | 'error'
-
-/**
- * Opens the session if the browser is online. Null when it is open, otherwise why it is not, and whether the server
- * refused the person, in which case nothing kept on this device is shown in its place.
- */
-async function openOnline(
-  session: LedgerSession,
-  opened: () => void,
-): Promise<{ message: string; denied: boolean } | null> {
-  if (!isOnline()) return { message: 'You are offline and no saved data is available.', denied: false }
-  try {
-    await session.open()
-    opened()
-    return null
-  } catch (failed) {
-    return { message: reason(failed), denied: isAccessDenied(failed) }
-  }
-}
-
-/** Keeps what is held as the owner's snapshot (it never throws and nothing waits for it) and says it settled. */
-function keep(
-  session: LedgerSession,
-  owner: string | undefined,
-  settled: LedgerDataOptions['onSettled'],
-): void {
-  const { held, viewed } = session.getState()
-  if (!held) return
-  if (owner) void saveLedgerSnapshot(owner, held, viewed)
-  settled?.(held)
-}
-
-/** What a windowed model says about having no history: it is being read, the read failed, or there is no one to ask. */
-function historyNoteOf(
-  missing: boolean,
-  { offline, seriesFailed }: SessionState,
-): string | undefined {
-  if (!missing) return undefined
-  return HISTORY_WORDS[offline ? 'offline' : seriesFailed ? 'failed' : 'loading']
 }
 
 interface Shown {
@@ -132,94 +79,28 @@ export function useLedgerData(
   const { failure: listFailure, noteRead, applyPatch } = useListFailure(session, pager)
   const alive = useRef(true)
 
-  useEffect(() => {
-    alive.current = true
-    const restore = async (): Promise<boolean> => {
-      const snapshot = owner ? await loadLedgerSnapshot(owner) : null
-      if (!snapshot || !alive.current) return false
-      session.restore(snapshot.held, snapshot.viewed)
-      setSnapshotAt(snapshot.savedAt)
-      return true
-    }
-    const begin = async () => {
-      const error = await openOnline(session, () => keep(session, owner, settled.current))
-      if (error?.denied && owner) void forgetLedgerSnapshot(owner)
-      if (error === null || (!error.denied && (await restore()))) return setPhase('ready')
-      if (!alive.current) return
-      setFailure(error.message)
-      setPhase('error')
-    }
-    void begin()
-    return () => {
-      alive.current = false
-    }
-  }, [session, owner, attempt])
+  useEffect(
+    () => openLedger(session, owner, { alive, settled, setPhase, setFailure, setSnapshotAt }),
+    [session, owner, attempt],
+  )
 
   const { held, series, offline } = state
   // A ledger held in full has every row to work the series out from, as the screens do without a history.
   const windowed = held !== null && held.cells !== null
   const note = historyNoteOf(windowed && !series, state)
-  const model = useMemo<ExpenseModel | undefined>(() => {
-    if (!held) return undefined
-    // A window's older descriptions are the server's, asked for in the browser's locale and merged into its own.
-    const older = olderThan(held)
-    const descriptions = older
-      ? {
-          index: { locale: BROWSER_LOCALE },
-          wrap: (index: Parameters<typeof withOlderDescriptions>[0]) =>
-            withOlderDescriptions(index, source, { before: older.before, locale: BROWSER_LOCALE }),
-        }
-      : undefined
-    const built = buildLedgerModel(ledgerOfHeld(held), {
-      attachmentCounts: held.attachmentCounts,
-      ...(descriptions ? { descriptions } : {}),
-    })
-    const withSeries = windowed && series ? withHistory(built, series) : built
-    return {
-      ...withSeries,
-      receiptsPending: receiptsPending(held),
-      ensureReceipts: session.loadReceipts,
-      watchHistory: session.watchSeries,
-      useUsage: ledgerUsageHook(usage, held.revision),
-      pagedList,
-      ...(windowed
-        ? {
-            exportAll: { count: held.rowCount, read: () => exportAllTransactions(source) },
-            recent: recentActivityOf(source),
-          }
-        : {}),
-      ...(windowed && series ? { newestCharges: newestChargesOfSeries(series) } : {}),
-      ...(windowed && offline ? { savedMonths: new Set(held.rows.keys()) } : {}),
-      ...(note ? { historyNote: note } : {}),
-    }
-  }, [held, series, windowed, offline, note, session, usage, pagedList, source])
+  const model = useMemo<ExpenseModel | undefined>(
+    () => ledgerModelOf({ held, series, windowed, offline, note, session, usage, pagedList, source }),
+    [held, series, windowed, offline, note, session, usage, pagedList, source],
+  )
 
-  const reload = useCallback(() => {
-    if (phase === 'error') {
-      setPhase('loading')
-      setAttempt((n) => n + 1)
-      return
-    }
-    const startedAt = Date.now()
-    setRefreshing(true)
-    setRefreshOutcome(null)
-    const finish = async (outcome: RefreshOutcome) => {
-      const wait = MIN_REFRESH_MS - (Date.now() - startedAt)
-      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
-      if (!alive.current) return
-      setRefreshing(false)
-      setRefreshOutcome(outcome)
-    }
-    session.refresh().then(
-      async () => {
-        keep(session, owner, settled.current)
-        const worked = await pager.refresh({ summary: true })
-        noteRead(worked)
-        return finish(worked === false ? 'fail' : 'ok')
-      },
-      () => finish('fail'),
-    )
-  }, [session, pager, phase, owner, noteRead])
+  const reload = useCallback(
+    () =>
+      reloadLedger(
+        { session, pager, phase, owner, noteRead, alive, settled },
+        { setPhase, setAttempt, setRefreshing, setRefreshOutcome },
+      ),
+    [session, pager, phase, owner, noteRead],
+  )
 
   const viewMonth = useCallback((month: string) => void session.view(month), [session])
 

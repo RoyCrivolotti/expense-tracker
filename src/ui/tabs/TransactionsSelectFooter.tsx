@@ -49,6 +49,82 @@ interface TransactionsSelectFooterProps {
   partial?: boolean | undefined
 }
 
+interface BarShown {
+  count: number
+  total: number
+  hiddenCount: number
+  partial: boolean
+  overrides: BarOverrides | undefined
+}
+
+/** The selection bar, drawn from the figures held while it leaves. */
+function SelectBar({
+  shown,
+  selection,
+  actionsEnabled,
+  editOpen,
+  visibleIds,
+}: {
+  shown: BarShown
+  selection: SelectionState
+  actionsEnabled: boolean
+  editOpen: boolean
+  visibleIds: number[]
+}) {
+  return (
+    <BatchBar
+      count={shown.count}
+      totalCount={shown.total}
+      hiddenCount={shown.hiddenCount}
+      partial={shown.partial}
+      selectAll={
+        shown.overrides?.allLabel === undefined
+          ? undefined
+          : {
+              label: shown.overrides.allLabel,
+              onClick: shown.overrides.matching ? selection.selectMatching! : selection.deselectAll,
+            }
+      }
+      note={shown.overrides?.note}
+      deleteBlocked={shown.overrides?.deleteBlocked}
+      busy={selection.busy}
+      readOnly={!actionsEnabled}
+      editOpen={editOpen}
+      onCancel={selection.toggleSelectMode}
+      onSelectAll={() => selection.selectAll(visibleIds)}
+      onDeselectAll={selection.deselectAll}
+      onEdit={selection.requestBulkEdit}
+      onDelete={selection.requestBatchDelete}
+    />
+  )
+}
+
+/** The bulk edit sheet, drawn from the figures held while it leaves. */
+function BulkEditSurface({
+  shown,
+  selection,
+  model,
+  actions,
+}: {
+  shown: { count: number; hiddenCount: number; descriptions: ReturnType<typeof summarizeDescriptions> }
+  selection: SelectionState
+  model: ExpenseModel
+  actions: ExpenseActions | undefined
+}) {
+  return (
+    <BulkEditSheet
+      count={shown.count}
+      hiddenCount={shown.hiddenCount}
+      currentDescriptions={shown.descriptions}
+      model={model}
+      actions={actions}
+      busy={selection.busy}
+      onApply={(patch, labelIdsToAdd) => void selection.confirmBulkEdit(patch, labelIdsToAdd)}
+      onCancel={selection.cancelBulkEdit}
+    />
+  )
+}
+
 export function TransactionsSelectFooter({
   actionsEnabled,
   actions,
@@ -72,14 +148,13 @@ export function TransactionsSelectFooter({
     () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
     [actionsEnabled, pendingBatchDelete, count, hiddenCount],
   )
-  const selected = selection.selected
   const describable = selection.describable !== false
   const editing = useMemo(
     () =>
       actionsEnabled && pendingBulkEdit
-        ? { count, hiddenCount, descriptions: describable ? summarizeDescriptions(rows, selected) : [] }
+        ? { count, hiddenCount, descriptions: describable ? summarizeDescriptions(rows, selection.selected) : [] }
         : null,
-    [actionsEnabled, pendingBulkEdit, count, hiddenCount, describable, rows, selected],
+    [actionsEnabled, pendingBulkEdit, count, hiddenCount, describable, rows, selection.selected],
   )
   return (
     <>
@@ -87,29 +162,12 @@ export function TransactionsSelectFooter({
           way out, since select mode and its locks stay on. */}
       <PresenceValue value={bar} exitMs={EXIT_MS.bar}>
         {(shown) => (
-          <BatchBar
-            count={shown.count}
-            totalCount={shown.total}
-            hiddenCount={shown.hiddenCount}
-            partial={shown.partial}
-            selectAll={
-              shown.overrides?.allLabel === undefined
-                ? undefined
-                : {
-                    label: shown.overrides.allLabel,
-                    onClick: shown.overrides.matching ? selection.selectMatching! : selection.deselectAll,
-                  }
-            }
-            note={shown.overrides?.note}
-            deleteBlocked={shown.overrides?.deleteBlocked}
-            busy={selection.busy}
-            readOnly={!actionsEnabled}
+          <SelectBar
+            shown={shown}
+            selection={selection}
+            actionsEnabled={actionsEnabled}
             editOpen={pendingBulkEdit}
-            onCancel={selection.toggleSelectMode}
-            onSelectAll={() => selection.selectAll(visibleIds)}
-            onDeselectAll={selection.deselectAll}
-            onEdit={selection.requestBulkEdit}
-            onDelete={selection.requestBatchDelete}
+            visibleIds={visibleIds}
           />
         )}
       </PresenceValue>
@@ -124,18 +182,7 @@ export function TransactionsSelectFooter({
         )}
       </PresenceValue>
       <PresenceValue value={editing} exitMs={EXIT_MS.sheet}>
-        {(shown) => (
-          <BulkEditSheet
-            count={shown.count}
-            hiddenCount={shown.hiddenCount}
-            currentDescriptions={shown.descriptions}
-            model={model}
-            actions={actions}
-            busy={selection.busy}
-            onApply={(patch, labelIdsToAdd) => void selection.confirmBulkEdit(patch, labelIdsToAdd)}
-            onCancel={selection.cancelBulkEdit}
-          />
-        )}
+        {(shown) => <BulkEditSurface shown={shown} selection={selection} model={model} actions={actions} />}
       </PresenceValue>
     </>
   )

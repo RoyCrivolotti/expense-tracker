@@ -1,12 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
 import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
+import { PopoverFrame } from './PopoverFrame'
+import { MonthGrid, YearHeader } from './MonthPickerParts'
 import styles from './DatePicker.module.css'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 
 function currentYearMonth(): string {
   const d = new Date()
@@ -49,66 +48,24 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
   useFocusTrap(popoverRef, onClose, motion.leaving)
   useDismissOnOutsidePointer(popoverRef, !motion.leaving, onClose, triggerRef)
 
-  return createPortal(
-    <div
-      ref={popoverRef}
-      className={motion.leaving ? `${styles.popover} ${styles.popoverLeaving}` : styles.popover}
-      {...motion.attrs}
-      style={{
-        ...motion.exit,
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        // Capped to the visible band and scrollable, so a popover taller than
-        // the space left by an open keyboard stays reachable instead of running
-        // off the screen.
-        maxHeight: pos?.maxHeight,
-        overflowY: 'auto',
-        visibility: pos ? 'visible' : 'hidden',
-      }}
-      role="dialog"
-      aria-label="Choose a month"
-    >
-      <div className={styles.header}>
-        <span className={styles.headerTitle}>{viewYear}</span>
-        <div className={styles.headerNav}>
-          <button type="button" className={styles.navBtn} onClick={prevYear} aria-label="Previous year">
-            ‹
-          </button>
-          <button type="button" className={styles.navBtn} onClick={nextYear} aria-label="Next year">
-            ›
-          </button>
-        </div>
-      </div>
+  return (
+    <PopoverFrame popoverRef={popoverRef} pos={pos} motion={motion} classes={styles} label="Choose a month">
+      <YearHeader year={viewYear} onPrev={prevYear} onNext={nextYear} />
 
-      <div className={styles.monthGrid}>
-        {MONTHS.map((label, i) => {
-          const m = i + 1
-          const isSelected = viewYear === valYear && m === valMonth
-          const isCurrent = viewYear === thisY && m === thisM
-          const cls = [styles.monthBtn, isCurrent ? styles.monthCurrent : '', isSelected ? styles.monthSelected : '']
-            .filter(Boolean)
-            .join(' ')
-          return (
-            <button
-              key={label}
-              type="button"
-              className={cls}
-              onClick={() => selectMonth(m)}
-              aria-label={`${MONTHS[i]} ${viewYear}`}
-              aria-pressed={isSelected}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
+      <MonthGrid
+        viewYear={viewYear}
+        valYear={valYear}
+        valMonth={valMonth}
+        thisY={thisY}
+        thisM={thisM}
+        onSelectMonth={selectMonth}
+      />
 
       <div className={styles.footer}>
         <button type="button" className={styles.resetBtn} onClick={reset}>
           Reset
         </button>
       </div>
-    </div>,
-    document.body,
+    </PopoverFrame>
   )
 }

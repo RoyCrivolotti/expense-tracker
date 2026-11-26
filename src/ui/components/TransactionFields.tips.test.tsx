@@ -7,7 +7,7 @@ import { makeActions } from '../../testing/makeActions'
 import { setMotionDisabledForTests } from '../hooks/motion'
 import { TipsProvider } from '../tips/TipsProvider'
 import type { ExpenseModel } from '../useExpenseData'
-import { Fields } from './TransactionFields'
+import { Fields } from './TransactionFieldsForm'
 import type { FormFields } from './transactionFormState'
 
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))

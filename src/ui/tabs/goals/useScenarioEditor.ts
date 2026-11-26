@@ -1,13 +1,12 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useState } from 'react'
 import type { ExpenseDataset, GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { duplicateScenario, pickScenarioColor } from '../../../engine'
-import { bootstrapEditor, differsFrom, hasUnsavedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
-import { useBlankDraft } from './useBlankDraft'
-import { useHiddenLines } from './useHiddenLines'
+import { bootstrapEditor, differsFrom, rebaseDraft, scenarioToDraft } from './scenarioDraft'
+import { useDiscardPrompt } from './useDiscardPrompt'
+import { useEditorStanding } from './useEditorStanding'
+import { useScenarioCreate } from './useScenarioCreate'
 import { useScenarioSave } from './useScenarioSave'
-import { useStartLater } from './useStartLater'
 import type { StartLater } from './StartLaterSheet'
 
 /**
@@ -101,29 +100,11 @@ export function useScenarioEditor(
     setDraft((prev) => ({ ...prev, ...patch }))
   }, [])
 
-  // Two different "current" scenarios: the one loaded in the editor (activeId), and the
-  // owner's plan, which Progress measures against. Exploring a path must not change
-  // what you are being measured against.
-  const activeScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === loadedId) ?? null,
-    [dataset.goalScenarios, loadedId],
+  const { activeScenario, activeId, dirty, hiddenIds, onToggleVisible, clearBlank, unsaved } = useEditorStanding(
+    dataset,
+    { loadedId, baseId, draft },
+    first,
   )
-  // A scenario deleted while it is loaded is not loaded any more: the numbers on screen stay,
-  // as a draft with no saved scenario behind it, which is what the tabs and the buttons must
-  // say. Reading the id from the state alone left them naming one that no longer exists.
-  const activeId = activeScenario?.id ?? null
-  const dirty = useMemo(() => activeScenario !== null && differsFrom(draft, activeScenario), [activeScenario, draft])
-  const { hiddenIds, onToggleVisible } = useHiddenLines(dataset.goalScenarios, activeScenario, dirty)
-  // A detached draft has no saved scenario of its own, so loading another one would drop
-  // its edits just as surely; it is measured against the scenario it came from.
-  const baseScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
-    [dataset.goalScenarios, baseId],
-  )
-  // A draft with no saved scenario to compare with (a first-time user's, or one whose scenario was
-  // deleted) is measured against how it started, so editing it counts as work that leaving loses.
-  const { blank, clearBlank } = useBlankDraft(first, baseId, baseScenario, draft)
-  const unsaved = hasUnsavedEdits({ dirty, loaded: activeScenario, base: baseScenario, blank, draft })
 
   const selectScenario = useCallback(
     (scenario: GoalScenario) => {
@@ -141,27 +122,13 @@ export function useScenarioEditor(
     void actions.activateScenario(activeId)
   }, [actions, activeId])
 
-  // Loading another scenario replaces the draft, so unsaved edits are held back behind a
-  // question. Held as its own value so the sheet keeps its text while it animates out.
-  const [pendingSelect, setPendingSelect] = useState<GoalScenario | null>(null)
-  const [discardOpen, setDiscardOpen] = useState(false)
-  const onSelectScenario = useCallback(
-    (scenario: GoalScenario) => {
-      if (scenario.id === activeId) return
-      if (unsaved) {
-        setPendingSelect(scenario)
-        setDiscardOpen(true)
-        return
-      }
-      selectScenario(scenario)
-    },
-    [activeId, unsaved, selectScenario],
-  )
-  const onDiscardAndSelect = useCallback(() => {
-    setDiscardOpen(false)
-    if (pendingSelect) selectScenario(pendingSelect)
-  }, [pendingSelect, selectScenario])
-  const onCancelDiscard = useCallback(() => setDiscardOpen(false), [])
+  const { onSelectScenario, discardPrompt } = useDiscardPrompt({
+    activeId,
+    unsaved,
+    selectScenario,
+    canSave: actions !== undefined,
+    name: activeScenario?.name ?? draft.name,
+  })
 
   // Switching to the unsaved draft keeps the current edits, so it needs no question.
   const onSelectEditing = useCallback(() => {
@@ -174,55 +141,12 @@ export function useScenarioEditor(
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
   }, [activeScenario])
 
-  // What the editor held when a create started, to tell whether anything was touched while it ran.
-  const live = useRef({ activeId, draft })
-  useEffect(() => {
-    live.current = { activeId, draft }
-  })
-  const creatingNow = useRef(false)
-  const [creating, setCreating] = useState(false)
-  // One create at a time, and the new scenario is opened only if nothing was touched while it was
-  // being made: opening it replaces the draft, so an edit made in the meantime, or another
-  // scenario opened, would be dropped without a word. A second press is the same copy twice.
-  const createAndOpen = useCallback(
-    async (input: NewGoalScenario) => {
-      if (!actions || creatingNow.current) return
-      creatingNow.current = true
-      setCreating(true)
-      const started = live.current
-      try {
-        const scenario = await actions.createScenario(input)
-        if (live.current.activeId === started.activeId && live.current.draft === started.draft) selectScenario(scenario)
-      } finally {
-        creatingNow.current = false
-        setCreating(false)
-      }
-    },
-    [actions, selectScenario],
+  const { creating, onSaveDraft, onDuplicate, startLater } = useScenarioCreate(
+    actions,
+    dataset,
+    { activeId, draft },
+    selectScenario,
   )
-
-  const onSaveDraft = useCallback(
-    (name: string) => {
-      const used = dataset.goalScenarios.map((s) => s.color)
-      // The draft's own colour when no scenario has it; saved from another scenario's draft it is
-      // that scenario's, and two lines of one colour cannot be told apart.
-      const color = used.includes(draft.color) ? pickScenarioColor(used) : draft.color
-      void createAndOpen({ ...draft, name, color, sortOrder: dataset.goalScenarios.length })
-    },
-    [createAndOpen, draft, dataset.goalScenarios],
-  )
-
-  const onDuplicate = useCallback(() => {
-    const { goalScenarios } = dataset
-    void createAndOpen(
-      duplicateScenario(
-        draft,
-        goalScenarios.length,
-        goalScenarios.map((s) => s.color),
-        goalScenarios.map((s) => s.name),
-      ),
-    )
-  }, [createAndOpen, dataset, draft])
 
   return {
     activeId,
@@ -235,15 +159,7 @@ export function useScenarioEditor(
     canSave: actions !== undefined,
     saving,
     creating,
-    discardPrompt: {
-      pending: pendingSelect,
-      open: discardOpen,
-      detached: activeId === null,
-      canSave: actions !== undefined,
-      name: activeScenario?.name ?? draft.name,
-      onConfirm: onDiscardAndSelect,
-      onCancel: onCancelDiscard,
-    },
+    discardPrompt,
     patchDraft,
     selectScenario,
     onSelectScenario,
@@ -254,6 +170,6 @@ export function useScenarioEditor(
     onSaveDraft,
     onDuplicate,
     onDiscard,
-    startLater: useStartLater(dataset, draft, createAndOpen),
+    startLater,
   }
 }

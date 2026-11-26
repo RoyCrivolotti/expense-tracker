@@ -1,14 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import {
-  ChartBandLayer,
-  ChartScatterLayer,
-  ChartTodayMarker,
-  ChartPurchaseMarkers,
-  ChartLifeEventMarkers,
-  ChartLabeledMarkers,
-  ChartFocusIndicator,
-} from './linearChartParts'
+import { ChartBandLayer, ChartScatterLayer, ChartFocusIndicator } from './chartDataLayers'
+import { ChartTodayMarker, ChartPurchaseMarkers, ChartLifeEventMarkers, ChartLabeledMarkers } from './linearChartParts'
 
 const xForIndex = (i: number) => i * 10
 const scaleY = (v: number) => 100 - v

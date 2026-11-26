@@ -14,11 +14,11 @@ import { sortedMonths } from '../domain/engine/dates'
 import {
   patchAfterAttachmentAdd,
   patchAfterAttachmentDelete,
-  patchAfterFlagDelete,
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
+import { patchAfterFlagDelete } from '../ui/referencePatches'
 import { adversarialLedger } from '../testing/adversarialLedger'
 import { makeAttachment, makeDataset, makeTransaction } from '../testing/factories'
 import { comparable, memorySource } from '../testing/ledgerSource'

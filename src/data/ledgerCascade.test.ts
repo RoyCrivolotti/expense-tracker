@@ -2,24 +2,28 @@ import { describe, expect, it } from 'vitest'
 import type { ExpenseDataset, InstallmentPlan } from '../domain/types'
 import {
   patchAfterAccountDelete,
-  patchAfterAttachmentAdd,
-  patchAfterBulkUpdate,
-  patchAfterCashActual,
   patchAfterCategory,
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
-  patchAfterInstallmentPlanCreate,
-  patchAfterInstallmentPlanDelete,
-  patchAfterInstallmentPlanUpdate,
   patchAfterLabelDelete,
-  patchAfterScenarioCreate,
   patchAfterSettings,
+} from '../ui/referencePatches'
+import {
+  patchAfterAttachmentAdd,
+  patchAfterBulkUpdate,
+  patchAfterCashActual,
   patchAfterStatementPaid,
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
 } from '../ui/datasetPatches'
+import {
+  patchAfterInstallmentPlanCreate,
+  patchAfterInstallmentPlanDelete,
+  patchAfterInstallmentPlanUpdate,
+  patchAfterScenarioCreate,
+} from '../ui/planningPatches'
 import { makeDataset, makeFlag, makeLabel, makeScenario, makeTransaction } from '../testing/factories'
 import { cascadeOf } from './ledgerCascade'
 

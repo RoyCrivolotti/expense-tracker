@@ -3,6 +3,14 @@ import type { ExpenseDataset, InstallmentPlan, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
+  patchAfterCategoryDelete,
+  patchAfterFlag,
+  patchAfterFlagDelete,
+  patchAfterLabel,
+  patchAfterLabelDelete,
+  patchAfterSettings,
+} from './referencePatches'
+import {
   patchAfterAttachmentAdd,
   patchAfterAttachmentDelete,
   patchAfterBulkCreate,
@@ -11,16 +19,8 @@ import {
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
   patchAfterBulkUpdate,
-  patchAfterCategoryDelete,
-  patchAfterFlag,
-  patchAfterFlagDelete,
-  patchAfterLabel,
-  patchAfterLabelDelete,
-  patchAfterScenarioActivate,
-  patchAfterScenarioCreate,
-  patchAfterScenarioUpdate,
-  patchAfterSettings,
 } from './datasetPatches'
+import { patchAfterScenarioActivate, patchAfterScenarioCreate, patchAfterScenarioUpdate } from './planningPatches'
 import { makeScenario } from '../testing/factories'
 
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
