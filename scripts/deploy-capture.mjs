@@ -21,6 +21,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { ACCOUNT_ID, cf } from './access-api.mjs'
 import { resolveCloudflareToken } from './cloudflare-auth.mjs'
+import { publicOutput } from './public-output.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKER_DIR = join(ROOT, 'workers/capture')
@@ -129,17 +130,6 @@ export async function findDatabaseId(
   const exact = found.filter((database) => database.name === name)
   if (exact.length !== 1 || !exact[0].uuid) throw new Error(`No D1 database called ${name} on this account`)
   return exact[0].uuid
-}
-
-/**
- * What wrangler wrote, fit for a public log. It prints each Worker's address, which is private: nothing limits requests
- * to it. On an authentication error it goes on to run `whoami`, which names the account and can name its email.
- * @param {string} text
- */
-export function publicOutput(text) {
-  return text
-    .replace(/^.*Getting User settings[\s\S]*$/m, "(wrangler's account details are left out)")
-    .replace(/[\w.-]*\.workers\.dev/gi, '<address hidden>')
 }
 
 /**
