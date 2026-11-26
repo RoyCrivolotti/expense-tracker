@@ -46,6 +46,7 @@ function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> })
     <div>
       <p data-testid="count">{r.count}</p>
       <p data-testid="write">{String(r.canWrite)}</p>
+      <p data-testid="out">{r.totals?.outCents}</p>
       {r.views.map((v) => (
         <div key={v.rec.id} data-testid={v.rec.id}>
           <span>{v.description}</span>
@@ -55,7 +56,7 @@ function Rows({ core }: { core: NonNullable<ReturnType<typeof useReviewCore>> })
           <span>{r.failures.get(v.rec.id)}</span>
           <button onClick={() => r.add(v)}>add {v.rec.id.slice(-1)}</button>
           <button onClick={() => r.dontAdd(v)}>skip {v.rec.id.slice(-1)}</button>
-          <button onClick={() => r.link(v)}>link {v.rec.id.slice(-1)}</button>
+          <button onClick={() => r.dismissDuplicate(v)}>dismiss {v.rec.id.slice(-1)}</button>
           <button onClick={() => r.review(v)}>review {v.rec.id.slice(-1)}</button>
         </div>
       ))}
@@ -256,7 +257,7 @@ describe('one tap', () => {
     expect(screen.getByTestId('write')).toHaveTextContent('false')
     press('add 1')
     press('skip 1')
-    press('link 1')
+    press('dismiss 1')
     press('review 1')
     await tick(UNDO_MS * 2)
 
@@ -293,38 +294,74 @@ describe("Don't add", () => {
   })
 })
 
-describe('Link', () => {
-  it('links to the typed row the server named, once the window ends', async () => {
-    await show([known(A, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })])
+describe('Dismiss duplicate, for a bill that waits twice', () => {
+  /** A bill of 62,15 the bank announced on the 19th for the 23rd, and the charge it reported on the 23rd. */
+  const bill = { amountCents: 6215, localDate: '2026-11-23', merchantRaw: 'EXAMPLE UTILITY' }
+  const notice = known(A, { ...bill, occurredAt: pushAt(2026, 11, 19, 10, 2) })
+  const charge = known(B, { ...bill, occurredAt: pushAt(2026, 11, 23, 8, 10) })
+  const other = known(C, { localDate: '2026-11-20', occurredAt: pushAt(2026, 11, 20) })
 
-    press('link 1')
+  it.each([
+    ['the charge first', [charge, notice, other]],
+    ['the announcement first', [notice, other, charge]],
+  ])('removes the announcement and nothing else, with %s in the list', async (_order, listed) => {
+    await show(listed)
 
-    expect(showToast.mock.calls[0]![0]).toContain('To the row "Cafe". Nothing new is added.')
-    await tick(UNDO_MS)
-    expect(decisions.linkRecommendation).toHaveBeenCalledExactlyOnceWith(A, 9)
+    press('dismiss 2')
+
     expect(screen.queryByTestId(A)).not.toBeInTheDocument()
+    expect(screen.getByTestId(B)).toBeInTheDocument()
+    expect(screen.getByTestId(C)).toBeInTheDocument()
+    expect(screen.getByTestId('count')).toHaveTextContent('2')
+    expect(decisions.dismissRecommendation).not.toHaveBeenCalled()
+    await tick(UNDO_MS)
+    expect(decisions.dismissRecommendation).toHaveBeenCalledExactlyOnceWith(A)
+    expect(screen.getByTestId(B)).toBeInTheDocument()
   })
 
-  it('does nothing for a payment with no named match', async () => {
-    await show([known(A)])
+  it('removes the announcement whichever of the two rows it is pressed on', async () => {
+    await show([charge, notice])
 
-    press('link 1')
+    press('dismiss 1')
     await tick(UNDO_MS)
 
-    expect(decisions.linkRecommendation).not.toHaveBeenCalled()
+    expect(decisions.dismissRecommendation).toHaveBeenCalledExactlyOnceWith(A)
+    expect(screen.getByTestId(B)).toBeInTheDocument()
   })
 
-  it('puts the row back when the server says another recommendation already answers for that row', async () => {
-    await show([known(A, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })])
-    vi.mocked(decisions.linkRecommendation).mockRejectedValue(
-      new Error('That transaction already answers for another recommendation'),
-    )
+  it('offers Undo in the usual bar, which puts the announcement back and sends nothing', async () => {
+    await show([charge, notice])
 
-    press('link 1')
+    press('dismiss 2')
+    const [text, tone, action] = showToast.mock.calls[0] as [string, string, { label: string; onAction: () => void }]
+    expect(text).toContain('Not added')
+    expect([tone, action.label]).toEqual(['success', 'Undo'])
+    act(() => action.onAction())
     await tick(UNDO_MS)
 
-    expect(screen.getByText('That transaction already answers for another recommendation')).toBeInTheDocument()
-    expect(showToast).toHaveBeenLastCalledWith("Couldn't link Cafe Example. It is back in the list.", 'error')
+    expect(screen.getByTestId(A)).toBeInTheDocument()
+    expect(screen.getByTestId('count')).toHaveTextContent('2')
+    expect(decisions.dismissRecommendation).not.toHaveBeenCalled()
+  })
+
+  it('does nothing for a payment that is in no pair', async () => {
+    await show([charge, other])
+
+    press('dismiss 2')
+    press('dismiss 3')
+    await tick(UNDO_MS)
+
+    expect(decisions.dismissRecommendation).not.toHaveBeenCalled()
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
+  it('counts the bill once in the totals while both wait, and still once after the announcement goes', async () => {
+    await show([charge, notice, other])
+    expect(screen.getByTestId('out')).toHaveTextContent(String(6215 + 1250))
+
+    press('dismiss 2')
+
+    expect(screen.getByTestId('out')).toHaveTextContent(String(6215 + 1250))
   })
 })
 

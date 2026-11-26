@@ -1,0 +1,91 @@
+name: Verify the To review card in a browser
+
+# `npm run verify` cannot see layout or what a tap lands on: jsdom has neither. The Dashboard's "To review" card depends
+# on both (a row is pressed anywhere along its line, a long name is cut and never wraps, the review view's buttons stay
+# in view while its form scrolls), so `scripts/verify-review-card.mjs` measures them in Chromium and WebKit on the demo
+# instance, with invented payments answered in place of the list.
+#
+# Its own workflow, like the Goals one: it needs browsers, and the checks that tell a reviewer whether the code builds
+# should not wait for it. Make it required in the branch protection rules once it has proved itself.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/ui/capture/**'
+      - 'src/ui/components/Transaction*'
+      - 'src/ui/components/SeedAddons.tsx'
+      - 'src/ui/components/Modal*'
+      - 'src/ui/theme.css'
+      - 'scripts/verify-review-card.mjs'
+      - 'scripts/verifyReviewCardData.mjs'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - '.github/workflows/verify-review-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/ui/capture/**'
+      - 'src/ui/components/Transaction*'
+      - 'src/ui/components/SeedAddons.tsx'
+      - 'src/ui/components/Modal*'
+      - 'src/ui/theme.css'
+      - 'scripts/verify-review-card.mjs'
+      - 'scripts/verifyReviewCardData.mjs'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: expense-tracker-review-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review-browser:
+    name: review-browser (${{ matrix.engine }})
+    # WebKit is only Safari's engine on macOS: the Linux build scrolls and focuses differently.
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { engine: chromium, os: ubuntu-latest }
+          - { engine: webkit, os: macos-latest }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-node-deps
+
+      - name: Cache the browser
+        id: browsers
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.os == 'macOS' && '~/Library/Caches/ms-playwright' || '~/.cache/ms-playwright' }}
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install the browser
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} ${{ matrix.engine }}
+
+      - name: Install what the browser needs from the system
+        if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: npx playwright install-deps ${{ matrix.engine }}
+
+      - name: Measure the To review card in ${{ matrix.engine }}
+        env:
+          CAPTURE_PORT: '5173'
+          ENGINES: ${{ matrix.engine }}
+        run: node scripts/verify-review-card.mjs
+
+  # The one job to require once this workflow is trusted: a matrix job that failed, was cancelled or never started is
+  # not `success`, and without `always()` this job would be skipped, which reads as passing to anything that requires it.
+  review-browser-gate:
+    name: review-browser gate
+    needs: review-browser
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Both engines must have passed
+        run: |
+          echo "result: ${{ needs.review-browser.result }}"
+          [ "${{ needs.review-browser.result }}" = success ]

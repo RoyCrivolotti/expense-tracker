@@ -93,6 +93,20 @@ describe('possibleMatchFor', () => {
       transactionId: 7,
       description: 'Cafe',
       date: '2026-11-10',
+      amountCents: 1250,
+      type: 'expense',
+    })
+  })
+
+  it('carries the row as stored, with its account when the caller read one, so it can be shown in full', () => {
+    const withdrawn = row({ id: 8, type: 'investment', amountCents: -1250, accountId: 3 })
+    expect(possibleMatchFor(payment({ suggestedType: 'income' }), [withdrawn])).toEqual({
+      transactionId: 8,
+      description: withdrawn.description,
+      date: withdrawn.date,
+      amountCents: -1250,
+      type: 'investment',
+      accountId: 3,
     })
   })
 

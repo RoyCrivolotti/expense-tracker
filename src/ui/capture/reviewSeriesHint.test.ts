@@ -5,7 +5,10 @@ import { groupKeyString, groupTransactions } from '../../domain/engine/recurring
 import { makeRecommendation, makeSeriesModel } from '../../testing/reviewKit'
 import type { ExpenseModel } from '../useExpenseData'
 import { describeRecommendation, seedOf, transactionOf } from './reviewFields'
+import { introNotes } from './reviewNotes'
+import { rowButton, rowNote } from './reviewRowText'
 import { seriesHintsOf } from './reviewSeries'
+import { whyReasons } from './reviewWhy'
 
 const model = makeSeriesModel()
 const merchants = buildMerchantIndex(model.dataset.transactions, '2026-11-14')
@@ -76,11 +79,125 @@ describe('a push that fits one monthly series', () => {
     expect(v.hintAccount).toBe('Main Debit')
   })
 
+  it('names a whole message by the series it fits, and no longer says the bank named no merchant', () => {
+    const sentence = 'Example Bank alert: 12,99 EUR today'
+    const alone = viewOf(push({ merchantRaw: sentence, amountCents: 5555 }))
+    expect(alone).toMatchObject({ unnamed: true, hint: null })
+    expect(alone.reasons).toContain('no-merchant')
+
+    const fitted = viewOf(push({ merchantRaw: sentence }))
+    expect(fitted).toMatchObject({ unnamed: false, description: 'Video Stream', filled: true })
+    expect(fitted.reasons).not.toContain('no-merchant')
+    expect(fitted.reasons).not.toContain('new-merchant')
+  })
+
+  it('never adds by one tap a payment whose series is paid from another account, even under the name it already has', () => {
+    const v = viewOf(push({ accountId: 2, suggestion: { ...settled('Video Stream'), categoryId: 2, accountId: 2 } }))
+
+    expect(v.hint).toMatchObject({ kind: 'moved' })
+    // Nothing else is in doubt: the name is the series' own, so no field was filled from it.
+    expect(v).toMatchObject({ filled: false, reasons: [], oneTap: false })
+    expect(transactionOf(v)).toBeNull()
+    expect(rowNote(v, 'card', '2026-11-11')).toEqual({ text: 'Check the account', tone: 'need' })
+    expect(rowButton(v)).toBe('review')
+  })
+
+  it('says in the review view what the series asks: moved, renamed, and the monthly payment it looks like', () => {
+    const moved = viewOf(push({ accountId: 2 }))
+    expect(whyReasons(moved, undefined, '2026-11-11')).toContain(
+      'you pay Video Stream from Main Debit, so it may have moved',
+    )
+    expect(introNotes(moved)).toEqual([{ text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false }])
+
+    const renamed = viewOf(push({ suggestion: settled('Old Stream') }))
+    expect(whyReasons(renamed, undefined, '2026-11-11')).toContain(
+      'you added it as Old Stream before, so it may have been renamed',
+    )
+
+    // A push that names no account: the series' account is in the fields, and the line names it too.
+    const plain = viewOf(push({ accountId: null }))
+    expect(plain.hint).toMatchObject({ kind: 'series' })
+    expect(introNotes(plain)).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov, paid from Main Debit.', warn: false },
+    ])
+    expect(introNotes(viewOf(push()))).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false },
+    ])
+  })
+
+  it('has no line about a monthly payment without one, or for two that fit, which the form asks about itself', () => {
+    expect(introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO' })))).toEqual([])
+    const two = viewOf(push({ amountCents: 999, localDate: '2026-11-14' }))
+    expect(two.hint).toMatchObject({ kind: 'choose' })
+    expect(introNotes(two)).toEqual([])
+  })
+
+  it('says what the bank wrote for an amount not in euros, and nothing when there is no amount', () => {
+    const foreign = viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: 1820 }))
+    expect(introNotes(foreign)).toEqual([
+      { text: 'The message says US$18.20. Type the amount in euros your bank charged.', warn: true },
+    ])
+    expect(
+      introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: null }))),
+    ).toEqual([])
+  })
+
   it('names the series’ account but leaves the card question to the person when the push showed an unlinked card', () => {
     const v = viewOf(push({ accountId: null, card: { source: 'bank', digits: '0000' } }))
 
     expect(v).toMatchObject({ description: 'Video Stream', accountId: null, askCard: { digits: '0000' } })
     expect(v.hintAccount).toBe('Main Debit')
+  })
+
+  it('never adds by one tap a payment whose series is paid from another account, even under the name it already has', () => {
+    const v = viewOf(push({ accountId: 2, suggestion: { ...settled('Video Stream'), categoryId: 2, accountId: 2 } }))
+
+    expect(v.hint).toMatchObject({ kind: 'moved' })
+    // Nothing else is in doubt: the name is the series' own, so no field was filled from it.
+    expect(v).toMatchObject({ filled: false, reasons: [], oneTap: false })
+    expect(transactionOf(v)).toBeNull()
+    expect(rowNote(v, 'card', '2026-11-11')).toEqual({ text: 'Check the account', tone: 'need' })
+    expect(rowButton(v)).toBe('review')
+  })
+
+  it('says in the review view what the series asks: moved, renamed, and the monthly payment it looks like', () => {
+    const moved = viewOf(push({ accountId: 2 }))
+    expect(whyReasons(moved, undefined, '2026-11-11')).toContain(
+      'you pay Video Stream from Main Debit, so it may have moved',
+    )
+    expect(introNotes(moved)).toEqual([{ text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false }])
+
+    const renamed = viewOf(push({ suggestion: settled('Old Stream') }))
+    expect(whyReasons(renamed, undefined, '2026-11-11')).toContain(
+      'you added it as Old Stream before, so it may have been renamed',
+    )
+
+    // A push that names no account: the series' account is in the fields, and the line names it too.
+    const plain = viewOf(push({ accountId: null }))
+    expect(plain.hint).toMatchObject({ kind: 'series' })
+    expect(introNotes(plain)).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov, paid from Main Debit.', warn: false },
+    ])
+    expect(introNotes(viewOf(push()))).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false },
+    ])
+  })
+
+  it('has no line about a monthly payment without one, or for two that fit, which the form asks about itself', () => {
+    expect(introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO' })))).toEqual([])
+    const two = viewOf(push({ amountCents: 999, localDate: '2026-11-14' }))
+    expect(two.hint).toMatchObject({ kind: 'choose' })
+    expect(introNotes(two)).toEqual([])
+  })
+
+  it('says what the bank wrote for an amount not in euros, and nothing when there is no amount', () => {
+    const foreign = viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: 1820 }))
+    expect(introNotes(foreign)).toEqual([
+      { text: 'The message says US$18.20. Type the amount in euros your bank charged.', warn: true },
+    ])
+    expect(
+      introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: null }))),
+    ).toEqual([])
   })
 
   it('keeps the usual one-tap rule when the person’s settled name already is the series’', () => {
@@ -106,6 +223,57 @@ describe('a push the series ask about', () => {
     expect(v.hint).toMatchObject({ kind: 'moved', pushAccountId: 2 })
     expect(v).toMatchObject({ description: 'Video Stream', accountId: 2, accountName: 'Travel Credit', oneTap: false })
     expect(v.hintAccount).toBe('Main Debit')
+  })
+
+  it('never adds by one tap a payment whose series is paid from another account, even under the name it already has', () => {
+    const v = viewOf(push({ accountId: 2, suggestion: { ...settled('Video Stream'), categoryId: 2, accountId: 2 } }))
+
+    expect(v.hint).toMatchObject({ kind: 'moved' })
+    // Nothing else is in doubt: the name is the series' own, so no field was filled from it.
+    expect(v).toMatchObject({ filled: false, reasons: [], oneTap: false })
+    expect(transactionOf(v)).toBeNull()
+    expect(rowNote(v, 'card', '2026-11-11')).toEqual({ text: 'Check the account', tone: 'need' })
+    expect(rowButton(v)).toBe('review')
+  })
+
+  it('says in the review view what the series asks: moved, renamed, and the monthly payment it looks like', () => {
+    const moved = viewOf(push({ accountId: 2 }))
+    expect(whyReasons(moved, undefined, '2026-11-11')).toContain(
+      'you pay Video Stream from Main Debit, so it may have moved',
+    )
+    expect(introNotes(moved)).toEqual([{ text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false }])
+
+    const renamed = viewOf(push({ suggestion: settled('Old Stream') }))
+    expect(whyReasons(renamed, undefined, '2026-11-11')).toContain(
+      'you added it as Old Stream before, so it may have been renamed',
+    )
+
+    // A push that names no account: the series' account is in the fields, and the line names it too.
+    const plain = viewOf(push({ accountId: null }))
+    expect(plain.hint).toMatchObject({ kind: 'series' })
+    expect(introNotes(plain)).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov, paid from Main Debit.', warn: false },
+    ])
+    expect(introNotes(viewOf(push()))).toEqual([
+      { text: 'Looks like your monthly Video Stream, due 10\u00a0Nov.', warn: false },
+    ])
+  })
+
+  it('has no line about a monthly payment without one, or for two that fit, which the form asks about itself', () => {
+    expect(introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO' })))).toEqual([])
+    const two = viewOf(push({ amountCents: 999, localDate: '2026-11-14' }))
+    expect(two.hint).toMatchObject({ kind: 'choose' })
+    expect(introNotes(two)).toEqual([])
+  })
+
+  it('says what the bank wrote for an amount not in euros, and nothing when there is no amount', () => {
+    const foreign = viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: 1820 }))
+    expect(introNotes(foreign)).toEqual([
+      { text: 'The message says US$18.20. Type the amount in euros your bank charged.', warn: true },
+    ])
+    expect(
+      introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: null }))),
+    ).toEqual([])
   })
 
   it('offers two series side by side and fills from neither', () => {

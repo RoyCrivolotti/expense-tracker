@@ -41,7 +41,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
 
   return (
     <Modal
-      title={titleFor(editing, mode, formView)}
+      title={titleFor(editing, mode, formView, seed?.recommendationId !== undefined)}
       subtitle={hint ?? installmentNote(editing, model)}
       onClose={guards.modalOnClose}
       onBack={formView === 'installment' ? () => setFormView('fields') : undefined}

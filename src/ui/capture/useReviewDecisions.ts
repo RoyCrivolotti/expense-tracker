@@ -49,7 +49,7 @@ export function useReviewDecisions(
             if (e instanceof PossibleDuplicateError) {
               matched(id, e.possibleMatch)
               if (!pending.isHeld())
-                showToast('Not added yet \u00b7 you may have entered this already. Link it, or review it.', 'info')
+                showToast('Not added yet \u00b7 you may have entered this already. Review it to see the entry.', 'info')
               hide(id, false)
               return
             }

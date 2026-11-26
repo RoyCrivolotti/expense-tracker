@@ -196,7 +196,11 @@ describe('a bill announced the day before, then charged', () => {
 
   it('offers the hand-typed bill as the row the charge is already added as', () => {
     const matches = possibleMatchesFor([chargeAs(taughtIncome())], [saved])
-    expect(matches.get('charge')).toEqual({ transactionId: 41, description: 'Example Utility', date: '2026-11-24' })
+    expect(matches.get('charge')).toMatchObject({
+      transactionId: 41,
+      description: 'Example Utility',
+      date: '2026-11-24',
+    })
   })
 
   it('makes no offer when the charge is read as money in, which is what the wording alone said', () => {

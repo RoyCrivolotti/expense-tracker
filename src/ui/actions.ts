@@ -1,3 +1,4 @@
+import type { PossibleMatch } from '../domain/capture/duplicate'
 import type {
   ExpenseSettings,
   Flag,
@@ -51,11 +52,33 @@ export interface TransactionSeed {
   /** Set for a payment from a card that is not linked to an account, so the form asks which account it is. */
   card?: SeedCard
   /** The typed row the list already offered for this payment, so the form does not ask about it a second time. */
-  possibleMatch?: { transactionId: number; description: string; date: string }
+  possibleMatch?: PossibleMatch
+  /** What the form says above its fields for a captured payment. */
+  intro?: SeedIntro
   /** The monthly series a captured payment may be, when more than one fits: the form asks which, and picking one opens it. */
   seriesChoice?: SeedSeriesOption[]
   /** The monthly series the fields were filled from, so picking another one opens a fresh form rather than keeping these. */
   fromSeries?: string
+}
+
+/** What a captured payment's form opens with, above the fields. */
+export interface SeedIntro {
+  /** When the bank's message arrived: "Sun 22 Nov, 12:31". */
+  arrived: string
+  /** The bank's own words, or null when none are kept. */
+  message: string | null
+  /** Why the payment needs a look, each in words that follow "because". Empty when nothing is in doubt. */
+  reasons: string[]
+  /** What the form adds under that: the monthly payment it looks like, the amount as the bank wrote it. */
+  notes: SeedNote[]
+  /** For a bill that may be waiting twice: what the other payment is and what to do about it. */
+  pair?: string
+}
+
+/** One line above a captured payment's fields. `warn` is for something the person has to do. */
+export interface SeedNote {
+  text: string
+  warn: boolean
 }
 
 /** One of the monthly series a captured payment may be. */
@@ -69,7 +92,9 @@ export interface SeedSeriesOption {
 
 /** What the add form offers when the server says a typed row already looks like the payment being added. */
 export interface DuplicateOffer {
-  match: { transactionId: number; description: string; date: string }
+  match: PossibleMatch
+  /** True when the server refused a save for this row, so the form's button reads Add anyway; false for the list's own match. */
+  refused: boolean
   /** The recommendation to link, which the offer's Link button sends to the server. */
   recommendationId: string
   /** Called once the link is made: tells the list, says so, and moves the queue on. */

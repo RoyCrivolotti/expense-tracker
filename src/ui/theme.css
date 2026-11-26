@@ -19,6 +19,7 @@
   --exp-success-text: color-mix(in srgb, var(--exp-success) 60%, black);
   --exp-warning-text: color-mix(in srgb, var(--exp-warning) 60%, black);
   --exp-danger-text: color-mix(in srgb, var(--exp-danger) 60%, black);
+  --exp-income-text: color-mix(in srgb, var(--exp-income) 60%, black);
   /* Text on a solid danger fill (the destructive button): white on the light theme's red is 4.8:1, and on the dark theme's lighter red it is 2.8, so the dark theme takes dark text (6.8:1). */
   --exp-danger-contrast: #ffffff;
 
@@ -133,6 +134,7 @@ html[data-keyboard-open] {
     --exp-success-text: var(--exp-success);
     --exp-warning-text: var(--exp-warning);
     --exp-danger-text: var(--exp-danger);
+    --exp-income-text: var(--exp-income);
     --exp-danger-contrast: #0f1115;
   }
 }
@@ -159,6 +161,7 @@ html[data-exp-theme='light'] {
   --exp-success-text: color-mix(in srgb, var(--exp-success) 60%, black);
   --exp-warning-text: color-mix(in srgb, var(--exp-warning) 60%, black);
   --exp-danger-text: color-mix(in srgb, var(--exp-danger) 60%, black);
+  --exp-income-text: color-mix(in srgb, var(--exp-income) 60%, black);
   /* Text on a solid danger fill (the destructive button): white on the light theme's red is 4.8:1, and on the dark theme's lighter red it is 2.8, so the dark theme takes dark text (6.8:1). */
   --exp-danger-contrast: #ffffff;
 }
@@ -184,6 +187,7 @@ html[data-exp-theme='dark'] {
   --exp-success-text: var(--exp-success);
   --exp-warning-text: var(--exp-warning);
   --exp-danger-text: var(--exp-danger);
+  --exp-income-text: var(--exp-income);
   --exp-danger-contrast: #0f1115;
 }
 

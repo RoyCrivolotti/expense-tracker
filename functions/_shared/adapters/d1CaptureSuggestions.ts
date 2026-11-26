@@ -5,7 +5,7 @@ import { MERCHANT_ROWS_SQL, SUGGESTION_EVENTS_SQL } from '../capture/captureSugg
 import { toFacts, type FactsRow } from '../capture/captureLearningSql'
 import { rows } from './d1CaptureSupport'
 
-type EventRow = { rec_id: string; slots: string | null; known: string | null } & {
+type EventRow = { rec_id: string; slots: string | null; body: string | null; known: string | null } & {
   [K in keyof FactsRow]: FactsRow[K] | null
 }
 
@@ -40,8 +40,9 @@ export async function merchantRows(
 }
 
 /**
- * Adds what each recommendation of a page should become (`suggestFor`), in two reads for the whole page, run together:
- * the pushes and their templates, and the merchants. A recommendation no push made gets null.
+ * Adds what each recommendation of a page should become (`suggestFor`) and the text of the push that made it, in two
+ * reads for the whole page, run together: the pushes and their templates, and the merchants. A recommendation no push
+ * made gets null for both. Each is also told whether its text is a merchant (`merchantKeyOf`) or a whole message.
  */
 export async function withSuggestions(
   db: D1Database,
@@ -58,15 +59,21 @@ export async function withSuggestions(
   const byRec = new Map(events.map((e) => [e.rec_id, e]))
   return page.map((r) => {
     const event = byRec.get(r.id)
-    if (!event) return { ...r, suggestion: null }
+    const key = keyOf.get(r.id) ?? null
+    const named = key !== null
+    if (!event) return { ...r, suggestion: null, message: null, named }
     const template = event.known === null ? null : toFacts(event as FactsRow)
-    const key = keyOf.get(r.id)
     const input = {
       amountCents: r.amountCents,
       accountId: r.accountId,
       suggestedType: r.suggestedType,
       slots: storedSlots(event.slots),
     }
-    return { ...r, suggestion: suggestFor(input, template, key ? (merchants.get(key) ?? []) : []) }
+    return {
+      ...r,
+      suggestion: suggestFor(input, template, key ? (merchants.get(key) ?? []) : []),
+      message: event.body,
+      named,
+    }
   })
 }

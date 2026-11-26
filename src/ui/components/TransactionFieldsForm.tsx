@@ -10,7 +10,7 @@ import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ActionRows, ReadOnlyRows } from './TransactionFieldActions'
 import { useReceipts } from './useReceipts'
-import { SeedAddons } from './SeedAddons'
+import { SeedAddons, SeedOpening } from './SeedAddons'
 import { dateChanger, type FormFields, type Setter } from './transactionFormState'
 import { BudgetMonthLine, DescriptionLine, FirstPaymentLine } from '../tips/FormLines'
 import { Field } from './TransactionFields'
@@ -102,6 +102,7 @@ export function Fields(props: FieldsProps) {
 
   return (
     <>
+      <SeedOpening seed={seed} model={model} duplicate={props.duplicate} />
       <FirstPaymentLine model={model} editing={editing !== null} />
       <TypeChips form={form} set={set} investmentCategoryId={investmentCategoryId} />
       <Field label={`Amount (${format.symbol})`}>
@@ -128,7 +129,7 @@ export function Fields(props: FieldsProps) {
       <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
       <BudgetMonthLine model={model} form={form} editing={editing !== null} />
-      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} duplicate={props.duplicate} />
+      <SeedAddons seed={seed} form={form} set={set} model={model} onDate={onDate} />
 
       {actions ? (
         <ActionRows

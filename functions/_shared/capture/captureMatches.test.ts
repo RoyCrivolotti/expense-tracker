@@ -106,11 +106,18 @@ const matchOf = async (
   (await repo.listOpenRecommendations(owner, 50)).find((r) => r.id === id)?.possibleMatch
 
 describe('the typed row a recommendation may duplicate', () => {
-  it('is the row of the same price, direction and day, with its id, description and date', async () => {
+  it('is the row of the same price, direction and day, in full: id, description, date, amount, type and account', async () => {
     const id = await push()
     const row = typed({ description: 'Cafe at the till' })
 
-    expect(await matchOf(id)).toEqual({ transactionId: row, description: 'Cafe at the till', date: '2026-11-10' })
+    expect(await matchOf(id)).toEqual({
+      transactionId: row,
+      description: 'Cafe at the till',
+      date: '2026-11-10',
+      amountCents: 1250,
+      type: 'expense',
+      accountId: 1,
+    })
   })
 
   it('is null when there is no row, and for a payment that cannot be matched', async () => {

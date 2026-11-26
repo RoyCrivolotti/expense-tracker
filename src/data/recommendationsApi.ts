@@ -1,6 +1,7 @@
 import type { NewTransaction } from './dataSource'
 import type { Transaction } from '../types'
 import { ApiError, req } from './apiClient'
+import type { PossibleMatch } from '../domain/capture/duplicate'
 import type { Suggestion } from '../domain/capture/suggestion'
 
 /** A push the app turned into something to review, as the list route sends it. Nothing here is an expense yet. */
@@ -25,16 +26,20 @@ export interface RecommendationInfo {
    * days after for an announced bill and the row that answers for its charge. A reason to look before adding, and the
    * row Link points the payment at.
    */
-  possibleMatch?: { transactionId: number; description: string; date: string } | null
+  possibleMatch?: PossibleMatch | null
   /**
    * What the person's own decisions on earlier pushes say the payment becomes: their description and category for the
    * merchant, the type, account and amount the push's wording taught. Null for a recommendation no push made.
    */
   suggestion?: Suggestion | null
+  /** The bank's own text of the push behind it, or null when there is none or it has been blanked. */
+  message?: string | null
+  /** False when `merchantRaw` is a whole message or absent, not a merchant: the payment has no name of the bank's. */
+  named?: boolean
 }
 
 /** The typed row a payment may duplicate. */
-export type PossibleMatch = NonNullable<RecommendationInfo['possibleMatch']>
+export type { PossibleMatch }
 
 /** The server refused a submit because a typed row already looks like the payment. Nothing was created. */
 export class PossibleDuplicateError extends Error {
@@ -46,12 +51,26 @@ export class PossibleDuplicateError extends Error {
   }
 }
 
+/** The amount, type and account of the row, each kept only when the server sent one of the right kind. */
+function rowDetail(m: Partial<PossibleMatch>): Partial<PossibleMatch> {
+  return {
+    ...(typeof m.amountCents === 'number' ? { amountCents: m.amountCents } : {}),
+    ...(typeof m.type === 'string' ? { type: m.type } : {}),
+    ...(typeof m.accountId === 'number' ? { accountId: m.accountId } : {}),
+  }
+}
+
 function duplicateOf(error: unknown): PossibleMatch | null {
   if (!(error instanceof ApiError) || error.status !== 409) return null
   const body = error.body as { code?: unknown; possibleMatch?: Partial<PossibleMatch> } | undefined
   const m = body?.possibleMatch
   if (body?.code !== 'possible-duplicate' || !m || typeof m.transactionId !== 'number') return null
-  return { transactionId: m.transactionId, description: String(m.description ?? ''), date: String(m.date ?? '') }
+  return {
+    transactionId: m.transactionId,
+    description: String(m.description ?? ''),
+    date: String(m.date ?? ''),
+    ...rowDetail(m),
+  }
 }
 
 export interface RecommendationPage {

@@ -162,6 +162,26 @@
   gap: 0.6rem;
   margin-top: 0.3rem;
 }
+/*
+ * A captured payment's buttons stay in view while the form scrolls under them. The sheet is what scrolls, and its
+ * padding (which already holds the home indicator's inset) is under the form. The bar reaches down over that padding
+ * to the sheet's edge, and since a sticky box is held inside the scroller's padding, it is stuck that same distance
+ * below it: at the end of the scroll it is exactly where it would be anyway.
+ */
+.pinned {
+  --sheet-pad: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+  position: sticky;
+  bottom: calc(-1 * var(--sheet-pad));
+  z-index: 1;
+  flex-wrap: wrap;
+  margin: 0 -1.1rem calc(-1 * var(--sheet-pad));
+  padding: 0.7rem 1.1rem var(--sheet-pad);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.pinned > .error {
+  flex: 0 0 100%;
+}
 .save {
   flex: 1;
   padding: 0.8rem;

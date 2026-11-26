@@ -69,6 +69,7 @@ const open = () =>
 beforeEach(() => {
   localStorage.clear()
   localStorage.setItem(LEDGER_MODE_KEY, 'off')
+  localStorage.setItem('exp-review-card', 'open')
   setMotionDisabledForTests(true)
   vi.useFakeTimers({ shouldAdvanceTime: true })
   vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known, unknown], next: null, openCount: 2 })
@@ -105,7 +106,7 @@ describe('payments to review on the Dashboard', () => {
   it('shows the card at the top and a count on the Dashboard tab, and the Settings badge keeps its own meaning', async () => {
     open()
 
-    expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^2 to review/ })).toBeInTheDocument()
     expect(screen.getAllByLabelText('2 payments to review').length).toBeGreaterThan(0)
     expect(screen.queryByLabelText(/pending access requests/)).not.toBeInTheDocument()
   })
@@ -113,7 +114,7 @@ describe('payments to review on the Dashboard', () => {
   it('shows a payment that arrived while the app was open when the person refreshes', async () => {
     vi.mocked(api.fetchRecommendations).mockResolvedValueOnce({ recommendations: [known], next: null, openCount: 1 })
     open()
-    expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^1 to review/ })).toBeInTheDocument()
 
     // A second payment is captured on the server; the app is not restarted.
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
@@ -123,7 +124,7 @@ describe('payments to review on the Dashboard', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh data' }))
 
-    expect(await screen.findByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^2 to review/ })).toBeInTheDocument()
   })
 
   describe('when the app returns to the foreground', () => {
@@ -135,7 +136,7 @@ describe('payments to review on the Dashboard', () => {
 
     it('reads the list again', async () => {
       open()
-      await screen.findByRole('heading', { name: '2 payments to review' })
+      await screen.findByRole('heading', { name: /^2 to review/ })
       const before = reads()
 
       comeBack()
@@ -145,8 +146,8 @@ describe('payments to review on the Dashboard', () => {
 
     it('waits while the add form is open on a payment, and reads once when it closes', async () => {
       open()
-      await screen.findByRole('heading', { name: '2 payments to review' })
-      fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+      await screen.findByRole('heading', { name: /^2 to review/ })
+      fireEvent.click(screen.getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
       const dialog = await screen.findByRole('dialog')
       const before = reads()
 
@@ -164,7 +165,7 @@ describe('payments to review on the Dashboard', () => {
       )
       vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: seven, next: null, openCount: 7 })
       open()
-      await screen.findByRole('heading', { name: '7 payments to review' })
+      await screen.findByRole('heading', { name: /^7 to review/ })
       fireEvent.click(screen.getByRole('button', { name: /See all/ }))
       const dialog = await screen.findByRole('dialog')
       const before = reads()
@@ -180,9 +181,9 @@ describe('payments to review on the Dashboard', () => {
 
   it('adds a known merchant with one tap after the undo window, and the count drops', async () => {
     open()
-    await screen.findByRole('heading', { name: '2 payments to review' })
+    await screen.findByRole('heading', { name: /^2 to review/ })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Add Cafe Example/ }))
 
     expect(screen.getByRole('status')).toHaveTextContent('Added · Cafe Example')
     expect(screen.getByRole('status')).toHaveTextContent('Eating out')
@@ -195,26 +196,26 @@ describe('payments to review on the Dashboard', () => {
       expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, type: 'expense' }),
       undefined,
     )
-    expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^1 to review/ })).toBeInTheDocument()
   })
 
   it('takes a one tap back with Undo and sends nothing', async () => {
     open()
-    await screen.findByRole('heading', { name: '2 payments to review' })
+    await screen.findByRole('heading', { name: /^2 to review/ })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Add Cafe Example/ }))
     fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
     await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS * 2)))
 
     expect(api.submitRecommendation).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^2 to review/ })).toBeInTheDocument()
   })
 
   it('opens the add form for a payment in doubt, with only what the push said, and saves it through the recommendation', async () => {
     open()
-    await screen.findByRole('heading', { name: '2 payments to review' })
+    await screen.findByRole('heading', { name: /^2 to review/ })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
 
     const form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByLabelText(/amount/i)).toHaveValue('8,00')
@@ -240,9 +241,9 @@ describe('payments to review on the Dashboard', () => {
       openCount: 2,
     })
     open()
-    await screen.findByRole('heading', { name: '2 payments to review' })
+    await screen.findByRole('heading', { name: /^2 to review/ })
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Review' })[0]!)
+    fireEvent.click(screen.getAllByRole('button', { name: /^Review / })[0]!)
     let form = (await screen.findByRole('dialog')).querySelector('form')!
     expect(within(form).getByRole('button', { name: 'Add and next (1 left)' })).toBeInTheDocument()
     fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
@@ -272,7 +273,7 @@ describe('payments to review on the Dashboard', () => {
     })
     vi.mocked(cardsApi.linkCard).mockResolvedValue(undefined)
     open()
-    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Review / }))
     const form = (await screen.findByRole('dialog')).querySelector('form')!
 
     fireEvent.change(await screen.findByLabelText('Account for the card ending 4821'), { target: { value: '2' } })
@@ -302,7 +303,7 @@ describe('payments to review on the Dashboard', () => {
     })
     vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [], waiting: [] })
     open()
-    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Review / }))
     const form = (await screen.findByRole('dialog')).querySelector('form')!
 
     expect(within(form).getByLabelText('Account')).toHaveDisplayValue('Pick an account')
@@ -326,7 +327,7 @@ describe('payments to review on the Dashboard', () => {
     })
     vi.mocked(cardsApi.fetchCardLinks).mockResolvedValue({ cards: [], waiting: [] })
     open()
-    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Review / }))
     const dialog = await screen.findByRole('dialog')
     await within(dialog).findByText(/Which account is the card/)
 
@@ -346,28 +347,42 @@ describe('payments to review on the Dashboard', () => {
     })
     open()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Review / }))
 
     await screen.findByRole('dialog')
     expect(screen.queryByText(/Which account is the card/)).not.toBeInTheDocument()
   })
 
-  it('sends a payment the server says is already typed to Review, offers to link it, and links it to that row', async () => {
+  it('sends a payment the server says is already typed to Review, shows the entry there in full, and links it to that row', async () => {
     vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
+    const possibleMatch = {
+      transactionId: 41,
+      description: 'Cafe',
+      date: '2026-11-09',
+      amountCents: 1250,
+      type: 'expense',
+      accountId: 2,
+    }
     vi.mocked(api.fetchRecommendations).mockResolvedValue({
-      recommendations: [{ ...known, possibleMatch: { transactionId: 41, description: 'Cafe', date: '2026-11-09' } }],
+      recommendations: [{ ...known, possibleMatch }],
       next: null,
       openCount: 1,
     })
     open()
-    await screen.findByRole('heading', { name: '1 payment to review' })
+    await screen.findByRole('heading', { name: /^1 to review/ })
 
-    expect(screen.queryByRole('button', { name: 'Add Cafe Example' })).not.toBeInTheDocument()
-    expect(screen.getByText('May be entered already')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Already entered as Cafe? Link' }))
-    await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
+    expect(screen.queryByRole('button', { name: /^Add Cafe Example/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Possible duplicate')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /link/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Review Cafe Example/ }))
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Possible duplicate. You already have this entry:CafeMon 9 Nov · −12,50 € · Travel CreditIf it is the same payment:Link instead',
+    )
+    expect(within(dialog).queryByText(/Needs a look/)).not.toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Link instead' }))
 
-    expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41)
+    await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41))
     expect(api.submitRecommendation).not.toHaveBeenCalled()
   })
 
@@ -378,9 +393,9 @@ describe('payments to review on the Dashboard', () => {
       openCount: 1,
     })
     open()
-    await screen.findByRole('heading', { name: '1 payment to review' })
+    await screen.findByRole('heading', { name: /^1 to review/ })
 
-    expect(screen.getByRole('button', { name: 'Add Cafe Example' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Add Cafe Example/ })).toBeInTheDocument()
   })
 
   describe('when the server finds a typed row at submit that the list did not', () => {
@@ -389,35 +404,37 @@ describe('payments to review on the Dashboard', () => {
       vi.mocked(api.fetchRecommendations).mockResolvedValue({ recommendations: [known], next: null, openCount: 1 })
       vi.mocked(api.submitRecommendation).mockRejectedValueOnce(new api.PossibleDuplicateError(MATCH))
       open()
-      await screen.findByRole('heading', { name: '1 payment to review' })
-      fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+      await screen.findByRole('heading', { name: /^1 to review/ })
+      fireEvent.click(screen.getByRole('button', { name: /^Add Cafe Example/ }))
       await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
     }
 
-    it('puts the payment back in Review with the Link offer, and no error', async () => {
+    it('puts the payment back as a possible duplicate to review, and no error', async () => {
       await tapAdd()
 
-      expect(await screen.findByRole('button', { name: 'Already entered as Cafe? Link' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Add Cafe Example' })).not.toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+      expect(await screen.findByText('Possible duplicate')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Add Cafe Example/ })).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /^1 to review/ })).toBeInTheDocument()
       expect(screen.queryByText(/Couldn't/)).not.toBeInTheDocument()
-      expect(screen.getByRole('status')).toHaveTextContent('you may have entered this already')
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'you may have entered this already. Review it to see the entry.',
+      )
     })
 
-    it('links the returned payment to that row', async () => {
+    it('links the returned payment to that row from its review view', async () => {
       vi.mocked(decisionsApi.linkRecommendation).mockResolvedValue(undefined)
       await tapAdd()
 
-      fireEvent.click(await screen.findByRole('button', { name: 'Already entered as Cafe? Link' }))
-      await act(async () => void (await vi.advanceTimersByTimeAsync(UNDO_MS)))
+      fireEvent.click(await screen.findByRole('button', { name: /^Review Cafe Example/ }))
+      fireEvent.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Link instead' }))
 
-      expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41)
+      await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(KNOWN, 41))
     })
 
     it('adds it from Review without asking again, since the person has now seen the match', async () => {
       await tapAdd()
 
-      fireEvent.click(await screen.findByRole('button', { name: 'Review' }))
+      fireEvent.click(await screen.findByRole('button', { name: /^Review / }))
       const form = (await screen.findByRole('dialog')).querySelector('form')!
       fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
 

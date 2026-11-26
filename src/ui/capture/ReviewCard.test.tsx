@@ -3,10 +3,11 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { makeTransaction } from '../../testing/factories'
-import { makeRecommendation, makeReviewModel, makeSeriesModel } from '../../testing/reviewKit'
+import { makeRecommendation, makeReviewModel, makeSeriesModel, pushAt } from '../../testing/reviewKit'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import ReviewCard from './ReviewCard'
+import styles from './ReviewList.module.css'
 import { ReviewCardSlot } from './ReviewCardSlot'
 import { ReviewContext, type ReviewCore } from './reviewContext'
 
@@ -50,92 +51,61 @@ const wrap = (core: ReviewCore) => (
 )
 const show = (core: ReviewCore) => render(wrap(core))
 
-describe('a payment the server suggests from the person’s history', () => {
-  const suggested = rec(1, {
-    merchantRaw: 'NEW PLACE 0099',
-    suggestion: {
-      description: 'Weekly shop',
-      categoryId: 2,
-      type: 'expense',
-      accountId: 1,
-      amountCents: 1250,
-      sightings: 2,
-      settled: true,
-      reasons: [],
-    },
-  })
+const ROW = 'Review Cafe Example, −12,50 €, Today'
+const newPlace = (
+  n: number,
+  over: Partial<RecommendationInfo> = {},
+) => rec(n, { merchantRaw: 'BRAND NEW PLACE', ...over })
+const MOVEMENT = 'Example Bank alert: 43,80 EUR today'
+const names = (el: HTMLElement) =>
+  within(el)
+    .getAllByRole('button')
+    .map((b) => b.getAttribute('aria-label') ?? b.textContent)
 
-  it('shows the person’s own description and category instead of the bank’s words', () => {
-    show(makeCore({ items: [suggested] }))
-
-    const row = screen.getByRole('listitem')
-    expect(within(row).getByText('Weekly shop')).toBeInTheDocument()
-    expect(within(row).getByText('Groceries')).toBeInTheDocument()
-    expect(within(row).queryByText(/NEW PLACE/)).not.toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: 'Add Weekly shop' })).toBeInTheDocument()
-  })
-
-  it('names a wording the person has never accepted as the reason to look', () => {
-    show(makeCore({ items: [{ ...suggested, suggestion: { ...suggested.suggestion!, reasons: ['new-shape'] } }] }))
-
-    const row = screen.getByRole('listitem')
-    expect(within(row).getByText('New push wording')).toBeInTheDocument()
-    expect(within(row).queryByRole('button', { name: 'Add Weekly shop' })).not.toBeInTheDocument()
-  })
-})
-
-describe('a known payment', () => {
-  it("shows all seven fields and offers Add, Change and Don't add", () => {
+describe('a row', () => {
+  it('is the amount with its day, the name with one note, and one button', () => {
     show(makeCore())
 
     const row = screen.getByRole('listitem')
-    expect(within(row).getByText('Cafe Example')).toBeInTheDocument()
-    expect(within(row).getByText(/12,50/)).toBeInTheDocument()
-    expect(within(row).getByText('Expense')).toBeInTheDocument()
-    expect(within(row).getByText('Eating out')).toBeInTheDocument()
-    expect(within(row).getByText('Main Debit')).toBeInTheDocument()
-    expect(within(row).getByText(/Tue 10 Nov, \d\d:\d\d/)).toBeInTheDocument()
-    expect(within(row).getByText('Nov budget')).toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: 'Add Cafe Example' })).toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: 'Change' })).toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: "Don't add Cafe Example" })).toBeInTheDocument()
+    expect(row).toHaveTextContent('−12,50 € money outTodayCafe ExampleEating outAdd')
+    expect(names(row)).toEqual([ROW, 'Add Cafe Example, −12,50 €'])
+    expect(within(row).getByText('Add')).toHaveClass(styles.add!)
+  })
+
+  it("has no Don't add, Link or Change, on the card or in the sheet", () => {
+    const match = { transactionId: 7, description: 'Lunch', date: '2026-11-10' }
+    show(makeCore({ items: [rec(1), rec(2, { possibleMatch: match }), rec(3), rec(4), rec(5)] }))
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
+
+    for (const label of [/don't add/i, /link/i, /change/i])
+      expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
   })
 
   it('holds an Add as a decision that sends the payment through its recommendation', async () => {
     const core = makeCore()
     show(core)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example, −12,50 €' }))
 
     const [recId, message, failure, send] = vi.mocked(core.decide).mock.calls[0]!
     expect([recId, failure]).toEqual([id(1), 'add Cafe Example'])
-    expect(message.split('\n')[1]).toBe(
-      'Expense \u00b7 Eating out \u00b7 Main Debit \u00b7 Tue 10 Nov \u00b7 Nov budget',
-    )
+    expect(message.split('\n')).toEqual([
+      'Added · Cafe Example −12,50 €',
+      'Expense · Eating out · Main Debit · Tue 10 Nov · Nov budget',
+    ])
     await send()
     expect(core.submit).toHaveBeenCalledWith(
       id(1),
       expect.objectContaining({ amountCents: 1250, categoryId: 1, accountId: 1, budgetMonth: '2026-11' }),
     )
+    expect(core.openForm).not.toHaveBeenCalled()
   })
 
-  it("holds a Don't add that only dismisses, and says it teaches nothing", () => {
+  it('opens the review view when a ready row is tapped anywhere but its button', () => {
     const core = makeCore()
     show(core)
 
-    fireEvent.click(screen.getByRole('button', { name: "Don't add Cafe Example" }))
-
-    const [recId, message, failure] = vi.mocked(core.decide).mock.calls[0]!
-    expect([recId, failure]).toEqual([id(1), 'remove Cafe Example'])
-    expect(message).toContain('Only this suggestion is removed')
-    expect(core.submit).not.toHaveBeenCalled()
-  })
-
-  it('opens the add form on Change, with the seed and no queue behind a single payment', () => {
-    const core = makeCore()
-    show(core)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    fireEvent.click(screen.getByRole('button', { name: ROW }))
 
     const seed = vi.mocked(core.openForm).mock.calls[0]![0]
     expect(seed).toMatchObject({
@@ -145,89 +115,357 @@ describe('a known payment', () => {
       description: 'Cafe Example',
     })
     expect(seed.queue?.left).toBe(0)
+    expect(core.decide).not.toHaveBeenCalled()
   })
 
-  it("says in plain words that Don't add removes only this suggestion", () => {
-    show(makeCore())
+  it('has Review for a payment in doubt, which does what tapping the row does and is announced once', () => {
+    const core = makeCore({ items: [newPlace(1)] })
+    show(core)
+    const row = screen.getByRole('listitem')
 
-    expect(screen.getByText(/only removes that one suggestion/)).toBeInTheDocument()
-  })
-})
+    expect(names(row)).toEqual(['Review BRAND NEW PLACE, −12,50 €, Today'])
+    const pill = within(row).getByText('Review')
+    expect(pill).toHaveClass(styles.review!)
+    expect(pill.closest('button')).toHaveAttribute('aria-hidden', 'true')
+    expect(pill.closest('button')).toHaveAttribute('tabindex', '-1')
+    fireEvent.click(pill)
+    // A press on the pill is the row's press: the focus is on the row's button, where it returns when the form closes.
+    expect(within(row).getByRole('button')).toHaveFocus()
+    fireEvent.click(within(row).getByRole('button'))
 
-describe('a payment in doubt', () => {
-  it('has Review and no one-tap Add, says why in chips, and writes a foreign amount in its own currency', () => {
-    show(makeCore({ items: [rec(1, { merchantRaw: 'BRAND NEW PLACE', currency: 'USD', amountCents: 2000 })] }))
-
-    expect(screen.queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument()
-    expect(screen.getByText('Category: not set')).toBeInTheDocument()
-    expect(screen.getByText('Not in euros')).toBeInTheDocument()
-    expect(screen.getByText('New merchant')).toBeInTheDocument()
-    expect(screen.getByText('US$20.00')).toBeInTheDocument()
-  })
-
-  it('says what is missing on a payment with no merchant, no account and no amount', () => {
-    show(makeCore({ items: [rec(1, { merchantRaw: null, accountId: null, amountCents: null, suggestedType: null })] }))
-
-    expect(screen.getByText('No merchant', { selector: 'span[class*=missing]' })).toBeInTheDocument()
-    expect(screen.getByText('Account: not set')).toBeInTheDocument()
-    expect(screen.getByText('Type: pick one')).toBeInTheDocument()
-    expect(screen.getByText('Your own money moved')).toBeInTheDocument()
-    expect(screen.getByText('Amount missing')).toBeInTheDocument()
+    expect(vi.mocked(core.openForm).mock.calls.map(([seed]) => seed.recommendationId)).toEqual([id(1), id(1)])
   })
 
-  it('offers to link the typed row the server named, and holds the link', () => {
+  it('never opens: nothing on it says it can be expanded', () => {
+    show(makeCore({ items: [rec(1), newPlace(2)] }))
+
+    for (const row of screen.getAllByRole('listitem'))
+      for (const button of within(row).getAllByRole('button', { hidden: true }))
+        expect(button).not.toHaveAttribute('aria-expanded')
+  })
+
+  it('draws a note the person must decide in amber, a possible duplicate as a chip, and what it is plainly', () => {
+    const match = { transactionId: 7, description: 'Lunch', date: '2026-11-10' }
+    show(makeCore({ items: [rec(1), newPlace(2), rec(3, { possibleMatch: match }), rec(4, { currency: 'USD' })] }))
+
+    expect(screen.getByText('Eating out').tagName).toBe('P')
+    expect(screen.getByText('No category')).toHaveClass(styles.need!)
+    expect(screen.getByText('Possible duplicate')).toHaveClass(styles.chip!)
+    expect(screen.getByText('Not in euros')).toHaveClass(styles.need!)
+    expect(screen.getByText(/US\$12\.50/)).toBeInTheDocument()
+    // The note is not in the button's name, so it is tied to it: a screen reader says it after the name.
+    const [ready, , duplicate, foreign] = screen.getAllByRole('listitem')
+    expect(within(duplicate!).getByRole('button')).toHaveAccessibleDescription('Possible duplicate')
+    expect(within(foreign!).getByRole('button')).toHaveAccessibleDescription('Not in euros')
+    expect(within(ready!).getByRole('button', { name: ROW })).toHaveAccessibleDescription('Eating out')
+  })
+
+  it('draws money in green with a plus, money out plainly with a minus, and no sign where the way is not known', () => {
+    show(makeCore({ items: [rec(1, { suggestedType: 'income' }), rec(2), rec(3, { suggestedType: null })] }))
+    const [income, expense, unknown] = screen.getAllByRole('listitem')
+
+    expect(within(income!).getByText(/^\+12,50 €/)).toHaveClass(styles.in!)
+    expect(within(income!).getByText('money in', { exact: false, selector: 'span span' })).toBeInTheDocument()
+    expect(within(expense!).getByText(/^−12,50 €/)).not.toHaveClass(styles.in!)
+    expect(within(unknown!).getByText('12,50 €')).not.toHaveClass(styles.in!)
+    expect(within(unknown!).queryByText(/money (in|out)/)).not.toBeInTheDocument()
+  })
+
+  it('says "Unnamed" in grey for a whole message, with the time as its one clue, and never the sentence', () => {
+    show(makeCore({ items: [rec(1, { merchantRaw: MOVEMENT, amountCents: 4380 })] }))
+    const row = screen.getByRole('listitem')
+
+    expect(within(row).getByText('Unnamed').closest(`.${styles.title}`)).toHaveClass(styles.unnamed!)
+    expect(within(row).getByText('No merchant, 09:41')).toBeInTheDocument()
+    expect(row).not.toHaveTextContent(/alert/)
+    expect(names(row)).toEqual(['Review Unnamed payment, −43,80 €, Today'])
+  })
+
+  it('says "No amount" where the bank gave none', () => {
+    show(makeCore({ items: [rec(1, { amountCents: null })] }))
+
+    expect(screen.getByText('No amount')).toHaveClass(styles.noAmount!)
+    expect(screen.getByText('Amount missing')).toHaveClass(styles.need!)
+    expect(names(screen.getByRole('listitem'))).toEqual(['Review Cafe Example, no amount, Today'])
+  })
+
+  it('says in red that a send failed, with the reason for a screen reader, and keeps its button to try again', () => {
+    show(makeCore({ failures: new Map([[id(1), 'Request failed (500)']]) }))
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveClass(styles.bad!)
+    expect(alert).toHaveTextContent('Not sent. Try again: Request failed (500)')
+    expect(screen.getByRole('button', { name: 'Add Cafe Example, −12,50 €' })).toBeInTheDocument()
+  })
+
+  it('carries the bank’s message and why it needs a look into the review view', () => {
     const core = makeCore({
-      items: [rec(1, { possibleMatch: { transactionId: 9, description: 'Cafe', date: '2026-11-09' } })],
+      items: [rec(1, { merchantRaw: MOVEMENT, message: `${MOVEMENT}. Thank you for banking with us` })],
     })
     show(core)
 
-    expect(screen.queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Already entered as Cafe? Link' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Review Unnamed payment/ }))
 
-    const [recId, message, failure] = vi.mocked(core.decide).mock.calls[0]!
-    expect([recId, failure]).toEqual([id(1), 'link Cafe Example'])
-    expect(message).toContain('To the row "Cafe". Nothing new is added.')
-  })
-
-  it('cuts a long description of the typed row on the button, starts the name with the words shown and keeps the whole of it after them', () => {
-    const long = 'A very long description that somebody typed once and that runs past the end of any row'
-    show(makeCore({ items: [rec(1, { possibleMatch: { transactionId: 9, description: long, date: '2026-11-09' } })] }))
-
-    const button = screen.getByRole('button', {
-      name: `Already entered as A very long description that somebo\u2026? Link, ${long}`,
+    const seed = vi.mocked(core.openForm).mock.calls[0]![0]
+    expect(seed).not.toHaveProperty('description')
+    expect(seed.intro).toEqual({
+      arrived: 'Tue 10 Nov, 09:41',
+      message: `${MOVEMENT}. Thank you for banking with us`,
+      reasons: ["the bank's message names no merchant", 'it has no category yet'],
+      notes: [],
     })
-
-    expect(button).toHaveTextContent(/^Already entered as A very long description that somebo\u2026\? Link$/)
-    expect(button).toHaveAttribute('title', long)
   })
 
-  it('shows why a payment came back after a failed send', () => {
-    show(makeCore({ failures: new Map([[id(1), 'Request failed (500)']]) }))
+  it('carries the entry a payment may duplicate into the review view, in full, and drops the repeated reason', () => {
+    const match = {
+      transactionId: 7,
+      description: 'Lunch',
+      date: '2026-11-10',
+      amountCents: 1250,
+      type: 'expense',
+      accountId: 2,
+    }
+    const core = makeCore({ items: [rec(1, { possibleMatch: match })] })
+    show(core)
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Not sent: Request failed (500)')
+    fireEvent.click(screen.getByRole('button', { name: ROW }))
+
+    const seed = vi.mocked(core.openForm).mock.calls[0]![0]
+    expect(seed.possibleMatch).toEqual(match)
+    expect(seed.intro).toMatchObject({ reasons: [] })
+  })
+})
+
+describe('the card’s one line', () => {
+  const heading = () => screen.getByRole('heading')
+  const strip = () => within(heading()).getByRole('button')
+
+  it('counts the payments, the same way for one', () => {
+    const { unmount } = show(makeCore({ items: [rec(1)] }))
+    expect(heading()).toHaveTextContent(/^1 to review/)
+    unmount()
+
+    show(makeCore({ items: [rec(1), rec(2)] }))
+    expect(heading()).toHaveTextContent(/^2 to review/)
+  })
+
+  it('shows what is waiting, money in on a green chip and money out on a red one, in whole euros', () => {
+    show(
+      makeCore({
+        items: [
+          rec(1, { amountCents: 340 }),
+          rec(2, { amountCents: 17024 }),
+          rec(3, { amountCents: 185000, suggestedType: 'income' }),
+        ],
+      }),
+    )
+
+    expect(screen.getByText('+1.850 €')).toHaveClass(styles.total!, styles.in!)
+    expect(screen.getByText('−174 €')).toHaveClass(styles.total!, styles.out!)
+    expect(heading()).toHaveAccessibleName('3 to review +1.850 € coming in −174 € going out')
+  })
+
+  it('has no chip for a side where nothing moves', () => {
+    const { unmount } = show(makeCore({ items: [rec(1), rec(2)] }))
+    expect(heading()).toHaveAccessibleName('2 to review −25 € going out')
+    unmount()
+
+    show(makeCore({ items: [rec(1, { suggestedType: 'refund' })] }))
+    expect(heading()).toHaveAccessibleName('1 to review +13 € coming in')
+  })
+
+  it('leaves out what cannot be added up: not in euros, no amount, a way not known', () => {
+    show(
+      makeCore({
+        items: [
+          rec(1, { amountCents: 500 }),
+          rec(2, { amountCents: 99900, currency: 'USD' }),
+          rec(3, { amountCents: null }),
+          rec(4, { amountCents: 30000, suggestedType: null }),
+        ],
+      }),
+    )
+
+    expect(heading()).toHaveAccessibleName('4 to review −5 € going out')
+  })
+
+  it('counts a bill that waits twice once, and one the bank only announced like any other', () => {
+    const bill = { amountCents: 6215, localDate: '2026-11-10', merchantRaw: 'EXAMPLE UTILITY' }
+    const notice = rec(1, { ...bill, occurredAt: pushAt(2026, 11, 6, 10, 2) })
+    const charge = rec(2, { ...bill, occurredAt: pushAt(2026, 11, 10, 8, 10) })
+    const { unmount } = show(makeCore({ items: [charge, notice, rec(3, { amountCents: 340 })] }))
+    expect(heading()).toHaveAccessibleName('3 to review −66 € going out')
+    unmount()
+
+    show(makeCore({ items: [notice, rec(3, { amountCents: 340 })] }))
+    expect(heading()).toHaveAccessibleName('2 to review −66 € going out')
+  })
+
+  it('shows no totals while more payments wait than are loaded, when a sum would be short', () => {
+    show(makeCore({ hasMore: true, count: 60 }))
+
+    expect(heading()).toHaveAccessibleName('60 to review')
+  })
+
+  it('is one line until it is opened, and opens and folds from that line', () => {
+    localStorage.clear()
+    show(makeCore())
+    const body = document.getElementById(strip().getAttribute('aria-controls')!)!
+
+    expect(strip()).toHaveAttribute('aria-expanded', 'false')
+    expect(body).toHaveAttribute('inert')
+    fireEvent.click(strip())
+    expect(strip()).toHaveAttribute('aria-expanded', 'true')
+    expect(body).not.toHaveAttribute('inert')
+    expect(within(body).getByRole('listitem')).toBeInTheDocument()
+    fireEvent.click(strip())
+    expect(strip()).toHaveAttribute('aria-expanded', 'false')
+    expect(body).toHaveAttribute('inert')
+  })
+
+  it('comes back the way it was left after a reload, on this device', () => {
+    localStorage.clear()
+    const first = show(makeCore())
+    fireEvent.click(strip())
+    first.unmount()
+
+    const second = show(makeCore())
+    expect(strip()).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(strip())
+    second.unmount()
+
+    show(makeCore())
+    expect(strip()).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('a bill that waits twice', () => {
+  const bill = { amountCents: 6215, localDate: '2026-11-10', merchantRaw: 'EXAMPLE UTILITY' }
+  const notice = rec(1, {
+    ...bill,
+    merchantRaw: 'Heads up: 62,15 EUR is due',
+    occurredAt: pushAt(2026, 11, 6, 10, 2),
+  })
+  const charge = rec(2, { ...bill, occurredAt: pushAt(2026, 11, 10, 8, 10) })
+
+  it.each([
+    ['the announcement listed first', [notice, charge]],
+    ['the charge listed first', [charge, notice]],
+  ])('ties the two with the heading and Dismiss duplicate beside it, with %s', (_name, items) => {
+    show(makeCore({ items }))
+    const [top, bottom] = screen.getAllByRole('listitem')
+
+    expect(top).toHaveClass(styles.tieTop!)
+    expect(bottom).toHaveClass(styles.tieBottom!)
+    expect(top).toHaveTextContent("Might be one bill, twiceIf it's duplicated:Dismiss duplicate−62,15 €")
+    expect(within(top!).getByText('EXAMPLE UTILITY')).toBeInTheDocument()
+    expect(within(bottom!).getByText('Unnamed')).toBeInTheDocument()
+    expect(within(bottom!).getByText('Notice, 6 Nov')).toBeInTheDocument()
+    expect(screen.getAllByText('Might be one bill, twice')).toHaveLength(1)
+  })
+
+  it('keeps Review on both rows', () => {
+    show(makeCore({ items: [charge, notice] }))
+
+    for (const row of screen.getAllByRole('listitem')) {
+      expect(within(row).getByText('Review')).toHaveClass(styles.review!)
+      expect(within(row).queryByText('Add')).not.toBeInTheDocument()
+    }
+  })
+
+  it('removes only the announcement on Dismiss duplicate, as a decision that can be undone', () => {
+    const core = makeCore({ items: [charge, notice, rec(3)] })
+    show(core)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss duplicate: the notice, −62,15 €' }))
+
+    expect(core.decide).toHaveBeenCalledOnce()
+    const [recId, message, failure] = vi.mocked(core.decide).mock.calls[0]!
+    expect(recId).toBe(id(1))
+    expect(message).toContain('Not added · Unnamed payment')
+    expect(failure).toBe('remove Unnamed payment')
+    expect(core.submit).not.toHaveBeenCalled()
+  })
+
+  it('tells the review view of each about the other', () => {
+    const core = makeCore({ items: [charge, notice] })
+    show(core)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Review EXAMPLE UTILITY/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Review Unnamed payment/ }))
+
+    const [first, second] = vi.mocked(core.openForm).mock.calls.map(([seed]) => seed.intro!)
+    expect(first!.pair).toMatch(
+      /^Might be the same bill as the one the bank announced on Fri 6 Nov \(−62,15 €, also waiting\)/,
+    )
+    expect(first!.reasons[0]).toBe('it might be the same bill as another one waiting')
+    expect(second!.pair).toMatch(/^Might be the same bill as EXAMPLE UTILITY, −62,15 €, charged Tue 10 Nov/)
+  })
+
+  it('only warns where the app cannot write: the heading, what to do, and no button', () => {
+    show(makeCore({ items: [charge, notice], canWrite: false, submit: undefined }))
+
+    expect(screen.getByText('Might be one bill, twice').parentElement).toHaveTextContent(
+      "Might be one bill, twiceIf it's duplicated, add only one.",
+    )
+    expect(within(screen.getByRole('list')).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('draws no tie on the card when its limit shows only one of the two, and draws it in the sheet', () => {
+    show(makeCore({ items: [rec(3), rec(4), charge, notice, rec(5)] }))
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
+    // The half that is shown is an ordinary row: no amber line down its side with nothing to tie it to.
+    for (const row of screen.getAllByRole('listitem')) {
+      expect(row).not.toHaveClass(styles.tieTop!)
+      expect(row).not.toHaveClass(styles.tieBottom!)
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
+
+    expect(within(screen.getByRole('dialog')).getByText('Might be one bill, twice')).toBeInTheDocument()
+  })
+
+  it('keeps the announcement under its charge in the sheet when the charge came days after the day named', () => {
+    const early = rec(1, { ...bill, localDate: '2026-11-08', occurredAt: pushAt(2026, 11, 6, 10, 2) })
+    show(
+      makeCore({
+        items: [charge, rec(3, { localDate: '2026-11-09', occurredAt: pushAt(2026, 11, 9) }), early, rec(4), rec(5)],
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
+    const sheet = screen.getByRole('dialog')
+
+    // One run of rows under the charge's day holds both, so the tie is drawn and the notice gets no day of its own.
+    const tied = within(sheet).getByText('Might be one bill, twice').closest('ul')!
+    expect(within(tied).getByText('Notice, 6 Nov')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('heading', { name: 'Sun 8 Nov' })).not.toBeInTheDocument()
+  })
+
+  it('ties nothing when the two are not one bill: another amount, or a charge before the day named', () => {
+    const { unmount } = show(makeCore({ items: [rec(2, { ...charge, amountCents: 6216 }), notice] }))
+    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
+    unmount()
+
+    show(
+      makeCore({
+        items: [rec(2, { ...bill, localDate: '2026-11-09', occurredAt: pushAt(2026, 11, 9, 8, 10) }), notice],
+      }),
+    )
+    expect(screen.queryByText('Might be one bill, twice')).not.toBeInTheDocument()
   })
 })
 
 describe('the card', () => {
-  it('counts the payments, in the singular too', () => {
-    const { unmount } = show(makeCore({ items: [rec(1)] }))
-    expect(screen.getByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
-    unmount()
-
-    show(makeCore({ items: [rec(1), rec(2)] }))
-    expect(screen.getByRole('heading', { name: '2 payments to review' })).toBeInTheDocument()
-  })
-
-  it('shows three payments and opens the rest in a sheet, whose Review closes it and opens the form', () => {
-    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5, { merchantRaw: 'BRAND NEW PLACE' })] })
+  it('shows three payments and opens the rest in a sheet, where tapping a row closes it and opens the form', () => {
+    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), newPlace(5)] })
     show(core)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
 
     fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
     const sheet = screen.getByRole('dialog')
     expect(within(sheet).getAllByRole('listitem')).toHaveLength(5)
-    fireEvent.click(within(sheet).getByRole('button', { name: 'Review' }))
+    fireEvent.click(within(sheet).getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(vi.mocked(core.openForm).mock.calls[0]![0]).toMatchObject({ recommendationId: id(5) })
@@ -237,37 +475,40 @@ describe('the card', () => {
     ['a phone', true, 3],
     ['a wide screen', false, 5],
   ])(
-    'shows %s the most rows, and all of them when it is exactly one more, with the full count on the heading',
+    'shows %s the most rows, and all of them when it is exactly one more, with the full count on its line',
     (_name, phone, limit) => {
       viewport(phone)
-      for (const total of [0, 1, 3, 4, 5, 6, 7]) {
+      for (const total of [1, 3, 4, 5, 6, 7]) {
         const items = Array.from({ length: total }, (_x, i) => rec(i + 1))
         const { unmount } = show(makeCore({ items }))
         const rows = screen.queryAllByRole('listitem').length
-        const expected = total === 0 ? 0 : total === limit + 1 ? total : Math.min(total, limit)
+        const expected = total === limit + 1 ? total : Math.min(total, limit)
 
         expect(rows, `${total} on ${limit}`).toBe(expected)
         expect(screen.queryByRole('button', { name: `See all ${total}` }) !== null, `${total} see all`).toBe(
           total > expected,
         )
-        if (total > 0)
-          expect(
-            screen.getByRole('heading', { name: total === 1 ? '1 payment to review' : `${total} payments to review` }),
-          ).toBeInTheDocument()
+        expect(screen.getByRole('heading')).toHaveTextContent(new RegExp(`^${total} to review`))
         unmount()
       }
     },
   )
 
+  it('shows nothing at all with nothing waiting', () => {
+    const { container } = show(makeCore({ items: [], count: 0 }))
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('queues the payments after the one reviewed, so the form can move on to them', () => {
-    const core = makeCore({ items: [rec(1, { merchantRaw: 'BRAND NEW PLACE' }), rec(2), rec(3)] })
+    const core = makeCore({ items: [newPlace(1), rec(2), rec(3)] })
     show(core)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
 
     const seed = vi.mocked(core.openForm).mock.calls[0]![0]
     expect(seed.queue!.left).toBe(2)
-    expect(seed.queue!.next()).toMatchObject({ recommendationId: id(2) })
+    expect(seed.queue!.next()).toMatchObject({ recommendationId: id(2), intro: { arrived: 'Tue 10 Nov, 09:41' } })
   })
 
   it('offers See all when more are not loaded yet, and Show more in the sheet', () => {
@@ -280,16 +521,6 @@ describe('the card', () => {
     expect(core.more).toHaveBeenCalledOnce()
   })
 
-  it('says all caught up in the sheet once nothing is left', () => {
-    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5)] })
-    const { rerender } = show(core)
-    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
-
-    rerender(wrap({ ...core, items: [], count: 0 }))
-
-    expect(within(screen.getByRole('dialog')).getByText('All caught up.')).toBeInTheDocument()
-  })
-
   it('shows a failed read with a way to try again', () => {
     const core = makeCore({ error: 'Request failed (500)' })
     show(core)
@@ -299,20 +530,83 @@ describe('the card', () => {
     expect(core.retry).toHaveBeenCalledOnce()
   })
 
-  it('shows the rows but no buttons where the app cannot write', () => {
+  it('shows the rows with no buttons where the app cannot write, and says it is a saved copy', () => {
     show(makeCore({ canWrite: false, submit: undefined }))
 
     expect(screen.getByText('Cafe Example')).toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText('Saved copy. You can add these when you are back online.')).toBeInTheDocument()
+    expect(within(screen.getByRole('list')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('ignores a one tap where the app cannot write', () => {
     const core = makeCore({ submit: undefined })
     show(core)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Cafe Example, −12,50 €' }))
 
     expect(core.decide).not.toHaveBeenCalled()
+  })
+})
+
+describe('the sheet', () => {
+  const open = (core: ReviewCore) => {
+    show(core)
+    fireEvent.click(screen.getByRole('button', { name: /^See all/ }))
+    return screen.getByRole('dialog')
+  }
+  const days = [
+    rec(1),
+    rec(2, { occurredAt: pushAt(2026, 11, 10, 3, 50), merchantRaw: MOVEMENT }),
+    rec(3, { localDate: '2026-11-09', occurredAt: pushAt(2026, 11, 9, 7, 2) }),
+    rec(4, { localDate: '2026-11-07', occurredAt: pushAt(2026, 11, 7, 8, 10) }),
+    rec(5, { localDate: '2026-10-31', occurredAt: pushAt(2026, 10, 31, 12) }),
+  ]
+
+  it('groups the payments by day, today and yesterday by name', () => {
+    const sheet = open(makeCore({ items: days }))
+
+    expect(within(sheet).getByRole('heading', { name: 'To review (5)' })).toBeInTheDocument()
+    expect(
+      within(sheet)
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => h.textContent),
+    ).toEqual(['Today · Tue 10 Nov', 'Yesterday · Mon 9 Nov', 'Sat 7 Nov', 'Sat 31 Oct'])
+  })
+
+  it('shows the time under the amount, since the heading gives the day, and does not repeat it in the note', () => {
+    const sheet = open(makeCore({ items: days }))
+    const rows = within(sheet).getAllByRole('listitem')
+
+    expect(rows[0]).toHaveTextContent('−12,50 € money out09:41Cafe Example')
+    expect(rows[1]).toHaveTextContent('03:50UnnamedNo merchant named')
+    expect(names(rows[0]!)).toEqual(['Review Cafe Example, −12,50 €, 09:41', 'Add Cafe Example, −12,50 €'])
+  })
+
+  it('says what the list is and how to reach the rest, under the rows', () => {
+    const sheet = open(makeCore({ items: days }))
+
+    expect(
+      within(sheet).getByText(/^From your bank's notifications\. Nothing is added until you add it\./),
+    ).toHaveTextContent("Tap a payment to see the bank's message, change it, or choose “Don't add”.")
+  })
+
+  it('says it is a saved copy where the app cannot write', () => {
+    const sheet = open(makeCore({ items: days, canWrite: false, submit: undefined }))
+
+    expect(within(sheet).getAllByText('Saved copy. You can add these when you are back online.')).toHaveLength(1)
+    expect(within(sheet).queryByText(/Tap a payment/)).not.toBeInTheDocument()
+  })
+
+  it('says all caught up once nothing is left', () => {
+    const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5)] })
+    const { rerender } = show(core)
+    fireEvent.click(screen.getByRole('button', { name: 'See all 5' }))
+
+    rerender(wrap({ ...core, items: [], count: 0 }))
+
+    expect(within(screen.getByRole('dialog')).getByText('All caught up').parentElement).toHaveTextContent(
+      'All caught upNothing is waiting for a look.',
+    )
   })
 })
 
@@ -329,11 +623,20 @@ function viewport(phone: boolean) {
   })
 }
 
-beforeEach(() => viewport(true))
+/** A Tuesday morning, so a payment of 10 Nov reads "Today" whenever the suite runs. */
+const NOW = new Date(2026, 10, 10, 12)
+
+beforeEach(() => {
+  viewport(true)
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(NOW)
+  localStorage.setItem('exp-review-card', 'open')
+})
 
 afterEach(() => {
   vi.useRealTimers()
   setMotionDisabledForTests(true)
+  localStorage.clear()
 })
 
 describe('the slot on the Dashboard', () => {
@@ -357,11 +660,11 @@ describe('the slot on the Dashboard', () => {
   it('loads the card when there is a payment', async () => {
     slot(makeCore())
 
-    expect(await screen.findByRole('heading', { name: '1 payment to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '1 to review −13 € going out' })).toBeInTheDocument()
   })
 
   it('keeps the sheet when its last payment is decided there, says all caught up, and lets it leave before the card goes', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW })
     setMotionDisabledForTests(false)
     const four = [rec(1), rec(2), rec(3), rec(4), rec(5)]
     const { rerender } = slot(makeCore({ items: four }))
@@ -377,8 +680,8 @@ describe('the slot on the Dashboard', () => {
     )
 
     const sheet = screen.getByRole('dialog')
-    expect(within(sheet).getByText('All caught up.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /payments? to review/ })).not.toBeInTheDocument()
+    expect(within(sheet).getByText('All caught up')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /to review/ })).not.toBeInTheDocument()
 
     fireEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -387,7 +690,7 @@ describe('the slot on the Dashboard', () => {
   })
 
   it('lets the sheet play its exit when it is closed with payments still waiting', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW })
     setMotionDisabledForTests(false)
     slot(makeCore({ items: [rec(1), rec(2), rec(3), rec(4), rec(5)] }))
     await act(async () => void (await vi.advanceTimersByTimeAsync(0)))
@@ -398,7 +701,7 @@ describe('the slot on the Dashboard', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     await act(async () => void (await vi.advanceTimersByTimeAsync(EXIT_MS.sheet + 10)))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '5 payments to review' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^5 to review/ })).toBeInTheDocument()
   })
 })
 
@@ -440,8 +743,14 @@ describe('the payment a notification was tapped for', () => {
 describe('a payment that looks like a monthly series', () => {
   const seriesModel = makeSeriesModel()
   const push = (over: Partial<RecommendationInfo> = {}) =>
-    rec(1, { merchantRaw: 'PAYPROC*XY 77', amountCents: 1299, localDate: '2026-11-11', ...over })
-  const hintText = () => screen.getByText(/Looks like/).textContent
+    rec(1, {
+      merchantRaw: 'PAYPROC*XY 77',
+      amountCents: 1299,
+      localDate: '2026-11-11',
+      occurredAt: pushAt(2026, 11, 11, 7, 2),
+      ...over,
+    })
+  const twoFit = { amountCents: 999, localDate: '2026-11-14', occurredAt: pushAt(2026, 11, 14, 7, 30) }
   const showPush = (
     over: Partial<RecommendationInfo> = {},
     core: Partial<ReviewCore> = {},
@@ -451,114 +760,45 @@ describe('a payment that looks like a monthly series', () => {
     return c
   }
 
-  it('says which series and when it is due, fills the row from it and offers no one-tap Add', () => {
+  it('is named by the series, says when it is due, and offers Review, never a one-tap Add', () => {
     showPush()
-
-    expect(hintText()).toBe('Looks like your monthly Video Stream, due 10\u00a0Nov.')
     const row = screen.getByRole('listitem')
-    expect(within(row).getAllByText('Video Stream')).toHaveLength(2)
-    expect(within(row).getByText('Groceries')).toBeInTheDocument()
-    expect(within(row).queryByRole('button', { name: /^Add / })).not.toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: 'Review' })).toBeInTheDocument()
-    expect(within(row).queryByText('New merchant')).not.toBeInTheDocument()
+
+    expect(within(row).getByText('Video Stream')).toBeInTheDocument()
+    expect(within(row).getByText('Monthly, due 10 Nov').tagName).toBe('P')
+    expect(within(row).queryByText('Add')).not.toBeInTheDocument()
+    expect(within(row).getByText('Review')).toBeInTheDocument()
   })
 
-  it('names the series’ account when the push named none, so a wrong one shows before adding', () => {
-    showPush({ accountId: null, card: { source: 'bank', digits: '0000' } })
+  it('asks which monthly bill when two fit, and leaves the choice to the review view', () => {
+    const core = showPush(twoFit)
 
-    expect(hintText()).toBe('Looks like your monthly Video Stream, due 10\u00a0Nov, paid from Main Debit.')
-  })
+    expect(screen.getByText('Which monthly bill?')).toHaveClass(styles.need!)
+    expect(screen.queryByRole('button', { name: /Cloud Box|Music Plan/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Review PAYPROC\*XY/ }))
 
-  it('asks whether a series paid from another account moved', () => {
-    showPush({ accountId: 2 })
-
-    expect(hintText()).toBe('Looks like Video Stream, which you pay from Main Debit. Moved it?')
-    expect(within(screen.getByRole('listitem')).getByText('Travel Credit')).toBeInTheDocument()
-  })
-
-  it('asks about a rename and shows the series’ current name', () => {
-    showPush({
-      suggestion: {
-        description: 'Old Stream',
-        categoryId: 1,
-        type: 'expense',
-        accountId: 1,
-        amountCents: 1299,
-        sightings: 3,
-        settled: true,
-        reasons: [],
-      },
-    })
-
-    expect(hintText()).toBe(
-      'Looks like your monthly Video Stream, due 10\u00a0Nov. You added it as Old Stream before. Renamed?',
-    )
-  })
-
-  it('offers two series to pick from, and opens review filled from the one picked', () => {
-    const core = showPush({ amountCents: 999, localDate: '2026-11-14' })
-
-    expect(hintText()).toBe('Looks like one of your monthly payments. Which one?')
-    fireEvent.click(screen.getByRole('button', { name: 'Review as Cloud Box, due 15\u00a0Nov' }))
-
-    expect(core.openForm).toHaveBeenCalledWith(
-      expect.objectContaining({ description: 'Cloud Box', categoryId: 2, type: 'expense', accountId: 1 }),
-    )
-    expect(screen.getByRole('button', { name: 'Review as Music Plan, due 14\u00a0Nov' })).toBeInTheDocument()
+    const seed = vi.mocked(core.openForm).mock.calls[0]![0]
+    expect(seed.seriesChoice?.map((o) => o.label)).toEqual(['Music Plan, due 14 Nov', 'Cloud Box, due 15 Nov'])
+    expect(seed.fromSeries).toBeUndefined()
+    expect(seed.intro?.reasons).toContain('it could be either of two monthly payments')
   })
 
   it('opens a payment two series fit with both offered, when "Add and next" reaches it', () => {
-    const plain = rec(2, { merchantRaw: 'BRAND NEW PLACE', amountCents: 450, localDate: '2026-11-13' })
-    const core = makeCore({ model: seriesModel, items: [plain, push({ amountCents: 999, localDate: '2026-11-14' })] })
+    const plain = newPlace(2, { amountCents: 450, localDate: '2026-11-13', occurredAt: pushAt(2026, 11, 13) })
+    const core = makeCore({ model: seriesModel, items: [plain, push(twoFit)] })
     show(core)
 
-    fireEvent.click(within(screen.getAllByRole('listitem')[0]!).getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
     const first = vi.mocked(core.openForm).mock.calls[0]![0]
     expect(first.seriesChoice).toBeUndefined()
     const next = first.queue!.next()!
 
     expect(next.recommendationId).toBe(id(1))
-    expect(next.seriesChoice?.map((o) => o.label)).toEqual([
-      'Music Plan, due 14\u00a0Nov',
-      'Cloud Box, due 15\u00a0Nov',
-    ])
     next.seriesChoice![1]!.pick()
     const picked = vi.mocked(core.openForm).mock.calls[1]![0]
     expect(picked).toMatchObject({ recommendationId: id(1), description: 'Cloud Box', categoryId: 2 })
     expect(picked.fromSeries).toBe(next.seriesChoice![1]!.seriesKey)
     expect(picked.seriesChoice).toBeUndefined()
-  })
-
-  it('offers the two series in the form opened from Review too', () => {
-    const core = showPush({ amountCents: 999, localDate: '2026-11-14' })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-
-    const seed = vi.mocked(core.openForm).mock.calls[0]![0]
-    expect(seed.seriesChoice).toHaveLength(2)
-    expect(seed.fromSeries).toBeUndefined()
-  })
-
-  it('closes the sheet before opening the form for a series picked there, as Review does', () => {
-    const core = makeCore({ model: seriesModel, items: [push({ amountCents: 999, localDate: '2026-11-14' })] })
-    const onSheet = vi.fn()
-    render(
-      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <ReviewCard core={core} sheet={true} onSheet={onSheet} />
-      </MoneyFormatProvider>,
-    )
-
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Review as Cloud Box/ }))
-
-    expect(onSheet).toHaveBeenCalledWith(false)
-    expect(core.openForm).toHaveBeenCalledWith(expect.objectContaining({ description: 'Cloud Box' }))
-  })
-
-  it('names the two series without buttons where the app cannot write', () => {
-    showPush({ amountCents: 999, localDate: '2026-11-14' }, { canWrite: false, submit: undefined })
-
-    expect(screen.getByText(/^Music Plan, due 14.Nov$/)).toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('asks the model for the whole history while the card is shown', () => {
@@ -571,9 +811,9 @@ describe('a payment that looks like a monthly series', () => {
     expect(gone).toHaveBeenCalledTimes(1)
   })
 
-  it('shows no hint for a payment no series fits', () => {
+  it('says nothing about monthly payments for a payment no series fits', () => {
     showPush({ amountCents: 1300 })
 
-    expect(screen.queryByText(/Looks like/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Monthly|monthly/)).not.toBeInTheDocument()
   })
 })

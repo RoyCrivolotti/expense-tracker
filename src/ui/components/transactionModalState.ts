@@ -21,10 +21,13 @@ export function titleFor(
   editing: Transaction | null,
   mode: 'single' | 'batch',
   formView: 'fields' | 'installment',
+  /** True for a captured payment, whose form is where it is looked over before it is added. */
+  reviewing = false,
 ): string {
   if (mode === 'batch') return 'Add multiple transactions'
   if (formView === 'installment') return 'Installment plan'
-  return editing ? 'Edit transaction' : 'New transaction'
+  if (editing) return 'Edit transaction'
+  return reviewing ? 'Review payment' : 'New transaction'
 }
 
 /** Guards a modal's close against silently discarding unsaved input: closing

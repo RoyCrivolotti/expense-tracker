@@ -187,6 +187,9 @@ describe('GET /api/recommendations, the typed row a payment may duplicate', () =
       transactionId: id,
       description: 'Coffee at the till',
       date: '2026-03-02',
+      amountCents: 1250,
+      type: 'expense',
+      accountId: 1,
     })
   })
 
@@ -254,7 +257,14 @@ describe('POST /api/recommendations/:id/submit', () => {
       expect(await response.json()).toEqual({
         error: expect.any(String) as unknown,
         code: 'possible-duplicate',
-        possibleMatch: { transactionId: row, description: 'Cafe at the till', date: '2026-03-02' },
+        possibleMatch: {
+          transactionId: row,
+          description: 'Cafe at the till',
+          date: '2026-03-02',
+          amountCents: 1250,
+          type: 'expense',
+          accountId: 1,
+        },
       })
       expect(transactions()).toBe(1)
       expect(state(1).state).toBe('open')

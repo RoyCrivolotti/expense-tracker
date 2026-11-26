@@ -14,6 +14,7 @@ import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import { ToastContext } from '../hooks/useToast'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
+import formStyles from './TransactionForm.module.css'
 
 vi.mock('../../data/recommendationDecisionsApi', () => ({
   dismissRecommendation: vi.fn(),
@@ -47,11 +48,12 @@ function model(
   plan?: InstallmentPlan,
   labels: Label[] = [],
 ): ExpenseModel {
+  const data = dataset(labels)
   return {
-    dataset: dataset(labels),
+    dataset: data,
     lookup: {
       category: () => undefined,
-      account: () => undefined,
+      account: (id) => data.accounts.find((a) => a.id === id),
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
@@ -942,6 +944,36 @@ describe('TransactionModal, a queue of captured payments', () => {
     queue: { left: 2, next: () => seedB, dontAdd: () => seedB, ...over },
   })
 
+  it('keeps its buttons in a bar that stays in view, with the form’s error in it', async () => {
+    const submitRecommendation = vi.fn().mockRejectedValue(new Error('Offline'))
+    const { container } = renderModal({ seed: queued(), actions: { submitRecommendation } })
+    const skip = singleForm(container).getByRole('button', { name: "Don't add" })
+    const bar = skip.parentElement!
+    expect(bar).toHaveClass(formStyles.pinned!)
+    expect(bar).toContainElement(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
+
+    expect(bar).toContainElement(await screen.findByText('Offline'))
+    expect(screen.getAllByText('Offline')).toHaveLength(1)
+  })
+
+  it('leaves the ordinary add form and the edit form ending with their buttons, as before', async () => {
+    const createTransaction = vi.fn().mockRejectedValue(new Error('Offline'))
+    const add = renderModal({ actions: { createTransaction } })
+    const save = singleForm(add.container).getByRole('button', { name: 'Add transaction' })
+    expect(save.parentElement).not.toHaveClass(formStyles.pinned!)
+    fireEvent.change(singleForm(add.container).getByLabelText(/amount/i), { target: { value: '3' } })
+    fireEvent.click(save)
+    expect(save.parentElement).not.toContainElement(await screen.findByText('Offline'))
+    add.unmount()
+
+    const edit = renderModal({ editing: makeTransaction({ id: 4 }) })
+    expect(singleForm(edit.container).getByRole('button', { name: 'Save changes' }).parentElement).not.toHaveClass(
+      formStyles.pinned!,
+    )
+  })
+
   it('says how many are left on the save button, and ends with a plain label at the last one', () => {
     const first = renderModal({ seed: queued() })
     expect(singleForm(first.container).getByRole('button', { name: 'Add and next (2 left)' })).toBeInTheDocument()
@@ -1273,9 +1305,136 @@ describe('TransactionModal, the category of a payment with none suggested', () =
   })
 })
 
+describe('TransactionModal, what a captured payment opens with', () => {
+  const seed: TransactionSeed = {
+    recommendationId: '0b0c0d0e-1111-4222-8333-444455556688',
+    amountCents: 4380,
+    type: 'expense',
+    accountId: 1,
+    categoryId: 0,
+  }
+  const intro: NonNullable<TransactionSeed['intro']> = {
+    arrived: 'Tue 10 Nov, 03:50',
+    message: 'Example Bank alert: 43,80 EUR today',
+    reasons: ["the bank's message names no merchant", 'it has no category yet'],
+    notes: [],
+  }
+  const open = (over: Partial<typeof intro> = {}) =>
+    renderModal({ seed: { ...seed, intro: { ...intro, ...over } }, actions: { submitRecommendation: vi.fn() } })
+
+  it('shows the bank’s whole message and when it arrived, above the fields', async () => {
+    const { container } = open()
+
+    const from = await screen.findByRole('region', { name: 'From your bank' })
+    expect(from).toHaveTextContent('From your bank · Tue 10 Nov, 03:50Example Bank alert: 43,80 EUR today')
+    expect(from.compareDocumentPosition(singleForm(container).getByLabelText(/^Amount/))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('says in one line why the payment needs a look', async () => {
+    open()
+
+    expect(await screen.findByText(/because/)).toHaveTextContent(
+      "Needs a look because the bank's message names no merchant, and it has no category yet.",
+    )
+  })
+
+  it('says so when nothing is in doubt', async () => {
+    open({ reasons: [] })
+
+    expect(await screen.findByText('Nothing in doubt. Filled in the way you added it before.')).toBeInTheDocument()
+    expect(screen.queryByText(/Needs a look/)).not.toBeInTheDocument()
+  })
+
+  const MATCH = { transactionId: 41, description: 'Cafe at the till', date: '2026-11-09' }
+  const withMatch = (over: Partial<typeof intro>) =>
+    renderModal({
+      seed: { ...seed, possibleMatch: MATCH, intro: { ...intro, ...over } },
+      actions: { submitRecommendation: vi.fn() },
+    })
+
+  it('says nothing about doubt beside a duplicate block that is the only doubt', async () => {
+    withMatch({ reasons: [] })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^Possible duplicate/)
+    expect(screen.getByRole('region', { name: 'From your bank' })).not.toHaveTextContent(
+      /Needs a look|Nothing in doubt/,
+    )
+  })
+
+  it('keeps the other reasons beside a duplicate block', async () => {
+    withMatch({ reasons: ['it has no category yet'] })
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('region', { name: 'From your bank' })).toHaveTextContent(
+      'Needs a look because it has no category yet.',
+    )
+  })
+
+  it('shows the lines about a monthly payment and a foreign amount above the fields, the second as a warning', async () => {
+    const monthly = 'Looks like your monthly Gym, due 14 Nov.'
+    const foreign = 'The message says US$18.20. Type the amount in euros your bank charged.'
+    const { container } = open({
+      notes: [
+        { text: monthly, warn: false },
+        { text: foreign, warn: true },
+      ],
+    })
+
+    const first = await screen.findByText(monthly)
+    const second = screen.getByText(foreign)
+    expect(first.className).not.toBe(second.className)
+    expect(second.compareDocumentPosition(singleForm(container).getByLabelText(/^Amount/))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('shows no message where none is kept, and still says when and why', async () => {
+    open({ message: null })
+
+    expect(await screen.findByRole('region', { name: 'From your bank' })).toHaveTextContent(
+      /^From your bank · Tue 10 Nov, 03:50Needs a look because/,
+    )
+  })
+
+  it('says what the other payment of a same-bill pair is, and only for a pair', async () => {
+    const pair =
+      "Might be the same bill as EXAMPLE UTILITY, −62,15 €, charged Mon 23 Nov and also waiting. If it's duplicated, choose Don't add here."
+    const first = open({ pair })
+    expect(await screen.findByText(pair)).toBeInTheDocument()
+    first.unmount()
+
+    open()
+    await screen.findByRole('region', { name: 'From your bank' })
+    expect(screen.queryByText(/Might be the same bill/)).not.toBeInTheDocument()
+  })
+
+  it('is titled "Review payment", since it is where the payment is looked over', async () => {
+    open()
+
+    expect(await screen.findByRole('heading', { name: 'Review payment' })).toBeInTheDocument()
+  })
+
+  it('opens an ordinary add with none of it, under its own title', () => {
+    renderModal({})
+
+    expect(screen.queryByRole('region', { name: 'From your bank' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New transaction' })).toBeInTheDocument()
+  })
+})
+
 describe('TransactionModal, a captured payment a typed row may duplicate', () => {
   const REC = '0b0c0d0e-1111-4222-8333-444455556677'
-  const MATCH = { transactionId: 41, description: 'Cafe at the till', date: '2026-11-09' }
+  const MATCH = {
+    transactionId: 41,
+    description: 'Cafe at the till',
+    date: '2026-11-09',
+    amountCents: 1250,
+    type: 'expense',
+    accountId: 1,
+  }
+  const account = () => model().lookup.account(1)!.name
   const seed: TransactionSeed = {
     recommendationId: REC,
     amountCents: 1250,
@@ -1292,7 +1451,7 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
   const press = (container: HTMLElement) =>
     fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
 
-  it('offers the row it found, with Link and Add anyway, and no error', async () => {
+  it('offers the row it found in full with Link instead, turns the form’s button into Add anyway, and shows no error', async () => {
     const submitRecommendation = refusedOnce()
     const { container } = renderModal({ seed, actions: { submitRecommendation } })
 
@@ -1300,8 +1459,16 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
 
     expect(await screen.findByText('Cafe at the till')).toBeInTheDocument()
     // A live region, so a screen reader hears it: the form's own error line stays empty for this refusal.
-    expect(screen.getByRole('alert')).toHaveTextContent('Already entered as Cafe at the till on Mon 9 Nov?')
-    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      `Possible duplicate. You already have this entry:Cafe at the tillMon 9 Nov · −12,50 € · ${account()}If it is the same payment:Link instead`,
+    )
+    // Above the fields, where the list's own match is shown, and brought into view there.
+    expect(screen.getByRole('alert').compareDocumentPosition(singleForm(container).getByLabelText(/^Amount/))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    // One button adds, and it now says what pressing it means.
+    expect(singleForm(container).getByRole('button', { name: 'Add anyway' })).toHaveAttribute('type', 'submit')
+    expect(screen.queryByRole('button', { name: 'Add transaction' })).not.toBeInTheDocument()
     expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), false)
   })
 
@@ -1321,8 +1488,15 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     const submitRecommendation = vi.fn().mockResolvedValue(makeTransaction({ id: 9 }))
     const { container } = renderModal({ seed: { ...seed, possibleMatch: MATCH }, actions: { submitRecommendation } })
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Already entered as Cafe at the till on Mon 9 Nov?')
-    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
+    const block = await screen.findByRole('alert')
+    expect(block).toHaveTextContent(
+      `Possible duplicate. You already have this entry:Cafe at the tillMon 9 Nov · −12,50 € · ${account()}If it is the same payment:Link instead`,
+    )
+    // The list found it, so it is above the fields, and the form's own Add goes ahead: no second button for that.
+    expect(block.compareDocumentPosition(singleForm(container).getByLabelText(/^Amount/))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument()
     press(container)
 
     await waitFor(() => expect(submitRecommendation).toHaveBeenCalledWith(REC, expect.anything(), true))
@@ -1336,11 +1510,21 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
       { seed: { ...seed, possibleMatch: MATCH }, actions: { submitRecommendation: vi.fn() } },
       (m) => shown.push(m),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Link' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Link instead' }))
 
     await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(REC, 41))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(shown).toEqual(['Linked \u00b7 to the row "Cafe at the till". Nothing new was added.'])
+  })
+
+  it('shows the name of the entry in full however long, and only what an older answer knows of it', async () => {
+    const long = 'Weekly groceries for the flat, shared account, with the cleaning things'
+    const bare = { transactionId: 41, description: long, date: '2026-11-09' }
+    renderModal({ seed: { ...seed, possibleMatch: bare }, actions: { submitRecommendation: vi.fn() } })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      `You already have this entry:${long}Mon 9 NovIf it is the same payment:Link instead`,
+    )
   })
 
   it('links the payment to the row, creates nothing and closes', async () => {
@@ -1348,7 +1532,7 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     const onClose = vi.fn()
     const { container, actions } = renderModal({ seed, onClose, actions: { submitRecommendation: refusedOnce() } })
     press(container)
-    fireEvent.click(await screen.findByRole('button', { name: 'Link' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Link instead' }))
 
     await waitFor(() => expect(decisionsApi.linkRecommendation).toHaveBeenCalledWith(REC, 41))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
@@ -1360,7 +1544,7 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     const onClose = vi.fn()
     const { container } = renderModal({ seed, onClose, actions: { submitRecommendation: refusedOnce() } })
     press(container)
-    fireEvent.click(await screen.findByRole('button', { name: 'Link' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Link instead' }))
 
     expect(await screen.findByText('Transaction not found')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
@@ -1368,20 +1552,44 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('does not let an Add anyway the form refused skip the check on the next ordinary Add', async () => {
+  it('does not let an Add anyway the form refused skip the check on the next payment', async () => {
+    const NEXT = '0b0c0d0e-1111-4222-8333-444455556678'
+    const following: TransactionSeed = { ...seed, recommendationId: NEXT, description: 'Bakery' }
     const submitRecommendation = refusedOnce()
-    const { container } = renderModal({ seed, actions: { submitRecommendation } })
-    press(container)
+    const onAdd = vi.fn()
+    const queue = { left: 1, next: () => following, dontAdd: () => following }
+    const { container, rerender, actions } = renderModal({
+      seed: { ...seed, queue },
+      actions: { submitRecommendation, onAdd },
+    })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add and next (1 left)' }))
     const anyway = await screen.findByRole('button', { name: 'Add anyway' })
-    const amount = singleForm(container).getByLabelText(/amount/i)
-    fireEvent.change(amount, { target: { value: '' } })
+    // The form refuses an empty amount, so this press saves nothing.
+    fireEvent.change(singleForm(container).getByLabelText(/amount/i), { target: { value: '' } })
     fireEvent.click(anyway)
     await new Promise((r) => setTimeout(r, 5))
-    fireEvent.change(amount, { target: { value: '12,50' } })
-    press(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: "Don't add" }))
+    expect(onAdd).toHaveBeenCalledWith(following)
+    rerender(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <TransactionModal model={model()} actions={actions} editing={null} seed={following} onClose={vi.fn()} />
+      </MoneyFormatProvider>,
+    )
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
 
     await waitFor(() => expect(submitRecommendation).toHaveBeenCalledTimes(2))
-    expect(submitRecommendation.mock.calls[1]?.[2]).toBe(false)
+    expect(submitRecommendation.mock.calls[1]).toEqual([NEXT, expect.anything(), false])
+  })
+
+  it('says nothing about doubt above a refused save’s duplicate block', async () => {
+    const intro = { arrived: 'Tue 10 Nov, 03:50', message: null, reasons: [], notes: [] }
+    const { container } = renderModal({ seed: { ...seed, intro }, actions: { submitRecommendation: refusedOnce() } })
+    expect(await screen.findByText(/Nothing in doubt/)).toBeInTheDocument()
+
+    press(container)
+
+    await screen.findByRole('alert')
+    expect(screen.queryByText(/Nothing in doubt/)).not.toBeInTheDocument()
   })
 
   it('keeps a failure that is not a duplicate as the form error', async () => {
