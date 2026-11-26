@@ -9,8 +9,8 @@ export function PairTie({ amount, onDismiss }: { amount: string; onDismiss?: (()
   return (
     <div className={styles.tieHead}>
       <p>
-        <b>Might be one bill, twice</b>
-        {onDismiss ? "If it's duplicated:" : "If it's duplicated, add only one."}
+        <b>Is this a duplicate?</b>
+        {onDismiss ? null : "If it's duplicated, add only one."}
       </p>
       {onDismiss ? (
         <button
