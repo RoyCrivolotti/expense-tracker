@@ -65,6 +65,8 @@ export interface TransactionSeed {
 export interface SeedIntro {
   /** When the bank's message arrived: "Sun 22 Nov, 12:31". */
   arrived: string
+  /** The payment's amount as the row shows it, "−43,80 €", or "No amount". The box's one line while a keyboard is up. */
+  amount: string
   /** The bank's own words, or null when none are kept. */
   message: string | null
   /** Why the payment needs a look, each in words that follow "because". Empty when nothing is in doubt. */

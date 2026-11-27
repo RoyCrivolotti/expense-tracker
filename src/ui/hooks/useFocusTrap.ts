@@ -33,8 +33,8 @@ export function useFocusTrap(
   paused = false,
 ): void {
   // Captured during render, before this trap's own DOM commits. An effect would run
-  // after the browser has already applied any `autoFocus` inside the trap (the amount
-  // field on every transaction form), capturing that instead of the real trigger. The
+  // after the browser has already applied any `autoFocus` inside the trap (a sheet's
+  // name field, say), capturing that instead of the real trigger. The
   // lazy initializer runs exactly once, at mount, before anything here can steal focus.
   const [previouslyFocused] = useState(() => document.activeElement as HTMLElement | null)
   // Every sheet and popover that can hold typing traps focus, so a trap is the one place that marks "something is open":

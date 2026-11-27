@@ -94,12 +94,107 @@
   background: var(--color-surface-muted);
 }
 
+.fromHead {
+  display: flex;
+  align-items: baseline;
+}
+
 .fromWhen {
-  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/*
+ * While a phone keyboard is up (useKeyboardOpen) the box is one line, the day and the amount, held at the top of the
+ * sheet so the payment being named stays in sight while the fields scroll under it (useFieldReveal starts them below
+ * it). The message and the reason fold away beneath it, since the keyboard has taken the lower half of the screen and
+ * the field being typed in needs what is left, and unfold the same way when it goes. Folding is the row of a grid
+ * shrinking to nothing, the same path both ways, a little quicker on the way out, like the To review card's own fold.
+ * Only on a phone-sized layout (PHONE_LAYOUT in useFieldReveal): with an iPad's docked keyboard the sheet is a dialog
+ * with room for the whole message.
+ */
+.fromAmount {
+  flex: none;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  transition:
+    max-width var(--motion-enter-sheet) var(--motion-ease-out),
+    margin-left var(--motion-enter-sheet) var(--motion-ease-out),
+    opacity var(--motion-enter-sheet) var(--motion-ease-out);
+}
+
+.fromFold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--motion-enter-sheet) var(--motion-ease-out),
+    opacity var(--motion-enter-sheet) var(--motion-ease-out);
+}
+
+.fromFold > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 559px), (max-height: 559px) {
+  :global(html[data-keyboard-open]) .from {
+    /*
+     * The sheet's own colour around it, so the fields scrolling up pass behind a clean edge. Upwards it reaches the
+     * sheet's 1rem top padding (Modal.module.css), the strip above a line stuck at the top of the content, and no
+     * further. Before the sheet has scrolled the header sits above the line, a 0.75rem margin plus the quarter rem
+     * here away, so that colour stops where the header ends rather than painting over it.
+     */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin-top: 0.25rem;
+    box-shadow:
+      0 -0.5rem 0 0.5rem var(--color-bg),
+      0 0 0 0.5rem var(--color-bg);
+  }
+
+  :global(html[data-keyboard-open]) .fromWhen {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  :global(html[data-keyboard-open]) .fromAmount {
+    max-width: 12em;
+    margin-left: 0.6rem;
+    opacity: 1;
+    transition:
+      max-width var(--motion-fold) var(--motion-ease-in),
+      margin-left var(--motion-fold) var(--motion-ease-in),
+      opacity var(--motion-fold) var(--motion-ease-in);
+  }
+
+  :global(html[data-keyboard-open]) .fromFold {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows var(--motion-fold) var(--motion-ease-in),
+      opacity var(--motion-enter-fade) var(--motion-ease-in);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fromAmount,
+  .fromFold,
+  :global(html[data-keyboard-open]) .fromAmount,
+  :global(html[data-keyboard-open]) .fromFold {
+    transition: none;
+  }
 }
 
 .fromMessage {

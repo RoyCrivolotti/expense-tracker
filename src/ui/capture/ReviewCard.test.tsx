@@ -210,6 +210,7 @@ describe('a row', () => {
     expect(seed).not.toHaveProperty('description')
     expect(seed.intro).toEqual({
       arrived: 'Tue 10 Nov, 09:41',
+      amount: '−12,50 €',
       message: `${MOVEMENT}. Thank you for banking with us`,
       reasons: ["the bank's message names no merchant", 'it has no category yet'],
       notes: [],

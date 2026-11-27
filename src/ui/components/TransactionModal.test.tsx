@@ -123,6 +123,34 @@ function singleForm(container: HTMLElement) {
   return within(container.querySelector('form')!)
 }
 
+describe('TransactionModal, opening', () => {
+  /** Every element that took focus while the sheet opened, however briefly. */
+  async function focusedWhileOpening(open: () => void): Promise<Element[]> {
+    const seen: Element[] = []
+    const record = (event: FocusEvent) => seen.push(event.target as Element)
+    document.addEventListener('focusin', record)
+    try {
+      open()
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus())
+    } finally {
+      document.removeEventListener('focusin', record)
+    }
+    return seen
+  }
+  const fields = (seen: Element[]) => seen.filter((el) => el.matches('input, textarea, select'))
+
+  // On a phone a field taking focus as the sheet opens can bring the keyboard up over the payment the person has not
+  // read yet. The sheet lands on its Close button and a field waits for a tap.
+  it('focuses no field when adding a transaction', async () => {
+    expect(fields(await focusedWhileOpening(() => renderModal()))).toEqual([])
+  })
+
+  it('focuses no field when reviewing a captured payment', async () => {
+    const seed: TransactionSeed = { recommendationId: '0b0c0d0e-1111-4222-8333-444455556699', amountCents: 4380 }
+    expect(fields(await focusedWhileOpening(() => renderModal({ seed })))).toEqual([])
+  })
+})
+
 describe('TransactionModal — batch mode toggle', () => {
   it('shows the Add one / Add multiple toggle for a from-scratch add', () => {
     renderModal()
@@ -1315,6 +1343,7 @@ describe('TransactionModal, what a captured payment opens with', () => {
   }
   const intro: NonNullable<TransactionSeed['intro']> = {
     arrived: 'Tue 10 Nov, 03:50',
+    amount: '−43,80 €',
     message: 'Example Bank alert: 43,80 EUR today',
     reasons: ["the bank's message names no merchant", 'it has no category yet'],
     notes: [],
@@ -1326,10 +1355,28 @@ describe('TransactionModal, what a captured payment opens with', () => {
     const { container } = open()
 
     const from = await screen.findByRole('region', { name: 'From your bank' })
-    expect(from).toHaveTextContent('From your bank · Tue 10 Nov, 03:50Example Bank alert: 43,80 EUR today')
+    expect(from).toHaveTextContent('From your bank · Tue 10 Nov, 03:50')
+    expect(from).toHaveTextContent('Example Bank alert: 43,80 EUR today')
     expect(from.compareDocumentPosition(singleForm(container).getByLabelText(/^Amount/))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
+  })
+
+  it('has the amount beside the day for the one line it folds to while a keyboard is up, hidden from a screen reader', async () => {
+    open()
+
+    const from = await screen.findByRole('region', { name: 'From your bank' })
+    const amount = within(from).getByText('−43,80 €')
+    expect(amount).toHaveAttribute('aria-hidden', 'true')
+    // The day and the amount share the line that stays; the message and the reason are in the part that folds.
+    expect(amount.parentElement).toHaveTextContent('From your bank · Tue 10 Nov, 03:50')
+    const fold = within(from)
+      .getByText(/^Example Bank alert/)
+      .closest('div')!.parentElement!
+    expect(fold).toHaveTextContent(/Needs a look/)
+    expect(fold).not.toContainElement(amount)
+    // The line is what useFieldReveal starts the fields below once it sticks.
+    expect(from).toHaveAttribute('data-reveal-cover')
   })
 
   it('says in one line why the payment needs a look', async () => {
@@ -1394,7 +1441,7 @@ describe('TransactionModal, what a captured payment opens with', () => {
     open({ message: null })
 
     expect(await screen.findByRole('region', { name: 'From your bank' })).toHaveTextContent(
-      /^From your bank · Tue 10 Nov, 03:50Needs a look because/,
+      /^From your bank · Tue 10 Nov, 03:50−43,80 €Needs a look because/,
     )
   })
 
@@ -1582,7 +1629,7 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
   })
 
   it('says nothing about doubt above a refused save’s duplicate block', async () => {
-    const intro = { arrived: 'Tue 10 Nov, 03:50', message: null, reasons: [], notes: [] }
+    const intro = { arrived: 'Tue 10 Nov, 03:50', amount: '−43,80 €', message: null, reasons: [], notes: [] }
     const { container } = renderModal({ seed: { ...seed, intro }, actions: { submitRecommendation: refusedOnce() } })
     expect(await screen.findByText(/Nothing in doubt/)).toBeInTheDocument()
 

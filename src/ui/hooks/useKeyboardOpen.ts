@@ -15,6 +15,9 @@ const KEYBOARD_MIN_PX = 150
  */
 const SETTLE_MS = 350
 
+/** The attribute kept on `<html>` while a software keyboard covers the bottom of the page. */
+export const KEYBOARD_OPEN_ATTR = 'data-keyboard-open'
+
 /** Input types that open a text keyboard. A date, a checkbox or a slider does not. */
 const TEXT_TYPES = new Set(['text', 'search', 'email', 'tel', 'url', 'password', 'number', ''])
 
@@ -97,8 +100,8 @@ export function useKeyboardOpen(): boolean {
 
   useEffect(() => {
     const root = document.documentElement
-    root.toggleAttribute('data-keyboard-open', open)
-    return () => root.removeAttribute('data-keyboard-open')
+    root.toggleAttribute(KEYBOARD_OPEN_ATTR, open)
+    return () => root.removeAttribute(KEYBOARD_OPEN_ATTR)
   }, [open])
 
   return open

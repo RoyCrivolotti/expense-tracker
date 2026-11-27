@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
@@ -6,6 +6,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useExit } from '../hooks/usePresence'
 import { EASE_THROWN, useSheetExit, type SheetRelease } from '../hooks/useSheetExit'
 import { sheetGrabProps, useSwipeDismiss } from '../hooks/useSwipeDismiss'
+import { useFieldReveal } from '../hooks/useFieldReveal'
 import styles from './Modal.module.css'
 
 /** The scrim at rest. Thins towards nothing as the sheet is dragged away. */
@@ -19,6 +20,8 @@ interface ModalProps {
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
+  /** With a phone keyboard up, keep the field being typed in at the top of the sheet (see `useFieldReveal`). */
+  revealFields?: boolean
 }
 
 /**
@@ -45,7 +48,61 @@ function bandPosition(viewport: { top: number; height: number } | null): CSSProp
   return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
-export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
+/** The sheet's classes: its size while a keyboard is up, and whether a finger or an exit is moving it. */
+function sheetClassName(
+  revealFields: boolean,
+  dragging: boolean,
+  leaving: boolean,
+): string {
+  const classes = [styles.sheet]
+  if (revealFields) classes.push(styles.sheetTall)
+  if (dragging) classes.push(styles.sheetDragging)
+  if (leaving) classes.push(styles.sheetClosing)
+  return classes.join(' ')
+}
+
+function SheetHeader({
+  title,
+  subtitle,
+  onBack,
+  onClose,
+  headingRef,
+}: {
+  title: string
+  subtitle?: string | undefined
+  onBack?: (() => void) | undefined
+  onClose: () => void
+  headingRef: RefObject<HTMLHeadingElement | null>
+}) {
+  return (
+    <header className={styles.header} {...sheetGrabProps}>
+      {onBack && (
+        <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+          <BackIcon />
+        </button>
+      )}
+      <div className={styles.titleBlock}>
+        <h2 ref={headingRef} tabIndex={-1}>
+          {title}
+        </h2>
+        {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+      </div>
+      <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
+        <CloseIcon />
+      </button>
+    </header>
+  )
+}
+
+export function Modal({
+  title,
+  subtitle,
+  onClose,
+  onBack,
+  children,
+  trapPaused = false,
+  revealFields = false,
+}: ModalProps) {
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
   const { leaving, exitMs } = useExit()
@@ -62,6 +119,7 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
   const { release, requestClose } = useSheetExit(sheetRef, onClose, leaving)
   useFocusTrap(sheetRef, requestClose, trapPaused || leaving)
   const { offset, isDragging, progress } = useSwipeDismiss(sheetRef, requestClose, !trapPaused && !leaving)
+  useFieldReveal(sheetRef, revealFields && !leaving)
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   // Skip the first run: useFocusTrap already sends initial focus to the first
@@ -78,10 +136,6 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
     headingRef.current?.focus()
   }, [title])
 
-  const sheetClasses = [styles.sheet, isDragging && styles.sheetDragging, leaving && styles.sheetClosing]
-    .filter(Boolean)
-    .join(' ')
-
   return (
     <div
       className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
@@ -97,7 +151,7 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
       <div className={styles.band} style={bandPosition(viewport)}>
         <div
           ref={sheetRef}
-          className={sheetClasses}
+          className={sheetClassName(revealFields, isDragging, leaving)}
           style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
           role="dialog"
           aria-modal="true"
@@ -105,27 +159,13 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
           onClick={(e) => e.stopPropagation()}
         >
           <div className={styles.handle} aria-hidden {...sheetGrabProps} />
-          <header className={styles.header} {...sheetGrabProps}>
-            {onBack && (
-              <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
-                <BackIcon />
-              </button>
-            )}
-            <div className={styles.titleBlock}>
-              <h2 ref={headingRef} tabIndex={-1}>
-                {title}
-              </h2>
-              {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => requestClose()}
-              aria-label="Close"
-              className={`${styles.close} tapActive`}
-            >
-              <CloseIcon />
-            </button>
-          </header>
+          <SheetHeader
+            title={title}
+            subtitle={subtitle}
+            onBack={onBack}
+            onClose={() => requestClose()}
+            headingRef={headingRef}
+          />
           <div className={styles.body}>{children}</div>
         </div>
       </div>

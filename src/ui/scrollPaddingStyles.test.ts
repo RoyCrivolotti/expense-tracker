@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PINNED_AIR_PX } from './hooks/stickyScroll'
+import { KEYBOARD_OPEN_ATTR } from './hooks/useKeyboardOpen'
 
 /** A stylesheet in src/ui, without its comments. */
 function stylesheet(file: string): string {
@@ -115,9 +116,7 @@ describe('the page scroll padding', () => {
   })
 
   it('is dropped on the attribute the keyboard hook keeps on the root element', () => {
-    const hook = readFileSync(resolve(process.cwd(), 'src/ui/hooks/useKeyboardOpen.ts'), 'utf8')
-
-    expect(hook).toContain("toggleAttribute('data-keyboard-open'")
+    expect(KEYBOARD_OPEN_ATTR).toBe('data-keyboard-open')
   })
 
   it('is taken back out by the app header and the rail, which are stuck, so focus in them does not scroll the page', () => {

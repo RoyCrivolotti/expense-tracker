@@ -174,6 +174,14 @@ describe('what the review view opens with', () => {
     expect(introOf(notice, asNotice, EU_MONEY_FORMAT, TODAY).pair).toMatch(/^Might be the same bill as EXAMPLE UTILITY/)
   })
 
+  it('carries the amount the way the row shows it, for the box’s one line while a keyboard is up', () => {
+    const amount = (over: Partial<RecommendationInfo>) => introOf(view(over), undefined, EU_MONEY_FORMAT, TODAY).amount
+    expect(amount({ amountCents: 4380 })).toBe('−43,80 €')
+    expect(amount({ amountCents: 185000, suggestedType: 'income' })).toBe('+1.850,00 €')
+    expect(amount({ amountCents: 1820, currency: 'USD' })).toMatch(/18[.,]20/)
+    expect(amount({ amountCents: null })).toBe('No amount')
+  })
+
   it('leaves out only the reason the duplicate block already says, and keeps the others', () => {
     const possibleMatch = { transactionId: 7, description: 'Lunch', date: '2026-11-10' }
     expect(introOf(view({ possibleMatch }), undefined, EU_MONEY_FORMAT, TODAY).reasons).toEqual([])

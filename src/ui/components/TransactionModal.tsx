@@ -37,7 +37,6 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
    * everything has landed, the way BatchTransactionForm already does.
    */
   const queue = useQueueAdvance(seed, actions, onClose, editing)
-  const remove = deleteWithToast(actions, showToast)
 
   return (
     <Modal
@@ -46,6 +45,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       onClose={guards.modalOnClose}
       onBack={formView === 'installment' ? () => setFormView('fields') : undefined}
       trapPaused={guards.confirming || guards.discardingOther || popoverOpen}
+      revealFields
     >
       {canBatch && (
         <>
@@ -82,7 +82,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         seed={seed}
         duplicate={queue.duplicate}
         onSubmit={queue.submit}
-        onDelete={remove}
+        onDelete={deleteWithToast(actions, showToast)}
         onDuplicate={actions.onDuplicate}
         onClose={queue.finish}
         queue={queue.forForm}
