@@ -10,7 +10,7 @@ import type { DuplicateOffer, TransactionSeed } from '../actions'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
 import { type InstallmentDraft, type InstallmentIntent } from './installmentIntent'
 import { initialDraft } from './transactionFormSupport'
-import { useDirtyReporting, useRevokeStagedOnUnmount, useTransactionSave } from './useTransactionSave'
+import { useBusyReporting, useDirtyReporting, useRevokeStagedOnUnmount, useTransactionSave } from './useTransactionSave'
 import { FormActions, FormBody } from './TransactionFormParts'
 import styles from './TransactionForm.module.css'
 
@@ -46,6 +46,8 @@ interface FormProps {
   onPartialSaveChange?: (strandedReceipts: number) => void
   /** Raised while a portalled popover owns focus, so the Modal pauses its trap. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
+  /** Raised from the press of the save button until the save and its receipts have landed or failed. */
+  onBusyChange?: ((busy: boolean) => void) | undefined
   /** Passed through to the receipts strip; absent in read-only sessions. */
   actions?: ExpenseActions | undefined
   view: 'fields' | 'installment'
@@ -61,6 +63,7 @@ export function TransactionForm(props: FormProps) {
   const save = useTransactionSave({ ...props, form, draft, format, showToast })
   useDirtyReporting(form, draft, save.pendingFiles, save.savedId, props.onDirtyChange, props.onPartialSaveChange)
   useRevokeStagedOnUnmount(save.pendingFiles)
+  useBusyReporting(save.busy, props.onBusyChange)
 
   const set: Setter = (
     key,

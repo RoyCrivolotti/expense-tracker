@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import type { NewTransaction } from '../../data/dataSource'
 import type { Transaction } from '../../types'
 import type { ExpenseActions, SeedCard, TransactionSeed } from '../actions'
@@ -19,24 +19,42 @@ function refuseUnanswered(
 }
 
 /**
+ * The form's identity: a new payment gets a fresh form, so its fields start from its own seed, and so does the same
+ * payment filled from another series.
+ */
+export function formKeyOf(
+  editing: Transaction | null,
+  seed: TransactionSeed | undefined,
+): string | number {
+  return editing?.id ?? (seed?.recommendationId ? `${seed.recommendationId}|${seed.fromSeries ?? ''}` : 'new')
+}
+
+/**
  * What the add form does at the end of a queue of captured payments: after a save it opens the next payment's form in
- * place of closing, and "Don't add" hands over the same way. Without a queue it only closes.
+ * place of closing, and "Don't add" hands over the same way. Without a queue it only closes. `shown` is false for a
+ * payment's form kept behind the one on screen: a save or a link it started still lands, but does not move the sheet
+ * off the payment the person went on to.
  */
 export function useQueueAdvance(
   seed: TransactionSeed | undefined,
   actions: ExpenseActions,
   onClose: () => void,
-  editing: Transaction | null,
+  shown = true,
 ) {
   const next = useRef<TransactionSeed | undefined>(undefined)
   // What to tell when a card could not be remembered after its payment was saved.
   const notRemembered = useRef<string | null>(null)
+  const onScreen = useRef(shown)
+  useLayoutEffect(() => {
+    onScreen.current = shown
+  }, [shown])
   const { showToast } = useToast()
   const queue = seed?.queue
   const spot = useQueueSpot(queue)
   const finish = () => {
     if (notRemembered.current) showToast(notRemembered.current, 'error')
     notRemembered.current = null
+    if (!onScreen.current) return
     if (next.current) actions.onAdd(next.current)
     else onClose()
   }
@@ -68,11 +86,6 @@ export function useQueueAdvance(
       if (saved) next.current = queue?.next()
       return saved
     },
-    /**
-     * The form's identity: a new payment gets a fresh form, so its fields start from its own seed, and so does the same
-     * payment filled from another series.
-     */
-    formKey: editing?.id ?? (seed?.recommendationId ? `${seed.recommendationId}|${seed.fromSeries ?? ''}` : 'new'),
     finish,
     /** Set while the server says a typed row already looks like this payment: Link it, or add it anyway. */
     duplicate: dup.offer,

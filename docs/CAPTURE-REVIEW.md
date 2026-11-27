@@ -39,7 +39,7 @@ month, edge days and whether a category or account is still in use are always wo
 | | |
 | --- | --- |
 | **Add** (on the row) | Only when nothing is in doubt. It sends the transaction shown, exactly |
-| **Review** (on the row, or a tap on it) | Everything else. It opens the add form, filled with only what the push said, under the bank's whole message (the list's `message`) and one line saying why the payment needs a look. With "Add and next (N left)" each save opens the next payment. Its buttons are a bar that stays in view while the form scrolls |
+| **Review** (on the row, or a tap on it) | Everything else. It opens the add form, filled with only what the push said, under the bank's whole message (the list's `message`) and one line saying why the payment needs a look. Arrows beside its title ("2 of 6") move to the payment before or after in the list's order without deciding the one on screen, and what was typed for each is kept until the view closes. "Add and next (N left)" counts every other payment still waiting: a save opens the one after, or at the end of the list the one before. Its buttons are a bar that stays in view while the form scrolls |
 | **Don't add** (in the review view only) | Removes only that suggestion and creates nothing. Three in a row on one wording never added stop it being suggested ([CAPTURE.md](CAPTURE.md), "What it learns") |
 | **Link instead** (in the review view only) | Offered when the server names a typed row that looks the same (`possibleMatch`), shown there in full. It points the recommendation at that row and creates nothing |
 | **Dismiss duplicate** (on a same-bill pair) | Removes the announcement of the pair, below |
