@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Fields no longer hide behind the review buttons)
+
+- **A field you move to in "Review payment" is never left under the buttons at the bottom.** On a short screen, or pressing Tab on a computer, the field you landed on could sit behind the "Don't add" and "Add" bar, so you typed into something you could not see. The sheet now scrolls it clear of the bar. Nothing changes while a phone keyboard is up, when the bar already steps aside.
+
 ## November 2026 (Money in and money out stay apart in To review)
 
 - **A payment received is no longer hidden inside a payment sent.** When two bank pushes showed the same amount within two minutes, To review showed them as one payment, even when one was money going out and the other money coming in, so sending 5,00 and getting 5,00 back a minute later showed only the payment sent. Now two pushes are one payment only when both have a minus on the amount or neither has. The cost: a card app that writes a payment without a sign and a bank alert that writes the same payment with a minus now show two payments to review, and you dismiss the extra one.

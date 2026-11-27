@@ -10,7 +10,8 @@ import { InstallmentStep } from './InstallmentStep'
 import { acceptDescriptionSuggestion } from './transactionFormActions'
 import type { FormFields, Setter } from './transactionFormState'
 import type { InstallmentDraft } from './installmentIntent'
-import type { Dispatch, SetStateAction } from 'react'
+import { useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { usePinnedFoot } from '../hooks/usePinnedFoot'
 import styles from './TransactionForm.module.css'
 
 export function FormError({ message }: { message: string | null }) {
@@ -19,6 +20,21 @@ export function FormError({ message }: { message: string | null }) {
       {message}
     </p>
   ) : null
+}
+
+/** The row the buttons sit in, pinned to the foot of the sheet with room kept for it there (`usePinnedFoot`). */
+function ActionsBar({ pinned, children }: { pinned: boolean; children: ReactNode }) {
+  const bar = useRef<HTMLDivElement>(null)
+  usePinnedFoot(bar, pinned)
+  return (
+    <div
+      ref={bar}
+      className={pinned ? `${styles.actions} ${styles.pinned}` : styles.actions}
+      data-pinned-foot={pinned ? '' : undefined}
+    >
+      {children}
+    </div>
+  )
 }
 
 /**
@@ -52,7 +68,7 @@ export function FormActions({
   onClose: () => void
 }) {
   return (
-    <div className={queue ? `${styles.actions} ${styles.pinned}` : styles.actions}>
+    <ActionsBar pinned={queue !== undefined}>
       {queue && view === 'fields' ? <FormError message={err} /> : null}
       {view === 'fields' && editing && onDelete && (
         <button
@@ -78,7 +94,7 @@ export function FormActions({
         retrying={retrying}
         anyway={duplicate?.refused ? duplicate.addAnyway : undefined}
       />
-    </div>
+    </ActionsBar>
   )
 }
 

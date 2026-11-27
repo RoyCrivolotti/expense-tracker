@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NOW, REFUSAL, SETS } from './verifyReviewCardData.mjs'
+import { checkFocusClear } from './verifyReviewFocus.mjs'
 import { checkPagerFits, checkPagerKeyboard, checkPagerMove } from './verifyReviewPager.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,6 +30,9 @@ const WIDE = { name: '1280x800', width: 1280, height: 800 }
 const TABLET = { name: '744x1133', width: 744, height: 1133 }
 /** The narrowest phone: where the heading beside "Dismiss duplicate" has to wrap. */
 const NARROW = { name: '320x700', width: 320, height: 700 }
+/** The smallest phone supported, and a phone on its side: the shortest sheets. */
+const SMALLEST = { name: '320x568', width: 320, height: 568 }
+const SIDEWAYS = { name: '667x375', width: 667, height: 375 }
 
 /** A row is one line: 58px at the app's type size. */
 const ROW_HEIGHT = 58
@@ -736,6 +740,7 @@ async function main() {
         for (const viewport of [PHONE, TABLET, WIDE]) await checkPagerFits(helpers, browser, viewport)
         for (const viewport of [PHONE, WIDE]) await checkPagerMove(helpers, browser, viewport)
         for (const viewport of [PHONE, TABLET]) await checkPagerKeyboard(helpers, browser, viewport)
+        for (const viewport of [SMALLEST, SHORT, SIDEWAYS, WIDE]) await checkFocusClear(helpers, browser, viewport)
       } finally {
         await browser.close()
       }

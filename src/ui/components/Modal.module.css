@@ -100,6 +100,19 @@
 }
 
 /*
+ * Room at the foot for a bar pinned there (usePinnedFoot), so Tab or a focused field is not left behind it. None while
+ * an on-screen keyboard is up, on any screen: scroll padding with the keyboard up is what made iOS scroll a page by
+ * itself (theme.css). On a phone-sized screen the bar steps aside then and useFieldReveal places the field; on a
+ * larger one, such as an iPad, the bar stays while the room goes.
+ */
+.sheet {
+  scroll-padding-bottom: var(--sheet-pinned-foot, 0px);
+}
+:global(html[data-keyboard-open]) .sheet {
+  scroll-padding-bottom: 0;
+}
+
+/*
  * A sheet that keeps the field being typed in at its top (useFieldReveal) takes the whole visible slice while a phone
  * keyboard is up (useKeyboardOpen): the keyboard has the lower half of the screen, and on the shortest phone the
  * strip of scrim above the sheet was the room a third suggestion under the field needed. It grows and shrinks back
