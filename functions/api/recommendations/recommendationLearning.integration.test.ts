@@ -232,8 +232,8 @@ describe('dismissing', () => {
 describe('learning', () => {
   it('teaches the template of the push that made a recommendation, and gives every push behind it the outcome', async () => {
     const id = (await push(NO_CARD('Example Cafe')))!
-    // A balance alert of the same amount a minute later joins the recommendation rather than making one.
-    expect(await push('Movimiento de -33,40 EUR en tu cuenta **5512')).toBeNull()
+    // A balance alert of the same amount and sign a minute later joins the recommendation rather than making one.
+    expect(await push('Movimiento de 33,40 EUR en tu cuenta **5512')).toBeNull()
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM capture_events WHERE rec_id = ?').get(id)).toEqual({ n: 2 })
     await decide(submit, id, row('Coffee'))
 

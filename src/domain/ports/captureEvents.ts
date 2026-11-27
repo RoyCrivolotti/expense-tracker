@@ -23,6 +23,11 @@ export interface CaptureEvent {
   kind: 'push'
   /** Positive: the push says nothing the server trusts about direction. Null only on rows stored before that rule. */
   amountCents: number | null
+  /**
+   * Whether the bank wrote a minus on the amount (`amountMinus` in `grouping.ts`): false for a plus or no sign. Null
+   * on rows stored before it was kept, and on a row written without the reader.
+   */
+  amountMinus?: boolean | null
   currency: string | null
   /** At most 200 characters. */
   merchantRaw: string | null

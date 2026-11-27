@@ -44,6 +44,7 @@ export { replayKey } from './replayKey'
 export { readNumber } from './readNumber'
 export type { Candidate } from './readNumber'
 export { currencyAmount, readPushSlots, readSlots } from './slots'
+export { signedDirection } from './sign'
 export type { CodeSlot, DateSlot, MaskedDigitsSlot, NumberSlot, Slot } from './slots'
 export {
   MAX_SIBLING_RUN,

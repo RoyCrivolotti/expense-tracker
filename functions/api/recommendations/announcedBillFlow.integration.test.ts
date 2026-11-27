@@ -228,8 +228,20 @@ describe('an announced bill and its charge, through the routes', () => {
   it('keeps a charge within two minutes of the announcement as one payment, which is then not tied', async () => {
     const c = CASES[2]!
     const announcement = await push(...c.announce(shiftDay(c.arrival.slice(0, 10), c.ahead)), c.arrival)
-    expect(await push('Movimiento', c.charge, '2027-06-30T00:03:00+02:00')).toBe(announcement)
+    // Without the minus: pushes with different signs on the amount are never one payment (`sameMovement`).
+    const unsigned = c.charge.replace('-', '')
+    expect(await push('Movimiento', unsigned, '2027-06-30T00:03:00+02:00')).toBe(announcement)
     expect((await open()).map((r) => r.id)).toEqual([announcement])
+    expect(await pairs()).toEqual([])
+  })
+
+  it('keeps a charge with a minus a minute after the announcement apart, and does not tie the two', async () => {
+    const c = CASES[2]!
+    const announcement = await push(...c.announce(shiftDay(c.arrival.slice(0, 10), c.ahead)), c.arrival)
+    // The charge comes before the bill's named day, so the same-bill rule does not tie it either.
+    const charge = await push('Movimiento', c.charge, '2027-06-30T00:03:00+02:00')
+    expect(charge).not.toBe(announcement)
+    expect((await open()).map((r) => r.id).sort()).toEqual([announcement, charge].sort())
     expect(await pairs()).toEqual([])
   })
 

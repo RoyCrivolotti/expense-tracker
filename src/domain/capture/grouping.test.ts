@@ -5,6 +5,7 @@ import type { GroupablePush } from './grouping'
 const AT = Date.parse('2026-11-03T08:41:07.000Z')
 const payment: GroupablePush = {
   amountCents: 1050,
+  amountMinus: false,
   currency: 'EUR',
   occurredAtMs: AT,
   templateId: 't-payment',
@@ -12,6 +13,7 @@ const payment: GroupablePush = {
 }
 const alert: GroupablePush = {
   amountCents: 1050,
+  amountMinus: false,
   currency: 'EUR',
   occurredAtMs: AT + 5_000,
   templateId: 't-alert',
@@ -24,8 +26,19 @@ describe('sameMovement', () => {
     expect(sameMovement(alert, payment)).toBe(true)
   })
 
-  it('compares the amount without its sign', () => {
-    expect(sameMovement(payment, { ...alert, amountCents: -1050 })).toBe(true)
+  it('keeps apart a push with a minus on its amount and one without, in either order', () => {
+    expect(sameMovement({ ...payment, amountMinus: true }, alert)).toBe(false)
+    expect(sameMovement(payment, { ...alert, amountMinus: true })).toBe(false)
+  })
+
+  it('joins two pushes that both have a minus', () => {
+    expect(sameMovement({ ...payment, amountMinus: true }, { ...alert, amountMinus: true })).toBe(true)
+  })
+
+  it('lets a push stored before the sign was kept join either sign', () => {
+    expect(sameMovement({ ...payment, amountMinus: null }, { ...alert, amountMinus: true })).toBe(true)
+    expect(sameMovement({ ...payment, amountMinus: null }, alert)).toBe(true)
+    expect(sameMovement({ ...payment, amountMinus: null }, { ...alert, amountMinus: null })).toBe(true)
   })
 
   it('keeps apart two pushes of one template, however close', () => {

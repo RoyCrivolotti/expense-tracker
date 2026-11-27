@@ -48,7 +48,7 @@ const payment = (
 ): Push => ({ title: 'Card payment', body: `${shop} *4321 ${amount} EUR`, seconds })
 const alert = (
   seconds: number,
-  amount = '-10.50',
+  amount = '10.50',
 ): Push => ({ title: 'Balance changed', body: `A movement of ${amount} EUR on your account **5512`, seconds })
 const purchase = (
   seconds: number,
@@ -174,6 +174,53 @@ describe('pushes of one movement', () => {
     await send(alert(5, '-10.51'))
     await send({ ...alert(6), body: 'A movement of -10.50 USD on your account **5512' })
     expect(recs()).toHaveLength(3)
+  })
+
+  it('stay two when money goes out and the same amount comes in soon after', async () => {
+    await send(alert(0, '-3.00'))
+    await send({ title: 'Money received', body: 'Sam Example sent you 3,00 EUR for lunch', seconds: 81 })
+    expect(recs()).toHaveLength(2)
+    expect(events().map((e) => e.grouped)).toEqual([0, 0])
+  })
+
+  it('join when both have a minus on the amount', async () => {
+    await send(payment(0, '-24,90', 'Hardware Example'))
+    await send(alert(12, '-24.90'))
+    expect(recs()).toHaveLength(1)
+    expect(rows('SELECT amount_minus, grouped FROM capture_events ORDER BY received_at, rowid')).toEqual([
+      { amount_minus: 1, grouped: 0 },
+      { amount_minus: 1, grouped: 1 },
+    ])
+  })
+
+  it('join a plus with no sign, which is how money in usually comes', async () => {
+    await send({ title: 'Money received', body: 'Lee Example sent you 7,25 EUR', seconds: 0 })
+    await send(alert(5, '+7.25'))
+    expect(recs()).toHaveLength(1)
+    expect(rows('SELECT amount_minus FROM capture_events ORDER BY received_at, rowid')).toEqual([
+      { amount_minus: 0 },
+      { amount_minus: 0 },
+    ])
+  })
+
+  it('stay two when only one has a minus, even for one card payment and its balance alert', async () => {
+    await send(payment(0))
+    await send(alert(8, '-10.50'))
+    expect(recs()).toHaveLength(2)
+  })
+
+  it('read the minus on the amount only, not a dash standing apart or a minus on another number', async () => {
+    await send({ title: 'Money received', body: 'Kim Example - 15,00 EUR, balance -3,10', seconds: 0 })
+    await send(alert(6, '15.00'))
+    expect(recs()).toHaveLength(1)
+  })
+
+  it('stay two when the second push has the other sign of every push already joined', async () => {
+    await send(payment(0, '-40,00', 'Fuel Example'))
+    await send(alert(4, '-40.00'))
+    await send({ title: 'Money received', body: 'Ana Example sent you 40,00 EUR', seconds: 30 })
+    expect(recs()).toHaveLength(2)
+    expect(events().map((e) => e.grouped)).toEqual([0, 1, 0])
   })
 
   it('never join a recommendation the person has decided', async () => {

@@ -417,7 +417,7 @@ describe('the Worker', () => {
     await capture(request({ at }))
     const later = new Date(at.getTime() + 8000)
     await capture(
-      request({ title: 'Balance changed', body: 'A movement of -10.50 EUR on your account **5512', at: later }),
+      request({ title: 'Balance changed', body: 'A movement of 10.50 EUR on your account **5512', at: later }),
     )
     expect(db.prepare('SELECT COUNT(*) AS n FROM recommendations').get()).toEqual({ n: 1 })
     expect(pushes()).toBe(1)
