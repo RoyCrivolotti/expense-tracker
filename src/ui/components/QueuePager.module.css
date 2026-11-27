@@ -1,0 +1,113 @@
+/*
+ * Sits in the sheet's header between the title and the close cross. The arrows are 44px to the finger but drawn as
+ * small chevrons, so their touch areas reach past what is drawn: above and below the header's own height, so the
+ * header is no taller than without them, into the gaps either side, and in over the edges of the count, which takes
+ * no taps. On a 375px phone that is the room the title needs to stay on one line in a wider font than the app's.
+ */
+.pager {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin: calc((1.7rem - 44px) / 2) -0.5rem;
+  transition:
+    opacity var(--motion-enter-sheet) var(--motion-ease-out),
+    visibility 0s;
+}
+
+.arrow {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.arrow:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  cursor: default;
+}
+
+.count {
+  /* Under the arrows' touch areas, so the count sits close to the chevrons; a tap there goes to the arrow. Wide enough
+     for "10 of 20", so the arrows do not shift as the numbers grow. */
+  margin: 0 -0.6rem;
+  min-width: 3.6em;
+  pointer-events: none;
+  text-align: center;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * While a phone keyboard is up the header has given way to the payment's one line (Review.module.css), and the pager
+ * goes with it, fading as quickly as the button bar does and coming back the same way. It keeps its place, so the
+ * title does not move. Only on a phone-sized layout, as for the bar.
+ */
+@media (max-width: 559px), (max-height: 559px) {
+  :global(html[data-keyboard-open]) .pager {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--motion-enter-fade) var(--motion-ease-in),
+      visibility 0s linear var(--motion-enter-fade);
+  }
+}
+
+/*
+ * A move between payments: the payment on screen slides a little the way the list goes and fades, then the other
+ * arrives from the far side. Next leaves to the left and arrives from the right; Previous is the mirror. The way out
+ * reads `--exit-ms`, which is what the move waits before showing the other payment.
+ */
+.page {
+  --page-shift: 1.25rem;
+}
+.pageOut {
+  animation: page-out var(--exit-ms, 130ms) var(--motion-ease-in) forwards;
+}
+.pageIn {
+  animation: page-in var(--motion-enter-fade) var(--motion-ease-out);
+}
+.page[data-dir='previous'] {
+  --page-shift: -1.25rem;
+}
+
+@keyframes page-out {
+  to {
+    transform: translateX(calc(-1 * var(--page-shift)));
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    transform: translateX(var(--page-shift));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pager,
+  :global(html[data-keyboard-open]) .pager {
+    transition: none;
+  }
+  .pageOut,
+  .pageIn {
+    animation: none;
+  }
+}

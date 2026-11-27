@@ -366,7 +366,7 @@ describe('Dismiss duplicate, for a bill that waits twice', () => {
 })
 
 describe('review', () => {
-  it('opens the add form for the payment with the others queued behind it, skipping any decided meanwhile', async () => {
+  it('opens the add form for the payment placed among the others, skipping any decided meanwhile', async () => {
     const actions = await show([
       known(A),
       known(B, { merchantRaw: 'BRAND NEW PLACE' }),
@@ -377,12 +377,12 @@ describe('review', () => {
 
     const seed = vi.mocked(actions!.onAdd).mock.calls[0]![0]!
     expect(seed).toMatchObject({ recommendationId: A, amountCents: 1250 })
-    expect(seed.queue!.left).toBe(2)
+    expect(seed.queue!.spot()).toEqual({ at: 1, of: 3 })
     press('skip 2')
-    expect(seed.queue!.left).toBe(2)
+    expect(seed.queue!.spot()).toEqual({ at: 1, of: 2 })
     const next = seed.queue!.next()
     expect(next).toMatchObject({ recommendationId: C })
-    expect(next!.queue!.left).toBe(0)
+    expect(next!.queue!.spot()).toEqual({ at: 1, of: 1 })
     expect(next!.queue!.next()).toBeUndefined()
   })
 

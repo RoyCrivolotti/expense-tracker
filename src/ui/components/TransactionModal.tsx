@@ -1,13 +1,12 @@
 import type { Transaction } from '../../types'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
-import { useToast } from '../hooks/useToast'
 import { BatchTransactionForm } from './BatchTransactionForm'
 import { Modal } from './Modal'
-import { TransactionForm } from './TransactionForm'
-import { useQueueAdvance } from './transactionModalQueue'
+import { useReviewSheet } from './reviewPages'
+import { ModalForms, SheetPager, type FormShared } from './TransactionModalForms'
 import { ModalGuards, ModeToggle } from './transactionModalParts'
-import { deleteWithToast, installmentNote, titleFor, useDraftGuards, useModalModes } from './transactionModalState'
+import { installmentNote, titleFor, useDraftGuards, useModalModes } from './transactionModalState'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 interface Props {
@@ -23,21 +22,20 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   // The flag, date and month pickers portal out of this Modal and run their own
   // focus traps, so this Modal's trap must stand down while any of them is open.
   const [popoverOpen, setPopoverOpen] = usePopoverTrapPause()
-  const { showToast } = useToast()
   const { mode, setMode, formView, setFormView, canBatch } = useModalModes(editing, seed)
   const guards = useDraftGuards(onClose)
-
-  /**
-   * Resolves with the stored row on create so the form can upload the receipts
-   * staged against it, and null on update where the id was already known.
-   *
-   * Deliberately does not toast: receipts upload *after* this resolves, and a
-   * premature "Transaction added" would be replaced by any failure message —
-   * ToastProvider holds one message at a time. TransactionForm toasts once
-   * everything has landed, the way BatchTransactionForm already does.
-   */
-  const queue = useQueueAdvance(seed, actions, onClose, editing)
-
+  // Set while working through captured payments: each one shown keeps its form until the sheet closes.
+  const sheet = useReviewSheet(seed, actions.onAdd, guards.setSingleDirty)
+  const form: FormShared = {
+    model,
+    actions,
+    editing,
+    onClose,
+    view: formView,
+    onViewChange: setFormView,
+    onTrapPausedChange: setPopoverOpen,
+    onPartialSaveChange: guards.setStranded,
+  }
   return (
     <Modal
       title={titleFor(editing, mode, formView, seed?.recommendationId !== undefined)}
@@ -46,6 +44,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       onBack={formView === 'installment' ? () => setFormView('fields') : undefined}
       trapPaused={guards.confirming || guards.discardingOther || popoverOpen}
       revealFields
+      headerExtra={<SheetPager sheet={sheet} seed={seed} view={formView} pickerOpen={popoverOpen} />}
     >
       {canBatch && (
         <>
@@ -68,31 +67,12 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
           />
         </>
       )}
-      <TransactionForm
-        /*
-         * Keyed on the row being edited, so following a link from inside the
-         * editor to another transaction rebuilds the form. `initialFields` runs
-         * in a `useState` initialiser, so without this the fields kept showing
-         * the transaction you came *from* while the header and links described
-         * the one you had just opened.
-         */
-        key={queue.formKey}
-        model={model}
-        editing={editing}
+      <ModalForms
+        sheet={sheet}
         seed={seed}
-        duplicate={queue.duplicate}
-        onSubmit={queue.submit}
-        onDelete={deleteWithToast(actions, showToast)}
-        onDuplicate={actions.onDuplicate}
-        onClose={queue.finish}
-        queue={queue.forForm}
         hidden={canBatch && mode === 'batch'}
         onDirtyChange={guards.setSingleDirty}
-        onPartialSaveChange={guards.setStranded}
-        onTrapPausedChange={setPopoverOpen}
-        actions={actions}
-        view={formView}
-        onViewChange={setFormView}
+        form={form}
       />
       <ModalGuards
         guards={guards}

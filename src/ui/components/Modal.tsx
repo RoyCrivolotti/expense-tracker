@@ -22,6 +22,8 @@ interface ModalProps {
   trapPaused?: boolean
   /** With a phone keyboard up, keep the field being typed in at the top of the sheet (see `useFieldReveal`). */
   revealFields?: boolean
+  /** Controls drawn in the header between the title and the close cross. */
+  headerExtra?: ReactNode
 }
 
 /**
@@ -67,12 +69,14 @@ function SheetHeader({
   onBack,
   onClose,
   headingRef,
+  extra,
 }: {
   title: string
   subtitle?: string | undefined
   onBack?: (() => void) | undefined
   onClose: () => void
   headingRef: RefObject<HTMLHeadingElement | null>
+  extra: ReactNode
 }) {
   return (
     <header className={styles.header} {...sheetGrabProps}>
@@ -87,6 +91,7 @@ function SheetHeader({
         </h2>
         {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
       </div>
+      {extra}
       <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
         <CloseIcon />
       </button>
@@ -102,6 +107,7 @@ export function Modal({
   children,
   trapPaused = false,
   revealFields = false,
+  headerExtra,
 }: ModalProps) {
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
@@ -165,6 +171,7 @@ export function Modal({
             onBack={onBack}
             onClose={() => requestClose()}
             headingRef={headingRef}
+            extra={headerExtra}
           />
           <div className={styles.body}>{children}</div>
         </div>

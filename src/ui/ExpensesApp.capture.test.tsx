@@ -223,7 +223,8 @@ describe('payments to review on the Dashboard', () => {
     fireEvent.change(within(form).getByLabelText(/^description$/i), { target: { value: 'Bakery' } })
     expect(within(form).getByLabelText('Category')).toHaveDisplayValue('Pick a category')
     chooseCategory(form)
-    fireEvent.click(within(form).getByRole('button', { name: 'Add transaction' }))
+    // The payment before it still waits, so the form goes back to it once this one is added.
+    fireEvent.click(within(form).getByRole('button', { name: 'Add and next (1 left)' }))
 
     await waitFor(() =>
       expect(api.submitRecommendation).toHaveBeenCalledWith(

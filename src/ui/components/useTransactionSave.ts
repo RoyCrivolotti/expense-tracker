@@ -168,3 +168,15 @@ export function useRevokeStagedOnUnmount(pendingFiles: PendingReceipt[]): void {
     return () => revokeStaged(stagedRef.current)
   }, [])
 }
+
+/** Tells the caller while a save is under way, from the press until it and its receipts have landed or failed. */
+export function useBusyReporting(
+  busy: boolean,
+  onBusyChange: ((busy: boolean) => void) | undefined,
+): void {
+  useEffect(() => {
+    onBusyChange?.(busy)
+    // As for useDirtyReporting: callers pass a setter inline, so only a change of `busy` is news.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy])
+}

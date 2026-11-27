@@ -28,6 +28,8 @@ import type {
   NewWealthCheckin,
 } from '../data/dataSource'
 
+import type { SeedQueue } from './seedQueue'
+
 export type { InstallmentIntent } from './components/installmentIntent'
 
 /** Pre-filled fields for the add modal (partial overlay on defaults). */
@@ -123,16 +125,6 @@ export interface SeedNotice {
   text: string
   original: { date: string; label: string }
   alternate: { date: string; label: string }
-}
-
-/** The payments still to review after the one in the form. Each call acts for the form's payment and hands back the next. */
-export interface SeedQueue {
-  /** How many are left after this one. */
-  left: number
-  /** The form for the next one, or undefined at the end. Called once this one is saved. */
-  next: () => TransactionSeed | undefined
-  /** "Don't add" for this one. Hands back the form for the next one, or undefined at the end. */
-  dontAdd: () => TransactionSeed | undefined
 }
 
 /**

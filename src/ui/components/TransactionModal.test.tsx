@@ -119,6 +119,22 @@ function renderModalWithToasts(
 
 /** The single-transaction form is the only literal `<form>` element, so this
  * reliably scopes queries to it even while both forms are mounted (one hidden). */
+/** A queue that never changes: its payment first of `left + 1`, with nothing before it. */
+function fixedQueue(
+  left: number,
+  over: Partial<NonNullable<TransactionSeed['queue']>> = {},
+): NonNullable<TransactionSeed['queue']> {
+  return {
+    spot: () => ({ at: 1, of: left + 1 }),
+    watch: () => () => {},
+    next: () => undefined,
+    dontAdd: () => undefined,
+    previous: () => undefined,
+    following: () => undefined,
+    ...over,
+  }
+}
+
 function singleForm(container: HTMLElement) {
   return within(container.querySelector('form')!)
 }
@@ -962,14 +978,18 @@ describe('TransactionModal, a queue of captured payments', () => {
     accountId: 1,
     categoryId: 1,
   }
-  const queued = (over: Partial<NonNullable<TransactionSeed['queue']>> = {}): TransactionSeed => ({
+  /** A queue whose payment is the first of `left + 1` waiting. */
+  const queued = ({
+    left = 2,
+    ...over
+  }: Partial<NonNullable<TransactionSeed['queue']>> & { left?: number } = {}): TransactionSeed => ({
     recommendationId: A,
     amountCents: 1250,
     description: 'Cafe',
     type: 'expense',
     accountId: 1,
     categoryId: 1,
-    queue: { left: 2, next: () => seedB, dontAdd: () => seedB, ...over },
+    queue: fixedQueue(left, { next: () => seedB, dontAdd: () => seedB, ...over }),
   })
 
   it('keeps its buttons in a bar that stays in view, with the form’s error in it', async () => {
@@ -1604,7 +1624,7 @@ describe('TransactionModal, a captured payment a typed row may duplicate', () =>
     const following: TransactionSeed = { ...seed, recommendationId: NEXT, description: 'Bakery' }
     const submitRecommendation = refusedOnce()
     const onAdd = vi.fn()
-    const queue = { left: 1, next: () => following, dontAdd: () => following }
+    const queue = fixedQueue(1, { next: () => following, dontAdd: () => following })
     const { container, rerender, actions } = renderModal({
       seed: { ...seed, queue },
       actions: { submitRecommendation, onAdd },
