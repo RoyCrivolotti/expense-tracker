@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Arrows between payments to review)
+
+- **Move between the payments waiting for review without deciding them.** The "Review payment" sheet has arrows beside its title and says where you are ("2 of 6"). The payment you leave stays in To review as it was, and what you typed or chose for it is still there when you come back, until you close the sheet. "Add and next" now counts every payment still waiting, before or after the one on screen, and after the last one in the list it goes back to the one before rather than closing.
+
 ## November 2026 (Capture has its own Settings tab)
 
 - **Everything about capture is under Settings, Capture.** The setup steps, the capture key, notifications, linked cards, muted pushes and diagnostics had piled up on the Account tab, which now holds only your sign-in, access requests and the app's version.
