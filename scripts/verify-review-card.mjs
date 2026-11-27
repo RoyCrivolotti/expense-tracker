@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NOW, REFUSAL, SETS } from './verifyReviewCardData.mjs'
+import { checkPagerFits, checkPagerKeyboard, checkPagerMove } from './verifyReviewPager.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.CAPTURE_PORT ?? '5173'
@@ -99,20 +100,20 @@ async function waitForServer(ms = 30000) {
 
 /**
  * The Dashboard with one of the invented lists waiting, the card open unless `fold` says otherwise. `refuse` makes the
- * first save answer that the payment looks like an entry the person already has.
+ * first save answer that the payment looks like an entry the person already has. Motion is off unless `motion` says.
  */
 async function openCard(
   browser,
   viewport,
   set,
-  { theme = 'dark', fold = 'open', refuse = false } = {},
+  { theme = 'dark', fold = 'open', refuse = false, motion = 'reduce' } = {},
 ) {
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
     deviceScaleFactor: 2,
     locale: 'en-GB',
     colorScheme: theme,
-    reducedMotion: 'reduce',
+    reducedMotion: motion,
   })
   await context.clock.setFixedTime(new Date(NOW))
   const recommendations = SETS[set]()
@@ -731,6 +732,10 @@ async function main() {
         for (const viewport of [SHORT, PHONE]) await checkKeyboard(browser, viewport)
         await checkKeyboardOnDialog(browser, TABLET)
         for (const theme of ['light', 'dark']) await checkColours(browser, theme)
+        const helpers = { check, openCard, dialog, box, px, TAP }
+        for (const viewport of [PHONE, TABLET, WIDE]) await checkPagerFits(helpers, browser, viewport)
+        for (const viewport of [PHONE, WIDE]) await checkPagerMove(helpers, browser, viewport)
+        for (const viewport of [PHONE, TABLET]) await checkPagerKeyboard(helpers, browser, viewport)
       } finally {
         await browser.close()
       }
