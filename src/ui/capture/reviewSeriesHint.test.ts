@@ -125,6 +125,32 @@ describe('a push that fits one monthly series', () => {
     ])
   })
 
+  it('says money coming in arrives into an account, where a charge is paid from one', () => {
+    const income = (over: Partial<RecommendationInfo>) =>
+      viewOf(push({ suggestedType: 'income', amountCents: 185000, localDate: '2026-11-25', ...over }))
+
+    const moved = income({ accountId: 2 })
+    expect(moved.hint).toMatchObject({ kind: 'moved', series: { description: 'Pay Example' } })
+    expect(rowNote(moved, 'card', '2026-11-25')).toEqual({ text: 'Check the account', tone: 'need' })
+    const why = whyReasons(moved, undefined, '2026-11-25')
+    expect(why).toContain('Pay Example usually comes into Main Debit, so it may have moved')
+    expect(why.join(' ')).not.toMatch(/you pay/)
+
+    expect(introNotes(income({ accountId: null }))).toEqual([
+      { text: 'Looks like your monthly Pay Example, due 25\u00a0Nov, paid into Main Debit.', warn: false },
+    ])
+  })
+
+  it('asks which monthly payment an income is, and which monthly bill a charge is, when two fit', () => {
+    const income = viewOf(push({ suggestedType: 'income', amountCents: 60000, localDate: '2026-11-03' }))
+    expect(income.hint).toMatchObject({ kind: 'choose' })
+    expect(rowNote(income, 'card', '2026-11-03')).toEqual({ text: 'Which monthly payment?', tone: 'need' })
+
+    const charge = viewOf(push({ amountCents: 999, localDate: '2026-11-14' }))
+    expect(charge.hint).toMatchObject({ kind: 'choose' })
+    expect(rowNote(charge, 'card', '2026-11-14')).toEqual({ text: 'Which monthly bill?', tone: 'need' })
+  })
+
   it('has no line about a monthly payment without one, or for two that fit, which the form asks about itself', () => {
     expect(introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO' })))).toEqual([])
     const two = viewOf(push({ amountCents: 999, localDate: '2026-11-14' }))
@@ -140,6 +166,17 @@ describe('a push that fits one monthly series', () => {
     expect(
       introNotes(viewOf(makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: null }))),
     ).toEqual([])
+  })
+
+  it('asks what money coming in in another currency came to, not what the bank charged', () => {
+    for (const suggestedType of ['income', 'refund'] as const) {
+      const view = viewOf(
+        makeRecommendation({ merchantRaw: 'TIENDA EJEMPLO', currency: 'USD', amountCents: 1820, suggestedType }),
+      )
+      expect(introNotes(view), suggestedType).toEqual([
+        { text: 'The message says US$18.20. Type the amount in euros it came to.', warn: true },
+      ])
+    }
   })
 
   it('names the series’ account but leaves the card question to the person when the push showed an unlinked card', () => {

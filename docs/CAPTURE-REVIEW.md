@@ -157,7 +157,7 @@ every read ([`reviewSeries.ts`](../src/ui/capture/reviewSeries.ts)).
 | --- | --- | --- |
 | One series | "Monthly, due D" | Description, category and type from the series; the account too when the push named none and showed no card to ask about |
 | One series, paid from another account | "Check the account" | The push's own account is kept, and there is no one-tap Add: the review view asks whether the payment moved |
-| Two or more | "Which monthly bill?" | Unchanged, and no one-tap Add even when the votes are settled. The add form asks which, each a button that opens it again filled from that series; none is picked for the person |
+| Two or more | "Which monthly bill?" ("Which monthly payment?" for money coming in) | Unchanged, and no one-tap Add even when the votes are settled. The add form asks which, each a button that opens it again filled from that series; none is picked for the person |
 
 A filled payment always goes through review, so the first time a bank text is matched it is never added by one tap. Its "New merchant" reason is dropped, since the hint already says what the payment is.
 When the person's own settled name for the merchant already is the series' name, the row still says which series it
@@ -165,7 +165,7 @@ looks like, but the fields stay as their history has them and one tap follows th
 
 The review view says the rest above its fields ([`reviewNotes.ts`](../src/ui/capture/reviewNotes.ts),
 [`reviewWhy.ts`](../src/ui/capture/reviewWhy.ts)): "Looks like your monthly X, due D", with the account it is paid
-from where the fields do not show it, and in the "Needs a look" line whether it may have moved account or been renamed
+from (or into, for money coming in) where the fields do not show it, and in the "Needs a look" line whether it may have moved account or been renamed
 (the series has another name than the person's own for the merchant).
 
 The recurring card reads the same hints the other way round: a charge a waiting payment stands for says "Captured from

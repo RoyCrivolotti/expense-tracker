@@ -1,3 +1,4 @@
+import { paymentDirection } from '../../domain/capture/direction'
 import type { ReviewReason } from '../../domain/capture/review'
 import type { MoneyFormat } from '../../engine/money'
 import type { ReviewView } from './reviewFields'
@@ -29,12 +30,22 @@ const BECAUSE: Record<ReviewReason, (view: ReviewView) => string> = {
   'mixed-description': () => 'you have named this merchant in more than one way',
 }
 
+/** Where a monthly payment's series usually goes from, or for money coming in, where it usually goes into. */
+function usualAccount(
+  view: ReviewView,
+  description: string,
+): string {
+  const account = view.hintAccount ?? 'another account'
+  return paymentDirection(view.type) === 'in'
+    ? `${description} usually comes into ${account}`
+    : `you pay ${description} from ${account}`
+}
+
 /** What a monthly payment's hint asks the person: which of two it is, whether it moved account, whether it was renamed. */
 function hintReasons(view: ReviewView): string[] {
   const { hint } = view
   if (hint?.kind === 'choose') return ['it could be either of two monthly payments']
-  if (hint?.kind === 'moved')
-    return [`you pay ${hint.series.description} from ${view.hintAccount ?? 'another account'}, so it may have moved`]
+  if (hint?.kind === 'moved') return [`${usualAccount(view, hint.series.description)}, so it may have moved`]
   if (hint?.kind === 'renamed') return [`you added it as ${hint.votedDescription} before, so it may have been renamed`]
   return []
 }

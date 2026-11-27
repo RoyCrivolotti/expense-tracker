@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Money coming in no longer reads like a bill)
+
+- **A monthly income waiting for review is worded as money coming in.** When your pay arrived on another account than usual, "Review payment" said "you pay Pay from Joint". It now says "Pay usually comes into Joint, so it may have moved", the monthly line says "paid into", and two monthly incomes that both fit ask "Which monthly payment?" rather than "Which monthly bill?". An income or refund in another currency asks for the amount in euros "it came to" rather than what "your bank charged".
+
 ## November 2026 (Fields no longer hide behind the review buttons)
 
 - **A field you move to in "Review payment" is never left under the buttons at the bottom.** On a short screen, or pressing Tab on a computer, the field you landed on could sit behind the "Don't add" and "Add" bar, so you typed into something you could not see. The sheet now scrolls it clear of the bar. Nothing changes while a phone keyboard is up, when the bar already steps aside.

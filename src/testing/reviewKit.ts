@@ -87,7 +87,9 @@ function monthly(
 /**
  * `makeReviewModel` with monthly series waiting for their November charge: Video Stream (12,99 on the 10th, Main
  * Debit, Groceries), Gym (25,00 on the 12th, Travel Credit, Eating out), and two at 9,99 due the same week (Music Plan
- * on the 14th and Cloud Box on the 15th), and an investment, Index Plan (400,00 on the 20th, Main Debit). Invented data.
+ * on the 14th and Cloud Box on the 15th), an investment, Index Plan (400,00 on the 20th, Main Debit), and money coming
+ * in: Pay Example (1.850,00 on the 25th, Main Debit) and two at 600,00 the same week (Rent Share on the 3rd and Side
+ * Pay on the 4th). Invented data.
  */
 export function makeSeriesModel(): ExpenseModel {
   const base = makeReviewModel().dataset
@@ -107,6 +109,27 @@ export function makeSeriesModel(): ExpenseModel {
           categoryId: 2,
           amountCents: 40000,
           type: 'investment',
+        }),
+        ...monthly(150, 25, {
+          description: 'Pay Example',
+          accountId: 1,
+          categoryId: 1,
+          amountCents: 185000,
+          type: 'income',
+        }),
+        ...monthly(160, 3, {
+          description: 'Rent Share',
+          accountId: 1,
+          categoryId: 1,
+          amountCents: 60000,
+          type: 'income',
+        }),
+        ...monthly(170, 4, {
+          description: 'Side Pay',
+          accountId: 1,
+          categoryId: 1,
+          amountCents: 60000,
+          type: 'income',
         }),
       ],
     }),
