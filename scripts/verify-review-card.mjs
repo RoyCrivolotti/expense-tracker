@@ -391,9 +391,19 @@ async function barStays(
   }
   const foot = await sheet.evaluate((el) => {
     const bar = [...el.querySelectorAll('button')].find((b) => b.textContent === "Don't add").parentElement
+    // The colour as the canvas paints it, so any notation the browser hands back reads the same.
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+    const painted = (colour) => {
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = colour
+      ctx.fillRect(0, 0, 1, 1)
+      return [...ctx.getImageData(0, 0, 1, 1).data].join(',')
+    }
     return {
       gap: el.getBoundingClientRect().bottom - bar.getBoundingClientRect().bottom,
       sticky: getComputedStyle(bar).position,
+      background: painted(getComputedStyle(bar).backgroundColor),
+      sheet: painted(getComputedStyle(el).backgroundColor),
     }
   })
   check(
@@ -401,6 +411,13 @@ async function barStays(
     'the bar reaches the foot of the sheet, over its padding',
     foot.sticky === 'sticky' && Math.abs(foot.gap) <= 2,
     `position ${foot.sticky}, ${px(foot.gap)} short`,
+  )
+  // The form scrolls under the bar: without a solid fill of the sheet's own colour, the fields show through the buttons.
+  check(
+    where,
+    "the bar is filled with the sheet's colour, so the form does not show through it",
+    foot.background === foot.sheet && foot.background.endsWith(',255'),
+    `bar ${foot.background}, sheet ${foot.sheet}`,
   )
 }
 

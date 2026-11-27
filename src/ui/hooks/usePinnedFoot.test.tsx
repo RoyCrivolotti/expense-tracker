@@ -96,11 +96,12 @@ describe('usePinnedFoot', () => {
   })
 })
 
+/** A stylesheet in src/ui/components, without its comments. */
+const stylesheet = (file: string) =>
+  readFileSync(resolve(process.cwd(), 'src/ui/components', file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+
 describe('the sheet’s room at its foot', () => {
-  const css = readFileSync(resolve(process.cwd(), 'src/ui/components/Modal.module.css'), 'utf8').replace(
-    /\/\*[\s\S]*?\*\//g,
-    '',
-  )
+  const css = stylesheet('Modal.module.css')
 
   it('is the scroll padding at the sheet’s foot, none where no bar sets it', () => {
     expect(css).toMatch(new RegExp(`\\.sheet \\{\\s*scroll-padding-bottom: var\\(${PINNED_FOOT_VAR}, 0px\\);\\s*\\}`))
@@ -108,5 +109,17 @@ describe('the sheet’s room at its foot', () => {
 
   it('is dropped while a phone keyboard is up, when the bar steps aside', () => {
     expect(css).toMatch(/:global\(html\[data-keyboard-open\]\) \.sheet \{\s*scroll-padding-bottom: 0;\s*\}/)
+  })
+})
+
+describe('the pinned bar', () => {
+  it('is filled with the sheet’s own colour, so the form scrolling under it does not show through the buttons', () => {
+    const pinned = /\.pinned \{([^}]*)\}/.exec(stylesheet('TransactionForm.module.css'))?.[1] ?? ''
+    const sheet = /\.sheet \{([^}]*)\}/.exec(stylesheet('Modal.module.css'))?.[1] ?? ''
+    const fill = (rule: string) => /\bbackground(?:-color)?:\s*([^;]+);/.exec(rule)?.[1]
+
+    expect(pinned).toMatch(/position:\s*sticky;/)
+    expect(fill(pinned)).toBe('var(--color-bg)')
+    expect(fill(pinned)).toBe(fill(sheet))
   })
 })
