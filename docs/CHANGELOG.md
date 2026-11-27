@@ -5,6 +5,7 @@ For users: high-signal UX and reliability changes on `main`. Internal refactors 
 ## November 2026 (Money coming in no longer reads like a bill)
 
 - **A monthly income waiting for review is worded as money coming in.** When your pay arrived on another account than usual, "Review payment" said "you pay Pay from Joint". It now says "Pay usually comes into Joint, so it may have moved", the monthly line says "paid into", and two monthly incomes that both fit ask "Which monthly payment?" rather than "Which monthly bill?". An income or refund in another currency asks for the amount in euros "it came to" rather than what "your bank charged".
+- **An income the bank announced and then reported is not called a bill.** When the two wait side by side, "Review payment" now says "Might be the same payment as…" and "received" on such a day, where it said "bill" and "charged". Charges keep their wording.
 
 ## November 2026 (Fields no longer hide behind the review buttons)
 

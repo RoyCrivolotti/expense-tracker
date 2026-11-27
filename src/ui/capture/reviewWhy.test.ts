@@ -33,6 +33,24 @@ const charge = view({
 const asCharge: PairSide = { role: 'charge', other: notice }
 const asNotice: PairSide = { role: 'announcement', other: charge }
 
+/** The same for money coming in: a pay of 1.850,00 announced on 23 Nov for the 25th, and its arrival on the 25th. */
+const payNotice = view({
+  id: 'pay-notice',
+  merchantRaw: 'Heads up: 1.850,00 EUR arrives soon',
+  amountCents: 185000,
+  suggestedType: 'income',
+  localDate: '2026-11-25',
+  occurredAt: pushAt(2026, 11, 23, 9, 15),
+})
+const pay = view({
+  id: 'pay',
+  merchantRaw: 'EXAMPLE EMPLOYER',
+  amountCents: 185000,
+  suggestedType: 'income',
+  localDate: '2026-11-25',
+  occurredAt: pushAt(2026, 11, 25, 7, 40),
+})
+
 describe('why a payment needs a look', () => {
   it('is nothing for a payment with nothing in doubt', () => {
     expect(whyReasons(view(), undefined, TODAY)).toEqual([])
@@ -101,8 +119,11 @@ describe('why a payment needs a look', () => {
     expect(whyReasons(later, undefined, '2026-11-15')).toEqual([])
   })
 
-  it('puts the same-bill warning first', () => {
+  it('puts the same-bill warning first, a payment rather than a bill for money coming in', () => {
     expect(whyReasons(charge, asCharge, TODAY)[0]).toBe('it might be the same bill as another one waiting')
+    expect(whyReasons(pay, { role: 'charge', other: payNotice }, TODAY)[0]).toBe(
+      'it might be the same payment as another one waiting',
+    )
   })
 
   it('says what the monthly payments say: matched for the first time, or one of two', () => {
@@ -145,6 +166,15 @@ describe('what the review view says about the other half of a pair', () => {
   it('tells the announcement which charge, and to not add this one', () => {
     expect(pairSentence(asNotice, EU_MONEY_FORMAT)).toBe(
       "Might be the same bill as EXAMPLE UTILITY, −62,15 €, charged Mon 23 Nov and also waiting. If it's duplicated, choose Don't add here.",
+    )
+  })
+
+  it('calls money coming in a payment, received rather than charged, on both halves', () => {
+    expect(pairSentence({ role: 'charge', other: payNotice }, EU_MONEY_FORMAT)).toBe(
+      "Might be the same payment as the one the bank announced on Mon 23 Nov (+1.850,00 €, also waiting). If it's duplicated, add this one and choose Don't add on the other.",
+    )
+    expect(pairSentence({ role: 'announcement', other: pay }, EU_MONEY_FORMAT)).toBe(
+      "Might be the same payment as EXAMPLE EMPLOYER, +1.850,00 €, received Wed 25 Nov and also waiting. If it's duplicated, choose Don't add here.",
     )
   })
 })
