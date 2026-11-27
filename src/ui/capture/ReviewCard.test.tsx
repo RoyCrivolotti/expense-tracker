@@ -114,7 +114,7 @@ describe('a row', () => {
       categoryId: 1,
       description: 'Cafe Example',
     })
-    expect(seed.queue?.left).toBe(0)
+    expect(seed.queue?.spot()).toEqual({ at: 1, of: 1 })
     expect(core.decide).not.toHaveBeenCalled()
   })
 
@@ -502,14 +502,14 @@ describe('the card', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('queues the payments after the one reviewed, so the form can move on to them', () => {
+  it('places the payment reviewed among the others, so the form can move on to them', () => {
     const core = makeCore({ items: [newPlace(1), rec(2), rec(3)] })
     show(core)
 
     fireEvent.click(screen.getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
 
     const seed = vi.mocked(core.openForm).mock.calls[0]![0]
-    expect(seed.queue!.left).toBe(2)
+    expect(seed.queue!.spot()).toEqual({ at: 1, of: 3 })
     expect(seed.queue!.next()).toMatchObject({ recommendationId: id(2), intro: { arrived: 'Tue 10 Nov, 09:41' } })
   })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import { dismissRecommendation } from '../../data/recommendationDecisionsApi'
 import type { RecommendationInfo } from '../../data/recommendationsApi'
 import { buildMerchantIndex } from '../../domain/capture/review'
@@ -15,7 +15,7 @@ import { seriesHintsOf } from './reviewSeries'
 import { toastText } from './reviewFormat'
 import { introOf } from './reviewIntro'
 import { billPairs, pairSides, tiedOrder, totalsOf } from './reviewPairs'
-import { queuedSeed } from './reviewQueue'
+import { queuedSeed, WaitingList } from './reviewQueue'
 import { rowTitle } from './reviewRowText'
 import { localToday } from './reviewToday'
 import type { PairSide } from './reviewWhy'
@@ -40,7 +40,7 @@ export interface ReviewApi {
   dontAdd: (view: ReviewView) => void
   /** Removes the announcement of the pair this payment is in, and nothing else. The charge stays to be reviewed. */
   dismissDuplicate: (view: ReviewView) => void
-  /** Opens the add form on this payment, with the ones after it queued behind it. */
+  /** Opens the add form on this payment, placed among the others so the form can move between them. */
   review: (view: ReviewView) => void
   /** Opens the add form on this payment filled from one of the series its hint offers, which the person picked. */
   reviewAs: (
@@ -77,16 +77,15 @@ function useViews(
     const bills = billPairs(listed)
     return { views: tiedOrder(listed, bills), pairs: pairSides(listed, bills), totals: totalsOf(listed, bills) }
   }, [items, model, merchants, hints])
-  // The queue reads the latest views when it moves on, not the ones it started with.
-  const latest = useRef(views)
-  useEffect(() => {
-    latest.current = views
-  }, [views])
+  // An open form reads the latest views when it moves on, not the ones it started with. Set before paint, so its
+  // counter never shows a payment just put aside.
+  const [list] = useState(() => new WaitingList())
+  useLayoutEffect(() => list.set(views), [list, views])
   const describe = (
     rec: RecommendationInfo,
     hint: SeriesHint,
   ) => describeRecommendation(rec, model, merchants, hint)
-  return { views, pairs, totals, latest, describe }
+  return { views, pairs, totals, list, describe }
 }
 
 /** Works the payments out as the seven fields a person sees, and turns a press into a held decision. */
@@ -101,7 +100,7 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     setLinked(new Map())
   }
   const items = useMemo(() => core.items.map((r) => withLink(r, linked)), [core.items, linked])
-  const { views, pairs, totals, latest, describe } = useViews(items, model)
+  const { views, pairs, totals, list, describe } = useViews(items, model)
 
   const dontAdd = (view: ReviewView) => {
     const message = `Not added \u00b7 ${name(view)}\nOnly this suggestion is removed. Nothing is created and the app learns nothing.`
@@ -114,10 +113,8 @@ export function useReviewApi(core: ReviewCore): ReviewApi {
     series: SeriesFit,
   ) => review(describe(view.rec, { kind: 'series', series }))
   function review(view: ReviewView) {
-    const at = latest.current.findIndex((v) => v.rec.id === view.rec.id)
-    const after = latest.current.slice(at + 1).map((v) => v.rec.id)
     const intro = (v: ReviewView) => introOf(v, pairs.get(v.rec.id), format, localToday())
-    openForm(queuedSeed(view, after, { latest: () => latest.current, dontAdd, rememberFor, choose: reviewAs, intro }))
+    openForm(queuedSeed(view, list, { dontAdd, rememberFor, choose: reviewAs, intro }))
   }
   return {
     views,

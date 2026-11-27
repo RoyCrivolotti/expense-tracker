@@ -5,6 +5,7 @@ import type { ExpenseActions, SeedCard, TransactionSeed } from '../actions'
 import { useToast } from '../hooks/useToast'
 import type { InstallmentIntent } from './installmentIntent'
 import { useDuplicateOffer } from './useDuplicateOffer'
+import { useQueueSpot } from './reviewPages'
 import { saveTransaction } from './transactionSaveIntent'
 
 /** Nothing is saved for a card until it is answered, and the question is shown where it is. */
@@ -32,6 +33,7 @@ export function useQueueAdvance(
   const notRemembered = useRef<string | null>(null)
   const { showToast } = useToast()
   const queue = seed?.queue
+  const spot = useQueueSpot(queue)
   const finish = () => {
     if (notRemembered.current) showToast(notRemembered.current, 'error')
     notRemembered.current = null
@@ -77,7 +79,8 @@ export function useQueueAdvance(
     /** The form's own labels for a queue, or undefined when there is none. */
     forForm: queue
       ? {
-          left: queue.left,
+          // Every other payment still waiting, before this one or after it: deciding this one shows one of them.
+          left: spot.at > 0 ? spot.of - 1 : spot.of,
           onSkip: () => {
             const following = queue.dontAdd()
             if (following) actions.onAdd(following)
