@@ -55,6 +55,7 @@ export function ReviewProvider({
     model,
     items: items.filter((r) => !decisions.hidden.has(r.id)),
     loads: list.loads,
+    reading: list.reading,
     count,
     hasMore: list.hasMore,
     more: () => void list.more(),
@@ -68,6 +69,7 @@ export function ReviewProvider({
       decisions.flush()
       actions?.onAdd(seed)
     },
+    formOpen,
   }
   return <ReviewContext.Provider value={core}>{children}</ReviewContext.Provider>
 }

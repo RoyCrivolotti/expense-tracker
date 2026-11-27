@@ -459,7 +459,7 @@ describe('a bill that waits twice', () => {
 })
 
 describe('the card', () => {
-  it('shows three payments and opens the rest in a sheet, where tapping a row closes it and opens the form', () => {
+  it('shows three payments and opens the rest in a sheet, where tapping a row opens the form and keeps the sheet', () => {
     const core = makeCore({ items: [rec(1), rec(2), rec(3), rec(4), newPlace(5)] })
     show(core)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
@@ -469,7 +469,8 @@ describe('the card', () => {
     expect(within(sheet).getAllByRole('listitem')).toHaveLength(5)
     fireEvent.click(within(sheet).getByRole('button', { name: /^Review BRAND NEW PLACE/ }))
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // The form opens on top of it, so closing the form comes back here.
+    expect(screen.getByRole('dialog')).toBe(sheet)
     expect(vi.mocked(core.openForm).mock.calls[0]![0]).toMatchObject({ recommendationId: id(5) })
   })
 

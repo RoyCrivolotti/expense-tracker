@@ -105,6 +105,7 @@ export function ReviewRow({ view, place, tie, today, review, onReview }: RowProp
                 type="button"
                 className={styles.tap}
                 aria-label={`Review ${spoken}, ${when}`}
+                data-review-id={view.rec.id}
                 aria-describedby={note}
                 onClick={() => onReview(view)}
               >

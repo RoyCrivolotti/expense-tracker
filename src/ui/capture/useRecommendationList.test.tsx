@@ -40,6 +40,30 @@ describe('useRecommendationList', () => {
     expect(result.current.hasMore).toBe(false)
   })
 
+  it('says a read is on its way from the moment a decision asks for one until it has answered, landed or failed', async () => {
+    let answer: (value: api.RecommendationPage) => void = () => {}
+    let refuse: (reason: unknown) => void = () => {}
+    fetchMock().mockResolvedValueOnce(page(['a', 'b']))
+    const { result } = renderHook(() => useRecommendationList())
+    expect(result.current.reading).toBe(true)
+    await waitFor(() => expect(result.current.reading).toBe(false))
+
+    fetchMock().mockImplementationOnce(() => new Promise((done) => (answer = done)))
+    act(() => api.announceRecommendationsChanged())
+    expect(result.current.reading).toBe(true)
+    answer(page(['a']))
+    await waitFor(() => expect(result.current.reading).toBe(false))
+    expect(result.current.items?.map((r) => r.id)).toEqual(['a'])
+
+    fetchMock().mockImplementationOnce(() => new Promise((_done, fail) => (refuse = fail)))
+    act(() => api.announceRecommendationsChanged())
+    expect(result.current.reading).toBe(true)
+    refuse(new ApiError('Request failed (500)', 500))
+    await waitFor(() => expect(result.current.reading).toBe(false))
+    // A read nobody asked for keeps the rows and says nothing.
+    expect(result.current.error).toBeNull()
+  })
+
   it('shows the reason a read failed, and clears it when a retry works', async () => {
     fetchMock()
       .mockRejectedValueOnce(new ApiError('Request failed (500)', 500))
