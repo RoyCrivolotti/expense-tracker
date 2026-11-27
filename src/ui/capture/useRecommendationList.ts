@@ -18,6 +18,36 @@ async function readLoaded(want: number) {
   return { rows, next: page.next, openCount: page.openCount }
 }
 
+type Landed = ReturnType<ReadBook['landed']>
+
+/**
+ * Reads the list once for each `version`, and says whether the latest read is still on its way. Only a read the person
+ * is waiting on (`asked`) shows its failure.
+ */
+function useReads(
+  version: { n: number; asked: boolean },
+  book: ReadBook,
+  land: (read: Landed) => void,
+  fail: (message: string) => void,
+): boolean {
+  // The last version whose read has answered, landed or failed.
+  const [answered, setAnswered] = useState(-1)
+  useEffect(() => {
+    let current = true
+    const since = book.begin()
+    readLoaded(book.held)
+      .then(
+        (read) => current && land(book.landed(read, since)),
+        (e: unknown) => current && version.asked && fail(messageOf(e)),
+      )
+      .finally(() => current && setAnswered(version.n))
+    return () => {
+      current = false
+    }
+  }, [version, book, land, fail])
+  return answered !== version.n
+}
+
 /**
  * The person's open recommendations, newest day first, read once on mount and again whenever one is
  * decided in the add form. `remove` drops a row the caller has just decided, without another read.
@@ -34,25 +64,14 @@ export function useRecommendationList() {
   const [loads, setLoads] = useState(0)
   const [book] = useState(() => new ReadBook())
 
-  useEffect(() => {
-    let current = true
-    const since = book.begin()
-    readLoaded(book.held).then(
-      (read) => {
-        if (!current) return
-        const { rows, next: after, openCount: count } = book.landed(read, since)
-        setItems(rows)
-        setNext(after)
-        setOpenCount(count)
-        setError(null)
-        setLoads((n) => n + 1)
-      },
-      (e: unknown) => current && version.asked && setError(messageOf(e)),
-    )
-    return () => {
-      current = false
-    }
-  }, [version, book])
+  const land = useCallback((read: Landed) => {
+    setItems(read.rows)
+    setNext(read.next)
+    setOpenCount(read.openCount)
+    setError(null)
+    setLoads((n) => n + 1)
+  }, [])
+  const reading = useReads(version, book, land, setError)
 
   useEffect(() => onRecommendationsChanged(() => setVersion((v) => ({ n: v.n + 1, asked: false }))), [])
 
@@ -84,6 +103,8 @@ export function useRecommendationList() {
     hasMore: next !== null,
     openCount,
     loads,
+    /** A read is on its way, such as the one a save in the add form asks for. */
+    reading,
     error,
     more,
     remove,

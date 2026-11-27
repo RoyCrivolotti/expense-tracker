@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Presence } from '../components/Presence'
 import { Card } from '../components/primitives'
 import { EXIT_MS } from '../hooks/motion'
@@ -87,6 +87,38 @@ function useLanding(
 }
 
 /**
+ * A payment opened from the full list opens the form on top of it, and the list stays where it was underneath, so
+ * closing the form goes back to it. When nothing is left to go back to, the list leaves with the form instead of
+ * coming back empty. Whether anything is left is not always known as the form closes: "Don't add" takes the payment off
+ * the list at once, but a save only shows in the read that follows it, which lands a moment later. So from the form
+ * closing until that read has answered, a list that turns empty closes. A list emptied by its own one-tap buttons, with
+ * no form, still says all caught up.
+ *
+ * Returns what the list shows: while it leaves for being empty, the last of it that had payments, so it slides away as
+ * it was rather than as "All caught up".
+ */
+function useCloseWhenEmptied(
+  review: ReviewApi,
+  { stacked, reading }: { stacked: boolean; reading: boolean },
+  onSheet: (open: boolean) => void,
+): ReviewApi {
+  const empty = review.views.length === 0
+  const [was, setWas] = useState(stacked)
+  const [armed, setArmed] = useState(false)
+  const [full, setFull] = useState(review)
+  if (was !== stacked) {
+    setWas(stacked)
+    setArmed(!stacked)
+  } else if (armed && !empty && !reading) setArmed(false)
+  if (!empty && full.views !== review.views) setFull(review)
+  const closing = armed && empty
+  useEffect(() => {
+    if (closing) onSheet(false)
+  }, [closing, onSheet])
+  return closing ? full : review
+}
+
+/**
  * The card at the top of the Dashboard: one line saying how many payments wait and what they add up to, which opens
  * to the newest few. It stays the way it was left.
  */
@@ -101,12 +133,12 @@ export default function ReviewCard({
 }) {
   const review = useReviewApi(core)
   useLanding(review, core.loads)
-  // Every way into the form closes the sheet first, so saving lands back on the Dashboard.
+  const formOpen = core.formOpen ?? false
+  const listed = useCloseWhenEmptied(review, { stacked: sheet && formOpen, reading: core.reading ?? false }, onSheet)
   const open: OnReview = (
     view,
     series,
   ) => {
-    onSheet(false)
     if (series) review.reviewAs(view, series)
     else review.review(view)
   }
@@ -114,7 +146,7 @@ export default function ReviewCard({
     <>
       {review.views.length > 0 ? <CardBody review={review} onSheet={onSheet} onReview={open} /> : null}
       <Presence show={sheet} exitMs={EXIT_MS.sheet}>
-        <ReviewSheet review={review} onClose={() => onSheet(false)} onReview={open} />
+        <ReviewSheet review={listed} stacked={formOpen} onClose={() => onSheet(false)} onReview={open} />
       </Presence>
     </>
   )

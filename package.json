@@ -57,6 +57,7 @@
     "verify:section-tabs": "node scripts/verify-section-tabs.mjs",
     "verify:ledger-mode": "node scripts/verify-ledger-mode.mjs",
     "verify:review-card": "node scripts/verify-review-card.mjs",
+    "verify:review-return": "node scripts/verify-review-return.mjs",
     "verify:offline-start": "node scripts/verify-offline-start.mjs",
     "format": "prettier --write \"{src,functions,scripts,workers}/**/*.{ts,tsx,js,mjs}\" \"*.{ts,js,mjs}\"",
     "format:check": "prettier --check \"{src,functions,scripts,workers}/**/*.{ts,tsx,js,mjs}\" \"*.{ts,js,mjs}\""

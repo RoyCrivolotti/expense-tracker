@@ -15,6 +15,8 @@ export interface ReviewCore {
   items: RecommendationInfo[]
   /** How many reads of the list have landed, so the rows can be told apart from ones that were patched by hand. */
   loads: number
+  /** A read of the list is on its way, so the rows may be about to change. */
+  reading?: boolean
   /** How many are open, counting those not loaded yet. */
   count: number
   hasMore: boolean
@@ -45,6 +47,8 @@ export interface ReviewCore {
     | undefined
   /** Opens the add form. The form saves at once, so anything held is sent first. */
   openForm: (seed: TransactionSeed) => void
+  /** The add form is open, on top of whatever opened it. */
+  formOpen?: boolean
 }
 
 export const ReviewContext = createContext<ReviewCore | null>(null)

@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Closing a payment goes back to the full list)
+
+- **A payment opened from "See all" goes back to the list when you close it.** Closing it used to land on the Dashboard, so you had to open the list again and find your place. Now the list is still there, scrolled where you left it, without the payments you added or chose not to add in the meantime. When you have decided the last one, both close and you are on the Dashboard. A payment opened from the Dashboard card still closes to the Dashboard.
+
 ## November 2026 (Arrows between payments to review)
 
 - **Move between the payments waiting for review without deciding them.** The "Review payment" sheet has arrows beside its title and says where you are ("2 of 6"). The payment you leave stays in To review as it was, and what you typed or chose for it is still there when you come back, until you close the sheet. "Add and next" now counts every payment still waiting, before or after the one on screen, and after the last one in the list it goes back to the one before rather than closing.

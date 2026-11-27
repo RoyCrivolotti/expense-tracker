@@ -3,7 +3,9 @@ name: Verify the To review card in a browser
 # `npm run verify` cannot see layout or what a tap lands on: jsdom has neither. The Dashboard's "To review" card depends
 # on both (a row is pressed anywhere along its line, a long name is cut and never wraps, the review view's buttons stay
 # in view while its form scrolls), so `scripts/verify-review-card.mjs` measures them in Chromium and WebKit on the demo
-# instance, with invented payments answered in place of the list.
+# instance, with invented payments answered in place of the list. `scripts/verify-review-return.mjs` does the same for
+# a payment opened from the full list: which sheet is on top, the list's scroll place when it comes back, and both
+# sheets leaving together when the last payment is decided.
 #
 # Its own workflow, like the Goals one: it needs browsers, and the checks that tell a reviewer whether the code builds
 # should not wait for it. Make it required in the branch protection rules once it has proved itself.
@@ -25,6 +27,7 @@ on:
       - 'scripts/verify-review-card.mjs'
       - 'scripts/verifyReviewCardData.mjs'
       - 'scripts/verifyReviewPager.mjs'
+      - 'scripts/verify-review-return.mjs'
       - 'package-lock.json'
       - 'vite.config.*'
       - '.github/workflows/verify-review-browser.yml'
@@ -44,6 +47,7 @@ on:
       - 'scripts/verify-review-card.mjs'
       - 'scripts/verifyReviewCardData.mjs'
       - 'scripts/verifyReviewPager.mjs'
+      - 'scripts/verify-review-return.mjs'
       - 'package-lock.json'
   workflow_dispatch:
 
@@ -88,6 +92,12 @@ jobs:
           CAPTURE_PORT: '5173'
           ENGINES: ${{ matrix.engine }}
         run: node scripts/verify-review-card.mjs
+
+      - name: Check closing a payment goes back to the full list in ${{ matrix.engine }}
+        env:
+          CAPTURE_PORT: '5173'
+          ENGINES: ${{ matrix.engine }}
+        run: node scripts/verify-review-return.mjs
 
   # The one job to require once this workflow is trusted: a matrix job that failed, was cancelled or never started is
   # not `success`, and without `always()` this job would be skipped, which reads as passing to anything that requires it.
