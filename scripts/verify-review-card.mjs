@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NOW, REFUSAL, SETS } from './verifyReviewCardData.mjs'
+import { checkFocusClear } from './verifyReviewFocus.mjs'
 import { checkPagerFits, checkPagerKeyboard, checkPagerMove } from './verifyReviewPager.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,6 +30,9 @@ const WIDE = { name: '1280x800', width: 1280, height: 800 }
 const TABLET = { name: '744x1133', width: 744, height: 1133 }
 /** The narrowest phone: where the heading beside "Dismiss duplicate" has to wrap. */
 const NARROW = { name: '320x700', width: 320, height: 700 }
+/** The smallest phone supported, and a phone on its side: the shortest sheets. */
+const SMALLEST = { name: '320x568', width: 320, height: 568 }
+const SIDEWAYS = { name: '667x375', width: 667, height: 375 }
 
 /** A row is one line: 58px at the app's type size. */
 const ROW_HEIGHT = 58
@@ -387,9 +391,19 @@ async function barStays(
   }
   const foot = await sheet.evaluate((el) => {
     const bar = [...el.querySelectorAll('button')].find((b) => b.textContent === "Don't add").parentElement
+    // The colour as the canvas paints it, so any notation the browser hands back reads the same.
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+    const painted = (colour) => {
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = colour
+      ctx.fillRect(0, 0, 1, 1)
+      return [...ctx.getImageData(0, 0, 1, 1).data].join(',')
+    }
     return {
       gap: el.getBoundingClientRect().bottom - bar.getBoundingClientRect().bottom,
       sticky: getComputedStyle(bar).position,
+      background: painted(getComputedStyle(bar).backgroundColor),
+      sheet: painted(getComputedStyle(el).backgroundColor),
     }
   })
   check(
@@ -397,6 +411,13 @@ async function barStays(
     'the bar reaches the foot of the sheet, over its padding',
     foot.sticky === 'sticky' && Math.abs(foot.gap) <= 2,
     `position ${foot.sticky}, ${px(foot.gap)} short`,
+  )
+  // The form scrolls under the bar: without a solid fill of the sheet's own colour, the fields show through the buttons.
+  check(
+    where,
+    "the bar is filled with the sheet's colour, so the form does not show through it",
+    foot.background === foot.sheet && foot.background.endsWith(',255'),
+    `bar ${foot.background}, sheet ${foot.sheet}`,
   )
 }
 
@@ -736,6 +757,7 @@ async function main() {
         for (const viewport of [PHONE, TABLET, WIDE]) await checkPagerFits(helpers, browser, viewport)
         for (const viewport of [PHONE, WIDE]) await checkPagerMove(helpers, browser, viewport)
         for (const viewport of [PHONE, TABLET]) await checkPagerKeyboard(helpers, browser, viewport)
+        for (const viewport of [SMALLEST, SHORT, SIDEWAYS, WIDE]) await checkFocusClear(helpers, browser, viewport)
       } finally {
         await browser.close()
       }

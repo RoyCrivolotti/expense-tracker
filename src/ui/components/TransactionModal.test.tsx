@@ -15,6 +15,7 @@ import { ToastContext } from '../hooks/useToast'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
 import formStyles from './TransactionForm.module.css'
+import { PINNED_FOOT_VAR } from '../hooks/usePinnedFoot'
 
 vi.mock('../../data/recommendationDecisionsApi', () => ({
   dismissRecommendation: vi.fn(),
@@ -999,6 +1000,8 @@ describe('TransactionModal, a queue of captured payments', () => {
     const bar = skip.parentElement!
     expect(bar).toHaveClass(formStyles.pinned!)
     expect(bar).toContainElement(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
+    // The sheet keeps room for the bar at its foot, so Tab does not stop on a field behind it.
+    expect(bar.closest<HTMLElement>('[role="dialog"]')!.style.getPropertyValue(PINNED_FOOT_VAR)).not.toBe('')
 
     fireEvent.click(singleForm(container).getByRole('button', { name: 'Add and next (2 left)' }))
 
@@ -1011,6 +1014,7 @@ describe('TransactionModal, a queue of captured payments', () => {
     const add = renderModal({ actions: { createTransaction } })
     const save = singleForm(add.container).getByRole('button', { name: 'Add transaction' })
     expect(save.parentElement).not.toHaveClass(formStyles.pinned!)
+    expect(save.closest<HTMLElement>('[role="dialog"]')!.style.getPropertyValue(PINNED_FOOT_VAR)).toBe('')
     fireEvent.change(singleForm(add.container).getByLabelText(/amount/i), { target: { value: '3' } })
     fireEvent.click(save)
     expect(save.parentElement).not.toContainElement(await screen.findByText('Offline'))

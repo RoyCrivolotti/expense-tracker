@@ -100,7 +100,10 @@ const NOTES: readonly Rule[] = [
   (v) => (has(v, 'zero-amount') ? need('Amount is zero') : null),
   (v) => (has(v, 'amount-relearned') ? need('Check the amount') : null),
   (v) => (has(v, 'own-money') ? need(v.type === null ? 'Pick a type' : 'Check the type') : null),
-  (v) => (v.hint?.kind === 'choose' ? need('Which monthly bill?') : null),
+  (v) =>
+    v.hint?.kind === 'choose'
+      ? need(paymentDirection(v.type) === 'in' ? 'Which monthly payment?' : 'Which monthly bill?')
+      : null,
   (v) => (has(v, 'no-account') ? need('Which account?') : null),
   (v) => (v.hint?.kind === 'moved' ? need('Check the account') : null),
   (v) => (has(v, 'month-edge') ? need(edgeQuestion(v)) : null),

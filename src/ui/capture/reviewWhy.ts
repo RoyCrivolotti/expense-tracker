@@ -1,3 +1,4 @@
+import { paymentDirection } from '../../domain/capture/direction'
 import type { ReviewReason } from '../../domain/capture/review'
 import type { MoneyFormat } from '../../engine/money'
 import type { ReviewView } from './reviewFields'
@@ -29,12 +30,25 @@ const BECAUSE: Record<ReviewReason, (view: ReviewView) => string> = {
   'mixed-description': () => 'you have named this merchant in more than one way',
 }
 
+/** What two payments that may be one are called: a bill, or for money coming in, a payment. */
+const what = (view: ReviewView) => (paymentDirection(view.type) === 'in' ? 'payment' : 'bill')
+
+/** Where a monthly payment's series usually goes from, or for money coming in, where it usually goes into. */
+function usualAccount(
+  view: ReviewView,
+  description: string,
+): string {
+  const account = view.hintAccount ?? 'another account'
+  return paymentDirection(view.type) === 'in'
+    ? `${description} usually comes into ${account}`
+    : `you pay ${description} from ${account}`
+}
+
 /** What a monthly payment's hint asks the person: which of two it is, whether it moved account, whether it was renamed. */
 function hintReasons(view: ReviewView): string[] {
   const { hint } = view
   if (hint?.kind === 'choose') return ['it could be either of two monthly payments']
-  if (hint?.kind === 'moved')
-    return [`you pay ${hint.series.description} from ${view.hintAccount ?? 'another account'}, so it may have moved`]
+  if (hint?.kind === 'moved') return [`${usualAccount(view, hint.series.description)}, so it may have moved`]
   if (hint?.kind === 'renamed') return [`you added it as ${hint.votedDescription} before, so it may have been renamed`]
   return []
 }
@@ -49,7 +63,7 @@ export function whyReasons(
   today: string,
 ): string[] {
   return [
-    ...(pair ? ['it might be the same bill as another one waiting'] : []),
+    ...(pair ? [`it might be the same ${what(view)} as another one waiting`] : []),
     ...view.reasons.filter((r) => r !== 'possible-match').map((r) => BECAUSE[r](view)),
     ...hintReasons(view),
     ...(view.filled ? ['it was matched to a monthly payment for the first time'] : []),
@@ -57,18 +71,20 @@ export function whyReasons(
   ]
 }
 
-/** What the review view says about the other half of a same-bill pair, and what to do if they are one bill. */
+/** What the review view says about the other half of a same-bill pair, and what to do if they are one. */
 export function pairSentence(
   pair: PairSide,
   format: MoneyFormat,
 ): string {
   const { other } = pair
   const amount = signedAmount(other, format)
+  const same = `Might be the same ${what(other)} as`
   if (pair.role === 'charge') {
     const announced = other.fromMessage ? ` on ${weekdayDay(other.fromMessage.arrivedDate)}` : ''
-    return `Might be the same bill as the one the bank announced${announced} (${amount}, also waiting). If it's duplicated, add this one and choose Don't add on the other.`
+    return `${same} the one the bank announced${announced} (${amount}, also waiting). If it's duplicated, add this one and choose Don't add on the other.`
   }
-  return `Might be the same bill as ${rowTitle(other).long}, ${amount}, charged ${weekdayDay(other.date)} and also waiting. If it's duplicated, choose Don't add here.`
+  const moved = paymentDirection(other.type) === 'in' ? 'received' : 'charged'
+  return `${same} ${rowTitle(other).long}, ${amount}, ${moved} ${weekdayDay(other.date)} and also waiting. If it's duplicated, choose Don't add here.`
 }
 
 /** When the bank's message arrived, on the phone's clock: "Sun 22 Nov, 12:31". */

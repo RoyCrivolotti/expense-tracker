@@ -8,25 +8,34 @@ name: Verify the To review card in a browser
 # sheets leaving together when the last payment is decided.
 #
 # Its own workflow, like the Goals one: it needs browsers, and the checks that tell a reviewer whether the code builds
-# should not wait for it. Make it required in the branch protection rules once it has proved itself.
+# should not wait for it. The paths are what the checked behaviour lives in, the form's lower-case helpers, the hooks
+# and shared parts the sheet uses and the API it reads included (`scripts/reviewBrowserWorkflow.test.ts` holds the two
+# lists together). Make it required in the branch protection rules once it has proved itself.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'src/ui/capture/**'
+      - 'src/domain/capture/**'
       - 'src/ui/components/Transaction*'
+      - 'src/ui/components/transaction*'
+      - 'src/ui/components/useDuplicateOffer.ts'
+      - 'src/ui/components/useTransactionSave.ts'
       - 'src/ui/components/SeedAddons.tsx'
+      - 'src/ui/components/SeedNotice.tsx'
+      - 'src/ui/components/Presence.tsx'
+      - 'src/ui/components/primitives.*'
+      - 'src/ui/components/Money.*'
       - 'src/ui/components/Modal*'
       - 'src/ui/components/QueuePager*'
       - 'src/ui/components/reviewPages.ts'
       - 'src/ui/seedQueue.ts'
-      - 'src/ui/hooks/useFieldReveal.ts'
-      - 'src/ui/hooks/useKeyboardOpen.ts'
+      - 'src/data/recommendationsApi.ts'
+      - 'src/ui/hooks/**'
       - 'src/ui/theme.css'
       - 'scripts/verify-review-card.mjs'
-      - 'scripts/verifyReviewCardData.mjs'
-      - 'scripts/verifyReviewPager.mjs'
+      - 'scripts/verifyReview*.mjs'
       - 'scripts/verify-review-return.mjs'
       - 'package-lock.json'
       - 'vite.config.*'
@@ -35,20 +44,29 @@ on:
     branches: [main]
     paths:
       - 'src/ui/capture/**'
+      - 'src/domain/capture/**'
       - 'src/ui/components/Transaction*'
+      - 'src/ui/components/transaction*'
+      - 'src/ui/components/useDuplicateOffer.ts'
+      - 'src/ui/components/useTransactionSave.ts'
       - 'src/ui/components/SeedAddons.tsx'
+      - 'src/ui/components/SeedNotice.tsx'
+      - 'src/ui/components/Presence.tsx'
+      - 'src/ui/components/primitives.*'
+      - 'src/ui/components/Money.*'
       - 'src/ui/components/Modal*'
       - 'src/ui/components/QueuePager*'
       - 'src/ui/components/reviewPages.ts'
       - 'src/ui/seedQueue.ts'
-      - 'src/ui/hooks/useFieldReveal.ts'
-      - 'src/ui/hooks/useKeyboardOpen.ts'
+      - 'src/data/recommendationsApi.ts'
+      - 'src/ui/hooks/**'
       - 'src/ui/theme.css'
       - 'scripts/verify-review-card.mjs'
-      - 'scripts/verifyReviewCardData.mjs'
-      - 'scripts/verifyReviewPager.mjs'
+      - 'scripts/verifyReview*.mjs'
       - 'scripts/verify-review-return.mjs'
       - 'package-lock.json'
+      - 'vite.config.*'
+      - '.github/workflows/verify-review-browser.yml'
   workflow_dispatch:
 
 concurrency:
