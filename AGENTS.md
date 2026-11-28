@@ -45,8 +45,7 @@ All changes — code, docs, config — must go through a pull request with the
 `npm run verify` is the baseline local gate. It runs, in order:
 
 - Symlink checks, migration doc checks, docs size check, PII scan
-- ESLint
-- TypeScript type checking
+- Formatting, ESLint and TypeScript type checking, side by side (lint with a local cache)
 - Vitest with coverage (global thresholds enforced)
 - Production build + bundle budget check
 

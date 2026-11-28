@@ -521,7 +521,7 @@ describe('ExpensesApp while selecting transactions', () => {
 
     const refresh = screen.getByRole('button', { name: 'Refresh data' })
     fireEvent.click(refresh)
-    await waitFor(() => expect(refresh).toBeEnabled(), { timeout: 3000 })
+    await waitFor(() => expect(refresh).toBeEnabled())
 
     expect(previous().parentElement).toHaveTextContent('July 2026')
     expect(screen.getByText('Row 2')).toBeInTheDocument()

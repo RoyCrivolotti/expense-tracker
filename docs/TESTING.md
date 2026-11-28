@@ -8,7 +8,7 @@ For contributors writing or running tests. Stack: **Vitest** + **React Testing L
 npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
-npm run verify         # symlinks, migration docs, docs size, PII check, format:check, lint, typecheck, test:coverage, build, bundle budget, service worker
+npm run verify         # symlinks, migration docs, docs size, PII check, format:check + lint + typecheck side by side, test:coverage, build, bundle budget, service worker
 PARITY_TESTS=1 npm test   # optional parity test, needs a private export (see "Local parity tests")
 ```
 
@@ -88,6 +88,25 @@ jsdom lays nothing out, so the unit tests for the Goals phone navigation and the
 `verify:offline-start` runs in CI as its own check (`.github/workflows/verify-offline-start.yml`, Chromium on Linux and WebKit on macOS) on a PR that touches the worker's configuration or the build. `npm run verify` also runs `scripts/check-service-worker.mjs` on the built worker, in a VM and with no browser: it fails a worker that does not precache the shell, that raises an error while it loads, or that answers a navigation before the network does.
 
 `verify:goals-nav` prints one line per measurement and exits 1 with what it measured for any that fail. It serves on `CAPTURE_PORT` (5173 unless set, as `npm run capture:screenshots` does) and refuses to run if something already answers there, since it would be measuring someone else's code: `CAPTURE_PORT=5490 npm run verify:goals-nav`. Run it after changing `src/ui/tabs/goals/`, `SegmentedControl` or the app shell's header or bottom bar, since a unit test cannot see most of what those break. `verify:section-tabs` is run the same way (`CAPTURE_PORT=5490 npm run verify:section-tabs`, a few minutes) after changing `SectionTabs`, the scroll padding in `theme.css`, or what sticks under the header in Transactions.
+
+## How CI runs the checks
+
+`.github/workflows/ci.yml` runs the checks as parallel jobs: lint, a static job (types, build, budgets), four test shards, and a gate that merges the shards' coverage and runs the two PR checks below.
+
+**Installed packages.** Every job sets up through `.github/actions/setup-node-deps`, which restores `node_modules` from GitHub's cache when one was saved for the same lockfile, `.npmrc`, Node version and runner (operating system and processor), and runs `npm ci` and saves the result otherwise. Only an exact match is restored, so a PR that changes the lockfile installs afresh on its first run and restores from then on. A PR reads the caches its base branch saved, so after a lockfile change lands on `main` the next PR's first run restores too. If a run fails in a way that smells of a broken install, bump the `v1` in the key to start over.
+
+**Test shards.** `--shard=N/4` hands each job a quarter of the test files, dealt by `scripts/testSequencer.mjs` so the four take about the same time: heaviest first, each file goes to the shard with the least recorded time so far. The times are seconds per file on a GitHub runner, in `scripts/test-durations.json`. A file the list does not know, new or renamed, counts as the median and still runs; `scripts/testSequencer.test.ts` fails if any test file in the repository would land in no shard or in two. The list only goes stale in the sense that the shards drift apart, so refresh it when one test job in Verify takes clearly longer than the other three, from any recent green run:
+
+```bash
+gh run download <run-id> -p 'vitest-blob-*' -D .tmp/blobs
+npm run test:durations -- .tmp/blobs
+```
+
+The coverage floors are checked once, by the gate, on all four shards merged.
+
+**Time limits.** Each test has 15 s (`testTimeout` in `vitest.config.ts`) and each `findBy*` or `waitFor` 5 s (`src/test/setup.ts`), on a laptop and in CI alike: a shared runner has run single tests five to nine times slower than a laptop. A test that hangs fails after 15 s with "Test timed out in 15000ms" in that shard's log, and an element that never appears fails after 5 s with the screen printed. Give a test its own longer limit only when it does a lot of work on purpose (the sweeps and parity tests do), not to get past a slow runner.
+
+**On a laptop.** `npm run verify` runs the same checks one after another, except the formatting check, lint and the type check, which run side by side (`scripts/side-by-side.mjs`): each one's output is printed whole when it ends, and the run fails naming every one that failed. Lint there keeps ESLint's cache (`npm run lint:cached`), so a second run with nothing changed takes seconds. The cache re-checks a file only when that file changes, while some rules read types from other files, so clear it with `rm -rf node_modules/.cache/eslint` after changing a type or export other files use, after switching branches or rebasing, or whenever lint passes locally and fails in CI. CI never uses it: `npm run lint:cached` drops the cache when `CI` or `GITHUB_ACTIONS` is set, and `ci.yml` runs plain `npm run lint` (`scripts/ciParity.test.ts` checks both).
 
 ## Coverage gate
 

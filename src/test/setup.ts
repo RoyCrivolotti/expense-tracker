@@ -1,7 +1,12 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 import { setMotionDisabledForTests } from '../ui/hooks/motion'
+
+// How long findBy* and waitFor keep looking before they fail with the screen printed. The 1 s
+// default ran out on a slow CI runner for elements that were on their way; 5 s still fails well
+// inside the 15 s test limit, so a missing element reports as itself, not as a timeout.
+configure({ asyncUtilTimeout: 5_000 })
 
 // An overlay that animates out stays mounted for the animation, which would turn every
 // "it closed" assertion into a wait. Tests that are about motion switch it back on.
