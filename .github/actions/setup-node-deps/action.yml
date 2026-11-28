@@ -1,13 +1,39 @@
 name: Set up Node and install dependencies
-description: Node 22 with the npm cache, and `npm ci`. Run after checkout.
+description: Node 22 and the packages in package-lock.json, restored from the cache when an identical install exists. Run after checkout.
+
+# `npm ci` takes about 45 s on a GitHub runner, and every job paid it, so `node_modules` is cached
+# as `npm ci` left it. The key is everything that decides what `npm ci` writes: the lockfile (and
+# .npmrc, which picks the registry), the exact Node version, and the operating system and
+# processor, since esbuild and workerd install a binary for the machine they run on. Only an exact
+# match is restored, never a nearest one, so a lockfile change always means a fresh `npm ci`.
+#
+# Restore and save are separate steps on purpose. actions/cache's single step saves when the job
+# ends, after the tests and the build have written their own caches into node_modules/.vite and
+# node_modules/.cache; saving straight after `npm ci` keeps the cached copy what `npm ci` gave.
 
 runs:
   using: composite
   steps:
     - uses: actions/setup-node@v5
+      id: node
       with:
         node-version: '22'
         cache: npm
 
-    - shell: bash
+    - uses: actions/cache/restore@v5
+      id: modules
+      with:
+        path: node_modules
+        key: node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', '.npmrc') }}
+
+    - if: steps.modules.outputs.cache-hit != 'true'
+      shell: bash
       run: npm ci
+
+    # Jobs that start together all miss and all try to save one key; the first wins and the rest
+    # log a warning without failing.
+    - if: steps.modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: node_modules
+        key: ${{ steps.modules.outputs.cache-primary-key }}

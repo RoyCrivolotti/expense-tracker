@@ -89,6 +89,12 @@ jsdom lays nothing out, so the unit tests for the Goals phone navigation and the
 
 `verify:goals-nav` prints one line per measurement and exits 1 with what it measured for any that fail. It serves on `CAPTURE_PORT` (5173 unless set, as `npm run capture:screenshots` does) and refuses to run if something already answers there, since it would be measuring someone else's code: `CAPTURE_PORT=5490 npm run verify:goals-nav`. Run it after changing `src/ui/tabs/goals/`, `SegmentedControl` or the app shell's header or bottom bar, since a unit test cannot see most of what those break. `verify:section-tabs` is run the same way (`CAPTURE_PORT=5490 npm run verify:section-tabs`, a few minutes) after changing `SectionTabs`, the scroll padding in `theme.css`, or what sticks under the header in Transactions.
 
+## How CI runs the checks
+
+`.github/workflows/ci.yml` runs the checks as parallel jobs: lint, a static job (types, build, budgets), four test shards, and a gate that merges the shards' coverage and runs the two PR checks below.
+
+**Installed packages.** Every job sets up through `.github/actions/setup-node-deps`, which restores `node_modules` from GitHub's cache when one was saved for the same lockfile, `.npmrc`, Node version and runner (operating system and processor), and runs `npm ci` and saves the result otherwise. Only an exact match is restored, so a PR that changes the lockfile installs afresh on its first run and restores from then on. A PR reads the caches its base branch saved, so after a lockfile change lands on `main` the next PR's first run restores too. If a run fails in a way that smells of a broken install, bump the `v1` in the key to start over.
+
 ## Coverage gate
 
 Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR:
