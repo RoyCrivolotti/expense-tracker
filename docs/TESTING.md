@@ -95,6 +95,15 @@ jsdom lays nothing out, so the unit tests for the Goals phone navigation and the
 
 **Installed packages.** Every job sets up through `.github/actions/setup-node-deps`, which restores `node_modules` from GitHub's cache when one was saved for the same lockfile, `.npmrc`, Node version and runner (operating system and processor), and runs `npm ci` and saves the result otherwise. Only an exact match is restored, so a PR that changes the lockfile installs afresh on its first run and restores from then on. A PR reads the caches its base branch saved, so after a lockfile change lands on `main` the next PR's first run restores too. If a run fails in a way that smells of a broken install, bump the `v1` in the key to start over.
 
+**Test shards.** `--shard=N/4` hands each job a quarter of the test files, dealt by `scripts/testSequencer.mjs` so the four take about the same time: heaviest first, each file goes to the shard with the least recorded time so far. The times are seconds per file on a GitHub runner, in `scripts/test-durations.json`. A file the list does not know, new or renamed, counts as the median and still runs; `scripts/testSequencer.test.ts` fails if any test file in the repository would land in no shard or in two. The list only goes stale in the sense that the shards drift apart, so refresh it when one test job in Verify takes clearly longer than the other three, from any recent green run:
+
+```bash
+gh run download <run-id> -p 'vitest-blob-*' -D .tmp/blobs
+npm run test:durations -- .tmp/blobs
+```
+
+The coverage floors are checked once, by the gate, on all four shards merged.
+
 ## Coverage gate
 
 Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR:

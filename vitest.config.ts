@@ -1,6 +1,7 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+import DurationSequencer from './scripts/testSequencer.mjs'
 
 // scripts/ is included so the migration-safety test can run. Those files stay out
 // of `coverage.include` below — they are build/ops tooling, not shipped code.
@@ -28,6 +29,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    // Deals files between CI's `--shard` jobs by recorded duration rather than by count.
+    sequence: { sequencer: DurationSequencer },
     // Tests that never touch the DOM run in node: building a jsdom environment costs about
     // 0.2s per test file. A file in node that starts needing `document` fails with "document
     // is not defined"; opt it back in with `// @vitest-environment jsdom` on its first line.
