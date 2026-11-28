@@ -8,7 +8,7 @@ For contributors writing or running tests. Stack: **Vitest** + **React Testing L
 npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
-npm run verify         # symlinks, migration docs, docs size, PII check, format:check, lint, typecheck, test:coverage, build, bundle budget, service worker
+npm run verify         # symlinks, migration docs, docs size, PII check, format:check + lint + typecheck side by side, test:coverage, build, bundle budget, service worker
 PARITY_TESTS=1 npm test   # optional parity test, needs a private export (see "Local parity tests")
 ```
 
@@ -105,6 +105,8 @@ npm run test:durations -- .tmp/blobs
 The coverage floors are checked once, by the gate, on all four shards merged.
 
 **Time limits.** Each test has 15 s (`testTimeout` in `vitest.config.ts`) and each `findBy*` or `waitFor` 5 s (`src/test/setup.ts`), on a laptop and in CI alike: a shared runner has run single tests five to nine times slower than a laptop. A test that hangs fails after 15 s with "Test timed out in 15000ms" in that shard's log, and an element that never appears fails after 5 s with the screen printed. Give a test its own longer limit only when it does a lot of work on purpose (the sweeps and parity tests do), not to get past a slow runner.
+
+**On a laptop.** `npm run verify` runs the same checks one after another, except the formatting check, lint and the type check, which run side by side (`scripts/side-by-side.mjs`): each one's output is printed whole when it ends, and the run fails naming every one that failed. Lint there keeps ESLint's cache (`npm run lint:cached`), so a second run with nothing changed takes seconds. The cache re-checks a file only when that file changes, while some rules read types from other files, so clear it with `rm -rf node_modules/.cache/eslint` after changing a type or export other files use, after switching branches or rebasing, or whenever lint passes locally and fails in CI. CI never uses it: `npm run lint:cached` drops the cache when `CI` or `GITHUB_ACTIONS` is set, and `ci.yml` runs plain `npm run lint` (`scripts/ciParity.test.ts` checks both).
 
 ## Coverage gate
 

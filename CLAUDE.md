@@ -148,8 +148,10 @@ deliberately stays out of that, since retitling a PR is no reason to redeploy it
 npm run verify
 ```
 
-Symlink check → migration doc check → docs size check → PII check → formatting → lint → typecheck → test coverage →
-build → bundle budget.
+Symlink check → migration doc check → docs size check → PII check → formatting, lint and typecheck side by side → test
+coverage → build → bundle budget. Lint there keeps a cache that CI never uses; clear it (`rm -rf node_modules/.cache/eslint`)
+after changing a shared type or switching branches, since it only re-checks files that changed. See
+[docs/TESTING.md](docs/TESTING.md), "How CI runs the checks".
 
 **A green `verify` does not mean CI will be green.** Two required checks run only in CI:
 
