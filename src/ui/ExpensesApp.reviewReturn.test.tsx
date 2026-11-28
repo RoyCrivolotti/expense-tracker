@@ -71,10 +71,6 @@ const open = () =>
     </ToastProvider>,
   )
 
-// The whole app renders in each test, and some save several payments, each waiting on a read. A shared CI runner has
-// run one of these nine times slower than a laptop, past the 5s default.
-vi.setConfig({ testTimeout: 15_000 })
-
 beforeEach(() => {
   phone()
   localStorage.clear()

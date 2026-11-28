@@ -119,7 +119,7 @@ describe('the Transactions tab over a list read in pages: the header', () => {
     renderTab(source)
     expect(await stats().findByText('1000+ items')).toBeInTheDocument()
     expect(stats().getByText('−1.234,00 €')).toBeInTheDocument()
-    expect(await screen.findByText('1000+ transactions match', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByText('1000+ transactions match')).toBeInTheDocument()
   })
 
   it('gives the exact count once the whole list has been read, whatever the summary stopped at', async () => {
@@ -159,7 +159,7 @@ describe('the Transactions tab over a list read in pages: before anything is kno
     expect(announced()).toBe('')
     await held.release()
     expect(await stats().findByText(/^\d+\+? items?$/)).toBeInTheDocument()
-    await waitFor(() => expect(announced()).toMatch(/transactions match$/), { timeout: 3000 })
+    await waitFor(() => expect(announced()).toMatch(/transactions match$/))
   })
 
   it('says nothing to a screen reader when the first page could not be read, and the failure is an alert with a way to try again', async () => {
@@ -254,14 +254,14 @@ describe('the Transactions tab over a list read in pages: select all', () => {
   it('names how many rows it selects while more match, and says all once the list is complete', async () => {
     const source = memorySource(ledger)
     const { pager } = renderTab(source, { limit: 20 })
-    await waitFor(() => expect(pager.getState().rows).toHaveLength(20), { timeout: 5000 })
+    await waitFor(() => expect(pager.getState().rows).toHaveLength(20))
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
     expect(await screen.findByRole('button', { name: 'Select 20' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Select all' })).toBeNull()
     act(() => FakeObserver.nearScreen())
-    await waitFor(() => expect(pager.getState().complete).toBe(true), { timeout: 5000 })
+    await waitFor(() => expect(pager.getState().complete).toBe(true))
     expect(await screen.findByRole('button', { name: 'Select all' })).toBeInTheDocument()
-  }, 15_000)
+  })
 })
 
 describe('the Transactions tab over a list read in pages: a write', () => {
@@ -353,7 +353,7 @@ describe('the Transactions tab over a list read in pages: every row that matches
     const [target] = updateMatching.mock.calls[0]!
     expect(target).toMatchObject({ expectedCount: count, expectedRevision: revision })
     expect(await screen.findByText(`Updated ${count} transactions`)).toBeInTheDocument()
-  }, 15_000)
+  })
 
   it('does not offer them while the count has stopped at what an edit may reach', async () => {
     const source = memorySource(ledger)

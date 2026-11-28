@@ -516,8 +516,8 @@ describe('useLedgerData, a read in the background that fails', () => {
   /** A refresh that works clears the error, which is how the user gets out of it. */
   async function refreshClears(result: { current: ReturnType<typeof useLedgerData> }) {
     act(() => result.current.reload())
-    await waitFor(() => expect(result.current.backgroundError).toBeNull(), { timeout: 3000 })
-    await waitFor(() => expect(result.current.refreshOutcome).toBe('ok'), { timeout: 3000 })
+    await waitFor(() => expect(result.current.backgroundError).toBeNull())
+    await waitFor(() => expect(result.current.refreshOutcome).toBe('ok'))
   }
 
   it('is null while nothing has failed', async () => {

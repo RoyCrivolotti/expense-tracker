@@ -104,6 +104,8 @@ npm run test:durations -- .tmp/blobs
 
 The coverage floors are checked once, by the gate, on all four shards merged.
 
+**Time limits.** Each test has 15 s (`testTimeout` in `vitest.config.ts`) and each `findBy*` or `waitFor` 5 s (`src/test/setup.ts`), on a laptop and in CI alike: a shared runner has run single tests five to nine times slower than a laptop. A test that hangs fails after 15 s with "Test timed out in 15000ms" in that shard's log, and an element that never appears fails after 5 s with the screen printed. Give a test its own longer limit only when it does a lot of work on purpose (the sweeps and parity tests do), not to get past a slow runner.
+
 ## Coverage gate
 
 Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR:
