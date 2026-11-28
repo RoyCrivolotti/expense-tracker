@@ -26,14 +26,14 @@ The Worker's log says which of these each push was ([CAPTURE-WORKER.md](CAPTURE-
 
 **One movement, one recommendation.** A bank often sends several pushes for one movement: a card payment and a balance
 alert of the same amount seconds later, or a purchase and an offer to split it. A push with the same amount and currency
-as an open recommendation of the person, at most 2 minutes from it by the moment each push gives, and of another
-wording, joins that recommendation instead of making a second (`sameMovement`, `src/domain/capture/grouping.ts`). The
-window is short because in real pushes the second push of one movement came within seconds, while two real movements
-of one amount (money in, then the same amount sent on) came minutes apart. It is not limited to one bank app: two apps
-reporting one payment join, and so would two shops charging the same price within two minutes. Two
-pushes of one wording are always two movements, two coffees at the same price being two payments, and a decided
-recommendation takes no more pushes. The statement that stores the push decides it, so two pushes arriving together
-cannot both make one. What the person sees is in [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
+as an open recommendation of its owner, at most 2 minutes from it by the moment each push gives, of another wording and
+with the same sign on the amount, joins that recommendation instead of making a second (`sameMovement`,
+`src/domain/capture/grouping.ts`). The window is short because in real pushes the second push of one movement came
+within seconds, while two real movements of one amount (money in, then the same amount sent on) came minutes apart. Two
+apps reporting one payment join, and so would two shops charging one price within two minutes. Two pushes of one wording
+are always two movements, two coffees at the same price being two payments, and a decided recommendation takes no more
+pushes. The statement that stores the push decides it, so two pushes arriving together cannot both make one. Why the
+sign, and what the person sees: [CAPTURE-REVIEW.md](CAPTURE-REVIEW.md).
 
 ## The capture key
 

@@ -4,17 +4,19 @@ import type { CaptureCaps, CaptureEvent } from '../../../src/domain/ports/captur
 
 /**
  * The open recommendation of the key's owner that a push joins, by the rule of `sameMovement`: the same amount and
- * currency, at most `?25` seconds apart, and no event behind it of the push's template (`?23`) or shape (`?22`). The
- * nearest in time wins. `?26` and `?27` bound the stored text a day either side, so the index on `occurred_at` narrows
- * the read before the exact test, which needs `unixepoch` because the stored moment carries the phone's offset. Only a
- * push that brings a recommendation of its own (`?15`) looks for one to join.
+ * currency, at most `?25` seconds apart, and no event behind it of the push's template (`?23`) or shape (`?22`), or
+ * with the other sign on its amount (`?28`). An event stored before the sign was kept holds NULL there, which the
+ * comparison never matches, so it stops nothing. The nearest in time wins. `?26` and `?27` bound the stored text a day
+ * either side, so the index on `occurred_at` narrows the read before the exact test, which needs `unixepoch` because
+ * the stored moment carries the phone's offset. Only a push that brings a recommendation of its own (`?15`) looks for
+ * one to join.
  */
 const OPEN_MOVEMENT = `(SELECT r.id FROM recommendations r
   WHERE ?15 IS NOT NULL AND r.owner = k.owner AND r.state = 'open' AND r.amount_cents = ?6 AND r.currency = ?7
   AND r.occurred_at >= ?26 AND r.occurred_at <= ?27
   AND abs(unixepoch(r.occurred_at) - unixepoch(?11)) <= ?25
   AND NOT EXISTS (SELECT 1 FROM capture_events f WHERE f.owner = r.owner AND f.rec_id = r.id
-    AND (f.template_id = ?23 OR f.shape_id = ?22))
+    AND (f.template_id = ?23 OR f.shape_id = ?22 OR f.amount_minus <> ?28))
   ORDER BY abs(unixepoch(r.occurred_at) - unixepoch(?11)), r.id LIMIT 1)`
 
 /**
@@ -31,9 +33,9 @@ const OPEN_MOVEMENT = `(SELECT r.id FROM recommendations r
  */
 export const RECORD_EVENT_SQL = `INSERT INTO capture_events
 (id, owner, key_id, source, replay_key, kind, amount_cents, currency, merchant_raw, last4, account_digits,
- occurred_at, local_date, offset_minutes, received_at, rec_id, body, shape_id, template_id, slots, grouped)
+ occurred_at, local_date, offset_minutes, received_at, rec_id, body, shape_id, template_id, slots, grouped, amount_minus)
 SELECT ?1, owner, key_id, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, COALESCE(joined, ?15), ?16, ?22, ?23, ?24,
-  joined IS NOT NULL
+  joined IS NOT NULL, ?28
 FROM (SELECT k.owner, k.key_id, ${OPEN_MOVEMENT} AS joined
   FROM capture_keys k WHERE k.key_id = ?2 AND k.revoked_at IS NULL
   AND (SELECT COUNT(*) FROM capture_events WHERE key_id = ?2 AND received_at >= ?17) < ?18
@@ -106,6 +108,7 @@ export function eventParams(
     e.slots ?? null,
     GROUP_WINDOW_MS / 1000,
     ...dayEitherSide(e.occurredAt),
+    e.amountMinus == null ? null : Number(e.amountMinus),
   ]
 }
 

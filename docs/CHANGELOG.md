@@ -2,6 +2,10 @@
 
 For users: high-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## November 2026 (Money in and money out stay apart in To review)
+
+- **A payment received is no longer hidden inside a payment sent.** When two bank pushes showed the same amount within two minutes, To review showed them as one payment, even when one was money going out and the other money coming in, so sending 5,00 and getting 5,00 back a minute later showed only the payment sent. Now two pushes are one payment only when both have a minus on the amount or neither has. The cost: a card app that writes a payment without a sign and a bank alert that writes the same payment with a minus now show two payments to review, and you dismiss the extra one.
+
 ## November 2026 (Closing a payment goes back to the full list)
 
 - **A payment opened from "See all" goes back to the list when you close it.** Closing it used to land on the Dashboard, so you had to open the list again and find your place. Now the list is still there, scrolled where you left it, without the payments you added or chose not to add in the meantime. When you have decided the last one, both close and you are on the Dashboard. A payment opened from the Dashboard card still closes to the Dashboard.

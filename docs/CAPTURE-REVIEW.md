@@ -116,6 +116,12 @@ and the template a decision teaches. A later push only gives the description, wh
 push could only give its whole text. Every push behind it is blanked and gets the decision's outcome, and the
 diagnostics count the later ones as "Same payment as another", not as suggestions.
 
+Pushes join only when they carry the same sign on the amount: a minus on both, or on neither, a plus counting as none.
+Amounts are stored unsigned, so that minus (`capture_events.amount_minus`) is all a push says of direction by itself,
+and without the rule money sent and the same amount received a minute later became one payment. The cost is a card
+payment with no sign and a balance alert of `-12,50` for it making two recommendations, one to dismiss, which shows
+where a wrong join would not. Pushes stored before the sign was kept never stop a join, and nothing joined is regrouped.
+
 ## What the list suggests
 
 Each recommendation in `GET /api/recommendations` carries a `suggestion`: what the person's own decisions on earlier

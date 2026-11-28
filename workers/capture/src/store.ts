@@ -5,6 +5,7 @@ import {
   readPush,
   replayKey,
   shapeId,
+  signedDirection,
   spanText,
 } from '../../../src/domain/capture'
 import type { PushInstant } from '../../../src/domain/capture'
@@ -204,6 +205,8 @@ export async function storePush(
     replayKey: hash,
     kind: 'push',
     amountCents: amount.cents,
+    // Read from the number the amount was, so a push joins only pushes with the same sign on that amount.
+    amountMinus: signedDirection(reading.slots, null) === 'out',
     currency: amount.currency,
     merchantRaw: read.merchantRaw,
     merchantIsSpan: read.merchantIsSpan,
