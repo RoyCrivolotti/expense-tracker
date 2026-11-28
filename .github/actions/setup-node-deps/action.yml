@@ -37,3 +37,29 @@ runs:
       with:
         path: node_modules
         key: ${{ steps.modules.outputs.cache-primary-key }}
+
+    # TEMPORARY, removed before review: proves a restored node_modules is the one npm ci wrote.
+    - shell: bash
+      run: |
+        node -e '
+          const fs = require("fs"), path = require("path"), crypto = require("crypto")
+          const lines = []
+          const walk = (dir) => {
+            for (const name of fs.readdirSync(dir).sort()) {
+              const p = path.join(dir, name), st = fs.lstatSync(p)
+              const mode = (st.mode & 0o777).toString(8)
+              if (st.isSymbolicLink()) lines.push(`${p} l ${fs.readlinkSync(p)}`)
+              else if (st.isDirectory()) { lines.push(`${p} d ${mode}`); walk(p) }
+              else lines.push(`${p} f ${mode} ${crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex")}`)
+            }
+          }
+          walk("node_modules")
+          const sum = crypto.createHash("sha256").update(lines.join("\n")).digest("hex")
+          console.log(`node_modules fingerprint ${sum} over ${lines.length} entries (cache hit: ${process.env.HIT || "no"})`)
+          for (const pkg of ["esbuild", "workerd"]) {
+            const own = lines.filter((l) => l.startsWith(`node_modules/@${pkg === "esbuild" ? "esbuild" : "cloudflare"}/`) && l.includes(" f ")).length
+            console.log(`  ${pkg} platform files: ${own}`)
+          }
+        '
+      env:
+        HIT: ${{ steps.modules.outputs.cache-hit }}
